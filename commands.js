@@ -177,6 +177,21 @@ const CLEAR_TRIBEALL_COMMAND = {
   default_member_permissions: ADMIN_PERMISSIONS
 };
 
+const CLEAR_TRIBE_COMMAND = {
+  name: maybePrependDev('clear_tribe'),
+  description: 'Clear a specific tribe from the castlist',
+  type: 1,
+  options: [
+    {
+      name: 'role',
+      description: 'Select the tribe to clear from the castlist',
+      type: 8, // ROLE
+      required: true
+    }
+  ],
+  default_member_permissions: ADMIN_PERMISSIONS
+};
+
 const SET_PLAYERS_AGE_COMMAND = {
   name: maybePrependDev('set_players_age'),
   description: 'Set ages for up to 12 players at a time',
@@ -321,8 +336,9 @@ const GETTING_STARTED_COMMAND = {
 };
 
 const ALL_COMMANDS = [
-  SET_TRIBE_COMMAND,   // Add new command
-  SET_TRIBE1_COMMAND,  // Keep existing commands
+  CLEAR_TRIBE_COMMAND,     // Add new command first
+  SET_TRIBE_COMMAND,   
+  SET_TRIBE1_COMMAND,  
   SET_TRIBE2_COMMAND,
   SET_TRIBE3_COMMAND,
   SET_TRIBE4_COMMAND,
