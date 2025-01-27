@@ -1,13 +1,22 @@
+# Dependencies
 node_modules/
+
+# Environment and Config
 .env*
-.env
-.env-prod
 *.env
 .env-prod
+.ngrok.yml
+
+# Data files
 playerData.json
+
+# System files
+desktop.ini
+.DS_Store
+Thumbs.db
+
+# Logs and temp
 logs/
 *.log
-.archive
-.supporting
-.ngrok.yml
-desktop.ini
+.archive/
+.supporting/
