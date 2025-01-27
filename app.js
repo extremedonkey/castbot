@@ -1443,6 +1443,99 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
+} else if (name === 'react_timezones') {
+  try {
+    const guildId = req.body.guild_id;
+    const guild = await client.guilds.fetch(guildId);
+
+    // Get timezone roles from storage
+    const timezones = await getGuildTimezones(guildId);
+    if (!Object.keys(timezones).length) {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: 'No timezone roles found. Add some using /timezones_add first!',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    }
+
+    // Get role objects and sort alphabetically
+    const roles = await Promise.all(
+      Object.keys(timezones).map(id => guild.roles.fetch(id))
+    );
+    const sortedRoles = roles
+      .filter(role => role) // Remove any null roles
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (sortedRoles.length > REACTION_NUMBERS.length) {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: `Too many timezone roles (maximum ${REACTION_NUMBERS.length} supported)`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    }
+
+    // Create embed
+    const embed = new EmbedBuilder()
+      .setTitle('Timezone Role Selection')
+      .setDescription('React with the emoji corresponding to your timezone:\n\n' + 
+        sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
+      .setColor('#7ED321');
+
+    // Send the message
+    await res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        embeds: [embed]
+      }
+    });
+
+    // Get the message we just sent
+    const response = await fetch(
+      `https://discord.com/api/v10/channels/${req.body.channel_id}/messages`,
+      {
+        headers: {
+          Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    const messages = await response.json();
+    const message = messages[0];  // Get most recent message
+
+    // Add reactions
+    for (let i = 0; i < sortedRoles.length; i++) {
+      await fetch(
+        `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${message.id}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+          },
+        }
+      );
+    }
+
+    // Store role-emoji mappings in memory for reaction handler
+    if (!client.roleReactions) client.roleReactions = new Map();
+    client.roleReactions.set(message.id, 
+      Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]))
+    );
+
+  } catch (error) {
+    console.error('Error in react_timezones:', error);
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: 'Error creating reaction message',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+  return;
 }
 
   } // end if APPLICATION_COMMAND

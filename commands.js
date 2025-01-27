@@ -357,6 +357,12 @@ const REACT_PRONOUNS_COMMAND = {
   default_member_permissions: ADMIN_PERMISSIONS
 };
 
+const REACT_TIMEZONES_COMMAND = {
+  name: 'react_timezones',
+  description: 'Create a message for users to select their timezone roles via reactions',
+  type: 1,  // CHAT_INPUT
+};
+
 const ALL_COMMANDS = [
   REACT_PRONOUNS_COMMAND,  // Add new command first
   ROLE_GENERATOR_COMMAND,   // Add new command first
@@ -377,6 +383,7 @@ const ALL_COMMANDS = [
   PRONOUNS_REMOVE_COMMAND,     // Updated name
   TIMEZONES_ADD_COMMAND,       // Updated name
   TIMEZONES_REMOVE_COMMAND,    // Updated name
+  REACT_TIMEZONES_COMMAND,     // Add new command
 ];
 
 console.log('Registering commands with:');
