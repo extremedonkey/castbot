@@ -505,21 +505,43 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
         // Add each tribe that has members
         for (let i = 0; i < tribeRoles.length; i++) {
-          console.log(`Adding tribe ${i + 1} to embed: ${tribeRoles[i].name}`);
-          // Add spacer if this isn't the first tribe
-          if (i > 0) {
-            embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
+          try {
+            console.log(`Adding tribe ${i + 1} to embed: ${tribeRoles[i].name}`);
+            // Add spacer if this isn't the first tribe
+            if (i > 0) {
+              embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
+            }
+            
+            // Add tribe header and members
+            const tribeEmoji = tribesCfg[`tribe${i + 1}emoji`] || '';
+            const header = tribeEmoji
+              ? `${tribeEmoji}  ${tribeRoles[i].name}  ${tribeEmoji}`
+              : tribeRoles[i].name;
+            embed.addFields({ name: header, value: '\u200B', inline: false });
+            const memberFields = await createMemberFields(tribeMembers[i], fullGuild);
+            console.log(`Generated ${memberFields.length} member fields for tribe ${i + 1}`);
+            
+            // Check if adding these fields would exceed the limit
+            if (embed.data.fields.length + memberFields.length > 25) {
+              throw new Error('Embed field limit exceeded');
+            }
+            
+            embed.addFields(memberFields);
+          } catch (error) {
+            if (error.message === 'Embed field limit exceeded') {
+              console.error('Embed field limit exceeded, sending error message');
+              const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+              await DiscordRequest(endpoint, {
+                method: 'PATCH',
+                body: {
+                  content: 'Cannot display castlist: Too many fields (maximum 25). Consider splitting tribes into separate castlists using the castlist parameter in /set_tribe.',
+                  flags: InteractionResponseFlags.EPHEMERAL
+                },
+              });
+              return;
+            }
+            throw error;
           }
-          
-          // Add tribe header and members
-          const tribeEmoji = tribesCfg[`tribe${i + 1}emoji`] || '';
-          const header = tribeEmoji
-            ? `${tribeEmoji}  ${tribeRoles[i].name}  ${tribeEmoji}`
-            : tribeRoles[i].name;
-          embed.addFields({ name: header, value: '\u200B', inline: false });
-          const memberFields = await createMemberFields(tribeMembers[i], fullGuild);
-          console.log(`Generated ${memberFields.length} member fields for tribe ${i + 1}`);
-          embed.addFields(memberFields);
         }
 
         // Edit the initial response with the embed
@@ -1401,24 +1423,20 @@ async function calculateCastlistFields(guild, tribeRoleId, castlistName = 'defau
     const guildData = await loadPlayerData();
     const guildTribes = guildData[guild.id]?.tribes || {};
     let totalFields = 0;
+    const uniquePlayers = new Set();
     
     // Count existing tribe fields and their players
     for (const [key, value] of Object.entries(guildTribes)) {
-      // Skip emoji entries
-      if (key.endsWith('emoji')) continue;
-      
-      // Get the role ID
-      const roleId = value;
-      if (!roleId) continue;
+      // Skip emoji entries and empty tribes
+      if (key.endsWith('emoji') || !value) continue;
       
       // Add 1 for the tribe header
       totalFields++;
       
-      // Count members with this role
-      const role = await guild.roles.fetch(roleId);
+      // Get members with this role
+      const role = await guild.roles.fetch(value);
       if (role) {
-        const members = role.members;
-        totalFields += members.size;
+        role.members.forEach(member => uniquePlayers.add(member.id));
       }
     }
     
@@ -1427,8 +1445,11 @@ async function calculateCastlistFields(guild, tribeRoleId, castlistName = 'defau
     if (newRole) {
       // Add 1 for the new tribe header
       totalFields++;
-      totalFields += newRole.members.size;
+      newRole.members.forEach(member => uniquePlayers.add(member.id));
     }
+    
+    // Add the count of unique players
+    totalFields += uniquePlayers.size;
     
     return totalFields;
   } catch (error) {
