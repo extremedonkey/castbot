@@ -1484,7 +1484,7 @@ async function createMemberFields(members, guild) {
   return fields;
 }
 
-// Add this helper function before the castlist command handler
+// Add this helper function before the castlist command handler!
 async function determineCastlistToShow(guildId, userId, requestedCastlist = null) {
   const data = await loadPlayerData();
   const tribes = data[guildId]?.tribes || {};
