@@ -630,6 +630,120 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               },
           });
       }
+  } else if (name === 'clear_tribe') {
+    try {
+      console.log('Processing /clear_tribe command');
+      await res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+      });
+
+      const guildId = req.body.guild_id;
+      const guild = await client.guilds.fetch(guildId);
+      const roleOption = data.options.find(opt => opt.name === 'role');
+      const roleId = roleOption.value;
+      
+      console.log(`Processing clear_tribe for role ${roleId} in guild ${guildId}`);
+
+      // Load full data structure
+      const playerData = await loadPlayerData();
+      if (!playerData[guildId]?.tribes) {
+        console.log('No guild data found');
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: 'No tribe data found for this server',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        return;
+      }
+
+      // Check if tribe exists
+      if (!playerData[guildId].tribes[roleId]) {
+        console.log('No tribe found with this role ID');
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: `No tribe found with role <@&${roleId}>`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        return;
+      }
+
+      // Get all members with this tribe role
+      const members = await guild.members.fetch();
+      const targetMembers = members.filter(m => m.roles.cache.has(roleId));
+      console.log(`Found ${targetMembers.size} members with tribe role`);
+
+      const resultLines = [];
+
+      // Process each member with the tribe role
+      for (const [memberId, member] of targetMembers) {
+        if (playerData[guildId].players[memberId]?.emojiCode) {
+          const emojiCode = playerData[guildId].players[memberId].emojiCode;
+          const emoji = parseEmojiCode(emojiCode);
+          
+          if (emoji?.id) {
+            try {
+              const guildEmoji = await guild.emojis.fetch(emoji.id);
+              if (guildEmoji) {
+                await guildEmoji.delete();
+                console.log(`Deleted ${emoji.animated ? 'animated' : 'static'} emoji for ${member.displayName}`);
+                resultLines.push(`Deleted ${emoji.animated ? 'animated' : 'static'} emoji for ${member.displayName}`);
+              }
+            } catch (err) {
+              console.error(`Error deleting emoji for ${member.displayName}:`, {
+                error: err,
+                emojiCode: emojiCode,
+                emojiData: emoji
+              });
+              resultLines.push(`Failed to delete emoji for ${member.displayName}`);
+            }
+          }
+          // Clear emoji code
+          playerData[guildId].players[memberId].emojiCode = null;
+        }
+      }
+
+      // Store the tribe name before deletion for the message
+      const tribeName = (await guild.roles.fetch(roleId))?.name || roleId;
+      const castlist = playerData[guildId].tribes[roleId].castlist || 'default';
+
+      // Remove tribe
+      delete playerData[guildId].tribes[roleId];
+
+      // Save updated data
+      await savePlayerData(playerData);
+      console.log('Saved updated player data');
+
+      // Send response
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          content: resultLines.length > 0 
+            ? `Cleared tribe ${tribeName} from castlist '${castlist}'.\n${resultLines.join('\n')}`
+            : `Cleared tribe ${tribeName} from castlist '${castlist}'. No emojis needed to be removed.`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in clear_tribe:', error);
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          content: 'Error clearing tribe',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    }
+    return;
+
   } else if (name === 'clear_tribe1' || name === 'clear_tribe2' || name === 'clear_tribe3' || name === 'clear_tribe4') {
     try {
       console.log(`Received /${name} command`);
