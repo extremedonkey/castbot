@@ -95,8 +95,17 @@ const app = express();
 // Get port, or default to 3000
 const PORT = process.env.PORT || 3000;
 
-// Initialize Discord client
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+// Initialize Discord client with required intents and partials
+const client = new Client({ 
+  intents: [
+    GatewayIntentBits.Guilds, 
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.MessageContent
+  ],
+  partials: ['MESSAGE', 'CHANNEL', 'REACTION']
+});
 
 // Add these event handlers after client initialization
 client.once('ready', async () => {
@@ -1759,35 +1768,69 @@ async function determineCastlistToShow(guildId, userId, requestedCastlist = null
 
 // Add reaction handlers near client.on('guildCreate') handlers
 client.on('messageReactionAdd', async (reaction, user) => {
-  if (user.bot) return;
-  if (!client.roleReactions?.has(reaction.message.id)) return;
-
-  const roleMapping = client.roleReactions.get(reaction.message.id);
-  const roleId = roleMapping[reaction.emoji.name];
-  if (!roleId) return;
-
-  const guild = reaction.message.guild;
-  const member = await guild.members.fetch(user.id);
   try {
-    await member.roles.add(roleId);
+    if (user.bot) return;
+
+    // When a reaction is received, check if the structure is partial
+    if (reaction.partial) {
+      // If the message this reaction belongs to was removed, the fetching might result in an API error
+      try {
+        await reaction.fetch();
+      } catch (error) {
+        console.error('Something went wrong when fetching the message:', error);
+        return;
+      }
+    }
+
+    if (!client.roleReactions?.has(reaction.message.id)) return;
+
+    const roleMapping = client.roleReactions.get(reaction.message.id);
+    const roleId = roleMapping[reaction.emoji.name];
+    if (!roleId) return;
+
+    const guild = reaction.message.guild;
+    const member = await guild.members.fetch(user.id);
+    try {
+      await member.roles.add(roleId);
+      console.log(`Added role ${roleId} to user ${user.tag}`);
+    } catch (error) {
+      console.error('Error adding role:', error);
+    }
   } catch (error) {
-    console.error('Error adding role:', error);
+    console.error('Error in messageReactionAdd:', error);
   }
 });
 
 client.on('messageReactionRemove', async (reaction, user) => {
-  if (user.bot) return;
-  if (!client.roleReactions?.has(reaction.message.id)) return;
-
-  const roleMapping = client.roleReactions.get(reaction.message.id);
-  const roleId = roleMapping[reaction.emoji.name];
-  if (!roleId) return;
-
-  const guild = reaction.message.guild;
-  const member = await guild.members.fetch(user.id);
   try {
-    await member.roles.remove(roleId);
+    if (user.bot) return;
+
+    // When a reaction is received, check if the structure is partial
+    if (reaction.partial) {
+      // If the message this reaction belongs to was removed, the fetching might result in an API error
+      try {
+        await reaction.fetch();
+      } catch (error) {
+        console.error('Something went wrong when fetching the message:', error);
+        return;
+      }
+    }
+
+    if (!client.roleReactions?.has(reaction.message.id)) return;
+
+    const roleMapping = client.roleReactions.get(reaction.message.id);
+    const roleId = roleMapping[reaction.emoji.name];
+    if (!roleId) return;
+
+    const guild = reaction.message.guild;
+    const member = await guild.members.fetch(user.id);
+    try {
+      await member.roles.remove(roleId);
+      console.log(`Removed role ${roleId} from user ${user.tag}`);
+    } catch (error) {
+      console.error('Error removing role:', error);
+    }
   } catch (error) {
-    console.error('Error removing role:', error);
+    console.error('Error in messageReactionRemove:', error);
   }
 });
