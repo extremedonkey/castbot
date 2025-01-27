@@ -338,13 +338,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       try {
         console.log('Processing castlist command');
         const guildId = req.body.guild_id;
+        const castlistName = data.options?.find(opt => opt.name === 'castlist')?.value || 'default';
 
-        // Load full guild data
-        const guildData = await loadPlayerData();
-        const tribes = guildData[guildId]?.tribes || {};
-        
+        // Load tribe data based on castlist
+        const tribes = await getGuildTribes(guildId, castlistName);
+        console.log('Loaded tribes:', tribes);
+
         // Check if any tribes exist
-        if (Object.keys(tribes).length === 0) {
+        if (tribes.length === 0) {
           res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -364,7 +365,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
 
         const guild = await client.guilds.fetch(guildId);
-        console.log('Guild:', guild); // Debug log
+        console.log('Guild:', guild);
 
         if (!guild) {
           throw new Error('Could not fetch guild');
@@ -375,45 +376,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         await fullGuild.roles.fetch();
         const members = await fullGuild.members.fetch();
 
-        // Save all player data to JSON
-        const allMembers = Array.from(members.values());
-        const savedData = await saveAllPlayerData(allMembers, fullGuild, roleConfig);
-        console.log('Saved all player data to JSON:', savedData);
-
-        // Create arrays to store tribe data
-        const tribeRoles = [];
-        const tribeMembers = [];
-
-        // Fetch roles and members for each tribe
-        for (const [roleId, tribeData] of Object.entries(tribes)) {
-          try {
-            const tribeRole = fullGuild.roles.cache.get(roleId);
-            if (!tribeRole) continue;
-
-            if (tribeRoles.length > 0) {
-              embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
-            }
-            
-            const header = tribeData.emoji
-              ? `${tribeData.emoji}  ${tribeRole.name}  ${tribeData.emoji}`
-              : tribeRole.name;
-            
-            embed.addFields({ name: header, value: '\u200B', inline: false });
-            
-            const tribeMembers = members.filter(member => member.roles.cache.has(roleId));
-            const memberFields = await createMemberFields(tribeMembers, fullGuild);
-            
-            if (embed.data.fields.length + memberFields.length > 25) {
-              throw new Error('Embed field limit exceeded');
-            }
-            
-            embed.addFields(memberFields);
-          } catch (error) {
-            // ...existing error handling...
-          }
-        }
-
-        // Create the embed
+        // Create the embed first
         const embed = new EmbedBuilder()
           .setTitle('CastBot: Dynamic Castlist')
           .setAuthor({ 
@@ -427,29 +390,39 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
 
         // Add each tribe that has members
-        for (let i = 0; i < tribeRoles.length; i++) {
+        for (const tribe of tribes) {
           try {
-            console.log(`Adding tribe ${i + 1} to embed: ${tribeRoles[i].name}`);
-            // Add spacer if this isn't the first tribe
-            if (i > 0) {
+            const tribeRole = await fullGuild.roles.fetch(tribe.roleId);
+            if (!tribeRole) {
+              console.log(`Could not find role for tribe ${tribe.roleId}`);
+              continue;
+            }
+
+            console.log(`Processing tribe role: ${tribeRole.name} (${tribeRole.id})`);
+
+            // Add spacer if this isn't the first tribe added
+            if (embed.data.fields?.length > 0) {
               embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
             }
+
+            // Add tribe header
+            const header = tribe.emoji
+              ? `${tribe.emoji}  ${tribeRole.name}  ${tribe.emoji}`
+              : tribeRole.name;
             
-            // Add tribe header and members
-            const tribeEmoji = tribesCfg[`tribe${i + 1}emoji`] || '';
-            const header = tribeEmoji
-              ? `${tribeEmoji}  ${tribeRoles[i].name}  ${tribeEmoji}`
-              : tribeRoles[i].name;
             embed.addFields({ name: header, value: '\u200B', inline: false });
-            const memberFields = await createMemberFields(tribeMembers[i], fullGuild);
-            console.log(`Generated ${memberFields.length} member fields for tribe ${i + 1}`);
-            
-            // Check if adding these fields would exceed the limit
+
+            // Get members with this role
+            const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
+            const memberFields = await createMemberFields(tribeMembers, fullGuild);
+            console.log(`Generated ${memberFields.length} member fields for tribe ${tribeRole.name}`);
+
             if (embed.data.fields.length + memberFields.length > 25) {
               throw new Error('Embed field limit exceeded');
             }
-            
+
             embed.addFields(memberFields);
+
           } catch (error) {
             if (error.message === 'Embed field limit exceeded') {
               console.error('Embed field limit exceeded, sending error message');
@@ -463,7 +436,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               });
               return;
             }
-            throw error;
+            console.error(`Error processing tribe:`, error);
           }
         }
 
@@ -475,8 +448,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             embeds: [embed],
           },
         });
+
       } catch (error) {
         console.error('Error handling castlist command:', error);
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: 'An error occurred while generating the castlist.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          },
+        });
       }
       return;
     } else if (name === 'playericons') {
