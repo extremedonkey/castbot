@@ -147,73 +147,80 @@ app.get("/interactions", (req, res) => {
 app.use(express.json());
 
 // Define handleSetTribe before the route handlers
-async function handleSetTribe(guildId, tribeNumber, options) {
-    const tribeRoleId = options.find(option => option.name === 'role')?.value || options[0].value;
-    const emojiOption = options.find(option => option.name === 'emoji');
-    const tribeEmoji = emojiOption?.value || null;
+async function handleSetTribe(guildId, roleId, options) {
+  const guild = await client.guilds.fetch(guildId);
+  const emojiOption = options.find(opt => opt.name === 'emoji');
+  const castlistName = options.find(opt => opt.name === 'castlist')?.value || 'default';
 
-    console.log(`Setting tribe${tribeNumber} for guild ${guildId} to role ${tribeRoleId}`);
+  // Get guild and verify role
+  const role = await guild.roles.fetch(roleId);
+  const data = await loadPlayerData();
+  
+  if (!role) {
+    throw new Error(`Role ${roleId} not found in guild ${guildId}`);
+  }
 
-    // Get guild and verify role
-    const guild = await client.guilds.fetch(guildId);
-    const role = await guild.roles.fetch(tribeRoleId);
-    const guildData = await loadPlayerData(guildId);
-    
-    if (!role) {
-        throw new Error(`Role ${tribeRoleId} not found in guild ${guildId}`);
+  // Ensure tribes structure exists
+  if (!data[guildId]) data[guildId] = {};
+  if (!data[guildId].tribes) data[guildId].tribes = {};
+
+  // Check if tribe exists in a different castlist
+  const existingTribe = Object.entries(data[guildId].tribes)
+    .find(([id, tribe]) => id === roleId && tribe.castlist !== castlistName);
+  
+  if (existingTribe) {
+    throw new Error(`Tribe not added - this tribe already exists in ${existingTribe[1].castlist}. You can only have each tribe in one castlist.`);
+  }
+
+  // Calculate field count
+  const totalFields = await calculateCastlistFields(guild, roleId, castlistName);
+  if (totalFields > 25) {
+    throw new Error('Cannot add tribe: Too many fields (maximum 25). Consider creating a new castlist.');
+  }
+
+  // Update or add tribe
+  data[guildId].tribes[roleId] = {
+    emoji: emojiOption?.value || null,
+    castlist: castlistName
+  };
+
+  await savePlayerData(data);
+
+  // Use existing guild instance for emoji creation
+  const members = await guild.members.fetch();
+  const targetMembers = members.filter(m => m.roles.cache.has(roleId));
+
+  let resultLines = [];
+  let existingLines = [];
+  let errorLines = [];
+  let maxEmojiReached = false;
+
+  for (const [_, member] of targetMembers) {
+    try {
+      // Check if player already has an emoji
+      const existingPlayer = data[guildId].players[member.id];
+      if (existingPlayer?.emojiCode) {
+        existingLines.push(`${member.displayName}: Already has emoji \`${existingPlayer.emojiCode}\``);
+        continue;
+      }
+
+      const result = await createEmojiForUser(member, guild);
+      await updatePlayer(guildId, member.id, { emojiCode: result.emojiCode });
+      resultLines.push(`${member.displayName} ${result.emojiCode} (${result.isAnimated ? 'animated' : 'static'})`);
+    } catch (error) {
+      // ...existing emoji error handling...
     }
+  }
 
-    console.log(`Found role: ${role.name} (${role.id})`);
-
-    // Update tribe data
-    await updateGuildTribes(guildId, {
-        [`tribe${tribeNumber}`]: tribeRoleId,
-        [`tribe${tribeNumber}emoji`]: tribeEmoji
-    });
-
-    // Verify the update
-    const updatedTribes = await getGuildTribes(guildId);
-    console.log('Tribes after update:', updatedTribes);
-
-    // Use the existing guild instance
-    const members = await guild.members.fetch();
-    const targetMembers = members.filter(m => m.roles.cache.has(tribeRoleId));
-
-    let resultLines = [];
-    let existingLines = [];
-    let errorLines = [];
-    let maxEmojiReached = false;
-
-    for (const [_, member] of targetMembers) {
-        try {
-            // Check if player already has an emoji
-            const existingPlayer = guildData.players[member.id];
-            if (existingPlayer?.emojiCode) {
-                existingLines.push(`${member.displayName}: Already has emoji \`${existingPlayer.emojiCode}\``);
-                continue;
-            }
-
-            const result = await createEmojiForUser(member, guild);
-            await updatePlayer(guildId, member.id, { emojiCode: result.emojiCode });
-            resultLines.push(`${member.displayName} ${result.emojiCode} (${result.isAnimated ? 'animated' : 'static'})`);
-
-        } catch (error) {
-            if (error.code === 50138) {
-                errorLines.push(`${error.memberName}: Failed to upload emoji - File size too large`);
-            } else {
-                errorLines.push(`${error.memberName}: Failed to upload emoji - ${error.message}`);
-            }
-            console.error('Emoji creation error:', error);
-        }
-    }
-
-    return {
-        resultLines,
-        existingLines,
-        errorLines,
-        maxEmojiReached,
-        tribeRoleId
-    };
+  return {
+    resultLines,
+    existingLines,
+    errorLines,
+    maxEmojiReached,
+    tribeRoleId: roleId,
+    totalFields,
+    isNew: !data[guildId].tribes[roleId]
+  };
 }
 
 async function handleClearTribe(interaction, tribeNumber) {
@@ -1139,13 +1146,42 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
 
     const roleId = data.options.find(opt => opt.name === 'role').value;
+    const castlistName = data.options.find(opt => opt.name === 'castlist')?.value || 'default';
     const result = await handleSetTribe(req.body.guild_id, roleId, data.options);
+
+    // Prepare response message
+    const messageLines = [
+      `Tribe <@&${result.tribeRoleId}> ${result.isNew ? 'added to' : 'updated in'} castlist '${castlistName}'`,
+      ''
+    ];
+
+    if (result.resultLines.length > 0) {
+      messageLines.push('New emojis created:');
+      messageLines.push(...result.resultLines);
+      messageLines.push('');
+    }
+
+    if (result.existingLines.length > 0) {
+      messageLines.push('Existing emojis found:');
+      messageLines.push(...result.existingLines);
+      messageLines.push('');
+    }
+
+    if (result.errorLines.length > 0) {
+      messageLines.push('Errors encountered:');
+      messageLines.push(...result.errorLines);
+    }
+
+    if (result.maxEmojiReached) {
+      messageLines.push('');
+      messageLines.push('⚠️ Server emoji limit reached. Some emojis could not be created.');
+    }
 
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
     await DiscordRequest(endpoint, {
       method: 'PATCH',
       body: {
-        content: `Tribe <@&${result.tribeRoleId}> ${result.isNew ? 'added' : 'updated'}. Total fields that will be used: ${result.totalFields}`,
+        content: messageLines.join('\n'),
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
