@@ -1,0 +1,596 @@
+{
+  "/* Server ID */": null,
+  "1297188286191767603": {
+    "players": {
+      "391415444084490240": {
+        "age": "36",
+        "emojiCode": "<:391415444084490240:1331591371810799691>"
+      },
+      "676262975132139522": {
+        "emojiCode": null,
+        "age": "21"
+      },
+      "1088078919409881098": {
+        "emojiCode": "<:1088078919409881098:1331592200458600499>",
+        "age": "21"
+      },
+      "287002306078310400": {
+        "emojiCode": "<:287002306078310400:1331592203516121121>",
+        "age": "27"
+      },
+      "208197633846542336": {
+        "emojiCode": "<:208197633846542336:1331592205822857216>",
+        "age": "21"
+      },
+      "1147751688481026110": {
+        "emojiCode": "<:1147751688481026110:1330211914050965616>",
+        "age": "23"
+      },
+      "696456309762949141": {
+        "emojiCode": "<:696456309762949141:1331591365838114927>",
+        "age": "99"
+      },
+      "197562770068078592": {
+        "emojiCode": "<:197562770068078592:1331591368019152906>",
+        "age": "100"
+      },
+      "443545183997657120": {
+        "emojiCode": "<:443545183997657120:1331591369936076881>"
+      },
+      "909852958525636660": {
+        "emojiCode": "<:909852958525636660:1331591374130384938>"
+      },
+      "386463066600112128": {
+        "emojiCode": "<:386463066600112128:1331591376466481214>",
+        "age": "55"
+      },
+      "689155539028148232": {
+        "emojiCode": "<:689155539028148232:1331591379050168322>",
+        "age": "10"
+      },
+      "1125936782698086461": {
+        "emojiCode": "<:1125936782698086461:1330120062207660134>"
+      },
+      "723629872173416579": {
+        "emojiCode": "<:723629872173416579:1330120064304808039>"
+      },
+      "504494339116761088": {
+        "emojiCode": "<:504494339116761088:1330120066595033211>"
+      },
+      "499595256270946326": {
+        "age": "10",
+        "emojiCode": null
+      },
+      "1319912453248647170": {
+        "emojiCode": "<:1319912453248647170:1331664707290927246>"
+      }
+    },
+    "tribes": {
+      "tribe1": "1297188286338695172",
+      "tribe1emoji": null,
+      "tribe2": null,
+      "tribe2emoji": null,
+      "tribe3": "1319920908680433664",
+      "tribe3emoji": null,
+      "tribe4": null,
+      "tribe4emoji": null
+    },
+    "timezones": {
+      "1320094346288300124": {
+        "offset": -5
+      },
+      "1320094564731850803": {
+        "offset": -6
+      },
+      "1320094467486908507": {
+        "offset": -8
+      },
+      "1328044491860607118": {
+        "offset": 11
+      },
+      "1330207937330679938": {
+        "offset": 13
+      },
+      "1328044184673714248": {
+        "offset": 0
+      },
+      "1330207345619374131": {
+        "offset": 8
+      }
+    },
+    "pronounRoleIDs": [
+      "1317667003015626795",
+      "1317667163854868552",
+      "1321780294482923530",
+      "1297199989646299208",
+      "1330184045216141415",
+      "1297199987498946673",
+      "1297199988375293972",
+      "1319920908680433664"
+    ],
+    "serverName": "EpochORG S7: Rumrunners",
+    "icon": "https://cdn.discordapp.com/icons/1297188286191767603/82ee1b34273d340c02179b0ae8567e8a.webp",
+    "ownerId": "696456309762949141",
+    "memberCount": 161,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1729344188021,
+    "lastUpdated": 1737564601415
+  },
+  "1127596863885934652": {
+    "players": {
+      "987862850338963506": {
+        "emojiCode": "<:987862850338963506:1330213405285683200>"
+      },
+      "475402113443168256": {
+        "emojiCode": "<:475402113443168256:1330213408754110486>",
+        "age": "22"
+      },
+      "372442773799829506": {
+        "emojiCode": "<:372442773799829506:1330213412265001031>"
+      },
+      "692193262957756417": {
+        "emojiCode": "<:692193262957756417:1330213415163265127>"
+      },
+      "700105131517018182": {
+        "emojiCode": "<:700105131517018182:1330213418807988265>"
+      },
+      "233762709932474370": {
+        "emojiCode": "<:233762709932474370:1330213423342030969>"
+      },
+      "705936744595587112": {
+        "emojiCode": "<:705936744595587112:1330213425535647807>"
+      },
+      "420459241313271808": {
+        "emojiCode": "<:420459241313271808:1330213428119212142>"
+      },
+      "348399805048946692": {
+        "emojiCode": "<:348399805048946692:1330213431885955123>"
+      },
+      "572291395365109770": {
+        "emojiCode": "<:572291395365109770:1330213435363033139>"
+      },
+      "765705051162804264": {
+        "emojiCode": "<:765705051162804264:1330213437766242466>",
+        "age": "31"
+      },
+      "700145159618166856": {
+        "emojiCode": "<:700145159618166856:1330213441155235870>"
+      },
+      "523325892810768397": {
+        "emojiCode": "<:523325892810768397:1330215055467348099>"
+      },
+      "749083524241555486": {
+        "emojiCode": "<:749083524241555486:1330215058835374200>"
+      },
+      "468655730975703041": {
+        "emojiCode": "<:468655730975703041:1330215062303936552>"
+      },
+      "391415444084490240": {
+        "emojiCode": "<:391415444084490240:1330215064078123018>",
+        "age": "36"
+      },
+      "1086246253819613274": {
+        "emojiCode": "<:1086246253819613274:1330215066083135528>"
+      },
+      "891514863107579984": {
+        "emojiCode": "<:891514863107579984:1330215069564534845>"
+      },
+      "977455730300956683": {
+        "emojiCode": "<:977455730300956683:1330215073297469452>"
+      },
+      "650409567028641802": {
+        "emojiCode": "<:650409567028641802:1330215077395304558>"
+      }
+    },
+    "tribes": {
+      "tribe1": "1186677670998724731",
+      "tribe1emoji": null,
+      "tribe2": "1127614270306263080",
+      "tribe2emoji": null
+    },
+    "timezones": {
+      "1129716603504828509": {
+        "offset": 8
+      }
+    },
+    "pronounRoleIDs": [
+      "1129714391877681192",
+      "1129714392699768912",
+      "1129714393358274570"
+    ],
+    "serverName": "LOSTVivor",
+    "icon": "https://cdn.discordapp.com/icons/1127596863885934652/21246f7f1ab8a24074a5bdb6ae3b6ba2.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 108,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1688910442087,
+    "lastUpdated": 1737564601410
+  },
+  "1308581797915005029": {
+    "players": {
+      "877692281619116093": {
+        "emojiCode": "<:877692281619116093:1331595398128734218>"
+      },
+      "813130551254056960": {
+        "emojiCode": "<:813130551254056960:1331595401727316059>"
+      },
+      "272907597303119873": {
+        "emojiCode": "<:272907597303119873:1331595405217108030>"
+      },
+      "242017916826943489": {
+        "emojiCode": "<:242017916826943489:1331595408153251850>"
+      },
+      "473926986516135937": {
+        "emojiCode": "<:473926986516135937:1331595411504496731>"
+      },
+      "468655730975703041": {
+        "emojiCode": "<:468655730975703041:1331595414000111748>"
+      },
+      "688699623581155340": {
+        "emojiCode": "<:688699623581155340:1331595416273162330>"
+      },
+      "391415444084490240": {
+        "emojiCode": "<:391415444084490240:1331595418135433338>"
+      },
+      "700105131517018182": {
+        "emojiCode": "<:700105131517018182:1331595419611955293>"
+      },
+      "671651621956222978": {
+        "emojiCode": "<:671651621956222978:1331595422107566202>"
+      }
+    },
+    "tribes": {
+      "tribe1": "1308797124275863592",
+      "tribe1emoji": null
+    },
+    "timezones": {},
+    "serverName": "SERVIVORG S10 - DRIVE IN MADNESS",
+    "icon": "https://cdn.discordapp.com/icons/1308581797915005029/844ba42288ad45eec25cf10db6b356ab.webp",
+    "ownerId": "468655730975703041",
+    "memberCount": 97,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1732060612897,
+    "lastUpdated": 1737564601419
+  },
+  "1195996661185511434": {
+    "players": {
+      "362707810296791040": {
+        "emojiCode": "<:362707810296791040:1331656266619289613>"
+      },
+      "235148962103951360": {
+        "emojiCode": "<:235148962103951360:1331656268888408177>"
+      },
+      "468655730975703041": {
+        "emojiCode": "<:468655730975703041:1331656271828357150>"
+      },
+      "391415444084490240": {
+        "emojiCode": "<:391415444084490240:1331656274672091178>"
+      },
+      "630470402900230146": {
+        "emojiCode": "<:630470402900230146:1331656277876801536>"
+      },
+      "700105131517018182": {
+        "emojiCode": "<:700105131517018182:1331656279692677181>"
+      },
+      "782105629572464652": {
+        "emojiCode": "<:782105629572464652:1331656281379049575>"
+      },
+      "650409567028641802": {
+        "emojiCode": "<:650409567028641802:1331656283467677727>"
+      }
+    },
+    "tribes": {
+      "tribe1": "1204580983349973032",
+      "tribe1emoji": "🛡️"
+    },
+    "timezones": {},
+    "serverName": "Zeldavivor",
+    "icon": "https://cdn.discordapp.com/icons/1195996661185511434/294b3ca83eb4fefc2a1ac43aeea70cb3.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 38,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1705218224570,
+    "lastUpdated": 1737564601412
+  },
+  "1209015985798127696": {
+    "players": {
+      "696456309762949141": {},
+      "197562770068078592": {},
+      "391415444084490240": {},
+      "386463066600112128": {},
+      "689155539028148232": {}
+    },
+    "tribes": {
+      "tribe1": "1209022775147237397",
+      "tribe1emoji": "🍆"
+    },
+    "timezones": {},
+    "serverName": "EpochORG S4: Ancient Egypt",
+    "icon": "https://cdn.discordapp.com/icons/1209015985798127696/fab803057622fa548002ca6920f860ac.webp",
+    "ownerId": "696456309762949141",
+    "memberCount": 94,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1708322273445,
+    "lastUpdated": 1737564601414
+  },
+  "1331657596087566398": {
+    "serverName": "CastBot",
+    "icon": "https://cdn.discordapp.com/icons/1331657596087566398/5ae33ab383540721e8a07387ddbf58f5.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 3,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1737562311909,
+    "lastUpdated": 1737564601420,
+    "players": {},
+    "tribes": {
+      "tribe1": null,
+      "tribe1emoji": null,
+      "tribe2": null,
+      "tribe2emoji": null,
+      "tribe3": null,
+      "tribe3emoji": null,
+      "tribe4": null,
+      "tribe4emoji": null
+    },
+    "timezones": {},
+    "pronounRoleIDs": []
+  },
+  "894395227777933373": {
+    "serverName": "Oreovivor S13 Scooby Doo",
+    "icon": "https://cdn.discordapp.com/icons/894395227777933373/2c9ed955aa9f2b907eeb6e3d004132c5.webp",
+    "ownerId": "245470919600898048",
+    "memberCount": 129,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1633310839362,
+    "lastUpdated": 1737564725300,
+    "players": {
+      "883720052224954368": {
+        "emojiCode": "<:883720052224954368:1331667844232122408>"
+      },
+      "343519555987046400": {
+        "emojiCode": "<:343519555987046400:1331667846027149332>"
+      }
+    },
+    "tribes": {
+      "tribe1": "1254096027531743293",
+      "tribe1emoji": null,
+      "tribe2": null,
+      "tribe2emoji": null,
+      "tribe3": null,
+      "tribe3emoji": null,
+      "tribe4": null,
+      "tribe4emoji": null
+    },
+    "timezones": {},
+    "pronounRoleIDs": []
+  },
+  "1080166267136262154": {
+    "serverName": "Triumph Hub",
+    "icon": "https://cdn.discordapp.com/icons/1080166267136262154/dd80214e2801612e97849f4eb45889e9.webp",
+    "ownerId": "572291395365109770",
+    "memberCount": 396,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1677602106604,
+    "lastUpdated": 1737566075240,
+    "players": {
+      "572291395365109770": {
+        "age": "28"
+      }
+    },
+    "tribes": {
+      "tribe1": "1331675513496010802",
+      "tribe1emoji": null,
+      "tribe2": null,
+      "tribe2emoji": null,
+      "tribe3": null,
+      "tribe3emoji": null,
+      "tribe4": null,
+      "tribe4emoji": null
+    },
+    "timezones": {
+      "1331674255691092032": {
+        "offset": -5
+      },
+      "1331674396737142865": {
+        "offset": -6
+      },
+      "1331674425828839465": {
+        "offset": -7
+      },
+      "1331674446276329586": {
+        "offset": -8
+      }
+    },
+    "pronounRoleIDs": [
+      "1137804391609540789",
+      "1137804240115466341",
+      "1137805245905371177"
+    ]
+  },
+  "1330203988100120668": {
+    "serverName": "EpochORG S8: Armageddon",
+    "icon": "https://cdn.discordapp.com/icons/1330203988100120668/dfc71d1a68af5619718d1f2d1c207541.webp",
+    "ownerId": "696456309762949141",
+    "memberCount": 14,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1737215744758,
+    "lastUpdated": 1737567837314,
+    "players": {},
+    "tribes": {
+      "tribe1": null,
+      "tribe1emoji": null,
+      "tribe2": null,
+      "tribe2emoji": null,
+      "tribe3": null,
+      "tribe3emoji": null,
+      "tribe4": null,
+      "tribe4emoji": null
+    },
+    "timezones": {},
+    "pronounRoleIDs": []
+  },
+  "1198412959240699935": {
+    "serverName": "RVIVOR S5: DONNIE DARKORG",
+    "icon": "https://cdn.discordapp.com/icons/1198412959240699935/6be6b79d4d6d1050bca3b5b022d1dabb.webp",
+    "ownerId": "455951495272202240",
+    "memberCount": 189,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1705794314919,
+    "lastUpdated": 1737676255574,
+    "players": {
+      "868564793756385351": {
+        "age": "23",
+        "emojiCode": "<:868564793756385351:1332146079323656212>"
+      },
+      "420787141023629316": {
+        "age": "32",
+        "emojiCode": "<:420787141023629316:1332146073619271792>"
+      },
+      "338264402245582848": {
+        "age": "30",
+        "emojiCode": "<:338264402245582848:1332146082678833225>"
+      },
+      "455951495272202240": {
+        "age": "27",
+        "emojiCode": "<:455951495272202240:1332146070486126592>"
+      },
+      "155149108183695360": {
+        "emojiCode": "<:155149108183695360:1332146075678806147>"
+      },
+      "767266852857577545": {
+        "emojiCode": "<:767266852857577545:1332146086131007488>"
+      }
+    },
+    "tribes": {
+      "tribe1": "1199548544214913094",
+      "tribe1emoji": null,
+      "tribe2": null,
+      "tribe2emoji": null,
+      "tribe3": null,
+      "tribe3emoji": null,
+      "tribe4": null,
+      "tribe4emoji": null
+    },
+    "timezones": {
+      "1332141259199877212": {
+        "offset": -7
+      },
+      "1332141359783477279": {
+        "offset": -8
+      },
+      "1332141407758057562": {
+        "offset": -6
+      }
+    },
+    "pronounRoleIDs": [
+      "1330743300344254515",
+      "1330743445073035264"
+    ]
+  },
+  "1203901346311438356": {
+    "serverName": "Parkvivor: Mythic Lands - S3: Middle Earth",
+    "icon": "https://cdn.discordapp.com/icons/1203901346311438356/9b285604d1f2db5e01df0853f2a42223.webp",
+    "ownerId": "233762709932474370",
+    "memberCount": 97,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1707102848366,
+    "lastUpdated": 1737767242435,
+    "players": {
+      "178018306328887298": {
+        "emojiCode": "<:178018306328887298:1332519064249172040>"
+      },
+      "692928428046942311": {
+        "emojiCode": "<:692928428046942311:1332519075976314891>"
+      },
+      "242017916826943489": {
+        "emojiCode": "<:242017916826943489:1332519078316871731>"
+      },
+      "977455730300956683": {
+        "emojiCode": "<:977455730300956683:1332519080611024967>"
+      },
+      "233762709932474370": {
+        "emojiCode": "<:233762709932474370:1332519083891097641>"
+      },
+      "1058212158732783727": {
+        "emojiCode": "<:1058212158732783727:1332519419938869288>"
+      },
+      "252302032390586368": {}
+    },
+    "tribes": {
+      "tribe1": "1205906888194129961",
+      "tribe1emoji": null,
+      "tribe2": null,
+      "tribe2emoji": null,
+      "tribe3": null,
+      "tribe3emoji": null,
+      "tribe4": null,
+      "tribe4emoji": null
+    },
+    "timezones": {
+      "1332518033427660854": {
+        "offset": 1
+      },
+      "1332518073907019796": {
+        "offset": -5
+      },
+      "1332518086238146631": {
+        "offset": -6
+      },
+      "1332518108719611984": {
+        "offset": -7
+      },
+      "1332518126327300169": {
+        "offset": -8
+      }
+    },
+    "pronounRoleIDs": [
+      "1206381198461370408",
+      "1206381197748346950",
+      "1206381199140851722"
+    ]
+  }
+}

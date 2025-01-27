@@ -1,0 +1,13 @@
+node_modules/
+.env*
+.env
+.env-prod
+*.env
+.env-prod
+playerData.json
+logs/
+*.log
+.archive
+.supporting
+.ngrok.yml
+desktop.ini
