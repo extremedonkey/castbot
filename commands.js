@@ -343,7 +343,23 @@ const GETTING_STARTED_COMMAND = {
   type: 1,
 };
 
+const ROLE_GENERATOR_COMMAND = {
+  name: maybePrependDev('role_generator'),
+  description: 'Create standard timezone and pronoun roles for your server',
+  type: 1,
+  default_member_permissions: ADMIN_PERMISSIONS
+};
+
+const REACT_PRONOUNS_COMMAND = {
+  name: maybePrependDev('react_pronouns'),
+  description: 'Create a reaction role message for pronoun roles',
+  type: 1,
+  default_member_permissions: ADMIN_PERMISSIONS
+};
+
 const ALL_COMMANDS = [
+  REACT_PRONOUNS_COMMAND,  // Add new command first
+  ROLE_GENERATOR_COMMAND,   // Add new command first
   CLEAR_TRIBE_COMMAND,     // Add new command first
   SET_TRIBE_COMMAND,   
   SET_TRIBE1_COMMAND,  

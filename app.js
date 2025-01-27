@@ -28,6 +28,12 @@ import fetch from 'node-fetch';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 
+// Add these constants near the top with other constants
+const REACTION_NUMBERS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
+
+// Add this to your imports
+import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
+
 // Update ensureServerData function
 async function ensureServerData(guild) {
   const playerData = await loadPlayerData();
@@ -1328,6 +1334,99 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
+} else if (name === 'react_pronouns') {
+  try {
+    const guildId = req.body.guild_id;
+    const guild = await client.guilds.fetch(guildId);
+
+    // Get pronoun roles from storage
+    const pronounRoleIDs = await getGuildPronouns(guildId);
+    if (!pronounRoleIDs?.length) {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: 'No pronoun roles found. Add some using /pronouns_add first!',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    }
+
+    // Get role objects and sort alphabetically
+    const roles = await Promise.all(
+      pronounRoleIDs.map(id => guild.roles.fetch(id))
+    );
+    const sortedRoles = roles
+      .filter(role => role) // Remove any null roles
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (sortedRoles.length > REACTION_NUMBERS.length) {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: `Too many pronoun roles (maximum ${REACTION_NUMBERS.length} supported)`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    }
+
+    // Create embed
+    const embed = new EmbedBuilder()
+      .setTitle('Pronoun Role Selection')
+      .setDescription('React with the emoji corresponding to your pronouns:\n\n' + 
+        sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
+      .setColor('#7ED321');
+
+    // Send the message
+    await res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        embeds: [embed]
+      }
+    });
+
+    // Get the message we just sent
+    const response = await fetch(
+      `https://discord.com/api/v10/channels/${req.body.channel_id}/messages`,
+      {
+        headers: {
+          Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    const messages = await response.json();
+    const message = messages[0];  // Get most recent message
+
+    // Add reactions
+    for (let i = 0; i < sortedRoles.length; i++) {
+      await fetch(
+        `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${message.id}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+          },
+        }
+      );
+    }
+
+    // Store role-emoji mappings in memory for reaction handler
+    if (!client.roleReactions) client.roleReactions = new Map();
+    client.roleReactions.set(message.id, 
+      Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]))
+    );
+
+  } catch (error) {
+    console.error('Error in react_pronouns:', error);
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: 'Error creating reaction message',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+  return;
 }
 
   } // end if APPLICATION_COMMAND
@@ -1650,3 +1749,38 @@ async function determineCastlistToShow(guildId, userId, requestedCastlist = null
   // Otherwise show first alphabetically
   return Array.from(userCastlists).sort()[0];
 }
+
+// Add reaction handlers near client.on('guildCreate') handlers
+client.on('messageReactionAdd', async (reaction, user) => {
+  if (user.bot) return;
+  if (!client.roleReactions?.has(reaction.message.id)) return;
+
+  const roleMapping = client.roleReactions.get(reaction.message.id);
+  const roleId = roleMapping[reaction.emoji.name];
+  if (!roleId) return;
+
+  const guild = reaction.message.guild;
+  const member = await guild.members.fetch(user.id);
+  try {
+    await member.roles.add(roleId);
+  } catch (error) {
+    console.error('Error adding role:', error);
+  }
+});
+
+client.on('messageReactionRemove', async (reaction, user) => {
+  if (user.bot) return;
+  if (!client.roleReactions?.has(reaction.message.id)) return;
+
+  const roleMapping = client.roleReactions.get(reaction.message.id);
+  const roleId = roleMapping[reaction.emoji.name];
+  if (!roleId) return;
+
+  const guild = reaction.message.guild;
+  const member = await guild.members.fetch(user.id);
+  try {
+    await member.roles.remove(roleId);
+  } catch (error) {
+    console.error('Error removing role:', error);
+  }
+});
