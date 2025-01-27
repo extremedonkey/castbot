@@ -352,10 +352,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       try {
         console.log('Processing castlist command');
         const guildId = req.body.guild_id;
-        const castlistName = data.options?.find(opt => opt.name === 'castlist')?.value || 'default';
+        const userId = req.body.member.user.id;
+        const requestedCastlist = data.options?.find(opt => opt.name === 'castlist')?.value;
 
-        // Load tribe data based on castlist
-        const tribes = await getGuildTribes(guildId, castlistName);
+        // Determine which castlist to show
+        const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
+        console.log(`Selected castlist: ${castlistToShow}`);
+
+        // Load tribe data based on selected castlist
+        const tribes = await getGuildTribes(guildId, castlistToShow);
         console.log('Loaded tribes:', tribes);
 
         // Check if any tribes exist
@@ -391,8 +396,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const members = await fullGuild.members.fetch();
 
         // Create the embed first
+        const embedTitle = castlistToShow === 'default' 
+          ? 'CastBot: Dynamic Castlist'
+          : `CastBot: Dynamic Castlist (${castlistToShow})`;
+        
         const embed = new EmbedBuilder()
-          .setTitle('CastBot: Dynamic Castlist')
+          .setTitle(embedTitle)
           .setAuthor({ 
             name: fullGuild.name || 'Unknown Server', 
             iconURL: fullGuild.iconURL() || undefined 
@@ -1473,4 +1482,57 @@ async function createMemberFields(members, guild) {
     }
   }
   return fields;
+}
+
+// Add this helper function before the castlist command handler
+async function determineCastlistToShow(guildId, userId, requestedCastlist = null) {
+  const data = await loadPlayerData();
+  const tribes = data[guildId]?.tribes || {};
+  
+  // If specific castlist requested, always use that
+  if (requestedCastlist) {
+    return requestedCastlist;
+  }
+
+  // Get all unique castlists in this guild
+  const castlists = new Set(
+    Object.values(tribes)
+      .filter(tribe => tribe?.castlist)
+      .map(tribe => tribe.castlist)
+  );
+
+  // If only one castlist exists, use it
+  if (castlists.size <= 1) {
+    return Array.from(castlists)[0] || 'default';
+  }
+
+  // Find which castlists the user appears in
+  const userCastlists = new Set();
+  for (const [tribeId, tribe] of Object.entries(tribes)) {
+    if (!tribe?.castlist) continue;
+    
+    const guild = await client.guilds.fetch(guildId);
+    const member = await guild.members.fetch(userId);
+    if (member.roles.cache.has(tribeId)) {
+      userCastlists.add(tribe.castlist);
+    }
+  }
+
+  // If user not in any castlist, show default
+  if (userCastlists.size === 0) {
+    return 'default';
+  }
+
+  // If user in exactly one castlist, show that
+  if (userCastlists.size === 1) {
+    return Array.from(userCastlists)[0];
+  }
+
+  // If user in multiple castlists including default, show default
+  if (userCastlists.has('default')) {
+    return 'default';
+  }
+
+  // Otherwise show first alphabetically
+  return Array.from(userCastlists).sort()[0];
 }

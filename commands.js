@@ -140,6 +140,14 @@ const CASTLIST_COMMAND = {
   name: maybePrependDev('castlist'),
   description: 'Display the dynamic castlist',
   type: 1,
+  options: [
+    {
+      name: 'castlist',
+      description: 'Select which castlist to display (if left blank, will display default castlist)',
+      type: 3, // STRING type
+      required: false
+    }
+  ]
 };
 
 const CLEAR_TRIBE1_COMMAND = {
