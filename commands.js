@@ -363,7 +363,22 @@ const REACT_TIMEZONES_COMMAND = {
   type: 1,  // CHAT_INPUT
 };
 
+const SET_AGE_COMMAND = {
+  name: maybePrependDev('set_age'),
+  description: 'Set your own age in the castlist',
+  type: 1,
+  options: [
+    {
+      type: 3, // STRING type
+      name: 'age',
+      description: 'Enter your age.',
+      required: true,
+    }
+  ]
+};
+
 const ALL_COMMANDS = [
+  SET_AGE_COMMAND,      // Add new command
   REACT_PRONOUNS_COMMAND,  // Add new command first
   ROLE_GENERATOR_COMMAND,   // Add new command first
   CLEAR_TRIBE_COMMAND,     // Add new command first

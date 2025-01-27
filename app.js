@@ -1536,6 +1536,52 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
+} else if (name === 'set_age') {
+  try {
+    const guildId = req.body.guild_id;
+    const userId = req.body.member.user.id;
+    const age = data.options.find(opt => opt.name === 'age').value;
+
+    // Load player data
+    const playerData = await loadPlayerData();
+    
+    // Ensure guild and player data structures exist
+    if (!playerData[guildId]) {
+      playerData[guildId] = { players: {} };
+    }
+    if (!playerData[guildId].players) {
+      playerData[guildId].players = {};
+    }
+    if (!playerData[guildId].players[userId]) {
+      playerData[guildId].players[userId] = {};
+    }
+
+    // Update age
+    playerData[guildId].players[userId].age = age;
+    
+    // Save data
+    await savePlayerData(playerData);
+
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: `Your age has been set to ${age}`,
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in set_age command:', error);
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: 'Error setting age',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+
+// ...existing code...
 }
 
   } // end if APPLICATION_COMMAND
