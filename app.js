@@ -1423,33 +1423,50 @@ async function calculateCastlistFields(guild, tribeRoleId, castlistName = 'defau
     const guildData = await loadPlayerData();
     const guildTribes = guildData[guild.id]?.tribes || {};
     let totalFields = 0;
-    const uniquePlayers = new Set();
+    let tribeCount = 0;
     
     // Count existing tribe fields and their players
     for (const [key, value] of Object.entries(guildTribes)) {
       // Skip emoji entries and empty tribes
       if (key.endsWith('emoji') || !value) continue;
       
+      // For each tribe except the first, add a spacer
+      if (tribeCount > 0) {
+        totalFields++; // Add spacer
+      }
+      
       // Add 1 for the tribe header
       totalFields++;
+      tribeCount++;
       
-      // Get members with this role
+      // Get members with this role and count ALL of them
       const role = await guild.roles.fetch(value);
       if (role) {
-        role.members.forEach(member => uniquePlayers.add(member.id));
+        totalFields += role.members.size; // Each member takes a field, even if duplicate
       }
     }
     
-    // Count new tribe's members
+    // Count new tribe's fields
     const newRole = await guild.roles.fetch(tribeRoleId);
     if (newRole) {
+      // Add spacer if there are existing tribes
+      if (tribeCount > 0) {
+        totalFields++;
+      }
+      
       // Add 1 for the new tribe header
       totalFields++;
-      newRole.members.forEach(member => uniquePlayers.add(member.id));
+      
+      // Add all members in the new role
+      totalFields += newRole.members.size; // Each member takes a field
     }
     
-    // Add the count of unique players
-    totalFields += uniquePlayers.size;
+    console.log('Field count breakdown:');
+    console.log(`- Existing tribes: ${tribeCount}`);
+    console.log(`- Spacers: ${tribeCount > 0 ? tribeCount : 0}`);
+    console.log(`- Headers: ${tribeCount + 1}`); // +1 for new tribe
+    console.log(`- Total player fields: ${totalFields - (tribeCount + 1) - (tribeCount > 0 ? tribeCount : 0)}`);
+    console.log(`- Total fields: ${totalFields}`);
     
     return totalFields;
   } catch (error) {
