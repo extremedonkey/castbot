@@ -339,27 +339,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log('Processing castlist command');
         const guildId = req.body.guild_id;
 
-        // Load tribe IDs from guild data
-        const tribesCfg = await getGuildTribes(guildId);
-        const tribeIDs = {
-          tribe1: tribesCfg.tribe1,
-          tribe2: tribesCfg.tribe2,
-          tribe3: tribesCfg.tribe3,
-          tribe4: tribesCfg.tribe4,
-        };
-        console.log('Loaded tribe IDs:', tribeIDs);
+        // Load tribe data based on castlist
+        const castlistName = data.options?.find(opt => opt.name === 'castlist')?.value || 'default';
+        const tribes = await getGuildTribes(guildId, castlistName);
+        console.log('Loaded tribes:', tribes);
 
-        // After loading tribeIDs, check if any tribes exist
-        const hasTribes = Object.values(tribeIDs).some(id => id !== null);
-        
-        if (!hasTribes) {
-          // Send initial response
+        // Check if any tribes exist
+        if (tribes.length === 0) {
           res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
               embeds: [{
                 title: 'CastBot: Dynamic Castlist',
-                description: 'No tribes have been added yet. Please have production run the `/set_tribe1`, `/set_tribe2`, `/set_tribe3`, or `/set_tribe4` command and select the Tribe role for them to show up in this list.',
+                description: 'No tribes have been added yet. Please have production run the `/set_tribe` command and select the Tribe role for them to show up in this list.',
                 color: 0x7ED321
               }]
             }
@@ -1229,36 +1221,34 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   }
 } else if (name === 'set_tribe') {
   try {
-    const guildId = req.body.guild_id;
-    const guild = await client.guilds.fetch(guildId);
+    await res.send({
+      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    });
+
     const roleId = data.options.find(opt => opt.name === 'role').value;
-    const castlistName = data.options.find(opt => opt.name === 'castlist')?.value || 'default';
+    const result = await handleSetTribe(req.body.guild_id, roleId, data.options);
 
-    // Calculate total fields that would be used
-    const totalFields = await calculateCastlistFields(guild, roleId, castlistName);
-    
-    let message = `Number of fields that would be used: ${totalFields}`;
-    if (totalFields > 25) {
-      message += ' (more than 25 fields used)';
-    }
-
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        content: message,
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: `Tribe <@&${result.tribeRoleId}> ${result.isNew ? 'added' : 'updated'}. Total fields that will be used: ${result.totalFields}`,
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
+
   } catch (error) {
-    console.error('Error in set_tribe command:', error);
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        content: 'An error occurred while processing the command.',
+    const errorMessage = error.message || 'An error occurred while processing the command.';
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: errorMessage,
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
   }
+  return;
 }
 
   } // end if APPLICATION_COMMAND

@@ -106,17 +106,43 @@ export async function getPlayer(guildId, playerId) {
     return storage[guildId].players[playerId] || null;
 }
 
-export async function getGuildTribes(guildId) {
-    console.log('getGuildTribes called for guild:', guildId);
-    const data = await loadPlayerData();
-    
-    if (!data[guildId]) {
-        console.log('No data found for guild:', guildId);
-        return {};
-    }
+export async function getGuildTribes(guildId, castlist = 'default') {
+  const data = await loadPlayerData();
+  const guildData = data[guildId];
+  
+  if (!guildData?.tribes) return [];
+  
+  // Filter tribes based on castlist
+  const tribesInCastlist = Object.entries(guildData.tribes)
+    .filter(([_, tribeData]) => tribeData.castlist === castlist)
+    .map(([roleId, tribeData]) => ({
+      roleId,
+      emoji: tribeData.emoji
+    }));
 
-    console.log('Retrieved tribe data as follows:', data[guildId].tribes);
-    return data[guildId].tribes || {};
+  return tribesInCastlist;
+}
+
+export async function updateGuildTribes(guildId, updates) {
+  const data = await loadPlayerData();
+  if (!data[guildId]) {
+    data[guildId] = {};
+  }
+  if (!data[guildId].tribes) {
+    data[guildId].tribes = {};
+  }
+  
+  // Handle new tribe format
+  const roleId = updates.roleId;
+  if (roleId) {
+    data[guildId].tribes[roleId] = {
+      emoji: updates.emoji || null,
+      castlist: updates.castlist || 'default'
+    };
+  }
+  
+  await savePlayerData(data);
+  return data[guildId].tribes;
 }
 
 export async function getTribesByCastlist(guildId, castlistName = 'default') {
@@ -127,26 +153,6 @@ export async function getTribesByCastlist(guildId, castlistName = 'default') {
             acc[id] = tribe;
             return acc;
         }, {});
-}
-
-export async function updateGuildTribes(guildId, tribeData) {
-    const data = await loadPlayerData();
-    
-    if (!data[guildId]) {
-        data[guildId] = {
-            players: {},
-            tribes: {},
-            timezones: {}
-        };
-    }
-
-    data[guildId].tribes = {
-        ...data[guildId].tribes,
-        ...tribeData
-    };
-
-    await savePlayerData(data);
-    return data[guildId].tribes;
 }
 
 export async function saveAllPlayerData(members, guild, roleConfig) {

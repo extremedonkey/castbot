@@ -1,33 +1,38 @@
-$jsonPath = "./playerData.json"
-$json = Get-Content $jsonPath -Raw | ConvertFrom-Json
+$jsonPath = ".\playerData.json"
+$backupPath = ".\playerData_backup.json"
 
-# Used this site to fix formatting https://jsonformatter.org/
+# Read and parse the JSON file
+$jsonContent = Get-Content $jsonPath -Raw
+$data = $jsonContent | ConvertFrom-Json
 
-# Process each guild
-$json.PSObject.Properties | ForEach-Object {
-    if ($_.Name -ne "/* Server ID */") {
-        $guildData = $_.Value
+# Create backup
+Copy-Item $jsonPath $backupPath
+
+# Process each server
+$data.PSObject.Properties | Where-Object { $_.Name -ne "/* Server ID */" } | ForEach-Object {
+    $server = $_.Value
+    
+    if ($server.tribes) {
         $newTribes = @{}
         
-        # Convert existing tribe structure
+        # Process tribe1 through tribe4
         1..4 | ForEach-Object {
-            $tribeKey = "tribe$_"
-            $emojiKey = "tribe$_emoji"
+            $tribeId = $server.tribes."tribe$_"
+            $emoji = $server.tribes."tribe$_emoji"
             
-            if ($guildData.tribes.$tribeKey) {
-                $tribeId = $guildData.tribes.$tribeKey
+            if ($tribeId) {
                 $newTribes[$tribeId] = @{
-                    emoji = $guildData.tribes.$emojiKey
+                    emoji = $emoji
                     castlist = "default"
                 }
             }
         }
-        $guildData.tribes = $newTribes
+        
+        # Replace old tribes structure with new one
+        $server.tribes = $newTribes
     }
 }
 
-# Save updated data with consistent formatting
-$jsonString = $json | ConvertTo-Json -Depth 10
-$jsonString = $jsonString -replace '    ', '  ' # Replace 4 spaces with 2
-Set-Content -Path $jsonPath -Value $jsonString
-Write-Host "Migration complete"
+# Save the updated JSON
+$data | ConvertTo-Json -Depth 10 | Set-Content $jsonPath
+Write-Host "Migration complete. Backup saved to $backupPath"
