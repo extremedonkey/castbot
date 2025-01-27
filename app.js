@@ -339,13 +339,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log('Processing castlist command');
         const guildId = req.body.guild_id;
 
-        // Load tribe data based on castlist
-        const castlistName = data.options?.find(opt => opt.name === 'castlist')?.value || 'default';
-        const tribes = await getGuildTribes(guildId, castlistName);
-        console.log('Loaded tribes:', tribes);
-
+        // Load full guild data
+        const guildData = await loadPlayerData();
+        const tribes = guildData[guildId]?.tribes || {};
+        
         // Check if any tribes exist
-        if (tribes.length === 0) {
+        if (Object.keys(tribes).length === 0) {
           res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -358,80 +357,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
           return;
         }
-
-        // Define the createMemberFields function first
-        const createMemberFields = async (members, guild) => {
-          const fields = [];
-          const pronounRoleIDs = await getGuildPronouns(guild.id);
-          const timezones = await getGuildTimezones(guild.id);
-          
-          console.log('Loaded timezones for guild:', guild.id, timezones); // Add debug logging
-          
-          // Convert members to array for sorting
-          const membersArray = Array.from(members.values());
-          // Sort members by displayName
-          membersArray.sort((a, b) => a.displayName.localeCompare(b.displayName));
-          
-          for (const member of membersArray) {
-            try {
-              let pronouns = pronounRoleIDs
-                .filter(pronounRoleID => member.roles.cache.has(pronounRoleID))
-                .map(pronounRoleID => {
-                  const role = guild.roles.cache.get(pronounRoleID);
-                  return role ? role.name : '';
-                })
-                .filter(name => name !== '')
-                .join(', ');
-
-              // Add friendly message if no pronoun roles
-              if (!pronouns) {
-                pronouns = 'No pronoun roles';
-              }
-
-              // Update timezone handling to properly check roleId against timezones
-              let timezone = 'No timezone roles';
-              let memberTime = Math.floor(Date.now() / 1000);
-
-              // Check member's roles against the timezones object
-              console.log(`Checking roles for member ${member.displayName}:`);
-              for (const [roleId] of member.roles.cache) {
-                console.log(`- Checking role ${roleId}`);
-                if (timezones[roleId]) {
-                  console.log(`  Found timezone with offset:`, timezones[roleId].offset);
-                  const role = guild.roles.cache.get(roleId);
-                  timezone = role ? role.name : 'Unknown timezone';
-                  memberTime = Math.floor(Date.now() / 1000) + (timezones[roleId].offset * 3600);
-                  break;
-                }
-              }
-
-              const date = new Date(memberTime * 1000);
-              const hours = date.getUTCHours() % 12 || 12;
-              const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-              const ampm = date.getUTCHours() >= 12 ? 'PM' : 'AM';
-              const formattedTime = `\`🕐 ${hours}:${minutes} ${ampm} 🕐\``;
-
-              // Get player data from storage
-              const playerData = await getPlayer(guild.id, member.id);
-              const age = playerData?.age ? `${playerData.age}` : 'No age set';
-              
-              // Create name field with emoji if it exists
-              const nameWithEmoji = playerData?.emojiCode ? 
-                `${playerData.emojiCode} ${capitalize(member.displayName)}` : 
-                capitalize(member.displayName);
-
-              let value = `> * ${age}\n> * ${pronouns}\n> * ${timezone}\n> * ${formattedTime}`;
-              fields.push({
-                name: nameWithEmoji,
-                value: value,
-                inline: true
-              });
-            } catch (err) {
-              console.error(`Error processing member ${member.displayName}:`, err);
-            }
-          }
-          return fields;
-        };
 
         // Send initial response
         res.send({
@@ -460,25 +385,31 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const tribeMembers = [];
 
         // Fetch roles and members for each tribe
-        for (const [key, tribeId] of Object.entries(tribeIDs)) {
-          if (tribeId) {  // Only process tribes that have IDs
-            const tribeRole = fullGuild.roles.cache.get(tribeId);
-            if (tribeRole) {
-              console.log(`Processing tribe ${key} with ID ${tribeId}:`);
-              console.log(`- Role name: ${tribeRole.name}`);
-              const tribeMemberCollection = members.filter(member => member.roles.cache.has(tribeId));
-              
-              // Debug member filtering
-              const memberArray = Array.from(tribeMemberCollection.values());
-              console.log(`- Member count: ${memberArray.length}`);
-              console.log(`- Members: ${memberArray.map(m => `${m.displayName} (${m.id})`).join(', ')}`);
-              console.log(`- Raw member roles: ${memberArray.map(m => Array.from(m.roles.cache.keys())).join(', ')}`);
-              
-              tribeRoles.push(tribeRole);
-              tribeMembers.push(tribeMemberCollection);
-            } else {
-              console.log(`Could not find role for tribe ${key} with ID ${tribeId}`);
+        for (const [roleId, tribeData] of Object.entries(tribes)) {
+          try {
+            const tribeRole = fullGuild.roles.cache.get(roleId);
+            if (!tribeRole) continue;
+
+            if (tribeRoles.length > 0) {
+              embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
             }
+            
+            const header = tribeData.emoji
+              ? `${tribeData.emoji}  ${tribeRole.name}  ${tribeData.emoji}`
+              : tribeRole.name;
+            
+            embed.addFields({ name: header, value: '\u200B', inline: false });
+            
+            const tribeMembers = members.filter(member => member.roles.cache.has(roleId));
+            const memberFields = await createMemberFields(tribeMembers, fullGuild);
+            
+            if (embed.data.fields.length + memberFields.length > 25) {
+              throw new Error('Embed field limit exceeded');
+            }
+            
+            embed.addFields(memberFields);
+          } catch (error) {
+            // ...existing error handling...
           }
         }
 

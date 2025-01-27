@@ -169,17 +169,17 @@ export async function saveAllPlayerData(members, guild, roleConfig) {
             };
         }
 
-        // Update only age and emojiCode for players
-        const tribeRoles = Object.values(data[guildId].tribes || {})
-            .filter(id => id && !id.includes('emoji'));
+        // Get tribe role IDs from the new structure
+        const tribeRoleIds = Object.keys(data[guildId].tribes || {});
 
         for (const member of members) {
-            if (tribeRoles.some(roleId => member.roles.cache.has(roleId))) {
+            // Check if member has any tribe role
+            if (tribeRoleIds.some(roleId => member.roles.cache.has(roleId))) {
                 if (!data[guildId].players[member.id]) {
                     data[guildId].players[member.id] = {};
                 }
-                // Only update if emojiCode exists
-                if (data[guildId].players[member.id].emojiCode) {
+                // Only update if emojiCode doesn't exist
+                if (!data[guildId].players[member.id].emojiCode) {
                     continue;
                 }
             }
