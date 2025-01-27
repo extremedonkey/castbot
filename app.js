@@ -146,49 +146,56 @@ app.get("/interactions", (req, res) => {
  */
 app.use(express.json());
 
-// Define handleSetTribe before the route handlers
+// Update handleSetTribe function to properly handle role options
 async function handleSetTribe(guildId, roleId, options) {
   const guild = await client.guilds.fetch(guildId);
+  
+  // Get role object - for /set_tribe, roleId is actually the role option
+  const roleOption = typeof roleId === 'object' ? roleId : options.find(opt => opt.name === 'role');
+  if (!roleOption) {
+    throw new Error('No role provided');
+  }
+  
+  // Extract actual role ID from the option
+  const actualRoleId = roleOption.value;
+  const role = await guild.roles.fetch(actualRoleId);
+  if (!role) {
+    throw new Error(`Role ${actualRoleId} not found in guild ${guildId}`);
+  }
+
   const emojiOption = options.find(opt => opt.name === 'emoji');
   const castlistName = options.find(opt => opt.name === 'castlist')?.value || 'default';
 
-  // Get guild and verify role
-  const role = await guild.roles.fetch(roleId);
+  // Load guild data
   const data = await loadPlayerData();
-  
-  if (!role) {
-    throw new Error(`Role ${roleId} not found in guild ${guildId}`);
-  }
-
-  // Ensure tribes structure exists
   if (!data[guildId]) data[guildId] = {};
   if (!data[guildId].tribes) data[guildId].tribes = {};
 
   // Check if tribe exists in a different castlist
   const existingTribe = Object.entries(data[guildId].tribes)
-    .find(([id, tribe]) => id === roleId && tribe.castlist !== castlistName);
+    .find(([id, tribe]) => id === actualRoleId && tribe?.castlist !== castlistName);
   
   if (existingTribe) {
     throw new Error(`Tribe not added - this tribe already exists in ${existingTribe[1].castlist}. You can only have each tribe in one castlist.`);
   }
 
-  // Calculate field count
-  const totalFields = await calculateCastlistFields(guild, roleId, castlistName);
+  // Calculate field count for this castlist
+  const totalFields = await calculateCastlistFields(guild, actualRoleId, castlistName);
   if (totalFields > 25) {
     throw new Error('Cannot add tribe: Too many fields (maximum 25). Consider creating a new castlist.');
   }
 
   // Update or add tribe
-  data[guildId].tribes[roleId] = {
+  data[guildId].tribes[actualRoleId] = {
     emoji: emojiOption?.value || null,
     castlist: castlistName
   };
 
   await savePlayerData(data);
 
-  // Use existing guild instance for emoji creation
+  // Handle emoji creation
   const members = await guild.members.fetch();
-  const targetMembers = members.filter(m => m.roles.cache.has(roleId));
+  const targetMembers = members.filter(m => m.roles.cache.has(actualRoleId));
 
   let resultLines = [];
   let existingLines = [];
@@ -217,9 +224,9 @@ async function handleSetTribe(guildId, roleId, options) {
     existingLines,
     errorLines,
     maxEmojiReached,
-    tribeRoleId: roleId,
+    tribeRoleId: actualRoleId,
     totalFields,
-    isNew: !data[guildId].tribes[roleId]
+    isNew: !data[guildId].tribes[actualRoleId]
   };
 }
 
@@ -1145,11 +1152,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
     });
 
-    const roleId = data.options.find(opt => opt.name === 'role').value;
-    const castlistName = data.options.find(opt => opt.name === 'castlist')?.value || 'default';
-    const result = await handleSetTribe(req.body.guild_id, roleId, data.options);
+    const roleOption = data.options.find(opt => opt.name === 'role');
+    const result = await handleSetTribe(req.body.guild_id, roleOption, data.options);
 
     // Prepare response message
+    const castlistName = data.options.find(opt => opt.name === 'castlist')?.value || 'default';
     const messageLines = [
       `Tribe <@&${result.tribeRoleId}> ${result.isNew ? 'added to' : 'updated in'} castlist '${castlistName}'`,
       ''
