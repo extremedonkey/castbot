@@ -8,7 +8,16 @@ import {
   ButtonStyleTypes,
   verifyKeyMiddleware,
 } from 'discord-interactions';
-import { Client, GatewayIntentBits, EmbedBuilder, SnowflakeUtil, PermissionFlagsBits } from 'discord.js';
+import { 
+  Client, 
+  GatewayIntentBits, 
+  EmbedBuilder, 
+  SnowflakeUtil, 
+  PermissionFlagsBits,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
+} from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';  // Add DiscordRequest to imports
 import { 
   loadPlayerData, 
@@ -30,9 +39,6 @@ import { pipeline } from 'stream/promises';
 
 // Add these constants near the top with other constants
 const REACTION_NUMBERS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
-
-// Add this to your imports
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } from 'discord.js';
 
 // Update ensureServerData function
 async function ensureServerData(guild) {
@@ -266,6 +272,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     return res.send({ type: InteractionResponseType.PONG });
   }
   
+
 
 
   /**
