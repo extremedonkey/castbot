@@ -1377,3 +1377,72 @@ async function calculateCastlistFields(guild, tribeRoleId, castlistName = 'defau
     throw error;
   }
 }
+
+// Add this helper function before handling the castlist command
+async function createMemberFields(members, guild) {
+  const fields = [];
+  const pronounRoleIDs = await getGuildPronouns(guild.id);
+  const timezones = await getGuildTimezones(guild.id);
+  
+  // Convert members to array for sorting
+  const membersArray = Array.from(members.values());
+  // Sort members by displayName
+  membersArray.sort((a, b) => a.displayName.localeCompare(b.displayName));
+  
+  for (const member of membersArray) {
+    try {
+      let pronouns = pronounRoleIDs
+        .filter(pronounRoleID => member.roles.cache.has(pronounRoleID))
+        .map(pronounRoleID => {
+          const role = guild.roles.cache.get(pronounRoleID);
+          return role ? role.name : '';
+        })
+        .filter(name => name !== '')
+        .join(', ');
+
+      // Add friendly message if no pronoun roles
+      if (!pronouns) {
+        pronouns = 'No pronoun roles';
+      }
+
+      // Update timezone handling to properly check roleId against timezones
+      let timezone = 'No timezone roles';
+      let memberTime = Math.floor(Date.now() / 1000);
+
+      // Check member's roles against the timezones object
+      for (const [roleId] of member.roles.cache) {
+        if (timezones[roleId]) {
+          const role = guild.roles.cache.get(roleId);
+          timezone = role ? role.name : 'Unknown timezone';
+          memberTime = Math.floor(Date.now() / 1000) + (timezones[roleId].offset * 3600);
+          break;
+        }
+      }
+
+      const date = new Date(memberTime * 1000);
+      const hours = date.getUTCHours() % 12 || 12;
+      const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+      const ampm = date.getUTCHours() >= 12 ? 'PM' : 'AM';
+      const formattedTime = `\`🕐 ${hours}:${minutes} ${ampm} 🕐\``;
+
+      // Get player data from storage
+      const playerData = await getPlayer(guild.id, member.id);
+      const age = playerData?.age ? `${playerData.age}` : 'No age set';
+      
+      // Create name field with emoji if it exists
+      const nameWithEmoji = playerData?.emojiCode ? 
+        `${playerData.emojiCode} ${capitalize(member.displayName)}` : 
+        capitalize(member.displayName);
+
+      let value = `> * ${age}\n> * ${pronouns}\n> * ${timezone}\n> * ${formattedTime}`;
+      fields.push({
+        name: nameWithEmoji,
+        value: value,
+        inline: true
+      });
+    } catch (err) {
+      console.error(`Error processing member ${member.displayName}:`, err);
+    }
+  }
+  return fields;
+}
