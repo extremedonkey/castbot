@@ -1207,14 +1207,26 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   }
 } else if (name === 'set_tribe') {
   try {
-    await res.send({
+    const guildId = req.body.guild_id;
+    const guild = await client.guilds.fetch(guildId);
+    const roleId = data.options.find(opt => opt.name === 'role').value;
+    const castlistName = data.options.find(opt => opt.name === 'castlist')?.value || 'default';
+
+    // Calculate total fields that would be used
+    const totalFields = await calculateCastlistFields(guild, roleId, castlistName);
+    
+    let message = `Number of fields that would be used: ${totalFields}`;
+    if (totalFields > 25) {
+      message += ' (more than 25 fields used)';
+    }
+
+    return res.send({
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
       data: {
-        content: 'Testing..!',
+        content: message,
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
-    return;
   } catch (error) {
     console.error('Error in set_tribe command:', error);
     return res.send({
@@ -1381,4 +1393,46 @@ async function createEmojiForUser(member, guild) {
         console.error('Detailed emoji error:', error);
         throw error;
     }
+}
+
+// Add this helper function
+async function calculateCastlistFields(guild, tribeRoleId, castlistName = 'default') {
+  try {
+    const guildData = await loadPlayerData();
+    const guildTribes = guildData[guild.id]?.tribes || {};
+    let totalFields = 0;
+    
+    // Count existing tribe fields and their players
+    for (const [key, value] of Object.entries(guildTribes)) {
+      // Skip emoji entries
+      if (key.endsWith('emoji')) continue;
+      
+      // Get the role ID
+      const roleId = value;
+      if (!roleId) continue;
+      
+      // Add 1 for the tribe header
+      totalFields++;
+      
+      // Count members with this role
+      const role = await guild.roles.fetch(roleId);
+      if (role) {
+        const members = role.members;
+        totalFields += members.size;
+      }
+    }
+    
+    // Count new tribe's members
+    const newRole = await guild.roles.fetch(tribeRoleId);
+    if (newRole) {
+      // Add 1 for the new tribe header
+      totalFields++;
+      totalFields += newRole.members.size;
+    }
+    
+    return totalFields;
+  } catch (error) {
+    console.error('Error calculating castlist fields:', error);
+    throw error;
+  }
 }
