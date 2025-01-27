@@ -2,6 +2,13 @@
 $sensitivePatterns = @('.env*', '*.env')
 $currentBranch = git rev-parse --abbrev-ref HEAD
 
+# Get commit message from arguments
+$commitMessage = if ($args.Count -gt 0) {
+    $args -join " "
+} else {
+    "Auto-commit"
+}
+
 # Check for sensitive files
 $sensitiveFound = $false
 foreach ($pattern in $sensitivePatterns) {
@@ -26,8 +33,8 @@ git add .
 # Get current status
 $status = git status --porcelain
 if ($status) {
-    Write-Output "Committing changes..."
-    git commit -m "Auto-commit"
+    Write-Output "Committing changes with message: $commitMessage"
+    git commit -m "$commitMessage"
     
     # Try pushing
     Write-Output "Pushing to $currentBranch..."

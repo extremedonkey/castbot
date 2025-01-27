@@ -1457,7 +1457,7 @@ async function createMemberFields(members, guild) {
       const playerData = await getPlayer(guild.id, member.id);
       const age = playerData?.age ? `${playerData.age}` : 'No age set';
       
-      // Create name field with emoji if it exists
+      // Create name field with emoji if it exists!
       const nameWithEmoji = playerData?.emojiCode ? 
         `${playerData.emojiCode} ${capitalize(member.displayName)}` : 
         capitalize(member.displayName);
