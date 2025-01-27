@@ -296,7 +296,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     console.log(`Received command: ${rawName}`);
 
     // Only check permissions for commands that modify data
-    const readOnlyCommands = ['castlist', 'getting_started'];
+    const readOnlyCommands = ['castlist', 'getting_started', 'set_age'];  // Add set_age here
     if (!readOnlyCommands.includes(name)) {
       const hasPerms = await hasRequiredPermissions(req.body.guild_id, req.body.member.user.id);
       if (!hasPerms) {
