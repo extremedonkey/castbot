@@ -112,26 +112,21 @@ export async function getGuildTribes(guildId) {
     
     if (!data[guildId]) {
         console.log('No data found for guild:', guildId);
-        return {
-            tribe1: null, tribe1emoji: null,
-            tribe2: null, tribe2emoji: null,
-            tribe3: null, tribe3emoji: null,
-            tribe4: null, tribe4emoji: null
-        };
+        return {};
     }
 
-    // Ensure tribes object exists
-    if (!data[guildId].tribes) {
-        data[guildId].tribes = {
-            tribe1: null, tribe1emoji: null,
-            tribe2: null, tribe2emoji: null,
-            tribe3: null, tribe3emoji: null,
-            tribe4: null, tribe4emoji: null
-        };
-    }
+    console.log('Retrieved tribe data as follows:', data[guildId].tribes);
+    return data[guildId].tribes || {};
+}
 
-    console.log('Retrieved tribe data:', data[guildId].tribes);
-    return data[guildId].tribes;
+export async function getTribesByCastlist(guildId, castlistName = 'default') {
+    const tribes = await getGuildTribes(guildId);
+    return Object.entries(tribes)
+        .filter(([_, tribe]) => tribe.castlist === castlistName)
+        .reduce((acc, [id, tribe]) => {
+            acc[id] = tribe;
+            return acc;
+        }, {});
 }
 
 export async function updateGuildTribes(guildId, tribeData) {

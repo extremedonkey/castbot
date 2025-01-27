@@ -141,79 +141,43 @@ app.get("/interactions", (req, res) => {
 });
 
 /**
- * Interactions endpoint URL where Discord will send HTTP requests
+ * Interactions endpoint URL where Discord will send HTTP requests!
  * Parse request body and verifies incoming requests using discord-interactions package
  */
 app.use(express.json());
 
 // Define handleSetTribe before the route handlers
-async function handleSetTribe(guildId, tribeNumber, options) {
-    const tribeRoleId = options.find(option => option.name === 'role')?.value || options[0].value;
-    const emojiOption = options.find(option => option.name === 'emoji');
-    const tribeEmoji = emojiOption?.value || null;
-
-    console.log(`Setting tribe${tribeNumber} for guild ${guildId} to role ${tribeRoleId}`);
-
-    // Get guild and verify role
-    const guild = await client.guilds.fetch(guildId);
-    const role = await guild.roles.fetch(tribeRoleId);
-    const guildData = await loadPlayerData(guildId);
-    
-    if (!role) {
-        throw new Error(`Role ${tribeRoleId} not found in guild ${guildId}`);
-    }
-
-    console.log(`Found role: ${role.name} (${role.id})`);
-
-    // Update tribe data
-    await updateGuildTribes(guildId, {
-        [`tribe${tribeNumber}`]: tribeRoleId,
-        [`tribe${tribeNumber}emoji`]: tribeEmoji
-    });
-
-    // Verify the update
-    const updatedTribes = await getGuildTribes(guildId);
-    console.log('Tribes after update:', updatedTribes);
-
-    // Use the existing guild instance
-    const members = await guild.members.fetch();
-    const targetMembers = members.filter(m => m.roles.cache.has(tribeRoleId));
-
-    let resultLines = [];
-    let existingLines = [];
-    let errorLines = [];
-    let maxEmojiReached = false;
-
-    for (const [_, member] of targetMembers) {
-        try {
-            // Check if player already has an emoji
-            const existingPlayer = guildData.players[member.id];
-            if (existingPlayer?.emojiCode) {
-                existingLines.push(`${member.displayName}: Already has emoji \`${existingPlayer.emojiCode}\``);
-                continue;
-            }
-
-            const result = await createEmojiForUser(member, guild);
-            await updatePlayer(guildId, member.id, { emojiCode: result.emojiCode });
-            resultLines.push(`${member.displayName} ${result.emojiCode} (${result.isAnimated ? 'animated' : 'static'})`);
-
-        } catch (error) {
-            if (error.code === 50138) {
-                errorLines.push(`${error.memberName}: Failed to upload emoji - File size too large`);
-            } else {
-                errorLines.push(`${error.memberName}: Failed to upload emoji - ${error.message}`);
-            }
-            console.error('Emoji creation error:', error);
-        }
-    }
-
-    return {
-        resultLines,
-        existingLines,
-        errorLines,
-        maxEmojiReached,
-        tribeRoleId
-    };
+async function handleSetTribe(guild, roleId, emoji = null, castlist = 'default') {
+  const guildId = guild.id;
+  const guildData = await loadPlayerData();
+  
+  // Check if tribe exists in a different castlist
+  const tribes = guildData[guildId]?.tribes || {};
+  if (tribes[roleId] && tribes[roleId].castlist !== castlist) {
+    throw new Error(`Tribe not added - this tribe already exists in "${tribes[roleId].castlist}". You can only have each tribe in one castlist.`);
+  }
+  
+  // Calculate fields that would be used
+  const totalFields = await calculateCastlistFields(guild, roleId, castlist);
+  if (totalFields > 25) {
+    throw new Error('Each castlist can only support up to 25 entries (1 entry per player, 1 entry per tribe). Clear an existing tribe, or create a new castlist.');
+  }
+  
+  // Add or update tribe
+  if (!guildData[guildId]) {
+    guildData[guildId] = { tribes: {} };
+  }
+  if (!guildData[guildId].tribes) {
+    guildData[guildId].tribes = {};
+  }
+  
+  guildData[guildId].tribes[roleId] = {
+    emoji: emoji,
+    castlist: castlist
+  };
+  
+  await savePlayerData(guildData);
+  return { roleId, emoji, castlist };
 }
 
 async function handleClearTribe(interaction, tribeNumber) {
@@ -1232,23 +1196,29 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const guildId = req.body.guild_id;
     const guild = await client.guilds.fetch(guildId);
     const roleId = data.options.find(opt => opt.name === 'role').value;
-    const castlistName = data.options.find(opt => opt.name === 'castlist')?.value || 'default';
-
-    // Calculate total fields that would be used
-    const totalFields = await calculateCastlistFields(guild, roleId, castlistName);
+    const emoji = data.options.find(opt => opt.name === 'emoji')?.value || null;
+    const castlist = data.options.find(opt => opt.name === 'castlist')?.value || 'default';
     
-    let message = `Number of fields that would be used: ${totalFields}`;
-    if (totalFields > 25) {
-      message += ' (more than 25 fields used)';
+    try {
+      const result = await handleSetTribe(guild, roleId, emoji, castlist);
+      
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: `Tribe added to castlist "${result.castlist}"${result.emoji ? ` with emoji ${result.emoji}` : ''}`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    } catch (error) {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: error.message,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
     }
-
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        content: message,
-        flags: InteractionResponseFlags.EPHEMERAL
-      }
-    });
+    
   } catch (error) {
     console.error('Error in set_tribe command:', error);
     return res.send({
