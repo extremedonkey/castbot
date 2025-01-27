@@ -1205,6 +1205,26 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     });
   }
+} else if (name === 'set_tribe') {
+  try {
+    await res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: 'Testing..!',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+    return;
+  } catch (error) {
+    console.error('Error in set_tribe command:', error);
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: 'An error occurred while processing the command.',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
 }
 
   } // end if APPLICATION_COMMAND

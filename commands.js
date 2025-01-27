@@ -1,6 +1,4 @@
 import 'dotenv/config';
-// Remove this import
-// import { getRPSChoices } from './game.js';
 import { capitalize, InstallGlobalCommands } from './utils.js';
 import { PermissionFlagsBits } from 'discord-api-types/v10';
 
@@ -104,6 +102,33 @@ const SET_TRIBE4_COMMAND = {
     {
       name: 'emoji',
       description: 'Set an optional emoji to be displayed in the tribe\'s castlist header',
+      type: 3, // STRING
+      required: false
+    }
+  ],
+  default_member_permissions: ADMIN_PERMISSIONS
+};
+
+const SET_TRIBE_COMMAND = {
+  name: maybePrependDev('set_tribe'),
+  description: 'Add or update a tribe in your dynamic castlist',
+  type: 1,
+  options: [
+    {
+      name: 'role',
+      description: 'Select the tribe role to be displayed on the castlist',
+      type: 8, // ROLE
+      required: true
+    },
+    {
+      name: 'emoji',
+      description: 'Set an optional emoji to be displayed in the tribe\'s castlist header',
+      type: 3, // STRING
+      required: false
+    },
+    {
+      name: 'castlist',
+      description: 'Set which castlist this tribe is added to (if left blank, will be set to the default castlist)',
       type: 3, // STRING
       required: false
     }
@@ -296,7 +321,8 @@ const GETTING_STARTED_COMMAND = {
 };
 
 const ALL_COMMANDS = [
-  SET_TRIBE1_COMMAND,
+  SET_TRIBE_COMMAND,   // Add new command
+  SET_TRIBE1_COMMAND,  // Keep existing commands
   SET_TRIBE2_COMMAND,
   SET_TRIBE3_COMMAND,
   SET_TRIBE4_COMMAND,
