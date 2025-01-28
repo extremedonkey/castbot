@@ -163,7 +163,7 @@ app.get("/interactions", (req, res) => {
 
 /**
  * Interactions endpoint URL where Discord will send HTTP requests
- * Parse request body and verifies incoming requests using discord-interactions package
+ * Parse request body and verifies incoming requests using discord-interactions package!
  */
 app.use(express.json());
 
