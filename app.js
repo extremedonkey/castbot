@@ -335,6 +335,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             {
               name: 'Final Step',
               value: 'Type the `/castlist` command in a channel to see your default dynamic castlist, or view an alternate castlist by specifying the castlist name.'
+            },
+            {
+              name: 'How to swap',
+              value: 'Remove your old tribes with `/clear_tribe @TribeRole` and add your new tribes with `/set_tribe`.'
             }
           ])
           .setFooter({ 
