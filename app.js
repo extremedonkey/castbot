@@ -1266,6 +1266,70 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
 
+} else if (name === 'pronouns_remove') {
+      try {
+        console.log('Processing pronouns_remove command');
+        await res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+        });
+
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Process all possible role options (up to 12)
+        const roleOptions = [];
+        for (let i = 1; i <= 12; i++) {
+          const roleOption = data.options.find(opt => opt.name === `role${i}`);
+          if (roleOption) {
+            roleOptions.push(roleOption.value);
+          }
+        }
+
+        console.log('Roles to remove:', roleOptions);
+
+        // Load current pronouns
+        const currentPronouns = await getGuildPronouns(guildId);
+        const removed = [];
+        const notFound = [];
+
+        // Process each role
+        for (const roleId of roleOptions) {
+          if (currentPronouns.includes(roleId)) {
+            removed.push(`<@&${roleId}> (${roleId})`);
+          } else {
+            notFound.push(`<@&${roleId}> (${roleId})`);
+          }
+        }
+
+        // Update pronouns list by removing the roles
+        const updatedPronouns = currentPronouns.filter(id => !roleOptions.includes(id));
+        await updateGuildPronouns(guildId, updatedPronouns);
+
+        // Prepare response message
+        const removedMsg = removed.length > 0 ? `Successfully removed: ${removed.join(', ')}` : '';
+        const notFoundMsg = notFound.length > 0 ? `Not found in pronoun list: ${notFound.join(', ')}` : '';
+        const message = [removedMsg, notFoundMsg].filter(msg => msg).join('\n');
+
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: message || 'No changes made to pronoun roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          },
+        });
+      } catch (error) {
+        console.error('Error in pronouns_remove:', error);
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: 'Error removing pronoun roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          },
+        });
+      }
+      return;
 // ...existing code...
 }
 
