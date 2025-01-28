@@ -314,27 +314,27 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .addFields([
             {
               name: 'About CastBot',
-              value: 'CastBot provides a dynamically updating castlist - no need to manually update your castlist every time a player is booted!'
+              value: 'CastBot provides a dynamically updating castlist with auto-generated emojis and flexible role-based data.'
             },
             {
               name: '1️⃣ Set up Pronouns',
-              value: 'Create roles in your server representing each pronoun (e.g., She/Her), run `/pronouns_add`, select all of the pronouns roles you just added, then within Discord assign the relevant pronoun role to each player.'
+              value: 'Create roles for each pronoun (She/Her, He/Him, etc.), then run `/pronouns_add` to register them. Assign these roles to each player directly in Discord.'
             },
             {
               name: '2️⃣ Set up Timezones',
-              value: 'Create roles in your server representing each timezone, run `/timezones_add`, select all of the timezone roles you just added, then within Discord assign the relevant timezone role to each player.'
+              value: 'Create timezone roles, then use the appropriate commands (e.g., `/timezones_add`) to register them. Assign these roles to players so CastBot can show local times.'
             },
             {
               name: '3️⃣ Set player ages',
-              value: 'Run the `/set_players_age` command and select each player (user) from discord, then type their age. You can do this for upto 12 players at a time, so you\'ll need to run the command twice assuming your season has more than 12 players.'
+              value: 'Use `/set_players_age` to set ages for up to 12 players per command usage.'
             },
             {
-              name: '4️⃣ Set Tribes',
-              value: 'Run `/set_tribe1`, `/set_tribe2`, `/set_tribe3`, and `/set_tribe4` commands (for as many tribes as you have). Any players with the tribe roles will then immediately show up in `/castlist`.'
+              name: '4️⃣ Manage Tribes',
+              value: 'Use `/set_tribe` to associate a role with a castlist (players with that role will appear in `/castlist`). Use `/clear_tribe` to remove that tribe.'
             },
             {
               name: 'Final Step',
-              value: 'Type the `/castlist` command in a channel to show the players how to summon it and you\'re good to go!'
+              value: 'Type the `/castlist` command in a channel to see your default dynamic castlist, or view an alternate castlist by specifying the castlist name.'
             }
           ])
           .setFooter({ 
