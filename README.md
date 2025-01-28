@@ -59,27 +59,19 @@ To register the global and guild-specific slash commands, run the following Powe
 
 ### Available Commands
 
-The following commands are available in Castbot:
+- /set_tribe: Add or update a tribe in the castlist
+- /castlist: Display the dynamic castlist
+- /clear_tribe: Clear a specific tribe
+- /cleartribeall: Clear all tribes
+- /set_players_age: Set ages for multiple players at once
+- /pronouns_add: Add pronoun roles
+- /pronouns_remove: Remove pronoun roles
 
-- **/castlist**: Display the dynamic castlist.
-- **/setage**: Set the age for a specific user.
-- **/settribe1**: Set up the 1st tribe in your dynamic castlist.
-- **/settribe2**: Set up the 2nd tribe in your dynamic castlist.
-- **/settribe3**: Set up the 3rd tribe in your dynamic castlist.
-- **/settribe4**: Set up the 4th tribe in your dynamic castlist.
-- **/cleartribe1**: Clear tribe1, remove associated players and emojis.
-- **/cleartribe2**: Clear tribe2, remove associated players and emojis.
-- **/cleartribe3**: Clear tribe3, remove associated players and emojis.
-- **/cleartribe4**: Clear tribe4, remove associated players and emojis.
-- **/cleartribeall**: Clear all tribes and remove associated players and emojis.
-- **/clearemoji**: Clear saved emojis and delete them from the guild.
-- **/checkdata**: Check stored player data.
-- **/playericons**: Create player icons from avatars.
-- **/util_deleteserveremoji**: Delete an emoji from the server by its ID.
-- **/util_deleteplayeremoji**: Delete a player's emoji and their entry from playerData.json.
-- **/zzgetallguildroles**: Get all role IDs in the guild.
-- **/zzgetroles**: Reece seeing if he can do stuff.
-- **/zzchallenge**: Challenge to a match of rock paper scissors.
+### How It Works
+
+- Automatically creates and updates tribal sections in the castlist
+- Retrieves pronouns/timezones/ages from roles or slash commands
+- Dynamically fetches data from Discord each time /castlist is used
 
 ### Example Usage
 

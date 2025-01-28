@@ -13,14 +13,10 @@
          - age: string
          - emojiCode: string
    2. Tribes
-      - tribe1: Discord Role ID
-      - tribe1emoji: Emoji
-      - tribe2: Discord Role ID
-      - tribe2emoji: Emoji
-      - tribe3: Discord Role ID
-      - tribe3emoji: Emoji
-      - tribe4: Discord Role ID
-      - tribe4emoji: Emoji
+      - Keyed by Discord Role ID (e.g. "1324815211009671170")
+      - Each entry contains:
+        - emoji: (optional) Emoji displayed in castlist
+        - castlist: (optional) Name of the castlist this tribe belongs to
    3. Timezones
       - Keyed by timezone name
       - Contains:

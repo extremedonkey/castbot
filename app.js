@@ -64,16 +64,7 @@ async function ensureServerData(guild) {
     playerData[guild.id] = {
       ...serverMetadata,
       players: {},
-      tribes: {
-        tribe1: null,
-        tribe1emoji: null,
-        tribe2: null,
-        tribe2emoji: null,
-        tribe3: null,
-        tribe3emoji: null,
-        tribe4: null,
-        tribe4emoji: null
-      },
+      tribes: {},           // Now empty object (no fixed keys)
       timezones: {},
       pronounRoleIDs: []
     };
