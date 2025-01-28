@@ -695,18 +695,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     } else if (name === 'pronouns_add') {     // Changed from addpronouns
       try {
-        console.log('Processing addpronouns command');
+        console.log('Processing pronouns_add command');
         await res.send({
           type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
         });
     
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
-        const roleOptions = ['role1', 'role2', 'role3']
-          .map(roleName => data.options.find(opt => opt.name === roleName))
-          .filter(opt => opt !== undefined)
-          .map(opt => opt.value);
-    
+        
+        // Process all possible role options (up to 12)
+        const roleOptions = [];
+        for (let i = 1; i <= 12; i++) {
+          const roleOption = data.options.find(opt => opt.name === `role${i}`);
+          if (roleOption) {
+            roleOptions.push(roleOption.value);
+          }
+        }
+
         console.log('Roles to add:', roleOptions);
     
         // Load current pronouns from guild data
@@ -742,7 +747,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           },
         });
       } catch (error) {
-        console.error('Error processing addpronouns command:', error);
+        console.error('Error processing pronouns_add command:', error);
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
         await DiscordRequest(endpoint, {
           method: 'PATCH',
