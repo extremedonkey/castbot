@@ -25,90 +25,6 @@ function maybePrependDev(baseName) {
 
 // Command containing options
 
-const SET_TRIBE2_COMMAND = {
-  name: maybePrependDev('set_tribe2'),
-  description: 'Add or update the 2nd tribe that displays in your dynamic castlist',
-  type: 1,
-  options: [
-    {
-      name: 'role',
-      description: 'Select the second tribe to be displayed on the castlist',
-      type: 8, // ROLE
-      required: true
-    },
-    {
-      name: 'emoji',
-      description: 'Set an optional emoji to be displayed in the tribe\'s castlist header',
-      type: 3, // STRING
-      required: false
-    }
-  ],
-  default_member_permissions: ADMIN_PERMISSIONS
-};
-
-const SET_TRIBE1_COMMAND = {
-  name: maybePrependDev('set_tribe1'),
-  description: 'Add or update the 1st tribe that displays in your dynamic castlist',
-  type: 1,
-  options: [
-    {
-      name: 'role',
-      description: 'Select the first tribe to be displayed on the castlist',
-      type: 8, // ROLE
-      required: true
-    },
-    {
-      name: 'emoji',
-      description: 'Set an optional emoji to be displayed in the tribe\'s castlist header',
-      type: 3, // STRING
-      required: false
-    }
-  ],
-  default_member_permissions: ADMIN_PERMISSIONS
-};
-
-const SET_TRIBE3_COMMAND = {
-  name: maybePrependDev('set_tribe3'),
-  description: 'Add or update the 3rd tribe that displays in your dynamic castlist',
-  type: 1,
-  options: [
-    {
-      name: 'role',
-      description: 'Select the third tribe to be displayed on the castlist',
-      type: 8, // ROLE
-      required: true
-    },
-    {
-      name: 'emoji',
-      description: 'Set an optional emoji to be displayed in the tribe\'s castlist header',
-      type: 3, // STRING
-      required: false
-    }
-  ],
-  default_member_permissions: ADMIN_PERMISSIONS
-};
-
-const SET_TRIBE4_COMMAND = {
-  name: maybePrependDev('set_tribe4'),
-  description: 'Add or update the 4th tribe that displays in your dynamic castlist',
-  type: 1,
-  options: [
-    {
-      name: 'role',
-      description: 'Select the fourth tribe to be displayed on the castlist',
-      type: 8, // ROLE
-      required: true
-    },
-    {
-      name: 'emoji',
-      description: 'Set an optional emoji to be displayed in the tribe\'s castlist header',
-      type: 3, // STRING
-      required: false
-    }
-  ],
-  default_member_permissions: ADMIN_PERMISSIONS
-};
-
 const SET_TRIBE_COMMAND = {
   name: maybePrependDev('set_tribe'),
   description: 'Add or update a tribe in your dynamic castlist',
@@ -148,34 +64,6 @@ const CASTLIST_COMMAND = {
       required: false
     }
   ]
-};
-
-const CLEAR_TRIBE1_COMMAND = {
-  name: maybePrependDev('clear_tribe1'),  // Changed from cleartribe1 to clear_tribe1
-  description: 'Clear tribe1, remove associated players and emojis',
-  type: 1,
-  default_member_permissions: ADMIN_PERMISSIONS
-};
-
-const CLEAR_TRIBE2_COMMAND = {
-  name: maybePrependDev('clear_tribe2'),  // Changed from cleartribe2 to clear_tribe2
-  description: 'Clear tribe2, remove associated players and emojis',
-  type: 1,
-  default_member_permissions: ADMIN_PERMISSIONS
-};
-
-const CLEAR_TRIBE3_COMMAND = {
-  name: maybePrependDev('clear_tribe3'),  // Changed from cleartribe3 to clear_tribe3
-  description: 'Clear tribe3, remove associated players and emojis',
-  type: 1,
-  default_member_permissions: ADMIN_PERMISSIONS
-};
-
-const CLEAR_TRIBE4_COMMAND = {
-  name: maybePrependDev('clear_tribe4'),  // Changed from cleartribe4 to clear_tribe4
-  description: 'Clear tribe4, remove associated players and emojis',
-  type: 1,
-  default_member_permissions: ADMIN_PERMISSIONS
 };
 
 const CLEAR_TRIBEALL_COMMAND = {
