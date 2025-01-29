@@ -40,6 +40,18 @@ import { pipeline } from 'stream/promises';
 // Add these constants near the top with other constants
 const REACTION_NUMBERS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
 
+// Add this near other constants
+const STANDARD_PRONOUN_ROLES = [
+  'He/Him',
+  'She/Her',
+  'They/Them',
+  'They/He',
+  'She/They',
+  'Ask',
+  'Any',
+  'All Pronouns'
+];
+
 // Update ensureServerData function
 async function ensureServerData(guild) {
   const playerData = await loadPlayerData();
@@ -1330,6 +1342,99 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
       }
       return;
+// ...existing code...
+} else if (name === 'role_generator') {
+  try {
+    console.log('Processing role_generator command');
+    await res.send({
+      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    });
+
+    const guildId = req.body.guild_id;
+    const guild = await client.guilds.fetch(guildId);
+    
+    // Track results for user feedback
+    const created = [];
+    const failed = [];
+    const existingRoles = [];
+
+    // Create each pronoun role
+    for (const pronounRole of STANDARD_PRONOUN_ROLES) {
+      try {
+        // Check if role already exists
+        const existing = guild.roles.cache.find(r => r.name === pronounRole);
+        if (existing) {
+          console.log(`Role ${pronounRole} already exists with ID ${existing.id}`);
+          existingRoles.push({ name: pronounRole, id: existing.id });
+          continue;
+        }
+
+        // Create new role
+        const newRole = await guild.roles.create({
+          name: pronounRole,
+          mentionable: true,
+          reason: 'CastBot pronoun role generation'
+        });
+        console.log(`Created role ${pronounRole} with ID ${newRole.id}`);
+        created.push({ name: pronounRole, id: newRole.id });
+      } catch (error) {
+        console.error(`Failed to create role ${pronounRole}:`, error);
+        failed.push(pronounRole);
+      }
+    }
+
+    // Update pronounRoleIDs in storage
+    const playerData = await loadPlayerData();
+    if (!playerData[guildId]) {
+      playerData[guildId] = { pronounRoleIDs: [] };
+    }
+    
+    // Add all new and existing role IDs to the pronounRoleIDs array
+    const allRoleIds = [...created, ...existingRoles].map(role => role.id);
+    playerData[guildId].pronounRoleIDs = [
+      ...new Set([...playerData[guildId].pronounRoleIDs || [], ...allRoleIds])
+    ];
+    
+    await savePlayerData(playerData);
+
+    // Prepare response message
+    const messageLines = [];
+    if (created.length > 0) {
+      messageLines.push('Created roles:');
+      messageLines.push(...created.map(role => `• ${role.name} (<@&${role.id}>)`));
+    }
+    if (existingRoles.length > 0) {
+      messageLines.push('\nExisting roles found:');
+      messageLines.push(...existingRoles.map(role => `• ${role.name} (<@&${role.id}>)`));
+    }
+    if (failed.length > 0) {
+      messageLines.push('\nFailed to create:');
+      messageLines.push(...failed.map(name => `• ${name}`));
+    }
+    messageLines.push('\nAll role IDs have been registered with CastBot.');
+
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: messageLines.join('\n'),
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in role_generator command:', error);
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: 'Error generating roles.',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+  return;
+
 // ...existing code...
 }
 
