@@ -52,6 +52,23 @@ const STANDARD_PRONOUN_ROLES = [
   'All Pronouns'
 ];
 
+// Add this near other constants
+const STANDARD_TIMEZONE_ROLES = [
+  { name: 'PST (UTC-8)', offset: -8 },
+  { name: 'MST (UTC-7)', offset: -7 },
+  { name: 'CST (UTC-6)', offset: -6 },
+  { name: 'EST (UTC-5)', offset: -5 },
+  { name: 'NST (UTC-3:30)', offset: -3.5 },
+  { name: 'ADT (UTC-3)', offset: -3 },
+  { name: 'GMT (UTC+0)', offset: 0 },
+  { name: 'BST (UTC+1)', offset: 1 },
+  { name: 'CEST (UTC+2)', offset: 2 },
+  { name: 'IST (UTC+5:30)', offset: 5.5 },
+  { name: 'GMT+8 (UTC+8)', offset: 8 },
+  { name: 'AEST (UTC+10)', offset: 10 },
+  { name: 'NZDT (UTC+13)', offset: 13 }
+];
+
 // Update ensureServerData function
 async function ensureServerData(guild) {
   const playerData = await loadPlayerData();
@@ -1353,64 +1370,119 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const guildId = req.body.guild_id;
     const guild = await client.guilds.fetch(guildId);
     
-    // Track results for user feedback
-    const created = [];
-    const failed = [];
-    const existingRoles = [];
+    // Track results for both pronouns and timezones
+    const created = { pronouns: [], timezones: [] };
+    const failed = { pronouns: [], timezones: [] };
+    const existingRoles = { pronouns: [], timezones: [] };
 
-    // Create each pronoun role
+    // Create pronoun roles
+    console.log('Creating pronoun roles...');
     for (const pronounRole of STANDARD_PRONOUN_ROLES) {
       try {
-        // Check if role already exists
         const existing = guild.roles.cache.find(r => r.name === pronounRole);
         if (existing) {
-          console.log(`Role ${pronounRole} already exists with ID ${existing.id}`);
-          existingRoles.push({ name: pronounRole, id: existing.id });
+          console.log(`Pronoun role ${pronounRole} already exists with ID ${existing.id}`);
+          existingRoles.pronouns.push({ name: pronounRole, id: existing.id });
           continue;
         }
 
-        // Create new role
         const newRole = await guild.roles.create({
           name: pronounRole,
           mentionable: true,
           reason: 'CastBot pronoun role generation'
         });
-        console.log(`Created role ${pronounRole} with ID ${newRole.id}`);
-        created.push({ name: pronounRole, id: newRole.id });
+        console.log(`Created pronoun role ${pronounRole} with ID ${newRole.id}`);
+        created.pronouns.push({ name: pronounRole, id: newRole.id });
       } catch (error) {
-        console.error(`Failed to create role ${pronounRole}:`, error);
-        failed.push(pronounRole);
+        console.error(`Failed to create pronoun role ${pronounRole}:`, error);
+        failed.pronouns.push(pronounRole);
       }
     }
 
-    // Update pronounRoleIDs in storage
+    // Create timezone roles
+    console.log('Creating timezone roles...');
+    for (const timezone of STANDARD_TIMEZONE_ROLES) {
+      try {
+        const existing = guild.roles.cache.find(r => r.name === timezone.name);
+        if (existing) {
+          console.log(`Timezone role ${timezone.name} already exists with ID ${existing.id}`);
+          existingRoles.timezones.push({ ...timezone, id: existing.id });
+          continue;
+        }
+
+        const newRole = await guild.roles.create({
+          name: timezone.name,
+          mentionable: true,
+          reason: 'CastBot timezone role generation'
+        });
+        console.log(`Created timezone role ${timezone.name} with ID ${newRole.id}`);
+        created.timezones.push({ ...timezone, id: newRole.id });
+      } catch (error) {
+        console.error(`Failed to create timezone role ${timezone.name}:`, error);
+        failed.timezones.push(timezone.name);
+      }
+    }
+
+    // Update storage
     const playerData = await loadPlayerData();
     if (!playerData[guildId]) {
-      playerData[guildId] = { pronounRoleIDs: [] };
+      playerData[guildId] = { pronounRoleIDs: [], timezones: {} };
+    }
+
+    // Update pronounRoleIDs
+    const allPronounIds = [...created.pronouns, ...existingRoles.pronouns].map(role => role.id);
+    playerData[guildId].pronounRoleIDs = [
+      ...new Set([...playerData[guildId].pronounRoleIDs || [], ...allPronounIds])
+    ];
+
+    // Update timezones
+    if (!playerData[guildId].timezones) {
+      playerData[guildId].timezones = {};
     }
     
-    // Add all new and existing role IDs to the pronounRoleIDs array
-    const allRoleIds = [...created, ...existingRoles].map(role => role.id);
-    playerData[guildId].pronounRoleIDs = [
-      ...new Set([...playerData[guildId].pronounRoleIDs || [], ...allRoleIds])
-    ];
-    
+    // Add new and existing timezone roles
+    [...created.timezones, ...existingRoles.timezones].forEach(tz => {
+      playerData[guildId].timezones[tz.id] = {
+        offset: tz.offset
+      };
+    });
+
     await savePlayerData(playerData);
 
     // Prepare response message
     const messageLines = [];
-    if (created.length > 0) {
-      messageLines.push('Created roles:');
-      messageLines.push(...created.map(role => `• ${role.name} (<@&${role.id}>)`));
+    
+    // Pronouns section
+    if (created.pronouns.length > 0) {
+      messageLines.push('Created pronoun roles:');
+      messageLines.push(...created.pronouns.map(role => `• ${role.name} (<@&${role.id}>)`));
     }
-    if (existingRoles.length > 0) {
-      messageLines.push('\nExisting roles found:');
-      messageLines.push(...existingRoles.map(role => `• ${role.name} (<@&${role.id}>)`));
+    if (existingRoles.pronouns.length > 0) {
+      messageLines.push('\nExisting pronoun roles found:');
+      messageLines.push(...existingRoles.pronouns.map(role => `• ${role.name} (<@&${role.id}>)`));
     }
-    if (failed.length > 0) {
-      messageLines.push('\nFailed to create:');
-      messageLines.push(...failed.map(name => `• ${name}`));
+    if (failed.pronouns.length > 0) {
+      messageLines.push('\nFailed to create pronoun roles:');
+      messageLines.push(...failed.pronouns.map(name => `• ${name}`));
     }
+
+    // Timezone section
+    messageLines.push('\n--- Timezones ---');
+    if (created.timezones.length > 0) {
+      messageLines.push('\nCreated timezone roles:');
+      messageLines.push(...created.timezones.map(tz => 
+        `• ${tz.name} (<@&${tz.id}>) [offset: ${tz.offset}]`));
+    }
+    if (existingRoles.timezones.length > 0) {
+      messageLines.push('\nExisting timezone roles found:');
+      messageLines.push(...existingRoles.timezones.map(tz => 
+        `• ${tz.name} (<@&${tz.id}>) [offset: ${tz.offset}]`));
+    }
+    if (failed.timezones.length > 0) {
+      messageLines.push('\nFailed to create timezone roles:');
+      messageLines.push(...failed.timezones.map(name => `• ${name}`));
+    }
+
     messageLines.push('\nAll role IDs have been registered with CastBot.');
 
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
