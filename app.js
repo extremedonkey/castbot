@@ -1960,11 +1960,31 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
     const guild = reaction.message.guild;
     const member = await guild.members.fetch(user.id);
+
+    // Add permission check
+    const permCheck = await checkRoleHierarchyPermission(guild, roleId);
+    if (!permCheck.allowed) {
+      // Remove the user's reaction to indicate failure
+      await reaction.users.remove(user.id);
+      
+      try {
+        // Try to DM the user about the error
+        await user.send(`Could not assign role in ${guild.name}: ${permCheck.reason}. Please contact a server admin to fix the bot's role position.`);
+      } catch (dmError) {
+        console.log('Could not DM user about role assignment failure');
+      }
+      
+      // Also log the error
+      console.error(`Role assignment failed in ${guild.name}: ${permCheck.reason}`);
+      return;
+    }
+
     try {
       await member.roles.add(roleId);
       console.log(`Added role ${roleId} to user ${user.tag}`);
     } catch (error) {
       console.error('Error adding role:', error);
+      await reaction.users.remove(user.id);
     }
   } catch (error) {
     console.error('Error in messageReactionAdd:', error);
@@ -1994,6 +2014,14 @@ client.on('messageReactionRemove', async (reaction, user) => {
 
     const guild = reaction.message.guild;
     const member = await guild.members.fetch(user.id);
+
+    // Add permission check here too
+    const permCheck = await checkRoleHierarchyPermission(guild, roleId);
+    if (!permCheck.allowed) {
+      console.error(`Role removal failed in ${guild.name}: ${permCheck.reason}`);
+      return;
+    }
+
     try {
       await member.roles.remove(roleId);
       console.log(`Removed role ${roleId} from user ${user.tag}`);
@@ -2004,3 +2032,25 @@ client.on('messageReactionRemove', async (reaction, user) => {
     console.error('Error in messageReactionRemove:', error);
   }
 });
+
+// Add near other helper functions
+async function checkRoleHierarchyPermission(guild, roleId) {
+  const bot = await guild.members.fetch(client.user.id);
+  const role = await guild.roles.fetch(roleId);
+  
+  if (!bot.permissions.has(PermissionFlagsBits.ManageRoles)) {
+    return { 
+      allowed: false, 
+      reason: 'Bot is missing Manage Roles permission' 
+    };
+  }
+
+  if (role.position >= bot.roles.highest.position) {
+    return { 
+      allowed: false, 
+      reason: `Cannot assign role ${role.name} as it is higher than or equal to the bot's highest role. Go to Server Settings > Roles and drag the CastBot role to the very top of the list, so it is above your timezone and pronoun roles.` 
+    };
+  }
+
+  return { allowed: true };
+}
