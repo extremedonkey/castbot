@@ -354,16 +354,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             },
             {
               name: '4️⃣ Add Tribes to Castlist',
-              value: 'Run `/set_tribe` for each tribe you want to add to your castlist, selecting the Discord Role for the tribe to add. Players with that role will appear in `/castlist`, and when the role is cleared (e.g., they are eliminated), they will no longer appear in the castlist. Use `/clear_tribe` to remove tribes from the castlist.'
+              value: 'Run `/add_tribe` for each tribe you want to add to your castlist, selecting the Discord Role for the tribe to add. Players with that role will appear in `/castlist`, and when the role is cleared (e.g., they are eliminated), they will no longer appear in the castlist. Use `/clear_tribe` to remove tribes from the castlist.'
             },
             {
-              name: 'Final Step',
-              value: 'Type the `/castlist` command in a channel to see your default dynamic castlist, or view an alternate castlist by specifying the castlist name.'
+              name: '🏁 Final Step',
+              value: 'Type the `/castlist` command in a channel to see your default dynamic castlist. Be sure to let players know they can use the command themselves, such as in their subs or confessionals.'
+            },
+            {
+              name: '🔁 How to swap / merge / exile / redemption',
+              value: 'Remove your old tribes with `/clear_tribe @TribeRole` and add your new swap tribe roles with `/add_tribe @NewTribeRole`. If you are using redemption or exile style twists, simply create a role for those players and add them to the castlist.'
             },
             {
               name: 'How to swap',
-              value: 'Remove your old tribes with `/clear_tribe @TribeRole` and add your new tribes with `/set_tribe`.'
-            }
+              value: 'Remove your old tribes with `/clear_tribe @TribeRole` and add your new swap tribe roles with `/add_tribe`.'
+            }            
           ])
           .setFooter({ 
             text: 'Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!',
