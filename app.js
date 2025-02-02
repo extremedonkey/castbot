@@ -338,15 +338,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .addFields([
             {
               name: 'Getting Started!',
-              value: 'CastBot provides a simple to set up, dynamically updating castlist with auto-generated player emojis and live times for each player. /Follow the instructions below to get the castlist setup for your next season!'
+              value: 'CastBot provides a simple to set up, dynamically updating castlist with auto-generated player emojis and live times for each player. Follow the instructions below to get the castlist setup for your next season!'
             },
             {
-              name: '1️⃣ Set up Pronouns and Timezone Roles',
+              name: '1️⃣ Set up Pronouns and Timezone roles',
               value: 'CastBot uses Discord roles to track player Pronouns, Timezones and Tribes. Run `/setup_castbot` and CastBot will create the majority of pronouns and timezones roles needed in your server, and add them to its database. If you already have pronoun roles set up, it should automatically detect and add them.'
             },
             {
-              name: '2️⃣ Assign Player Pronoun and Timezone Roles',
-              value: 'Now you must assign the corresponding Pronoun and Timezone roles to each player. You can do this either manually by assigning the player the relevant role in Discord (e.g., He/Him, EST), or you can have the players do the work for you by typing `/player_set_pronouns`and `/player_set_timezone` which will allow the players to self assign from a react for roles prompt! You can include these commands as instructions to applicants as part of your season application process so they set their own pronouns and timezones.'
+              name: '2️⃣ Assign Pronoun and Timezone roles to players',
+              value: 'Now you must assign the corresponding Pronoun and Timezone roles to each player. You can do this either manually by assigning the player the relevant role in Discord (e.g., He/Him, EST), or you can have the players do the work for you by typing `/player_set_pronouns` and `/player_set_timezone` (such as in their subs) which will allow the players to self assign from a react for roles prompt! You can include these commands as instructions to applicants as part of your season application process so they set their own pronouns and timezones.'
             },
             {
               name: '3️⃣ Set Player Ages',
