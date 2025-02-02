@@ -40,7 +40,7 @@ const CASTLIST_COMMAND = {
 
 // Admin-only commands: assign ADMIN_ANY as the default permission
 const SET_TRIBE_COMMAND = {
-	name: maybePrependDev('set_tribe'),
+	name: maybePrependDev('add_tribe'),  // Changed from set_tribe
 	description: 'Add or update a tribe in your dynamic castlist',
 	type: 1,
 	options: [
@@ -233,7 +233,7 @@ const GETTING_STARTED_COMMAND = {
 };
 
 const ROLE_GENERATOR_COMMAND = {
-	name: maybePrependDev('role_generator'),
+	name: maybePrependDev('setup_castbot'),  // Changed from role_generator
 	description: 'Create standard timezone and pronoun roles for your server',
 	type: 1,
 	default_member_permissions: ADMIN_ANY
@@ -241,19 +241,21 @@ const ROLE_GENERATOR_COMMAND = {
 
 // Open commands: remove any default_member_permissions property
 const REACT_PRONOUNS_COMMAND = {
-	name: maybePrependDev('react_pronouns'),
+	name: maybePrependDev('player_set_pronouns'),  // Changed from react_pronouns
 	description: 'Create a reaction role message for pronoun roles',
 	type: 1,
+	dm_permission: false
 };
 
 const REACT_TIMEZONES_COMMAND = {
-	name: 'react_timezones',
+	name: maybePrependDev('player_set_timezone'),  // Changed from react_timezones
 	description: 'Create a message for users to select their timezone roles via reactions',
-	type: 1,  // CHAT_INPUT
+	type: 1,
+	dm_permission: false
 };
 
 const SET_AGE_COMMAND = {
-	name: maybePrependDev('set_age'),
+	name: maybePrependDev('player_set_age'),  // Changed from set_age
 	description: 'Set your own age in the castlist',
 	type: 1,
 	options: [

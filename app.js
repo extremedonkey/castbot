@@ -304,13 +304,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
    */
   if (type === InteractionType.APPLICATION_COMMAND) {
     const rawName = data.name;
-    // Strip "dev_" if present
     const name = rawName.replace(/^dev_/, '');
 
     console.log(`Received command: ${rawName}`);
 
-    // Only check permissions for commands that modify data
-    const readOnlyCommands = ['castlist', 'getting_started', 'set_age'];  // Add set_age here
+    // Update the readOnlyCommands array to use new command names
+    const readOnlyCommands = ['castlist', 'getting_started', 'player_set_age', 'player_set_pronouns','player_set_timezone'];  // Updated from set_age
     if (!readOnlyCommands.includes(name)) {
       const hasPerms = await hasRequiredPermissions(req.body.guild_id, req.body.member.user.id);
       if (!hasPerms) {
@@ -339,7 +338,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .addFields([
             {
               name: 'About CastBot',
-              value: 'CastBot provides a dynamically updating castlist with auto-generated emojis and flexible role-based data.'
+              value: 'CastBot provides a dynamically updating castlist with auto-generated emojis and flexible role-based data. Follow the instructions below to get the castlist setup for your next season!'
             },
             {
               name: '1️⃣ Set up Pronouns',
@@ -1110,7 +1109,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
-} else if (name === 'set_tribe') {
+} else if (name === 'add_tribe') {  // Changed from set_tribe
   try {
     await res.send({
       type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
@@ -1169,7 +1168,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
-} else if (name === 'react_pronouns') {
+} else if (name === 'player_set_pronouns') {  // Changed from react_pronouns
   try {
     const guildId = req.body.guild_id;
     const guild = await client.guilds.fetch(guildId);
@@ -1262,7 +1261,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
-} else if (name === 'react_timezones') {
+} else if (name === 'player_set_timezone') {  // Changed from react_timezones
   try {
     const guildId = req.body.guild_id;
     const guild = await client.guilds.fetch(guildId);
@@ -1355,7 +1354,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
-} else if (name === 'set_age') {
+} else if (name === 'player_set_age') {  // Changed from set_age
   try {
     const guildId = req.body.guild_id;
     const userId = req.body.member.user.id;
@@ -1465,9 +1464,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
       return;
 // ...existing code...
-} else if (name === 'role_generator') {
+} else if (name === 'setup_castbot') {  // Changed from role_generator
   try {
-    console.log('Processing role_generator command');
+    console.log('Processing setup_castbot command');
     await res.send({
       type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
     });
