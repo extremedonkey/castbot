@@ -950,59 +950,57 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
     const guildId = req.body.guild_id;
     const guild = await client.guilds.fetch(guildId);
-    const removedCount = 0;
-    const notFoundCount = 0;
-    let responseMessage = '';
+    const removed = [];
+    const notFound = [];
 
-    // Get all timezone role options
-    const roleOptions = Array.from({ length: 12 }, (_, i) => 
-      data.options?.find(opt => opt.name === `timezone${i + 1}`)
-    ).filter(opt => opt !== undefined);
+    // Process all possible role options (up to 12)
+    const roleOptions = [];
+    for (let i = 1; i <= 12; i++) {
+      const roleOption = data.options?.find(opt => opt.name === `timezone${i}`);
+      if (roleOption) {
+        roleOptions.push(roleOption.value);
+      }
+    }
 
     console.log('Roles to remove:', roleOptions);
 
     // Load current timezone data
     const playerData = await loadPlayerData();
     if (!playerData[guildId]?.timezones) {
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
           content: 'No timezones have been set up for this server yet.',
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
+      return;
     }
 
     // Process each role
-    for (const roleOption of roleOptions) {
-      const roleId = roleOption.value;
-      
+    for (const roleId of roleOptions) {
       if (playerData[guildId].timezones[roleId]) {
         delete playerData[guildId].timezones[roleId];
-        removedCount++;
-        console.log(`Removed timezone role ${roleId} from server ${guildId}`);
+        removed.push(`<@&${roleId}> (${roleId})`);
       } else {
-        notFoundCount++;
-        console.log(`Timezone role ${roleId} not found in server ${guildId}`);
+        notFound.push(`<@&${roleId}> (${roleId})`);
       }
     }
 
     // Save changes
     await savePlayerData(playerData);
 
-    // Build response message
-    if (removedCount > 0) {
-      responseMessage += `Successfully removed ${removedCount} timezone role${removedCount !== 1 ? 's' : ''} from Castbot.\n`;
-    }
-    if (notFoundCount > 0) {
-      responseMessage += `${notFoundCount} role${notFoundCount !== 1 ? 's were' : ' was'} not found in Castbot's timezone list.`;
-    }
+    // Prepare response message
+    const removedMsg = removed.length > 0 ? `Successfully removed: ${removed.join(', ')}` : '';
+    const notFoundMsg = notFound.length > 0 ? `Not found in timezone list: ${notFound.join(', ')}` : '';
+    const message = [removedMsg, notFoundMsg].filter(msg => msg).join('\n');
 
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
     await DiscordRequest(endpoint, {
       method: 'PATCH',
       body: {
-        content: responseMessage || 'No timezone roles were specified for removal.',
+        content: message || 'No timezone roles were specified for removal.',
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
