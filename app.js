@@ -58,15 +58,11 @@ const STANDARD_TIMEZONE_ROLES = [
   { name: 'MST (UTC-7)', offset: -7 },
   { name: 'CST (UTC-6)', offset: -6 },
   { name: 'EST (UTC-5)', offset: -5 },
-  { name: 'NST (UTC-3:30)', offset: -3.5 },
-  { name: 'ADT (UTC-3)', offset: -3 },
   { name: 'GMT (UTC+0)', offset: 0 },
   { name: 'BST (UTC+1)', offset: 1 },
   { name: 'CEST (UTC+2)', offset: 2 },
-  { name: 'IST (UTC+5:30)', offset: 5.5 },
   { name: 'GMT+8 (UTC+8)', offset: 8 },
-  { name: 'AEST (UTC+10)', offset: 10 },
-  { name: 'NZDT (UTC+13)', offset: 13 }
+  { name: 'AEST (UTC+11)', offset: 10 }
 ];
 
 // Update ensureServerData function
@@ -945,12 +941,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     });
   }
-} else if (name === 'remove_timezones') { // Changed from removetimezone
+} else if (name === 'timezones_remove') {
   try {
-    console.log('Processing removetimezone command');
+    console.log('Processing timezones_remove command');
+    await res.send({
+      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    });
+
     const guildId = req.body.guild_id;
     const guild = await client.guilds.fetch(guildId);
-    
+    const removedCount = 0;
+    const notFoundCount = 0;
+    let responseMessage = '';
+
     // Get all timezone role options
     const roleOptions = Array.from({ length: 12 }, (_, i) => 
       data.options?.find(opt => opt.name === `timezone${i + 1}`)
@@ -959,52 +962,156 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     console.log('Roles to remove:', roleOptions);
 
     // Load current timezone data
-    const storageData = await loadPlayerData();
-    if (!storageData[guildId]?.timezones) {
-      storageData[guildId] = { ...storageData[guildId], timezones: {} };
+    const playerData = await loadPlayerData();
+    if (!playerData[guildId]?.timezones) {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: 'No timezones have been set up for this server yet.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
     }
-
-    const results = [];
 
     // Process each role
     for (const roleOption of roleOptions) {
       const roleId = roleOption.value;
-      const role = await guild.roles.fetch(roleId);
-      const roleName = role ? role.name : roleId;
-
-      if (storageData[guildId].timezones[roleId]) {
-        delete storageData[guildId].timezones[roleId];
-        const message = `Timezone <@&${roleId}> (${roleId}) removed from the timezone list.`;
-        console.log(message);
-        results.push(message);
+      
+      if (playerData[guildId].timezones[roleId]) {
+        delete playerData[guildId].timezones[roleId];
+        removedCount++;
+        console.log(`Removed timezone role ${roleId} from server ${guildId}`);
       } else {
-        const message = `Timezone <@&${roleId}> (${roleId}) was not found in the list of Timezones, so nothing has been removed.`;
-        console.log(message);
-        results.push(message);
+        notFoundCount++;
+        console.log(`Timezone role ${roleId} not found in server ${guildId}`);
       }
     }
 
     // Save changes
-    await savePlayerData(storageData);
-    
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        content: results.join('\n'),
+    await savePlayerData(playerData);
+
+    // Build response message
+    if (removedCount > 0) {
+      responseMessage += `Successfully removed ${removedCount} timezone role${removedCount !== 1 ? 's' : ''} from Castbot.\n`;
+    }
+    if (notFoundCount > 0) {
+      responseMessage += `${notFoundCount} role${notFoundCount !== 1 ? 's were' : ' was'} not found in Castbot's timezone list.`;
+    }
+
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: responseMessage || 'No timezone roles were specified for removal.',
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
-    
-  } catch (err) {
-    console.error('Error processing removetimezone command:', err);
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        content: 'Failed to remove timezones.',
+
+  } catch (error) {
+    console.error('Error in timezones_remove:', error);
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: 'Error removing timezone roles.',
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
   }
+  return;
+} else if (name === 'react_timezones') {
+  try {
+    const guildId = req.body.guild_id;
+    const guild = await client.guilds.fetch(guildId);
+
+    // Get timezone roles from storage
+    const timezones = await getGuildTimezones(guildId);
+    if (!Object.keys(timezones).length) {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: 'No timezone roles found. Add some using /timezones_add first!',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    }
+
+    // Get role objects and sort alphabetically
+    const roles = await Promise.all(
+      Object.keys(timezones).map(id => guild.roles.fetch(id))
+    );
+    const sortedRoles = roles
+      .filter(role => role) // Remove any null roles
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (sortedRoles.length > REACTION_NUMBERS.length) {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: `Too many timezone roles (maximum ${REACTION_NUMBERS.length} supported)`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    }
+
+    // Create embed
+    const embed = new EmbedBuilder()
+      .setTitle('Timezone Role Selection')
+      .setDescription('React with the emoji corresponding to your timezone:\n\n' + 
+        sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
+      .setColor('#7ED321');
+
+    // Send the message
+    await res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        embeds: [embed]
+      }
+    });
+
+    // Get the message we just sent
+    const response = await fetch(
+      `https://discord.com/api/v10/channels/${req.body.channel_id}/messages`,
+      {
+        headers: {
+          Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    const messages = await response.json();
+    const message = messages[0];  // Get most recent message
+
+    // Add reactions
+    for (let i = 0; i < sortedRoles.length; i++) {
+      await fetch(
+        `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${message.id}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+          },
+        }
+      );
+    }
+
+    // Store role-emoji mappings in memory for reaction handler
+    if (!client.roleReactions) client.roleReactions = new Map();
+    client.roleReactions.set(message.id, 
+      Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]))
+    );
+
+  } catch (error) {
+    console.error('Error in react_timezones:', error);
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: 'Error creating reaction message',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+  return;
 } else if (name === 'set_tribe') {
   try {
     await res.send({

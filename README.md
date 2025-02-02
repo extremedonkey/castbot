@@ -55,6 +55,53 @@ To register the global and guild-specific slash commands, run the following Powe
 .\registerslashcommands.ps1
 ```
 
+## Command Deployment and Management
+
+### Development Mode (`PRODUCTION=FALSE`)
+1. Clean existing commands if needed:
+```bash
+node fix_commands.js
+```
+
+2. Deploy commands to test server:
+```bash
+npm run registerguild
+```
+
+### Production Mode (`PRODUCTION=TRUE`)
+1. Clean existing commands:
+```bash
+node fix_commands.js
+```
+
+2. Deploy global commands:
+```bash
+npm run deploy
+```
+
+Note: Global commands can take up to an hour to propagate across Discord.
+
+### Troubleshooting Commands
+
+If you see duplicate commands or commands with incorrect permissions:
+
+1. Set your environment properly in `.env`:
+```env
+PRODUCTION=TRUE  # or FALSE for development
+```
+
+2. Run the cleanup script:
+```bash
+node fix_commands.js
+```
+
+3. Redeploy your commands:
+```bash
+npm run deploy  # for production
+# or
+npm run registerguild  # for development
+```
+
 ## Usage
 
 ### Available Commands
