@@ -338,7 +338,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .addFields([
             {
               name: 'Getting Started!',
-              value: 'CastBot provides a dynamically updating castlist with auto-generated emojis and flexible role-based data. Follow the instructions below to get the castlist setup for your next season!'
+              value: 'CastBot provides a simple to set up, dynamically updating castlist with auto-generated player emojis and live times for each player. /Follow the instructions below to get the castlist setup for your next season!'
             },
             {
               name: '1️⃣ Set up Pronouns and Timezone Roles',
@@ -346,15 +346,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             },
             {
               name: '2️⃣ Assign Player Pronoun and Timezone Roles',
-              value: 'You can do this either manually by assigning the player the relevant role in Discord (e.g., He/Him, EST), or you can have the players do the work for you by typing `/player_set_ pronouns`and `/player_set_timezone` which will allow the players to self assign from a react for roles prompt! You can include these commands as instructions as part of your season application process to have applicants self-assign!'
+              value: 'Now you must assign the corresponding Pronoun and Timezone roles to each player. You can do this either manually by assigning the player the relevant role in Discord (e.g., He/Him, EST), or you can have the players do the work for you by typing `/player_set_pronouns`and `/player_set_timezone` which will allow the players to self assign from a react for roles prompt! You can include these commands as instructions to applicants as part of your season application process so they set their own pronouns and timezones.'
             },
             {
-              name: '3️⃣ Set player ages',
-              value: 'Use `/set_players_age` to bulk set ages for up to 12 players at a time (run it twice if you have more than 12 players). Or you can have players set their own age using `/player_set_age`.'
+              name: '3️⃣ Set Player Ages',
+              value: 'Use `/set_players_age` to bulk set ages for up to 12 players at a time (run the command twice to set up to 24 players). Or you can have players set their own age using `/player_set_age`.'
             },
             {
-              name: '4️⃣ Manage Tribes',
-              value: 'Use `/set_tribe` and select the Discord Tribe Roles for your starting tribes. Players with that role will appear in `/castlist`). Use `/clear_tribe` to remove that tribe.'
+              name: '4️⃣ Add Tribes to Castlist',
+              value: 'Run `/set_tribe` for each tribe you want to add to your castlist, selecting the Discord Role for the tribe to add. Players with that role will appear in `/castlist`, and when the role is cleared (e.g., they are eliminated), they will no longer appear in the castlist. Use `/clear_tribe` to remove tribes from the castlist.'
             },
             {
               name: 'Final Step',
@@ -1587,7 +1587,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       messageLines.push(...failed.timezones.map(name => `• ${name}`));
     }
 
-    messageLines.push('\nAll role IDs have been registered with CastBot.');
+    messageLines.push('\nCastBot has finished setting up Pronoun and Timezone Roles! Assign these roles to players to have them show up on the castlist.');
 
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
     await DiscordRequest(endpoint, {
