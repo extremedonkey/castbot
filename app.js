@@ -26,11 +26,11 @@ import {
   saveAllPlayerData,
   getGuildTribes,
   updateGuildTribes,
-  savePlayerData,    // Add this import
-  getGuildPronouns,  // Add this import
-  updateGuildPronouns, // Add this import
-  getGuildTimezones, // Add this import
-  getTimezoneOffset // Add this import
+  savePlayerData,
+  getGuildPronouns,
+  updateGuildPronouns,
+  getGuildTimezones,
+  getTimezoneOffset
 } from './storage.js';
 import fs from 'fs';
 import fetch from 'node-fetch';
