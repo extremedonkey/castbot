@@ -268,6 +268,13 @@ const SET_AGE_COMMAND = {
 	]
 };
 
+const STATS_COMMAND = {
+  name: maybePrependDev('stats'),
+  description: 'Display message statistics for all channels',
+  type: 1,
+  default_member_permissions: ADMIN_ANY
+};
+
 const ALL_COMMANDS = [
 	SET_AGE_COMMAND,
 	REACT_PRONOUNS_COMMAND,
@@ -282,6 +289,7 @@ const ALL_COMMANDS = [
 	TIMEZONES_ADD_COMMAND,
 	TIMEZONES_REMOVE_COMMAND,
 	REACT_TIMEZONES_COMMAND,
+	STATS_COMMAND,          // Add the stats command here
 ];
 
 console.log('Registering commands with:');
