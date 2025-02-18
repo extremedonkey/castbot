@@ -1643,8 +1643,124 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   return;
 
 // ...existing code...
-}
+} else if (name === 'stats') {
+    try {
+      // Send initial response since this might take a while
+      await res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+      });
 
+      const guildId = req.body.guild_id;
+      const guild = await client.guilds.fetch(guildId);
+      
+      // Get all channels
+      const channels = await guild.channels.fetch();
+      const textChannels = channels.filter(channel => 
+        channel.type === 0 && // GUILD_TEXT
+        channel.viewable // Only count channels the bot can see
+      );
+
+      // Collect message counts for each channel
+      const channelStats = [];
+      
+      for (const channel of textChannels.values()) {
+        try {
+          let messageCount = 0;
+          let lastId;
+
+          // Fetch messages in batches of 100 (Discord API limit)
+          while (true) {
+            const options = { limit: 100 };
+            if (lastId) options.before = lastId;
+
+            const messages = await channel.messages.fetch(options);
+            if (messages.size === 0) break;
+
+            messageCount += messages.size;
+            lastId = messages.last().id;
+
+            // Break if we've counted over 5000 messages to avoid long processing
+            if (messageCount > 5000) {
+              messageCount = `${messageCount}+`;
+              break;
+            }
+          }
+
+          channelStats.push({
+            name: channel.name,
+            count: messageCount,
+            category: channel.parent?.name || 'No Category'
+          });
+
+        } catch (error) {
+          console.error(`Error counting messages in #${channel.name}:`, error);
+          channelStats.push({
+            name: channel.name,
+            count: 'Error',
+            category: channel.parent?.name || 'No Category'
+          });
+        }
+      }
+
+      // Group by category
+      const categoryGroups = {};
+      for (const stat of channelStats) {
+        if (!categoryGroups[stat.category]) {
+          categoryGroups[stat.category] = [];
+        }
+        categoryGroups[stat.category].push(stat);
+      }
+
+      // Create embed
+      const embed = new EmbedBuilder()
+        .setTitle(`${guild.name} - Channel Statistics`)
+        .setColor('#7ED321')
+        .setTimestamp();
+
+      // Add fields for each category
+      for (const [category, channels] of Object.entries(categoryGroups)) {
+        // Sort channels by message count (convert to number for sorting)
+        channels.sort((a, b) => {
+          const countA = typeof a.count === 'string' ? parseInt(a.count) || 0 : a.count;
+          const countB = typeof b.count === 'string' ? parseInt(b.count) || 0 : b.count;
+          return countB - countA;
+        });
+
+        const channelList = channels
+          .map(ch => `#${ch.name}: ${ch.count} messages`)
+          .join('\n');
+
+        embed.addFields({
+          name: category,
+          value: channelList || 'No channels',
+          inline: false
+        });
+      }
+
+      // Edit the deferred response
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          embeds: [embed]
+        }
+      });
+
+    } catch (error) {
+      console.error('Error in stats command:', error);
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          content: 'Error fetching channel statistics.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    }
+    return;
+  }
+
+  // ...existing code...
   } // end if APPLICATION_COMMAND
 
   // ...rest of interaction handling...
