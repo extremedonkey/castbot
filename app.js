@@ -236,6 +236,7 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
   let existingLines = [];
   let errorLines = [];
   let maxEmojiReached = false;
+  let maxEmojiError = null;
 
   for (const [_, member] of targetMembers) {
     try {
@@ -250,8 +251,30 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
       await updatePlayer(guildId, member.id, { emojiCode: result.emojiCode });
       resultLines.push(`${member.displayName} ${result.emojiCode} (${result.isAnimated ? 'animated' : 'static'})`);
     } catch (error) {
-      // ...existing emoji error handling...
+      if (error.code === 30008) {
+        // Maximum emoji limit reached
+        maxEmojiReached = true;
+        maxEmojiError = error;
+        // Break the loop since we can't create any more emoji
+        break;
+      } else {
+        errorLines.push(`${member.displayName}: ${error.message || 'Unknown error'}`);
+      }
     }
+  }
+
+  if (maxEmojiReached) {
+    errorLines.push('⚠️ Maximum emoji limit reached! Some players did not get emoji created.');
+    errorLines.push('Consider manually deleting some emoji from your server from Server Settings > Emoji.');
+    errorLines.push('Note: For any emoji created using CastBot, use `/clear_tribe` which will also delete the emoji from your server and CastBot\'s database.');
+    
+    // Log detailed error for debugging
+    console.error('Maximum emoji limit reached:', {
+      guildId,
+      error: maxEmojiError,
+      processedCount: resultLines.length,
+      remainingCount: targetMembers.size - resultLines.length
+    });
   }
 
   return {
@@ -1745,32 +1768,49 @@ async function createEmojiForUser(member, guild) {
             }
 
             // Create emoji with processed buffer
-            const emoji = await guild.emojis.create({
-                attachment: processedBuffer,
-                name: member.id
-            });
+            try {
+                const emoji = await guild.emojis.create({
+                    attachment: processedBuffer,
+                    name: member.id
+                });
 
-            const emojiCode = finalIsAnimated ? 
-                `<a:${member.id}:${emoji.id}>` : 
-                `<:${member.id}:${emoji.id}>`;
+                const emojiCode = finalIsAnimated ? 
+                    `<a:${member.id}:${emoji.id}>` : 
+                    `<:${member.id}:${emoji.id}>`;
 
-            console.log(`Created ${finalIsAnimated ? 'animated' : 'static'} emoji (${processedBuffer.length} bytes): ${emojiCode}`);
+                console.log(`Created ${finalIsAnimated ? 'animated' : 'static'} emoji (${processedBuffer.length} bytes): ${emojiCode}`);
 
-            return {
-                success: true,
-                emoji,
-                emojiCode,
-                isAnimated: finalIsAnimated
-            };
+                return {
+                    success: true,
+                    emoji,
+                    emojiCode,
+                    isAnimated: finalIsAnimated
+                };
+            } catch (emojiError) {
+                // Check specifically for emoji limit error
+                if (emojiError.code === 30008) {
+                    console.error('Emoji limit reached:', {
+                        guild: guild.id,
+                        member: member.id,
+                        error: emojiError
+                    });
+                    // Rethrow with preserved error code
+                    throw {
+                        code: emojiError.code,
+                        message: 'Maximum number of emojis reached. Cannot create more emojis until some are deleted.',
+                        rawError: emojiError
+                    };
+                }
+                // For other errors, throw with generic message
+                throw {
+                    code: emojiError.code || 'UNKNOWN',
+                    message: emojiError.message || 'Failed to create emoji',
+                    rawError: emojiError
+                };
+            }
 
-        } catch (emojiError) {
-            throw {
-                code: emojiError.code || 'UNKNOWN',
-                message: emojiError.message,
-                rawError: emojiError,
-                memberName: member.displayName,
-                avatarUrl: avatarURL
-            };
+        } catch (error) {
+            throw error; // Propagate the error up
         }
     } catch (error) {
         console.error('Detailed emoji error:', error);
