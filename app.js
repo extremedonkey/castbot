@@ -497,7 +497,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
             // Get members with this role
             const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
-            const memberFields = await createMemberFields(tribeMembers, fullGuild);
+            const memberFields = await createMemberFields(tribeMembers, fullGuild, tribe.color);
             console.log(`Generated ${memberFields.length} member fields for tribe ${tribeRole.name}`);
 
             if (embed.data.fields.length + memberFields.length > 25) {
@@ -1142,8 +1142,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
     // Prepare response message
     const castlistName = data.options.find(opt => opt.name === 'castlist')?.value || 'default';
+    
+    // Add color information to the message if a valid color was provided
+    let colorInfo = '';
+    if (colorOption?.value && !result.colorMessage) {
+      const formattedColor = colorOption.value.startsWith('#') ? 
+        colorOption.value : `#${colorOption.value}`;
+      colorInfo = ` with color ${formattedColor}`;
+    }
+    
     const messageLines = [
-      `Tribe <@&${result.tribeRoleId}> ${result.isNew ? 'added to' : 'updated in'} castlist '${castlistName}'${result.colorMessage || ''}`,
+      `Tribe <@&${result.tribeRoleId}> ${result.isNew ? 'added to' : 'updated in'} castlist '${castlistName}'${colorInfo}${result.colorMessage || ''}`,
       ''
     ];
 
@@ -1380,6 +1389,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   try {
     const guildId = req.body.guild_id;
     const userId = req.body.member.user.id;
+    const userName = req.body.member.nick || req.body.member.user.username;
     const age = data.options.find(opt => opt.name === 'age').value;
 
     // Load player data
@@ -1405,18 +1415,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     return res.send({
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
       data: {
-        content: `Your age has been set to ${age}`,
-        flags: InteractionResponseFlags.EPHEMERAL
+        content: `${userName} has set their age to ${age}` // Public message visible to all
       }
     });
 
   } catch (error) {
-    console.error('Error in set_age command:', error);
+    console.error('Error in player_set_age command:', error);
     return res.send({
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
       data: {
         content: 'Error setting age',
-        flags: InteractionResponseFlags.EPHEMERAL
+        flags: InteractionResponseFlags.EPHEMERAL // Only error messages are ephemeral
       }
     });
   }
@@ -1836,7 +1845,7 @@ async function calculateCastlistFields(guild, roleId, castlistName = 'default') 
 }
 
 // Add this helper function before handling the castlist command
-async function createMemberFields(members, guild) {
+async function createMemberFields(members, guild, tribeColor = null) {
   const fields = [];
   const pronounRoleIDs = await getGuildPronouns(guild.id);
   const timezones = await getGuildTimezones(guild.id);
