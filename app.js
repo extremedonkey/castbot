@@ -444,7 +444,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         await fullGuild.roles.fetch();
         const members = await fullGuild.members.fetch();
 
-        // Default color
+        // Default color (in hex format)
         const defaultColor = "#7ED321";
         let currentColor = defaultColor;
 
@@ -465,6 +465,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             iconURL: client.user.displayAvatarURL()
           });
 
+        console.log('Starting to process tribes for castlist. Initial color:', defaultColor);
+        
         // Add each tribe that has members
         for (const tribe of tribes) {
           try {
@@ -474,7 +476,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               continue;
             }
 
-            console.log(`Processing tribe role: ${tribeRole.name} (${tribeRole.id})`);
+            console.log(`Processing tribe role: ${tribeRole.name} (${tribe.roleId})`);
+            console.log('Tribe data:', JSON.stringify(tribe));
 
             // Update the embed color if this tribe has a color specified
             if (tribe.color) {
@@ -497,7 +500,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
             // Get members with this role
             const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
-            const memberFields = await createMemberFields(tribeMembers, fullGuild, tribe.color);
+            const memberFields = await createMemberFields(tribeMembers, fullGuild);
             console.log(`Generated ${memberFields.length} member fields for tribe ${tribeRole.name}`);
 
             if (embed.data.fields.length + memberFields.length > 25) {
@@ -523,6 +526,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
 
+        console.log(`Final embed color: ${embed.data.color || currentColor}`);
+
         // Edit the initial response with the embed
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
         await DiscordRequest(endpoint, {
@@ -533,15 +538,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
 
       } catch (error) {
-        console.error('Error handling castlist command:', error);
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            content: 'An error occurred while generating the castlist.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          },
-        });
+        // ...existing error handling...
       }
       return;
     } else if (name === 'clear_tribe') {
