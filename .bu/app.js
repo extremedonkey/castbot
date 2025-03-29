@@ -54,10 +54,10 @@ const STANDARD_PRONOUN_ROLES = [
 
 // Add this near other constants
 const STANDARD_TIMEZONE_ROLES = [
-  { name: 'PST (UTC-8)', offset: -8 },
-  { name: 'MST (UTC-7)', offset: -7 },
-  { name: 'CST (UTC-6)', offset: -6 },
-  { name: 'EST (UTC-5)', offset: -5 },
+  { name: 'PST (UTC-7)', offset: -7 },
+  { name: 'MST (UTC-6)', offset: -6 },
+  { name: 'CST (UTC-5)', offset: -5 },
+  { name: 'EST (UTC-4)', offset: -4 },
   { name: 'GMT (UTC+0)', offset: 0 },
   { name: 'BST (UTC+1)', offset: 1 },
   { name: 'CEST (UTC+2)', offset: 2 },
@@ -200,7 +200,6 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
 
   const emojiOption = options.find(opt => opt.name === 'emoji');
   const castlistName = options.find(opt => opt.name === 'castlist')?.value || 'default';
-  const colorOption = options.find(opt => opt.name === 'color');
 
   // Load guild data
   const data = await loadPlayerData();
@@ -227,22 +226,6 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     castlist: castlistName
   };
 
-  // Handle color if provided
-  let colorMessage = "";
-  if (colorOption?.value) {
-    const colorRegex = /^#?([0-9A-Fa-f]{6})$/;
-    const match = colorOption.value.match(colorRegex);
-    
-    if (match) {
-      // Add # if it's missing
-      const formattedColor = colorOption.value.startsWith('#') ? 
-        colorOption.value : `#${colorOption.value}`;
-      data[guildId].tribes[roleId].color = formattedColor;
-    } else {
-      colorMessage = " Invalid color entered - you must enter it as a 6 digit hexadecimal (e.g. #FFFFFF)";
-    }
-  }
-
   await savePlayerData(data);
 
   // Handle emoji creation
@@ -257,7 +240,7 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
   for (const [_, member] of targetMembers) {
     try {
       // Check if player already has an emoji
-      const existingPlayer = data[guildId].players?.[member.id];
+      const existingPlayer = data[guildId].players[member.id];
       if (existingPlayer?.emojiCode) {
         existingLines.push(`${member.displayName}: Already has emoji \`${existingPlayer.emojiCode}\``);
         continue;
@@ -278,9 +261,24 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     maxEmojiReached,
     tribeRoleId: roleId,
     totalFields,
-    isNew: !data[guildId].tribes[roleId],
-    colorMessage
+    isNew: !data[guildId].tribes[roleId]
   };
+}
+
+async function handleClearTribe(interaction, tribeNumber) {
+    const guildId = interaction.guild_id;
+    const guildData = await loadPlayerData();
+    
+    if (!guildData[guildId]?.tribes) {
+        return interaction.editReply('No tribe data found');
+    }
+
+    // Clear tribe data
+    guildData[guildId].tribes[`tribe${tribeNumber}`] = null;
+    guildData[guildId].tribes[`tribe${tribeNumber}emoji`] = null;
+
+    await savePlayerData(guildData);
+    return interaction.editReply(`Tribe ${tribeNumber} cleared`);
 }
 
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
@@ -344,7 +342,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             },
             {
               name: 'Too Long; Didn\'t Read (tl;dr)',
-              value: 'Run `/setup_castbot` to create your pronoun and timezone roles. Then assign your pronoun, timezone and tribe role to each player and type `/castlist`.'
+              value: 'Run `/setup_castbot` to create your pronoun and timezone roles. Then assign your pronoun, timezone and tribe roles to each player and type `/castlist`.'
             },
             {
               name: '1️⃣ Set up Pronouns and Timezone roles',
@@ -372,7 +370,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             },
             {
               name: 'How to create additional castlists',
-              value: 'You can create additional castlists - for example if you want to show the Production team pronoun information, creating ad-hoc teams for challenges post-merge, etc. To do this, use `/set_tribe`, select the Tribe Role and then click on the castlist option and type a name for your new castlist (e.g., production). You can then view that castlist by typing `/castlist *castlistname*`, e.g. /castlist production.'
+              value: 'You can create additional castlists - for example if you want to show the Production team pronoun information, creating ad-hoc teams for challenges post-merge, etc. To do this, use `/add_tribe`, select the Tribe Role and then click on the castlist option and type a name for your new castlist (e.g., production). You can then view that castlist by typing `/castlist *castlistname*`, e.g. /castlist production.'
             }            
           ])
           .setFooter({ 
@@ -419,7 +417,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             data: {
               embeds: [{
                 title: 'CastBot: Dynamic Castlist',
-                description: 'No tribes have been added yet. Please have production run the `/set_tribe` command and select the Tribe role for them to show up in this list.',
+                description: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.',
                 color: 0x7ED321
               }]
             }
@@ -444,10 +442,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         await fullGuild.roles.fetch();
         const members = await fullGuild.members.fetch();
 
-        // Default color
-        const defaultColor = "#7ED321";
-        let currentColor = defaultColor;
-
         // Create the embed first
         const embedTitle = castlistToShow === 'default' 
           ? 'CastBot: Dynamic Castlist'
@@ -459,7 +453,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             name: fullGuild.name || 'Unknown Server', 
             iconURL: fullGuild.iconURL() || undefined 
           })
-          .setColor(defaultColor)  // Start with default color
+          .setColor('#7ED321')
           .setFooter({ 
             text: 'Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!',
             iconURL: client.user.displayAvatarURL()
@@ -475,13 +469,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }
 
             console.log(`Processing tribe role: ${tribeRole.name} (${tribeRole.id})`);
-
-            // Update the embed color if this tribe has a color specified
-            if (tribe.color) {
-              currentColor = tribe.color;
-              embed.setColor(currentColor);
-              console.log(`Set embed color to ${currentColor} for tribe ${tribeRole.name}`);
-            }
 
             // Add spacer if this isn't the first tribe added
             if (embed.data.fields?.length > 0) {
@@ -513,7 +500,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               await DiscordRequest(endpoint, {
                 method: 'PATCH',
                 body: {
-                  content: 'Cannot display castlist: Too many fields (maximum 25). Consider splitting tribes into separate castlists using the castlist parameter in /set_tribe.',
+                  content: 'Cannot display castlist: Too many fields (maximum 25). Consider splitting tribes into separate castlists using the castlist parameter in /add_tribe.',
                   flags: InteractionResponseFlags.EPHEMERAL
                 },
               });
@@ -1137,13 +1124,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
 
     const roleOption = data.options.find(opt => opt.name === 'role');
-    const colorOption = data.options.find(opt => opt.name === 'color');
     const result = await handleSetTribe(req.body.guild_id, roleOption, data.options);
 
     // Prepare response message
     const castlistName = data.options.find(opt => opt.name === 'castlist')?.value || 'default';
     const messageLines = [
-      `Tribe <@&${result.tribeRoleId}> ${result.isNew ? 'added to' : 'updated in'} castlist '${castlistName}'${result.colorMessage || ''}`,
+      `Tribe <@&${result.tribeRoleId}> ${result.isNew ? 'added to' : 'updated in'} castlist '${castlistName}'`,
       ''
     ];
 

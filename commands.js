@@ -61,7 +61,7 @@ const SET_TRIBE_COMMAND = {
 			description: 'Set which castlist this tribe is added to (if left blank, will be set to the default castlist)',
 			type: 3, // STRING
 			required: false
-		}
+				}
 	],
 	default_member_permissions: ADMIN_ANY
 };
