@@ -106,21 +106,25 @@ export async function getPlayer(guildId, playerId) {
     return storage[guildId].players[playerId] || null;
 }
 
+// Update getGuildTribes to include the color property from tribes
 export async function getGuildTribes(guildId, castlist = 'default') {
   const data = await loadPlayerData();
-  const guildData = data[guildId];
+  const tribes = [];
   
-  if (!guildData?.tribes) return [];
+  if (data[guildId]?.tribes) {
+    Object.entries(data[guildId].tribes).forEach(([roleId, tribeData]) => {
+      if (tribeData.castlist === castlist) {
+        tribes.push({
+          roleId,
+          emoji: tribeData.emoji,
+          color: tribeData.color, // Make sure we include the color property
+          castlist: tribeData.castlist
+        });
+      }
+    });
+  }
   
-  // Filter tribes based on castlist
-  const tribesInCastlist = Object.entries(guildData.tribes)
-    .filter(([_, tribeData]) => tribeData.castlist === castlist)
-    .map(([roleId, tribeData]) => ({
-      roleId,
-      emoji: tribeData.emoji
-    }));
-
-  return tribesInCastlist;
+  return tribes;
 }
 
 export async function updateGuildTribes(guildId, updates) {
