@@ -591,6 +591,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const guild = await client.guilds.fetch(guildId);
       const roleOption = data.options.find(opt => opt.name === 'role');
       const roleId = roleOption.value;
+      const token = req.body.token; // Store the token for later use
       
       console.log(`Processing clear_tribe for role ${roleId} in guild ${guildId}`);
 
@@ -598,30 +599,44 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const playerData = await loadPlayerData();
       if (!playerData[guildId]?.tribes) {
         console.log('No guild data found');
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            content: 'No tribe data found for this server',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+        try {
+          const endpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`;
+          await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: {
+              content: 'No tribe data found for this server',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } catch (webhookError) {
+          console.error('Webhook response error:', webhookError);
+          // If webhook fails, we can't do anything, just log it
+        }
         return;
       }
 
       // Check if tribe exists
       if (!playerData[guildId].tribes[roleId]) {
         console.log('No tribe found with this role ID');
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            content: `No tribe found with role <@&${roleId}>`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+        try {
+          const endpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`;
+          await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: {
+              content: `No tribe found with role <@&${roleId}>`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } catch (webhookError) {
+          console.error('Webhook response error:', webhookError);
+          // If webhook fails, we can't do anything, just log it
+        }
         return;
       }
+
+      // Store the tribe name and castlist before deletion for the message
+      const tribeName = (await guild.roles.fetch(roleId))?.name || roleId;
+      const castlist = playerData[guildId].tribes[roleId].castlist || 'default';
 
       // Get all members with this tribe role
       const members = await guild.members.fetch();
@@ -658,10 +673,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       }
 
-      // Store the tribe name before deletion for the message
-      const tribeName = (await guild.roles.fetch(roleId))?.name || roleId;
-      const castlist = playerData[guildId].tribes[roleId].castlist || 'default';
-
       // Remove tribe
       delete playerData[guildId].tribes[roleId];
 
@@ -670,31 +681,41 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       console.log('Saved updated player data');
 
       // Send response
-      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-      await DiscordRequest(endpoint, {
-        method: 'PATCH',
-        body: {
-          content: resultLines.length > 0 
-            ? `Cleared tribe ${tribeName} from castlist '${castlist}'.\n${resultLines.join('\n')}`
-            : `Cleared tribe ${tribeName} from castlist '${castlist}'. No emojis needed to be removed.`,
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
+      try {
+        const endpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: resultLines.length > 0 
+              ? `Cleared tribe ${tribeName} from castlist '${castlist}'.\n${resultLines.join('\n')}`
+              : `Cleared tribe ${tribeName} from castlist '${castlist}'. No emojis needed to be removed.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      } catch (webhookError) {
+        console.error('Error updating webhook response:', webhookError);
+        // The webhook might have expired, but the operation has completed successfully
+        console.log('However, tribe deletion was successful');
+      }
 
     } catch (error) {
       console.error('Error in clear_tribe:', error);
-      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-      await DiscordRequest(endpoint, {
-        method: 'PATCH',
-        body: {
-          content: 'Error clearing tribe',
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
+      try {
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: 'Error clearing tribe. Please check server logs.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      } catch (webhookError) {
+        console.error('Could not send error message via webhook:', webhookError);
+        // Webhook has likely expired, nothing more we can do
+      }
     }
     return;
-
-  } else if (name === 'set_players_age') {  // Changed from setageall
+} else if (name === 'set_players_age') {  // Changed from setageall
       try {
         console.log('Processing setageall command');
         const guildId = req.body.guild_id;
