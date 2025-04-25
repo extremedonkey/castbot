@@ -54,10 +54,10 @@ const STANDARD_PRONOUN_ROLES = [
 
 // Add this near other constants
 const STANDARD_TIMEZONE_ROLES = [
-  { name: 'PST (UTC-8)', offset: -8 },
-  { name: 'MST (UTC-7)', offset: -7 },
-  { name: 'CST (UTC-6)', offset: -6 },
-  { name: 'EST (UTC-5)', offset: -5 },
+  { name: 'PDT (UTC-7)', offset: -7 },
+  { name: 'MDT (UTC-6)', offset: -6 },
+  { name: 'CDT (UTC-5)', offset: -5 },
+  { name: 'EDT (UTC-4)', offset: -4 },
   { name: 'GMT (UTC+0)', offset: 0 },
   { name: 'BST (UTC+1)', offset: 1 },
   { name: 'CEST (UTC+2)', offset: 2 },
