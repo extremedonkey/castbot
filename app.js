@@ -1931,7 +1931,7 @@ async function createEmojiForUser(member, guild) {
     }
 }
 
-// Update calculateCastlistFields to handle role ID correctly
+// Update calculateCastlistFields to handle role ID correctly and manage spacers intelligently
 async function calculateCastlistFields(guild, roleIdOrOption, castlistName = 'default') {
   try {
     // Extract the actual role ID from the option object if needed
@@ -1945,73 +1945,59 @@ async function calculateCastlistFields(guild, roleIdOrOption, castlistName = 'de
 
     const guildData = await loadPlayerData();
     const guildTribes = guildData[guild.id]?.tribes || {};
-    let totalFields = 0;
-    let tribeCount = 0;
     
-    console.log(`Calculating fields for castlist "${castlistName}" with roleId "${roleId}"`);
+    // Count existing tribes in this castlist (excluding the one being updated)
+    const existingTribes = Object.entries(guildTribes)
+      .filter(([id, tribe]) => tribe.castlist === castlistName && id !== roleId)
+      .map(([id]) => id);
+    
+    console.log(`Found ${existingTribes.length} existing tribes in castlist "${castlistName}"`);
     
     // Get all members for the new/updated tribe
     const newRole = await guild.roles.fetch(roleId);
     const newRoleMembers = newRole ? newRole.members.size : 0;
-    
     console.log(`New tribe "${newRole?.name}" has ${newRoleMembers} members`);
     
-    // We need a more accurate count of field usage for Discord embeds
-    // Each tribe adds:
-    // 1. A header field
-    // 2. One field per member
-    // 3. A spacer field between tribes (except for the first tribe)
-
-    // First, count all tribe headers and their members in this castlist
-    for (const [id, tribe] of Object.entries(guildTribes)) {
-      if (!tribe || tribe.castlist !== castlistName) continue;
-      
-      // Skip the tribe being updated
-      if (id === roleId) {
-        console.log(`Skipping current tribe ${id} as we'll count it separately`);
-        continue;
-      }
-      
-      // We've found a tribe in this castlist
-      tribeCount++;
-      
-      // Add 1 field for tribe header
-      totalFields++;
-      
-      // Fetch role and count members
+    // Count fields without spacers first
+    let fieldsWithoutSpacers = 0;
+    
+    // Count existing tribes and their members
+    for (const tribeId of existingTribes) {
       try {
-        const role = await guild.roles.fetch(id);
+        const role = await guild.roles.fetch(tribeId);
         if (role) {
-          // Count each member as a field
+          // Header + members
           const memberCount = role.members.size;
-          totalFields += memberCount;
-          console.log(`Counted tribe ${role.name} (${id}): 1 header + ${memberCount} members = ${memberCount + 1} fields`);
+          fieldsWithoutSpacers += 1 + memberCount;
+          console.log(`Existing tribe ${role.name}: 1 header + ${memberCount} members = ${1 + memberCount} fields`);
         }
       } catch (err) {
-        console.warn(`Could not fetch role ${id}:`, err.message);
+        console.warn(`Could not fetch role ${tribeId}:`, err.message);
       }
     }
     
-    // Now add fields for the new/updated tribe
-    if (newRole) {
-      // Add 1 field for the tribe header
-      totalFields++;
-      
-      // Add fields for each member
-      totalFields += newRoleMembers;
-      console.log(`Adding new/updated tribe ${newRole.name}: 1 header + ${newRoleMembers} members = ${newRoleMembers + 1} fields`);
-      
-      // Increment tribe count since we're adding/updating one
-      tribeCount++;
+    // Add the new tribe's fields
+    fieldsWithoutSpacers += 1 + newRoleMembers;
+    console.log(`New tribe ${newRole?.name}: 1 header + ${newRoleMembers} members = ${1 + newRoleMembers} fields`);
+    
+    // Calculate total number of fields with spacers
+    const totalTribes = existingTribes.length + 1;
+    const spacerFields = Math.max(0, totalTribes - 1);
+    const fieldsWithSpacers = fieldsWithoutSpacers + spacerFields;
+    
+    console.log(`Fields without spacers: ${fieldsWithoutSpacers}`);
+    console.log(`Number of spacers needed: ${spacerFields}`);
+    console.log(`Fields with spacers: ${fieldsWithSpacers}`);
+    
+    // Check if we need to omit spacers to fit within Discord's 25 field limit
+    if (fieldsWithSpacers > 25 && fieldsWithoutSpacers <= 25) {
+      console.log(`Will need to omit spacers to fit within 25 field limit`);
+      // Return fields without spacers (we'll handle spacers in the castlist command)
+      return fieldsWithoutSpacers;
     }
     
-    // Finally, add spacer fields between tribes (tribeCount - 1 spacers needed)
-    const spacerFields = Math.max(0, tribeCount - 1);
-    totalFields += spacerFields;
-    console.log(`Adding ${spacerFields} spacer fields between tribes`);
-    
-    console.log(`Final field count: ${totalFields} (limit: 25)`);
-    return totalFields;
+    // Otherwise return the total count with spacers
+    return fieldsWithSpacers;
   } catch (error) {
     console.error('Error calculating castlist fields:', error);
     throw error;
