@@ -1859,16 +1859,30 @@ async function createEmojiForUser(member, guild) {
 }
 
 // Update calculateCastlistFields to handle role ID correctly
-async function calculateCastlistFields(guild, roleId, castlistName = 'default') {
+async function calculateCastlistFields(guild, roleIdOrOption, castlistName = 'default') {
   try {
+    // Extract the actual role ID from the option object if needed
+    let roleId;
+    if (typeof roleIdOrOption === 'object' && roleIdOrOption.value) {
+      roleId = roleIdOrOption.value;
+      console.log(`Extracted roleId ${roleId} from roleIdOrOption object`);
+    } else {
+      roleId = roleIdOrOption;
+    }
+
     const guildData = await loadPlayerData();
     const guildTribes = guildData[guild.id]?.tribes || {};
     let totalFields = 0;
     let tribeCount = 0;
     
+    console.log(`Calculating fields for castlist "${castlistName}" with roleId "${roleId}"`);
+    
     // Count existing tribe fields and their players in this castlist
     for (const [id, tribe] of Object.entries(guildTribes)) {
       if (!tribe || tribe.castlist !== castlistName) continue;
+      
+      // Skip the tribe being updated/added since we'll count it separately
+      if (id === roleId) continue;
       
       // For each tribe except the first, add a spacer
       if (tribeCount > 0) {
@@ -1880,20 +1894,27 @@ async function calculateCastlistFields(guild, roleId, castlistName = 'default') 
       
       const role = await guild.roles.fetch(id);
       if (role) {
-        totalFields += role.members.size;
+        const memberCount = role.members.size;
+        totalFields += memberCount;
+        console.log(`Counted existing tribe ${role.name} (${id}): ${memberCount} members, current total: ${totalFields}`);
       }
     }
     
-    // Count new tribe's fields if it's not already counted
-    if (roleId !== Object(roleId)) { // Ensure roleId is not an object
-      const newRole = await guild.roles.fetch(roleId);
-      if (newRole && !guildTribes[roleId]) {
-        if (tribeCount > 0) totalFields++; // Add spacer
-        totalFields++; // Add header
-        totalFields += newRole.members.size;
+    // Add fields for the new/updated tribe
+    const newRole = await guild.roles.fetch(roleId);
+    if (newRole) {
+      // If this isn't the first tribe, add a spacer
+      if (tribeCount > 0) {
+        totalFields++;
       }
+      
+      totalFields++; // Add header
+      const memberCount = newRole.members.size;
+      totalFields += memberCount;
+      console.log(`Counted new/updated tribe ${newRole.name} (${roleId}): ${memberCount} members, new total: ${totalFields}`);
     }
     
+    console.log(`Final field count: ${totalFields}`);
     return totalFields;
   } catch (error) {
     console.error('Error calculating castlist fields:', error);
