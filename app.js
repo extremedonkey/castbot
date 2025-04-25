@@ -1787,6 +1787,44 @@ async function createEmojiForUser(member, guild) {
         console.log('Avatar URL:', avatarURL);
 
         try {
+            // Count existing emojis and check server emoji limits
+            const emojis = await guild.emojis.fetch();
+            const staticCount = emojis.filter(e => !e.animated).size;
+            const animatedCount = emojis.filter(e => e.animated).size;
+            
+            // Calculate emoji limits based on server boost level
+            // Base limits: 50 static, 50 animated
+            // Level 1: +50 (100 each)
+            // Level 2: +100 (150 each)
+            // Level 3: +150 (200 each)
+            let staticLimit = 50;
+            let animatedLimit = 50;
+            
+            if (guild.premiumTier === 1) {
+                staticLimit = 100;
+                animatedLimit = 100;
+            } else if (guild.premiumTier === 2) {
+                staticLimit = 150;
+                animatedLimit = 150; 
+            } else if (guild.premiumTier === 3) {
+                staticLimit = 250;
+                animatedLimit = 250;
+            }
+            
+            console.log(`Server emoji info - Guild: ${guild.name} (${guild.id})`);
+            console.log(`Boost tier: ${guild.premiumTier}`);
+            console.log(`Static emojis: ${staticCount}/${staticLimit} (${staticLimit - staticCount} remaining)`);
+            console.log(`Animated emojis: ${animatedCount}/${animatedLimit} (${animatedLimit - animatedCount} remaining)`);
+
+            // Check if we've hit the emoji limit for this type
+            if (isAnimated && animatedCount >= animatedLimit) {
+                console.log(`Cannot create animated emoji: Server limit reached (${animatedCount}/${animatedLimit})`);
+                throw { code: 30008, message: `Maximum emoji limit reached for server (${animatedCount}/${animatedLimit} animated)` };
+            } else if (!isAnimated && staticCount >= staticLimit) {
+                console.log(`Cannot create static emoji: Server limit reached (${staticCount}/${staticLimit})`);
+                throw { code: 30008, message: `Maximum emoji limit reached for server (${staticCount}/${staticLimit} static)` };
+            }
+
             // Add timeout to the fetch operation
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
@@ -1822,6 +1860,10 @@ async function createEmojiForUser(member, guild) {
                         name: member.id,
                         reason: `CastBot emoji for ${member.displayName}`
                     }).catch(err => {
+                        // Special handling for emoji limit errors
+                        if (err.code === 30008) {
+                            throw { code: 30008, message: err.message || "Maximum emoji limit reached for server" };
+                        }
                         console.error(`Error creating animated emoji for ${member.displayName}: ${err.message}`);
                         throw err;
                     });
@@ -1836,8 +1878,19 @@ async function createEmojiForUser(member, guild) {
                         isAnimated: true
                     };
                 } catch (directUploadError) {
-                    console.log('Direct upload failed:', directUploadError.message);
-                    // Fall back to static version
+                    // Re-throw if it's a limit error
+                    if (directUploadError.code === 30008) {
+                        console.error(`Emoji limit error: ${directUploadError.message}`);
+                        throw directUploadError;
+                    }
+                    
+                    console.log('Direct upload failed, falling back to static version:', directUploadError.message);
+                    
+                    // Fall back to static if we still have room in static emoji limit
+                    if (staticCount >= staticLimit) {
+                        throw { code: 30008, message: `Maximum emoji limit reached for server (${staticCount}/${staticLimit} static)` };
+                    }
+                    
                     try {
                         const sharp = (await import('sharp')).default;
                         processedBuffer = await sharp(buffer, { 
@@ -1897,6 +1950,9 @@ async function createEmojiForUser(member, guild) {
                 name: member.id,
                 reason: `CastBot emoji for ${member.displayName}`
             }).catch(err => {
+                if (err.code === 30008) {
+                    throw { code: 30008, message: err.message || "Maximum emoji limit reached for server" };
+                }
                 console.error(`Error creating emoji for ${member.displayName}: ${err.message}`);
                 throw err;
             });
