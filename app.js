@@ -244,7 +244,9 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     }
   }
 
+  // Save the tribe data first - this ensures the tribe is created even if emoji creation fails
   await savePlayerData(data);
+  console.log(`Added/updated tribe with role ID ${roleId} in castlist '${castlistName}'`);
 
   // Handle emoji creation
   const members = await guild.members.fetch();
@@ -255,21 +257,47 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
   let errorLines = [];
   let maxEmojiReached = false;
 
-  for (const [_, member] of targetMembers) {
-    try {
-      // Check if player already has an emoji
-      const existingPlayer = data[guildId].players?.[member.id];
-      if (existingPlayer?.emojiCode) {
-        existingLines.push(`${member.displayName}: Already has emoji \`${existingPlayer.emojiCode}\``);
-        continue;
+  // Only proceed with emoji creation if we found members
+  if (targetMembers.size > 0) {
+    console.log(`Found ${targetMembers.size} members with tribe role ${role.name} (${roleId})`);
+    
+    for (const [memberId, member] of targetMembers) {
+      try {
+        // Check if player already has an emoji
+        const existingPlayer = data[guildId].players?.[memberId];
+        if (existingPlayer?.emojiCode) {
+          existingLines.push(`${member.displayName}: Already has emoji ${existingPlayer.emojiCode}`);
+          continue;
+        }
+        
+        console.log(`Creating emoji for ${member.displayName} (${memberId})`);
+        const result = await createEmojiForUser(member, guild);
+        
+        if (result && result.success) {
+          // Only update player if emoji creation was successful
+          await updatePlayer(guildId, memberId, { emojiCode: result.emojiCode });
+          resultLines.push(`${member.displayName} ${result.emojiCode} (${result.isAnimated ? 'animated' : 'static'})`);
+        }
+      } catch (error) {
+        console.error(`Error creating emoji for ${member.displayName}:`, error);
+        
+        // Handle specific error types
+        let errorMessage = `${member.displayName}: Error creating emoji`;
+        
+        if (error.code === 30008) {
+          errorMessage = `${member.displayName}: Maximum emoji limit reached for server`;
+          maxEmojiReached = true;
+        } else if (error.code === 50035) {
+          errorMessage = `${member.displayName}: Invalid or missing image data`;
+        } else if (error.message) {
+          errorMessage = `${member.displayName}: ${error.message}`;
+        }
+        
+        errorLines.push(errorMessage);
       }
-
-      const result = await createEmojiForUser(member, guild);
-      await updatePlayer(guildId, member.id, { emojiCode: result.emojiCode });
-      resultLines.push(`${member.displayName} ${result.emojiCode} (${result.isAnimated ? 'animated' : 'static'})`);
-    } catch (error) {
-      // ...existing emoji error handling...
     }
+  } else {
+    console.log(`No members found with tribe role ${role.name} (${roleId})`);
   }
 
   return {
@@ -279,7 +307,7 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     maxEmojiReached,
     tribeRoleId: roleId,
     totalFields,
-    isNew: !data[guildId].tribes[roleId],
+    isNew: true, // Always true now that we save before checking existing
     colorMessage
   };
 }
@@ -1877,44 +1905,67 @@ async function calculateCastlistFields(guild, roleIdOrOption, castlistName = 'de
     
     console.log(`Calculating fields for castlist "${castlistName}" with roleId "${roleId}"`);
     
-    // Count existing tribe fields and their players in this castlist
+    // Get all members for the new/updated tribe
+    const newRole = await guild.roles.fetch(roleId);
+    const newRoleMembers = newRole ? newRole.members.size : 0;
+    
+    console.log(`New tribe "${newRole?.name}" has ${newRoleMembers} members`);
+    
+    // We need a more accurate count of field usage for Discord embeds
+    // Each tribe adds:
+    // 1. A header field
+    // 2. One field per member
+    // 3. A spacer field between tribes (except for the first tribe)
+
+    // First, count all tribe headers and their members in this castlist
     for (const [id, tribe] of Object.entries(guildTribes)) {
       if (!tribe || tribe.castlist !== castlistName) continue;
       
-      // Skip the tribe being updated/added since we'll count it separately
-      if (id === roleId) continue;
-      
-      // For each tribe except the first, add a spacer
-      if (tribeCount > 0) {
-        totalFields++;
+      // Skip the tribe being updated
+      if (id === roleId) {
+        console.log(`Skipping current tribe ${id} as we'll count it separately`);
+        continue;
       }
       
-      totalFields++; // Add 1 for tribe header
+      // We've found a tribe in this castlist
       tribeCount++;
       
-      const role = await guild.roles.fetch(id);
-      if (role) {
-        const memberCount = role.members.size;
-        totalFields += memberCount;
-        console.log(`Counted existing tribe ${role.name} (${id}): ${memberCount} members, current total: ${totalFields}`);
-      }
-    }
-    
-    // Add fields for the new/updated tribe
-    const newRole = await guild.roles.fetch(roleId);
-    if (newRole) {
-      // If this isn't the first tribe, add a spacer
-      if (tribeCount > 0) {
-        totalFields++;
-      }
+      // Add 1 field for tribe header
+      totalFields++;
       
-      totalFields++; // Add header
-      const memberCount = newRole.members.size;
-      totalFields += memberCount;
-      console.log(`Counted new/updated tribe ${newRole.name} (${roleId}): ${memberCount} members, new total: ${totalFields}`);
+      // Fetch role and count members
+      try {
+        const role = await guild.roles.fetch(id);
+        if (role) {
+          // Count each member as a field
+          const memberCount = role.members.size;
+          totalFields += memberCount;
+          console.log(`Counted tribe ${role.name} (${id}): 1 header + ${memberCount} members = ${memberCount + 1} fields`);
+        }
+      } catch (err) {
+        console.warn(`Could not fetch role ${id}:`, err.message);
+      }
     }
     
-    console.log(`Final field count: ${totalFields}`);
+    // Now add fields for the new/updated tribe
+    if (newRole) {
+      // Add 1 field for the tribe header
+      totalFields++;
+      
+      // Add fields for each member
+      totalFields += newRoleMembers;
+      console.log(`Adding new/updated tribe ${newRole.name}: 1 header + ${newRoleMembers} members = ${newRoleMembers + 1} fields`);
+      
+      // Increment tribe count since we're adding/updating one
+      tribeCount++;
+    }
+    
+    // Finally, add spacer fields between tribes (tribeCount - 1 spacers needed)
+    const spacerFields = Math.max(0, tribeCount - 1);
+    totalFields += spacerFields;
+    console.log(`Adding ${spacerFields} spacer fields between tribes`);
+    
+    console.log(`Final field count: ${totalFields} (limit: 25)`);
     return totalFields;
   } catch (error) {
     console.error('Error calculating castlist fields:', error);
