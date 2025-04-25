@@ -1,0 +1,275 @@
+[33mcommit 2b43428b47d4dd09cddbe3f714ab72586ef40321[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: Reece <extremedonkey@gmail.com>
+Date:   Tue Dec 24 14:35:37 2024 +0800
+
+    wrangler changes
+
+[33mcommit ec30f6d0bd1b8a55ca7cb2e080a997ae2da0ce1c[m
+Author: Reece <extremedonkey@gmail.com>
+Date:   Tue Dec 24 11:23:29 2024 +0800
+
+    Slash command permissions implemented
+
+[33mcommit dfdb8cdd948c0272d4bde9069340778d1fed1d9c[m
+Author: Reece <extremedonkey@gmail.com>
+Date:   Mon Dec 23 01:18:24 2024 +0800
+
+    Initial github version
+
+[33mcommit 01fe51d04af6fb6e7e70b61fedc30d271f830fec[m[33m ([m[1;31mupstream/main[m[33m, [m[1;31mupstream/HEAD[m[33m)[m
+Author: codeconfessions <justin@modrg.com>
+Date:   Wed Sep 25 11:37:46 2024 -0500
+
+    Fix for MESSAGE_COMPONENT interaction falling through to error section (#59)
+    
+    Co-authored-by: Justin Weinberg <justn@modrg.com>
+
+[33mcommit 3a2892f2e23c22d3a7a9fae322aa6a77693ff953[m
+Author: shay <shay.dewael@discordapp.com>
+Date:   Mon Jul 29 11:38:57 2024 -0400
+
+    Update app for user-installable apps (#52)
+    
+    * update code for user-install
+    
+    * readme
+
+[33mcommit ae6b1974751d96468424d7cfb466f23254c0daed[m
+Author: Tarab1te <69683068+JayyDoesDev@users.noreply.github.com>
+Date:   Fri Jul 26 14:10:04 2024 -0400
+
+    fix: APPLICATION_MODAL type doesn't exist upon the discord-interactions (#24)
+
+[33mcommit 62f3c90c6db45191c33b516eb0f5b8e59ab3e513[m
+Author: Justin Beckwith <justin.beckwith@gmail.com>
+Date:   Fri Jul 26 10:48:46 2024 -0700
+
+    Upgrade discord-interactions and use verifyKeyMiddleware (#57)
+
+[33mcommit 0e233d10a729634dc32ae94c7e21903632583fac[m
+Author: Mend Renovate <bot@renovateapp.com>
+Date:   Fri Jul 26 19:33:11 2024 +0200
+
+    Update dependency nodemon to v3 (#56)
+
+[33mcommit 7ebacde35892fed174f62e0487b69ff6947c2b81[m
+Author: Mend Renovate <renovate@whitesourcesoftware.com>
+Date:   Fri Jul 26 19:20:24 2024 +0200
+
+    Configure Renovate (#54)
+    
+    * Add renovate.json
+    
+    * Update renovate.json
+    
+    ---------
+    
+    Co-authored-by: Justin Beckwith <justin.beckwith@gmail.com>
+
+[33mcommit b366a6d678c4ce9c4aabf0a1967852a9a13332ac[m
+Author: Justin Beckwith <justin.beckwith@gmail.com>
+Date:   Fri Jul 26 09:54:53 2024 -0700
+
+    Use native node.js fetch (#53)
+
+[33mcommit db5c93cd1bcf0f30c922b5f4ccfbca4769eb4d1d[m
+Author: oakwoodgates <wpguru4u@gmail.com>
+Date:   Wed Oct 11 12:02:26 2023 -0400
+
+    fix user name in sample data (#35)
+
+[33mcommit bf47f2516229fde5faa33d16f7e9fceb791b033a[m
+Merge: db7ffb3 3d9dcb5
+Author: shay <shay.dewael@discordapp.com>
+Date:   Tue Aug 29 11:57:23 2023 -0400
+
+    Merge pull request #33 from discord/matthova/hard-coded-gif-url
+    
+    Use hard-coded image so it works in glitch's UI
+
+[33mcommit 3d9dcb5b4702d257aff45461ed51db728ceda48e[m[33m ([m[1;31mupstream/matthova/hard-coded-gif-url[m[33m, [m[1;31morigin/matthova/hard-coded-gif-url[m[33m)[m
+Author: Matt Hova <matthova87@gmail.com>
+Date:   Mon Aug 28 11:46:06 2023 -0700
+
+    Use hard-coded image so it works in glitch's UI
+
+[33mcommit db7ffb3023c949231e9d1a57021fe6566e79dfdf[m
+Merge: df0fee3 9bc9d32
+Author: Ian Mitchell <ian.mitchell@hey.com>
+Date:   Thu Aug 17 10:31:05 2023 -0700
+
+    Merge pull request #29 from cabbage63/fix-getting-started
+    
+    Fix typo in the example code of Getting Started
+
+[33mcommit 9bc9d32459b13a576908538b637cd1020bb76546[m
+Author: cabbage63 <7237868+cabbage63@users.noreply.github.com>
+Date:   Sun Aug 13 11:06:21 2023 +0900
+
+    Fix typo in the example code of Getting Started
+
+[33mcommit df0fee33af30aa763ae53db664dd958d1aeb12b2[m
+Author: Shay <shay.dewael@discordapp.com>
+Date:   Mon Apr 3 12:30:42 2023 -0700
+
+    add engines to package.json
+
+[33mcommit 6ec668cc469b46d7cb4252783f00b8723f18a642[m
+Merge: bbe1a59 aa26d1d
+Author: shay <shay.dewael@discordapp.com>
+Date:   Mon Mar 20 10:50:11 2023 -0700
+
+    Merge pull request #22 from shaydewael/update-command-registration
+    
+    Update command registration
+
+[33mcommit aa26d1d283b5287a6d861b4d3b347efaba471c4a[m
+Author: Shay <shay.dewael@discordapp.com>
+Date:   Sat Mar 18 16:14:33 2023 -0700
+
+    more
+
+[33mcommit 767394582c660e992f3697651288bab7e021bc31[m
+Author: Shay <shay.dewael@discordapp.com>
+Date:   Sat Mar 18 16:05:36 2023 -0700
+
+    update command registration to npm
+
+[33mcommit bbe1a594a25cf5a1d6edb9504ef7189cc5fe40ad[m
+Merge: 976cf99 813b1a2
+Author: shay <shay.dewael@discordapp.com>
+Date:   Wed Jan 25 09:39:28 2023 -0800
+
+    Merge pull request #17 from ilyigna/main
+    
+    small changes
+
+[33mcommit 813b1a2add6e28070fabe734886b6b82144a6f5d[m
+Author: igna <igna@intent.cool>
+Date:   Mon Nov 21 19:45:12 2022 -0300
+
+    change from user replit to github import
+    
+    this tries to avoid people from checking any leaked token from forks
+
+[33mcommit 309935af5b85aa8dbe740fd9a82fbd5652e1c182[m
+Author: igna <igna@intent.cool>
+Date:   Mon Nov 21 19:43:40 2022 -0300
+
+    bump versions
+
+[33mcommit 2d23ca617e7b42daa7abc580e89cc5154a582321[m
+Author: igna <igna@intent.cool>
+Date:   Mon Nov 21 19:42:11 2022 -0300
+
+    oops
+    
+    i was gonna put the nodejs requirement there, but it looked better in **before you start**
+
+[33mcommit 273da64a3e997535cf784e85282656fc29eab7d3[m
+Author: igna <igna@intent.cool>
+Date:   Mon Nov 21 19:41:37 2022 -0300
+
+    kinda better I guess? (it may fixes #10)
+
+[33mcommit 6decec08d1e68e7fc97209bae05af257481cc4fd[m
+Author: igna <igna@intent.cool>
+Date:   Mon Nov 21 19:33:15 2022 -0300
+
+    you shouldn't add package-lock.json
+
+[33mcommit 976cf99e580409be9be1b40ff19d980485aeb0e2[m
+Author: Caleb Rogers <caleb@calebjay.com>
+Date:   Thu Sep 22 01:01:29 2022 +0800
+
+    Update app.js comment with proper file extension (#12)
+    
+    Commands are defined in `commands.js`, not  `commands.json`.
+
+[33mcommit 07afa70d2b0adf576fbce68439b6c9385a96b313[m
+Merge: 002b69c a7c9127
+Author: Shay DeWael <shay.dewael@discordapp.com>
+Date:   Tue May 17 10:28:23 2022 -0700
+
+    Merge pull request #5 from tcrms/main
+    
+    Minor Changes
+
+[33mcommit a7c91271ae4cf7dc70ceb64e9b3f5f1fb41e60d3[m
+Author: tcrms <visual@shiro.wtf>
+Date:   Tue May 17 03:36:42 2022 -0400
+
+    make the version match with `package.json`
+
+[33mcommit 3f0bfddf5ca1a36c01a1da85ba1378ee3b09554c[m
+Author: tcrms <visual@shiro.wtf>
+Date:   Tue May 17 03:35:00 2022 -0400
+
+    fix, again
+    
+    Co-authored-by: Splatterxl <splatterxl@outlook.ie>
+
+[33mcommit 1a061508567e2c447c051058d178d6060d081b89[m
+Author: vi <visual@shiro.wtf>
+Date:   Mon May 16 19:22:17 2022 -0400
+
+    update api version + fix user agent
+
+[33mcommit d5251bedbc3e010bc2c2bc5a50b5fcdd6e5c0f7b[m
+Author: vi <visual@shiro.wtf>
+Date:   Sun May 15 15:13:10 2022 -0400
+
+    add user-agent (fixes #4)
+
+[33mcommit 6319d023e81f43ca1cf81805c0986b031228a790[m
+Author: vi <visual@shiro.wtf>
+Date:   Sun May 15 12:56:43 2022 -0400
+
+    typo
+
+[33mcommit 002b69cfa3deedb61b777a8db3acf4a9861384a2[m
+Merge: 50a56d6 50f4c9a
+Author: Shay DeWael <shay.dewael@discordapp.com>
+Date:   Thu May 5 15:26:18 2022 -0700
+
+    Merge pull request #3 from discord/add-replit
+    
+    Add replit support
+
+[33mcommit 50f4c9a1b83d157563010e2e383f72bf1c931984[m
+Author: Shay <shay.dewael@discordapp.com>
+Date:   Thu May 5 15:25:34 2022 -0700
+
+    Add replit support
+
+[33mcommit 50a56d6a604e9abc62f6d9ce25461079bc9b17a9[m
+Author: Shay <shay.dewael@discordapp.com>
+Date:   Thu Apr 14 16:32:12 2022 -0700
+
+    add start script
+
+[33mcommit 27c30b1e0ceba4347c72b33bae1a379a14f05201[m
+Author: Shay <shay.dewael@discordapp.com>
+Date:   Fri Apr 8 14:48:43 2022 -0700
+
+    throw API errors
+
+[33mcommit 2705a61be4db758d8829f151fcf887ce9786bb4d[m
+Author: Shay <shay.dewael@discordapp.com>
+Date:   Fri Apr 8 14:04:15 2022 -0700
+
+    update github link
+
+[33mcommit e7aca7a22b139d602a82ef41404d5cfabe2c72e4[m
+Author: Shay <shay.dewael@discordapp.com>
+Date:   Fri Apr 8 09:54:58 2022 -0700
+
+    update enums to discord-interactions
+
+[33mcommit d2afdabfaaa6b0ad050ee54071f2d28d27bc2b51[m
+Author: Shay <shay.dewael@discordapp.com>
+Date:   Thu Apr 7 15:27:40 2022 -0700
+
+    small correction
+
+[33mcommit 6cea182ff04a7cb8f
