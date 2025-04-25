@@ -1778,11 +1778,28 @@ async function createEmojiForUser(member, guild) {
         const avatarURL = member.avatarURL(avatarOptions) || 
                          member.user.avatarURL(avatarOptions);
 
+        if (!avatarURL) {
+            console.log(`No avatar URL found for ${member.displayName}`);
+            throw new Error('No avatar URL found');
+        }
+
         console.log(`Processing ${isAnimated ? 'animated' : 'static'} avatar for ${member.displayName}`);
         console.log('Avatar URL:', avatarURL);
 
         try {
-            const response = await fetch(avatarURL);
+            // Add timeout to the fetch operation
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+            
+            const response = await fetch(avatarURL, { 
+                signal: controller.signal 
+            }).catch(err => {
+                console.error(`Fetch error for ${member.displayName}: ${err.message}`);
+                throw new Error(`Failed to fetch avatar: ${err.message}`);
+            });
+            
+            clearTimeout(timeoutId);
+            
             if (!response.ok) {
                 throw new Error(`Failed to fetch avatar: ${response.statusText}`);
             }
@@ -1802,7 +1819,11 @@ async function createEmojiForUser(member, guild) {
                     console.log('Attempting direct upload of animated GIF');
                     const emoji = await guild.emojis.create({
                         attachment: buffer,
-                        name: member.id
+                        name: member.id,
+                        reason: `CastBot emoji for ${member.displayName}`
+                    }).catch(err => {
+                        console.error(`Error creating animated emoji for ${member.displayName}: ${err.message}`);
+                        throw err;
                     });
                     
                     const emojiCode = `<a:${member.id}:${emoji.id}>`;
@@ -1817,11 +1838,38 @@ async function createEmojiForUser(member, guild) {
                 } catch (directUploadError) {
                     console.log('Direct upload failed:', directUploadError.message);
                     // Fall back to static version
+                    try {
+                        const sharp = (await import('sharp')).default;
+                        processedBuffer = await sharp(buffer, { 
+                            animated: true,  // Recognize it's an animated image
+                            pages: 1        // Only take first frame
+                        })
+                            .resize(96, 96, { 
+                                fit: 'contain',
+                                withoutEnlargement: true,
+                                position: 'center'
+                            })
+                            .png({ 
+                                quality: 80, 
+                                colors: 128,
+                                effort: 10
+                            })
+                            .toBuffer()
+                            .catch(err => {
+                                console.error(`Sharp processing error for ${member.displayName}: ${err.message}`);
+                                throw err;
+                            });
+                        finalIsAnimated = false;
+                    } catch (sharpError) {
+                        console.error(`Sharp processing error for ${member.displayName}: ${sharpError.message}`);
+                        throw new Error(`Failed to process animated avatar: ${sharpError.message}`);
+                    }
+                }
+            } else {
+                // Handle static images
+                try {
                     const sharp = (await import('sharp')).default;
-                    processedBuffer = await sharp(buffer, { 
-                        animated: true,  // Recognize it's an animated image
-                        pages: 1        // Only take first frame
-                    })
+                    processedBuffer = await sharp(buffer)
                         .resize(96, 96, { 
                             fit: 'contain',
                             withoutEnlargement: true,
@@ -1832,30 +1880,25 @@ async function createEmojiForUser(member, guild) {
                             colors: 128,
                             effort: 10
                         })
-                        .toBuffer();
-                    finalIsAnimated = false;
+                        .toBuffer()
+                        .catch(err => {
+                            console.error(`Sharp processing error for ${member.displayName}: ${err.message}`);
+                            throw err;
+                        });
+                } catch (sharpError) {
+                    console.error(`Sharp processing error for ${member.displayName}: ${sharpError.message}`);
+                    throw new Error(`Failed to process static avatar: ${sharpError.message}`);
                 }
-            } else {
-                // Handle static images
-                const sharp = (await import('sharp')).default;
-                processedBuffer = await sharp(buffer)
-                    .resize(96, 96, { 
-                        fit: 'contain',
-                        withoutEnlargement: true,
-                        position: 'center'
-                    })
-                    .png({ 
-                        quality: 80, 
-                        colors: 128,
-                        effort: 10
-                    })
-                    .toBuffer();
             }
 
             // Create emoji with processed buffer
             const emoji = await guild.emojis.create({
                 attachment: processedBuffer,
-                name: member.id
+                name: member.id,
+                reason: `CastBot emoji for ${member.displayName}`
+            }).catch(err => {
+                console.error(`Error creating emoji for ${member.displayName}: ${err.message}`);
+                throw err;
             });
 
             const emojiCode = finalIsAnimated ? 
@@ -1872,16 +1915,18 @@ async function createEmojiForUser(member, guild) {
             };
 
         } catch (emojiError) {
-            throw {
+            const error = {
                 code: emojiError.code || 'UNKNOWN',
-                message: emojiError.message,
+                message: emojiError.message || 'Unknown error creating emoji',
                 rawError: emojiError,
                 memberName: member.displayName,
                 avatarUrl: avatarURL
             };
+            console.error(`Emoji creation error details:`, error);
+            throw error;
         }
     } catch (error) {
-        console.error('Detailed emoji error:', error);
+        console.error(`Complete emoji creation failure for ${member.displayName}:`, error);
         throw error;
     }
 }
