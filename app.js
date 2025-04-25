@@ -445,6 +445,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     await fullGuild.roles.fetch();
     const members = await fullGuild.members.fetch();
 
+    // Check if we should omit spacers to fit within Discord's 25 field limit
+    const omitSpacers = await shouldOmitSpacers(tribes, fullGuild);
+    if (omitSpacers) {
+      console.log('Omitting spacers to fit content within 25 field limit');
+    }
+
     // Default color (in hex format)
     const defaultColor = "#7ED321";
     let currentColor = defaultColor;
@@ -501,8 +507,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
 
-        // Add spacer if this isn't the first tribe added
-        if (embed.data.fields?.length > 0) {
+        // Add spacer if this isn't the first tribe and we're not omitting spacers
+        if (embed.data.fields?.length > 0 && !omitSpacers) {
           embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
         }
 
@@ -2113,4 +2119,34 @@ async function checkRoleHierarchyPermission(guild, roleId) {
   }
 
   return { allowed: true };
+}
+
+// Add this function to check if spacers should be omitted to fit within field limits
+async function shouldOmitSpacers(tribes, guild) {
+  // Calculate total fields without spacers
+  let totalFields = 0;
+  let tribeCount = 0;
+  
+  for (const tribe of tribes) {
+    try {
+      const tribeRole = await guild.roles.fetch(tribe.roleId);
+      if (!tribeRole) continue;
+      
+      // Add tribe header (1 field)
+      totalFields++;
+      tribeCount++;
+      
+      // Get members with this role
+      const tribeMembers = guild.members.cache.filter(member => member.roles.cache.has(tribe.roleId));
+      totalFields += tribeMembers.size;
+    } catch (error) {
+      console.error(`Error processing tribe ${tribe.roleId}:`, error);
+    }
+  }
+  
+  // Calculate fields with spacers (spacers = tribeCount - 1)
+  const totalFieldsWithSpacers = totalFields + (tribeCount - 1);
+  
+  // Check if removing spacers would help stay within the 25 field limit
+  return totalFieldsWithSpacers > 25 && totalFields <= 25;
 }
