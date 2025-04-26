@@ -1,3 +1,27 @@
 {
-    "terminal.integrated.cwd": "C:\\Users\\extre\\OneDrive\\ORG\\01 Zeldavivor\\Tagscript\\Paper Scissors Reece\\discord-example-app"
+    "terminal.integrated.cwd": "C:\\Users\\extre\\OneDrive\\ORG\\01 Zeldavivor\\Tagscript\\Castbot\\castbot",
+    "terminal.integrated.profiles.windows": {
+        "PowerShell": {
+            "source": "PowerShell",
+            "icon": "terminal-powershell"
+        },
+        "General Terminal": {
+            "source": "PowerShell",
+            "color": "terminal.ansiYellow",
+            "icon": "terminal-powershell"
+        },
+        "Ngrok Server": {
+            "source": "PowerShell",
+            "color": "terminal.ansiRed",
+            "icon": "globe",
+            "overrideName": true
+        },
+        "Start Script": {
+            "source": "PowerShell",
+            "color": "terminal.ansiGreen",
+            "icon": "play",
+            "overrideName": true
+        }
+    },
+    "terminal.integrated.defaultProfile.windows": "General Terminal"
 }

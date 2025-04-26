@@ -1,0 +1,83 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Start Ngrok",
+            "type": "shell",
+            "command": "ngrok http 3000",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "showReuseMessage": false,
+                "focus": true,
+                "group": "CastBot",
+                "echo": true,
+                "close": false
+            },
+            "icon": {
+                "id": "globe",
+                "color": "terminal.ansiRed"
+            }
+        },
+        {
+            "label": "Run Start Script",
+            "type": "shell",
+            "command": ".\\start-and-push.ps1",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "showReuseMessage": false,
+                "focus": true,
+                "group": "CastBot",
+                "echo": true,
+                "close": false
+            },
+            "icon": {
+                "id": "play",
+                "color": "terminal.ansiGreen"
+            }
+        },
+        {
+            "label": "Open All Terminals",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Open General Terminal",
+                "Start Ngrok", 
+                "Run Start Script"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "icon": {
+                "id": "tools",
+                "color": "terminal.ansiBlue"
+            }
+        },
+        {
+            "label": "Open General Terminal",
+            "type": "shell",
+            "command": "echo 'General Terminal Ready'",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "dedicated",
+                "clear": true,
+                "showReuseMessage": false,
+                "focus": true,
+                "group": "CastBot",
+                "echo": true,
+                "close": false
+            },
+            "icon": {
+                "id": "terminal-powershell",
+                "color": "terminal.ansiYellow"
+            }
+        }
+    ]
+}
