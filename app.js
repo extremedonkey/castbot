@@ -61,7 +61,6 @@ const STANDARD_TIMEZONE_ROLES = [
   { name: 'GMT (UTC+0)', offset: 0 },
   { name: 'BST (UTC+1)', offset: 1 },
   { name: 'CEST (UTC+2)', offset: 2 },
-  { name: 'IST (UTC+5.5)', offset: 5.5 },
   { name: 'GMT+8 (UTC+8)', offset: 8 },
   { name: 'AEST (UTC+10)', offset: 10 }
 ];
