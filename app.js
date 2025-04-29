@@ -54,15 +54,15 @@ const STANDARD_PRONOUN_ROLES = [
 
 // Add this near other constants
 const STANDARD_TIMEZONE_ROLES = [
-  { name: 'PDT (UTC-7)', offset: -7 },
-  { name: 'MDT (UTC-6)', offset: -6 },
-  { name: 'CDT (UTC-5)', offset: -5 },
-  { name: 'EDT (UTC-4)', offset: -4 },
+  { name: 'PST (UTC-8)', offset: -8 },
+  { name: 'MST (UTC-7)', offset: -7 },
+  { name: 'CST (UTC-6)', offset: -6 },
+  { name: 'EST (UTC-5)', offset: -5 },
   { name: 'GMT (UTC+0)', offset: 0 },
   { name: 'BST (UTC+1)', offset: 1 },
   { name: 'CEST (UTC+2)', offset: 2 },
   { name: 'GMT+8 (UTC+8)', offset: 8 },
-  { name: 'AEST (UTC+10)', offset: 10 }
+  { name: 'AEST (UTC+11)', offset: 10 }
 ];
 
 // Update ensureServerData function
@@ -243,9 +243,7 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     }
   }
 
-  // Save the tribe data first - this ensures the tribe is created even if emoji creation fails
   await savePlayerData(data);
-  console.log(`Added/updated tribe with role ID ${roleId} in castlist '${castlistName}'`);
 
   // Handle emoji creation
   const members = await guild.members.fetch();
@@ -256,47 +254,21 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
   let errorLines = [];
   let maxEmojiReached = false;
 
-  // Only proceed with emoji creation if we found members
-  if (targetMembers.size > 0) {
-    console.log(`Found ${targetMembers.size} members with tribe role ${role.name} (${roleId})`);
-    
-    for (const [memberId, member] of targetMembers) {
-      try {
-        // Check if player already has an emoji
-        const existingPlayer = data[guildId].players?.[memberId];
-        if (existingPlayer?.emojiCode) {
-          existingLines.push(`${member.displayName}: Already has emoji ${existingPlayer.emojiCode}`);
-          continue;
-        }
-        
-        console.log(`Creating emoji for ${member.displayName} (${memberId})`);
-        const result = await createEmojiForUser(member, guild);
-        
-        if (result && result.success) {
-          // Only update player if emoji creation was successful
-          await updatePlayer(guildId, memberId, { emojiCode: result.emojiCode });
-          resultLines.push(`${member.displayName} ${result.emojiCode} (${result.isAnimated ? 'animated' : 'static'})`);
-        }
-      } catch (error) {
-        console.error(`Error creating emoji for ${member.displayName}:`, error);
-        
-        // Handle specific error types
-        let errorMessage = `${member.displayName}: Error creating emoji`;
-        
-        if (error.code === 30008) {
-          errorMessage = `${member.displayName}: Maximum emoji limit reached for server`;
-          maxEmojiReached = true;
-        } else if (error.code === 50035) {
-          errorMessage = `${member.displayName}: Invalid or missing image data`;
-        } else if (error.message) {
-          errorMessage = `${member.displayName}: ${error.message}`;
-        }
-        
-        errorLines.push(errorMessage);
+  for (const [_, member] of targetMembers) {
+    try {
+      // Check if player already has an emoji
+      const existingPlayer = data[guildId].players?.[member.id];
+      if (existingPlayer?.emojiCode) {
+        existingLines.push(`${member.displayName}: Already has emoji \`${existingPlayer.emojiCode}\``);
+        continue;
       }
+
+      const result = await createEmojiForUser(member, guild);
+      await updatePlayer(guildId, member.id, { emojiCode: result.emojiCode });
+      resultLines.push(`${member.displayName} ${result.emojiCode} (${result.isAnimated ? 'animated' : 'static'})`);
+    } catch (error) {
+      // ...existing emoji error handling...
     }
-  } else {
-    console.log(`No members found with tribe role ${role.name} (${roleId})`);
   }
 
   return {
@@ -306,7 +278,7 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     maxEmojiReached,
     tribeRoleId: roleId,
     totalFields,
-    isNew: true, // Always true now that we save before checking existing
+    isNew: !data[guildId].tribes[roleId],
     colorMessage
   };
 }
@@ -426,188 +398,153 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
       }
     } else if (name === 'castlist') {
-  try {
-    console.log('Processing castlist command');
-    const guildId = req.body.guild_id;
-    const userId = req.body.member.user.id;
-    const requestedCastlist = data.options?.find(opt => opt.name === 'castlist')?.value;
-
-    // Determine which castlist to show
-    const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
-    console.log(`Selected castlist: ${castlistToShow}`);
-
-    // Load tribe data based on selected castlist
-    const tribes = await getGuildTribes(guildId, castlistToShow);
-    console.log('Loaded tribes:', JSON.stringify(tribes));
-
-    // Check if any tribes exist
-    if (tribes.length === 0) {
-      res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          embeds: [{
-            title: 'CastBot: Dynamic Castlist',
-            description: 'No tribes have been added yet. Please have production run the `/set_tribe` command and select the Tribe role for them to show up in this list.',
-            color: 0x7ED321
-          }]
-        }
-      });
-      return;
-    }
-
-    // Send initial response
-    res.send({
-      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-    });
-
-    const guild = await client.guilds.fetch(guildId);
-    console.log('Guild:', guild.name);
-
-    if (!guild) {
-      throw new Error('Could not fetch guild');
-    }
-
-    // Fetch the full guild with roles cache
-    const fullGuild = await client.guilds.fetch(guildId, { force: true });
-    await fullGuild.roles.fetch();
-    const members = await fullGuild.members.fetch();
-
-    // Check if we should omit spacers to fit within Discord's 25 field limit
-    const omitSpacers = await shouldOmitSpacers(tribes, fullGuild);
-    if (omitSpacers) {
-      console.log('Omitting spacers to fit content within 25 field limit');
-    }
-
-    // Default color (in hex format)
-    const defaultColor = "#7ED321";
-    let currentColor = defaultColor;
-
-    // Create the embed first
-    const embedTitle = castlistToShow === 'default' 
-      ? 'CastBot: Dynamic Castlist'
-      : `CastBot: Dynamic Castlist (${castlistToShow})`;
-    
-    const embed = new EmbedBuilder()
-      .setTitle(embedTitle)
-      .setAuthor({ 
-        name: fullGuild.name || 'Unknown Server', 
-        iconURL: fullGuild.iconURL() || undefined 
-      })
-      .setColor(defaultColor)  // Start with default color
-      .setFooter({ 
-        text: 'Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!',
-        iconURL: client.user.displayAvatarURL()
-      });
-
-    console.log('Starting to process tribes for castlist. Initial color:', defaultColor);
-    
-    // Track if any tribe has a color
-    let hasFoundColor = false;
-    
-    // Add each tribe that has members
-    for (const tribe of tribes) {
       try {
-        const tribeRole = await fullGuild.roles.fetch(tribe.roleId);
-        if (!tribeRole) {
-          console.log(`Could not find role for tribe ${tribe.roleId}`);
-          continue;
-        }
+        console.log('Processing castlist command');
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const requestedCastlist = data.options?.find(opt => opt.name === 'castlist')?.value;
 
-        console.log(`Processing tribe role: ${tribeRole.name} (${tribe.roleId})`);
-        console.log('Tribe data:', JSON.stringify(tribe));
+        // Determine which castlist to show
+        const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
+        console.log(`Selected castlist: ${castlistToShow}`);
 
-        // Update the embed color if this tribe has a color specified
-        if (tribe.color) {
-          hasFoundColor = true;
-          currentColor = tribe.color;
-          
-          try {
-            // Convert hex color to a format Discord.js can understand
-            // If it already has the # prefix, use it directly
-            const colorValue = tribe.color.startsWith('#') ? 
-              tribe.color : `#${tribe.color}`;
-            
-            console.log(`Setting embed color to ${colorValue} for tribe ${tribeRole.name}`);
-            embed.setColor(colorValue);
-          } catch (colorErr) {
-            console.error(`Error setting color ${tribe.color}:`, colorErr);
-          }
-        }
+        // Load tribe data based on selected castlist
+        const tribes = await getGuildTribes(guildId, castlistToShow);
+        console.log('Loaded tribes:', tribes);
 
-        // Add spacer if this isn't the first tribe and we're not omitting spacers
-        if (embed.data.fields?.length > 0 && !omitSpacers) {
-          embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
-        }
-
-        // Add tribe header
-        const header = tribe.emoji
-          ? `${tribe.emoji}  ${tribeRole.name}  ${tribe.emoji}`
-          : tribeRole.name;
-        
-        embed.addFields({ name: header, value: '\u200B', inline: false });
-
-        // Get members with this role
-        const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
-        const memberFields = await createMemberFields(tribeMembers, fullGuild);
-        console.log(`Generated ${memberFields.length} member fields for tribe ${tribeRole.name}`);
-
-        if (embed.data.fields.length + memberFields.length > 25) {
-          throw new Error('Embed field limit exceeded');
-        }
-
-        embed.addFields(memberFields);
-
-      } catch (error) {
-        if (error.message === 'Embed field limit exceeded') {
-          console.error('Embed field limit exceeded, sending error message');
-          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-          await DiscordRequest(endpoint, {
-            method: 'PATCH',
-            body: {
-              content: 'Cannot display castlist: Too many fields (maximum 25). Consider splitting tribes into separate castlists using the castlist parameter in /set_tribe.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            },
+        // Check if any tribes exist
+        if (tribes.length === 0) {
+          res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              embeds: [{
+                title: 'CastBot: Dynamic Castlist',
+                description: 'No tribes have been added yet. Please have production run the `/set_tribe` command and select the Tribe role for them to show up in this list.',
+                color: 0x7ED321
+              }]
+            }
           });
           return;
         }
-        console.error(`Error processing tribe:`, error);
+
+        // Send initial response
+        res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        });
+
+        const guild = await client.guilds.fetch(guildId);
+        console.log('Guild:', guild);
+
+        if (!guild) {
+          throw new Error('Could not fetch guild');
+        }
+
+        // Fetch the full guild with roles cache
+        const fullGuild = await client.guilds.fetch(guildId, { force: true });
+        await fullGuild.roles.fetch();
+        const members = await fullGuild.members.fetch();
+
+        // Default color
+        const defaultColor = "#7ED321";
+        let currentColor = defaultColor;
+
+        // Create the embed first
+        const embedTitle = castlistToShow === 'default' 
+          ? 'CastBot: Dynamic Castlist'
+          : `CastBot: Dynamic Castlist (${castlistToShow})`;
+        
+        const embed = new EmbedBuilder()
+          .setTitle(embedTitle)
+          .setAuthor({ 
+            name: fullGuild.name || 'Unknown Server', 
+            iconURL: fullGuild.iconURL() || undefined 
+          })
+          .setColor(defaultColor)  // Start with default color
+          .setFooter({ 
+            text: 'Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!',
+            iconURL: client.user.displayAvatarURL()
+          });
+
+        // Add each tribe that has members
+        for (const tribe of tribes) {
+          try {
+            const tribeRole = await fullGuild.roles.fetch(tribe.roleId);
+            if (!tribeRole) {
+              console.log(`Could not find role for tribe ${tribe.roleId}`);
+              continue;
+            }
+
+            console.log(`Processing tribe role: ${tribeRole.name} (${tribeRole.id})`);
+
+            // Update the embed color if this tribe has a color specified
+            if (tribe.color) {
+              currentColor = tribe.color;
+              embed.setColor(currentColor);
+              console.log(`Set embed color to ${currentColor} for tribe ${tribeRole.name}`);
+            }
+
+            // Add spacer if this isn't the first tribe added
+            if (embed.data.fields?.length > 0) {
+              embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
+            }
+
+            // Add tribe header
+            const header = tribe.emoji
+              ? `${tribe.emoji}  ${tribeRole.name}  ${tribe.emoji}`
+              : tribeRole.name;
+            
+            embed.addFields({ name: header, value: '\u200B', inline: false });
+
+            // Get members with this role
+            const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
+            const memberFields = await createMemberFields(tribeMembers, fullGuild);
+            console.log(`Generated ${memberFields.length} member fields for tribe ${tribeRole.name}`);
+
+            if (embed.data.fields.length + memberFields.length > 25) {
+              throw new Error('Embed field limit exceeded');
+            }
+
+            embed.addFields(memberFields);
+
+          } catch (error) {
+            if (error.message === 'Embed field limit exceeded') {
+              console.error('Embed field limit exceeded, sending error message');
+              const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+              await DiscordRequest(endpoint, {
+                method: 'PATCH',
+                body: {
+                  content: 'Cannot display castlist: Too many fields (maximum 25). Consider splitting tribes into separate castlists using the castlist parameter in /set_tribe.',
+                  flags: InteractionResponseFlags.EPHEMERAL
+                },
+              });
+              return;
+            }
+            console.error(`Error processing tribe:`, error);
+          }
+        }
+
+        // Edit the initial response with the embed
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            embeds: [embed],
+          },
+        });
+
+      } catch (error) {
+        console.error('Error handling castlist command:', error);
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: 'An error occurred while generating the castlist.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          },
+        });
       }
-    }
-
-    // Check the color that will be used in the embed
-    console.log(`Final embed color settings:`);
-    console.log(`- hasFoundColor: ${hasFoundColor}`);
-    console.log(`- currentColor: ${currentColor}`);
-    console.log(`- embed.data.color: ${embed.data.color || 'not set'}`);
-
-    // If no tribe had a color, make sure we're using the default color
-    if (!hasFoundColor) {
-      embed.setColor(defaultColor);
-      console.log(`No tribe colors found, setting to default: ${defaultColor}`);
-    }
-
-    // Edit the initial response with the embed
-    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-    await DiscordRequest(endpoint, {
-      method: 'PATCH',
-      body: {
-        embeds: [embed],
-      },
-    });
-
-  } catch (error) {
-    console.error('Error handling castlist command:', error);
-    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-    await DiscordRequest(endpoint, {
-      method: 'PATCH',
-      body: {
-        content: 'Error displaying castlist.',
-        flags: InteractionResponseFlags.EPHEMERAL
-      },
-    });
-  }
-  return;
-} else if (name === 'clear_tribe') {
+      return;
+    } else if (name === 'clear_tribe') {
     try {
       console.log('Processing /clear_tribe command');
       await res.send({
@@ -618,7 +555,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const guild = await client.guilds.fetch(guildId);
       const roleOption = data.options.find(opt => opt.name === 'role');
       const roleId = roleOption.value;
-      const token = req.body.token; // Store the token for later use
       
       console.log(`Processing clear_tribe for role ${roleId} in guild ${guildId}`);
 
@@ -626,44 +562,30 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const playerData = await loadPlayerData();
       if (!playerData[guildId]?.tribes) {
         console.log('No guild data found');
-        try {
-          const endpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`;
-          await DiscordRequest(endpoint, {
-            method: 'PATCH',
-            body: {
-              content: 'No tribe data found for this server',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        } catch (webhookError) {
-          console.error('Webhook response error:', webhookError);
-          // If webhook fails, we can't do anything, just log it
-        }
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: 'No tribe data found for this server',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
         return;
       }
 
       // Check if tribe exists
       if (!playerData[guildId].tribes[roleId]) {
         console.log('No tribe found with this role ID');
-        try {
-          const endpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`;
-          await DiscordRequest(endpoint, {
-            method: 'PATCH',
-            body: {
-              content: `No tribe found with role <@&${roleId}>`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        } catch (webhookError) {
-          console.error('Webhook response error:', webhookError);
-          // If webhook fails, we can't do anything, just log it
-        }
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: `No tribe found with role <@&${roleId}>`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
         return;
       }
-
-      // Store the tribe name and castlist before deletion for the message
-      const tribeName = (await guild.roles.fetch(roleId))?.name || roleId;
-      const castlist = playerData[guildId].tribes[roleId].castlist || 'default';
 
       // Get all members with this tribe role
       const members = await guild.members.fetch();
@@ -700,6 +622,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       }
 
+      // Store the tribe name before deletion for the message
+      const tribeName = (await guild.roles.fetch(roleId))?.name || roleId;
+      const castlist = playerData[guildId].tribes[roleId].castlist || 'default';
+
       // Remove tribe
       delete playerData[guildId].tribes[roleId];
 
@@ -708,41 +634,31 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       console.log('Saved updated player data');
 
       // Send response
-      try {
-        const endpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            content: resultLines.length > 0 
-              ? `Cleared tribe ${tribeName} from castlist '${castlist}'.\n${resultLines.join('\n')}`
-              : `Cleared tribe ${tribeName} from castlist '${castlist}'. No emojis needed to be removed.`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      } catch (webhookError) {
-        console.error('Error updating webhook response:', webhookError);
-        // The webhook might have expired, but the operation has completed successfully
-        console.log('However, tribe deletion was successful');
-      }
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          content: resultLines.length > 0 
+            ? `Cleared tribe ${tribeName} from castlist '${castlist}'.\n${resultLines.join('\n')}`
+            : `Cleared tribe ${tribeName} from castlist '${castlist}'. No emojis needed to be removed.`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
 
     } catch (error) {
       console.error('Error in clear_tribe:', error);
-      try {
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            content: 'Error clearing tribe. Please check server logs.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      } catch (webhookError) {
-        console.error('Could not send error message via webhook:', webhookError);
-        // Webhook has likely expired, nothing more we can do
-      }
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          content: 'Error clearing tribe',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
     }
     return;
-} else if (name === 'set_players_age') {  // Changed from setageall
+
+  } else if (name === 'set_players_age') {  // Changed from setageall
       try {
         console.log('Processing setageall command');
         const guildId = req.body.guild_id;
@@ -965,8 +881,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           offset: offsetOption
         });
         
-        // Clean up the offset value (remove + if present) and preserve decimal portions
-        const cleanOffset = parseFloat(offsetOption.value.replace(/^\+/, ''));
+        // Clean up the offset value (remove + if present)
+        const cleanOffset = parseInt(offsetOption.value.replace(/^\+/, ''));
         
         if (isNaN(cleanOffset)) {
           console.error(`Invalid offset value for timezone${i}: ${offsetOption.value}`);
@@ -1226,17 +1142,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
     // Prepare response message
     const castlistName = data.options.find(opt => opt.name === 'castlist')?.value || 'default';
-    
-    // Add color information to the message if a valid color was provided
-    let colorInfo = '';
-    if (colorOption?.value && !result.colorMessage) {
-      const formattedColor = colorOption.value.startsWith('#') ? 
-        colorOption.value : `#${colorOption.value}`;
-      colorInfo = ` with color ${formattedColor}`;
-    }
-    
     const messageLines = [
-      `Tribe <@&${result.tribeRoleId}> ${result.isNew ? 'added to' : 'updated in'} castlist '${castlistName}'${colorInfo}${result.colorMessage || ''}`,
+      `Tribe <@&${result.tribeRoleId}> ${result.isNew ? 'added to' : 'updated in'} castlist '${castlistName}'${result.colorMessage || ''}`,
       ''
     ];
 
@@ -1473,7 +1380,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   try {
     const guildId = req.body.guild_id;
     const userId = req.body.member.user.id;
-    const userName = req.body.member.nick || req.body.member.user.username;
     const age = data.options.find(opt => opt.name === 'age').value;
 
     // Load player data
@@ -1499,17 +1405,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     return res.send({
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
       data: {
-        content: `${userName} has set their age to ${age}` // Public message visible to all
+        content: `Your age has been set to ${age}`,
+        flags: InteractionResponseFlags.EPHEMERAL
       }
     });
 
   } catch (error) {
-    console.error('Error in player_set_age command:', error);
+    console.error('Error in set_age command:', error);
     return res.send({
       type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
       data: {
         content: 'Error setting age',
-        flags: InteractionResponseFlags.EPHEMERAL // Only error messages are ephemeral
+        flags: InteractionResponseFlags.EPHEMERAL
       }
     });
   }
@@ -1777,66 +1684,11 @@ async function createEmojiForUser(member, guild) {
         const avatarURL = member.avatarURL(avatarOptions) || 
                          member.user.avatarURL(avatarOptions);
 
-        if (!avatarURL) {
-            console.log(`No avatar URL found for ${member.displayName}`);
-            throw new Error('No avatar URL found');
-        }
-
         console.log(`Processing ${isAnimated ? 'animated' : 'static'} avatar for ${member.displayName}`);
         console.log('Avatar URL:', avatarURL);
 
         try {
-            // Count existing emojis and check server emoji limits
-            const emojis = await guild.emojis.fetch();
-            const staticCount = emojis.filter(e => !e.animated).size;
-            const animatedCount = emojis.filter(e => e.animated).size;
-            
-            // Calculate emoji limits based on server boost level
-            // Base limits: 50 static, 50 animated
-            // Level 1: +50 (100 each)
-            // Level 2: +100 (150 each)
-            // Level 3: +150 (200 each)
-            let staticLimit = 50;
-            let animatedLimit = 50;
-            
-            if (guild.premiumTier === 1) {
-                staticLimit = 100;
-                animatedLimit = 100;
-            } else if (guild.premiumTier === 2) {
-                staticLimit = 150;
-                animatedLimit = 150; 
-            } else if (guild.premiumTier === 3) {
-                staticLimit = 250;
-                animatedLimit = 250;
-            }
-            
-            console.log(`Server emoji info - Guild: ${guild.name} (${guild.id})`);
-            console.log(`Boost tier: ${guild.premiumTier}`);
-            console.log(`Static emojis: ${staticCount}/${staticLimit} (${staticLimit - staticCount} remaining)`);
-            console.log(`Animated emojis: ${animatedCount}/${animatedLimit} (${animatedLimit - animatedCount} remaining)`);
-
-            // Check if we've hit the emoji limit for this type
-            if (isAnimated && animatedCount >= animatedLimit) {
-                console.log(`Cannot create animated emoji: Server limit reached (${animatedCount}/${animatedLimit})`);
-                throw { code: 30008, message: `Maximum emoji limit reached for server (${animatedCount}/${animatedLimit} animated)` };
-            } else if (!isAnimated && staticCount >= staticLimit) {
-                console.log(`Cannot create static emoji: Server limit reached (${staticCount}/${staticLimit})`);
-                throw { code: 30008, message: `Maximum emoji limit reached for server (${staticCount}/${staticLimit} static)` };
-            }
-
-            // Add timeout to the fetch operation
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-            
-            const response = await fetch(avatarURL, { 
-                signal: controller.signal 
-            }).catch(err => {
-                console.error(`Fetch error for ${member.displayName}: ${err.message}`);
-                throw new Error(`Failed to fetch avatar: ${err.message}`);
-            });
-            
-            clearTimeout(timeoutId);
-            
+            const response = await fetch(avatarURL);
             if (!response.ok) {
                 throw new Error(`Failed to fetch avatar: ${response.statusText}`);
             }
@@ -1856,15 +1708,7 @@ async function createEmojiForUser(member, guild) {
                     console.log('Attempting direct upload of animated GIF');
                     const emoji = await guild.emojis.create({
                         attachment: buffer,
-                        name: member.id,
-                        reason: `CastBot emoji for ${member.displayName}`
-                    }).catch(err => {
-                        // Special handling for emoji limit errors
-                        if (err.code === 30008) {
-                            throw { code: 30008, message: err.message || "Maximum emoji limit reached for server" };
-                        }
-                        console.error(`Error creating animated emoji for ${member.displayName}: ${err.message}`);
-                        throw err;
+                        name: member.id
                     });
                     
                     const emojiCode = `<a:${member.id}:${emoji.id}>`;
@@ -1877,51 +1721,13 @@ async function createEmojiForUser(member, guild) {
                         isAnimated: true
                     };
                 } catch (directUploadError) {
-                    // Re-throw if it's a limit error
-                    if (directUploadError.code === 30008) {
-                        console.error(`Emoji limit error: ${directUploadError.message}`);
-                        throw directUploadError;
-                    }
-                    
-                    console.log('Direct upload failed, falling back to static version:', directUploadError.message);
-                    
-                    // Fall back to static if we still have room in static emoji limit
-                    if (staticCount >= staticLimit) {
-                        throw { code: 30008, message: `Maximum emoji limit reached for server (${staticCount}/${staticLimit} static)` };
-                    }
-                    
-                    try {
-                        const sharp = (await import('sharp')).default;
-                        processedBuffer = await sharp(buffer, { 
-                            animated: true,  // Recognize it's an animated image
-                            pages: 1        // Only take first frame
-                        })
-                            .resize(96, 96, { 
-                                fit: 'contain',
-                                withoutEnlargement: true,
-                                position: 'center'
-                            })
-                            .png({ 
-                                quality: 80, 
-                                colors: 128,
-                                effort: 10
-                            })
-                            .toBuffer()
-                            .catch(err => {
-                                console.error(`Sharp processing error for ${member.displayName}: ${err.message}`);
-                                throw err;
-                            });
-                        finalIsAnimated = false;
-                    } catch (sharpError) {
-                        console.error(`Sharp processing error for ${member.displayName}: ${sharpError.message}`);
-                        throw new Error(`Failed to process animated avatar: ${sharpError.message}`);
-                    }
-                }
-            } else {
-                // Handle static images
-                try {
+                    console.log('Direct upload failed:', directUploadError.message);
+                    // Fall back to static version
                     const sharp = (await import('sharp')).default;
-                    processedBuffer = await sharp(buffer)
+                    processedBuffer = await sharp(buffer, { 
+                        animated: true,  // Recognize it's an animated image
+                        pages: 1        // Only take first frame
+                    })
                         .resize(96, 96, { 
                             fit: 'contain',
                             withoutEnlargement: true,
@@ -1932,28 +1738,30 @@ async function createEmojiForUser(member, guild) {
                             colors: 128,
                             effort: 10
                         })
-                        .toBuffer()
-                        .catch(err => {
-                            console.error(`Sharp processing error for ${member.displayName}: ${err.message}`);
-                            throw err;
-                        });
-                } catch (sharpError) {
-                    console.error(`Sharp processing error for ${member.displayName}: ${sharpError.message}`);
-                    throw new Error(`Failed to process static avatar: ${sharpError.message}`);
+                        .toBuffer();
+                    finalIsAnimated = false;
                 }
+            } else {
+                // Handle static images
+                const sharp = (await import('sharp')).default;
+                processedBuffer = await sharp(buffer)
+                    .resize(96, 96, { 
+                        fit: 'contain',
+                        withoutEnlargement: true,
+                        position: 'center'
+                    })
+                    .png({ 
+                        quality: 80, 
+                        colors: 128,
+                        effort: 10
+                    })
+                    .toBuffer();
             }
 
             // Create emoji with processed buffer
             const emoji = await guild.emojis.create({
                 attachment: processedBuffer,
-                name: member.id,
-                reason: `CastBot emoji for ${member.displayName}`
-            }).catch(err => {
-                if (err.code === 30008) {
-                    throw { code: 30008, message: err.message || "Maximum emoji limit reached for server" };
-                }
-                console.error(`Error creating emoji for ${member.displayName}: ${err.message}`);
-                throw err;
+                name: member.id
             });
 
             const emojiCode = finalIsAnimated ? 
@@ -1970,89 +1778,57 @@ async function createEmojiForUser(member, guild) {
             };
 
         } catch (emojiError) {
-            const error = {
+            throw {
                 code: emojiError.code || 'UNKNOWN',
-                message: emojiError.message || 'Unknown error creating emoji',
+                message: emojiError.message,
                 rawError: emojiError,
                 memberName: member.displayName,
                 avatarUrl: avatarURL
             };
-            console.error(`Emoji creation error details:`, error);
-            throw error;
         }
     } catch (error) {
-        console.error(`Complete emoji creation failure for ${member.displayName}:`, error);
+        console.error('Detailed emoji error:', error);
         throw error;
     }
 }
 
-// Update calculateCastlistFields to handle role ID correctly and manage spacers intelligently
-async function calculateCastlistFields(guild, roleIdOrOption, castlistName = 'default') {
+// Update calculateCastlistFields to handle role ID correctly
+async function calculateCastlistFields(guild, roleId, castlistName = 'default') {
   try {
-    // Extract the actual role ID from the option object if needed
-    let roleId;
-    if (typeof roleIdOrOption === 'object' && roleIdOrOption.value) {
-      roleId = roleIdOrOption.value;
-      console.log(`Extracted roleId ${roleId} from roleIdOrOption object`);
-    } else {
-      roleId = roleIdOrOption;
-    }
-
     const guildData = await loadPlayerData();
     const guildTribes = guildData[guild.id]?.tribes || {};
+    let totalFields = 0;
+    let tribeCount = 0;
     
-    // Count existing tribes in this castlist (excluding the one being updated)
-    const existingTribes = Object.entries(guildTribes)
-      .filter(([id, tribe]) => tribe.castlist === castlistName && id !== roleId)
-      .map(([id]) => id);
-    
-    console.log(`Found ${existingTribes.length} existing tribes in castlist "${castlistName}"`);
-    
-    // Get all members for the new/updated tribe
-    const newRole = await guild.roles.fetch(roleId);
-    const newRoleMembers = newRole ? newRole.members.size : 0;
-    console.log(`New tribe "${newRole?.name}" has ${newRoleMembers} members`);
-    
-    // Count fields without spacers first
-    let fieldsWithoutSpacers = 0;
-    
-    // Count existing tribes and their members
-    for (const tribeId of existingTribes) {
-      try {
-        const role = await guild.roles.fetch(tribeId);
-        if (role) {
-          // Header + members
-          const memberCount = role.members.size;
-          fieldsWithoutSpacers += 1 + memberCount;
-          console.log(`Existing tribe ${role.name}: 1 header + ${memberCount} members = ${1 + memberCount} fields`);
-        }
-      } catch (err) {
-        console.warn(`Could not fetch role ${tribeId}:`, err.message);
+    // Count existing tribe fields and their players in this castlist
+    for (const [id, tribe] of Object.entries(guildTribes)) {
+      if (!tribe || tribe.castlist !== castlistName) continue;
+      
+      // For each tribe except the first, add a spacer
+      if (tribeCount > 0) {
+        totalFields++;
+      }
+      
+      totalFields++; // Add 1 for tribe header
+      tribeCount++;
+      
+      const role = await guild.roles.fetch(id);
+      if (role) {
+        totalFields += role.members.size;
       }
     }
     
-    // Add the new tribe's fields
-    fieldsWithoutSpacers += 1 + newRoleMembers;
-    console.log(`New tribe ${newRole?.name}: 1 header + ${newRoleMembers} members = ${1 + newRoleMembers} fields`);
-    
-    // Calculate total number of fields with spacers
-    const totalTribes = existingTribes.length + 1;
-    const spacerFields = Math.max(0, totalTribes - 1);
-    const fieldsWithSpacers = fieldsWithoutSpacers + spacerFields;
-    
-    console.log(`Fields without spacers: ${fieldsWithoutSpacers}`);
-    console.log(`Number of spacers needed: ${spacerFields}`);
-    console.log(`Fields with spacers: ${fieldsWithSpacers}`);
-    
-    // Check if we need to omit spacers to fit within Discord's 25 field limit
-    if (fieldsWithSpacers > 25 && fieldsWithoutSpacers <= 25) {
-      console.log(`Will need to omit spacers to fit within 25 field limit`);
-      // Return fields without spacers (we'll handle spacers in the castlist command)
-      return fieldsWithoutSpacers;
+    // Count new tribe's fields if it's not already counted
+    if (roleId !== Object(roleId)) { // Ensure roleId is not an object
+      const newRole = await guild.roles.fetch(roleId);
+      if (newRole && !guildTribes[roleId]) {
+        if (tribeCount > 0) totalFields++; // Add spacer
+        totalFields++; // Add header
+        totalFields += newRole.members.size;
+      }
     }
     
-    // Otherwise return the total count with spacers
-    return fieldsWithSpacers;
+    return totalFields;
   } catch (error) {
     console.error('Error calculating castlist fields:', error);
     throw error;
@@ -2060,7 +1836,7 @@ async function calculateCastlistFields(guild, roleIdOrOption, castlistName = 'de
 }
 
 // Add this helper function before handling the castlist command
-async function createMemberFields(members, guild, tribeColor = null) {
+async function createMemberFields(members, guild) {
   const fields = [];
   const pronounRoleIDs = await getGuildPronouns(guild.id);
   const timezones = await getGuildTimezones(guild.id);
@@ -2298,34 +2074,4 @@ async function checkRoleHierarchyPermission(guild, roleId) {
   }
 
   return { allowed: true };
-}
-
-// Add this function to check if spacers should be omitted to fit within field limits
-async function shouldOmitSpacers(tribes, guild) {
-  // Calculate total fields without spacers
-  let totalFields = 0;
-  let tribeCount = 0;
-  
-  for (const tribe of tribes) {
-    try {
-      const tribeRole = await guild.roles.fetch(tribe.roleId);
-      if (!tribeRole) continue;
-      
-      // Add tribe header (1 field)
-      totalFields++;
-      tribeCount++;
-      
-      // Get members with this role
-      const tribeMembers = guild.members.cache.filter(member => member.roles.cache.has(tribe.roleId));
-      totalFields += tribeMembers.size;
-    } catch (error) {
-      console.error(`Error processing tribe ${tribe.roleId}:`, error);
-    }
-  }
-  
-  // Calculate fields with spacers (spacers = tribeCount - 1)
-  const totalFieldsWithSpacers = totalFields + (tribeCount - 1);
-  
-  // Check if removing spacers would help stay within the 25 field limit
-  return totalFieldsWithSpacers > 25 && totalFields <= 25;
 }

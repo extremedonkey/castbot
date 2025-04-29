@@ -61,13 +61,7 @@ const SET_TRIBE_COMMAND = {
 			description: 'Set which castlist this tribe is added to (if left blank, will be set to the default castlist)',
 			type: 3, // STRING
 			required: false
-		},
-		{
-			name: 'color',
-			description: 'Set an optional hex color code for the tribe (e.g. #FF5733 or FF5733)',
-			type: 3, // STRING
-			required: false
-		}
+				}
 	],
 	default_member_permissions: ADMIN_ANY
 };
@@ -274,6 +268,13 @@ const SET_AGE_COMMAND = {
 	]
 };
 
+const STATS_COMMAND = {
+  name: maybePrependDev('stats'),
+  description: 'Display message statistics for all channels',
+  type: 1,
+  default_member_permissions: ADMIN_ANY
+};
+
 const ALL_COMMANDS = [
 	SET_AGE_COMMAND,
 	REACT_PRONOUNS_COMMAND,
@@ -288,6 +289,7 @@ const ALL_COMMANDS = [
 	TIMEZONES_ADD_COMMAND,
 	TIMEZONES_REMOVE_COMMAND,
 	REACT_TIMEZONES_COMMAND,
+	STATS_COMMAND,          // Add the stats command here
 ];
 
 console.log('Registering commands with:');
