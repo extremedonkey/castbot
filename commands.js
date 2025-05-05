@@ -38,19 +38,14 @@ const CASTLIST_COMMAND = {
 	]
 };
 
-// Adding the condensed castlist command
-const CASTLIST_SMALL_COMMAND = {
-	name: maybePrependDev('castlist_small'),
-	description: 'Display a condensed version of the dynamic castlist',
+// Adding the Tycoons setup command - only available in dev mode, not in production
+const SETUP_TYCOONS_COMMAND = {
+	name: maybePrependDev('setup_tycoons'),
+	description: 'Setup roles for the Tycoons game (development command)',
 	type: 1,
-	options: [
-		{
-			name: 'castlist',
-			description: 'Select which castlist to display (if left blank, will display default castlist)',
-			type: 3, // STRING type
-			required: false
-		}
-	]
+	default_member_permissions: ADMIN_ANY,
+	// This command will only be available in dev mode
+	production_disabled: true
 };
 
 // Admin-only commands: assign ADMIN_ANY as the default permission
@@ -296,14 +291,14 @@ const ALL_COMMANDS = [
 	CLEAR_TRIBE_COMMAND,     
 	SET_TRIBE_COMMAND,   
 	CASTLIST_COMMAND,
-	CASTLIST_SMALL_COMMAND,
-	GETTING_STARTED_COMMAND,
+		GETTING_STARTED_COMMAND,
 	SET_PLAYERS_AGE_COMMAND,
 	PRONOUNS_ADD_COMMAND,
 	PRONOUNS_REMOVE_COMMAND,
 	TIMEZONES_ADD_COMMAND,
 	TIMEZONES_REMOVE_COMMAND,
 	REACT_TIMEZONES_COMMAND,
+	SETUP_TYCOONS_COMMAND,
 ];
 
 console.log('Registering commands with:');

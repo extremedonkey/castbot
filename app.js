@@ -1725,6 +1725,53 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
+} else if (name === 'setup_tycoons') {
+  try {
+    console.log('Processing setup_tycoons command');
+    await res.send({
+      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    });
+
+    const guildId = req.body.guild_id;
+    const guild = await client.guilds.fetch(guildId);
+    
+    // Check if we're in production mode and this command should be disabled
+    const isProduction = process.env.PRODUCTION === 'TRUE';
+    if (isProduction) {
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          content: 'This command is only available in development mode.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+      return;
+    }
+    
+    // Call the helper function to create the roles
+    const result = await handleSetupTycoons(guild);
+    
+    // Send the formatted output back to the user
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: `Tycoons roles have been created successfully. Here are the role IDs in the format you requested:\n\n${result.formattedOutput}`,
+      }
+    });
+  } catch (error) {
+    console.error('Error in setup_tycoons command:', error);
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: 'Error setting up Tycoons roles.',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+  return;
 
 // ...existing code...
 }
@@ -2328,4 +2375,94 @@ async function shouldOmitSpacers(tribes, guild) {
   
   // Check if removing spacers would help stay within the 25 field limit
   return totalFieldsWithSpacers > 25 && totalFields <= 25;
+}
+
+// Add this helper function at the end of the file before the last closing bracket
+async function handleSetupTycoons(guild) {
+  // Arrays to hold the role IDs for each category
+  const moneyRoles = [];
+  const safeFarmRoles = [];
+  const riskyFarmRoles = [];
+  const siloRoles = [];
+  const attackRoles = [];
+
+  try {
+    // Create money balance roles: b.0 - b.9
+    for (let i = 0; i <= 9; i++) {
+      const roleName = `b.${i}`;
+      let role = guild.roles.cache.find(r => r.name === roleName);
+      if (!role) {
+        role = await guild.roles.create({ 
+          name: roleName,
+          reason: "Tycoons money balance role"
+        });
+      }
+      moneyRoles.push(role.id);
+    }
+
+    // Create safe farm roles: pr.0 - pr.5
+    for (let i = 0; i <= 5; i++) {
+      const roleName = `pr.${i}`;
+      let role = guild.roles.cache.find(r => r.name === roleName);
+      if (!role) {
+        role = await guild.roles.create({ 
+          name: roleName,
+          reason: "Tycoons safe farm role"
+        });
+      }
+      safeFarmRoles.push(role.id);
+    }
+
+    // Create risky farm roles: lr.0 - lr.5
+    for (let i = 0; i <= 5; i++) {
+      const roleName = `lr.${i}`;
+      let role = guild.roles.cache.find(r => r.name === roleName);
+      if (!role) {
+        role = await guild.roles.create({ 
+          name: roleName,
+          reason: "Tycoons risky farm role"
+        });
+      }
+      riskyFarmRoles.push(role.id);
+    }
+
+    // Create silo roles: sr.0 - sr.5
+    for (let i = 0; i <= 5; i++) {
+      const roleName = `sr.${i}`;
+      let role = guild.roles.cache.find(r => r.name === roleName);
+      if (!role) {
+        role = await guild.roles.create({ 
+          name: roleName,
+          reason: "Tycoons silo role"
+        });
+      }
+      siloRoles.push(role.id);
+    }
+
+    // Create attack roles: ar.0 - ar.5
+    for (let i = 0; i <= 5; i++) {
+      const roleName = `ar.${i}`;
+      let role = guild.roles.cache.find(r => r.name === roleName);
+      if (!role) {
+        role = await guild.roles.create({ 
+          name: roleName,
+          reason: "Tycoons attack role"
+        });
+      }
+      attackRoles.push(role.id);
+    }
+
+    // Format the output in the required format
+    return {
+      moneyRoles,
+      safeFarmRoles,
+      riskyFarmRoles,
+      siloRoles,
+      attackRoles,
+      formattedOutput: `Money Balance:\n{=(b):${moneyRoles.join('|')}}\n\nSafe Farm Balance:\n{=(pr):${safeFarmRoles.join('|')}}\n\nRisky Farm Balance:\n{=(lr):${riskyFarmRoles.join('|')}}\n\nSilo balance:\n{=(sr):${siloRoles.join('|')}}\n\nAttack name:\n{=(ar):${attackRoles.join('|')}}`
+    };
+  } catch (error) {
+    console.error('Error setting up Tycoons roles:', error);
+    throw error;
+  }
 }
