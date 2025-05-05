@@ -38,6 +38,21 @@ const CASTLIST_COMMAND = {
 	]
 };
 
+// Adding the condensed castlist command
+const CASTLIST_SMALL_COMMAND = {
+	name: maybePrependDev('castlist_small'),
+	description: 'Display a condensed version of the dynamic castlist',
+	type: 1,
+	options: [
+		{
+			name: 'castlist',
+			description: 'Select which castlist to display (if left blank, will display default castlist)',
+			type: 3, // STRING type
+			required: false
+		}
+	]
+};
+
 // Admin-only commands: assign ADMIN_ANY as the default permission
 const SET_TRIBE_COMMAND = {
 	name: maybePrependDev('add_tribe'),  // Changed from set_tribe
@@ -281,6 +296,7 @@ const ALL_COMMANDS = [
 	CLEAR_TRIBE_COMMAND,     
 	SET_TRIBE_COMMAND,   
 	CASTLIST_COMMAND,
+	CASTLIST_SMALL_COMMAND,
 	GETTING_STARTED_COMMAND,
 	SET_PLAYERS_AGE_COMMAND,
 	PRONOUNS_ADD_COMMAND,
