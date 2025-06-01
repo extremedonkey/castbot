@@ -2041,8 +2041,21 @@ function parseEmojiCode(emojiCode) {
     return null;
 }
 
+// Sanitize username for emoji naming (Discord requirements: 2-32 chars, alphanumeric + underscores only)
+function sanitizeEmojiName(username) {
+    return username
+        .replace(/[^a-zA-Z0-9_]/g, '_')  // Replace invalid chars with underscores
+        .substring(0, 32)               // Discord's 32-character limit
+        .replace(/^_+|_+$/g, '')        // Remove leading/trailing underscores
+        || 'user';                      // Fallback if everything gets stripped
+}
+
 async function createEmojiForUser(member, guild) {
     try {
+        // Create sanitized emoji name from username
+        const emojiName = sanitizeEmojiName(member.user.username);
+        console.log(`Using emoji name: ${emojiName} (from username: ${member.user.username})`);
+        
         // Check both user and member avatars for animation
         const userHasAnimatedAvatar = member.user.avatar?.startsWith('a_');
         const memberHasAnimatedAvatar = member.avatar?.startsWith('a_');
@@ -2139,7 +2152,7 @@ async function createEmojiForUser(member, guild) {
                     console.log('Attempting direct upload of animated GIF');
                     const emoji = await guild.emojis.create({
                         attachment: buffer,
-                        name: member.id,
+                        name: emojiName,
                         reason: `CastBot emoji for ${member.displayName}`
                     }).catch(err => {
                         // Special handling for emoji limit errors
@@ -2150,7 +2163,7 @@ async function createEmojiForUser(member, guild) {
                         throw err;
                     });
                     
-                    const emojiCode = `<a:${member.id}:${emoji.id}>`;
+                    const emojiCode = `<a:${emojiName}:${emoji.id}>`;
                     console.log(`Successfully created animated emoji directly: ${emojiCode}`);
                     
                     return {
@@ -2229,7 +2242,7 @@ async function createEmojiForUser(member, guild) {
             // Create emoji with processed buffer
             const emoji = await guild.emojis.create({
                 attachment: processedBuffer,
-                name: member.id,
+                name: emojiName,
                 reason: `CastBot emoji for ${member.displayName}`
             }).catch(err => {
                 if (err.code === 30008) {
@@ -2240,8 +2253,8 @@ async function createEmojiForUser(member, guild) {
             });
 
             const emojiCode = finalIsAnimated ? 
-                `<a:${member.id}:${emoji.id}>` : 
-                `<:${member.id}:${emoji.id}>`;
+                `<a:${emojiName}:${emoji.id}>` : 
+                `<:${emojiName}:${emoji.id}>`;
 
             console.log(`Created ${finalIsAnimated ? 'animated' : 'static'} emoji (${processedBuffer.length} bytes): ${emojiCode}`);
 
