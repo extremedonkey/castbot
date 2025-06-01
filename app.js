@@ -622,7 +622,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const buttonRow = new ActionRowBuilder()
       .addComponents(
         new ButtonBuilder()
-          .setCustomId(`show_castlist${requestedCastlist ? `_${requestedCastlist}` : ''}`)
+          .setCustomId(`show_castlist_${requestedCastlist || 'default'}`)
           .setLabel('Show Castlist')
           .setStyle(ButtonStyle.Primary)
           .setEmoji('📋')
@@ -1829,7 +1829,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     if (custom_id.startsWith('show_castlist')) {
       // Extract castlist name from custom_id if present
       const castlistMatch = custom_id.match(/^show_castlist(?:_(.+))?$/);
-      const requestedCastlist = castlistMatch?.[1] || null;
+      const requestedCastlist = castlistMatch?.[1] || 'default';
       
       console.log('Button clicked, redirecting to castlist command');
       
