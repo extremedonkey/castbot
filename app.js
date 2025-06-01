@@ -1831,19 +1831,187 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const castlistMatch = custom_id.match(/^show_castlist(?:_(.+))?$/);
       const requestedCastlist = castlistMatch?.[1] || 'default';
       
-      console.log('Button clicked, redirecting to castlist command');
+      console.log('Button clicked, processing castlist for:', requestedCastlist);
       
-      // Transform this button interaction into a castlist command by modifying the request data
-      req.body.data = {
-        name: 'castlist',
-        options: requestedCastlist ? [{ name: 'castlist', value: requestedCastlist }] : []
-      };
+      // Execute the exact same logic as the castlist command
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
       
-      // Change the interaction type to APPLICATION_COMMAND so it gets processed by the castlist handler
-      req.body.type = InteractionType.APPLICATION_COMMAND;
+        // Determine which castlist to show
+        const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
+        console.log(`Selected castlist: ${castlistToShow}`);
       
-      // Let it fall through to the castlist command handler by not returning here
-      // This ensures identical behavior to the /castlist command
+        // Load tribe data based on selected castlist
+        const tribes = await getGuildTribes(guildId, castlistToShow);
+        console.log('Loaded tribes:', JSON.stringify(tribes));
+      
+        // Check if any tribes exist
+        if (tribes.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              embeds: [{
+                title: 'CastBot: Dynamic Castlist',
+                description: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.',
+                color: 0x7ED321
+              }],
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+      
+        // Send initial response
+        await res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        });
+      
+        const guild = await client.guilds.fetch(guildId);
+        console.log('Guild:', guild.name);
+      
+        if (!guild) {
+          throw new Error('Could not fetch guild');
+        }
+      
+        // Fetch the full guild with roles cache
+        const fullGuild = await client.guilds.fetch(guildId, { force: true });
+        await fullGuild.roles.fetch();
+        const members = await fullGuild.members.fetch();
+      
+        // Check if we should omit spacers to fit within Discord's 25 field limit
+        const omitSpacers = await shouldOmitSpacers(tribes, fullGuild);
+        if (omitSpacers) {
+          console.log('Omitting spacers to fit content within 25 field limit');
+        }
+      
+        // Default color (in hex format)
+        const defaultColor = "#7ED321";
+        let currentColor = defaultColor;
+      
+        // Create the embed first
+        const embedTitle = castlistToShow === 'default' 
+          ? 'CastBot: Dynamic Castlist'
+          : `CastBot: Dynamic Castlist (${castlistToShow})`;
+        
+        const embed = new EmbedBuilder()
+          .setTitle(embedTitle)
+          .setAuthor({ 
+            name: fullGuild.name || 'Unknown Server', 
+            iconURL: fullGuild.iconURL() || undefined 
+          })
+          .setColor(defaultColor)  // Start with default color
+          .setFooter({ 
+            text: 'Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!',
+            iconURL: client.user.displayAvatarURL()
+          });
+      
+        console.log('Starting to process tribes for castlist. Initial color:', defaultColor);
+        
+        // Track if any tribe has a color
+        let hasFoundColor = false;
+        
+        // Add each tribe that has members
+        for (const tribe of tribes) {
+          try {
+            const tribeRole = await fullGuild.roles.fetch(tribe.roleId);
+            if (!tribeRole) {
+              console.log(`Could not find role for tribe ${tribe.roleId}`);
+              continue;
+            }
+      
+            console.log(`Processing tribe role: ${tribeRole.name} (${tribe.roleId})`);
+            console.log('Tribe data:', JSON.stringify(tribe));
+      
+            // Update the embed color if this tribe has a color specified
+            if (tribe.color) {
+              hasFoundColor = true;
+              currentColor = tribe.color;
+              
+              try {
+                // Convert hex color to a format Discord.js can understand
+                // If it already has the # prefix, use it directly
+                const colorValue = tribe.color.startsWith('#') ? 
+                  tribe.color : `#${tribe.color}`;
+                
+                console.log(`Setting embed color to ${colorValue} for tribe ${tribeRole.name}`);
+                embed.setColor(colorValue);
+              } catch (colorErr) {
+                console.error(`Error setting color ${tribe.color}:`, colorErr);
+              }
+            }
+      
+            // Add spacer if this isn't the first tribe and we're not omitting spacers
+            if (embed.data.fields?.length > 0 && !omitSpacers) {
+              embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
+            }
+      
+            // Add tribe header
+            const header = tribe.emoji
+              ? `${tribe.emoji}  ${tribeRole.name}  ${tribe.emoji}`
+              : tribeRole.name;
+            
+            embed.addFields({ name: header, value: '\u200B', inline: false });
+      
+            // Get members with this role
+            const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
+            const memberFields = await createMemberFields(tribeMembers, fullGuild);
+            console.log(`Generated ${memberFields.length} member fields for tribe ${tribeRole.name}`);
+      
+            if (embed.data.fields.length + memberFields.length > 25) {
+              throw new Error('Embed field limit exceeded');
+            }
+      
+            embed.addFields(memberFields);
+      
+          } catch (error) {
+            if (error.message === 'Embed field limit exceeded') {
+              console.error('Embed field limit exceeded, sending error message');
+              const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+              await DiscordRequest(endpoint, {
+                method: 'PATCH',
+                body: {
+                  content: 'Cannot display castlist: Too many fields (maximum 25). Consider splitting tribes into separate castlists using the castlist parameter in /add_tribe.',
+                  flags: InteractionResponseFlags.EPHEMERAL
+                },
+              });
+              return;
+            }
+            console.error(`Error processing tribe:`, error);
+          }
+        }
+      
+        // Check the color that will be used in the embed
+        console.log(`Final embed color settings:`);
+        console.log(`- hasFoundColor: ${hasFoundColor}`);
+        console.log(`- currentColor: ${currentColor}`);
+        console.log(`- embed.data.color: ${embed.data.color || 'not set'}`);
+      
+        // If no tribe had a color, make sure we're using the default color
+        if (!hasFoundColor) {
+          embed.setColor(defaultColor);
+          console.log(`No tribe colors found, setting to default: ${defaultColor}`);
+        }
+      
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            embeds: [embed]
+          },
+        });
+      
+      } catch (error) {
+        console.error('Error handling castlist command:', error);
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: 'Error displaying castlist.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          },
+        });
+      }
+      return;
     }
   } // end if MESSAGE_COMPONENT
   // ...rest of interaction handling...
