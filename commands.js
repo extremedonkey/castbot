@@ -284,6 +284,21 @@ const SET_AGE_COMMAND = {
 	]
 };
 
+// Button command that displays a button which triggers castlist when clicked
+const BUTTON_COMMAND = {
+	name: maybePrependDev('button'),
+	description: 'Display a button that shows the castlist when clicked',
+	type: 1,
+	options: [
+		{
+			name: 'castlist',
+			description: 'Select which castlist the button will display (if left blank, will use default castlist)',
+			type: 3, // STRING type
+			required: false
+		}
+	]
+};
+
 const ALL_COMMANDS = [
 	SET_AGE_COMMAND,
 	REACT_PRONOUNS_COMMAND,
@@ -291,6 +306,7 @@ const ALL_COMMANDS = [
 	CLEAR_TRIBE_COMMAND,     
 	SET_TRIBE_COMMAND,   
 	CASTLIST_COMMAND,
+	BUTTON_COMMAND,
 		GETTING_STARTED_COMMAND,
 	SET_PLAYERS_AGE_COMMAND,
 	PRONOUNS_ADD_COMMAND,

@@ -339,7 +339,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     console.log(`Received command: ${rawName}`);
 
     // Update the readOnlyCommands array to use new command names
-    const readOnlyCommands = ['castlist', 'getting_started', 'player_set_age', 'player_set_pronouns','player_set_timezone'];  // Updated from set_age
+    const readOnlyCommands = ['castlist', 'getting_started', 'player_set_age', 'player_set_pronouns','player_set_timezone', 'button'];  // Updated from set_age
     if (!readOnlyCommands.includes(name)) {
       const hasPerms = await hasRequiredPermissions(req.body.guild_id, req.body.member.user.id);
       if (!hasPerms) {
@@ -604,6 +604,48 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         content: 'Error displaying castlist.',
         flags: InteractionResponseFlags.EPHEMERAL
       },
+    });
+  }
+  return;
+} else if (name === 'button') {
+  try {
+    console.log('Processing button command');
+    
+    await res.send({
+      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    });
+    
+    const guildId = req.body.guild_id;
+    const requestedCastlist = data.options?.find(opt => opt.name === 'castlist')?.value;
+    
+    // Create button with castlist action
+    const buttonRow = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId(`show_castlist${requestedCastlist ? `_${requestedCastlist}` : ''}`)
+          .setLabel('Show Castlist')
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('📋')
+      );
+    
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: 'Click the button below to view the castlist:',
+        components: [buttonRow]
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error handling button command:', error);
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: 'Error creating button.',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
     });
   }
   return;
@@ -1777,6 +1819,160 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 }
 
   } // end if APPLICATION_COMMAND
+
+  /**
+   * Handle button interactions (MESSAGE_COMPONENT)
+   */
+  if (type === InteractionType.MESSAGE_COMPONENT) {
+    const { custom_id } = data;
+    
+    if (custom_id.startsWith('show_castlist')) {
+      try {
+        console.log('Processing castlist button click');
+        
+        await res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+        });
+        
+        // Extract castlist name from custom_id if present
+        const castlistMatch = custom_id.match(/^show_castlist(?:_(.+))?$/);
+        const requestedCastlist = castlistMatch?.[1] || null;
+        
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Reuse the castlist generation logic from the castlist command
+        await ensureServerData(guild);
+        
+        // Get all guild members with roles
+        await guild.members.fetch();
+        
+        const playerData = await loadPlayerData();
+        const guildTribes = getGuildTribes(guildId, requestedCastlist);
+        
+        if (!guildTribes || Object.keys(guildTribes).length === 0) {
+          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: {
+              content: requestedCastlist 
+                ? `No tribes found in the "${requestedCastlist}" castlist. Use /add_tribe to add tribes to this castlist.`
+                : 'No tribes found in the default castlist. Use /add_tribe to add tribes.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+          return;
+        }
+        
+        // Generate castlist embed using the same logic as the castlist command
+        const embeds = [];
+        const allFields = [];
+        
+        for (const [tribeName, tribeData] of Object.entries(guildTribes)) {
+          if (!tribeData || !tribeData.roleId) continue;
+          
+          const tribeRole = guild.roles.cache.get(tribeData.roleId);
+          if (!tribeRole) continue;
+          
+          const tribeMembers = guild.members.cache.filter(member => 
+            member.roles.cache.has(tribeData.roleId)
+          );
+          
+          if (tribeMembers.size === 0) {
+            allFields.push({
+              name: `${tribeData.emoji || ''} ${tribeName}`,
+              value: '*No members*',
+              inline: true
+            });
+            continue;
+          }
+          
+          const memberList = tribeMembers.map(member => {
+            const userId = member.user.id;
+            const playerInfo = getPlayer(guildId, userId);
+            
+            let displayName = member.displayName;
+            let ageText = '';
+            let pronounText = '';
+            let timeText = '';
+            
+            if (playerInfo?.age) {
+              ageText = ` (${playerInfo.age})`;
+            }
+            
+            const pronounRoles = member.roles.cache.filter(role => 
+              getGuildPronouns(guildId).includes(role.id)
+            );
+            if (pronounRoles.size > 0) {
+              pronounText = ` • ${pronounRoles.first().name}`;
+            }
+            
+            const timezoneRoles = member.roles.cache.filter(role => 
+              Object.keys(getGuildTimezones(guildId)).includes(role.id)
+            );
+            if (timezoneRoles.size > 0) {
+              const timezoneRole = timezoneRoles.first();
+              const offset = getTimezoneOffset(guildId, timezoneRole.id);
+              if (offset !== null) {
+                const now = new Date();
+                const localTime = new Date(now.getTime() + (offset * 60 * 60 * 1000));
+                const timeString = localTime.toLocaleTimeString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true,
+                  timeZone: 'UTC'
+                });
+                timeText = ` • ${timeString}`;
+              }
+            }
+            
+            return `${displayName}${ageText}${pronounText}${timeText}`;
+          }).join('\n');
+          
+          allFields.push({
+            name: `${tribeData.emoji || ''} ${tribeName}`,
+            value: memberList,
+            inline: true
+          });
+        }
+        
+        // Handle Discord's 25 field limit
+        const maxFieldsPerEmbed = 25;
+        for (let i = 0; i < allFields.length; i += maxFieldsPerEmbed) {
+          const fields = allFields.slice(i, i + maxFieldsPerEmbed);
+          
+          const embed = new EmbedBuilder()
+            .setTitle(requestedCastlist ? `${requestedCastlist.charAt(0).toUpperCase() + requestedCastlist.slice(1)} Castlist` : 'Castlist')
+            .setFields(fields)
+            .setTimestamp()
+            .setColor('#0099ff');
+          
+          embeds.push(embed);
+        }
+        
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: '',
+            embeds: embeds
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling castlist button:', error);
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: 'Error displaying castlist.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      return;
+    }
+  } // end if MESSAGE_COMPONENT
 
   // ...rest of interaction handling...
 }); // end app.post
