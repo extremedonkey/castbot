@@ -1821,31 +1821,167 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   } // end if APPLICATION_COMMAND
 
   /**
-   * Handle button interactions (MESSAGE_COMPONENT) 
+   * Handle button interactions (MESSAGE_COMPONENT)
    */
   if (type === InteractionType.MESSAGE_COMPONENT) {
     const { custom_id } = data;
     
     if (custom_id.startsWith('show_castlist')) {
-      // Extract castlist name from custom_id if present
-      const castlistMatch = custom_id.match(/^show_castlist(?:_(.+))?$/);
-      const requestedCastlist = castlistMatch?.[1] || null;
-      
-      console.log('Button clicked, redirecting to castlist command');
-      
-      // Transform this button interaction into a castlist command by modifying the request data
-      req.body.data = {
-        name: 'castlist',
-        options: requestedCastlist ? [{ name: 'castlist', value: requestedCastlist }] : []
-      };
-      
-      // Change the interaction type to APPLICATION_COMMAND so it gets processed by the castlist handler
-      req.body.type = InteractionType.APPLICATION_COMMAND;
-      
-      // Let it fall through to the castlist command handler by not returning here
-      // This ensures identical behavior to the /castlist command
+      try {
+        console.log('Processing castlist button click');
+        
+        await res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+        });
+        
+        // Extract castlist name from custom_id if present
+        const castlistMatch = custom_id.match(/^show_castlist(?:_(.+))?$/);
+        const requestedCastlist = castlistMatch?.[1] || null;
+        
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Reuse the castlist generation logic from the castlist command
+        await ensureServerData(guild);
+        
+        // Get all guild members with roles
+        await guild.members.fetch();
+        
+        const playerData = await loadPlayerData();
+        
+        // Use the same intelligent castlist selection as the regular castlist command
+        const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
+        const guildTribes = await getGuildTribes(guildId, castlistToShow);
+        
+        if (!guildTribes || Object.keys(guildTribes).length === 0) {
+          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: {
+              content: castlistToShow 
+                ? `No tribes found in the "${castlistToShow}" castlist. Use /add_tribe to add tribes to this castlist.`
+                : 'No tribes found in the default castlist. Use /add_tribe to add tribes.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+          return;
+        }
+        
+        // Generate castlist embed using the same logic as the castlist command
+        const embeds = [];
+        const allFields = [];
+        
+        for (const [tribeName, tribeData] of Object.entries(guildTribes)) {
+          if (!tribeData || !tribeData.roleId) continue;
+          
+          const tribeRole = guild.roles.cache.get(tribeData.roleId);
+          if (!tribeRole) continue;
+          
+          const tribeMembers = guild.members.cache.filter(member => 
+            member.roles.cache.has(tribeData.roleId)
+          );
+          
+          if (tribeMembers.size === 0) {
+            allFields.push({
+              name: `${tribeData.emoji || ''} ${tribeName}`,
+              value: '*No members*',
+              inline: true
+            });
+            continue;
+          }
+          
+          const memberList = await Promise.all(tribeMembers.map(async member => {
+            const userId = member.user.id;
+            const playerInfo = await getPlayer(guildId, userId);
+            
+            let displayName = member.displayName;
+            let ageText = '';
+            let pronounText = '';
+            let timeText = '';
+            
+            if (playerInfo?.age) {
+              ageText = ` (${playerInfo.age})`;
+            }
+            
+            const pronounRoleIds = await getGuildPronouns(guildId);
+            const pronounRoles = member.roles.cache.filter(role => 
+              pronounRoleIds && pronounRoleIds.includes(role.id)
+            );
+            if (pronounRoles.size > 0) {
+              pronounText = ` • ${pronounRoles.first().name}`;
+            }
+            
+            const timezones = await getGuildTimezones(guildId);
+            const timezoneRoles = member.roles.cache.filter(role => 
+              timezones && Object.keys(timezones).includes(role.id)
+            );
+            if (timezoneRoles.size > 0) {
+              const timezoneRole = timezoneRoles.first();
+              const offset = await getTimezoneOffset(guildId, timezoneRole.id);
+              if (offset !== null) {
+                const now = new Date();
+                const localTime = new Date(now.getTime() + (offset * 60 * 60 * 1000));
+                const timeString = localTime.toLocaleTimeString('en-US', {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true,
+                  timeZone: 'UTC'
+                });
+                timeText = ` • ${timeString}`;
+              }
+            }
+            
+            return `${displayName}${ageText}${pronounText}${timeText}`;
+          }));
+          
+          const memberListText = memberList.join('\n');
+          
+          allFields.push({
+            name: `${tribeData.emoji || ''} ${tribeName}`,
+            value: memberListText,
+            inline: true
+          });
+        }
+        
+        // Handle Discord's 25 field limit
+        const maxFieldsPerEmbed = 25;
+        for (let i = 0; i < allFields.length; i += maxFieldsPerEmbed) {
+          const fields = allFields.slice(i, i + maxFieldsPerEmbed);
+          
+          const embed = new EmbedBuilder()
+            .setTitle(castlistToShow ? `${castlistToShow.charAt(0).toUpperCase() + castlistToShow.slice(1)} Castlist` : 'Castlist')
+            .setFields(fields)
+            .setTimestamp()
+            .setColor('#0099ff');
+          
+          embeds.push(embed);
+        }
+        
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: '',
+            embeds: embeds
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling castlist button:', error);
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: 'Error displaying castlist.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      return;
     }
   } // end if MESSAGE_COMPONENT
+
   // ...rest of interaction handling...
 }); // end app.post
 
