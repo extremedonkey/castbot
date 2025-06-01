@@ -1891,9 +1891,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             continue;
           }
           
-          const memberList = tribeMembers.map(member => {
+          const memberList = await Promise.all(tribeMembers.map(async member => {
             const userId = member.user.id;
-            const playerInfo = getPlayer(guildId, userId);
+            const playerInfo = await getPlayer(guildId, userId);
             
             let displayName = member.displayName;
             let ageText = '';
@@ -1904,19 +1904,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               ageText = ` (${playerInfo.age})`;
             }
             
+            const pronounRoleIds = await getGuildPronouns(guildId);
             const pronounRoles = member.roles.cache.filter(role => 
-              getGuildPronouns(guildId).includes(role.id)
+              pronounRoleIds && pronounRoleIds.includes(role.id)
             );
             if (pronounRoles.size > 0) {
               pronounText = ` • ${pronounRoles.first().name}`;
             }
             
+            const timezones = await getGuildTimezones(guildId);
             const timezoneRoles = member.roles.cache.filter(role => 
-              Object.keys(getGuildTimezones(guildId)).includes(role.id)
+              timezones && Object.keys(timezones).includes(role.id)
             );
             if (timezoneRoles.size > 0) {
               const timezoneRole = timezoneRoles.first();
-              const offset = getTimezoneOffset(guildId, timezoneRole.id);
+              const offset = await getTimezoneOffset(guildId, timezoneRole.id);
               if (offset !== null) {
                 const now = new Date();
                 const localTime = new Date(now.getTime() + (offset * 60 * 60 * 1000));
@@ -1931,11 +1933,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }
             
             return `${displayName}${ageText}${pronounText}${timeText}`;
-          }).join('\n');
+          }));
+          
+          const memberListText = memberList.join('\n');
           
           allFields.push({
             name: `${tribeData.emoji || ''} ${tribeName}`,
-            value: memberList,
+            value: memberListText,
             inline: true
           });
         }
