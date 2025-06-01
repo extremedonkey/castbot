@@ -1839,6 +1839,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const requestedCastlist = castlistMatch?.[1] || null;
         
         const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
         const guild = await client.guilds.fetch(guildId);
         
         // Reuse the castlist generation logic from the castlist command
@@ -1848,15 +1849,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         await guild.members.fetch();
         
         const playerData = await loadPlayerData();
-        const guildTribes = getGuildTribes(guildId, requestedCastlist);
+        
+        // Use the same intelligent castlist selection as the regular castlist command
+        const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
+        const guildTribes = await getGuildTribes(guildId, castlistToShow);
         
         if (!guildTribes || Object.keys(guildTribes).length === 0) {
           const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
           await DiscordRequest(endpoint, {
             method: 'PATCH',
             body: {
-              content: requestedCastlist 
-                ? `No tribes found in the "${requestedCastlist}" castlist. Use /add_tribe to add tribes to this castlist.`
+              content: castlistToShow 
+                ? `No tribes found in the "${castlistToShow}" castlist. Use /add_tribe to add tribes to this castlist.`
                 : 'No tribes found in the default castlist. Use /add_tribe to add tribes.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
@@ -1942,7 +1946,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const fields = allFields.slice(i, i + maxFieldsPerEmbed);
           
           const embed = new EmbedBuilder()
-            .setTitle(requestedCastlist ? `${requestedCastlist.charAt(0).toUpperCase() + requestedCastlist.slice(1)} Castlist` : 'Castlist')
+            .setTitle(castlistToShow ? `${castlistToShow.charAt(0).toUpperCase() + castlistToShow.slice(1)} Castlist` : 'Castlist')
             .setFields(fields)
             .setTimestamp()
             .setColor('#0099ff');
