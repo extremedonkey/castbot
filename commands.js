@@ -304,10 +304,10 @@ const SET_AGE_COMMAND = {
 	]
 };
 
-// Button command that displays a button which triggers castlist when clicked
-const BUTTON_COMMAND = {
-	name: maybePrependDev('button'),
-	description: 'Display buttons for all available castlists in this server',
+// Menu command that displays buttons for castlists and other actions
+const MENU_COMMAND = {
+	name: maybePrependDev('menu'),
+	description: 'Display interactive menu with castlist buttons and quick actions',
 	type: 1
 };
 
@@ -319,7 +319,7 @@ const ALL_COMMANDS = [
 	SET_TRIBE_COMMAND,   
 	CASTLIST_COMMAND,
 	CASTLIST_SMALL_COMMAND,
-	BUTTON_COMMAND,
+	MENU_COMMAND,
 		GETTING_STARTED_COMMAND,
 	SET_PLAYERS_AGE_COMMAND,
 	PRONOUNS_ADD_COMMAND,

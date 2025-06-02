@@ -341,7 +341,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     console.log(`Received command: ${rawName}`);
 
     // Update the readOnlyCommands array to use new command names
-    const readOnlyCommands = ['castlist', 'castlist_small', 'getting_started', 'player_set_age', 'player_set_pronouns','player_set_timezone', 'button'];  // Updated from set_age
+    const readOnlyCommands = ['castlist', 'castlist_small', 'getting_started', 'player_set_age', 'player_set_pronouns','player_set_timezone', 'menu'];  // Updated from set_age
     if (!readOnlyCommands.includes(name)) {
       const hasPerms = await hasRequiredPermissions(req.body.guild_id, req.body.member.user.id);
       if (!hasPerms) {
@@ -787,9 +787,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
-} else if (name === 'button') {
+} else if (name === 'menu') {
   try {
-    console.log('Processing button command');
+    console.log('Processing menu command');
     
     await res.send({
       type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
@@ -821,7 +821,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     
     // If no castlists found, show default button
     if (allCastlists.size === 0) {
-      const buttonRow = new ActionRowBuilder()
+      const castlistRow = new ActionRowBuilder()
         .addComponents(
           new ButtonBuilder()
             .setCustomId('show_castlist_default')
@@ -830,11 +830,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             .setEmoji('📋')
         );
       
+      const actionRow = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('getting_started')
+            .setLabel('Getting Started')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🚀')
+        );
+      
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: {
-          components: [buttonRow]
+          components: [castlistRow, actionRow]
         }
       });
       return;
@@ -875,13 +884,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     }
     
-    const buttonRow = new ActionRowBuilder().addComponents(buttons);
+    const castlistRow = new ActionRowBuilder().addComponents(buttons);
+    
+    // Add second row with action buttons
+    const actionRow = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId('getting_started')
+          .setLabel('Getting Started')
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('🚀')
+      );
     
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
     await DiscordRequest(endpoint, {
       method: 'PATCH',
       body: {
-        components: [buttonRow]
+        components: [castlistRow, actionRow]
       }
     });
     
@@ -2260,6 +2279,80 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
       }
       return;
+    } else if (custom_id === 'getting_started') {
+      // Execute the same logic as the getting_started command
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        
+        const embed = new EmbedBuilder()
+          .setTitle('CastBot: Dynamic Castlist')
+          .setAuthor({ 
+            name: guild.name || 'Unknown Server', 
+            iconURL: guild.iconURL() || undefined 
+          })
+          .setColor('#7ED321')
+          .addFields([
+            {
+              name: 'Getting Started!',
+              value: 'CastBot provides a simple to set up, dynamically updating castlist with auto-generated player emojis and live times for each player. Follow the instructions below to get the castlist setup for your next season!'
+            },
+            {
+              name: 'Too Long; Didn\'t Read (tl;dr)',
+              value: 'Run `/setup_castbot` to create your pronoun and timezone roles. Then assign your pronoun, timezone and tribe role to each player and type `/castlist`.'
+            },
+            {
+              name: '1️⃣ Set up Pronouns and Timezone roles',
+              value: 'CastBot uses Discord roles to track player Pronouns, Timezones and Tribes. Run `/setup_castbot` and CastBot will create the majority of pronouns and timezones roles needed in your server, and add them to its database. If you already have pronoun roles set up, it should automatically detect and add them.'
+            },
+            {
+              name: '2️⃣ Assign Pronoun and Timezone roles to players',
+              value: 'Now you must assign the corresponding Pronoun and Timezone roles to each player. You can do this either manually by assigning the player the relevant role in Discord (e.g., He/Him, EST), or you can have the players do the work for you by typing `/player_set_pronouns` and `/player_set_timezone` (such as in their subs) which will allow the players to self assign from a react for roles prompt! You can include these commands as instructions to applicants as part of your season application process so they set their own pronouns and timezones.'
+            },
+            {
+              name: '3️⃣ Set Player Ages',
+              value: 'Use `/set_players_age` to bulk set ages for up to 12 players at a time (run the command twice to set up to 24 players). Or you can have players set their own age using `/player_set_age`.'
+            },
+            {
+              name: '4️⃣ Add Tribes to Castlist',
+              value: 'Run `/add_tribe` for each tribe you want to add to your castlist, selecting the Discord Role for the tribe to add. Players with that role will appear in `/castlist`, and when the role is cleared (e.g., they are eliminated), they will no longer appear in the castlist. Use `/clear_tribe` to remove tribes from the castlist.'
+            },
+            {
+              name: '📃 Final Step - view the Castlist!',
+              value: 'Type the `/castlist` command in a channel to see your default dynamic castlist. Be sure to let players know they can use the command themselves, such as in their subs or confessionals.'
+            },
+            {
+              name: '🔁 How to swap / merge / exile / redemption',
+              value: 'Remove your old tribes with `/clear_tribe @TribeRole` and add your new swap tribe roles with `/add_tribe @NewTribeRole`. If you are using redemption or exile style twists, simply create and assign a role for those players (e.g. @Exile) and add the role to the castlist.'
+            },
+            {
+              name: 'How to create additional castlists',
+              value: 'You can create additional castlists - for example if you want to show the Production team pronoun information, creating ad-hoc teams for challenges post-merge, etc. To do this, use `/set_tribe`, select the Tribe Role and then click on the castlist option and type a name for your new castlist (e.g., production). You can then view that castlist by typing `/castlist *castlistname*`, e.g. /castlist production.'
+            }            
+          ])
+          .setFooter({ 
+            text: 'Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!',
+            iconURL: client.user.displayAvatarURL()
+          });
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            embeds: [embed],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling getting_started button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error displaying getting started guide.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     }
   } // end if MESSAGE_COMPONENT
   // ...rest of interaction handling...
