@@ -713,10 +713,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
 
-        // Add spacer if this isn't the first tribe and we're not omitting spacers (same logic)
-        if (embed.data.fields?.length > 0 && !omitSpacers) {
-          embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
-        }
+        // No spacers for compact castlist to save space
 
         // Add tribe header (same logic)
         const header = tribe.emoji
