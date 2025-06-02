@@ -19,7 +19,9 @@ import {
   ButtonStyle,
   ModalBuilder,
   TextInputBuilder,
-  TextInputStyle
+  TextInputStyle,
+  StringSelectMenuBuilder,
+  ComponentType
 } from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';  // Add DiscordRequest to imports
 import { 
@@ -2866,7 +2868,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
       }
     } else if (custom_id === 'player_set_pronouns') {
-      // Execute the same logic as the player_set_pronouns command
+      // Show select menu for pronoun roles
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
@@ -2887,66 +2889,54 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const roles = await Promise.all(
           pronounRoleIDs.map(id => guild.roles.fetch(id))
         );
-        const sortedRoles = roles
+        const validRoles = roles
           .filter(role => role) // Remove any null roles
           .sort((a, b) => a.name.localeCompare(b.name));
 
-        if (sortedRoles.length > REACTION_NUMBERS.length) {
+        if (validRoles.length === 0) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: `Too many pronoun roles (maximum ${REACTION_NUMBERS.length} supported)`,
+              content: 'No valid pronoun roles found.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
 
-        // Create embed
-        const embed = new EmbedBuilder()
-          .setTitle('Pronoun Role Selection')
-          .setDescription('React with the emoji corresponding to your pronouns:\n\n' + 
-            sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
-          .setColor('#7ED321');
-
-        // Send the message
-        await res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            embeds: [embed]
-          }
-        });
-
-        // Get the message we just sent
-        const response = await fetch(
-          `https://discord.com/api/v10/channels/${req.body.channel_id}/messages`,
-          {
-            headers: {
-              Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        const messages = await response.json();
-        const message = messages[0];  // Get most recent message
-
-        // Add reactions
-        for (let i = 0; i < sortedRoles.length; i++) {
-          await fetch(
-            `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${message.id}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
-            {
-              method: 'PUT',
-              headers: {
-                Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-              },
+        if (validRoles.length > 25) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Too many pronoun roles (maximum 25 supported)',
+              flags: InteractionResponseFlags.EPHEMERAL
             }
-          );
+          });
         }
 
-        // Store role-emoji mappings in memory for reaction handler
-        if (!client.roleReactions) client.roleReactions = new Map();
-        client.roleReactions.set(message.id, 
-          Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]))
-        );
+        // Create select menu with pronoun roles
+        const pronounSelect = new StringSelectMenuBuilder()
+          .setCustomId('select_pronouns')
+          .setPlaceholder('Choose your pronouns')
+          .setMinValues(0)
+          .setMaxValues(Math.min(validRoles.length, 3)) // Allow up to 3 pronoun roles
+          .addOptions(
+            validRoles.map(role => ({
+              label: role.name,
+              value: role.id,
+              emoji: '💜'
+            }))
+          );
+
+        const selectRow = new ActionRowBuilder().addComponents(pronounSelect);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Select your pronoun roles:',
+            components: [selectRow],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
 
       } catch (error) {
         console.error('Error handling player_set_pronouns button:', error);
@@ -2959,7 +2949,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
       }
     } else if (custom_id === 'player_set_timezone') {
-      // Execute the same logic as the player_set_timezone command
+      // Show select menu for timezone roles
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
@@ -3005,64 +2995,41 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
 
-        if (validTimezones.length > REACTION_NUMBERS.length) {
+        if (validTimezones.length > 25) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: `Too many timezone roles (maximum ${REACTION_NUMBERS.length} supported)`,
+              content: 'Too many timezone roles (maximum 25 supported)',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
 
-        // Create embed
-        const embed = new EmbedBuilder()
-          .setTitle('Timezone Role Selection')
-          .setDescription('React with the emoji corresponding to your timezone:\n\n' + 
-            validTimezones.map((item, i) => 
-              `${REACTION_NUMBERS[i]} - ${item.role.name} (UTC${item.offset >= 0 ? '+' : ''}${item.offset})`
-            ).join('\n'))
-          .setColor('#7ED321');
+        // Create select menu with timezone roles
+        const timezoneSelect = new StringSelectMenuBuilder()
+          .setCustomId('select_timezone')
+          .setPlaceholder('Choose your timezone')
+          .setMinValues(0)
+          .setMaxValues(1) // Only one timezone allowed
+          .addOptions(
+            validTimezones.map(item => ({
+              label: item.role.name,
+              description: `UTC${item.offset >= 0 ? '+' : ''}${item.offset}`,
+              value: item.role.id,
+              emoji: '🗺️'
+            }))
+          );
 
-        // Send the message
-        await res.send({
+        const selectRow = new ActionRowBuilder().addComponents(timezoneSelect);
+
+        return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            embeds: [embed]
+            content: 'Select your timezone:',
+            components: [selectRow],
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
-
-        // Get the message we just sent
-        const response = await fetch(
-          `https://discord.com/api/v10/channels/${req.body.channel_id}/messages`,
-          {
-            headers: {
-              Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        const messages = await response.json();
-        const message = messages[0];  // Get most recent message
-
-        // Add reactions
-        for (let i = 0; i < validTimezones.length; i++) {
-          await fetch(
-            `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${message.id}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
-            {
-              method: 'PUT',
-              headers: {
-                Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-              },
-            }
-          );
-        }
-
-        // Store role-emoji mappings in memory for reaction handler
-        if (!client.timezoneReactions) client.timezoneReactions = new Map();
-        client.timezoneReactions.set(message.id, 
-          Object.fromEntries(validTimezones.map((item, i) => [REACTION_NUMBERS[i], item.role.id]))
-        );
 
       } catch (error) {
         console.error('Error handling player_set_timezone button:', error);
@@ -3103,6 +3070,127 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error opening age dialog.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'select_pronouns') {
+      // Handle pronoun role selection
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const userName = req.body.member.nick || req.body.member.user.username;
+        const selectedRoleIds = data.values || [];
+
+        const guild = await client.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
+
+        // Get all configured pronoun roles for this guild
+        const pronounRoleIDs = await getGuildPronouns(guildId);
+        
+        // Remove all existing pronoun roles first
+        const currentPronounRoles = member.roles.cache.filter(role => 
+          pronounRoleIDs.includes(role.id)
+        );
+        
+        if (currentPronounRoles.size > 0) {
+          await member.roles.remove(currentPronounRoles.map(role => role.id));
+        }
+
+        // Add new selected roles
+        if (selectedRoleIds.length > 0) {
+          await member.roles.add(selectedRoleIds);
+          
+          // Get role names for confirmation message
+          const selectedRoles = await Promise.all(
+            selectedRoleIds.map(id => guild.roles.fetch(id))
+          );
+          const roleNames = selectedRoles.filter(role => role).map(role => role.name);
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `${userName} has set their pronouns to: ${roleNames.join(', ')}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `${userName} has removed all pronoun roles`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+      } catch (error) {
+        console.error('Error handling pronoun selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error setting pronoun roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'select_timezone') {
+      // Handle timezone role selection
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const userName = req.body.member.nick || req.body.member.user.username;
+        const selectedRoleIds = data.values || [];
+
+        const guild = await client.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
+
+        // Get all configured timezone roles for this guild
+        const timezones = await getGuildTimezones(guildId);
+        const timezoneRoleIds = Object.keys(timezones);
+        
+        // Remove all existing timezone roles first
+        const currentTimezoneRoles = member.roles.cache.filter(role => 
+          timezoneRoleIds.includes(role.id)
+        );
+        
+        if (currentTimezoneRoles.size > 0) {
+          await member.roles.remove(currentTimezoneRoles.map(role => role.id));
+        }
+
+        // Add new selected role (only one timezone allowed)
+        if (selectedRoleIds.length > 0) {
+          const selectedRoleId = selectedRoleIds[0]; // Only take the first one
+          await member.roles.add(selectedRoleId);
+          
+          // Get role name and offset for confirmation message
+          const selectedRole = await guild.roles.fetch(selectedRoleId);
+          const timezoneData = timezones[selectedRoleId];
+          const offset = timezoneData ? timezoneData.offset : 'Unknown';
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `${userName} has set their timezone to: ${selectedRole.name} (UTC${offset >= 0 ? '+' : ''}${offset})`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `${userName} has removed their timezone role`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+      } catch (error) {
+        console.error('Error handling timezone selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error setting timezone role.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
