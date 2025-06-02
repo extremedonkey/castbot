@@ -2292,7 +2292,7 @@ async function createMemberFieldsCompact(members, guild, tribeColor = null) {
       fields.push({
         name: nameWithTime,
         value: value,
-        inline: true
+        inline: false
       });
     } catch (err) {
       console.error(`Error processing member ${member.displayName}:`, err);
