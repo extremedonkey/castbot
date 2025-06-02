@@ -118,7 +118,8 @@ export async function getGuildTribes(guildId, castlist = 'default') {
           roleId,
           emoji: tribeData.emoji,
           color: tribeData.color, // Make sure we include the color property
-          castlist: tribeData.castlist
+          castlist: tribeData.castlist,
+          showPlayerEmojis: tribeData.showPlayerEmojis // Include the emoji visibility setting
         });
       }
     });
