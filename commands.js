@@ -307,16 +307,8 @@ const SET_AGE_COMMAND = {
 // Button command that displays a button which triggers castlist when clicked
 const BUTTON_COMMAND = {
 	name: maybePrependDev('button'),
-	description: 'Display a button that shows the castlist when clicked',
-	type: 1,
-	options: [
-		{
-			name: 'castlist',
-			description: 'Select which castlist the button will display (if left blank, will use default castlist)',
-			type: 3, // STRING type
-			required: false
-		}
-	]
+	description: 'Display buttons for all available castlists in this server',
+	type: 1
 };
 
 const ALL_COMMANDS = [

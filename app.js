@@ -796,23 +796,91 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
     
     const guildId = req.body.guild_id;
-    const requestedCastlist = data.options?.find(opt => opt.name === 'castlist')?.value;
+    const guild = await client.guilds.fetch(guildId);
     
-    // Create button with castlist action
-    const buttonRow = new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId(`show_castlist_${requestedCastlist || 'default'}`)
-          .setLabel('Show Castlist')
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji('📋')
-      );
+    // Get all tribes to find unique castlists
+    const playerData = await loadPlayerData();
+    const allCastlists = new Set();
+    const castlistTribes = {}; // Track tribes per castlist to get emojis
+    
+    if (playerData[guildId]?.tribes) {
+      Object.entries(playerData[guildId].tribes).forEach(([roleId, tribeData]) => {
+        const castlistName = tribeData.castlist || 'default';
+        allCastlists.add(castlistName);
+        
+        // Store tribe info for each castlist (for emojis)
+        if (!castlistTribes[castlistName]) {
+          castlistTribes[castlistName] = [];
+        }
+        castlistTribes[castlistName].push({
+          roleId,
+          emoji: tribeData.emoji
+        });
+      });
+    }
+    
+    // If no castlists found, show default button
+    if (allCastlists.size === 0) {
+      const buttonRow = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('show_castlist_default')
+            .setLabel('Show Castlist')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('📋')
+        );
+      
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          components: [buttonRow]
+        }
+      });
+      return;
+    }
+    
+    // Create buttons for each castlist
+    const buttons = [];
+    const castlistArray = Array.from(allCastlists).sort((a, b) => {
+      // Sort so 'default' comes first
+      if (a === 'default') return -1;
+      if (b === 'default') return 1;
+      return a.localeCompare(b);
+    });
+    
+    for (const castlistName of castlistArray) {
+      if (castlistName === 'default') {
+        // Default castlist gets the primary blue button with 📋 emoji
+        buttons.push(
+          new ButtonBuilder()
+            .setCustomId('show_castlist_default')
+            .setLabel('Show Castlist')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('📋')
+        );
+      } else {
+        // Custom castlists get grey buttons with tribe emoji if available
+        const tribes = castlistTribes[castlistName] || [];
+        const tribeWithEmoji = tribes.find(tribe => tribe.emoji);
+        const emoji = tribeWithEmoji?.emoji || '📋';
+        
+        buttons.push(
+          new ButtonBuilder()
+            .setCustomId(`show_castlist_${castlistName}`)
+            .setLabel(`Show ${castlistName.charAt(0).toUpperCase() + castlistName.slice(1)}`)
+            .setStyle(ButtonStyle.Secondary) // Grey button
+            .setEmoji(emoji)
+        );
+      }
+    }
+    
+    const buttonRow = new ActionRowBuilder().addComponents(buttons);
     
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
     await DiscordRequest(endpoint, {
       method: 'PATCH',
       body: {
-        content: 'Click the button below to view the castlist:',
         components: [buttonRow]
       }
     });
