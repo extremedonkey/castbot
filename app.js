@@ -2468,13 +2468,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
       return;
     } else if (custom_id === 'show_castlist_small_default') {
-      // Execute the same logic as the castlist_small command for default castlist
+      // Extract castlist name from custom_id (same logic as regular show_castlist handler)
+      const castlistMatch = custom_id.match(/^show_castlist_small(?:_(.+))?$/);
+      const requestedCastlist = castlistMatch?.[1] || 'default';
+      
+      // Execute the same logic as the castlist_small command
       try {
         const guildId = req.body.guild_id;
         const userId = req.body.member.user.id;
       
-        // Use default castlist
-        const castlistToShow = 'default';
+        // Determine which castlist to show (same logic as regular castlist commands)
+        const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
         console.log(`Selected castlist: ${castlistToShow}`);
       
         // Load tribe data based on selected castlist

@@ -9,7 +9,11 @@
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -A 80 -B 5 \"name: member\\.id\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"function createMemberFields|createMemberFields.*=\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"showPlayerEmojis\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
-      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -C 3 \"showPlayerEmojis\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")"
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -C 3 \"showPlayerEmojis\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(find:*)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -A 5 -B 5 \"Show Castlist\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -A 3 -B 3 \"setCustomId.*show_castlist\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -A 3 -B 3 \"show_castlist_small\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")"
     ],
     "deny": []
   }
