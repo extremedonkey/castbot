@@ -16,7 +16,10 @@ import {
   PermissionFlagsBits,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
+  ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle
 } from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';  // Add DiscordRequest to imports
 import { 
@@ -969,6 +972,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             .setCustomId('show_castlist_default')
             .setLabel('Show Castlist')
             .setStyle(ButtonStyle.Primary)
+            .setEmoji('📋'),
+          new ButtonBuilder()
+            .setCustomId('show_castlist_small_default')
+            .setLabel('Show Castlist (Small)')
+            .setStyle(ButtonStyle.Secondary)
             .setEmoji('📋')
         );
       
@@ -984,7 +992,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             .setCustomId('player_set_timezone')
             .setLabel('Set Your Timezone')
             .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🗺️')
+            .setEmoji('🗺️'),
+          new ButtonBuilder()
+            .setCustomId('player_set_age')
+            .setLabel('Set Your Age')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🎂')
         );
       
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -1017,6 +1030,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             .setStyle(ButtonStyle.Primary)
             .setEmoji('📋')
         );
+        // Add small castlist button right after default castlist
+        buttons.push(
+          new ButtonBuilder()
+            .setCustomId('show_castlist_small_default')
+            .setLabel('Show Castlist (Small)')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('📋')
+        );
       } else {
         // Custom castlists get grey buttons with tribe emoji if available
         const tribes = castlistTribes[castlistName] || [];
@@ -1047,7 +1068,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .setCustomId('player_set_timezone')
           .setLabel('Set Your Timezone')
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji('🗺️')
+          .setEmoji('🗺️'),
+        new ButtonBuilder()
+          .setCustomId('player_set_age')
+          .setLabel('Set Your Age')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('🎂')
       );
     
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -2434,6 +2460,188 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
       }
       return;
+    } else if (custom_id === 'show_castlist_small_default') {
+      // Execute the same logic as the castlist_small command for default castlist
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+      
+        // Use default castlist
+        const castlistToShow = 'default';
+        console.log(`Selected castlist: ${castlistToShow}`);
+      
+        // Load tribe data based on selected castlist
+        const tribes = await getGuildTribes(guildId, castlistToShow);
+        console.log('Loaded tribes:', JSON.stringify(tribes));
+      
+        // Check if any tribes exist
+        if (tribes.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              embeds: [{
+                title: 'CastBot: Dynamic Castlist',
+                description: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.',
+                color: 0x7ED321
+              }],
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+      
+        // Send initial response
+        await res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        });
+      
+        const guild = await client.guilds.fetch(guildId);
+        console.log('Guild:', guild.name);
+      
+        if (!guild) {
+          throw new Error('Could not fetch guild');
+        }
+      
+        // Fetch the full guild with roles cache
+        const fullGuild = await client.guilds.fetch(guildId, { force: true });
+        await fullGuild.roles.fetch();
+        const members = await fullGuild.members.fetch();
+      
+        // Check if we should omit spacers to fit within Discord's 25 field limit
+        const omitSpacers = await shouldOmitSpacers(tribes, fullGuild);
+        if (omitSpacers) {
+          console.log('Omitting spacers to fit content within 25 field limit');
+        }
+      
+        // Default color (in hex format)
+        const defaultColor = "#7ED321";
+        let currentColor = defaultColor;
+      
+        // Create the embed first - using setAuthor instead of setTitle for compact version
+        const embed = new EmbedBuilder()
+          .setAuthor({ 
+            name: `CastBot: Dynamic Castlist | ${new Date().toLocaleString('en-US', { 
+              timeZone: 'America/New_York', 
+              month: 'short', 
+              day: 'numeric', 
+              hour: 'numeric', 
+              minute: '2-digit', 
+              hour12: true 
+            })} ET`, 
+            iconURL: fullGuild.iconURL() || undefined 
+          })
+          .setColor(defaultColor)  // Start with default color
+          .setFooter({ 
+            text: 'Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!',
+            iconURL: client.user.displayAvatarURL()
+          });
+      
+        console.log('Starting to process tribes for compact castlist. Initial color:', defaultColor);
+        
+        // Track if any tribe has a color
+        let hasFoundColor = false;
+        
+        // Add each tribe that has members
+        for (const tribe of tribes) {
+          try {
+            const tribeRole = await fullGuild.roles.fetch(tribe.roleId);
+            if (!tribeRole) {
+              console.log(`Could not find role for tribe ${tribe.roleId}`);
+              continue;
+            }
+      
+            console.log(`Processing tribe role: ${tribeRole.name} (${tribe.roleId})`);
+            console.log('Tribe data:', JSON.stringify(tribe));
+      
+            // Update the embed color if this tribe has a color specified
+            if (tribe.color) {
+              hasFoundColor = true;
+              currentColor = tribe.color;
+              
+              try {
+                // Convert hex color to a format Discord.js can understand
+                // If it already has the # prefix, use it directly
+                const colorValue = tribe.color.startsWith('#') ? 
+                  tribe.color : `#${tribe.color}`;
+                
+                console.log(`Setting embed color to ${colorValue} for tribe ${tribeRole.name}`);
+                embed.setColor(colorValue);
+              } catch (colorErr) {
+                console.error(`Error setting color ${tribe.color}:`, colorErr);
+              }
+            }
+      
+            // Add spacer if this isn't the first tribe and we're not omitting spacers
+            if (embed.data.fields?.length > 0 && !omitSpacers) {
+              embed.addFields({ name: '\u200B', value: '\u200B', inline: false });
+            }
+      
+            // Add tribe header
+            const header = tribe.emoji
+              ? `${tribe.emoji}  ${tribeRole.name}  ${tribe.emoji}`
+              : tribeRole.name;
+            
+            embed.addFields({ name: header, value: '\u200B', inline: false });
+      
+            // Get members with this role
+            const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
+            const memberFields = await createMemberFieldsCompact(tribeMembers, fullGuild, tribe);
+            console.log(`Generated ${memberFields.length} compact member fields for tribe ${tribeRole.name}`);
+      
+            if (embed.data.fields.length + memberFields.length > 25) {
+              throw new Error('Embed field limit exceeded');
+            }
+      
+            embed.addFields(memberFields);
+      
+          } catch (error) {
+            if (error.message === 'Embed field limit exceeded') {
+              console.error('Embed field limit exceeded, sending error message');
+              const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+              await DiscordRequest(endpoint, {
+                method: 'PATCH',
+                body: {
+                  content: 'Cannot display castlist: Too many fields (maximum 25). Consider splitting tribes into separate castlists using the castlist parameter in /add_tribe.',
+                  flags: InteractionResponseFlags.EPHEMERAL
+                },
+              });
+              return;
+            }
+            console.error(`Error processing tribe:`, error);
+          }
+        }
+      
+        // Check the color that will be used in the embed
+        console.log(`Final embed color settings:`);
+        console.log(`- hasFoundColor: ${hasFoundColor}`);
+        console.log(`- currentColor: ${currentColor}`);
+        console.log(`- embed.data.color: ${embed.data.color || 'not set'}`);
+      
+        // If no tribe had a color, make sure we're using the default color
+        if (!hasFoundColor) {
+          embed.setColor(defaultColor);
+          console.log(`No tribe colors found, setting to default: ${defaultColor}`);
+        }
+      
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            embeds: [embed]
+          },
+        });
+      
+      } catch (error) {
+        console.error('Error handling small castlist command:', error);
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: 'Error displaying castlist.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          },
+        });
+      }
+      return;
     } else if (custom_id === 'getting_started') {
       // Execute the same logic as the getting_started command
       try {
@@ -2866,8 +3074,106 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         });
       }
+    } else if (custom_id === 'player_set_age') {
+      // Show modal dialog for setting age
+      try {
+        const modal = new ModalBuilder()
+          .setCustomId('age_modal')
+          .setTitle('Set Your Age');
+
+        const ageInput = new TextInputBuilder()
+          .setCustomId('age_input')
+          .setLabel('Your Age')
+          .setPlaceholder('Type your age')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(3);
+
+        const ageRow = new ActionRowBuilder().addComponents(ageInput);
+        modal.addComponents(ageRow);
+
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+
+      } catch (error) {
+        console.error('Error handling player_set_age button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error opening age dialog.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     }
   } // end if MESSAGE_COMPONENT
+
+  /**
+   * Handle modal submissions
+   */
+  if (type === InteractionType.MODAL_SUBMIT) {
+    const { custom_id, components } = data;
+    
+    if (custom_id === 'age_modal') {
+      try {
+        const ageValue = components[0].components[0].value;
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const userName = req.body.member.nick || req.body.member.user.username;
+
+        // Validate age input
+        const age = parseInt(ageValue);
+        if (isNaN(age) || age < 1 || age > 150) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Please enter a valid age between 1 and 150.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Load player data
+        const playerData = await loadPlayerData();
+        
+        // Ensure guild and player data structures exist
+        if (!playerData[guildId]) {
+          playerData[guildId] = { players: {} };
+        }
+        if (!playerData[guildId].players) {
+          playerData[guildId].players = {};
+        }
+        if (!playerData[guildId].players[userId]) {
+          playerData[guildId].players[userId] = {};
+        }
+
+        // Update age
+        playerData[guildId].players[userId].age = ageValue;
+        
+        // Save data
+        await savePlayerData(playerData);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `${userName} has set their age to ${ageValue}`
+          }
+        });
+
+      } catch (error) {
+        console.error('Error in age modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error setting age.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    }
+  } // end if MODAL_SUBMIT
   // ...rest of interaction handling...
 }); // end app.post
 
