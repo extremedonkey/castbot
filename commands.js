@@ -38,6 +38,20 @@ const CASTLIST_COMMAND = {
 	]
 };
 
+const CASTLIST_SMALL_COMMAND = {
+	name: maybePrependDev('castlist_small'),
+	description: 'Display a condensed version of the dynamic castlist',
+	type: 1,
+	options: [
+		{
+			name: 'castlist',
+			description: 'Select which castlist to display (if left blank, will display default castlist)',
+			type: 3, // STRING type
+			required: false
+		}
+	]
+};
+
 // Adding the Tycoons setup command - only available in dev mode, not in production
 const SETUP_TYCOONS_COMMAND = {
 	name: maybePrependDev('setup_tycoons'),
@@ -306,6 +320,7 @@ const ALL_COMMANDS = [
 	CLEAR_TRIBE_COMMAND,     
 	SET_TRIBE_COMMAND,   
 	CASTLIST_COMMAND,
+	CASTLIST_SMALL_COMMAND,
 	BUTTON_COMMAND,
 		GETTING_STARTED_COMMAND,
 	SET_PLAYERS_AGE_COMMAND,
