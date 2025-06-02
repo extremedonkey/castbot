@@ -1817,43 +1817,48 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
       .setColor('#7ED321');
 
-    // Send the message
+    // Send initial response
     await res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
+      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    });
+
+    // Send the embed as a follow-up and get the message directly
+    const followUpResponse = await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
+      method: 'POST',
+      body: {
         embeds: [embed]
       }
     });
 
-    // Get the message we just sent
-    const response = await fetch(
-      `https://discord.com/api/v10/channels/${req.body.channel_id}/messages`,
-      {
-        headers: {
-          Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-    const messages = await response.json();
-    const message = messages[0];  // Get most recent message
+    if (!followUpResponse.id) {
+      console.error('Failed to get message ID from follow-up response');
+      return;
+    }
 
-    // Add reactions
+    const messageId = followUpResponse.id;
+
+    // Add reactions with proper error handling
     for (let i = 0; i < sortedRoles.length; i++) {
-      await fetch(
-        `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${message.id}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-          },
-        }
-      );
+      try {
+        await fetch(
+          `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${messageId}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+            },
+          }
+        );
+        // Small delay to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`Failed to add reaction ${REACTION_NUMBERS[i]}:`, error);
+      }
     }
 
     // Store role-emoji mappings in memory for reaction handler
     if (!client.roleReactions) client.roleReactions = new Map();
-    client.roleReactions.set(message.id, 
+    client.roleReactions.set(messageId, 
       Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]))
     );
 
@@ -3270,6 +3275,88 @@ app.listen(PORT, () => {
 });
 
 // Log in to Discord with your client's token
+// Add reaction event handlers for role assignment
+client.on('messageReactionAdd', async (reaction, user) => {
+  // Ignore bot reactions
+  if (user.bot) return;
+
+  try {
+    // Check if this is a pronoun role reaction
+    if (client.roleReactions && client.roleReactions.has(reaction.message.id)) {
+      const roleMapping = client.roleReactions.get(reaction.message.id);
+      const roleId = roleMapping[reaction.emoji.name];
+      
+      if (roleId) {
+        const guild = reaction.message.guild;
+        const member = await guild.members.fetch(user.id);
+        const role = await guild.roles.fetch(roleId);
+        
+        if (role && !member.roles.cache.has(roleId)) {
+          await member.roles.add(roleId);
+          console.log(`Added pronoun role ${role.name} to ${user.username}`);
+        }
+      }
+    }
+
+    // Check if this is a timezone role reaction  
+    if (client.timezoneReactions && client.timezoneReactions.has(reaction.message.id)) {
+      const roleMapping = client.timezoneReactions.get(reaction.message.id);
+      const roleId = roleMapping[reaction.emoji.name];
+      
+      if (roleId) {
+        const guild = reaction.message.guild;
+        const member = await guild.members.fetch(user.id);
+        const role = await guild.roles.fetch(roleId);
+        
+        if (role) {
+          // Remove all other timezone roles first
+          const timezones = await getGuildTimezones(guild.id);
+          const timezoneRoleIds = Object.keys(timezones);
+          const currentTimezoneRoles = member.roles.cache.filter(r => timezoneRoleIds.includes(r.id));
+          
+          if (currentTimezoneRoles.size > 0) {
+            await member.roles.remove(currentTimezoneRoles.map(r => r.id));
+          }
+          
+          // Add the new timezone role
+          await member.roles.add(roleId);
+          console.log(`Set timezone role ${role.name} for ${user.username}`);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error handling reaction role:', error);
+  }
+});
+
+client.on('messageReactionRemove', async (reaction, user) => {
+  // Ignore bot reactions
+  if (user.bot) return;
+
+  try {
+    // Check if this is a pronoun role reaction
+    if (client.roleReactions && client.roleReactions.has(reaction.message.id)) {
+      const roleMapping = client.roleReactions.get(reaction.message.id);
+      const roleId = roleMapping[reaction.emoji.name];
+      
+      if (roleId) {
+        const guild = reaction.message.guild;
+        const member = await guild.members.fetch(user.id);
+        
+        if (member.roles.cache.has(roleId)) {
+          await member.roles.remove(roleId);
+          const role = await guild.roles.fetch(roleId);
+          console.log(`Removed pronoun role ${role.name} from ${user.username}`);
+        }
+      }
+    }
+
+    // Timezone roles don't need remove handler since they're exclusive
+  } catch (error) {
+    console.error('Error handling reaction role removal:', error);
+  }
+});
+
 client.login(process.env.DISCORD_TOKEN);
 
 // Add this helper function near the top with other helpers
