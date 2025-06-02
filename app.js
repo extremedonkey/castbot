@@ -787,9 +787,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
-} else if (name === 'menu') {
+} else if (name === 'prod_menu') {
   try {
-    console.log('Processing menu command');
+    console.log('Processing prod_menu command');
     
     await res.send({
       type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
@@ -917,6 +917,155 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       method: 'PATCH',
       body: {
         content: 'Error creating button.',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+  return;
+} else if (name === 'menu') {
+  try {
+    console.log('Processing menu command');
+    
+    await res.send({
+      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+    });
+    
+    const guildId = req.body.guild_id;
+    const guild = await client.guilds.fetch(guildId);
+    
+    // Get all tribes to find unique castlists
+    const playerData = await loadPlayerData();
+    const allCastlists = new Set();
+    const castlistTribes = {}; // Track tribes per castlist to get emojis
+    
+    if (playerData[guildId]?.tribes) {
+      Object.entries(playerData[guildId].tribes).forEach(([roleId, tribeData]) => {
+        const castlistName = tribeData.castlist || 'default';
+        allCastlists.add(castlistName);
+        
+        // Store tribe info for each castlist (for emojis)
+        if (!castlistTribes[castlistName]) {
+          castlistTribes[castlistName] = [];
+        }
+        castlistTribes[castlistName].push({
+          roleId,
+          emoji: tribeData.emoji,
+          color: tribeData.color,
+          showPlayerEmojis: tribeData.showPlayerEmojis
+        });
+      });
+    }
+    
+    // Always include default castlist even if no tribes exist yet
+    if (allCastlists.size === 0) {
+      allCastlists.add('default');
+    }
+    
+    // If only default castlist exists, show single button layout
+    if (allCastlists.size === 1 && allCastlists.has('default')) {
+      const castlistRow = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('show_castlist_default')
+            .setLabel('Show Castlist')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('📋')
+        );
+      
+      // Add second row with player action buttons
+      const actionRow = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId('player_set_pronouns')
+            .setLabel('Set Your Pronouns')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('💜'),
+          new ButtonBuilder()
+            .setCustomId('player_set_timezone')
+            .setLabel('Set Your Timezone')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🗺️')
+        );
+      
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          content: '**Player Menu**',
+          components: [castlistRow, actionRow]
+        }
+      });
+      return;
+    }
+    
+    // Create buttons for each castlist
+    const buttons = [];
+    const castlistArray = Array.from(allCastlists).sort((a, b) => {
+      // Sort so 'default' comes first
+      if (a === 'default') return -1;
+      if (b === 'default') return 1;
+      return a.localeCompare(b);
+    });
+    
+    for (const castlistName of castlistArray) {
+      if (castlistName === 'default') {
+        // Default castlist gets the primary blue button with 📋 emoji
+        buttons.push(
+          new ButtonBuilder()
+            .setCustomId('show_castlist_default')
+            .setLabel('Show Castlist')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('📋')
+        );
+      } else {
+        // Custom castlists get grey buttons with tribe emoji if available
+        const tribes = castlistTribes[castlistName] || [];
+        const tribeWithEmoji = tribes.find(tribe => tribe.emoji);
+        const emoji = tribeWithEmoji?.emoji || '📋';
+        
+        buttons.push(
+          new ButtonBuilder()
+            .setCustomId(`show_castlist_${castlistName}`)
+            .setLabel(`Show ${castlistName.charAt(0).toUpperCase() + castlistName.slice(1)}`)
+            .setStyle(ButtonStyle.Secondary) // Grey button
+            .setEmoji(emoji)
+        );
+      }
+    }
+    
+    const castlistRow = new ActionRowBuilder().addComponents(buttons);
+    
+    // Add second row with player action buttons
+    const actionRow = new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId('player_set_pronouns')
+          .setLabel('Set Your Pronouns')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('💜'),
+        new ButtonBuilder()
+          .setCustomId('player_set_timezone')
+          .setLabel('Set Your Timezone')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('🗺️')
+      );
+    
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: '**Player Menu**',
+        components: [castlistRow, actionRow]
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error handling menu command:', error);
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: 'Error creating menu.',
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
@@ -2504,6 +2653,215 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           method: 'PATCH',
           body: {
             content: 'Error setting up roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'player_set_pronouns') {
+      // Execute the same logic as the player_set_pronouns command
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+
+        // Get pronoun roles from storage
+        const pronounRoleIDs = await getGuildPronouns(guildId);
+        if (!pronounRoleIDs?.length) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'No pronoun roles found. Ask an admin to add some using /pronouns_add first!',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get role objects and sort alphabetically
+        const roles = await Promise.all(
+          pronounRoleIDs.map(id => guild.roles.fetch(id))
+        );
+        const sortedRoles = roles
+          .filter(role => role) // Remove any null roles
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (sortedRoles.length > REACTION_NUMBERS.length) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `Too many pronoun roles (maximum ${REACTION_NUMBERS.length} supported)`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Create embed
+        const embed = new EmbedBuilder()
+          .setTitle('Pronoun Role Selection')
+          .setDescription('React with the emoji corresponding to your pronouns:\n\n' + 
+            sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
+          .setColor('#7ED321');
+
+        // Send the message
+        await res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            embeds: [embed]
+          }
+        });
+
+        // Get the message we just sent
+        const response = await fetch(
+          `https://discord.com/api/v10/channels/${req.body.channel_id}/messages`,
+          {
+            headers: {
+              Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        const messages = await response.json();
+        const message = messages[0];  // Get most recent message
+
+        // Add reactions
+        for (let i = 0; i < sortedRoles.length; i++) {
+          await fetch(
+            `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${message.id}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+            {
+              method: 'PUT',
+              headers: {
+                Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+              },
+            }
+          );
+        }
+
+        // Store role-emoji mappings in memory for reaction handler
+        if (!client.roleReactions) client.roleReactions = new Map();
+        client.roleReactions.set(message.id, 
+          Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]))
+        );
+
+      } catch (error) {
+        console.error('Error handling player_set_pronouns button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error creating pronoun selection',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'player_set_timezone') {
+      // Execute the same logic as the player_set_timezone command
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+
+        // Get timezone roles from storage
+        const timezones = await getGuildTimezones(guildId);
+        const timezoneEntries = Object.entries(timezones);
+        
+        if (!timezoneEntries?.length) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'No timezone roles found. Ask an admin to add some using /timezones_add first!',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get role objects, sort by offset, and validate existence
+        const timezoneRoles = await Promise.all(
+          timezoneEntries.map(async ([roleId, data]) => {
+            try {
+              const role = await guild.roles.fetch(roleId);
+              return role ? { role, offset: data.offset } : null;
+            } catch (error) {
+              console.warn(`Could not fetch timezone role ${roleId}:`, error);
+              return null;
+            }
+          })
+        );
+
+        const validTimezones = timezoneRoles
+          .filter(item => item !== null)
+          .sort((a, b) => a.offset - b.offset);
+
+        if (validTimezones.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'No valid timezone roles found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        if (validTimezones.length > REACTION_NUMBERS.length) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `Too many timezone roles (maximum ${REACTION_NUMBERS.length} supported)`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Create embed
+        const embed = new EmbedBuilder()
+          .setTitle('Timezone Role Selection')
+          .setDescription('React with the emoji corresponding to your timezone:\n\n' + 
+            validTimezones.map((item, i) => 
+              `${REACTION_NUMBERS[i]} - ${item.role.name} (UTC${item.offset >= 0 ? '+' : ''}${item.offset})`
+            ).join('\n'))
+          .setColor('#7ED321');
+
+        // Send the message
+        await res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            embeds: [embed]
+          }
+        });
+
+        // Get the message we just sent
+        const response = await fetch(
+          `https://discord.com/api/v10/channels/${req.body.channel_id}/messages`,
+          {
+            headers: {
+              Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        const messages = await response.json();
+        const message = messages[0];  // Get most recent message
+
+        // Add reactions
+        for (let i = 0; i < validTimezones.length; i++) {
+          await fetch(
+            `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${message.id}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+            {
+              method: 'PUT',
+              headers: {
+                Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
+              },
+            }
+          );
+        }
+
+        // Store role-emoji mappings in memory for reaction handler
+        if (!client.timezoneReactions) client.timezoneReactions = new Map();
+        client.timezoneReactions.set(message.id, 
+          Object.fromEntries(validTimezones.map((item, i) => [REACTION_NUMBERS[i], item.role.id]))
+        );
+
+      } catch (error) {
+        console.error('Error handling player_set_timezone button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error creating timezone selection',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

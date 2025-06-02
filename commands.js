@@ -304,11 +304,19 @@ const SET_AGE_COMMAND = {
 	]
 };
 
-// Menu command that displays buttons for castlists and other actions
+// Menu command that displays buttons for castlists and player actions
 const MENU_COMMAND = {
 	name: maybePrependDev('menu'),
-	description: 'Display interactive menu with castlist buttons and quick actions',
+	description: 'Display interactive menu with castlist buttons and player actions',
 	type: 1
+};
+
+// Production menu command that displays buttons for castlists and production actions
+const PROD_MENU_COMMAND = {
+	name: maybePrependDev('prod_menu'),
+	description: 'Display production menu with castlist buttons and admin actions',
+	type: 1,
+	default_member_permissions: ADMIN_ANY
 };
 
 const ALL_COMMANDS = [
@@ -320,7 +328,8 @@ const ALL_COMMANDS = [
 	CASTLIST_COMMAND,
 	CASTLIST_SMALL_COMMAND,
 	MENU_COMMAND,
-		GETTING_STARTED_COMMAND,
+	PROD_MENU_COMMAND,
+	GETTING_STARTED_COMMAND,
 	SET_PLAYERS_AGE_COMMAND,
 	PRONOUNS_ADD_COMMAND,
 	PRONOUNS_REMOVE_COMMAND,
