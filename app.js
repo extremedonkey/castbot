@@ -201,6 +201,7 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
   const emojiOption = options.find(opt => opt.name === 'emoji');
   const castlistName = options.find(opt => opt.name === 'castlist')?.value || 'default';
   const colorOption = options.find(opt => opt.name === 'color');
+  const showPlayerEmojisOption = options.find(opt => opt.name === 'show_player_emojis');
 
   // Load guild data
   const data = await loadPlayerData();
@@ -224,7 +225,8 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
   // Update or add tribe
   data[guildId].tribes[roleId] = {
     emoji: emojiOption?.value || null,
-    castlist: castlistName
+    castlist: castlistName,
+    showPlayerEmojis: showPlayerEmojisOption?.value !== false  // Default to true, only false if explicitly set to false
   };
 
   // Handle color if provided
@@ -548,7 +550,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
         // Get members with this role
         const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
-        const memberFields = await createMemberFields(tribeMembers, fullGuild);
+        const memberFields = await createMemberFields(tribeMembers, fullGuild, tribe);
         console.log(`Generated ${memberFields.length} member fields for tribe ${tribeRole.name}`);
 
         if (embed.data.fields.length + memberFields.length > 25) {
@@ -727,7 +729,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
         // Get members with this role and use COMPACT fields
         const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
-        const memberFields = await createMemberFieldsCompact(tribeMembers, fullGuild);
+        const memberFields = await createMemberFieldsCompact(tribeMembers, fullGuild, tribe);
         console.log(`Generated ${memberFields.length} compact member fields for tribe ${tribeRole.name}`);
 
         if (embed.data.fields.length + memberFields.length > 25) {
@@ -2132,7 +2134,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       
             // Get members with this role
             const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
-            const memberFields = await createMemberFields(tribeMembers, fullGuild);
+            const memberFields = await createMemberFields(tribeMembers, fullGuild, tribe);
             console.log(`Generated ${memberFields.length} member fields for tribe ${tribeRole.name}`);
       
             if (embed.data.fields.length + memberFields.length > 25) {
@@ -2229,7 +2231,7 @@ function sanitizeEmojiName(username) {
 }
 
 // Compact version of createMemberFields for castlist_small
-async function createMemberFieldsCompact(members, guild, tribeColor = null) {
+async function createMemberFieldsCompact(members, guild, tribeData = null) {
   const fields = [];
   const pronounRoleIDs = await getGuildPronouns(guild.id);
   const timezones = await getGuildTimezones(guild.id);
@@ -2283,8 +2285,9 @@ async function createMemberFieldsCompact(members, guild, tribeColor = null) {
       const playerData = await getPlayer(guild.id, member.id);
       const age = playerData?.age ? `${playerData.age}` : 'No age';
       
-      // Create name field with emoji and formatted time
-      const nameWithTime = playerData?.emojiCode ? 
+      // Create name field with emoji and formatted time (check tribe setting)
+      const shouldShowEmoji = playerData?.emojiCode && (tribeData?.showPlayerEmojis !== false);
+      const nameWithTime = shouldShowEmoji ? 
         `${playerData.emojiCode} ${capitalize(member.displayName)} ${formattedTime}` : 
         `${capitalize(member.displayName)} ${formattedTime}`;
 
@@ -2609,7 +2612,7 @@ async function calculateCastlistFields(guild, roleIdOrOption, castlistName = 'de
 }
 
 // Add this helper function before handling the castlist command
-async function createMemberFields(members, guild, tribeColor = null) {
+async function createMemberFields(members, guild, tribeData = null) {
   const fields = [];
   const pronounRoleIDs = await getGuildPronouns(guild.id);
   const timezones = await getGuildTimezones(guild.id);
@@ -2659,8 +2662,9 @@ async function createMemberFields(members, guild, tribeColor = null) {
       const playerData = await getPlayer(guild.id, member.id);
       const age = playerData?.age ? `${playerData.age}` : 'No age set';
       
-      // Create name field with emoji if it exists!
-      const nameWithEmoji = playerData?.emojiCode ? 
+      // Create name field with emoji if it exists and tribe allows it!
+      const shouldShowEmoji = playerData?.emojiCode && (tribeData?.showPlayerEmojis !== false);
+      const nameWithEmoji = shouldShowEmoji ? 
         `${playerData.emojiCode} ${capitalize(member.displayName)}` : 
         capitalize(member.displayName);
 

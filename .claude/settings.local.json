@@ -6,7 +6,10 @@
       "Bash(grep:*)",
       "Bash(node:*)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -B 10 -A 100 \"async function createEmojiForUser\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
-      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -A 80 -B 5 \"name: member\\.id\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")"
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -A 80 -B 5 \"name: member\\.id\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"function createMemberFields|createMemberFields.*=\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"showPlayerEmojis\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -C 3 \"showPlayerEmojis\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")"
     ],
     "deny": []
   }

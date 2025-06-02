@@ -91,6 +91,12 @@ const SET_TRIBE_COMMAND = {
 			description: 'Set an optional hex color code for the tribe (e.g. #FF5733 or FF5733)',
 			type: 3, // STRING
 			required: false
+		},
+		{
+			name: 'show_player_emojis',
+			description: 'Whether to show player emojis for this tribe (default: Yes)',
+			type: 5, // BOOLEAN
+			required: false
 		}
 	],
 	default_member_permissions: ADMIN_ANY
