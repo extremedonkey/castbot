@@ -2283,8 +2283,10 @@ async function createMemberFieldsCompact(members, guild, tribeColor = null) {
       const playerData = await getPlayer(guild.id, member.id);
       const age = playerData?.age ? `${playerData.age}` : 'No age';
       
-      // Create name field with emoji and formatted time (but without emoji for compact version)
-      const nameWithTime = `${capitalize(member.displayName)} ${formattedTime}`;
+      // Create name field with emoji and formatted time
+      const nameWithTime = playerData?.emojiCode ? 
+        `${playerData.emojiCode} ${capitalize(member.displayName)} ${formattedTime}` : 
+        `${capitalize(member.displayName)} ${formattedTime}`;
 
       // Compact value: timezone pronouns age (all on one line)
       let value = `${timezone} ${pronouns} ${age}`;
