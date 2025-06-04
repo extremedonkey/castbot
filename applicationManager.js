@@ -288,18 +288,10 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             };
         }
 
-        // Get text channels for selection - prioritize common channel types and show up to 25
+        // Get text channels for selection - use server order (position) and show up to 25
         const textChannels = guild.channels.cache
             .filter(channel => channel.type === ChannelType.GuildText)
-            .sort((a, b) => {
-                // Prioritize channels with common application-related keywords
-                const aHasKeywords = /apply|application|general|info|announce|public/i.test(a.name);
-                const bHasKeywords = /apply|application|general|info|announce|public/i.test(b.name);
-                
-                if (aHasKeywords && !bHasKeywords) return -1;
-                if (!aHasKeywords && bHasKeywords) return 1;
-                return a.name.localeCompare(b.name);
-            })
+            .sort((a, b) => a.position - b.position) // Use server order
             .first(25); // Discord select menu limit is 25
 
         if (textChannels.length === 0) {
@@ -309,10 +301,10 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             };
         }
 
-        // Get categories for selection
+        // Get categories for selection - use server order (position)
         const categories = guild.channels.cache
             .filter(channel => channel.type === ChannelType.GuildCategory)
-            .sort((a, b) => a.name.localeCompare(b.name))
+            .sort((a, b) => a.position - b.position) // Use server order
             .first(25); // Discord select menu limit
 
         if (categories.length === 0) {

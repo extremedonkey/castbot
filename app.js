@@ -3253,12 +3253,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const member = await guild.members.fetch(userId);
         
         // Get the application configuration
+        console.log(`Looking for config with ID: ${configId} in guild: ${guildId}`);
         const config = await getApplicationConfig(guildId, configId);
+        console.log(`Config found:`, config ? 'Yes' : 'No');
+        
         if (!config) {
+          // Debug: List all available configs
+          const playerData = await loadPlayerData();
+          const availableConfigs = playerData[guildId]?.applicationConfigs ? Object.keys(playerData[guildId].applicationConfigs) : [];
+          console.log(`Available configs in guild:`, availableConfigs);
+          console.log(`Full guild data structure:`, JSON.stringify(playerData[guildId], null, 2));
+          
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: 'Application button configuration not found.',
+              content: `Application button configuration not found. Looking for: ${configId}`,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -3365,10 +3374,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           };
           
           // Save the final configuration
+          console.log(`Saving config with ID: ${finalConfigId} for guild: ${guildId}`);
           await saveApplicationConfig(guildId, finalConfigId, finalConfig);
           
           // Create the application button
           const button = createApplicationButton(tempConfig.buttonText, finalConfigId);
+          console.log(`Button custom_id will be: apply_${finalConfigId}`);
           button.setStyle(BUTTON_STYLES[tempConfig.buttonStyle]);
           
           const row = new ActionRowBuilder().addComponents(button);
@@ -3408,13 +3419,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           if (!tempConfig.targetChannelId) {
             const textChannels = guild.channels.cache
               .filter(channel => channel.type === ChannelType.GuildText)
-              .sort((a, b) => {
-                const aHasKeywords = /apply|application|general|info|announce|public/i.test(a.name);
-                const bHasKeywords = /apply|application|general|info|announce|public/i.test(b.name);
-                if (aHasKeywords && !bHasKeywords) return -1;
-                if (!aHasKeywords && bHasKeywords) return 1;
-                return a.name.localeCompare(b.name);
-              })
+              .sort((a, b) => a.position - b.position) // Use server order
               .first(25);
             
             const channelSelect = new StringSelectMenuBuilder()
@@ -3435,7 +3440,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           if (!tempConfig.categoryId) {
             const categories = guild.channels.cache
               .filter(channel => channel.type === ChannelType.GuildCategory)
-              .sort((a, b) => a.name.localeCompare(b.name))
+              .sort((a, b) => a.position - b.position) // Use server order
               .first(25);
             
             const categorySelect = new StringSelectMenuBuilder()
