@@ -3253,21 +3253,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const member = await guild.members.fetch(userId);
         
         // Get the application configuration
-        console.log(`Looking for config with ID: ${configId} in guild: ${guildId}`);
         const config = await getApplicationConfig(guildId, configId);
-        console.log(`Config found:`, config ? 'Yes' : 'No');
         
         if (!config) {
-          // Debug: List all available configs
-          const playerData = await loadPlayerData();
-          const availableConfigs = playerData[guildId]?.applicationConfigs ? Object.keys(playerData[guildId].applicationConfigs) : [];
-          console.log(`Available configs in guild:`, availableConfigs);
-          console.log(`Full guild data structure:`, JSON.stringify(playerData[guildId], null, 2));
+          console.error(`Application config not found: ${configId} in guild: ${guildId}`);
           
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: `Application button configuration not found. Looking for: ${configId}`,
+              content: 'Application button configuration not found.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -3374,12 +3368,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           };
           
           // Save the final configuration
-          console.log(`Saving config with ID: ${finalConfigId} for guild: ${guildId}`);
-          await saveApplicationConfig(guildId, finalConfigId, finalConfig);
+          try {
+            await saveApplicationConfig(guildId, finalConfigId, finalConfig);
+            console.log(`✅ Application config saved: ${finalConfigId}`);
+          } catch (error) {
+            console.error(`❌ Error saving application config:`, error);
+            throw error;
+          }
           
           // Create the application button
           const button = createApplicationButton(tempConfig.buttonText, finalConfigId);
-          console.log(`Button custom_id will be: apply_${finalConfigId}`);
           button.setStyle(BUTTON_STYLES[tempConfig.buttonStyle]);
           
           const row = new ActionRowBuilder().addComponents(button);
@@ -3390,9 +3388,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             components: [row]
           });
           
-          // Clean up temporary config
-          delete guildData.applicationConfigs[tempConfigId];
-          await savePlayerData(playerData);
+          // Clean up temporary config - RELOAD data first to avoid overwriting final config
+          const freshPlayerData = await loadPlayerData();
+          if (freshPlayerData[guildId]?.applicationConfigs?.[tempConfigId]) {
+            delete freshPlayerData[guildId].applicationConfigs[tempConfigId];
+            await savePlayerData(freshPlayerData);
+            console.log(`🧹 Temp config cleaned up`);
+          }
           
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
