@@ -62,6 +62,13 @@ const SETUP_TYCOONS_COMMAND = {
 	production_disabled: true
 };
 
+const APPLY_BUTTON_COMMAND = {
+	name: maybePrependDev('apply_button'),
+	description: 'Create an application button for prospective players',
+	type: 1,
+	default_member_permissions: ADMIN_ANY
+};
+
 // Admin-only commands: assign ADMIN_ANY as the default permission
 const SET_TRIBE_COMMAND = {
 	name: maybePrependDev('add_tribe'),  // Changed from set_tribe
@@ -337,6 +344,7 @@ const ALL_COMMANDS = [
 	TIMEZONES_REMOVE_COMMAND,
 	REACT_TIMEZONES_COMMAND,
 	SETUP_TYCOONS_COMMAND,
+	APPLY_BUTTON_COMMAND,
 ];
 
 console.log('Registering commands with:');

@@ -37,6 +37,15 @@ import {
   getGuildTimezones, // Add this import
   getTimezoneOffset // Add this import
 } from './storage.js';
+import {
+  createApplicationButtonModal,
+  handleApplicationButtonModalSubmit,
+  createApplicationChannel,
+  getApplicationConfig,
+  saveApplicationConfig,
+  createApplicationButton,
+  BUTTON_STYLES
+} from './applicationManager.js';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import { Readable } from 'stream';
@@ -2270,6 +2279,32 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   }
   return;
 
+} else if (name === 'apply_button') {
+  try {
+    console.log('Processing apply_button command');
+    
+    const guildId = req.body.guild_id;
+    const guild = await client.guilds.fetch(guildId);
+    
+    // Create and show the application button configuration modal
+    const modal = createApplicationButtonModal();
+    
+    return res.send({
+      type: InteractionResponseType.MODAL,
+      data: modal.toJSON()
+    });
+
+  } catch (error) {
+    console.error('Error in apply_button command:', error);
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: 'Error creating application button configuration.',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+
 // ...existing code...
 }
 
@@ -3204,6 +3239,192 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         });
       }
+    } else if (custom_id.startsWith('apply_')) {
+      try {
+        console.log('Processing apply button click:', custom_id);
+        
+        const configId = custom_id.replace('apply_', '');
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const userDisplayName = req.body.member.nick || req.body.member.user.username;
+        
+        const guild = await client.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
+        
+        // Get the application configuration
+        const config = await getApplicationConfig(guildId, configId);
+        if (!config) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Application button configuration not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create the application channel
+        const result = await createApplicationChannel(guild, member, config);
+        
+        if (!result.success) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: result.error,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ Your application channel has been created: ${result.channel}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+
+      } catch (error) {
+        console.error('Error in apply button handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error processing application request.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'select_target_channel' || custom_id === 'select_application_category' || custom_id === 'select_button_style') {
+      try {
+        console.log('Processing application configuration selection:', custom_id);
+        
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const selectedValue = data.values[0];
+        
+        // Find the temporary config for this user
+        const playerData = await loadPlayerData();
+        const guildData = playerData[guildId];
+        
+        if (!guildData?.applicationConfigs) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Configuration session expired. Please run /apply-button again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Find the temp config for this user
+        const tempConfigId = Object.keys(guildData.applicationConfigs)
+          .find(id => id.startsWith(`temp_`) && id.includes(userId));
+        
+        if (!tempConfigId) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Configuration session not found. Please run /apply-button again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const tempConfig = guildData.applicationConfigs[tempConfigId];
+        
+        // Update the temp config with the selection
+        if (custom_id === 'select_target_channel') {
+          tempConfig.targetChannelId = selectedValue;
+        } else if (custom_id === 'select_application_category') {
+          tempConfig.categoryId = selectedValue;
+        } else if (custom_id === 'select_button_style') {
+          tempConfig.buttonStyle = selectedValue;
+        }
+        
+        // Check if all required selections are made
+        if (tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle) {
+          // All selections complete, create the final configuration and button
+          const guild = await client.guilds.fetch(guildId);
+          const targetChannel = await guild.channels.fetch(tempConfig.targetChannelId);
+          const category = await guild.channels.fetch(tempConfig.categoryId);
+          
+          // Generate a unique config ID
+          const finalConfigId = `config_${Date.now()}_${userId}`;
+          
+          // Create final configuration
+          const finalConfig = {
+            buttonText: tempConfig.buttonText,
+            explanatoryText: tempConfig.explanatoryText,
+            channelFormat: tempConfig.channelFormat,
+            targetChannelId: tempConfig.targetChannelId,
+            categoryId: tempConfig.categoryId,
+            buttonStyle: tempConfig.buttonStyle,
+            createdBy: userId,
+            stage: 'active'
+          };
+          
+          // Save the final configuration
+          await saveApplicationConfig(guildId, finalConfigId, finalConfig);
+          
+          // Create the application button
+          const button = createApplicationButton(tempConfig.buttonText, finalConfigId);
+          button.setStyle(BUTTON_STYLES[tempConfig.buttonStyle]);
+          
+          const row = new ActionRowBuilder().addComponents(button);
+          
+          // Post the button to the target channel
+          await targetChannel.send({
+            content: tempConfig.explanatoryText,
+            components: [row]
+          });
+          
+          // Clean up temporary config
+          delete guildData.applicationConfigs[tempConfigId];
+          await savePlayerData(playerData);
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Application button successfully created in ${targetChannel}!\n\nButton Text: "${tempConfig.buttonText}"\nStyle: ${tempConfig.buttonStyle}\nCategory: ${category.name}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          // Update temp config and show current status
+          await saveApplicationConfig(guildId, tempConfigId, tempConfig);
+          
+          const guild = await client.guilds.fetch(guildId);
+          let statusText = '**Application Button Configuration**\n\n';
+          statusText += `Button Text: "${tempConfig.buttonText}"\n`;
+          statusText += `Channel Format: \`${tempConfig.channelFormat}\`\n\n`;
+          statusText += `✅ Target Channel: ${tempConfig.targetChannelId ? `<#${tempConfig.targetChannelId}>` : '❌ Not selected'}\n`;
+          statusText += `✅ Category: ${tempConfig.categoryId ? (await guild.channels.fetch(tempConfig.categoryId)).name : '❌ Not selected'}\n`;
+          statusText += `✅ Button Style: ${tempConfig.buttonStyle || '❌ Not selected'}\n\n`;
+          
+          if (!tempConfig.targetChannelId || !tempConfig.categoryId || !tempConfig.buttonStyle) {
+            statusText += 'Please complete all selections above.';
+          }
+          
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              content: statusText,
+              components: [], // Remove the selection components if all are selected
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+      } catch (error) {
+        console.error('Error in application configuration selection handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error processing configuration selection.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     }
   } // end if MESSAGE_COMPONENT
 
@@ -3265,6 +3486,41 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error setting age.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'application_button_modal') {
+      try {
+        console.log('Processing application_button_modal submission');
+        
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Handle the modal submission
+        const result = await handleApplicationButtonModalSubmit(req.body, guild);
+        
+        if (!result.success) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: result.error,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: result.response
+        });
+
+      } catch (error) {
+        console.error('Error in application_button_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error processing application button configuration.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
