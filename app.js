@@ -21,7 +21,8 @@ import {
   TextInputBuilder,
   TextInputStyle,
   StringSelectMenuBuilder,
-  ComponentType
+  ComponentType,
+  ChannelType
 } from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';  // Add DiscordRequest to imports
 import { 
@@ -3390,26 +3391,112 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }
           });
         } else {
-          // Update temp config and show current status
+          // Update temp config and show current status with remaining selection components
           await saveApplicationConfig(guildId, tempConfigId, tempConfig);
           
           const guild = await client.guilds.fetch(guildId);
           let statusText = '**Application Button Configuration**\n\n';
           statusText += `Button Text: "${tempConfig.buttonText}"\n`;
           statusText += `Channel Format: \`${tempConfig.channelFormat}\`\n\n`;
-          statusText += `✅ Target Channel: ${tempConfig.targetChannelId ? `<#${tempConfig.targetChannelId}>` : '❌ Not selected'}\n`;
-          statusText += `✅ Category: ${tempConfig.categoryId ? (await guild.channels.fetch(tempConfig.categoryId)).name : '❌ Not selected'}\n`;
-          statusText += `✅ Button Style: ${tempConfig.buttonStyle || '❌ Not selected'}\n\n`;
+          statusText += `${tempConfig.targetChannelId ? '✅' : '❌'} Target Channel: ${tempConfig.targetChannelId ? `<#${tempConfig.targetChannelId}>` : 'Not selected'}\n`;
+          statusText += `${tempConfig.categoryId ? '✅' : '❌'} Category: ${tempConfig.categoryId ? (await guild.channels.fetch(tempConfig.categoryId)).name : 'Not selected'}\n`;
+          statusText += `${tempConfig.buttonStyle ? '✅' : '❌'} Button Style: ${tempConfig.buttonStyle || 'Not selected'}\n\n`;
           
-          if (!tempConfig.targetChannelId || !tempConfig.categoryId || !tempConfig.buttonStyle) {
-            statusText += 'Please complete all selections above.';
+          // Create remaining selection components
+          const remainingComponents = [];
+          
+          if (!tempConfig.targetChannelId) {
+            const textChannels = guild.channels.cache
+              .filter(channel => channel.type === ChannelType.GuildText)
+              .sort((a, b) => {
+                const aHasKeywords = /apply|application|general|info|announce|public/i.test(a.name);
+                const bHasKeywords = /apply|application|general|info|announce|public/i.test(b.name);
+                if (aHasKeywords && !bHasKeywords) return -1;
+                if (!aHasKeywords && bHasKeywords) return 1;
+                return a.name.localeCompare(b.name);
+              })
+              .first(25);
+            
+            const channelSelect = new StringSelectMenuBuilder()
+              .setCustomId('select_target_channel')
+              .setPlaceholder('Select channel to post the button')
+              .setMinValues(1)
+              .setMaxValues(1)
+              .addOptions(
+                textChannels.map(channel => ({
+                  label: `#${channel.name}`,
+                  description: channel.topic ? channel.topic.substring(0, 100) : 'No description',
+                  value: channel.id
+                }))
+              );
+            remainingComponents.push(new ActionRowBuilder().addComponents(channelSelect));
+          }
+          
+          if (!tempConfig.categoryId) {
+            const categories = guild.channels.cache
+              .filter(channel => channel.type === ChannelType.GuildCategory)
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .first(25);
+            
+            const categorySelect = new StringSelectMenuBuilder()
+              .setCustomId('select_application_category')
+              .setPlaceholder('Select category for application channels')
+              .setMinValues(1)
+              .setMaxValues(1)
+              .addOptions(
+                categories.map(category => ({
+                  label: category.name,
+                  description: `${category.children.cache.size} channels`,
+                  value: category.id
+                }))
+              );
+            remainingComponents.push(new ActionRowBuilder().addComponents(categorySelect));
+          }
+          
+          if (!tempConfig.buttonStyle) {
+            const styleSelect = new StringSelectMenuBuilder()
+              .setCustomId('select_button_style')
+              .setPlaceholder('Select button color/style')
+              .setMinValues(1)
+              .setMaxValues(1)
+              .addOptions([
+                {
+                  label: 'Primary (Blue)',
+                  description: 'Blue button style',
+                  value: 'Primary',
+                  emoji: '🔵'
+                },
+                {
+                  label: 'Secondary (Gray)',
+                  description: 'Gray button style',
+                  value: 'Secondary',
+                  emoji: '⚪'
+                },
+                {
+                  label: 'Success (Green)',
+                  description: 'Green button style',
+                  value: 'Success',
+                  emoji: '🟢'
+                },
+                {
+                  label: 'Danger (Red)',
+                  description: 'Red button style',
+                  value: 'Danger',
+                  emoji: '🔴'
+                }
+              ]);
+            remainingComponents.push(new ActionRowBuilder().addComponents(styleSelect));
+          }
+          
+          if (remainingComponents.length > 0) {
+            statusText += 'Please complete the remaining selections below:';
           }
           
           return res.send({
             type: InteractionResponseType.UPDATE_MESSAGE,
             data: {
               content: statusText,
-              components: [], // Remove the selection components if all are selected
+              components: remainingComponents,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
