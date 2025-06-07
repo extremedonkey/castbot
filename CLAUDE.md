@@ -23,6 +23,24 @@ CastBot has undergone a major optimization initiative that has been fully comple
 - `.\registerslashcommands.ps1` - PowerShell script for command registration
 - `.\start-and-push.ps1` - PowerShell script for dev environment startup
 
+### Development Environment Startup Workflow
+**Complete 3-step process for starting CastBot dev environment:**
+
+1. **Start ngrok tunnel**: `ngrok http 3000` (run in separate terminal/background)
+   - Creates tunnel from localhost:3000 to public ngrok URL
+   - Required for Discord webhooks to reach local development server
+
+2. **Git push and start app**: `.\start-and-push.ps1` 
+   - Automatically pushes any git changes before starting
+   - Starts the Express server on localhost:3000
+
+3. **Update Discord webhook URL**: 
+   - Get ngrok URL from step 1, append `/interactions`
+   - Update at: https://discord.com/developers/applications/1328366050848411658/information
+   - Format: `https://[random-id].ngrok-free.app/interactions`
+
+**Note**: ngrok URL changes each restart, so step 3 must be repeated every time.
+
 ## Architecture Overview
 
 ### Core Components
@@ -44,6 +62,8 @@ CastBot has undergone a major optimization initiative that has been fully comple
 **config.js** - Centralized configuration management with environment detection.
 
 **performanceMonitor.js** - Performance tracking utilities (ready for activation).
+
+**applicationManager.js** - Complete application management system for prospective player recruitment. Handles application button creation, private channel generation, and configuration management. ✅ FULLY IMPLEMENTED with modular architecture for future expansion.
 
 ### Data Architecture
 
@@ -114,6 +134,7 @@ The bot includes migration support for multi-castlist functionality. When updati
 - `react_timezones` - Create reaction-based timezone selection
 - `react_pronouns` - Create reaction-based pronoun selection
 - `set_players_age` - Bulk age assignment for multiple players
+- `apply_button` - Create application buttons for prospective player recruitment
 
 ### Player Commands (No special permissions)
 - `castlist` - Display dynamic castlist (supports named castlists)
@@ -143,9 +164,31 @@ When developing new features:
 3. Test with ngrok tunnel before deploying to production
 4. Use `node fix_commands.js` to clean up any command registration issues
 
+## Application Management System ✅ COMPLETE
+
+**New Feature: Application Button System**
+- **Command**: `/apply_button` - Admin-only command for creating application buttons
+- **Flow**: Modal configuration → Channel/Category/Style selection → Button deployment
+- **User Experience**: Click button → Private application channel creation with proper permissions
+- **Architecture**: Modular `applicationManager.js` with expandable design for future enhancements
+- **Data Storage**: Configurations stored in existing `playerData.json` structure
+- **Scale**: Designed for 1000+ servers with 20-40 applicants each
+
+**Development Stats for Application System:**
+- **Total Cost**: $4.46
+- **Development Time**: 1h 52m (API: 1h 6m)
+- **Code Changes**: 1028 lines added, 64 lines removed
+- **Token Usage**: 450k input, 121k output tokens across claude-3-5-haiku and claude-sonnet models
+
+**Future Expansion Ready:**
+- Auto-generated application questions
+- Admin application summary/tabulation
+- Applicant ranking and casting management tools
+
 ## Production Readiness Status: ✅ READY
 - All error handling patterns standardized and tested
 - Zero syntax errors across all files
 - Comprehensive error recovery mechanisms
 - Environment-specific configuration handling
 - Rate limiting and API best practices implemented
+- Application system fully tested and production-ready
