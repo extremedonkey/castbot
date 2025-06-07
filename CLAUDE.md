@@ -21,25 +21,33 @@ CastBot has undergone a major optimization initiative that has been fully comple
 
 ### Environment-Specific Scripts
 - `.\registerslashcommands.ps1` - PowerShell script for command registration
-- `.\start-and-push.ps1` - PowerShell script for dev environment startup
+- `.\start-and-push.ps1` - Legacy PowerShell script for dev environment startup
+- `.\start-dev.ps1` - **NEW** Complete automated dev startup script
 
 ### Development Environment Startup Workflow
-**Complete 3-step process for starting CastBot dev environment:**
+**ONE-COMMAND startup for CastBot dev environment:**
 
-1. **Start ngrok tunnel**: `ngrok http 3000` (run in separate terminal/background)
-   - Creates tunnel from localhost:3000 to public ngrok URL
-   - Required for Discord webhooks to reach local development server
+```powershell
+.\start-dev.ps1
+```
 
-2. **Git push and start app**: `.\start-and-push.ps1` 
-   - Automatically pushes any git changes before starting
-   - Starts the Express server on localhost:3000
+**This script automatically:**
+1. ✅ Checks if ngrok is running, starts it if needed (`ngrok http 3000`)
+2. ✅ Pushes any git changes to current branch
+3. ✅ Displays the Discord webhook URL ready for copy/paste
+4. ✅ Provides the Discord developer console link
+5. ✅ Starts the CastBot application
 
-3. **Update Discord webhook URL**: 
-   - Get ngrok URL from step 1, append `/interactions`
-   - Update at: https://discord.com/developers/applications/1328366050848411658/information
-   - Format: `https://[random-id].ngrok-free.app/interactions`
+**Output format:**
+```
+🎯 DISCORD WEBHOOK URL (copy this):
+https://[random-id].ngrok-free.app/interactions
 
-**Note**: ngrok URL changes each restart, so step 3 must be repeated every time.
+📝 Update Discord webhook at:
+https://discord.com/developers/applications/1328366050848411658/information
+```
+
+**Note**: ngrok URL changes each restart, but the script handles detection and provides easy copy/paste format.
 
 ## Architecture Overview
 
