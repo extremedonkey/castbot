@@ -23,7 +23,11 @@
       "Bash(lsof:*)",
       "Bash(ss:*)",
       "Bash(pkill:*)",
-      "Bash(npm start)"
+      "Bash(npm start)",
+      "Bash(ls:*)",
+      "Bash(rm:*)",
+      "Bash(mkdir:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

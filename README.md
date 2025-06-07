@@ -108,9 +108,61 @@ An equivalent of ngrok is not required in Prod, as Let's Encrypt provides a reve
 The production architecture is summarised below.
 ![[Pasted image 20250301125028.png]]
 
+## Data Structures
+
+### PlayerData.json Structure
+
+The bot stores all guild-specific data in a nested JSON structure:
+
+1. **Server Level (Guild ID)**
+   - Each Discord server has its own top-level node
+   - Example: `"1297188286191767603"`
+
+2. **Server Components**
+   - **Players**: Keyed by Discord User ID
+     - `age`: string
+     - `emojiCode`: string (custom emoji for castlist)
+   - **Tribes**: Keyed by tribe name or Discord Role ID
+     - `emoji`: (optional) Emoji displayed in castlist
+     - `castlist`: (optional) Name of the castlist this tribe belongs to
+   - **Timezones**: Keyed by timezone name
+     - `roleId`: Discord Role ID
+     - `offset`: number (UTC offset)
+
+### Real-time Data
+The following data is calculated in real-time and not stored:
+- Player tribe membership (from Discord roles)
+- Player timezone (from Discord roles)  
+- Player pronouns (from Discord roles)
+- Current time in player's timezone
+
+### Example Structure
+```json
+{
+  "1297188286191767603": {
+    "players": {
+      "208197633846542336": {
+        "age": "21",
+        "emojiCode": "<:208197633846542336:1322728046964375572>"
+      }
+    },
+    "tribes": {
+      "tribe1": "1324815211009671170",
+      "tribe1emoji": "🦞"
+    },
+    "timezones": {
+      "EST": {
+        "roleId": "1320094346288300124",
+        "offset": -5
+      }
+    }
+  }
+}
+```
+
 ## Security, Access and Data Management
-The bot interacts with discord. Since discord have a roles feature (used to denote security/ permissions / access groups, but in practice often used for cosmetic or tracking purposes), the bot uses these to track player information such as Timezones and Pronouns, effectively a way of storing data and method for hosts to use the native discord user interfacve for role assignment to assign castlist info such as timezones and pronouns.
-1. 
+The bot interacts with Discord using roles to track player information. Discord roles serve dual purposes: permissions/access control and data storage for player metadata like timezones and pronouns. This approach leverages Discord's native interface for role assignment.
+
 ## Command Deployment and Management
 
 ### Development Mode (`PRODUCTION=FALSE`)
