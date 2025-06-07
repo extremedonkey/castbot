@@ -3355,11 +3355,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Update the temp config with the selection
         if (custom_id === 'select_target_channel') {
           tempConfig.targetChannelId = selectedValue;
+          console.log('Updated targetChannelId to:', selectedValue);
         } else if (custom_id === 'select_application_category') {
           tempConfig.categoryId = selectedValue;
+          console.log('Updated categoryId to:', selectedValue);
         } else if (custom_id === 'select_button_style') {
           tempConfig.buttonStyle = selectedValue;
+          console.log('Updated buttonStyle to:', selectedValue);
         }
+        
+        console.log('Updated tempConfig after selection:', JSON.stringify(tempConfig, null, 2));
         
         // Check if all required selections are made for auto-creation
         if (tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle) {
