@@ -6,12 +6,14 @@ import {
     ButtonBuilder,
     ButtonStyle,
     StringSelectMenuBuilder,
+    ChannelSelectMenuBuilder,
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
     EmbedBuilder
 } from 'discord.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
+import { useComponentsV2 } from './config.js';
 
 /**
  * Application Management Module for CastBot
@@ -120,18 +122,29 @@ function createApplicationButtonModal() {
  * Create the channel selection component
  */
 function createChannelSelectMenu(channels) {
-    return new StringSelectMenuBuilder()
-        .setCustomId('select_target_channel')
-        .setPlaceholder('Select channel to post the button')
-        .setMinValues(1)
-        .setMaxValues(1)
-        .addOptions(
-            channels.map(channel => ({
-                label: `#${channel.name}`,
-                description: channel.topic ? channel.topic.substring(0, 100) : 'No description',
-                value: channel.id
-            }))
-        );
+    if (useComponentsV2) {
+        // Components v2: Native channel select
+        return new ChannelSelectMenuBuilder()
+            .setCustomId('select_target_channel')
+            .setPlaceholder('Select channel to post the button')
+            .setChannelTypes([ChannelType.GuildText])
+            .setMinValues(1)
+            .setMaxValues(1);
+    } else {
+        // Traditional: Manual string select
+        return new StringSelectMenuBuilder()
+            .setCustomId('select_target_channel')
+            .setPlaceholder('Select channel to post the button')
+            .setMinValues(1)
+            .setMaxValues(1)
+            .addOptions(
+                channels.map(channel => ({
+                    label: `#${channel.name}`,
+                    description: channel.topic ? channel.topic.substring(0, 100) : 'No description',
+                    value: channel.id
+                }))
+            );
+    }
 }
 
 /**
@@ -288,17 +301,20 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             };
         }
 
-        // Get text channels for selection - use server order (position) and show up to 25
-        const textChannels = guild.channels.cache
-            .filter(channel => channel.type === ChannelType.GuildText)
-            .sort((a, b) => a.position - b.position) // Use server order
-            .first(25); // Discord select menu limit is 25
+        // Get text channels for selection (only needed for traditional mode)
+        let textChannels = [];
+        if (!useComponentsV2) {
+            textChannels = guild.channels.cache
+                .filter(channel => channel.type === ChannelType.GuildText)
+                .sort((a, b) => a.position - b.position) // Use server order
+                .first(25); // Discord select menu limit is 25
 
-        if (textChannels.length === 0) {
-            return {
-                success: false,
-                error: 'No text channels available for button placement'
-            };
+            if (textChannels.length === 0) {
+                return {
+                    success: false,
+                    error: 'No text channels available for button placement'
+                };
+            }
         }
 
         // Get categories for selection - use server order (position)
@@ -334,13 +350,24 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         const categoryRow = new ActionRowBuilder().addComponents(categorySelect);
         const styleRow = new ActionRowBuilder().addComponents(styleSelect);
 
+        const responseData = {
+            components: [channelRow, categoryRow, styleRow],
+            ephemeral: true
+        };
+
+        if (useComponentsV2) {
+            // Components v2: Use flag and no content field
+            responseData.flags = (1 << 15); // IS_COMPONENTS_V2
+            // Note: In Components v2, we'd need to use Text Display component instead of content
+            // For now, just use components without content text
+        } else {
+            // Traditional: Use content field
+            responseData.content = `**Application Button Configuration**\n\nButton Text: "${buttonText}"\nChannel Format: \`${channelFormat}\`\n\nPlease select the options below:`;
+        }
+
         return {
             success: true,
-            response: {
-                content: `**Application Button Configuration**\n\nButton Text: "${buttonText}"\nChannel Format: \`${channelFormat}\`\n\nPlease select the options below:`,
-                components: [channelRow, categoryRow, styleRow],
-                ephemeral: true
-            },
+            response: responseData,
             tempConfigId
         };
 

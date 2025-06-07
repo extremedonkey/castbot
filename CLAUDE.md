@@ -111,6 +111,7 @@ APP_ID=your_discord_application_id
 DEV_GUILD_ID=development_server_id
 PORT=3000
 PRODUCTION=FALSE  # Set to TRUE for production
+USE_COMPONENTS_V2=false  # Set to true to test Discord Components v2 for /apply_button
 ```
 
 ### Development vs Production
