@@ -3525,39 +3525,27 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Create ALL selection components (keep them visible)
           const allComponents = [];
           
-          // Always show channel select (even if already selected)
-          if (useComponentsV2) {
-            const channelSelect = new ChannelSelectMenuBuilder()
-              .setCustomId('select_target_channel')
-              .setPlaceholder(tempConfig.targetChannelId ? 
-                `Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` : 
-                'Select channel to post your app button in')
-              .setChannelTypes([ChannelType.GuildText])
-              .setMinValues(1)
-              .setMaxValues(1);
-            allComponents.push(new ActionRowBuilder().addComponents(channelSelect));
-          } else {
-            const textChannels = guild.channels.cache
-              .filter(channel => channel.type === ChannelType.GuildText)
-              .sort((a, b) => a.position - b.position)
-              .first(25);
-            
-            const channelSelect = new StringSelectMenuBuilder()
-              .setCustomId('select_target_channel')
-              .setPlaceholder(tempConfig.targetChannelId ? 
-                `Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` : 
-                'Select channel to post your app button in')
-              .setMinValues(1)
-              .setMaxValues(1)
-              .addOptions(
-                textChannels.map(channel => ({
-                  label: `#${channel.name}`,
-                  description: channel.topic ? channel.topic.substring(0, 100) : 'No description',
-                  value: channel.id
-                }))
-              );
-            allComponents.push(new ActionRowBuilder().addComponents(channelSelect));
-          }
+          // Always show channel select (using traditional for now to support heading)
+          const textChannels = guild.channels.cache
+            .filter(channel => channel.type === ChannelType.GuildText)
+            .sort((a, b) => a.position - b.position)
+            .first(25);
+          
+          const channelSelect = new StringSelectMenuBuilder()
+            .setCustomId('select_target_channel')
+            .setPlaceholder(tempConfig.targetChannelId ? 
+              `Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` : 
+              'Select channel to post your app button in')
+            .setMinValues(1)
+            .setMaxValues(1)
+            .addOptions(
+              textChannels.map(channel => ({
+                label: `#${channel.name}`,
+                description: channel.topic ? channel.topic.substring(0, 100) : 'No description',
+                value: channel.id
+              }))
+            );
+          allComponents.push(new ActionRowBuilder().addComponents(channelSelect));
           
           // Always show category select (even if already selected)
           const categories = guild.channels.cache
@@ -3633,11 +3621,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             flags: InteractionResponseFlags.EPHEMERAL
           };
 
-          // Use Components v2 flag for native channel select, but also include content
-          // This is a hybrid approach - not pure Components v2 but allows the heading to show
-          if (useComponentsV2) {
-            responseData.flags |= (1 << 15); // Add IS_COMPONENTS_V2 flag
-          }
+          // Use traditional mode for this interface to support heading and Submit/Cancel buttons
           responseData.content = statusText;
 
           return res.send({
