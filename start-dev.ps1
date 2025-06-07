@@ -31,7 +31,7 @@ function Test-NgrokRunning {
 function Start-Ngrok {
     param($Port)
     Write-Output "Starting ngrok tunnel on port $Port..."
-    Start-Process -FilePath "ngrok" -ArgumentList "http", $Port -WindowStyle Normal
+    Start-Process -FilePath "ngrok" -ArgumentList "http", $Port -WindowStyle Minimized
     
     # Wait for ngrok to start
     $maxAttempts = 30
@@ -58,6 +58,17 @@ function Get-NgrokUrl {
         return $tunnel.public_url
     }
     return $null
+}
+
+# Function to kill existing node processes
+function Stop-ExistingApp {
+    Write-Output "Checking for existing node processes..."
+    $nodeProcesses = Get-Process -Name "node" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq "" -or $_.ProcessName -eq "node" }
+    if ($nodeProcesses) {
+        Write-Output "Stopping existing node processes..."
+        $nodeProcesses | Stop-Process -Force
+        Start-Sleep -Seconds 2
+    }
 }
 
 # Check if ngrok is already running
@@ -128,6 +139,9 @@ Write-Output ">>> Update Discord webhook at:"
 Write-Output "https://discord.com/developers/applications/1328366050848411658/information"
 Write-Output ""
 Write-Output "=== Starting CastBot Application ==="
+
+# Stop any existing node processes first
+Stop-ExistingApp
 
 # Start the application
 npm run start
