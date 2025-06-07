@@ -55,18 +55,18 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
 }
 
 /**
- * Creates a simplified tribe section optimized for 40 component limit
- * Uses Media Gallery for avatars and a single text block for all players
+ * Creates a tribe section with inline thumbnails, optimized for 40 component limit
+ * Shows 5 players per page to stay within component limits
  * @param {Object} tribe - Tribe data
  * @param {Array} tribeMembers - Array of Discord members in tribe
  * @param {Object} guild - Discord guild object
  * @param {Object} pronounRoleIds - Pronoun role mappings
  * @param {Object} timezones - Timezone role mappings
  * @param {number} page - Current page (0-based)
- * @param {number} playersPerPage - Number of players per page (max 10)
+ * @param {number} playersPerPage - Number of players per page (max 5 for component limits)
  * @returns {Object} Tribe container component
  */
-async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, page = 0, playersPerPage = 10) {
+async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, page = 0, playersPerPage = 5) {
     const startIndex = page * playersPerPage;
     const endIndex = Math.min(startIndex + playersPerPage, tribeMembers.length);
     const pageMembers = tribeMembers.slice(startIndex, endIndex);
@@ -82,14 +82,10 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         content: `# ${tribeHeaderText}${paginationText}`
     };
     
-    // Create avatars for Media Gallery
-    const avatarGalleryItems = [];
-    let playerListText = '';
+    const playerCards = [];
     
-    // Process each member
-    for (let i = 0; i < pageMembers.length; i++) {
-        const member = pageMembers[i];
-        
+    // Process each member into individual Section components with inline thumbnails
+    for (const member of pageMembers) {
         // Get player pronouns
         const memberPronouns = member.roles.cache
             .filter(role => pronounRoleIds.includes(role.id))
@@ -122,49 +118,27 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         
         // Get player data from storage
         const playerData = await getPlayer(guild.id, member.id);
-        const displayName = capitalize(member.displayName);
-        const age = playerData?.age || 'Unknown';
-        const emoji = (tribe.showPlayerEmojis !== false && playerData?.emojiCode) ? playerData.emojiCode : '';
         
-        // Add to avatar gallery
-        avatarGalleryItems.push({
-            media: {
-                url: member.user.displayAvatarURL({ size: 256, extension: 'png' })
-            },
-            description: `${displayName}'s avatar`
-        });
+        // Create individual player card with inline thumbnail
+        const playerCard = createPlayerCard(
+            member, 
+            playerData, 
+            memberPronouns, 
+            memberTimezone,
+            formattedTime,
+            tribe.showPlayerEmojis !== false
+        );
         
-        // Add to player list text
-        const nameWithEmoji = emoji ? `${emoji} **${displayName}**` : `**${displayName}**`;
-        const details = `${memberPronouns} • ${age} • ${memberTimezone}${formattedTime ? ` • ${formattedTime}` : ''}`;
-        playerListText += `${nameWithEmoji}\n${details}\n\n`;
-    }
-    
-    // Remove last extra newlines
-    playerListText = playerListText.trim();
-    
-    const components = [tribeHeader];
-    
-    // Add Media Gallery for avatars
-    if (avatarGalleryItems.length > 0) {
-        components.push({
-            type: 12, // Media Gallery
-            items: avatarGalleryItems
-        });
-    }
-    
-    // Add consolidated player text
-    if (playerListText) {
-        components.push({
-            type: 10, // Text Display
-            content: playerListText
-        });
+        playerCards.push(playerCard);
     }
     
     return {
         type: 17, // Container
         accent_color: tribe.color || 0x7ED321,
-        components: components
+        components: [
+            tribeHeader,
+            ...playerCards
+        ]
     };
 }
 
