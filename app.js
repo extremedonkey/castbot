@@ -3377,6 +3377,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         console.log('Updated tempConfig after selection:', JSON.stringify(tempConfig, null, 2));
         
+        // Save the updated temp config first
+        await saveApplicationConfig(guildId, tempConfigId, tempConfig);
+        
         // Check if all required selections are made for auto-creation
         if (tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle) {
           // All selections complete, create the final configuration and button
@@ -3430,8 +3433,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }
           });
         } else {
-          // Update temp config and show current status with all selection components
-          await saveApplicationConfig(guildId, tempConfigId, tempConfig);
+          // Show current status with all selection components (already saved above)
           
           const guild = await client.guilds.fetch(guildId);
           let statusText = '# Set Up Your Season Application Process\n\n';

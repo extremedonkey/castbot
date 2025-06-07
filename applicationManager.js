@@ -330,13 +330,26 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             };
         }
 
-        // Store temporary config data
+        // Clean up any existing temp configs for this user first
+        const playerData = await loadPlayerData();
+        if (playerData[guild.id]?.applicationConfigs) {
+            const existingTempConfigs = Object.keys(playerData[guild.id].applicationConfigs)
+                .filter(id => id.startsWith(`temp_`) && id.includes(interactionBody.member.user.id));
+            
+            for (const tempId of existingTempConfigs) {
+                delete playerData[guild.id].applicationConfigs[tempId];
+            }
+            await savePlayerData(playerData);
+        }
+
+        // Store fresh temporary config data
         const tempConfigId = `temp_${Date.now()}_${interactionBody.member.user.id}`;
         const tempConfig = {
             buttonText,
             explanatoryText,
             channelFormat,
             stage: 'awaiting_selections'
+            // Note: intentionally not setting targetChannelId, categoryId, buttonStyle
         };
 
         await saveApplicationConfig(guild.id, tempConfigId, tempConfig);
