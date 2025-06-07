@@ -367,14 +367,9 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             components: [channelRow, categoryRow, styleRow]
         };
 
-        if (useComponentsV2) {
-            // Components v2: Use IS_COMPONENTS_V2 flag (1 << 15 = 32768) + EPHEMERAL (1 << 6 = 64)
-            responseData.flags = (1 << 15) | (1 << 6); // 32768 + 64 = 32832
-        } else {
-            // Traditional: Use EPHEMERAL flag and content
-            responseData.flags = (1 << 6); // EPHEMERAL flag
-            responseData.content = `# Set Up Your Season Application Process\n\n**Button Text:** "${buttonText}"\n**Channel Format:** \`${channelFormat}\`\n\nPlease complete all selections below:`;
-        }
+        // Use standard EPHEMERAL flag and content for all modes
+        responseData.flags = InteractionResponseFlags.EPHEMERAL;
+        responseData.content = `# Set Up Your Season Application Process\n\n**Button Text:** "${buttonText}"\n**Channel Format:** \`${channelFormat}\`\n\nPlease complete all selections below:`;
 
         return {
             success: true,
