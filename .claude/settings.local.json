@@ -28,7 +28,9 @@
       "Bash(rm:*)",
       "Bash(mkdir:*)",
       "Bash(mv:*)",
-      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"application_button_modal|select_target_channel|select_application_category|select_button_style\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")"
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"application_button_modal|select_target_channel|select_application_category|select_button_style\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"handleApplicationButtonModalSubmit\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"InteractionType\\.\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")"
     ],
     "deny": []
   }

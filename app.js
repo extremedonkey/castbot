@@ -3310,14 +3310,25 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         // Handle both Components v1 and v2 data formats
         let selectedValue;
-        if (useComponentsV2 && custom_id === 'select_target_channel' && data.resolved?.channels) {
-          // Components v2: Native channel select provides resolved data
-          const channelId = data.values[0];
-          selectedValue = channelId;
-          console.log('Components v2 channel selected:', channelId, 'from resolved data:', Object.keys(data.resolved.channels));
+        if (!data.values || data.values.length === 0) {
+          console.error('No values found in component data');
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Error: No selection received. Please try again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        if (useComponentsV2 && custom_id === 'select_target_channel') {
+          // Components v2: Native channel select - values array contains channel ID
+          selectedValue = data.values[0];
+          console.log('Components v2 channel selected:', selectedValue);
         } else {
           // Components v1: Traditional string select
           selectedValue = data.values[0];
+          console.log('Traditional select chosen:', selectedValue);
         }
         
         // Find the temporary config for this user
@@ -3517,14 +3528,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           console.log('Components v2 mode - auto-creation when all 3 selections complete');
           
           const responseData = {
-            components: allComponents,
-            flags: InteractionResponseFlags.EPHEMERAL
+            components: allComponents
           };
 
-          // Components v2: No content field, just clean selects
+          // Set appropriate flags
           if (useComponentsV2) {
-            responseData.flags |= (1 << 15); // Add IS_COMPONENTS_V2 flag
+            // Components v2: Use IS_COMPONENTS_V2 flag (1 << 15 = 32768) + EPHEMERAL (1 << 6 = 64)
+            responseData.flags = (1 << 15) | (1 << 6); // 32768 + 64 = 32832
           } else {
+            // Traditional: Use EPHEMERAL flag and content
+            responseData.flags = InteractionResponseFlags.EPHEMERAL;
             responseData.content = statusText;
           }
 

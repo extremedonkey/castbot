@@ -351,15 +351,15 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         const styleRow = new ActionRowBuilder().addComponents(styleSelect);
 
         const responseData = {
-            components: [channelRow, categoryRow, styleRow],
-            ephemeral: true
+            components: [channelRow, categoryRow, styleRow]
         };
 
         if (useComponentsV2) {
-            // Components v2: Use flag and no content field - clean interface
-            responseData.flags = (1 << 15); // IS_COMPONENTS_V2
+            // Components v2: Use IS_COMPONENTS_V2 flag (1 << 15 = 32768) + EPHEMERAL (1 << 6 = 64)
+            responseData.flags = (1 << 15) | (1 << 6); // 32768 + 64 = 32832
         } else {
-            // Traditional: Use content field
+            // Traditional: Use EPHEMERAL flag and content
+            responseData.flags = (1 << 6); // EPHEMERAL flag
             responseData.content = `# Set Up Your Season Application Process\n\n**Button Text:** "${buttonText}"\n**Channel Format:** \`${channelFormat}\`\n\nPlease complete all selections below:`;
         }
 
