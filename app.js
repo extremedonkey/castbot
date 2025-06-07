@@ -687,67 +687,88 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const pronounRoleIds = await getGuildPronouns(guildId);
     const timezones = await getGuildTimezones(guildId);
 
-    const tribeComponents = [];
-    const navigationRows = [];
+    // Implement tribe-level pagination - show one tribe per page
+    const currentTribePage = 0; // Default to first tribe
+    const totalTribes = tribes.length;
+    
+    if (totalTribes === 0) {
+      // This case is already handled above, but kept for completeness
+      return;
+    }
 
-    for (const tribe of tribes) {
-      console.log(`Processing tribe: ${tribe.name}`);
-      
-      // Get members for this tribe
-      const role = await fullGuild.roles.fetch(tribe.roleId);
-      if (!role) {
-        console.warn(`Role not found for tribe ${tribe.name}`);
-        continue;
-      }
+    // Get the current tribe to display
+    const currentTribe = tribes[currentTribePage];
+    console.log(`Processing tribe: ${currentTribe.name || 'Unknown'}`);
+    
+    // Get members for this tribe
+    const role = await fullGuild.roles.fetch(currentTribe.roleId);
+    if (!role) {
+      console.warn(`Role not found for tribe ${currentTribe.name}`);
+      throw new Error(`Tribe role not found: ${currentTribe.roleId}`);
+    }
 
-      const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
-      console.log(`Found ${tribeMembers.size} members in ${tribe.name}`);
+    const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
+    console.log(`Found ${tribeMembers.size} members in ${role.name}`);
 
-      if (tribeMembers.size === 0) {
-        // Create empty tribe container
-        tribeComponents.push({
-          type: 17, // Container
-          accent_color: tribe.color || 0x7ED321,
-          components: [
-            {
-              type: 10, // Text Display
-              content: `# ${tribe.emoji || ''} ${tribe.name} ${tribe.emoji || ''}`.trim()
-            },
-            {
-              type: 10, // Text Display
-              content: '_No players yet_'
-            }
-          ]
-        });
-        continue;
-      }
-
+    let tribeSection;
+    
+    if (tribeMembers.size === 0) {
+      // Create empty tribe container
+      tribeSection = {
+        type: 17, // Container
+        accent_color: currentTribe.color || 0x7ED321,
+        components: [
+          {
+            type: 10, // Text Display
+            content: `# ${currentTribe.emoji || ''} ${role.name} ${currentTribe.emoji || ''}`.trim()
+          },
+          {
+            type: 10, // Text Display
+            content: '_No players yet_'
+          }
+        ]
+      };
+    } else {
       // Convert to array and sort by display name
       const sortedMembers = Array.from(tribeMembers.values())
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-      // Show first 13 players (pagination handled separately)
-      const playersToShow = sortedMembers.slice(0, 13);
-      const totalPages = Math.ceil(sortedMembers.length / 13);
-
       // Create tribe section using Components V2
-      const tribeSection = await createTribeSection(
-        { ...tribe, name: role.name }, // Use role name for accuracy
+      tribeSection = await createTribeSection(
+        { ...currentTribe, name: role.name }, // Use role name for accuracy
         sortedMembers, // Pass all members, let createTribeSection handle pagination
         fullGuild,
         pronounRoleIds,
         timezones,
-        0, // page
+        0, // page within tribe
         13 // playersPerPage
       );
+    }
 
-      tribeComponents.push(tribeSection);
+    const tribeComponents = [tribeSection];
+    const navigationRows = [];
 
-      // Add navigation buttons if needed
-      if (totalPages > 1) {
-        const navRow = createNavigationButtons(tribe.roleId, 0, totalPages, castlistToShow);
-        navigationRows.push(navRow.toJSON());
-      }
+    // Add tribe navigation buttons if there are multiple tribes
+    if (totalTribes > 1) {
+      const navRow = new ActionRowBuilder()
+        .addComponents(
+          new ButtonBuilder()
+            .setCustomId(`castlist2_tribe_prev_${currentTribePage}_${castlistToShow}`)
+            .setLabel('◀ Previous Tribe')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(currentTribePage === 0),
+          new ButtonBuilder()
+            .setCustomId(`castlist2_tribe_indicator_${currentTribePage}`)
+            .setLabel(`Tribe ${currentTribePage + 1}/${totalTribes}`)
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(true),
+          new ButtonBuilder()
+            .setCustomId(`castlist2_tribe_next_${currentTribePage}_${castlistToShow}`)
+            .setLabel('Next Tribe ▶')
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(currentTribePage >= totalTribes - 1)
+        );
+      navigationRows.push(navRow.toJSON());
     }
 
     // Create the complete Components V2 layout
@@ -3715,6 +3736,157 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             content: 'Error processing configuration selection.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
+        });
+      }
+    } else if (custom_id.startsWith('castlist2_tribe_prev_') || custom_id.startsWith('castlist2_tribe_next_')) {
+      // Handle castlist2 tribe navigation buttons
+      try {
+        console.log('Processing castlist2 tribe navigation:', custom_id);
+        
+        // Parse the custom_id to extract components
+        // Format: castlist2_tribe_prev_${currentTribePage}_${castlistName} or castlist2_tribe_next_${currentTribePage}_${castlistName}
+        const isNext = custom_id.startsWith('castlist2_tribe_next_');
+        const prefix = isNext ? 'castlist2_tribe_next_' : 'castlist2_tribe_prev_';
+        const parts = custom_id.substring(prefix.length).split('_');
+        
+        if (parts.length < 2) {
+          throw new Error('Invalid tribe navigation custom_id format');
+        }
+        
+        const currentTribePage = parseInt(parts[0]);
+        const castlistName = parts.slice(1).join('_');
+        
+        console.log('Parsed tribe navigation:', { currentTribePage, castlistName, isNext });
+        
+        // Calculate new tribe page
+        const newTribePage = isNext ? currentTribePage + 1 : currentTribePage - 1;
+        
+        // Send deferred response
+        await res.send({
+          type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
+        });
+        
+        const guildId = req.body.guild_id;
+        
+        // Load tribe data
+        const tribes = await getGuildTribes(guildId, castlistName);
+        const totalTribes = tribes.length;
+        
+        if (newTribePage < 0 || newTribePage >= totalTribes) {
+          throw new Error('Invalid tribe page');
+        }
+        
+        // Get the tribe to display
+        const currentTribe = tribes[newTribePage];
+        
+        // Fetch guild data
+        const fullGuild = await client.guilds.fetch(guildId, { force: true });
+        await fullGuild.roles.fetch();
+        const members = await fullGuild.members.fetch();
+        
+        // Get tribe role and members
+        const role = await fullGuild.roles.fetch(currentTribe.roleId);
+        if (!role) {
+          throw new Error('Tribe role not found');
+        }
+        
+        const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
+        console.log(`Found ${tribeMembers.size} members in ${role.name}`);
+        
+        // Get pronoun and timezone data
+        const pronounRoleIds = await getGuildPronouns(guildId);
+        const timezones = await getGuildTimezones(guildId);
+        
+        let tribeSection;
+        
+        if (tribeMembers.size === 0) {
+          // Create empty tribe container
+          tribeSection = {
+            type: 17, // Container
+            accent_color: currentTribe.color || 0x7ED321,
+            components: [
+              {
+                type: 10, // Text Display
+                content: `# ${currentTribe.emoji || ''} ${role.name} ${currentTribe.emoji || ''}`.trim()
+              },
+              {
+                type: 10, // Text Display
+                content: '_No players yet_'
+              }
+            ]
+          };
+        } else {
+          // Convert to array and sort by display name
+          const sortedMembers = Array.from(tribeMembers.values())
+            .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+          // Create tribe section using Components V2
+          tribeSection = await createTribeSection(
+            { ...currentTribe, name: role.name }, // Use role name for accuracy
+            sortedMembers, // Pass all members, let createTribeSection handle pagination
+            fullGuild,
+            pronounRoleIds,
+            timezones,
+            0, // page within tribe
+            13 // playersPerPage
+          );
+        }
+
+        const tribeComponents = [tribeSection];
+        const navigationRows = [];
+
+        // Add tribe navigation buttons
+        if (totalTribes > 1) {
+          const navRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId(`castlist2_tribe_prev_${newTribePage}_${castlistName}`)
+                .setLabel('◀ Previous Tribe')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(newTribePage === 0),
+              new ButtonBuilder()
+                .setCustomId(`castlist2_tribe_indicator_${newTribePage}`)
+                .setLabel(`Tribe ${newTribePage + 1}/${totalTribes}`)
+                .setStyle(ButtonStyle.Primary)
+                .setDisabled(true),
+              new ButtonBuilder()
+                .setCustomId(`castlist2_tribe_next_${newTribePage}_${castlistName}`)
+                .setLabel('Next Tribe ▶')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(newTribePage >= totalTribes - 1)
+            );
+          navigationRows.push(navRow.toJSON());
+        }
+
+        // Create the complete Components V2 layout
+        const responseData = createCastlistV2Layout(
+          tribeComponents,
+          castlistName,
+          fullGuild,
+          navigationRows
+        );
+
+        // Update the message
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: responseData,
+        });
+
+      } catch (error) {
+        console.error('Error handling castlist2 tribe navigation:', error);
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            flags: 1 << 15, // IS_COMPONENTS_V2 flag
+            components: [
+              {
+                type: 10, // Text Display
+                content: `# Error\nError navigating tribes: ${error.message}`
+              }
+            ]
+          },
         });
       }
     } else if (custom_id.startsWith('castlist2_prev_') || custom_id.startsWith('castlist2_next_')) {
