@@ -12,6 +12,7 @@ import {
     TextInputStyle,
     EmbedBuilder
 } from 'discord.js';
+import { InteractionResponseFlags } from 'discord-interactions';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { useComponentsV2 } from './config.js';
 
