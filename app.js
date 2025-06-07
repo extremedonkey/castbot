@@ -3567,18 +3567,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           console.log('Components v2 mode - auto-creation when all 3 selections complete');
           
           const responseData = {
-            components: allComponents
+            content: statusText,
+            components: allComponents,
+            flags: InteractionResponseFlags.EPHEMERAL
           };
-
-          // Set appropriate flags
-          if (useComponentsV2) {
-            // Components v2: Use IS_COMPONENTS_V2 flag (1 << 15 = 32768) + EPHEMERAL (1 << 6 = 64)
-            responseData.flags = (1 << 15) | (1 << 6); // 32768 + 64 = 32832
-          } else {
-            // Traditional: Use EPHEMERAL flag and content
-            responseData.flags = InteractionResponseFlags.EPHEMERAL;
-            responseData.content = statusText;
-          }
 
           console.log('Sending response data:', JSON.stringify(responseData, null, 2));
           
