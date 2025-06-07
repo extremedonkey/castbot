@@ -56,17 +56,17 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
 
 /**
  * Creates a tribe section with inline thumbnails, optimized for 40 component limit
- * Shows 5 players per page to stay within component limits
+ * Shows up to 13 players per page (1 Section + 1 Separator per player = 2 components each)
  * @param {Object} tribe - Tribe data
  * @param {Array} tribeMembers - Array of Discord members in tribe
  * @param {Object} guild - Discord guild object
  * @param {Object} pronounRoleIds - Pronoun role mappings
  * @param {Object} timezones - Timezone role mappings
  * @param {number} page - Current page (0-based)
- * @param {number} playersPerPage - Number of players per page (max 5 for component limits)
+ * @param {number} playersPerPage - Number of players per page (max 13 for component limits)
  * @returns {Object} Tribe container component
  */
-async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, page = 0, playersPerPage = 5) {
+async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, page = 0, playersPerPage = 13) {
     const startIndex = page * playersPerPage;
     const endIndex = Math.min(startIndex + playersPerPage, tribeMembers.length);
     const pageMembers = tribeMembers.slice(startIndex, endIndex);
@@ -119,17 +119,24 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         // Get player data from storage
         const playerData = await getPlayer(guild.id, member.id);
         
-        // Create individual player card with inline thumbnail
+        // Create individual player card with inline thumbnail (no player emojis for castlist2)
         const playerCard = createPlayerCard(
             member, 
             playerData, 
             memberPronouns, 
             memberTimezone,
             formattedTime,
-            tribe.showPlayerEmojis !== false
+            false // Never show player emojis in castlist2
         );
         
         playerCards.push(playerCard);
+        
+        // Add separator after each player except the last one
+        if (pageMembers.indexOf(member) < pageMembers.length - 1) {
+            playerCards.push({
+                type: 14 // Separator component
+            });
+        }
     }
     
     return {

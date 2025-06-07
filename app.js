@@ -726,19 +726,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const sortedMembers = Array.from(tribeMembers.values())
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-      // Show first 10 players (pagination handled separately)
-      const playersToShow = sortedMembers.slice(0, 10);
-      const totalPages = Math.ceil(sortedMembers.length / 10);
+      // Show first 13 players (pagination handled separately)
+      const playersToShow = sortedMembers.slice(0, 13);
+      const totalPages = Math.ceil(sortedMembers.length / 13);
 
       // Create tribe section using Components V2
       const tribeSection = await createTribeSection(
         { ...tribe, name: role.name }, // Use role name for accuracy
-        playersToShow,
+        sortedMembers, // Pass all members, let createTribeSection handle pagination
         fullGuild,
         pronounRoleIds,
         timezones,
         0, // page
-        10 // playersPerPage
+        13 // playersPerPage
       );
 
       tribeComponents.push(tribeSection);
