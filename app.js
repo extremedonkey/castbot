@@ -3602,19 +3602,31 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           allComponents.push(new ActionRowBuilder().addComponents(styleSelect));
           
           // Add Submit and Cancel buttons
-          const allSelected = tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle;
-          const submitButton = new ButtonBuilder()
-            .setCustomId('create_application_button')
-            .setLabel(allSelected ? 'Submit' : 'Complete all selections above')
-            .setStyle(allSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
-            .setDisabled(!allSelected);
-          
-          const cancelButton = new ButtonBuilder()
-            .setCustomId('cancel_application_button')
-            .setLabel('Cancel')
-            .setStyle(ButtonStyle.Danger);
-          
-          allComponents.push(new ActionRowBuilder().addComponents(submitButton, cancelButton));
+          try {
+            const allSelected = tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle;
+            console.log('All selected status:', allSelected, {
+              targetChannelId: !!tempConfig.targetChannelId,
+              categoryId: !!tempConfig.categoryId,
+              buttonStyle: !!tempConfig.buttonStyle
+            });
+            
+            const submitButton = new ButtonBuilder()
+              .setCustomId('create_application_button')
+              .setLabel(allSelected ? 'Submit' : 'Complete all selections above')
+              .setStyle(allSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+              .setDisabled(!allSelected);
+            
+            const cancelButton = new ButtonBuilder()
+              .setCustomId('cancel_application_button')
+              .setLabel('Cancel')
+              .setStyle(ButtonStyle.Danger);
+            
+            allComponents.push(new ActionRowBuilder().addComponents(submitButton, cancelButton));
+            console.log('Total components rows:', allComponents.length);
+          } catch (buttonError) {
+            console.error('Error building buttons:', buttonError);
+            throw buttonError;
+          }
           
           const responseData = {
             components: allComponents,
@@ -3624,10 +3636,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Use traditional mode for this interface to support heading and Submit/Cancel buttons
           responseData.content = statusText;
 
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: responseData
-          });
+          console.log('Sending response data:', JSON.stringify(responseData, null, 2));
+          
+          try {
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: responseData
+            });
+          } catch (responseError) {
+            console.error('Error sending response:', responseError);
+            throw responseError;
+          }
         }
 
       } catch (error) {
