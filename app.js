@@ -3349,6 +3349,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         const tempConfig = guildData.applicationConfigs[tempConfigId];
         
+        console.log('Current tempConfig before update:', JSON.stringify(tempConfig, null, 2));
+        
         // Update the temp config with the selection
         if (custom_id === 'select_target_channel') {
           tempConfig.targetChannelId = selectedValue;
@@ -3474,6 +3476,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
           
           if (!tempConfig.buttonStyle) {
+            console.log('Building button style select menu...');
             const styleSelect = new StringSelectMenuBuilder()
               .setCustomId('select_button_style')
               .setPlaceholder('Select button color/style')
@@ -3483,29 +3486,26 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 {
                   label: 'Primary (Blue)',
                   description: 'Blue button style',
-                  value: 'Primary',
-                  emoji: '🔵'
+                  value: 'Primary'
                 },
                 {
                   label: 'Secondary (Gray)',
                   description: 'Gray button style',
-                  value: 'Secondary',
-                  emoji: '⚪'
+                  value: 'Secondary'
                 },
                 {
                   label: 'Success (Green)',
                   description: 'Green button style',
-                  value: 'Success',
-                  emoji: '🟢'
+                  value: 'Success'
                 },
                 {
                   label: 'Danger (Red)',
                   description: 'Red button style',
-                  value: 'Danger',
-                  emoji: '🔴'
+                  value: 'Danger'
                 }
               ]);
             remainingComponents.push(new ActionRowBuilder().addComponents(styleSelect));
+            console.log('Added button style select to remaining components');
           }
           
           if (remainingComponents.length > 0) {
