@@ -1,8 +1,7 @@
 import { 
     ActionRowBuilder,
     ButtonBuilder,
-    ButtonStyle,
-    EmbedBuilder
+    ButtonStyle
 } from 'discord.js';
 import { InteractionResponseFlags } from 'discord-interactions';
 import { 
@@ -19,68 +18,47 @@ import { capitalize } from './utils.js';
  */
 
 /**
- * Creates a player card component for Components V2 display
+ * Creates a player card section using Components V2 Section component
  * @param {Object} member - Discord guild member
  * @param {Object} playerData - Player data from storage (age, emoji, etc.)
  * @param {string} pronouns - Formatted pronouns string
  * @param {string} timezone - Formatted timezone string
+ * @param {string} formattedTime - Current time in player's timezone
  * @param {boolean} showEmoji - Whether to display player emoji
- * @returns {Object} Player card component structure
+ * @returns {Object} Player card section component
  */
-function createPlayerCard(member, playerData, pronouns, timezone, showEmoji) {
+function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji) {
     const displayName = capitalize(member.displayName);
     const age = playerData?.age || 'Unknown';
     const emoji = (showEmoji && playerData?.emojiCode) ? playerData.emojiCode : '';
     
-    // Get current time in player's timezone
-    let formattedTime = '';
-    if (timezone !== 'Unknown') {
-        try {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', {
-                timeZone: timezone.includes('UTC') ? undefined : timezone,
-                hour12: true,
-                hour: '2-digit',
-                minute: '2-digit'
-            });
-            formattedTime = ` (${timeString})`;
-        } catch (error) {
-            formattedTime = '';
-        }
-    }
+    const nameWithEmoji = emoji ? `${emoji} **${displayName}**` : `**${displayName}**`;
+    const details = `${pronouns} • ${age} • ${timezone}${formattedTime ? ` • ${formattedTime}` : ''}`;
 
     return {
-        type: 'row', // Components V2 row container
+        type: 9, // Section component
         components: [
             {
-                type: 'image',
-                url: member.user.displayAvatarURL({ size: 64, extension: 'png' }),
-                width: 64,
-                height: 64,
-                style: 'thumbnail'
+                type: 10, // Text Display
+                content: nameWithEmoji
             },
             {
-                type: 'container',
-                style: 'vertical',
-                components: [
-                    {
-                        type: 'text',
-                        content: `${emoji}${emoji ? ' ' : ''}**${displayName}**`,
-                        style: 'heading'
-                    },
-                    {
-                        type: 'text',
-                        content: `${pronouns} • ${age} • ${timezone}${formattedTime}`,
-                        style: 'body'
-                    }
-                ]
+                type: 10, // Text Display  
+                content: details
             }
-        ]
+        ],
+        accessory: {
+            type: 11, // Thumbnail
+            media: {
+                url: member.user.displayAvatarURL({ size: 128, extension: 'png' })
+            },
+            description: `${displayName}'s avatar`
+        }
     };
 }
 
 /**
- * Creates a tribe section with player cards
+ * Creates a tribe container with player cards for Components V2
  * @param {Object} tribe - Tribe data
  * @param {Array} tribeMembers - Array of Discord members in tribe
  * @param {Object} guild - Discord guild object
@@ -88,7 +66,7 @@ function createPlayerCard(member, playerData, pronouns, timezone, showEmoji) {
  * @param {Object} timezones - Timezone role mappings
  * @param {number} page - Current page (0-based)
  * @param {number} playersPerPage - Number of players per page (max 10)
- * @returns {Object} Tribe section component
+ * @returns {Object} Tribe container component
  */
 async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, page = 0, playersPerPage = 10) {
     const startIndex = page * playersPerPage;
@@ -96,7 +74,18 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     const pageMembers = tribeMembers.slice(startIndex, endIndex);
     
     const playerCards = [];
+    const totalPages = Math.ceil(tribeMembers.length / playersPerPage);
     
+    // Create tribe header
+    const tribeHeaderText = `${tribe.emoji || ''} **${tribe.name}** ${tribe.emoji || ''}`.trim();
+    const paginationText = totalPages > 1 ? ` (Page ${page + 1} of ${totalPages})` : '';
+    
+    const tribeHeader = {
+        type: 10, // Text Display
+        content: `# ${tribeHeaderText}${paginationText}`
+    };
+    
+    // Process each member into a player card
     for (const member of pageMembers) {
         // Get player pronouns
         const memberPronouns = member.roles.cache
@@ -104,55 +93,72 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             .map(role => role.name)
             .join(', ') || 'Unknown';
             
-        // Get player timezone
+        // Get player timezone and calculate current time
         let memberTimezone = 'Unknown';
+        let formattedTime = '';
         const timezoneRole = member.roles.cache.find(role => timezones[role.id]);
+        
         if (timezoneRole) {
             const offset = timezones[timezoneRole.id].offset;
             memberTimezone = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
+            
+            // Calculate current time
+            try {
+                const now = new Date();
+                const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+                const targetTime = new Date(utcTime + (offset * 3600000));
+                formattedTime = targetTime.toLocaleTimeString('en-US', {
+                    hour12: true,
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (error) {
+                formattedTime = '';
+            }
         }
         
         // Get player data from storage
         const playerData = await getPlayer(guild.id, member.id);
         
-        // Create player card
+        // Create player card section
         const playerCard = createPlayerCard(
             member, 
             playerData, 
             memberPronouns, 
-            memberTimezone, 
+            memberTimezone,
+            formattedTime,
             tribe.showPlayerEmojis !== false
         );
         
         playerCards.push(playerCard);
     }
     
-    // Create tribe header
-    const tribeHeader = {
-        type: 'text',
-        content: `${tribe.emoji || ''} **${tribe.name}** ${tribe.emoji || ''}`.trim(),
-        style: 'heading'
-    };
-    
-    // Create pagination info if needed
-    const totalPages = Math.ceil(tribeMembers.length / playersPerPage);
-    const paginationInfo = totalPages > 1 ? {
-        type: 'text',
-        content: `Page ${page + 1} of ${totalPages}`,
-        style: 'caption'
-    } : null;
+    // Add separator between players if more than one
+    const componentsWithSeparators = [];
+    for (let i = 0; i < playerCards.length; i++) {
+        componentsWithSeparators.push(playerCards[i]);
+        
+        // Add separator between players (but not after the last one)
+        if (i < playerCards.length - 1) {
+            componentsWithSeparators.push({
+                type: 14, // Separator
+                divider: false,
+                spacing: 1
+            });
+        }
+    }
     
     return {
-        type: 'container',
-        style: 'vertical',
+        type: 17, // Container
+        accent_color: tribe.color || 0x7ED321,
         components: [
             tribeHeader,
-            ...(paginationInfo ? [paginationInfo] : []),
             {
-                type: 'container',
-                style: 'vertical',
-                components: playerCards
-            }
+                type: 14, // Separator after header
+                divider: true,
+                spacing: 1
+            },
+            ...componentsWithSeparators
         ]
     };
 }
@@ -247,31 +253,63 @@ async function processMemberData(member, pronounRoleIds, timezones, guildId) {
 }
 
 /**
- * Creates a fallback embed for when no Components V2 support is available
- * @param {Array} tribes - Processed tribe data
+ * Creates the main castlist layout with Components V2
+ * @param {Array} tribes - Array of tribe data
  * @param {string} castlistName - Name of the castlist
  * @param {Object} guild - Discord guild object
- * @returns {EmbedBuilder} Fallback embed
+ * @param {Array} navigationRows - Action rows with navigation buttons
+ * @returns {Object} Complete Components V2 message structure
  */
-function createFallbackEmbed(tribes, castlistName, guild) {
-    const embed = new EmbedBuilder()
-        .setTitle(`CastBot: Dynamic Castlist${castlistName !== 'default' ? ` (${castlistName})` : ''}`)
-        .setAuthor({ 
-            name: guild.name, 
-            iconURL: guild.iconURL() 
-        })
-        .setColor('#7ED321')
-        .setFooter({ 
-            text: 'Your client may not support Components V2. Try /castlist for the classic view.',
-        });
+function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []) {
+    const components = [];
+    
+    // Add main header
+    const headerText = castlistName !== 'default' 
+        ? `# ${guild.name} - ${castlistName} Castlist` 
+        : `# ${guild.name} - Castlist`;
+    
+    components.push({
+        type: 10, // Text Display
+        content: headerText
+    });
+    
+    // Add subtitle
+    components.push({
+        type: 10, // Text Display  
+        content: '_Modern interactive castlist with player thumbnails_'
+    });
+    
+    // Add separator
+    components.push({
+        type: 14, // Separator
+        divider: true,
+        spacing: 2
+    });
+    
+    // Add all tribe containers
+    for (const tribeComponent of tribes) {
+        components.push(tribeComponent);
         
-    if (tribes.length === 0) {
-        embed.setDescription('No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.');
-    } else {
-        embed.setDescription(`This server uses the modern Components V2 castlist format. If you can't see the interactive display above, try using \`/castlist\` instead.`);
+        // Add spacer between tribes
+        components.push({
+            type: 14, // Separator
+            divider: false,
+            spacing: 2
+        });
     }
     
-    return embed;
+    // Remove last spacer if any tribes were added
+    if (tribes.length > 0) {
+        components.pop();
+    }
+    
+    return {
+        flags: 1 << 15, // IS_COMPONENTS_V2 flag
+        components: [
+            ...components,
+            ...navigationRows
+        ]
+    };
 }
 
 export {
@@ -279,5 +317,5 @@ export {
     createTribeSection, 
     createNavigationButtons,
     processMemberData,
-    createFallbackEmbed
+    createCastlistV2Layout
 };

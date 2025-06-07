@@ -52,7 +52,7 @@ import {
   createTribeSection,
   createNavigationButtons,
   processMemberData,
-  createFallbackEmbed
+  createCastlistV2Layout
 } from './castlistV2.js';
 import fs from 'fs';
 import fetch from 'node-fetch';
@@ -651,11 +651,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          embeds: [{
-            title: 'CastBot: Dynamic Castlist (Components V2)',
-            description: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.',
-            color: 0x7ED321
-          }]
+          flags: 1 << 15, // IS_COMPONENTS_V2 flag
+          components: [
+            {
+              type: 10, // Text Display
+              content: '# No Tribes Found'
+            },
+            {
+              type: 10, // Text Display
+              content: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.'
+            }
+          ]
         }
       });
     }
@@ -681,11 +687,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const pronounRoleIds = await getGuildPronouns(guildId);
     const timezones = await getGuildTimezones(guildId);
 
-    // For Components V2, we'll show the first tribe by default
-    // TODO: Add tribe selector dropdown for multiple tribes
-    let processedTribes = [];
-    let tribeComponents = [];
-    let navigationRows = [];
+    const tribeComponents = [];
+    const navigationRows = [];
 
     for (const tribe of tribes) {
       console.log(`Processing tribe: ${tribe.name}`);
@@ -701,16 +704,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       console.log(`Found ${tribeMembers.size} members in ${tribe.name}`);
 
       if (tribeMembers.size === 0) {
-        // Show empty tribe message
+        // Create empty tribe container
         tribeComponents.push({
-          type: 1,
-          components: [{
-            type: 2,
-            style: 2,
-            label: `${tribe.emoji || ''} ${tribe.name} - No players yet`,
-            custom_id: `empty_tribe_${tribe.roleId}`,
-            disabled: true
-          }]
+          type: 17, // Container
+          accent_color: tribe.color || 0x7ED321,
+          components: [
+            {
+              type: 10, // Text Display
+              content: `# ${tribe.emoji || ''} ${tribe.name} ${tribe.emoji || ''}`.trim()
+            },
+            {
+              type: 10, // Text Display
+              content: '_No players yet_'
+            }
+          ]
         });
         continue;
       }
@@ -719,70 +726,39 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const sortedMembers = Array.from(tribeMembers.values())
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
 
-      // For now, show first 10 players (pagination coming next)
+      // Show first 10 players (pagination handled separately)
       const playersToShow = sortedMembers.slice(0, 10);
       const totalPages = Math.ceil(sortedMembers.length / 10);
 
-      // Process member data
-      const memberDataPromises = playersToShow.map(member => 
-        processMemberData(member, pronounRoleIds, timezones, guildId)
+      // Create tribe section using Components V2
+      const tribeSection = await createTribeSection(
+        { ...tribe, name: role.name }, // Use role name for accuracy
+        playersToShow,
+        fullGuild,
+        pronounRoleIds,
+        timezones,
+        0, // page
+        10 // playersPerPage
       );
-      const processedMembers = await Promise.all(memberDataPromises);
 
-      // Create tribe section embed (fallback for now since Components V2 isn't fully supported yet)
-      const tribeEmbed = new EmbedBuilder()
-        .setTitle(`${tribe.emoji || ''} ${tribe.name} ${tribe.emoji || ''}`.trim())
-        .setColor(tribe.color || 0x7ED321);
+      tribeComponents.push(tribeSection);
 
-      // Add player fields
-      processedMembers.forEach(memberData => {
-        const { member, pronouns, timezone, formattedTime, age, emojiCode } = memberData;
-        const displayName = capitalize(member.displayName);
-        const emoji = (tribe.showPlayerEmojis !== false && emojiCode) ? emojiCode : '';
-        const nameWithEmoji = emoji ? `${emoji} ${displayName}` : displayName;
-        
-        tribeEmbed.addFields({
-          name: nameWithEmoji,
-          value: `> * ${age}\n> * ${pronouns}\n> * ${timezone}${formattedTime ? `\n> * ${formattedTime}` : ''}`,
-          inline: true
-        });
-      });
-
-      // Add pagination info if needed
+      // Add navigation buttons if needed
       if (totalPages > 1) {
-        tribeEmbed.setFooter({ text: `Page 1 of ${totalPages} • Use navigation buttons below` });
-        
-        // Add navigation buttons
         const navRow = createNavigationButtons(tribe.roleId, 0, totalPages, castlistToShow);
-        navigationRows.push(navRow);
+        navigationRows.push(navRow.toJSON());
       }
-
-      processedTribes.push({
-        embed: tribeEmbed,
-        tribe: tribe,
-        totalMembers: sortedMembers.length,
-        totalPages: totalPages
-      });
     }
 
-    // Create main embed
-    const mainEmbed = new EmbedBuilder()
-      .setTitle(`CastBot: Dynamic Castlist${castlistToShow !== 'default' ? ` (${castlistToShow})` : ''} - Components V2`)
-      .setAuthor({ 
-        name: fullGuild.name, 
-        iconURL: fullGuild.iconURL() 
-      })
-      .setColor(processedTribes[0]?.tribe?.color || 0x7ED321)
-      .setDescription('Modern interactive castlist with player cards and navigation.')
-      .setFooter({ 
-        text: 'This is the new Components V2 castlist format. Use /castlist for the classic view.',
-      });
+    // Create the complete Components V2 layout
+    const responseData = createCastlistV2Layout(
+      tribeComponents,
+      castlistToShow,
+      fullGuild,
+      navigationRows
+    );
 
-    // Prepare response data
-    const responseData = {
-      embeds: [mainEmbed, ...processedTribes.map(t => t.embed)],
-      components: navigationRows.map(row => row.toJSON())
-    };
+    console.log('Sending Components V2 response with flag:', responseData.flags);
 
     // Send the response
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -797,8 +773,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     await DiscordRequest(endpoint, {
       method: 'PATCH',
       body: {
-        content: 'Error displaying Components V2 castlist.',
-        flags: InteractionResponseFlags.EPHEMERAL
+        flags: 1 << 15, // IS_COMPONENTS_V2 flag
+        components: [
+          {
+            type: 10, // Text Display
+            content: `# Error\nError displaying Components V2 castlist: ${error.message}`
+          }
+        ]
       },
     });
   }
@@ -3819,68 +3800,53 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         );
         const processedMembers = await Promise.all(memberDataPromises);
         
-        // Create updated tribe embed
-        const tribeEmbed = new EmbedBuilder()
-          .setTitle(`${targetTribe.emoji || ''} ${tribeRole.name} ${targetTribe.emoji || ''}`.trim())
-          .setColor(targetTribe.color || 0x7ED321);
-        
-        // Add player fields for the new page
-        processedMembers.forEach(memberData => {
-          const { member, pronouns, timezone, formattedTime, age, emojiCode } = memberData;
-          const displayName = capitalize(member.displayName);
-          const emoji = (targetTribe.showPlayerEmojis !== false && emojiCode) ? emojiCode : '';
-          const nameWithEmoji = emoji ? `${emoji} ${displayName}` : displayName;
-          
-          tribeEmbed.addFields({
-            name: nameWithEmoji,
-            value: `> * ${age}\n> * ${pronouns}\n> * ${timezone}${formattedTime ? `\n> * ${formattedTime}` : ''}`,
-            inline: true
-          });
-        });
-        
-        // Add pagination info
-        tribeEmbed.setFooter({ text: `Page ${newPage + 1} of ${totalPages} • Use navigation buttons below` });
+        // Create updated tribe section with Components V2
+        const updatedTribeSection = await createTribeSection(
+          { ...targetTribe, name: tribeRole.name },
+          playersToShow,
+          fullGuild,
+          pronounRoleIds,
+          timezones,
+          newPage,
+          playersPerPage
+        );
         
         // Create updated navigation buttons
         const navRow = createNavigationButtons(targetTribe.roleId, newPage, totalPages, castlistName);
         
-        // Get the original message data to preserve other embeds
-        // We need to find which embed index corresponds to this tribe and update only that one
+        // Get the original message components and update them
         const originalMessage = req.body.message;
-        const updatedEmbeds = [...originalMessage.embeds];
+        const originalComponents = originalMessage.components || [];
+        let updatedComponents = [...originalComponents];
         
-        // Find the embed index for this tribe (skipping the main castlist embed at index 0)
-        let tribeEmbedIndex = -1;
-        for (let i = 1; i < updatedEmbeds.length; i++) {
-          const embed = updatedEmbeds[i];
-          if (embed.title && embed.title.includes(tribeRole.name)) {
-            tribeEmbedIndex = i;
-            break;
+        // Find the tribe container to update (look for containers with matching tribe name)
+        let tribeContainerIndex = -1;
+        for (let i = 0; i < originalComponents.length; i++) {
+          const component = originalComponents[i];
+          if (component.type === 17) { // Container type
+            // Check if this container has the tribe name in its header
+            const headerComponent = component.components?.[0];
+            if (headerComponent?.type === 10 && headerComponent.content?.includes(tribeRole.name)) {
+              tribeContainerIndex = i;
+              break;
+            }
           }
         }
         
-        if (tribeEmbedIndex > 0) {
-          // Update the specific tribe embed
-          updatedEmbeds[tribeEmbedIndex] = tribeEmbed.toJSON();
-        } else {
-          // Fallback: couldn't find the embed, just replace all embeds with main + this tribe
-          const mainEmbed = updatedEmbeds[0]; // Preserve main embed
-          updatedEmbeds = [mainEmbed, tribeEmbed.toJSON()];
+        if (tribeContainerIndex >= 0) {
+          // Update the specific tribe container
+          updatedComponents[tribeContainerIndex] = updatedTribeSection;
         }
-        
-        // Get existing components and update the specific navigation row
-        const existingComponents = originalMessage.components || [];
-        let updatedComponents = [...existingComponents];
         
         // Find and update the navigation row for this tribe
         let navRowIndex = -1;
         for (let i = 0; i < updatedComponents.length; i++) {
           const component = updatedComponents[i];
-          if (component.components && component.components.length > 0) {
-            const firstComponent = component.components[0];
-            if (firstComponent.custom_id && 
-                (firstComponent.custom_id.includes(`castlist2_prev_${tribeId}_`) || 
-                 firstComponent.custom_id.includes(`castlist2_next_${tribeId}_`))) {
+          if (component.type === 1 && component.components?.length > 0) { // Action Row
+            const firstButton = component.components[0];
+            if (firstButton.custom_id && 
+                (firstButton.custom_id.includes(`castlist2_prev_${tribeId}_`) || 
+                 firstButton.custom_id.includes(`castlist2_next_${tribeId}_`))) {
               navRowIndex = i;
               break;
             }
@@ -3895,12 +3861,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           updatedComponents.push(navRow.toJSON());
         }
         
-        // Update the message
+        // Update the message with Components V2 flag
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            embeds: updatedEmbeds,
+            flags: 1 << 15, // IS_COMPONENTS_V2 flag
             components: updatedComponents
           },
         });
