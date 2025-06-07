@@ -3229,6 +3229,45 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         });
       }
+    } else if (custom_id === 'cancel_application_button') {
+      // Handle cancel application button click
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        
+        // Clean up temporary config
+        const playerData = await loadPlayerData();
+        const guildData = playerData[guildId];
+        
+        if (guildData?.applicationConfigs) {
+          const tempConfigId = Object.keys(guildData.applicationConfigs)
+            .find(id => id.startsWith(`temp_`) && id.includes(userId));
+          
+          if (tempConfigId) {
+            delete guildData.applicationConfigs[tempConfigId];
+            await savePlayerData(playerData);
+          }
+        }
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: '❌ Application button setup cancelled.',
+            components: [],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling cancel_application_button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error cancelling application button setup.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'select_pronouns') {
       // Handle pronoun role selection
       try {
@@ -3469,65 +3508,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           tempConfig.buttonStyle = selectedValue;
         }
         
-        // Check if all required selections are made
-        if (tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle) {
-          // All selections complete, create the final configuration and button
-          const guild = await client.guilds.fetch(guildId);
-          const targetChannel = await guild.channels.fetch(tempConfig.targetChannelId);
-          const category = await guild.channels.fetch(tempConfig.categoryId);
-          
-          // Generate a unique config ID
-          const finalConfigId = `config_${Date.now()}_${userId}`;
-          
-          // Create final configuration
-          const finalConfig = {
-            buttonText: tempConfig.buttonText,
-            explanatoryText: tempConfig.explanatoryText,
-            channelFormat: tempConfig.channelFormat,
-            targetChannelId: tempConfig.targetChannelId,
-            categoryId: tempConfig.categoryId,
-            buttonStyle: tempConfig.buttonStyle,
-            createdBy: userId,
-            stage: 'active'
-          };
-          
-          // Save the final configuration
-          try {
-            await saveApplicationConfig(guildId, finalConfigId, finalConfig);
-            console.log(`✅ Application config saved: ${finalConfigId}`);
-          } catch (error) {
-            console.error(`❌ Error saving application config:`, error);
-            throw error;
-          }
-          
-          // Create the application button
-          const button = createApplicationButton(tempConfig.buttonText, finalConfigId);
-          button.setStyle(BUTTON_STYLES[tempConfig.buttonStyle]);
-          
-          const row = new ActionRowBuilder().addComponents(button);
-          
-          // Post the button to the target channel
-          await targetChannel.send({
-            content: tempConfig.explanatoryText,
-            components: [row]
-          });
-          
-          // Clean up temporary config - RELOAD data first to avoid overwriting final config
-          const freshPlayerData = await loadPlayerData();
-          if (freshPlayerData[guildId]?.applicationConfigs?.[tempConfigId]) {
-            delete freshPlayerData[guildId].applicationConfigs[tempConfigId];
-            await savePlayerData(freshPlayerData);
-            console.log(`🧹 Temp config cleaned up`);
-          }
-          
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `✅ Application button successfully created in ${targetChannel}!\n\nButton Text: "${tempConfig.buttonText}"\nStyle: ${tempConfig.buttonStyle}\nCategory: ${category.name}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        } else {
+        // Always continue to show the interface (don't auto-create button)
+        // Button creation will only happen when user clicks "Submit" button
+        {
           // Update temp config and show current status with all selection components
           await saveApplicationConfig(guildId, tempConfigId, tempConfig);
           
@@ -3630,29 +3613,32 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             ]);
           allComponents.push(new ActionRowBuilder().addComponents(styleSelect));
           
-          // Add "Create Button" button (enabled/disabled based on completion)
+          // Add Submit and Cancel buttons
           const allSelected = tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle;
-          const createButton = new ButtonBuilder()
+          const submitButton = new ButtonBuilder()
             .setCustomId('create_application_button')
-            .setLabel(allSelected ? 'Create Application Button' : 'Complete all selections above')
+            .setLabel(allSelected ? 'Submit' : 'Complete all selections above')
             .setStyle(allSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
             .setDisabled(!allSelected);
           
-          allComponents.push(new ActionRowBuilder().addComponents(createButton));
+          const cancelButton = new ButtonBuilder()
+            .setCustomId('cancel_application_button')
+            .setLabel('Cancel')
+            .setStyle(ButtonStyle.Danger);
+          
+          allComponents.push(new ActionRowBuilder().addComponents(submitButton, cancelButton));
           
           const responseData = {
             components: allComponents,
             flags: InteractionResponseFlags.EPHEMERAL
           };
 
+          // Use Components v2 flag for native channel select, but also include content
+          // This is a hybrid approach - not pure Components v2 but allows the heading to show
           if (useComponentsV2) {
-            // Components v2: Use flag, no content field
             responseData.flags |= (1 << 15); // Add IS_COMPONENTS_V2 flag
-            // Note: Should use Text Display component instead of content in full v2 implementation
-          } else {
-            // Traditional: Use content field
-            responseData.content = statusText;
           }
+          responseData.content = statusText;
 
           return res.send({
             type: InteractionResponseType.UPDATE_MESSAGE,
