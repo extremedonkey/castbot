@@ -47,6 +47,7 @@ import {
   createApplicationButton,
   BUTTON_STYLES
 } from './applicationManager.js';
+import { useComponentsV2 } from './config.js';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import { Readable } from 'stream';
@@ -3304,7 +3305,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         const guildId = req.body.guild_id;
         const userId = req.body.member.user.id;
-        const selectedValue = data.values[0];
+        
+        // Handle both Components v1 and v2 data formats
+        let selectedValue;
+        if (useComponentsV2 && custom_id === 'select_target_channel' && data.resolved?.channels) {
+          // Components v2: Native channel select provides resolved data
+          const channelId = data.values[0];
+          selectedValue = channelId;
+          console.log('Components v2 channel selected:', channelId, 'from resolved data:', Object.keys(data.resolved.channels));
+        } else {
+          // Components v1: Traditional string select
+          selectedValue = data.values[0];
+        }
         
         // Find the temporary config for this user
         const playerData = await loadPlayerData();
