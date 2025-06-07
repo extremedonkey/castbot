@@ -34,7 +34,9 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
     
     // Combine all info into a single text component to save component count
     const nameWithEmoji = emoji ? `${emoji} **${displayName}**` : `**${displayName}**`;
-    const allInfo = `${nameWithEmoji}\n${pronouns} • ${age} • ${timezone}${formattedTime ? ` • ${formattedTime}` : ''}`;
+    const basicInfo = `${pronouns} • ${age} • ${timezone}`;
+    const timeInfo = formattedTime ? `🕐 Local time: \`${formattedTime}\`` : '';
+    const allInfo = timeInfo ? `${nameWithEmoji}\n${basicInfo}\n${timeInfo}` : `${nameWithEmoji}\n${basicInfo}`;
 
     return {
         type: 9, // Section component
