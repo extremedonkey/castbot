@@ -27,11 +27,18 @@ function Test-NgrokRunning {
     }
 }
 
-# Function to start ngrok
+# Function to start ngrok in background
 function Start-Ngrok {
     param($Port)
-    Write-Output "Starting ngrok tunnel on port $Port..."
-    Start-Process -FilePath "ngrok" -ArgumentList "http", $Port -WindowStyle Minimized
+    Write-Output "Starting ngrok tunnel on port $Port in background..."
+    
+    # Start ngrok as a background job
+    $job = Start-Job -ScriptBlock {
+        param($Port)
+        & ngrok http $Port
+    } -ArgumentList $Port
+    
+    Write-Output "ngrok job started (ID: $($job.Id))"
     
     # Wait for ngrok to start
     $maxAttempts = 30
@@ -40,13 +47,20 @@ function Start-Ngrok {
         Start-Sleep -Seconds 1
         $tunnel = Test-NgrokRunning -Port $Port
         $attempt++
+        if ($attempt % 5 -eq 0) {
+            Write-Output "Waiting for ngrok to initialize... ($attempt/$maxAttempts)"
+        }
     } while (!$tunnel -and $attempt -lt $maxAttempts)
     
     if (!$tunnel) {
         Write-Output "Failed to start ngrok after $maxAttempts seconds"
+        Write-Output "Stopping ngrok job..."
+        Stop-Job $job -ErrorAction SilentlyContinue
+        Remove-Job $job -ErrorAction SilentlyContinue
         exit 1
     }
     
+    Write-Output "ngrok tunnel established successfully"
     return $tunnel
 }
 
@@ -71,15 +85,37 @@ function Stop-ExistingApp {
     }
 }
 
+# Function to clean up existing ngrok processes and jobs
+function Stop-ExistingNgrok {
+    # Clean up any existing PowerShell jobs running ngrok
+    $ngrokJobs = Get-Job | Where-Object { $_.Command -like "*ngrok*" }
+    if ($ngrokJobs) {
+        Write-Output "Cleaning up existing ngrok jobs..."
+        $ngrokJobs | Stop-Job -ErrorAction SilentlyContinue
+        $ngrokJobs | Remove-Job -ErrorAction SilentlyContinue
+    }
+    
+    # Kill any ngrok processes
+    $ngrokProcesses = Get-Process -Name "ngrok" -ErrorAction SilentlyContinue
+    if ($ngrokProcesses) {
+        Write-Output "Stopping existing ngrok processes..."
+        $ngrokProcesses | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 2
+    }
+}
+
+# Clean up any existing ngrok instances first
+Stop-ExistingNgrok
+
 # Check if ngrok is already running
 Write-Output "Checking ngrok status..."
 $existingTunnel = Test-NgrokRunning -Port $ngrokPort
 
 if ($existingTunnel) {
-    Write-Output "✅ ngrok already running"
+    Write-Output "ngrok already running"
     $ngrokUrl = $existingTunnel.public_url
 } else {
-    Write-Output "🚀 Starting ngrok..."
+    Write-Output "Starting ngrok in background..."
     $tunnel = Start-Ngrok -Port $ngrokPort
     $ngrokUrl = $tunnel.public_url
 }
