@@ -355,8 +355,14 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             ephemeral: true
         };
 
-        // Always use traditional mode for better compatibility
-        responseData.content = `# Set Up Your Season Application Process\n\n**Button Text:** "${buttonText}"\n**Channel Format:** \`${channelFormat}\`\n\nPlease complete all selections below:`;
+        if (useComponentsV2) {
+            // Components v2: Use flag and no content field
+            responseData.flags = (1 << 15); // IS_COMPONENTS_V2
+            // Clean interface with just the selects
+        } else {
+            // Traditional: Use content field
+            responseData.content = `# Set Up Your Season Application Process\n\n**Button Text:** "${buttonText}"\n**Channel Format:** \`${channelFormat}\`\n\nPlease complete all selections below:`;
+        }
 
         return {
             success: true,

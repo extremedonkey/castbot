@@ -4,8 +4,8 @@
 // Development vs Production detection
 export const isDevelopment = process.env.PRODUCTION !== 'TRUE';
 
-// Components v2 testing flag - temporarily disabled due to compatibility issues
-export const useComponentsV2 = false; // process.env.USE_COMPONENTS_V2 === 'true';
+// Components v2 testing flag - set USE_COMPONENTS_V2=true in .env to test
+export const useComponentsV2 = process.env.USE_COMPONENTS_V2 === 'true';
 
 // Discord API configuration
 export const discordConfig = {
