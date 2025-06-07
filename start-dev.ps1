@@ -1,6 +1,16 @@
 # CastBot Development Startup Script
 # Handles ngrok tunnel management, git operations, and app startup
 
+# Set terminal title and icon
+$Host.UI.RawUI.WindowTitle = "castbot-dev"
+
+# Try to set VS Code terminal icon (works in integrated terminal)
+if ($env:TERM_PROGRAM -eq "vscode") {
+    Write-Output "`e]1337;SetUserVar=terminal.integrated.tabs.title=castbot-dev`a"
+    Write-Output "`e]1337;SetUserVar=terminal.integrated.tabs.icon=robot`a"
+    Write-Output "`e]1337;SetUserVar=terminal.integrated.tabs.color=red`a"
+}
+
 Write-Output "=== CastBot Dev Startup ==="
 
 # Configuration
@@ -163,21 +173,37 @@ if ($status) {
     Write-Output "No changes to commit"
 }
 
-# Display ngrok information
+# Display ngrok information (brief)
 Write-Output ""
 Write-Output "=== NGROK TUNNEL READY ==="
 Write-Output "Tunnel URL: $ngrokUrl"
-Write-Output ""
-Write-Output ">>> DISCORD WEBHOOK URL (copy this):"
-Write-Output "$ngrokUrl/interactions"
-Write-Output ""
-Write-Output ">>> Update Discord webhook at:"
-Write-Output "https://discord.com/developers/applications/1328366050848411658/information"
 Write-Output ""
 Write-Output "=== Starting CastBot Application ==="
 
 # Stop any existing node processes first
 Stop-ExistingApp
 
+# Function to display final URLs (call with Ctrl+C handler)
+function Show-DevUrls {
+    Write-Output ""
+    Write-Output "=== READY FOR DEVELOPMENT ==="
+    Write-Output ""
+    Write-Output ">>> Update Discord webhook at:"
+    Write-Output "https://discord.com/developers/applications/1328366050848411658/information"
+    Write-Output ""
+    Write-Output ">>> DISCORD WEBHOOK URL (copy this):"
+    Write-Output "$ngrokUrl/interactions"
+    Write-Output ""
+}
+
+# Register cleanup handler
+Register-EngineEvent PowerShell.Exiting -Action {
+    Show-DevUrls
+}
+
 # Start the application
-npm run start
+& {
+    npm run start
+    # Display URLs after app starts (if it exits normally)
+    Show-DevUrls
+}
