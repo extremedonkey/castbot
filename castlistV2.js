@@ -266,10 +266,10 @@ async function processMemberData(member, pronounRoleIds, timezones, guildId) {
 function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = [], client = null) {
     const components = [];
     
-    // Simplified header - just guild name + castlist (no subtitle)
+    // Large header text using markdown formatting
     const headerText = castlistName !== 'default' 
-        ? `${guild.name} - ${castlistName} Castlist` 
-        : `${guild.name} - Castlist`;
+        ? `# ${guild.name} ${castlistName} Castlist` 
+        : `# ${guild.name} Castlist`;
     
     components.push({
         type: 10, // Text Display
@@ -281,33 +281,11 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
         components.push(tribeComponent);
     }
     
-    // Create CastBot ad with bot avatar if client is available
-    let adComponent;
-    if (client && client.user) {
-        // Use Section component with bot avatar as accessory
-        adComponent = {
-            type: 9, // Section component
-            components: [
-                {
-                    type: 10, // Text Display
-                    content: '_Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!_'
-                }
-            ],
-            accessory: {
-                type: 11, // Thumbnail
-                media: {
-                    url: client.user.displayAvatarURL({ size: 64, extension: 'png' })
-                },
-                description: 'CastBot avatar'
-            }
-        };
-    } else {
-        // Fallback to simple text display
-        adComponent = {
-            type: 10, // Text Display
-            content: '_Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!_'
-        };
-    }
+    // Create clean CastBot ad (no image)
+    const adComponent = {
+        type: 10, // Text Display
+        content: '_Click on CastBot and click \'+Add App\' to use in your ORG!_'
+    };
 
     return {
         flags: 1 << 15, // IS_COMPONENTS_V2 flag
