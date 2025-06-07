@@ -4,9 +4,8 @@
 // Development vs Production detection
 export const isDevelopment = process.env.PRODUCTION !== 'TRUE';
 
-// Components v2 testing flag - disabled due to mixed component type limitations
-// Discord doesn't support native category/style selects, causing mixed component failures
-export const useComponentsV2 = false; // process.env.USE_COMPONENTS_V2 === 'true';
+// Use Components v2 for native channel select
+export const useComponentsV2 = process.env.USE_COMPONENTS_V2 === 'true';
 
 // Discord API configuration
 export const discordConfig = {

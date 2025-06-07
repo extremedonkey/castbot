@@ -3433,13 +3433,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Create ALL selection components (keep them visible)
           const allComponents = [];
           
-          // Always show channel select (match the initial Components v2 mode)
+          // Always show channel select (persistent)
           if (useComponentsV2) {
             const channelSelect = new ChannelSelectMenuBuilder()
               .setCustomId('select_target_channel')
-              .setPlaceholder(tempConfig.targetChannelId ? 
-                `Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` : 
-                'Select channel to post your app button in')
+              .setPlaceholder('Select channel to post your app button in')
               .setChannelTypes([ChannelType.GuildText])
               .setMinValues(1)
               .setMaxValues(1);
@@ -3458,7 +3456,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               .addOptions(
                 textChannels.map(channel => ({
                   label: `#${channel.name}`,
-                  description: channel.topic ? channel.topic.substring(0, 100) : 'No description',
+                  description: channel.topic ? channel.topic.substring(0, 100) : `Channel in ${channel.parent ? channel.parent.name : 'No Category'}`,
                   value: channel.id
                 }))
               );
@@ -3523,12 +3521,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             flags: InteractionResponseFlags.EPHEMERAL
           };
 
-          // Pure Components v2: Use flag, no content field
+          // Components v2: No content field, just clean selects
           if (useComponentsV2) {
             responseData.flags |= (1 << 15); // Add IS_COMPONENTS_V2 flag
-            // Note: No heading in Components v2 mode, but cleaner interface
           } else {
-            // Traditional: Use content field with heading
             responseData.content = statusText;
           }
 

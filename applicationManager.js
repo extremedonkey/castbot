@@ -131,7 +131,7 @@ function createChannelSelectMenu(channels) {
             .setMinValues(1)
             .setMaxValues(1);
     } else {
-        // Traditional: Manual string select
+        // Traditional: String select
         return new StringSelectMenuBuilder()
             .setCustomId('select_target_channel')
             .setPlaceholder('Select channel to post your app button in')
@@ -140,7 +140,7 @@ function createChannelSelectMenu(channels) {
             .addOptions(
                 channels.map(channel => ({
                     label: `#${channel.name}`,
-                    description: channel.topic ? channel.topic.substring(0, 100) : 'No description',
+                    description: channel.topic ? channel.topic.substring(0, 100) : `Channel in ${channel.parent ? channel.parent.name : 'No Category'}`,
                     value: channel.id
                 }))
             );
@@ -356,9 +356,8 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         };
 
         if (useComponentsV2) {
-            // Components v2: Use flag and no content field
+            // Components v2: Use flag and no content field - clean interface
             responseData.flags = (1 << 15); // IS_COMPONENTS_V2
-            // Clean interface with just the selects
         } else {
             // Traditional: Use content field
             responseData.content = `# Set Up Your Season Application Process\n\n**Button Text:** "${buttonText}"\n**Channel Format:** \`${channelFormat}\`\n\nPlease complete all selections below:`;
