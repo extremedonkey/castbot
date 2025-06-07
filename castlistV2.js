@@ -35,7 +35,7 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
     // Combine all info into a single text component to save component count
     const nameWithEmoji = emoji ? `${emoji} **${displayName}**` : `**${displayName}**`;
     const basicInfo = `${pronouns} • ${age} • ${timezone}`;
-    const timeInfo = formattedTime ? `🕐 Local time: \`${formattedTime}\`` : '';
+    const timeInfo = formattedTime ? `\`🕛 Local time 🕛\` ${formattedTime}` : '';
     const allInfo = timeInfo ? `${nameWithEmoji}\n${basicInfo}\n${timeInfo}` : `${nameWithEmoji}\n${basicInfo}`;
 
     return {
@@ -157,6 +157,9 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         accent_color: accentColor,
         components: [
             tribeHeader,
+            {
+                type: 14 // Separator after tribe name
+            },
             ...playerCards
         ]
     };
@@ -257,31 +260,62 @@ async function processMemberData(member, pronounRoleIds, timezones, guildId) {
  * @param {string} castlistName - Name of the castlist
  * @param {Object} guild - Discord guild object
  * @param {Array} navigationRows - Action rows with navigation buttons
+ * @param {Object} client - Discord client for bot avatar
  * @returns {Object} Complete Components V2 message structure
  */
-function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []) {
+function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = [], client = null) {
     const components = [];
     
-    // Simplified header - combine title and subtitle to save components
+    // Simplified header - just guild name + castlist (no subtitle)
     const headerText = castlistName !== 'default' 
-        ? `# ${guild.name} - ${castlistName} Castlist\n_Interactive castlist with player thumbnails_` 
-        : `# ${guild.name} - Castlist\n_Interactive castlist with player thumbnails_`;
+        ? `${guild.name} - ${castlistName} Castlist` 
+        : `${guild.name} - Castlist`;
     
     components.push({
         type: 10, // Text Display
         content: headerText
     });
     
-    // Add all tribe containers directly without separators to save components
+    // Add all tribe containers with separators after tribe names
     for (const tribeComponent of tribes) {
         components.push(tribeComponent);
     }
     
+    // Create CastBot ad with bot avatar if client is available
+    let adComponent;
+    if (client && client.user) {
+        // Use Section component with bot avatar as accessory
+        adComponent = {
+            type: 9, // Section component
+            components: [
+                {
+                    type: 10, // Text Display
+                    content: '_Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!_'
+                }
+            ],
+            accessory: {
+                type: 11, // Thumbnail
+                media: {
+                    url: client.user.displayAvatarURL({ size: 64, extension: 'png' })
+                },
+                description: 'CastBot avatar'
+            }
+        };
+    } else {
+        // Fallback to simple text display
+        adComponent = {
+            type: 10, // Text Display
+            content: '_Want dynamic castlist for your ORG? Simply click on \'CastBot\' and click +Add App!_'
+        };
+    }
+
     return {
         flags: 1 << 15, // IS_COMPONENTS_V2 flag
         components: [
             ...components,
-            ...navigationRows
+            ...navigationRows,
+            // Add CastBot ad after navigation buttons
+            adComponent
         ]
     };
 }

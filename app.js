@@ -739,6 +739,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             content: `# ${currentTribe.emoji || ''} ${role.name} ${currentTribe.emoji || ''}`.trim()
           },
           {
+            type: 14 // Separator after tribe name
+          },
+          {
             type: 10, // Text Display
             content: '_No players yet_'
           }
@@ -770,7 +773,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         .addComponents(
           new ButtonBuilder()
             .setCustomId(`castlist2_tribe_prev_${currentTribePage}_${castlistToShow}`)
-            .setLabel('◀ Previous Tribe')
+            .setLabel('◀ Last Tribe')
             .setStyle(ButtonStyle.Secondary)
             .setDisabled(currentTribePage === 0),
           new ButtonBuilder()
@@ -792,7 +795,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       tribeComponents,
       castlistToShow,
       fullGuild,
-      navigationRows
+      navigationRows,
+      client
     );
 
     console.log('Sending Components V2 response with flag:', responseData.flags);
@@ -3837,6 +3841,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 content: `# ${currentTribe.emoji || ''} ${role.name} ${currentTribe.emoji || ''}`.trim()
               },
               {
+                type: 14 // Separator after tribe name
+              },
+              {
                 type: 10, // Text Display
                 content: '_No players yet_'
               }
@@ -3868,7 +3875,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             .addComponents(
               new ButtonBuilder()
                 .setCustomId(`castlist2_tribe_prev_${newTribePage}_${castlistName}`)
-                .setLabel('◀ Previous Tribe')
+                .setLabel('◀ Last Tribe')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(newTribePage === 0),
               new ButtonBuilder()
@@ -3890,7 +3897,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           tribeComponents,
           castlistName,
           fullGuild,
-          navigationRows
+          navigationRows,
+          client
         );
 
         // Update the message
