@@ -18,7 +18,7 @@ import { capitalize } from './utils.js';
  */
 
 /**
- * Creates a player card section using Components V2 Section component
+ * Creates a condensed player card section using Components V2 Section component
  * @param {Object} member - Discord guild member
  * @param {Object} playerData - Player data from storage (age, emoji, etc.)
  * @param {string} pronouns - Formatted pronouns string
@@ -32,19 +32,16 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
     const age = playerData?.age || 'Unknown';
     const emoji = (showEmoji && playerData?.emojiCode) ? playerData.emojiCode : '';
     
+    // Combine all info into a single text component to save component count
     const nameWithEmoji = emoji ? `${emoji} **${displayName}**` : `**${displayName}**`;
-    const details = `${pronouns} • ${age} • ${timezone}${formattedTime ? ` • ${formattedTime}` : ''}`;
+    const allInfo = `${nameWithEmoji}\n${pronouns} • ${age} • ${timezone}${formattedTime ? ` • ${formattedTime}` : ''}`;
 
     return {
         type: 9, // Section component
         components: [
             {
-                type: 10, // Text Display
-                content: nameWithEmoji
-            },
-            {
-                type: 10, // Text Display  
-                content: details
+                type: 10, // Text Display - single component with all info
+                content: allInfo
             }
         ],
         accessory: {
@@ -58,7 +55,8 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
 }
 
 /**
- * Creates a tribe container with player cards for Components V2
+ * Creates a simplified tribe section optimized for 40 component limit
+ * Uses Media Gallery for avatars and a single text block for all players
  * @param {Object} tribe - Tribe data
  * @param {Array} tribeMembers - Array of Discord members in tribe
  * @param {Object} guild - Discord guild object
@@ -73,7 +71,6 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     const endIndex = Math.min(startIndex + playersPerPage, tribeMembers.length);
     const pageMembers = tribeMembers.slice(startIndex, endIndex);
     
-    const playerCards = [];
     const totalPages = Math.ceil(tribeMembers.length / playersPerPage);
     
     // Create tribe header
@@ -85,8 +82,14 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         content: `# ${tribeHeaderText}${paginationText}`
     };
     
-    // Process each member into a player card
-    for (const member of pageMembers) {
+    // Create avatars for Media Gallery
+    const avatarGalleryItems = [];
+    let playerListText = '';
+    
+    // Process each member
+    for (let i = 0; i < pageMembers.length; i++) {
+        const member = pageMembers[i];
+        
         // Get player pronouns
         const memberPronouns = member.roles.cache
             .filter(role => pronounRoleIds.includes(role.id))
@@ -119,47 +122,49 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         
         // Get player data from storage
         const playerData = await getPlayer(guild.id, member.id);
+        const displayName = capitalize(member.displayName);
+        const age = playerData?.age || 'Unknown';
+        const emoji = (tribe.showPlayerEmojis !== false && playerData?.emojiCode) ? playerData.emojiCode : '';
         
-        // Create player card section
-        const playerCard = createPlayerCard(
-            member, 
-            playerData, 
-            memberPronouns, 
-            memberTimezone,
-            formattedTime,
-            tribe.showPlayerEmojis !== false
-        );
+        // Add to avatar gallery
+        avatarGalleryItems.push({
+            media: {
+                url: member.user.displayAvatarURL({ size: 256, extension: 'png' })
+            },
+            description: `${displayName}'s avatar`
+        });
         
-        playerCards.push(playerCard);
+        // Add to player list text
+        const nameWithEmoji = emoji ? `${emoji} **${displayName}**` : `**${displayName}**`;
+        const details = `${memberPronouns} • ${age} • ${memberTimezone}${formattedTime ? ` • ${formattedTime}` : ''}`;
+        playerListText += `${nameWithEmoji}\n${details}\n\n`;
     }
     
-    // Add separator between players if more than one
-    const componentsWithSeparators = [];
-    for (let i = 0; i < playerCards.length; i++) {
-        componentsWithSeparators.push(playerCards[i]);
-        
-        // Add separator between players (but not after the last one)
-        if (i < playerCards.length - 1) {
-            componentsWithSeparators.push({
-                type: 14, // Separator
-                divider: false,
-                spacing: 1
-            });
-        }
+    // Remove last extra newlines
+    playerListText = playerListText.trim();
+    
+    const components = [tribeHeader];
+    
+    // Add Media Gallery for avatars
+    if (avatarGalleryItems.length > 0) {
+        components.push({
+            type: 12, // Media Gallery
+            items: avatarGalleryItems
+        });
+    }
+    
+    // Add consolidated player text
+    if (playerListText) {
+        components.push({
+            type: 10, // Text Display
+            content: playerListText
+        });
     }
     
     return {
         type: 17, // Container
         accent_color: tribe.color || 0x7ED321,
-        components: [
-            tribeHeader,
-            {
-                type: 14, // Separator after header
-                divider: true,
-                spacing: 1
-            },
-            ...componentsWithSeparators
-        ]
+        components: components
     };
 }
 
@@ -263,44 +268,19 @@ async function processMemberData(member, pronounRoleIds, timezones, guildId) {
 function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []) {
     const components = [];
     
-    // Add main header
+    // Simplified header - combine title and subtitle to save components
     const headerText = castlistName !== 'default' 
-        ? `# ${guild.name} - ${castlistName} Castlist` 
-        : `# ${guild.name} - Castlist`;
+        ? `# ${guild.name} - ${castlistName} Castlist\n_Interactive castlist with player thumbnails_` 
+        : `# ${guild.name} - Castlist\n_Interactive castlist with player thumbnails_`;
     
     components.push({
         type: 10, // Text Display
         content: headerText
     });
     
-    // Add subtitle
-    components.push({
-        type: 10, // Text Display  
-        content: '_Modern interactive castlist with player thumbnails_'
-    });
-    
-    // Add separator
-    components.push({
-        type: 14, // Separator
-        divider: true,
-        spacing: 2
-    });
-    
-    // Add all tribe containers
+    // Add all tribe containers directly without separators to save components
     for (const tribeComponent of tribes) {
         components.push(tribeComponent);
-        
-        // Add spacer between tribes
-        components.push({
-            type: 14, // Separator
-            divider: false,
-            spacing: 2
-        });
-    }
-    
-    // Remove last spacer if any tribes were added
-    if (tribes.length > 0) {
-        components.pop();
     }
     
     return {
