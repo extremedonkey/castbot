@@ -1,14 +1,11 @@
 # CastBot Development Startup Script
 # Handles ngrok tunnel management, git operations, and app startup
 
-# Set terminal title and icon
-$Host.UI.RawUI.WindowTitle = "castbot-dev"
-
-# Try to set VS Code terminal icon (works in integrated terminal)
-if ($env:TERM_PROGRAM -eq "vscode") {
-    Write-Output "`e]1337;SetUserVar=terminal.integrated.tabs.title=castbot-dev`a"
-    Write-Output "`e]1337;SetUserVar=terminal.integrated.tabs.icon=robot`a"
-    Write-Output "`e]1337;SetUserVar=terminal.integrated.tabs.color=red`a"
+# Set terminal title (basic PowerShell title only)
+try {
+    $Host.UI.RawUI.WindowTitle = "castbot-dev"
+} catch {
+    # Ignore if not supported
 }
 
 Write-Output "=== CastBot Dev Startup ==="
@@ -183,27 +180,25 @@ Write-Output "=== Starting CastBot Application ==="
 # Stop any existing node processes first
 Stop-ExistingApp
 
-# Function to display final URLs (call with Ctrl+C handler)
-function Show-DevUrls {
-    Write-Output ""
-    Write-Output "=== READY FOR DEVELOPMENT ==="
-    Write-Output ""
-    Write-Output ">>> Update Discord webhook at:"
-    Write-Output "https://discord.com/developers/applications/1328366050848411658/information"
-    Write-Output ""
-    Write-Output ">>> DISCORD WEBHOOK URL (copy this):"
-    Write-Output "$ngrokUrl/interactions"
-    Write-Output ""
-}
+# Start the application and wait a few seconds, then show URLs
+Write-Output "Starting npm application..."
+$npmProcess = Start-Process -FilePath "npm" -ArgumentList "run", "start" -PassThru -NoNewWindow
 
-# Register cleanup handler
-Register-EngineEvent PowerShell.Exiting -Action {
-    Show-DevUrls
-}
+# Wait a moment for app to start and show initial messages
+Start-Sleep -Seconds 5
 
-# Start the application
-& {
-    npm run start
-    # Display URLs after app starts (if it exits normally)
-    Show-DevUrls
+# Display final URLs for easy copy/paste
+Write-Output ""
+Write-Output "=== READY FOR DEVELOPMENT ==="
+Write-Output ""
+Write-Output ">>> Update Discord webhook at:"
+Write-Output "https://discord.com/developers/applications/1328366050848411658/information"
+Write-Output ""
+Write-Output ">>> DISCORD WEBHOOK URL (copy this):"
+Write-Output "$ngrokUrl/interactions"
+Write-Output ""
+
+# Wait for the npm process to complete
+if ($npmProcess -and !$npmProcess.HasExited) {
+    $npmProcess.WaitForExit()
 }
