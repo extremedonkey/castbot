@@ -3302,6 +3302,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     } else if (custom_id === 'select_target_channel' || custom_id === 'select_application_category' || custom_id === 'select_button_style') {
       try {
         console.log('Processing application configuration selection:', custom_id);
+        console.log('Raw data received:', JSON.stringify(data, null, 2));
         
         const guildId = req.body.guild_id;
         const userId = req.body.member.user.id;
@@ -3511,13 +3512,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             statusText += 'Please complete the remaining selections below:';
           }
           
+          const responseData = {
+            components: remainingComponents,
+            flags: InteractionResponseFlags.EPHEMERAL
+          };
+
+          if (useComponentsV2) {
+            // Components v2: Use flag, no content field
+            responseData.flags |= (1 << 15); // Add IS_COMPONENTS_V2 flag
+            // Note: Should use Text Display component instead of content in full v2 implementation
+          } else {
+            // Traditional: Use content field
+            responseData.content = statusText;
+          }
+
           return res.send({
             type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              content: statusText,
-              components: remainingComponents,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
+            data: responseData
           });
         }
 
