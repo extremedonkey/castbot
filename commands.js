@@ -38,6 +38,20 @@ const CASTLIST_COMMAND = {
 	]
 };
 
+const CASTLIST2_COMMAND = {
+	name: maybePrependDev('castlist2'),
+	description: 'Display the dynamic castlist with Components V2 (modern layout)',
+	type: 1,
+	options: [
+		{
+			name: 'castlist',
+			description: 'Select which castlist to display (if left blank, will display default castlist)',
+			type: 3, // STRING type
+			required: false
+		}
+	]
+};
+
 const CASTLIST_SMALL_COMMAND = {
 	name: maybePrependDev('castlist_small'),
 	description: 'Display a condensed version of the dynamic castlist',
@@ -333,6 +347,7 @@ const ALL_COMMANDS = [
 	CLEAR_TRIBE_COMMAND,     
 	SET_TRIBE_COMMAND,   
 	CASTLIST_COMMAND,
+	CASTLIST2_COMMAND,
 	CASTLIST_SMALL_COMMAND,
 	MENU_COMMAND,
 	PROD_MENU_COMMAND,
