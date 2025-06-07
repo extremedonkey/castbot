@@ -76,8 +76,8 @@ async function deployCommands() {
         console.log('Registering dev commands to guild...');
         const devCommands = ALL_COMMANDS.map(cmd => ({
           ...cmd,
-          name: `dev_${cmd.name}`,
-          default_member_permissions: null
+          name: `dev_${cmd.name}`
+          // Preserve original permissions for dev commands too
         }));
 
         await rateLimitAwareRequest(`applications/${appId}/guilds/${devGuildId}/commands`, {
@@ -95,7 +95,7 @@ async function deployCommands() {
       method: 'PUT',
       body: ALL_COMMANDS.map(cmd => ({
         ...cmd,
-        default_member_permissions: null,
+        // Only set dm_permission to false, preserve original permissions
         dm_permission: false
       })),
     });

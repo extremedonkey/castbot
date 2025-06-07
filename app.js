@@ -701,16 +701,31 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return;
     }
 
-    // Get the current tribe to display
-    const currentTribe = tribes[currentTribePage];
-    console.log(`Processing tribe: ${currentTribe.name || 'Unknown'}`);
+    // Get the current tribe to display (with error handling for missing roles)
+    let currentTribe = tribes[currentTribePage];
+    let role = await fullGuild.roles.fetch(currentTribe.roleId);
     
-    // Get members for this tribe
-    const role = await fullGuild.roles.fetch(currentTribe.roleId);
     if (!role) {
-      console.warn(`Role not found for tribe ${currentTribe.name}`);
-      throw new Error(`Tribe role not found: ${currentTribe.roleId}`);
+      console.warn(`Role not found for tribe ${currentTribe.name}, finding valid alternative...`);
+      // Find first valid tribe with existing role
+      const validTribes = [];
+      for (const tribe of tribes) {
+        const testRole = await fullGuild.roles.fetch(tribe.roleId);
+        if (testRole) {
+          validTribes.push(tribe);
+        }
+      }
+      
+      if (validTribes.length === 0) {
+        return followUp(`No valid tribes found. Some tribe roles may have been deleted. Please use \`/add_tribe\` to set up tribes again.`);
+      }
+      
+      // Use first valid tribe instead
+      currentTribe = validTribes[0];
+      role = await fullGuild.roles.fetch(currentTribe.roleId);
     }
+    
+    console.log(`Processing tribe: ${currentTribe.name || role.name}`);
 
     const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
     console.log(`Found ${tribeMembers.size} members in ${role.name}`);
