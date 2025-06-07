@@ -3382,56 +3382,74 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         // Check if all required selections are made for auto-creation
         if (tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle) {
-          // All selections complete, create the final configuration and button
-          const guild = await client.guilds.fetch(guildId);
-          const targetChannel = await guild.channels.fetch(tempConfig.targetChannelId);
-          const category = await guild.channels.fetch(tempConfig.categoryId);
-          
-          // Generate a unique config ID
-          const finalConfigId = `config_${Date.now()}_${userId}`;
-          
-          // Create final configuration
-          const finalConfig = {
-            buttonText: tempConfig.buttonText,
-            explanatoryText: tempConfig.explanatoryText,
-            channelFormat: tempConfig.channelFormat,
-            targetChannelId: tempConfig.targetChannelId,
-            categoryId: tempConfig.categoryId,
-            buttonStyle: tempConfig.buttonStyle,
-            createdBy: userId,
-            stage: 'active'
-          };
-          
-          // Save the final configuration
-          await saveApplicationConfig(guildId, finalConfigId, finalConfig);
-          
-          // Create the application button
-          const button = createApplicationButton(tempConfig.buttonText, finalConfigId);
-          button.setStyle(BUTTON_STYLES[tempConfig.buttonStyle]);
-          
-          const row = new ActionRowBuilder().addComponents(button);
-          
-          // Post the button to the target channel
-          await targetChannel.send({
-            content: tempConfig.explanatoryText,
-            components: [row]
-          });
-          
-          // Clean up temporary config
-          const freshPlayerData = await loadPlayerData();
-          if (freshPlayerData[guildId]?.applicationConfigs?.[tempConfigId]) {
-            delete freshPlayerData[guildId].applicationConfigs[tempConfigId];
-            await savePlayerData(freshPlayerData);
-          }
-          
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              content: `✅ Application button successfully created in ${targetChannel}!\n\n**Button Text:** "${tempConfig.buttonText}"\n**Style:** ${tempConfig.buttonStyle}\n**Category:** ${category.name}`,
-              components: [],
-              flags: InteractionResponseFlags.EPHEMERAL
+          console.log('All 3 selections complete, creating application button...');
+          try {
+            // All selections complete, create the final configuration and button
+            const guild = await client.guilds.fetch(guildId);
+            const targetChannel = await guild.channels.fetch(tempConfig.targetChannelId);
+            const category = await guild.channels.fetch(tempConfig.categoryId);
+            
+            // Generate a unique config ID
+            const finalConfigId = `config_${Date.now()}_${userId}`;
+            
+            // Create final configuration
+            const finalConfig = {
+              buttonText: tempConfig.buttonText,
+              explanatoryText: tempConfig.explanatoryText,
+              channelFormat: tempConfig.channelFormat,
+              targetChannelId: tempConfig.targetChannelId,
+              categoryId: tempConfig.categoryId,
+              buttonStyle: tempConfig.buttonStyle,
+              createdBy: userId,
+              stage: 'active'
+            };
+            
+            console.log('Saving final configuration...');
+            // Save the final configuration
+            await saveApplicationConfig(guildId, finalConfigId, finalConfig);
+            
+            console.log('Creating application button...');
+            // Create the application button
+            const button = createApplicationButton(tempConfig.buttonText, finalConfigId);
+            button.setStyle(BUTTON_STYLES[tempConfig.buttonStyle]);
+            
+            const row = new ActionRowBuilder().addComponents(button);
+            
+            console.log('Posting button to target channel...');
+            // Post the button to the target channel
+            await targetChannel.send({
+              content: tempConfig.explanatoryText,
+              components: [row]
+            });
+            
+            console.log('Cleaning up temporary config...');
+            // Clean up temporary config
+            const freshPlayerData = await loadPlayerData();
+            if (freshPlayerData[guildId]?.applicationConfigs?.[tempConfigId]) {
+              delete freshPlayerData[guildId].applicationConfigs[tempConfigId];
+              await savePlayerData(freshPlayerData);
             }
-          });
+            
+            console.log('Sending success response...');
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                content: `✅ Application button successfully created in ${targetChannel}!\n\n**Button Text:** "${tempConfig.buttonText}"\n**Style:** ${tempConfig.buttonStyle}\n**Category:** ${category.name}`,
+                components: [],
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          } catch (autoCreateError) {
+            console.error('Error in auto-creation:', autoCreateError);
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                content: `❌ Error creating application button: ${autoCreateError.message}`,
+                components: [],
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
         } else {
           // Show current status with all selection components (already saved above)
           
@@ -3446,11 +3464,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Create ALL selection components (keep them visible)
           const allComponents = [];
           
-          // Always show channel select (persistent)
+          // Always show channel select (persistent) with updated placeholder
           if (useComponentsV2) {
+            const channelPlaceholder = tempConfig.targetChannelId 
+              ? `✅ Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` 
+              : 'Select channel to post your app button in';
+            
             const channelSelect = new ChannelSelectMenuBuilder()
               .setCustomId('select_target_channel')
-              .setPlaceholder('Select channel to post your app button in')
+              .setPlaceholder(channelPlaceholder)
               .setChannelTypes([ChannelType.GuildText])
               .setMinValues(1)
               .setMaxValues(1);
@@ -3476,15 +3498,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             allComponents.push(new ActionRowBuilder().addComponents(channelSelect));
           }
           
-          // Always show category select (even if already selected)
+          // Always show category select with updated placeholder
           const categories = guild.channels.cache
             .filter(channel => channel.type === ChannelType.GuildCategory)
             .sort((a, b) => a.position - b.position)
             .first(25);
           
+          const categoryPlaceholder = tempConfig.categoryId 
+            ? `✅ Selected: ${(await guild.channels.fetch(tempConfig.categoryId)).name}` 
+            : 'Select the category new apps will be added to';
+          
           const categorySelect = new StringSelectMenuBuilder()
             .setCustomId('select_application_category')
-            .setPlaceholder('Select the category new apps will be added to')
+            .setPlaceholder(categoryPlaceholder)
             .setMinValues(1)
             .setMaxValues(1)
             .addOptions(
@@ -3496,10 +3522,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             );
           allComponents.push(new ActionRowBuilder().addComponents(categorySelect));
           
-          // Always show button style select (even if already selected)
+          // Always show button style select with updated placeholder
+          const stylePlaceholder = tempConfig.buttonStyle 
+            ? `✅ Selected: ${tempConfig.buttonStyle}` 
+            : 'Select app button color/style';
+          
           const styleSelect = new StringSelectMenuBuilder()
             .setCustomId('select_button_style')
-            .setPlaceholder('Select app button color/style')
+            .setPlaceholder(stylePlaceholder)
             .setMinValues(1)
             .setMaxValues(1)
             .addOptions([
