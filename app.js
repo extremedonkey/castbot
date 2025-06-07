@@ -251,7 +251,7 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     showPlayerEmojis: showPlayerEmojisOption?.value !== false  // Default to true, only false if explicitly set to false
   };
 
-  // Handle color if provided
+  // Handle color if provided, or use role color as fallback
   let colorMessage = "";
   if (colorOption?.value) {
     const colorRegex = /^#?([0-9A-Fa-f]{6})$/;
@@ -265,6 +265,11 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     } else {
       colorMessage = " Invalid color entered - you must enter it as a 6 digit hexadecimal (e.g. #FFFFFF)";
     }
+  } else if (role.color && role.color !== 0) {
+    // Use role color if no custom color provided and role has a color
+    const roleColorHex = `#${role.color.toString(16).padStart(6, '0')}`;
+    data[guildId].tribes[roleId].color = roleColorHex;
+    colorMessage = ` (using role color ${roleColorHex})`;
   }
 
   // Save the tribe data first - this ensures the tribe is created even if emoji creation fails
@@ -713,10 +718,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     let tribeSection;
     
     if (tribeMembers.size === 0) {
+      // Convert hex color to integer if needed
+      let accentColor = 0x7ED321; // Default green
+      if (currentTribe.color) {
+        if (typeof currentTribe.color === 'string' && currentTribe.color.startsWith('#')) {
+          // Convert hex string to integer
+          accentColor = parseInt(currentTribe.color.slice(1), 16);
+        } else if (typeof currentTribe.color === 'number') {
+          accentColor = currentTribe.color;
+        }
+      }
+
       // Create empty tribe container
       tribeSection = {
         type: 17, // Container
-        accent_color: currentTribe.color || 0x7ED321,
+        accent_color: accentColor,
         components: [
           {
             type: 10, // Text Display
@@ -3800,10 +3816,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         let tribeSection;
         
         if (tribeMembers.size === 0) {
+          // Convert hex color to integer if needed
+          let accentColor = 0x7ED321; // Default green
+          if (currentTribe.color) {
+            if (typeof currentTribe.color === 'string' && currentTribe.color.startsWith('#')) {
+              // Convert hex string to integer
+              accentColor = parseInt(currentTribe.color.slice(1), 16);
+            } else if (typeof currentTribe.color === 'number') {
+              accentColor = currentTribe.color;
+            }
+          }
+
           // Create empty tribe container
           tribeSection = {
             type: 17, // Container
-            accent_color: currentTribe.color || 0x7ED321,
+            accent_color: accentColor,
             components: [
               {
                 type: 10, // Text Display

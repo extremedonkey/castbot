@@ -141,9 +141,20 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         }
     }
     
+    // Convert hex color to integer if needed
+    let accentColor = 0x7ED321; // Default green
+    if (tribe.color) {
+        if (typeof tribe.color === 'string' && tribe.color.startsWith('#')) {
+            // Convert hex string to integer
+            accentColor = parseInt(tribe.color.slice(1), 16);
+        } else if (typeof tribe.color === 'number') {
+            accentColor = tribe.color;
+        }
+    }
+
     return {
         type: 17, // Container
-        accent_color: tribe.color || 0x7ED321,
+        accent_color: accentColor,
         components: [
             tribeHeader,
             ...playerCards
