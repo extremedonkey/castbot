@@ -48,7 +48,6 @@ import {
   createApplicationButton,
   BUTTON_STYLES
 } from './applicationManager.js';
-import { useComponentsV2 } from './config.js';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import { Readable } from 'stream';
@@ -3315,7 +3314,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const guildId = req.body.guild_id;
         const userId = req.body.member.user.id;
         
-        // Handle both Components v1 and v2 data formats
+        // Get selected value from Components v2
         let selectedValue;
         if (!data.values || data.values.length === 0) {
           console.error('No values found in component data');
@@ -3328,15 +3327,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
         
-        if (useComponentsV2 && custom_id === 'select_target_channel') {
-          // Components v2: Native channel select - values array contains channel ID
-          selectedValue = data.values[0];
-          console.log('Components v2 channel selected:', selectedValue);
-        } else {
-          // Components v1: Traditional string select
-          selectedValue = data.values[0];
-          console.log('Traditional select chosen:', selectedValue);
-        }
+        selectedValue = data.values[0];
+        console.log('Selected value:', selectedValue);
         
         // Find the temporary config for this user
         const playerData = await loadPlayerData();
@@ -3458,52 +3450,24 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             });
           }
         } else {
-          // Show current status with all selection components (already saved above)
-          
+          // Show selection components for remaining choices
           const guild = await client.guilds.fetch(guildId);
-          let statusText = '# Set Up Your Season Application Process\n\n';
-          statusText += `**Button Text:** "${tempConfig.buttonText}"\n`;
-          statusText += `**Channel Format:** \`${tempConfig.channelFormat}\`\n\n`;
-          statusText += `${tempConfig.targetChannelId ? '✅' : '❌'} Target Channel: ${tempConfig.targetChannelId ? `<#${tempConfig.targetChannelId}>` : 'Not selected'}\n`;
-          statusText += `${tempConfig.categoryId ? '✅' : '❌'} Category: ${tempConfig.categoryId ? (await guild.channels.fetch(tempConfig.categoryId)).name : 'Not selected'}\n`;
-          statusText += `${tempConfig.buttonStyle ? '✅' : '❌'} Button Style: ${tempConfig.buttonStyle || 'Not selected'}\n\n`;
           
           // Create ALL selection components (keep them visible)
           const allComponents = [];
           
-          // Always show channel select (persistent) with updated placeholder
-          if (useComponentsV2) {
-            const channelPlaceholder = tempConfig.targetChannelId 
-              ? `✅ Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` 
-              : 'Select channel to post your app button in';
-            
-            const channelSelect = new ChannelSelectMenuBuilder()
-              .setCustomId('select_target_channel')
-              .setPlaceholder(channelPlaceholder)
-              .setChannelTypes([ChannelType.GuildText])
-              .setMinValues(1)
-              .setMaxValues(1);
-            allComponents.push(new ActionRowBuilder().addComponents(channelSelect));
-          } else {
-            const textChannels = guild.channels.cache
-              .filter(channel => channel.type === ChannelType.GuildText)
-              .sort((a, b) => a.position - b.position)
-              .first(25);
-            
-            const channelSelect = new StringSelectMenuBuilder()
-              .setCustomId('select_target_channel')
-              .setPlaceholder('Select channel to post your app button in')
-              .setMinValues(1)
-              .setMaxValues(1)
-              .addOptions(
-                textChannels.map(channel => ({
-                  label: `#${channel.name}`,
-                  description: channel.topic ? channel.topic.substring(0, 100) : `Channel in ${channel.parent ? channel.parent.name : 'No Category'}`,
-                  value: channel.id
-                }))
-              );
-            allComponents.push(new ActionRowBuilder().addComponents(channelSelect));
-          }
+          // Components v2: Native channel select with updated placeholder
+          const channelPlaceholder = tempConfig.targetChannelId 
+            ? `✅ Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` 
+            : 'Select channel to post your app button in';
+          
+          const channelSelect = new ChannelSelectMenuBuilder()
+            .setCustomId('select_target_channel')
+            .setPlaceholder(channelPlaceholder)
+            .setChannelTypes([ChannelType.GuildText])
+            .setMinValues(1)
+            .setMaxValues(1);
+          allComponents.push(new ActionRowBuilder().addComponents(channelSelect));
           
           // Always show category select with updated placeholder
           const categories = guild.channels.cache
@@ -3567,7 +3531,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           console.log('Components v2 mode - auto-creation when all 3 selections complete');
           
           const responseData = {
-            content: statusText,
             components: allComponents,
             flags: InteractionResponseFlags.EPHEMERAL
           };

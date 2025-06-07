@@ -4,9 +4,6 @@
 // Development vs Production detection
 export const isDevelopment = process.env.PRODUCTION !== 'TRUE';
 
-// Use Components v2 for native channel select
-export const useComponentsV2 = process.env.USE_COMPONENTS_V2 === 'true';
-
 // Discord API configuration
 export const discordConfig = {
     token: process.env.DISCORD_TOKEN,
@@ -17,6 +14,5 @@ export const discordConfig = {
 
 export default {
     isDevelopment,
-    useComponentsV2,
     discordConfig
 };

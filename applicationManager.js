@@ -14,7 +14,6 @@ import {
 } from 'discord.js';
 import { InteractionResponseFlags } from 'discord-interactions';
 import { loadPlayerData, savePlayerData } from './storage.js';
-import { useComponentsV2 } from './config.js';
 
 /**
  * Application Management Module for CastBot
@@ -120,32 +119,15 @@ function createApplicationButtonModal() {
 }
 
 /**
- * Create the channel selection component
+ * Create Components v2 native channel select menu
  */
-function createChannelSelectMenu(channels) {
-    if (useComponentsV2) {
-        // Components v2: Native channel select
-        return new ChannelSelectMenuBuilder()
-            .setCustomId('select_target_channel')
-            .setPlaceholder('Select channel to post your app button in')
-            .setChannelTypes([ChannelType.GuildText])
-            .setMinValues(1)
-            .setMaxValues(1);
-    } else {
-        // Traditional: String select
-        return new StringSelectMenuBuilder()
-            .setCustomId('select_target_channel')
-            .setPlaceholder('Select channel to post your app button in')
-            .setMinValues(1)
-            .setMaxValues(1)
-            .addOptions(
-                channels.map(channel => ({
-                    label: `#${channel.name}`,
-                    description: channel.topic ? channel.topic.substring(0, 100) : `Channel in ${channel.parent ? channel.parent.name : 'No Category'}`,
-                    value: channel.id
-                }))
-            );
-    }
+function createChannelSelectMenu() {
+    return new ChannelSelectMenuBuilder()
+        .setCustomId('select_target_channel')
+        .setPlaceholder('Select channel to post your app button in')
+        .setChannelTypes([ChannelType.GuildText])
+        .setMinValues(1)
+        .setMaxValues(1);
 }
 
 /**
@@ -302,21 +284,6 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             };
         }
 
-        // Get text channels for selection (only needed for traditional mode)
-        let textChannels = [];
-        if (!useComponentsV2) {
-            textChannels = guild.channels.cache
-                .filter(channel => channel.type === ChannelType.GuildText)
-                .sort((a, b) => a.position - b.position) // Use server order
-                .first(25); // Discord select menu limit is 25
-
-            if (textChannels.length === 0) {
-                return {
-                    success: false,
-                    error: 'No text channels available for button placement'
-                };
-            }
-        }
 
         // Get categories for selection - use server order (position)
         const categories = guild.channels.cache
@@ -356,7 +323,7 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         await saveApplicationConfig(guild.id, tempConfigId, tempConfig);
 
         // Create selection components
-        const channelSelect = createChannelSelectMenu(textChannels);
+        const channelSelect = createChannelSelectMenu();
         const categorySelect = createCategorySelectMenu(categories);
         const styleSelect = createButtonStyleSelectMenu();
 
@@ -368,9 +335,8 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             components: [channelRow, categoryRow, styleRow]
         };
 
-        // Use standard EPHEMERAL flag and content for all modes
+        // Components v2: No content needed, just ephemeral flags
         responseData.flags = InteractionResponseFlags.EPHEMERAL;
-        responseData.content = `# Set Up Your Season Application Process\n\n**Button Text:** "${buttonText}"\n**Channel Format:** \`${channelFormat}\`\n\nPlease complete all selections below:`;
 
         return {
             success: true,
