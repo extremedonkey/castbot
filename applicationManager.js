@@ -126,7 +126,7 @@ function createChannelSelectMenu(channels) {
         // Components v2: Native channel select
         return new ChannelSelectMenuBuilder()
             .setCustomId('select_target_channel')
-            .setPlaceholder('Select the channel to post your application button in.')
+            .setPlaceholder('Select channel to post your app button in')
             .setChannelTypes([ChannelType.GuildText])
             .setMinValues(1)
             .setMaxValues(1);
@@ -134,7 +134,7 @@ function createChannelSelectMenu(channels) {
         // Traditional: Manual string select
         return new StringSelectMenuBuilder()
             .setCustomId('select_target_channel')
-            .setPlaceholder('Select the channel to post your application button in.')
+            .setPlaceholder('Select channel to post your app button in')
             .setMinValues(1)
             .setMaxValues(1)
             .addOptions(
@@ -153,7 +153,7 @@ function createChannelSelectMenu(channels) {
 function createCategorySelectMenu(categories) {
     return new StringSelectMenuBuilder()
         .setCustomId('select_application_category')
-        .setPlaceholder('Select the category new apps will be added to.')
+        .setPlaceholder('Select the category new apps will be added to')
         .setMinValues(1)
         .setMaxValues(1)
         .addOptions(
@@ -171,7 +171,7 @@ function createCategorySelectMenu(categories) {
 function createButtonStyleSelectMenu() {
     return new StringSelectMenuBuilder()
         .setCustomId('select_button_style')
-        .setPlaceholder('Select button color/style')
+        .setPlaceholder('Select app button color/style')
         .setMinValues(1)
         .setMaxValues(1)
         .addOptions([

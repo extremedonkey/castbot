@@ -21,6 +21,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
   StringSelectMenuBuilder,
+  ChannelSelectMenuBuilder,
   ComponentType,
   ChannelType
 } from 'discord.js';
@@ -3547,7 +3548,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               .setCustomId('select_target_channel')
               .setPlaceholder(tempConfig.targetChannelId ? 
                 `Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` : 
-                'Select the channel to post your application button in.')
+                'Select channel to post your app button in')
               .setChannelTypes([ChannelType.GuildText])
               .setMinValues(1)
               .setMaxValues(1);
@@ -3562,7 +3563,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               .setCustomId('select_target_channel')
               .setPlaceholder(tempConfig.targetChannelId ? 
                 `Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` : 
-                'Select the channel to post your application button in.')
+                'Select channel to post your app button in')
               .setMinValues(1)
               .setMaxValues(1)
               .addOptions(
@@ -3585,7 +3586,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             .setCustomId('select_application_category')
             .setPlaceholder(tempConfig.categoryId ? 
               `Selected: ${(await guild.channels.fetch(tempConfig.categoryId)).name}` : 
-              'Select the category new apps will be added to.')
+              'Select the category new apps will be added to')
             .setMinValues(1)
             .setMaxValues(1)
             .addOptions(
@@ -3602,7 +3603,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             .setCustomId('select_button_style')
             .setPlaceholder(tempConfig.buttonStyle ? 
               `Selected: ${tempConfig.buttonStyle}` : 
-              'Select button color/style')
+              'Select app button color/style')
             .setMinValues(1)
             .setMaxValues(1)
             .addOptions([
