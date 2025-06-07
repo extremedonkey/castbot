@@ -355,15 +355,8 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             ephemeral: true
         };
 
-        if (useComponentsV2) {
-            // Components v2: Use flag and no content field
-            responseData.flags = (1 << 15); // IS_COMPONENTS_V2
-            // Note: In Components v2, we'd need to use Text Display component instead of content
-            // For now, just use components without content text
-        } else {
-            // Traditional: Use content field
-            responseData.content = `# Set Up Your Season Application Process\n\n**Button Text:** "${buttonText}"\n**Channel Format:** \`${channelFormat}\`\n\nPlease complete all selections below:`;
-        }
+        // Always use traditional mode for better compatibility
+        responseData.content = `# Set Up Your Season Application Process\n\n**Button Text:** "${buttonText}"\n**Channel Format:** \`${channelFormat}\`\n\nPlease complete all selections below:`;
 
         return {
             success: true,

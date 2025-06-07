@@ -3544,9 +3544,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             
             const channelSelect = new StringSelectMenuBuilder()
               .setCustomId('select_target_channel')
-              .setPlaceholder(tempConfig.targetChannelId ? 
-                `Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` : 
-                'Select channel to post your app button in')
+              .setPlaceholder('Select channel to post your app button in')
               .setMinValues(1)
               .setMaxValues(1)
               .addOptions(
@@ -3567,9 +3565,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           const categorySelect = new StringSelectMenuBuilder()
             .setCustomId('select_application_category')
-            .setPlaceholder(tempConfig.categoryId ? 
-              `Selected: ${(await guild.channels.fetch(tempConfig.categoryId)).name}` : 
-              'Select the category new apps will be added to')
+            .setPlaceholder('Select the category new apps will be added to')
             .setMinValues(1)
             .setMaxValues(1)
             .addOptions(
@@ -3584,9 +3580,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Always show button style select (even if already selected)
           const styleSelect = new StringSelectMenuBuilder()
             .setCustomId('select_button_style')
-            .setPlaceholder(tempConfig.buttonStyle ? 
-              `Selected: ${tempConfig.buttonStyle}` : 
-              'Select app button color/style')
+            .setPlaceholder('Select app button color/style')
             .setMinValues(1)
             .setMaxValues(1)
             .addOptions([
