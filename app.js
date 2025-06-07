@@ -368,7 +368,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     console.log(`Received command: ${rawName}`);
 
     // Update the readOnlyCommands array to use new command names
-    const readOnlyCommands = ['castlist', 'castlist_small', 'getting_started', 'player_set_age', 'player_set_pronouns','player_set_timezone', 'menu'];  // Updated from set_age
+    const readOnlyCommands = ['castlist', 'castlist2', 'castlist_small', 'getting_started', 'player_set_age', 'player_set_pronouns','player_set_timezone', 'menu'];  // Updated from set_age
     if (!readOnlyCommands.includes(name)) {
       const hasPerms = await hasRequiredPermissions(req.body.guild_id, req.body.member.user.id);
       if (!hasPerms) {
