@@ -3255,10 +3255,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const member = await guild.members.fetch(userId);
         
         // Get the application configuration
+        console.log('Looking for application config:', configId, 'in guild:', guildId);
         const config = await getApplicationConfig(guildId, configId);
+        console.log('Found config:', config ? 'Yes' : 'No');
         
         if (!config) {
           console.error(`Application config not found: ${configId} in guild: ${guildId}`);
+          
+          // Debug: List all available configs
+          const playerData = await loadPlayerData();
+          const allConfigs = playerData[guildId]?.applicationConfigs || {};
+          console.log('Available configs:', Object.keys(allConfigs));
           
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
