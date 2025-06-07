@@ -85,7 +85,7 @@ function createApplicationButtonModal() {
     const buttonTextInput = new TextInputBuilder()
         .setCustomId('button_text')
         .setLabel('Button Text')
-        .setPlaceholder('e.g., "Apply for Season 45"')
+        .setPlaceholder('e.g., "Apply to Season 3!"')
         .setStyle(TextInputStyle.Short)
         .setRequired(true)
         .setMaxLength(80);
@@ -94,7 +94,7 @@ function createApplicationButtonModal() {
     const explanatoryTextInput = new TextInputBuilder()
         .setCustomId('explanatory_text')
         .setLabel('Explanatory Text')
-        .setPlaceholder('Text to display above the button')
+        .setPlaceholder('Give your applicants some information about the season. This will display above the apply button.')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(2000);
@@ -126,7 +126,7 @@ function createChannelSelectMenu(channels) {
         // Components v2: Native channel select
         return new ChannelSelectMenuBuilder()
             .setCustomId('select_target_channel')
-            .setPlaceholder('Select channel to post the button')
+            .setPlaceholder('Select the channel to post your application button in.')
             .setChannelTypes([ChannelType.GuildText])
             .setMinValues(1)
             .setMaxValues(1);
@@ -134,7 +134,7 @@ function createChannelSelectMenu(channels) {
         // Traditional: Manual string select
         return new StringSelectMenuBuilder()
             .setCustomId('select_target_channel')
-            .setPlaceholder('Select channel to post the button')
+            .setPlaceholder('Select the channel to post your application button in.')
             .setMinValues(1)
             .setMaxValues(1)
             .addOptions(
@@ -153,7 +153,7 @@ function createChannelSelectMenu(channels) {
 function createCategorySelectMenu(categories) {
     return new StringSelectMenuBuilder()
         .setCustomId('select_application_category')
-        .setPlaceholder('Select category for application channels')
+        .setPlaceholder('Select the category new apps will be added to.')
         .setMinValues(1)
         .setMaxValues(1)
         .addOptions(
@@ -362,7 +362,7 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             // For now, just use components without content text
         } else {
             // Traditional: Use content field
-            responseData.content = `**Application Button Configuration**\n\nButton Text: "${buttonText}"\nChannel Format: \`${channelFormat}\`\n\nPlease select the options below:`;
+            responseData.content = `# Set Up Your Season Application Process\n\n**Button Text:** "${buttonText}"\n**Channel Format:** \`${channelFormat}\`\n\nPlease complete all selections below:`;
         }
 
         return {

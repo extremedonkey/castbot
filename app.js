@@ -3120,6 +3120,114 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         });
       }
+    } else if (custom_id === 'create_application_button') {
+      // Handle create application button click
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        
+        // Find the temporary config for this user
+        const playerData = await loadPlayerData();
+        const guildData = playerData[guildId];
+        
+        if (!guildData?.applicationConfigs) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Configuration session expired. Please run /apply_button again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Find the temp config for this user
+        const tempConfigId = Object.keys(guildData.applicationConfigs)
+          .find(id => id.startsWith(`temp_`) && id.includes(userId));
+        
+        if (!tempConfigId) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Configuration session not found. Please run /apply_button again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const tempConfig = guildData.applicationConfigs[tempConfigId];
+        
+        // Verify all selections are complete
+        if (!tempConfig.targetChannelId || !tempConfig.categoryId || !tempConfig.buttonStyle) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Please complete all selections before creating the button.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create the final configuration and button (reuse existing logic)
+        const guild = await client.guilds.fetch(guildId);
+        const targetChannel = await guild.channels.fetch(tempConfig.targetChannelId);
+        const category = await guild.channels.fetch(tempConfig.categoryId);
+        
+        // Generate a unique config ID
+        const finalConfigId = `config_${Date.now()}_${userId}`;
+        
+        // Create final configuration
+        const finalConfig = {
+          buttonText: tempConfig.buttonText,
+          explanatoryText: tempConfig.explanatoryText,
+          channelFormat: tempConfig.channelFormat,
+          targetChannelId: tempConfig.targetChannelId,
+          categoryId: tempConfig.categoryId,
+          buttonStyle: tempConfig.buttonStyle,
+          createdBy: userId,
+          stage: 'active'
+        };
+        
+        // Save the final configuration
+        await saveApplicationConfig(guildId, finalConfigId, finalConfig);
+        
+        // Create the application button
+        const button = createApplicationButton(tempConfig.buttonText, finalConfigId);
+        button.setStyle(BUTTON_STYLES[tempConfig.buttonStyle]);
+        
+        const row = new ActionRowBuilder().addComponents(button);
+        
+        // Post the button to the target channel
+        await targetChannel.send({
+          content: tempConfig.explanatoryText,
+          components: [row]
+        });
+        
+        // Clean up temporary config
+        const freshPlayerData = await loadPlayerData();
+        if (freshPlayerData[guildId]?.applicationConfigs?.[tempConfigId]) {
+          delete freshPlayerData[guildId].applicationConfigs[tempConfigId];
+          await savePlayerData(freshPlayerData);
+        }
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: `✅ Application button successfully created in ${targetChannel}!\n\n**Button Text:** "${tempConfig.buttonText}"\n**Style:** ${tempConfig.buttonStyle}\n**Category:** ${category.name}`,
+            components: [], // Remove all components
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling create_application_button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error creating application button.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'select_pronouns') {
       // Handle pronoun role selection
       try {
@@ -3419,29 +3527,42 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }
           });
         } else {
-          // Update temp config and show current status with remaining selection components
+          // Update temp config and show current status with all selection components
           await saveApplicationConfig(guildId, tempConfigId, tempConfig);
           
           const guild = await client.guilds.fetch(guildId);
-          let statusText = '**Application Button Configuration**\n\n';
-          statusText += `Button Text: "${tempConfig.buttonText}"\n`;
-          statusText += `Channel Format: \`${tempConfig.channelFormat}\`\n\n`;
+          let statusText = '# Set Up Your Season Application Process\n\n';
+          statusText += `**Button Text:** "${tempConfig.buttonText}"\n`;
+          statusText += `**Channel Format:** \`${tempConfig.channelFormat}\`\n\n`;
           statusText += `${tempConfig.targetChannelId ? '✅' : '❌'} Target Channel: ${tempConfig.targetChannelId ? `<#${tempConfig.targetChannelId}>` : 'Not selected'}\n`;
           statusText += `${tempConfig.categoryId ? '✅' : '❌'} Category: ${tempConfig.categoryId ? (await guild.channels.fetch(tempConfig.categoryId)).name : 'Not selected'}\n`;
           statusText += `${tempConfig.buttonStyle ? '✅' : '❌'} Button Style: ${tempConfig.buttonStyle || 'Not selected'}\n\n`;
           
-          // Create remaining selection components
-          const remainingComponents = [];
+          // Create ALL selection components (keep them visible)
+          const allComponents = [];
           
-          if (!tempConfig.targetChannelId) {
+          // Always show channel select (even if already selected)
+          if (useComponentsV2) {
+            const channelSelect = new ChannelSelectMenuBuilder()
+              .setCustomId('select_target_channel')
+              .setPlaceholder(tempConfig.targetChannelId ? 
+                `Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` : 
+                'Select the channel to post your application button in.')
+              .setChannelTypes([ChannelType.GuildText])
+              .setMinValues(1)
+              .setMaxValues(1);
+            allComponents.push(new ActionRowBuilder().addComponents(channelSelect));
+          } else {
             const textChannels = guild.channels.cache
               .filter(channel => channel.type === ChannelType.GuildText)
-              .sort((a, b) => a.position - b.position) // Use server order
+              .sort((a, b) => a.position - b.position)
               .first(25);
             
             const channelSelect = new StringSelectMenuBuilder()
               .setCustomId('select_target_channel')
-              .setPlaceholder('Select channel to post the button')
+              .setPlaceholder(tempConfig.targetChannelId ? 
+                `Selected: #${(await guild.channels.fetch(tempConfig.targetChannelId)).name}` : 
+                'Select the channel to post your application button in.')
               .setMinValues(1)
               .setMaxValues(1)
               .addOptions(
@@ -3451,69 +3572,75 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                   value: channel.id
                 }))
               );
-            remainingComponents.push(new ActionRowBuilder().addComponents(channelSelect));
+            allComponents.push(new ActionRowBuilder().addComponents(channelSelect));
           }
           
-          if (!tempConfig.categoryId) {
-            const categories = guild.channels.cache
-              .filter(channel => channel.type === ChannelType.GuildCategory)
-              .sort((a, b) => a.position - b.position) // Use server order
-              .first(25);
-            
-            const categorySelect = new StringSelectMenuBuilder()
-              .setCustomId('select_application_category')
-              .setPlaceholder('Select category for application channels')
-              .setMinValues(1)
-              .setMaxValues(1)
-              .addOptions(
-                categories.map(category => ({
-                  label: category.name,
-                  description: `${category.children.cache.size} channels`,
-                  value: category.id
-                }))
-              );
-            remainingComponents.push(new ActionRowBuilder().addComponents(categorySelect));
-          }
+          // Always show category select (even if already selected)
+          const categories = guild.channels.cache
+            .filter(channel => channel.type === ChannelType.GuildCategory)
+            .sort((a, b) => a.position - b.position)
+            .first(25);
           
-          if (!tempConfig.buttonStyle) {
-            console.log('Building button style select menu...');
-            const styleSelect = new StringSelectMenuBuilder()
-              .setCustomId('select_button_style')
-              .setPlaceholder('Select button color/style')
-              .setMinValues(1)
-              .setMaxValues(1)
-              .addOptions([
-                {
-                  label: 'Primary (Blue)',
-                  description: 'Blue button style',
-                  value: 'Primary'
-                },
-                {
-                  label: 'Secondary (Gray)',
-                  description: 'Gray button style',
-                  value: 'Secondary'
-                },
-                {
-                  label: 'Success (Green)',
-                  description: 'Green button style',
-                  value: 'Success'
-                },
-                {
-                  label: 'Danger (Red)',
-                  description: 'Red button style',
-                  value: 'Danger'
-                }
-              ]);
-            remainingComponents.push(new ActionRowBuilder().addComponents(styleSelect));
-            console.log('Added button style select to remaining components');
-          }
+          const categorySelect = new StringSelectMenuBuilder()
+            .setCustomId('select_application_category')
+            .setPlaceholder(tempConfig.categoryId ? 
+              `Selected: ${(await guild.channels.fetch(tempConfig.categoryId)).name}` : 
+              'Select the category new apps will be added to.')
+            .setMinValues(1)
+            .setMaxValues(1)
+            .addOptions(
+              categories.map(category => ({
+                label: category.name,
+                description: `${category.children.cache.size} channels`,
+                value: category.id
+              }))
+            );
+          allComponents.push(new ActionRowBuilder().addComponents(categorySelect));
           
-          if (remainingComponents.length > 0) {
-            statusText += 'Please complete the remaining selections below:';
-          }
+          // Always show button style select (even if already selected)
+          const styleSelect = new StringSelectMenuBuilder()
+            .setCustomId('select_button_style')
+            .setPlaceholder(tempConfig.buttonStyle ? 
+              `Selected: ${tempConfig.buttonStyle}` : 
+              'Select button color/style')
+            .setMinValues(1)
+            .setMaxValues(1)
+            .addOptions([
+              {
+                label: 'Primary (Blue)',
+                description: 'Blue button style',
+                value: 'Primary'
+              },
+              {
+                label: 'Secondary (Gray)',
+                description: 'Gray button style',
+                value: 'Secondary'
+              },
+              {
+                label: 'Success (Green)',
+                description: 'Green button style',
+                value: 'Success'
+              },
+              {
+                label: 'Danger (Red)',
+                description: 'Red button style',
+                value: 'Danger'
+              }
+            ]);
+          allComponents.push(new ActionRowBuilder().addComponents(styleSelect));
+          
+          // Add "Create Button" button (enabled/disabled based on completion)
+          const allSelected = tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle;
+          const createButton = new ButtonBuilder()
+            .setCustomId('create_application_button')
+            .setLabel(allSelected ? 'Create Application Button' : 'Complete all selections above')
+            .setStyle(allSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+            .setDisabled(!allSelected);
+          
+          allComponents.push(new ActionRowBuilder().addComponents(createButton));
           
           const responseData = {
-            components: remainingComponents,
+            components: allComponents,
             flags: InteractionResponseFlags.EPHEMERAL
           };
 
