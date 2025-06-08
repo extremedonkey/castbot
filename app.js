@@ -920,7 +920,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('🔥'),
       new ButtonBuilder()
-        .setCustomId('prod_help')
         .setLabel('Need Help?')
         .setStyle(ButtonStyle.Danger)
         .setEmoji('❓')
