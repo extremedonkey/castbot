@@ -342,11 +342,7 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     throw new Error(`Tribe not added - this tribe already exists in ${existingTribe[1].castlist}. You can only have each tribe in one castlist.`);
   }
 
-  // Calculate field count for this castlist
-  const totalFields = await calculateCastlistFields(guild, roleId, castlistName);
-  if (totalFields > 25) {
-    throw new Error('Cannot add tribe: Too many fields (maximum 25). Consider creating a new castlist.');
-  }
+  // Note: 25-field limit check moved to /castlist display for better v1/v2 compatibility
 
   // Update or add tribe
   data[guildId].tribes[roleId] = {
@@ -611,6 +607,43 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const omitSpacers = await shouldOmitSpacers(tribes, fullGuild);
     if (omitSpacers) {
       console.log('Omitting spacers to fit content within 25 field limit');
+    }
+
+    // Check if total fields would exceed 25 (moved from /add_tribe for v1/v2 compatibility)
+    let totalTribes = 0;
+    let totalPlayers = 0;
+    
+    for (const tribe of tribes) {
+      try {
+        const tribeRole = await fullGuild.roles.fetch(tribe.roleId);
+        if (!tribeRole) continue;
+        
+        totalTribes++;
+        const tribeMembers = members.filter(member => member.roles.cache.has(tribe.roleId));
+        totalPlayers += tribeMembers.size;
+      } catch (error) {
+        console.error(`Error counting fields for tribe ${tribe.roleId}:`, error);
+      }
+    }
+    
+    const totalFields = totalTribes + totalPlayers;
+    if (totalFields > 25) {
+      console.log(`Castlist v1 field limit exceeded: ${totalTribes} tribes + ${totalPlayers} players = ${totalFields} fields (max 25)`);
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          content: `You are trying to show too many players on your castlist at once. The maximum \`(number of tribes + number of players)\` must be 25 or less. Currently: \`${totalTribes} tribes + ${totalPlayers} players = ${totalFields} fields\`.
+
+To fix this:
+1) If you have any redundant / old tribes, remove them with \`/clear_tribe <@TribeRole>\`
+2) If you are running a season with a large number of players / tribes, you can split these off to custom castlists. Use \`/clear_tribe <@TribeRole>\` to clear one or more tribes, then use \`/add_tribe <@TribeRole>\` and then under the slash command options click 'castlist' and type in a custom name (such as the tribe name). You can then display that castlist using \`/castlist <customname>\`, and any players who are on that castlist will see that with \`/castlist\` instead of the default.
+
+**Tip:** Try using \`/castlist2\` which supports unlimited tribes with pagination!`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        },
+      });
+      return;
     }
 
     // Default color (in hex format)
