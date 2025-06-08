@@ -851,7 +851,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             .setCustomId('getting_started')
             .setLabel('Getting Started')
             .setStyle(ButtonStyle.Primary)
-            .setEmoji('🚀')
+            .setEmoji('🚀'),
+          new ButtonBuilder()
+            .setCustomId('setup_castbot')
+            .setLabel('Setup')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('⚙️')
         );
       
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -916,9 +921,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .setEmoji('🧑‍🤝‍🧑'),
         new ButtonBuilder()
           .setCustomId('setup_castbot')
-          .setLabel('Setup Pronoun + Timezone Roles')
+          .setLabel('Setup')
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji('💜'),
+          .setEmoji('⚙️'),
         new ButtonBuilder()
           .setCustomId('prod_timezone_react')
           .setLabel('Timezone React')
