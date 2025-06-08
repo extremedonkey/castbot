@@ -154,22 +154,25 @@ function reorderTribes(tribes, userId = null, strategy = "default") {
  * Creates a condensed player card section using Components V2 Section component
  * @param {Object} member - Discord guild member
  * @param {Object} playerData - Player data from storage (age, emoji, etc.)
- * @param {string} pronouns - Formatted pronouns string
- * @param {string} timezone - Formatted timezone string
- * @param {string} formattedTime - Current time in player's timezone
+ * @param {string} pronouns - Formatted pronouns string (empty if none)
+ * @param {string} timezone - Timezone role name (empty if none)
  * @param {boolean} showEmoji - Whether to display player emoji
  * @returns {Object} Player card section component
  */
-function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji) {
+function createPlayerCard(member, playerData, pronouns, timezone, showEmoji) {
     const displayName = capitalize(member.displayName);
-    const age = playerData?.age || 'Unknown';
+    const age = playerData?.age || '';
     const emoji = (showEmoji && playerData?.emojiCode) ? playerData.emojiCode : '';
     
-    // Combine all info into a single text component to save component count
+    // Combine all info, filtering out empty values
     const nameWithEmoji = emoji ? `${emoji} **${displayName}**` : `**${displayName}**`;
-    const basicInfo = `${pronouns} • ${age} • ${timezone}`;
-    const timeInfo = formattedTime ? `\`🕛 Local time 🕛\` ${formattedTime}` : '';
-    const allInfo = timeInfo ? `${nameWithEmoji}\n${basicInfo}\n${timeInfo}` : `${nameWithEmoji}\n${basicInfo}`;
+    
+    // Build info array and filter out empty values
+    const infoElements = [pronouns, age, timezone].filter(info => info && info.trim() !== '');
+    const basicInfo = infoElements.length > 0 ? infoElements.join(' • ') : '';
+    
+    // Combine name and info, only add newline if there's info to show
+    const allInfo = basicInfo ? `${nameWithEmoji}\n${basicInfo}` : nameWithEmoji;
 
     return {
         type: 9, // Section component
@@ -207,47 +210,31 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     // Determine if separators should be included
     const includeSeparators = scenario !== "no-separators";
     
-    // Create tribe header with page info for multi-page tribes
+    // Create tribe header with stylistic blockquote and page info
     const tribeHeaderText = `${tribe.emoji || ''} **${tribe.name}** ${tribe.emoji || ''}`.trim();
-    const paginationText = totalPages > 1 ? ` (${currentPage + 1}/${totalPages})` : '';
+    const paginationText = totalPages > 1 ? ` \`${currentPage + 1}/${totalPages}\`` : '';
     
     const tribeHeader = {
         type: 10, // Text Display
-        content: `# ${tribeHeaderText}${paginationText}`
+        content: `### > ${tribeHeaderText}${paginationText}`
     };
     
     const playerCards = [];
     
     // Process each member into individual Section components with inline thumbnails
     for (const member of pageMembers) {
-        // Get player pronouns
+        // Get player pronouns (hide if none)
         const memberPronouns = member.roles.cache
             .filter(role => pronounRoleIds.includes(role.id))
             .map(role => role.name)
-            .join(', ') || 'Unknown';
+            .join(', ') || '';
             
-        // Get player timezone and calculate current time
-        let memberTimezone = 'Unknown';
-        let formattedTime = '';
+        // Get player timezone role name (hide if none)
+        let memberTimezone = '';
         const timezoneRole = member.roles.cache.find(role => timezones[role.id]);
         
         if (timezoneRole) {
-            const offset = timezones[timezoneRole.id].offset;
-            memberTimezone = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
-            
-            // Calculate current time
-            try {
-                const now = new Date();
-                const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-                const targetTime = new Date(utcTime + (offset * 3600000));
-                formattedTime = targetTime.toLocaleTimeString('en-US', {
-                    hour12: true,
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } catch (error) {
-                formattedTime = '';
-            }
+            memberTimezone = timezoneRole.name; // Show role name instead of UTC offset
         }
         
         // Get player data from storage
@@ -259,7 +246,6 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             playerData, 
             memberPronouns, 
             memberTimezone,
-            formattedTime,
             false // Never show player emojis in castlist2
         );
         
@@ -438,10 +424,10 @@ async function processMemberData(member, pronounRoleIds, timezones, guildId) {
 function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = [], client = null) {
     const components = [];
     
-    // Large header text using markdown formatting
+    // Medium header text using markdown formatting
     const headerText = castlistName !== 'default' 
-        ? `# ${guild.name} ${castlistName} Castlist` 
-        : `# ${guild.name} Castlist`;
+        ? `## ${guild.name} ${castlistName} Castlist` 
+        : `## ${guild.name} Castlist`;
     
     components.push({
         type: 10, // Text Display
@@ -456,7 +442,7 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
     // Create clean CastBot ad (no image)
     const adComponent = {
         type: 10, // Text Display
-        content: '_Click on CastBot and \'+Add App\' to use in your ORG!_'
+        content: '_Click CastBot and \'+Add App\' to use in your ORG!_'
     };
 
     return {
