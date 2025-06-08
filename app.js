@@ -808,7 +808,10 @@ To fix this:
     const guild = await client.guilds.fetch(guildId);
     const fullGuild = await client.guilds.fetch(guildId, { force: true });
     await fullGuild.roles.fetch();
-    const members = await fullGuild.members.fetch();
+    
+    // Ensure member cache is fully populated (post-restart fix)
+    console.log(`Fetching members for guild ${fullGuild.name} (${fullGuild.memberCount} total)`);
+    const members = await fullGuild.members.fetch({ force: true });
 
     // Process tribes and gather member data
     const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
@@ -3854,7 +3857,16 @@ To fix this:
         
         // Use cached data where possible for better performance
         const roles = guild.roles.cache.size > 0 ? guild.roles.cache : await guild.roles.fetch();
-        const members = guild.members.cache.size > 0 ? guild.members.cache : await guild.members.fetch();
+        
+        // Force member refresh if cache appears stale (post-restart fix)
+        let members = guild.members.cache;
+        if (guild.members.cache.size === 0) {
+          console.log('Member cache empty (likely post-restart), forcing refresh...');
+          members = await guild.members.fetch();
+        } else if (guild.members.cache.size < guild.memberCount * 0.8) {
+          console.log(`Member cache appears incomplete (${guild.members.cache.size}/${guild.memberCount}), forcing refresh...`);
+          members = await guild.members.fetch();
+        }
 
         // Process tribes and gather member data
         const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
