@@ -921,7 +921,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         .setEmoji('🔥'),
       new ButtonBuilder()
         .setLabel('Need Help?')
-        .setStyle(ButtonStyle.Danger)
+        .setStyle(ButtonStyle.Link)
         .setEmoji('❓')
         .setURL('https://discord.gg/vJjUPS6zK9')
     ];
