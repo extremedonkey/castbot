@@ -3588,7 +3588,6 @@ To fix this:
         
         // Create string select with existing tribe roles (showing castlist names)
         const existingTribeRoles = Object.keys(tribes);
-        const guild = await client.guilds.fetch(guildId);
         
         // Build options with role names and castlist info
         const options = [];
