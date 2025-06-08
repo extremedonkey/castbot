@@ -6,7 +6,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.
 
-## LATEST DEVELOPMENT: CASTLIST V2 IMPLEMENTATION ✅
+## LATEST DEVELOPMENT: PRODUCTION MENU V2 IMPLEMENTATION ✅
+
+**Major Feature Addition: Complete Production Menu Redesign**
+- **New Multi-Level Interface**: `/prod_menu` now features comprehensive admin management with always-visible castlist and setup buttons
+- **Manage Pronouns/Timezones Submenu**: View/edit/react functionality with live role selection and Discord.js builder components
+- **Manage Tribes Submenu**: View/add/clear functionality with 3-step Add Tribe flow (role → castlist → emoji modal)
+- **Smart Component Handling**: All role selects now use proper Discord.js builders instead of raw components for better validation
+- **Single-Select Clear Tribe**: Intuitive tribe removal showing castlist context and proper selection logic
+- **Conditional Player Management**: Shows only when pronouns/timezones are configured
+- **Fixed Help Button**: Now links to correct Discord server (https://discord.gg/H7MpJEjkwT)
+
+**Implementation Highlights:**
+- **Role Select Menus**: Converted from raw Discord components to `RoleSelectMenuBuilder` with proper default values
+- **String Select Menus**: Used `StringSelectMenuBuilder` for castlist selection and tribe clearing
+- **Modal Submissions**: 3-step tribe addition flow with custom castlist name support
+- **Error Prevention**: Fixed duplicate variable declarations and component validation issues
+- **User Experience**: Clear tribe now shows role names with castlist context in selection menu
+
+## PREVIOUS DEVELOPMENT: CASTLIST V2 IMPLEMENTATION ✅
 
 **Major Feature Addition: Discord Components V2 Castlist System**
 - **New Command**: `/castlist2` - Modern castlist with inline thumbnails, player cards, and tribe-level pagination
@@ -15,12 +33,6 @@ CastBot has undergone a major optimization initiative that has been fully comple
 - **Performance Optimized**: 70-80% faster navigation through smart caching and reduced API calls
 - **User-First Ordering**: Shows tribes containing the user first in default castlists
 - **Mobile-Friendly UI**: Optimized button layout and page indicators for mobile viewing
-
-**Implementation Stats:**
-- **Total Development Cost**: $4.46 + castlist2 development costs
-- **Development Time**: 1h 52m for application system + extensive castlist2 work
-- **Code Changes**: Major additions to `castlistV2.js`, `app.js`, extensive button handler refactoring
-- **Token Usage**: Significant investment in claude-3-5-haiku and claude-sonnet models
 
 ## Development Commands
 
