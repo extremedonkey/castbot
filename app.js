@@ -1091,7 +1091,7 @@ To fix this:
       const castlistRow = new ActionRowBuilder()
         .addComponents(
           new ButtonBuilder()
-            .setCustomId('show_castlist_default')
+            .setCustomId('show_castlist2_default')
             .setLabel('Show Castlist')
             .setStyle(ButtonStyle.Primary)
             .setEmoji('📋')
@@ -1130,7 +1130,7 @@ To fix this:
         // Default castlist gets the primary blue button with 📋 emoji
         buttons.push(
           new ButtonBuilder()
-            .setCustomId('show_castlist_default')
+            .setCustomId('show_castlist2_default')
             .setLabel('Show Castlist')
             .setStyle(ButtonStyle.Primary)
             .setEmoji('📋')
@@ -1143,7 +1143,7 @@ To fix this:
         
         buttons.push(
           new ButtonBuilder()
-            .setCustomId(`show_castlist_${castlistName}`)
+            .setCustomId(`show_castlist2_${castlistName}`)
             .setLabel(`Show ${castlistName.charAt(0).toUpperCase() + castlistName.slice(1)}`)
             .setStyle(ButtonStyle.Secondary) // Grey button
             .setEmoji(emoji)
@@ -1289,17 +1289,9 @@ To fix this:
         // Default castlist gets the primary blue button with 📋 emoji
         buttons.push(
           new ButtonBuilder()
-            .setCustomId('show_castlist_default')
+            .setCustomId('show_castlist2_default')
             .setLabel('Show Castlist')
             .setStyle(ButtonStyle.Primary)
-            .setEmoji('📋')
-        );
-        // Add small castlist button right after default castlist
-        buttons.push(
-          new ButtonBuilder()
-            .setCustomId('show_castlist_small_default')
-            .setLabel('Show Castlist (Small)')
-            .setStyle(ButtonStyle.Secondary)
             .setEmoji('📋')
         );
       } else {
@@ -1310,7 +1302,7 @@ To fix this:
         
         buttons.push(
           new ButtonBuilder()
-            .setCustomId(`show_castlist_${castlistName}`)
+            .setCustomId(`show_castlist2_${castlistName}`)
             .setLabel(`Show ${castlistName.charAt(0).toUpperCase() + castlistName.slice(1)}`)
             .setStyle(ButtonStyle.Secondary) // Grey button
             .setEmoji(emoji)
@@ -2752,6 +2744,114 @@ To fix this:
             content: 'Error displaying castlist.',
             flags: InteractionResponseFlags.EPHEMERAL
           },
+        });
+      }
+      return;
+    } else if (custom_id.startsWith('show_castlist2')) {
+      // Extract castlist name from custom_id if present
+      const castlistMatch = custom_id.match(/^show_castlist2(?:_(.+))?$/);
+      const requestedCastlist = castlistMatch?.[1] || 'default';
+      
+      console.log('Button clicked, processing castlist2 for:', requestedCastlist);
+      
+      // Execute the exact same logic as the castlist2 command
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+
+        // Determine which castlist to show
+        const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
+        console.log(`Selected castlist: ${castlistToShow}`);
+
+        // Load initial tribe data
+        const rawTribes = await getGuildTribes(guildId, castlistToShow);
+        console.log('Loaded raw tribes:', JSON.stringify(rawTribes));
+
+        if (rawTribes.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              embeds: [{
+                title: 'CastBot: Dynamic Castlist',
+                description: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.',
+                color: 0x7ED321
+              }],
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Send deferred response
+        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+
+        const guild = await client.guilds.fetch(guildId);
+        const fullGuild = await client.guilds.fetch(guildId, { force: true });
+        await fullGuild.roles.fetch();
+        
+        // Ensure member cache is fully populated (post-restart fix)
+        console.log(`Fetching members for guild ${fullGuild.name} (${fullGuild.memberCount} total)`);
+        const members = await fullGuild.members.fetch({ force: true });
+
+        // Process tribes and gather member data
+        const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
+          const role = await fullGuild.roles.fetch(tribe.roleId);
+          if (!role) {
+            console.warn(`Role not found for tribe ${tribe.roleId}, skipping...`);
+            return null;
+          }
+          
+          const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
+          return {
+            ...tribe,
+            name: role.name,
+            memberCount: tribeMembers.size,
+            members: Array.from(tribeMembers.values())
+          };
+        }));
+
+        // Filter out tribes with missing roles
+        const validTribes = tribesWithMembers.filter(tribe => tribe !== null);
+        
+        if (validTribes.length === 0) {
+          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: {
+              content: 'No valid tribes found. Some tribe roles may have been deleted. Please use `/add_tribe` to set up tribes again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+          return;
+        }
+
+        // Apply user-first tribe ordering for default castlists
+        const orderedTribes = reorderTribes(validTribes, userId, "user-first", castlistToShow);
+
+        // Determine display scenario based on component calculations
+        const scenario = determineDisplayScenario(orderedTribes);
+        console.log(`Component scenario: ${scenario}`);
+
+        // Log component calculations for debugging
+        orderedTribes.forEach(tribe => {
+          const withSeparators = calculateComponentsForTribe(tribe.memberCount, true);
+          const withoutSeparators = calculateComponentsForTribe(tribe.memberCount, false);
+          console.log(`Tribe ${tribe.name}: ${tribe.memberCount} members = ${withSeparators} components (with separators), ${withoutSeparators} (without)`);
+        });
+
+        // Create navigation state for initial display (first tribe, first page)
+        const navigationState = createNavigationState(orderedTribes, scenario, 0, 0);
+        
+        await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState);
+
+      } catch (error) {
+        console.error('Error handling castlist2 button:', error);
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: `Error displaying Components V2 castlist: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
         });
       }
       return;
