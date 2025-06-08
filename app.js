@@ -3586,28 +3586,42 @@ To fix this:
           });
         }
         
-        // Create role select with existing tribe roles only
+        // Create string select with existing tribe roles (showing castlist names)
         const existingTribeRoles = Object.keys(tribes);
+        const guild = await client.guilds.fetch(guildId);
         
-        // Use Discord.js RoleSelectMenuBuilder for better compatibility
-        const roleSelect = new RoleSelectMenuBuilder()
-          .setCustomId('prod_clear_tribe_select')
-          .setPlaceholder('Select tribe roles to remove from castlist')
-          .setMinValues(1)
-          .setMaxValues(Math.min(existingTribeRoles.length, 25));
-        
-        // Set default values to show existing tribe roles
-        if (existingTribeRoles.length > 0) {
-          roleSelect.setDefaultRoles(existingTribeRoles);
+        // Build options with role names and castlist info
+        const options = [];
+        for (const roleId of existingTribeRoles) {
+          const role = guild.roles.cache.get(roleId);
+          const tribeData = tribes[roleId];
+          if (role) {
+            const castlistName = tribeData.castlist || 'default';
+            const emoji = tribeData.emoji ? `${tribeData.emoji} ` : '';
+            options.push({
+              label: `${emoji}${role.name}`,
+              description: `Remove from castlist: ${castlistName}`,
+              value: roleId,
+              emoji: { name: '🗑️' }
+            });
+          }
         }
+        
+        // Use string select instead of role select for better UX
+        const stringSelect = new StringSelectMenuBuilder()
+          .setCustomId('prod_clear_tribe_select')
+          .setPlaceholder('Select ONE tribe to remove from castlist')
+          .setMinValues(1)
+          .setMaxValues(1)
+          .addOptions(options.slice(0, 25)); // Discord limit
 
         const row = new ActionRowBuilder()
-          .addComponents(roleSelect);
+          .addComponents(stringSelect);
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '## Clear Tribe\n\nSelect the tribe roles you want to remove from the castlist. This will remove them from CastBot but won\'t delete the Discord roles.',
+            content: '## Clear Tribe\n\nSelect the tribe you want to remove from the castlist. This will remove it from CastBot but won\'t delete the Discord role.',
             components: [row.toJSON()],
             flags: InteractionResponseFlags.EPHEMERAL
           }
