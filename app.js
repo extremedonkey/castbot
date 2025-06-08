@@ -2792,7 +2792,7 @@ To fix this:
     } else if (custom_id === 'admin_manage_player') {
       // Admin player management - show user select menu
       try {
-        const guild = await client.guilds.fetch(guild_id);
+        const guild = await client.guilds.fetch(req.body.guild_id);
         
         // Check admin permissions
         const member = await guild.members.fetch(req.body.member.user.id);
@@ -2823,7 +2823,7 @@ To fix this:
           data: {
             content: '**Player Management**\n\nSelect a player to manage their details:',
             components: [userSelectRow],
-            flags: (InteractionResponseFlags.EPHEMERAL | (1 << 15)) // Components V2 flag
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         
@@ -3092,7 +3092,7 @@ To fix this:
           data: {
             content: `Set pronoun roles for **${targetMember.displayName}**:`,
             components: [selectRow],
-            flags: (InteractionResponseFlags.EPHEMERAL | (1 << 15)) // Components V2 flag
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
 
@@ -3223,7 +3223,7 @@ To fix this:
           data: {
             content: `Set timezone role for **${targetMember.displayName}**:`,
             components: [selectRow],
-            flags: (InteractionResponseFlags.EPHEMERAL | (1 << 15)) // Components V2 flag
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
 
@@ -3371,7 +3371,7 @@ To fix this:
           data: {
             content: `Select vanity roles for **${targetMember.displayName}**:\n*These roles will appear under their name in the castlist.*`,
             components: [selectRow],
-            flags: (InteractionResponseFlags.EPHEMERAL | (1 << 15)) // Components V2 flag
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
 
@@ -4088,7 +4088,7 @@ To fix this:
           data: {
             content: `## Manage ${selectedPlayer.displayName}'s Details\n\nSelect an action to manage this player's profile:`,
             components: [managementRow1, managementRow2],
-            flags: (InteractionResponseFlags.EPHEMERAL | (1 << 15)) // Components V2 flag
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
 
