@@ -3461,26 +3461,26 @@ To fix this:
         // Get existing timezone role IDs
         const existingTimezoneRoles = Object.keys(timezones);
         
-        const roleSelect = {
-          type: 8, // Role select
-          custom_id: 'prod_edit_timezones_select',
-          placeholder: 'Select roles to add/remove as timezone roles',
-          min_values: 0,
-          max_values: 25,
-          default_values: existingTimezoneRoles.map(roleId => ({
-            id: roleId,
-            type: 'role'
-          }))
-        };
+        // Use Discord.js RoleSelectMenuBuilder for better compatibility
+        const roleSelect = new RoleSelectMenuBuilder()
+          .setCustomId('prod_edit_timezones_select')
+          .setPlaceholder('Select roles to add/remove as timezone roles')
+          .setMinValues(0)
+          .setMaxValues(25);
+        
+        // Set default values if any exist
+        if (existingTimezoneRoles.length > 0) {
+          roleSelect.setDefaultRoles(existingTimezoneRoles);
+        }
+
+        const row = new ActionRowBuilder()
+          .addComponents(roleSelect);
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '## Edit Timezone Roles\n\nSelect which roles should be timezone roles. Currently selected roles are already ticked. Add or remove roles as needed.',
-            components: [{
-              type: 1, // Action Row
-              components: [roleSelect]
-            }],
+            components: [row.toJSON()],
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -3502,26 +3502,26 @@ To fix this:
         const guild = await client.guilds.fetch(guildId);
         const pronounRoleIDs = await getGuildPronouns(guildId);
         
-        const roleSelect = {
-          type: 8, // Role select
-          custom_id: 'prod_edit_pronouns_select',
-          placeholder: 'Select roles to add/remove as pronoun roles',
-          min_values: 0,
-          max_values: 25,
-          default_values: pronounRoleIDs.map(roleId => ({
-            id: roleId,
-            type: 'role'
-          }))
-        };
+        // Use Discord.js RoleSelectMenuBuilder for better compatibility
+        const roleSelect = new RoleSelectMenuBuilder()
+          .setCustomId('prod_edit_pronouns_select')
+          .setPlaceholder('Select roles to add/remove as pronoun roles')
+          .setMinValues(0)
+          .setMaxValues(25);
+        
+        // Set default values if any exist
+        if (pronounRoleIDs && pronounRoleIDs.length > 0) {
+          roleSelect.setDefaultRoles(pronounRoleIDs);
+        }
+
+        const row = new ActionRowBuilder()
+          .addComponents(roleSelect);
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '## Edit Pronoun Roles\n\nSelect which roles should be pronoun roles. Currently selected roles are already ticked. Add or remove roles as needed.',
-            components: [{
-              type: 1, // Action Row
-              components: [roleSelect]
-            }],
+            components: [row.toJSON()],
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
