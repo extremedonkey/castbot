@@ -987,7 +987,7 @@ To fix this:
           .setEmoji('🚀'),
         new ButtonBuilder()
           .setCustomId('admin_manage_player')
-          .setLabel('Manager Player')
+          .setLabel('Manage Player')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('🧑‍🤝‍🧑'),
         new ButtonBuilder()
@@ -2795,7 +2795,7 @@ To fix this:
         const guild = await client.guilds.fetch(guild_id);
         
         // Check admin permissions
-        const member = await guild.members.fetch(user.id);
+        const member = await guild.members.fetch(req.body.member.user.id);
         if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
             !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
             !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
