@@ -874,7 +874,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       new ButtonBuilder()
         .setCustomId('show_castlist2_default')
         .setLabel('Show Castlist')
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Success)
         .setEmoji('📋')
     ];
     
@@ -907,7 +907,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       new ButtonBuilder()
         .setCustomId('prod_setup')
         .setLabel('Setup')
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Success)
         .setEmoji('⚙️'),
       new ButtonBuilder()
         .setCustomId('prod_manage_pronouns_timezones')
@@ -923,7 +923,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         .setLabel('Need Help?')
         .setStyle(ButtonStyle.Link)
         .setEmoji('❓')
-        .setURL('https://discord.gg/vJjUPS6zK9')
+        .setURL('https://discord.com/oauth2/authorize?client_id=1319912453248647170')
     ];
     
     // Add Manage Players button conditionally (3rd position)
@@ -2362,7 +2362,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             data: {
               embeds: [{
                 title: 'CastBot: Dynamic Castlist',
-                description: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.',
+                description: 'No tribes have been added to the default Castlist yet. Please have production add tribes via the \'/prod_menu\' command!',
                 color: 0x7ED321
               }],
               flags: InteractionResponseFlags.EPHEMERAL
@@ -2980,7 +2980,7 @@ To fix this:
           await DiscordRequest(endpoint, {
             method: 'PATCH',
             body: {
-              content: '✅ Server already has roles configured!\n\nUse **Manage Pronouns/Timezones** to view or edit existing roles.',
+              content: '# Setup\n\n✅ Server already has roles configured!\n☐ Players have assigned pronouns / timezones\n☐ You\'ve officially kicked off marooning\n☐ You\'ve assigned players from Discord their tribe roles\n☐ You\'ve used Castbot to add tribes to the castlist.',
               components: []
             }
           });
@@ -3451,6 +3451,42 @@ To fix this:
           }
         });
       }
+    } else if (custom_id === 'prod_edit_timezones') {
+      // Placeholder - role select menus need complex implementation
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: '⚠️ Edit Timezones feature is coming soon! For now, use the existing `/timezones_add` and `/timezones_remove` slash commands.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    } else if (custom_id === 'prod_edit_pronouns') {
+      // Placeholder - role select menus need complex implementation
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: '⚠️ Edit Pronouns feature is coming soon! For now, use the existing `/pronouns_add` and `/remove_pronouns` slash commands.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    } else if (custom_id === 'prod_add_tribe') {
+      // Placeholder - 3-step flow needs complex implementation
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: '⚠️ Add Tribe feature is coming soon! For now, use the existing `/add_tribe` slash command.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    } else if (custom_id === 'prod_clear_tribe') {
+      // Placeholder - role select needs complex implementation
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: '⚠️ Clear Tribe feature is coming soon! For now, use the existing `/clear_tribe` slash command.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
     } else if (custom_id.startsWith('admin_set_pronouns_')) {
       // Admin pronoun management
       try {
