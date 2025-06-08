@@ -15,7 +15,140 @@ import { capitalize } from './utils.js';
 /**
  * Components V2 Castlist Module for CastBot
  * Provides modern, interactive castlist display with player cards and pagination
+ * Features dynamic component calculation to handle Discord's 40-component limit
  */
+
+/**
+ * Calculate total components needed for a tribe
+ * @param {number} playerCount - Number of players in the tribe
+ * @param {boolean} includeSeparators - Whether to include separator components
+ * @returns {number} Total component count
+ */
+function calculateComponentsForTribe(playerCount, includeSeparators = true) {
+    const playerComponents = playerCount * 3; // Section + TextDisplay + Thumbnail per player
+    const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
+    const tribeOverhead = 3; // Container + Header + Separator
+    const messageOverhead = 2; // Main header + Ad
+    const navigationOverhead = 3; // Navigation buttons
+    
+    return playerComponents + separatorCount + tribeOverhead + messageOverhead + navigationOverhead;
+}
+
+/**
+ * Determine display scenario based on component limits
+ * @param {Array} tribes - Array of tribe data with member counts
+ * @returns {string} Scenario type: "ideal", "no-separators", or "multi-page"
+ */
+function determineDisplayScenario(tribes) {
+    const COMPONENT_LIMIT = 40;
+    
+    // Scenario 1: Check if all tribes fit with separators
+    const allTribesWithSeparators = tribes.every(tribe => 
+        calculateComponentsForTribe(tribe.memberCount, true) <= COMPONENT_LIMIT
+    );
+    if (allTribesWithSeparators) {
+        console.log('Display scenario: ideal (all tribes fit with separators)');
+        return "ideal";
+    }
+    
+    // Scenario 2: Check if removing separators fixes all tribes
+    const allTribesWithoutSeparators = tribes.every(tribe => 
+        calculateComponentsForTribe(tribe.memberCount, false) <= COMPONENT_LIMIT
+    );
+    if (allTribesWithoutSeparators) {
+        console.log('Display scenario: no-separators (removing separators fixes all tribes)');
+        return "no-separators";
+    }
+    
+    // Scenario 3: Multi-page required
+    console.log('Display scenario: multi-page (at least one tribe needs pagination)');
+    return "multi-page";
+}
+
+/**
+ * Calculate pagination for a tribe that exceeds component limits
+ * @param {Object} tribe - Tribe data
+ * @param {Array} members - Array of Discord members
+ * @param {boolean} includeSeparators - Whether to include separators
+ * @returns {Object} Pagination information
+ */
+function calculateTribePages(tribe, members, includeSeparators = true) {
+    const COMPONENT_LIMIT = 40;
+    const baseOverhead = 3 + 2 + 3; // tribe + message + navigation
+    
+    const availableForPlayers = COMPONENT_LIMIT - baseOverhead;
+    const componentsPerPlayer = includeSeparators ? 4 : 3; // +1 for separator if included
+    
+    const maxPlayersPerPage = Math.floor(availableForPlayers / componentsPerPlayer);
+    const totalPages = Math.ceil(members.length / maxPlayersPerPage);
+    
+    // Distribute players across pages (higher count on first page for odd distributions)
+    const pages = [];
+    let remainingMembers = [...members];
+    
+    for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const remainingPages = totalPages - pageIndex;
+        const membersForThisPage = Math.ceil(remainingMembers.length / remainingPages);
+        
+        pages.push(remainingMembers.slice(0, membersForThisPage));
+        remainingMembers = remainingMembers.slice(membersForThisPage);
+    }
+    
+    console.log(`Tribe ${tribe.name}: ${members.length} players across ${totalPages} pages`);
+    console.log(`Page distribution: ${pages.map(p => p.length).join(', ')} players`);
+    
+    return {
+        totalPages,
+        maxPlayersPerPage,
+        pages,
+        tribe
+    };
+}
+
+/**
+ * Enhanced navigation state for complex tribe/page navigation
+ * @param {Array} tribes - Array of tribe data
+ * @param {string} scenario - Display scenario
+ * @param {number} currentTribeIndex - Current tribe index
+ * @param {number} currentTribePage - Current page within tribe
+ * @returns {Object} Navigation state
+ */
+function createNavigationState(tribes, scenario, currentTribeIndex = 0, currentTribePage = 0) {
+    return {
+        currentTribeIndex,
+        currentTribePage,
+        totalTribes: tribes.length,
+        scenario,
+        tribes: tribes.map(tribe => ({
+            ...tribe,
+            totalPages: scenario === "multi-page" && tribe.memberCount > 0 ? 
+                calculateTribePages(tribe, tribe.members, true).totalPages : 1
+        }))
+    };
+}
+
+/**
+ * Reorder tribes based on strategy (infrastructure for future user-first feature)
+ * @param {Array} tribes - Array of tribe data
+ * @param {string} userId - User ID for user-first ordering
+ * @param {string} strategy - Ordering strategy
+ * @returns {Array} Reordered tribes
+ */
+function reorderTribes(tribes, userId = null, strategy = "default") {
+    switch(strategy) {
+        case "user-first":
+            // TODO: Implement user-first ordering (not activated yet)
+            console.log('User-first ordering infrastructure ready (not activated)');
+            return tribes;
+        case "alphabetical":
+            return [...tribes].sort((a, b) => a.name.localeCompare(b.name));
+        case "size":
+            return [...tribes].sort((a, b) => b.memberCount - a.memberCount);
+        case "default":
+        default:
+            return tribes;
+    }
+}
 
 /**
  * Creates a condensed player card section using Components V2 Section component
@@ -57,27 +190,26 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
 }
 
 /**
- * Creates a tribe section with inline thumbnails, optimized for 40 component limit
- * Shows up to 13 players per page (1 Section + 1 Separator per player = 2 components each)
+ * Creates a tribe section with dynamic component optimization
  * @param {Object} tribe - Tribe data
  * @param {Array} tribeMembers - Array of Discord members in tribe
  * @param {Object} guild - Discord guild object
  * @param {Object} pronounRoleIds - Pronoun role mappings
  * @param {Object} timezones - Timezone role mappings
- * @param {number} page - Current page (0-based)
- * @param {number} playersPerPage - Number of players per page (max 13 for component limits)
+ * @param {Object} pageInfo - Page information for this tribe
+ * @param {string} scenario - Display scenario ("ideal", "no-separators", "multi-page")
  * @returns {Object} Tribe container component
  */
-async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, page = 0, playersPerPage = 13) {
-    const startIndex = page * playersPerPage;
-    const endIndex = Math.min(startIndex + playersPerPage, tribeMembers.length);
-    const pageMembers = tribeMembers.slice(startIndex, endIndex);
+async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, pageInfo, scenario) {
+    const { currentPage, totalPages, playersOnPage } = pageInfo;
+    const pageMembers = playersOnPage;
     
-    const totalPages = Math.ceil(tribeMembers.length / playersPerPage);
+    // Determine if separators should be included
+    const includeSeparators = scenario !== "no-separators";
     
-    // Create tribe header
+    // Create tribe header with page info for multi-page tribes
     const tribeHeaderText = `${tribe.emoji || ''} **${tribe.name}** ${tribe.emoji || ''}`.trim();
-    const paginationText = totalPages > 1 ? ` (Page ${page + 1} of ${totalPages})` : '';
+    const paginationText = totalPages > 1 ? ` (${currentPage + 1}/${totalPages})` : '';
     
     const tribeHeader = {
         type: 10, // Text Display
@@ -133,8 +265,8 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         
         playerCards.push(playerCard);
         
-        // Add separator after each player except the last one
-        if (pageMembers.indexOf(member) < pageMembers.length - 1) {
+        // Add separator after each player except the last one (conditional based on scenario)
+        if (includeSeparators && pageMembers.indexOf(member) < pageMembers.length - 1) {
             playerCards.push({
                 type: 14 // Separator component
             });
@@ -166,38 +298,83 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
 }
 
 /**
- * Creates navigation buttons for pagination
- * @param {string} tribeId - Tribe role ID for button identification
- * @param {number} currentPage - Current page number
- * @param {number} totalPages - Total number of pages
+ * Creates context-aware navigation buttons for complex tribe/page navigation
+ * @param {Object} navigationState - Complete navigation state
  * @param {string} castlistName - Name of the castlist
  * @returns {ActionRowBuilder} Action row with navigation buttons
  */
-function createNavigationButtons(tribeId, currentPage, totalPages, castlistName) {
+function createNavigationButtons(navigationState, castlistName) {
+    const { currentTribeIndex, currentTribePage, totalTribes, scenario, tribes } = navigationState;
+    const currentTribe = tribes[currentTribeIndex];
     const row = new ActionRowBuilder();
     
-    // Previous button
-    const prevButton = new ButtonBuilder()
-        .setCustomId(`castlist2_prev_${tribeId}_${currentPage}_${castlistName}`)
-        .setLabel('◀ Previous')
-        .setStyle(ButtonStyle.Secondary)
-        .setDisabled(currentPage === 0);
+    // Determine navigation context
+    const isFirstTribe = currentTribeIndex === 0;
+    const isLastTribe = currentTribeIndex === totalTribes - 1;
+    const isFirstPageOfTribe = currentTribePage === 0;
+    const isLastPageOfTribe = currentTribePage === currentTribe.totalPages - 1;
+    const isMultiPageTribe = currentTribe.totalPages > 1;
     
-    // Next button  
-    const nextButton = new ButtonBuilder()
-        .setCustomId(`castlist2_next_${tribeId}_${currentPage}_${castlistName}`)
-        .setLabel('Next ▶')
+    // Last button logic
+    let lastLabel, lastDisabled, lastAction;
+    if (isFirstTribe && isFirstPageOfTribe) {
+        lastLabel = '◀ Last Tribe';
+        lastDisabled = true;
+        lastAction = 'disabled';
+    } else if (isMultiPageTribe && !isFirstPageOfTribe) {
+        lastLabel = '◀ Last Page';
+        lastDisabled = false;
+        lastAction = 'last_page';
+    } else {
+        lastLabel = '◀ Last Tribe';
+        lastDisabled = false;
+        lastAction = 'last_tribe';
+    }
+    
+    // Next button logic
+    let nextLabel, nextDisabled, nextAction;
+    if (isLastTribe && isLastPageOfTribe) {
+        nextLabel = 'Next Tribe ▶';
+        nextDisabled = true;
+        nextAction = 'disabled';
+    } else if (isMultiPageTribe && !isLastPageOfTribe) {
+        nextLabel = 'Next Page ▶';
+        nextDisabled = false;
+        nextAction = 'next_page';
+    } else {
+        nextLabel = 'Next Tribe ▶';
+        nextDisabled = false;
+        nextAction = 'next_tribe';
+    }
+    
+    // Create buttons
+    const lastButton = new ButtonBuilder()
+        .setCustomId(`castlist2_nav_${lastAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}`)
+        .setLabel(lastLabel)
         .setStyle(ButtonStyle.Secondary)
-        .setDisabled(currentPage >= totalPages - 1);
-        
-    // Page indicator (non-interactive)
+        .setDisabled(lastDisabled);
+    
+    const nextButton = new ButtonBuilder()
+        .setCustomId(`castlist2_nav_${nextAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}`)
+        .setLabel(nextLabel)
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(nextDisabled);
+    
+    // Page indicator - show tribe/page context
+    let indicatorLabel;
+    if (scenario === "multi-page" && isMultiPageTribe) {
+        indicatorLabel = `Tribe ${currentTribeIndex + 1}/${totalTribes} • Page ${currentTribePage + 1}/${currentTribe.totalPages}`;
+    } else {
+        indicatorLabel = `Tribe ${currentTribeIndex + 1}/${totalTribes}`;
+    }
+    
     const pageIndicator = new ButtonBuilder()
-        .setCustomId(`castlist2_page_${tribeId}_${currentPage}`)
-        .setLabel(`${currentPage + 1}/${totalPages}`)
+        .setCustomId(`castlist2_indicator_${currentTribeIndex}_${currentTribePage}`)
+        .setLabel(indicatorLabel)
         .setStyle(ButtonStyle.Primary)
         .setDisabled(true);
     
-    row.addComponents(prevButton, pageIndicator, nextButton);
+    row.addComponents(lastButton, pageIndicator, nextButton);
     return row;
 }
 
@@ -299,6 +476,11 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
 }
 
 export {
+    calculateComponentsForTribe,
+    determineDisplayScenario,
+    calculateTribePages,
+    createNavigationState,
+    reorderTribes,
     createPlayerCard,
     createTribeSection, 
     createNavigationButtons,

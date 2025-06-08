@@ -49,6 +49,11 @@ import {
   BUTTON_STYLES
 } from './applicationManager.js';
 import {
+  calculateComponentsForTribe,
+  determineDisplayScenario,
+  calculateTribePages,
+  createNavigationState,
+  reorderTribes,
   createTribeSection,
   createNavigationButtons,
   processMemberData,
@@ -61,6 +66,105 @@ import { pipeline } from 'stream/promises';
 
 // Add these constants near the top with other constants
 const REACTION_NUMBERS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
+
+/**
+ * Send castlist2 response with dynamic component optimization
+ * @param {Object} req - Request object with Discord interaction data
+ * @param {Object} guild - Discord guild object
+ * @param {Array} tribes - Array of tribe data with members
+ * @param {string} castlistName - Name of the castlist
+ * @param {Object} navigationState - Current navigation state
+ */
+async function sendCastlist2Response(req, guild, tribes, castlistName, navigationState) {
+  const { currentTribeIndex, currentTribePage, scenario } = navigationState;
+  const currentTribe = tribes[currentTribeIndex];
+  
+  // Get guild data for processing
+  const pronounRoleIds = await getGuildPronouns(guild.id);
+  const timezones = await getGuildTimezones(guild.id);
+  
+  // Calculate page info for current tribe
+  let pageInfo;
+  if (scenario === "multi-page" && currentTribe.memberCount > 0) {
+    const paginationData = calculateTribePages(currentTribe, currentTribe.members, true);
+    const currentPageMembers = paginationData.pages[currentTribePage] || [];
+    
+    pageInfo = {
+      currentPage: currentTribePage,
+      totalPages: paginationData.totalPages,
+      playersOnPage: currentPageMembers
+    };
+  } else {
+    // Single page tribe or ideal/no-separators scenario
+    pageInfo = {
+      currentPage: 0,
+      totalPages: 1,
+      playersOnPage: currentTribe.members
+    };
+  }
+  
+  // Create tribe section with current page
+  let tribeSection;
+  if (currentTribe.memberCount === 0) {
+    // Empty tribe handling
+    let accentColor = 0x7ED321;
+    if (currentTribe.color) {
+      if (typeof currentTribe.color === 'string' && currentTribe.color.startsWith('#')) {
+        accentColor = parseInt(currentTribe.color.slice(1), 16);
+      } else if (typeof currentTribe.color === 'number') {
+        accentColor = currentTribe.color;
+      }
+    }
+    
+    tribeSection = {
+      type: 17, // Container
+      accent_color: accentColor,
+      components: [
+        { type: 10, content: `# ${currentTribe.emoji || ''} ${currentTribe.name} ${currentTribe.emoji || ''}`.trim() },
+        { type: 14 }, // Separator
+        { type: 10, content: '_No players yet_' }
+      ]
+    };
+  } else {
+    // Sort members by display name
+    const sortedMembers = [...pageInfo.playersOnPage].sort((a, b) => 
+      a.displayName.localeCompare(b.displayName)
+    );
+    
+    pageInfo.playersOnPage = sortedMembers;
+    
+    tribeSection = await createTribeSection(
+      currentTribe,
+      currentTribe.members, // Full member list for context
+      guild,
+      pronounRoleIds,
+      timezones,
+      pageInfo,
+      scenario
+    );
+  }
+  
+  // Create navigation buttons
+  const navigationRow = createNavigationButtons(navigationState, castlistName);
+  
+  // Create complete layout
+  const responseData = createCastlistV2Layout(
+    [tribeSection],
+    castlistName,
+    guild,
+    [navigationRow.toJSON()],
+    client
+  );
+  
+  console.log(`Sending castlist2 response: Tribe ${currentTribeIndex + 1}/${tribes.length}, Page ${currentTribePage + 1}/${pageInfo.totalPages}, Scenario: ${scenario}`);
+  
+  // Send response
+  const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+  await DiscordRequest(endpoint, {
+    method: 'PATCH',
+    body: responseData,
+  });
+}
 
 // Add this near other constants
 const STANDARD_PRONOUN_ROLES = [
@@ -638,206 +742,86 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   return;
 } else if (name === 'castlist2') {
   try {
-    console.log('Processing castlist2 command (Components V2)');
+    console.log('Processing castlist2 command (Components V2 - Dynamic)');
     const guildId = req.body.guild_id;
     const userId = req.body.member.user.id;
     const requestedCastlist = data.options?.find(opt => opt.name === 'castlist')?.value;
 
-    // Determine which castlist to show (reuse existing logic)
+    // Determine which castlist to show
     const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
     console.log(`Selected castlist: ${castlistToShow}`);
 
-    // Load tribe data based on selected castlist
-    const tribes = await getGuildTribes(guildId, castlistToShow);
-    console.log('Loaded tribes:', JSON.stringify(tribes));
+    // Load initial tribe data
+    const rawTribes = await getGuildTribes(guildId, castlistToShow);
+    console.log('Loaded raw tribes:', JSON.stringify(rawTribes));
 
-    // Check if any tribes exist
-    if (tribes.length === 0) {
+    if (rawTribes.length === 0) {
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          flags: 1 << 15, // IS_COMPONENTS_V2 flag
+          flags: 1 << 15,
           components: [
-            {
-              type: 10, // Text Display
-              content: '# No Tribes Found'
-            },
-            {
-              type: 10, // Text Display
-              content: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.'
-            }
+            { type: 10, content: '# No Tribes Found' },
+            { type: 10, content: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.' }
           ]
         }
       });
     }
 
-    // Send initial deferred response
-    res.send({
-      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-    });
+    // Send deferred response
+    res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
 
     const guild = await client.guilds.fetch(guildId);
-    console.log('Guild:', guild.name);
-
-    if (!guild) {
-      throw new Error('Could not fetch guild');
-    }
-
-    // Fetch the full guild with roles cache
     const fullGuild = await client.guilds.fetch(guildId, { force: true });
     await fullGuild.roles.fetch();
     const members = await fullGuild.members.fetch();
 
-    // Get pronoun and timezone data
-    const pronounRoleIds = await getGuildPronouns(guildId);
-    const timezones = await getGuildTimezones(guildId);
-
-    // Implement tribe-level pagination - show one tribe per page
-    const currentTribePage = 0; // Default to first tribe
-    const totalTribes = tribes.length;
-    
-    if (totalTribes === 0) {
-      // This case is already handled above, but kept for completeness
-      return;
-    }
-
-    // Get the current tribe to display (with error handling for missing roles)
-    let currentTribe = tribes[currentTribePage];
-    let role = await fullGuild.roles.fetch(currentTribe.roleId);
-    
-    if (!role) {
-      console.warn(`Role not found for tribe ${currentTribe.name}, finding valid alternative...`);
-      // Find first valid tribe with existing role
-      const validTribes = [];
-      for (const tribe of tribes) {
-        const testRole = await fullGuild.roles.fetch(tribe.roleId);
-        if (testRole) {
-          validTribes.push(tribe);
-        }
+    // Process tribes and gather member data
+    const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
+      const role = await fullGuild.roles.fetch(tribe.roleId);
+      if (!role) {
+        console.warn(`Role not found for tribe ${tribe.roleId}, skipping...`);
+        return null;
       }
       
-      if (validTribes.length === 0) {
-        return followUp(`No valid tribes found. Some tribe roles may have been deleted. Please use \`/add_tribe\` to set up tribes again.`);
-      }
-      
-      // Use first valid tribe instead
-      currentTribe = validTribes[0];
-      role = await fullGuild.roles.fetch(currentTribe.roleId);
-    }
-    
-    console.log(`Processing tribe: ${currentTribe.name || role.name}`);
-
-    const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
-    console.log(`Found ${tribeMembers.size} members in ${role.name}`);
-
-    let tribeSection;
-    
-    if (tribeMembers.size === 0) {
-      // Convert hex color to integer if needed
-      let accentColor = 0x7ED321; // Default green
-      if (currentTribe.color) {
-        if (typeof currentTribe.color === 'string' && currentTribe.color.startsWith('#')) {
-          // Convert hex string to integer
-          accentColor = parseInt(currentTribe.color.slice(1), 16);
-        } else if (typeof currentTribe.color === 'number') {
-          accentColor = currentTribe.color;
-        }
-      }
-
-      // Create empty tribe container
-      tribeSection = {
-        type: 17, // Container
-        accent_color: accentColor,
-        components: [
-          {
-            type: 10, // Text Display
-            content: `# ${currentTribe.emoji || ''} ${role.name} ${currentTribe.emoji || ''}`.trim()
-          },
-          {
-            type: 14 // Separator after tribe name
-          },
-          {
-            type: 10, // Text Display
-            content: '_No players yet_'
-          }
-        ]
+      const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
+      return {
+        ...tribe,
+        name: role.name,
+        memberCount: tribeMembers.size,
+        members: Array.from(tribeMembers.values())
       };
-    } else {
-      // Convert to array and sort by display name
-      const sortedMembers = Array.from(tribeMembers.values())
-        .sort((a, b) => a.displayName.localeCompare(b.displayName));
+    }));
 
-      // Create tribe section using Components V2
-      tribeSection = await createTribeSection(
-        { ...currentTribe, name: role.name }, // Use role name for accuracy
-        sortedMembers, // Pass all members, let createTribeSection handle pagination
-        fullGuild,
-        pronounRoleIds,
-        timezones,
-        0, // page within tribe
-        13 // playersPerPage
-      );
+    // Filter out tribes with missing roles
+    const validTribes = tribesWithMembers.filter(tribe => tribe !== null);
+    
+    if (validTribes.length === 0) {
+      return followUp(`No valid tribes found. Some tribe roles may have been deleted. Please use \`/add_tribe\` to set up tribes again.`);
     }
 
-    const tribeComponents = [tribeSection];
-    const navigationRows = [];
+    // Apply tribe ordering (infrastructure ready, not activated)
+    const orderedTribes = reorderTribes(validTribes, userId, "default");
 
-    // Add tribe navigation buttons if there are multiple tribes
-    if (totalTribes > 1) {
-      const navRow = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId(`castlist2_tribe_prev_${currentTribePage}_${castlistToShow}`)
-            .setLabel('◀ Last Tribe')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(currentTribePage === 0),
-          new ButtonBuilder()
-            .setCustomId(`castlist2_tribe_indicator_${currentTribePage}`)
-            .setLabel(`Tribe ${currentTribePage + 1}/${totalTribes}`)
-            .setStyle(ButtonStyle.Primary)
-            .setDisabled(true),
-          new ButtonBuilder()
-            .setCustomId(`castlist2_tribe_next_${currentTribePage}_${castlistToShow}`)
-            .setLabel('Next Tribe ▶')
-            .setStyle(ButtonStyle.Secondary)
-            .setDisabled(currentTribePage >= totalTribes - 1)
-        );
-      navigationRows.push(navRow.toJSON());
-    }
+    // Determine display scenario based on component calculations
+    const scenario = determineDisplayScenario(orderedTribes);
+    console.log(`Component scenario: ${scenario}`);
 
-    // Create the complete Components V2 layout
-    const responseData = createCastlistV2Layout(
-      tribeComponents,
-      castlistToShow,
-      fullGuild,
-      navigationRows,
-      client
-    );
-
-    console.log('Sending Components V2 response with flag:', responseData.flags);
-
-    // Send the response
-    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-    await DiscordRequest(endpoint, {
-      method: 'PATCH',
-      body: responseData,
+    // Log component calculations for debugging
+    orderedTribes.forEach(tribe => {
+      const withSeparators = calculateComponentsForTribe(tribe.memberCount, true);
+      const withoutSeparators = calculateComponentsForTribe(tribe.memberCount, false);
+      console.log(`Tribe ${tribe.name}: ${tribe.memberCount} members = ${withSeparators} components (with separators), ${withoutSeparators} (without)`);
     });
+
+    // Create navigation state for initial display (first tribe, first page)
+    const navigationState = createNavigationState(orderedTribes, scenario, 0, 0);
+    
+    await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState);
 
   } catch (error) {
     console.error('Error handling castlist2 command:', error);
-    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-    await DiscordRequest(endpoint, {
-      method: 'PATCH',
-      body: {
-        flags: 1 << 15, // IS_COMPONENTS_V2 flag
-        components: [
-          {
-            type: 10, // Text Display
-            content: `# Error\nError displaying Components V2 castlist: ${error.message}`
-          }
-        ]
-      },
-    });
+    return followUp(`Error displaying Components V2 castlist: ${error.message}`);
   }
   return;
 } else if (name === 'castlist_small') {
