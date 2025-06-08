@@ -24,23 +24,11 @@ function maybePrependDev(baseName) {
 }
 
 // For open commands, do not assign default_member_permissions!
+// Legacy castlist command - REMOVED from registration (but handlers remain active)
+
 const CASTLIST_COMMAND = {
 	name: maybePrependDev('castlist'),
-	description: 'Display the dynamic castlist',
-	type: 1,
-	options: [
-		{
-			name: 'castlist',
-			description: 'Select which castlist to display (if left blank, will display default castlist)',
-			type: 3, // STRING type
-			required: false
-		}
-	]
-};
-
-const CASTLIST2_COMMAND = {
-	name: maybePrependDev('castlist2'),
-	description: 'Display the dynamic castlist with Components V2 (modern layout)',
+	description: 'Display the dynamic castlist with modern Components V2 layout',
 	type: 1,
 	options: [
 		{
@@ -282,34 +270,8 @@ const ROLE_GENERATOR_COMMAND = {
 	default_member_permissions: ADMIN_ANY
 };
 
-// Open commands: remove any default_member_permissions property
-const REACT_PRONOUNS_COMMAND = {
-	name: maybePrependDev('player_set_pronouns'),  // Changed from react_pronouns
-	description: 'Create a reaction role message for pronoun roles',
-	type: 1,
-	dm_permission: false
-};
-
-const REACT_TIMEZONES_COMMAND = {
-	name: maybePrependDev('player_set_timezone'),  // Changed from react_timezones
-	description: 'Create a message for users to select their timezone roles via reactions',
-	type: 1,
-	dm_permission: false
-};
-
-const SET_AGE_COMMAND = {
-	name: maybePrependDev('player_set_age'),  // Changed from set_age
-	description: 'Set your own age in the castlist',
-	type: 1,
-	options: [
-		{
-			type: 3, // STRING type
-			name: 'age',
-			description: 'Enter your age.',
-			required: true,
-		}
-	]
-};
+// Player commands - REMOVED from registration (handlers remain active for legacy support)
+// These are now replaced by the enhanced /menu system
 
 // Menu command that displays buttons for castlists and player actions
 const MENU_COMMAND = {
@@ -327,13 +289,11 @@ const PROD_MENU_COMMAND = {
 };
 
 const ALL_COMMANDS = [
-	SET_AGE_COMMAND,
-	REACT_PRONOUNS_COMMAND,
+	// Player commands REMOVED: player_set_age, player_set_pronouns, player_set_timezone
 	ROLE_GENERATOR_COMMAND,
 	CLEAR_TRIBE_COMMAND,     
 	SET_TRIBE_COMMAND,   
-	CASTLIST_COMMAND,
-	CASTLIST2_COMMAND,
+	CASTLIST_COMMAND, // Now points to castlist2 functionality
 	MENU_COMMAND,
 	PROD_MENU_COMMAND,
 	GETTING_STARTED_COMMAND,
@@ -342,7 +302,6 @@ const ALL_COMMANDS = [
 	PRONOUNS_REMOVE_COMMAND,
 	TIMEZONES_ADD_COMMAND,
 	TIMEZONES_REMOVE_COMMAND,
-	REACT_TIMEZONES_COMMAND,
 	SETUP_TYCOONS_COMMAND,
 	APPLY_BUTTON_COMMAND,
 ];
