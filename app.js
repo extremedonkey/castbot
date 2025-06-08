@@ -3778,15 +3778,25 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log('Processing castlist2 navigation:', custom_id);
         
         // Parse new format: castlist2_nav_${action}_${tribeIndex}_${tribePage}_${castlistName}
-        const parts = custom_id.split('_');
-        if (parts.length < 6) {
+        // Example: castlist2_nav_next_page_0_0_default
+        // We need to be careful because action can contain underscores (next_page, last_tribe, etc.)
+        
+        // Remove the 'castlist2_nav_' prefix
+        const withoutPrefix = custom_id.substring('castlist2_nav_'.length);
+        const parts = withoutPrefix.split('_');
+        
+        // Since actions can have underscores, we need to work backwards from the end
+        // Last part is castlistName, second-to-last is tribePage, third-to-last is tribeIndex
+        if (parts.length < 3) {
           throw new Error('Invalid navigation custom_id format');
         }
         
-        const action = parts[2]; // last_page, next_page, last_tribe, next_tribe, disabled_last, disabled_next
-        const currentTribeIndex = parseInt(parts[3]);
-        const currentTribePage = parseInt(parts[4]);
-        const castlistName = parts.slice(5).join('_');
+        const castlistName = parts[parts.length - 1];
+        const currentTribePage = parseInt(parts[parts.length - 2]);
+        const currentTribeIndex = parseInt(parts[parts.length - 3]);
+        
+        // Everything before the last 3 parts is the action
+        const action = parts.slice(0, parts.length - 3).join('_');
         
         console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistName });
         
@@ -3869,8 +3879,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            content: `Error navigating castlist: ${error.message}`,
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: 1 << 15, // Keep IS_COMPONENTS_V2 flag
+            components: [
+              {
+                type: 10, // Text Display
+                content: `# Error\nError navigating castlist: ${error.message}`
+              }
+            ]
           }
         });
       }
