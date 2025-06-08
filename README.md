@@ -165,50 +165,77 @@ The bot interacts with Discord using roles to track player information. Discord 
 
 ## Command Deployment and Management
 
-### Development Mode (`PRODUCTION=FALSE`)
-1. Clean existing commands if needed:
+### Unified Deployment Script
+
+CastBot now uses a single, intelligent deployment script that automatically detects your environment and deploys commands appropriately.
+
+**Primary Commands:**
 ```bash
-node fix_commands.js
+npm run deploy-commands    # Auto-detects dev/prod, deploys all commands
+npm run clean-commands     # Clean up duplicate/broken commands
+npm run verify-commands    # Verify current command registration status
 ```
 
-2. Deploy commands to test server:
+**Behavior by Environment:**
+
+**Development Mode (`PRODUCTION=FALSE`):**
+- Deploys `dev_` prefixed commands to your dev guild (immediate availability)
+- Deploys normal commands globally for testing across multiple servers
+- Automatically cleans up duplicates and conflicts
+
+**Production Mode (`PRODUCTION=TRUE`):**
+- Deploys only normal commands globally
+- Removes any dev_ commands from global scope
+- Ensures clean production environment
+
+### Remote Production Deployment
+
+**SSH Access:**
 ```bash
-npm run registerguild
+ssh castbot-lightsail              # Direct connection to production server
 ```
 
-### Production Mode (`PRODUCTION=TRUE`)
-1. Clean existing commands:
+**Safe Preview:**
 ```bash
-node fix_commands.js
+npm run deploy-remote-dry-run      # Preview deployment actions (SAFE - no changes made)
 ```
 
-2. Deploy global commands:
+**Deployment Commands (USE WITH CAUTION):**
 ```bash
-npm run deploy
+npm run deploy-remote              # Full deployment (code + commands)
+npm run deploy-commands-remote     # Commands only (faster)
+npm run logs-remote                # Monitor remote logs
+npm run status-remote              # Check remote status
 ```
 
-Note: Global commands can take up to an hour to propagate across Discord.
+**Important Notes:**
+- Always run `npm run deploy-remote-dry-run` first to preview changes
+- SSH alias `castbot-lightsail` is configured for easy access
+- Remote server path: `/opt/bitnami/projects/castbot`
+- Manual SSH access is always available as backup
 
 ### Troubleshooting Commands
 
-If you see duplicate commands or commands with incorrect permissions:
+If you encounter command registration issues:
 
-1. Set your environment properly in `.env`:
+1. Verify your environment in `.env`:
 ```env
-PRODUCTION=TRUE  # or FALSE for development
+PRODUCTION=FALSE  # for development
+PRODUCTION=TRUE   # for production
 ```
 
-2. Run the cleanup script:
+2. Clean and redeploy:
 ```bash
-node fix_commands.js
+npm run clean-commands    # Remove duplicates/conflicts
+npm run deploy-commands   # Deploy fresh commands
 ```
 
-3. Redeploy your commands:
+3. Verify registration:
 ```bash
-npm run deploy  # for production
-# or
-npm run registerguild  # for development
+npm run verify-commands   # Check current status
 ```
+
+**Note:** Global commands may take up to 1 hour to propagate across Discord servers.
 
 ## Usage
 

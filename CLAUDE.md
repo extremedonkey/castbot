@@ -30,10 +30,12 @@ CastBot has undergone a major optimization initiative that has been fully comple
 - `npm install` - Install dependencies
 
 ### Command Registration
-- `npm run register` - Register global slash commands
-- `npm run registerguild` - Register commands to dev guild only (faster for testing)
-- `npm run deploy` - Deploy commands (alias for register)
-- `node fix_commands.js` - Clean up duplicate/broken commands before redeployment
+- `npm run deploy-commands` - **Primary deployment script** - Auto-detects dev/prod environment and deploys appropriately
+- `npm run clean-commands` - Clean up duplicate/broken commands only
+- `npm run verify-commands` - Verify current command registration status
+- `npm run register` - Legacy: Register global slash commands (use deploy-commands instead)
+- `npm run registerguild` - Legacy: Register commands to dev guild only (use deploy-commands instead)
+- `npm run deploy` - Legacy: Deploy commands (use deploy-commands instead)
 
 ### Environment-Specific Scripts
 - `.\registerslashcommands.ps1` - PowerShell script for command registration
@@ -147,11 +149,28 @@ USE_COMPONENTS_V2=false  # Set to true to test Discord Components v2 for /apply_
 - **Production**: Global commands, AWS Lightsail hosting, pm2 process management
 
 ### Production Deployment Process
+
+**SSH Access and Remote Deployment:**
+```bash
+ssh castbot-lightsail               # Direct SSH connection to production server
+npm run deploy-remote-dry-run       # Preview what deployment would do (SAFE)
+npm run deploy-remote               # Full deployment (code + commands) [USE WITH CAUTION]
+npm run deploy-commands-remote      # Commands only (faster) [USE WITH CAUTION]
+npm run logs-remote                 # Monitor remote logs [USE WITH CAUTION]
+npm run status-remote               # Check remote status [USE WITH CAUTION]
+```
+
+**SSH Configuration:**
+- SSH alias `castbot-lightsail` configured for easy access
+- Remote path: `/opt/bitnami/projects/castbot`
+- User: `bitnami`
+- Always test with `npm run deploy-remote-dry-run` first
+
+**Manual Deployment Process:**
 1. Stop bot: `pm2 stop castbot-pm`
-2. Clean commands: `node fix_commands.js`
-3. Deploy commands: `npm run deploy`
-4. Restart: `pm2 restart castbot-pm`
-5. Monitor: `pm2 logs castbot-pm`
+2. Deploy commands: `npm run deploy-commands`
+3. Restart: `pm2 restart castbot-pm`
+4. Monitor: `pm2 logs castbot-pm`
 
 ## Data Migration
 

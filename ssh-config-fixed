@@ -1,0 +1,10 @@
+# Replace your ~/.ssh/config entry with this corrected version:
+
+# CastBot AWS Lightsail Instance
+Host castbot-lightsail
+    HostName 13.238.148.170
+    User bitnami
+    IdentityFile "C:/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/.supporting/aws/ssh.pem"
+    StrictHostKeyChecking no
+    ServerAliveInterval 60
+    ServerAliveCountMax 3

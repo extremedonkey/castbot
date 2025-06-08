@@ -10,11 +10,16 @@
   },
   "scripts": {
     "start": "node app.js",
-    "register": "node commands.js",
-    "registerguild": "node commands.js guild",
     "dev": "nodemon app.js",
-    "unregister": "node unregister.js",
-    "deploy": "node deploy-commands.js"
+    "deploy-commands": "node manage-commands.js",
+    "clean-commands": "node manage-commands.js --clean-only",
+    "verify-commands": "node manage-commands.js --verify-only",
+    "analyze-commands": "node manage-commands.js --analyze-only",
+    "deploy-remote": "node deploy-remote.js",
+    "deploy-commands-remote": "node deploy-remote.js --commands-only",
+    "deploy-remote-dry-run": "node deploy-remote.js --dry-run",
+    "logs-remote": "node deploy-remote.js --logs",
+    "status-remote": "node deploy-remote.js --status"
   },
   "author": "Shay DeWael",
   "license": "MIT",

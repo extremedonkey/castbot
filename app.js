@@ -2977,17 +2977,27 @@ To fix this:
           });
         }
 
+        // Get user's current pronoun roles for pre-selection
+        const userId = req.body.member.user.id;
+        const member = await guild.members.fetch(userId);
+        const userPronounRoles = member.roles.cache
+          .filter(role => pronounRoleIDs.includes(role.id))
+          .map(role => role.id);
+
         // Create select menu with pronoun roles
         const pronounSelect = new StringSelectMenuBuilder()
           .setCustomId('select_pronouns')
-          .setPlaceholder('Choose your pronouns')
+          .setPlaceholder(userPronounRoles.length > 0 ? 
+            `Current: ${member.roles.cache.filter(r => pronounRoleIDs.includes(r.id)).map(r => r.name).join(', ')}` : 
+            'Choose your pronouns')
           .setMinValues(0)
           .setMaxValues(Math.min(validRoles.length, 3)) // Allow up to 3 pronoun roles
           .addOptions(
             validRoles.map(role => ({
               label: role.name,
               value: role.id,
-              emoji: '💜'
+              emoji: '💜',
+              default: userPronounRoles.includes(role.id)
             }))
           );
 
@@ -3016,7 +3026,9 @@ To fix this:
       // Show select menu for timezone roles
       try {
         const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
         const guild = await client.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
 
         // Get timezone roles from storage
         const timezones = await getGuildTimezones(guildId);
@@ -3069,10 +3081,16 @@ To fix this:
           });
         }
 
+        // Get user's current timezone role for pre-selection
+        const timezoneRoleIds = Object.keys(timezones);
+        const userTimezoneRole = member.roles.cache.find(role => timezoneRoleIds.includes(role.id));
+
         // Create select menu with timezone roles
         const timezoneSelect = new StringSelectMenuBuilder()
           .setCustomId('select_timezone')
-          .setPlaceholder('Choose your timezone')
+          .setPlaceholder(userTimezoneRole ? 
+            `Current: ${userTimezoneRole.name}` : 
+            'Choose your timezone')
           .setMinValues(0)
           .setMaxValues(1) // Only one timezone allowed
           .addOptions(
@@ -3080,7 +3098,8 @@ To fix this:
               label: item.role.name,
               description: `UTC${item.offset >= 0 ? '+' : ''}${item.offset}`,
               value: item.role.id,
-              emoji: '🗺️'
+              emoji: '🗺️',
+              default: userTimezoneRole ? userTimezoneRole.id === item.role.id : false
             }))
           );
 
@@ -3149,6 +3168,20 @@ To fix this:
         const guild = await client.guilds.fetch(guildId);
         const member = await guild.members.fetch(userId);
 
+        // Check permissions for all selected roles before making any changes
+        for (const roleId of selectedRoleIds) {
+          const permissionCheck = await checkRoleHierarchyPermission(guild, roleId);
+          if (!permissionCheck.allowed) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ ${permissionCheck.reason}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+        }
+
         // Get all configured pronoun roles for this guild
         const pronounRoleIDs = await getGuildPronouns(guildId);
         
@@ -3208,6 +3241,21 @@ To fix this:
 
         const guild = await client.guilds.fetch(guildId);
         const member = await guild.members.fetch(userId);
+
+        // Check permissions for selected role before making any changes
+        if (selectedRoleIds.length > 0) {
+          const selectedRoleId = selectedRoleIds[0]; // Only take the first one
+          const permissionCheck = await checkRoleHierarchyPermission(guild, selectedRoleId);
+          if (!permissionCheck.allowed) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ ${permissionCheck.reason}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+        }
 
         // Get all configured timezone roles for this guild
         const timezones = await getGuildTimezones(guildId);
