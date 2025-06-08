@@ -128,18 +128,45 @@ function createNavigationState(tribes, scenario, currentTribeIndex = 0, currentT
 }
 
 /**
- * Reorder tribes based on strategy (infrastructure for future user-first feature)
- * @param {Array} tribes - Array of tribe data
+ * Reorder tribes based on strategy with user-first logic for default castlists
+ * @param {Array} tribes - Array of tribe data with members
  * @param {string} userId - User ID for user-first ordering
  * @param {string} strategy - Ordering strategy
+ * @param {string} castlistName - Name of the castlist ("default" triggers user-first)
  * @returns {Array} Reordered tribes
  */
-function reorderTribes(tribes, userId = null, strategy = "default") {
+function reorderTribes(tribes, userId = null, strategy = "default", castlistName = "default") {
     switch(strategy) {
         case "user-first":
-            // TODO: Implement user-first ordering (not activated yet)
-            console.log('User-first ordering infrastructure ready (not activated)');
-            return tribes;
+            if (!userId || castlistName !== "default") {
+                console.log('User-first ordering: conditions not met, using default order');
+                return tribes;
+            }
+            
+            // Find tribes that contain the user
+            const userTribes = [];
+            const otherTribes = [];
+            
+            for (const tribe of tribes) {
+                const userInTribe = tribe.members && tribe.members.some(member => member.id === userId);
+                if (userInTribe) {
+                    userTribes.push(tribe);
+                } else {
+                    otherTribes.push(tribe);
+                }
+            }
+            
+            // Sort user tribes alphabetically
+            userTribes.sort((a, b) => a.name.localeCompare(b.name));
+            
+            // Sort other tribes alphabetically  
+            otherTribes.sort((a, b) => a.name.localeCompare(b.name));
+            
+            console.log(`User-first ordering: User ${userId} is in ${userTribes.length} tribe(s), showing ${userTribes.map(t => t.name).join(', ')} first`);
+            
+            // Return user tribes first, then other tribes
+            return [...userTribes, ...otherTribes];
+            
         case "alphabetical":
             return [...tribes].sort((a, b) => a.name.localeCompare(b.name));
         case "size":

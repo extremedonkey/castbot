@@ -845,8 +845,8 @@ To fix this:
       return;
     }
 
-    // Apply tribe ordering (infrastructure ready, not activated)
-    const orderedTribes = reorderTribes(validTribes, userId, "default");
+    // Apply user-first tribe ordering for default castlists
+    const orderedTribes = reorderTribes(validTribes, userId, "user-first", castlistToShow);
 
     // Determine display scenario based on component calculations
     const scenario = determineDisplayScenario(orderedTribes);
@@ -3884,7 +3884,7 @@ To fix this:
         }));
 
         const validTribes = tribesWithMembers.filter(tribe => tribe !== null);
-        const orderedTribes = reorderTribes(validTribes, req.body.member.user.id, "default");
+        const orderedTribes = reorderTribes(validTribes, req.body.member.user.id, "user-first", castlistName);
         const scenario = determineDisplayScenario(orderedTribes);
         
         // Calculate new navigation position
