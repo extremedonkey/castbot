@@ -456,7 +456,7 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
     // Create clean CastBot ad (no image)
     const adComponent = {
         type: 10, // Text Display
-        content: '_Click on CastBot and click \'+Add App\' to use in your ORG!_'
+        content: '_Click on CastBot and \'+Add App\' to use in your ORG!_'
     };
 
     return {
