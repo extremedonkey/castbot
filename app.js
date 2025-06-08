@@ -3836,7 +3836,7 @@ To fix this:
         // Everything before the last 3 parts is the action
         const action = parts.slice(0, parts.length - 3).join('_');
         
-        console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistName });
+        console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistName, user: `${user?.username}#${user?.discriminator} (${user?.id})` });
         
         // Ignore disabled buttons
         if (action.startsWith('disabled_')) {
