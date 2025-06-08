@@ -533,7 +533,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             },
             {
               name: 'How to create additional castlists',
-              value: 'You can create additional castlists - for example if you want to show the Production team pronoun information, creating ad-hoc teams for challenges post-merge, etc. To do this, use `/set_tribe`, select the Tribe Role and then click on the castlist option and type a name for your new castlist (e.g., production). You can then view that castlist by typing `/castlist *castlistname*`, e.g. /castlist production.'
+              value: 'You can create additional castlists - for example if you want to show the Production team pronoun information, creating ad-hoc teams for challenges post-merge, etc. To do this, use `/add_tribe`, select the Tribe Role and then click on the castlist option and type a name for your new castlist (e.g., production). You can then view that castlist by typing `/castlist *castlistname*`, e.g. /castlist production.'
             }            
           ])
           .setFooter({ 
@@ -580,7 +580,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         data: {
           embeds: [{
             title: 'CastBot: Dynamic Castlist',
-            description: 'No tribes have been added yet. Please have production run the `/set_tribe` command and select the Tribe role for them to show up in this list.',
+            description: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.',
             color: 0x7ED321
           }]
         }
@@ -697,7 +697,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           await DiscordRequest(endpoint, {
             method: 'PATCH',
             body: {
-              content: 'Cannot display castlist: Too many fields (maximum 25). Consider splitting tribes into separate castlists using the castlist parameter in /set_tribe.',
+              content: 'Cannot display castlist: Too many fields (maximum 25). Consider splitting tribes into separate castlists using the castlist parameter in /add_tribe.',
               flags: InteractionResponseFlags.EPHEMERAL
             },
           });
@@ -2952,7 +2952,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             },
             {
               name: 'How to create additional castlists',
-              value: 'You can create additional castlists - for example if you want to show the Production team pronoun information, creating ad-hoc teams for challenges post-merge, etc. To do this, use `/set_tribe`, select the Tribe Role and then click on the castlist option and type a name for your new castlist (e.g., production). You can then view that castlist by typing `/castlist *castlistname*`, e.g. /castlist production.'
+              value: 'You can create additional castlists - for example if you want to show the Production team pronoun information, creating ad-hoc teams for challenges post-merge, etc. To do this, use `/add_tribe`, select the Tribe Role and then click on the castlist option and type a name for your new castlist (e.g., production). You can then view that castlist by typing `/castlist *castlistname*`, e.g. /castlist production.'
             }            
           ])
           .setFooter({ 
@@ -3768,6 +3768,108 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error processing configuration selection.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('castlist2_nav_')) {
+      // Handle new castlist2 navigation system
+      try {
+        console.log('Processing castlist2 navigation:', custom_id);
+        
+        // Parse new format: castlist2_nav_${action}_${tribeIndex}_${tribePage}_${castlistName}
+        const parts = custom_id.split('_');
+        if (parts.length < 6) {
+          throw new Error('Invalid navigation custom_id format');
+        }
+        
+        const action = parts[2]; // last_page, next_page, last_tribe, next_tribe, disabled_last, disabled_next
+        const currentTribeIndex = parseInt(parts[3]);
+        const currentTribePage = parseInt(parts[4]);
+        const castlistName = parts.slice(5).join('_');
+        
+        console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistName });
+        
+        // Ignore disabled buttons
+        if (action.startsWith('disabled_')) {
+          return res.send({
+            type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
+          });
+        }
+        
+        // Send deferred response
+        res.send({
+          type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
+        });
+        
+        const guildId = req.body.guild_id;
+        
+        // Load and process tribe data (reuse castlist2 logic)
+        const rawTribes = await getGuildTribes(guildId, castlistName);
+        const guild = await client.guilds.fetch(guildId);
+        const fullGuild = await client.guilds.fetch(guildId, { force: true });
+        await fullGuild.roles.fetch();
+        const members = await fullGuild.members.fetch();
+
+        // Process tribes and gather member data
+        const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
+          const role = await fullGuild.roles.fetch(tribe.roleId);
+          if (!role) return null;
+          
+          const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
+          return {
+            ...tribe,
+            name: role.name,
+            memberCount: tribeMembers.size,
+            members: Array.from(tribeMembers.values())
+          };
+        }));
+
+        const validTribes = tribesWithMembers.filter(tribe => tribe !== null);
+        const orderedTribes = reorderTribes(validTribes, req.body.member.user.id, "default");
+        const scenario = determineDisplayScenario(orderedTribes);
+        
+        // Calculate new navigation position
+        let newTribeIndex = currentTribeIndex;
+        let newTribePage = currentTribePage;
+        
+        switch(action) {
+          case 'next_page':
+            newTribePage++;
+            break;
+          case 'last_page':
+            newTribePage--;
+            break;
+          case 'next_tribe':
+            newTribeIndex++;
+            newTribePage = 0; // Reset to first page of new tribe
+            break;
+          case 'last_tribe':
+            newTribeIndex--;
+            newTribePage = 0; // Reset to first page of new tribe
+            break;
+        }
+        
+        // Validate bounds
+        if (newTribeIndex < 0 || newTribeIndex >= orderedTribes.length) {
+          throw new Error('Invalid tribe index');
+        }
+        
+        // Create new navigation state
+        const navigationState = createNavigationState(orderedTribes, scenario, newTribeIndex, newTribePage);
+        
+        // Send updated response
+        await sendCastlist2Response(req, fullGuild, orderedTribes, castlistName, navigationState);
+        
+        console.log(`Successfully navigated to tribe ${newTribeIndex + 1}, page ${newTribePage + 1}`);
+
+      } catch (error) {
+        console.error('Error handling castlist2 navigation:', error);
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: `Error navigating castlist: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
