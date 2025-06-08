@@ -202,6 +202,30 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
     // Add time info if available
     const timeInfo = formattedTime ? `\`🕛 Local time 🕛\` ${formattedTime}` : '';
     
+    // Add vanity roles if available
+    let vanityRolesInfo = '';
+    if (playerData?.vanityRoles && playerData.vanityRoles.length > 0) {
+        const validVanityRoles = [];
+        for (const roleId of playerData.vanityRoles) {
+            try {
+                // Try to find the role in the member's guild
+                const role = member.guild.roles.cache.get(roleId);
+                if (role) {
+                    // Use Discord role mention format <@&roleId>
+                    validVanityRoles.push(`<@&${roleId}>`);
+                }
+                // If role doesn't exist, silently skip it (graceful handling)
+            } catch (error) {
+                // Silently skip invalid roles
+                console.debug(`Skipping invalid vanity role ${roleId} for player ${member.id}`);
+            }
+        }
+        
+        if (validVanityRoles.length > 0) {
+            vanityRolesInfo = validVanityRoles.join(' ');
+        }
+    }
+    
     // Combine all parts, only adding newlines where there's content
     let allInfo = nameWithEmoji;
     if (basicInfo) {
@@ -209,6 +233,9 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
     }
     if (timeInfo) {
         allInfo += `\n${timeInfo}`;
+    }
+    if (vanityRolesInfo) {
+        allInfo += `\n${vanityRolesInfo}`;
     }
 
     return {

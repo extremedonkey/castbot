@@ -20,7 +20,21 @@ import path from 'path';
 const REMOTE_HOST = process.env.LIGHTSAIL_HOST || 'your-lightsail-ip';
 const REMOTE_USER = process.env.LIGHTSAIL_USER || 'ubuntu';
 const REMOTE_PATH = process.env.LIGHTSAIL_PATH || '/opt/bitnami/castbot';
-const SSH_KEY_PATH = process.env.SSH_KEY_PATH || `${process.env.HOME}/.ssh/id_rsa`;
+
+// Handle SSH key path for different environments (PowerShell vs WSL/Bash)
+let SSH_KEY_PATH = process.env.SSH_KEY_PATH;
+if (!SSH_KEY_PATH) {
+    // Default fallback
+    SSH_KEY_PATH = `${process.env.HOME}/.ssh/id_rsa`;
+} else if (SSH_KEY_PATH.startsWith('./')) {
+    // Convert relative path to absolute, handling Windows vs Unix paths
+    SSH_KEY_PATH = path.resolve(SSH_KEY_PATH);
+    
+    // On Windows, ensure we use backslashes for SSH commands
+    if (process.platform === 'win32' && !process.env.WSL_DISTRO_NAME) {
+        SSH_KEY_PATH = SSH_KEY_PATH.replace(/\//g, '\\');
+    }
+}
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -101,7 +115,7 @@ async function checkSSHConnection() {
             'Testing SSH connection'
         );
         
-        if (result.stdout.includes('SSH connection successful')) {
+        if (DRY_RUN || result.stdout.includes('SSH connection successful')) {
             log('SSH connection verified', 'success');
             return true;
         } else {
@@ -241,19 +255,52 @@ async function showStatus() {
     }
 }
 
+async function showHelp() {
+    log('=== CastBot Remote Deployment Help ===', 'info');
+    log('', 'info');
+    log('Available commands:', 'info');
+    log('  npm run deploy-remote-dry-run       # Preview changes (SAFE)', 'success');
+    log('  npm run status-remote               # Check server status', 'info');
+    log('  npm run logs-remote                 # View recent logs', 'info');
+    log('  npm run deploy-commands-remote      # Deploy commands only', 'warning');
+    log('  npm run deploy-remote               # Full deployment', 'error');
+    log('', 'info');
+    log('Direct usage:', 'info');
+    log('  node deploy-remote.js --dry-run     # Preview changes', 'success');
+    log('  node deploy-remote.js --status      # Check status', 'info');
+    log('  node deploy-remote.js --logs        # View logs', 'info');
+    log('  node deploy-remote.js --commands-only  # Commands only', 'warning');
+    log('  node deploy-remote.js               # Full deployment', 'error');
+    log('', 'info');
+    log('Configuration:', 'info');
+    log(`  Host: ${REMOTE_HOST}`, 'debug');
+    log(`  User: ${REMOTE_USER}`, 'debug');
+    log(`  Path: ${REMOTE_PATH}`, 'debug');
+    log(`  SSH Key: ${SSH_KEY_PATH}`, 'debug');
+    log(`  Platform: ${process.platform}${process.env.WSL_DISTRO_NAME ? ' (WSL)' : ''}`, 'debug');
+}
+
 async function main() {
     try {
         log('=== CastBot Remote Deployment ===', 'info');
         
+        // Check for help flag
+        if (args.includes('--help') || args.includes('-h')) {
+            await showHelp();
+            return;
+        }
+        
         // Validate configuration
         if (REMOTE_HOST === 'your-lightsail-ip') {
             log('Please set LIGHTSAIL_HOST environment variable to your server IP', 'error');
+            log('Run with --help for more information', 'info');
             process.exit(1);
         }
         
         if (!fs.existsSync(SSH_KEY_PATH)) {
             log(`SSH key not found at: ${SSH_KEY_PATH}`, 'error');
             log('Please set SSH_KEY_PATH environment variable or place key at ~/.ssh/id_rsa', 'error');
+            log('Run with --help for more information', 'info');
             process.exit(1);
         }
         

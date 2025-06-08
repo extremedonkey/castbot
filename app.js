@@ -21,6 +21,8 @@ import {
   TextInputBuilder,
   TextInputStyle,
   StringSelectMenuBuilder,
+  UserSelectMenuBuilder,
+  RoleSelectMenuBuilder,
   ChannelSelectMenuBuilder,
   ComponentType,
   ChannelType
@@ -983,6 +985,11 @@ To fix this:
           .setLabel('Getting Started')
           .setStyle(ButtonStyle.Primary)
           .setEmoji('🚀'),
+        new ButtonBuilder()
+          .setCustomId('admin_manage_player')
+          .setLabel('Manager Player')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('🧑‍🤝‍🧑'),
         new ButtonBuilder()
           .setCustomId('setup_castbot')
           .setLabel('Setup Pronoun + Timezone Roles')
@@ -2782,6 +2789,54 @@ To fix this:
           }
         });
       }
+    } else if (custom_id === 'admin_manage_player') {
+      // Admin player management - show user select menu
+      try {
+        const guild = await client.guilds.fetch(guild_id);
+        
+        // Check admin permissions
+        const member = await guild.members.fetch(user.id);
+        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Create user select menu with Components V2
+        const userSelectRow = new ActionRowBuilder()
+          .addComponents(
+            new UserSelectMenuBuilder()
+              .setCustomId('admin_select_player')
+              .setPlaceholder('Select user to manage..')
+              .setMinValues(1)
+              .setMaxValues(1)
+          );
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '**Player Management**\n\nSelect a player to manage their details:',
+            components: [userSelectRow],
+            flags: (InteractionResponseFlags.EPHEMERAL | (1 << 15)) // Components V2 flag
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling admin_manage_player button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error loading player management interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'setup_castbot') {
       // Execute the same logic as the setup_castbot command
       try {
@@ -2927,6 +2982,405 @@ To fix this:
           method: 'PATCH',
           body: {
             content: 'Error setting up roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_set_pronouns_')) {
+      // Admin pronoun management
+      try {
+        const guildId = req.body.guild_id;
+        const adminUserId = req.body.member.user.id;
+        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_set_pronouns_${playerId}
+        
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Check admin permissions
+        const adminMember = await guild.members.fetch(adminUserId);
+        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get target player
+        let targetMember;
+        try {
+          targetMember = await guild.members.fetch(targetPlayerId);
+        } catch (error) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Unable to find the target player in this server.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get pronoun roles from storage
+        const pronounRoleIDs = await getGuildPronouns(guildId);
+        if (!pronounRoleIDs?.length) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'No pronoun roles found. Add some using /pronouns_add first!',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get role objects and sort alphabetically
+        const roles = await Promise.all(
+          pronounRoleIDs.map(id => guild.roles.fetch(id))
+        );
+        const validRoles = roles
+          .filter(role => role) // Remove any null roles
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (validRoles.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'No valid pronoun roles found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        if (validRoles.length > 25) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Too many pronoun roles (maximum 25 supported)',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get target's current pronoun roles for pre-selection
+        const userPronounRoles = targetMember.roles.cache
+          .filter(role => pronounRoleIDs.includes(role.id))
+          .map(role => role.id);
+
+        // Create select menu with pronoun roles
+        const pronounSelect = new StringSelectMenuBuilder()
+          .setCustomId(`admin_select_pronouns_${targetPlayerId}`)
+          .setPlaceholder(userPronounRoles.length > 0 ? 
+            `Current: ${targetMember.roles.cache.filter(r => pronounRoleIDs.includes(r.id)).map(r => r.name).join(', ')}` : 
+            'Choose player pronouns')
+          .setMinValues(0)
+          .setMaxValues(Math.min(validRoles.length, 3)) // Allow up to 3 pronoun roles
+          .addOptions(
+            validRoles.map(role => ({
+              label: role.name,
+              value: role.id,
+              emoji: '💜',
+              default: userPronounRoles.includes(role.id)
+            }))
+          );
+
+        const selectRow = new ActionRowBuilder().addComponents(pronounSelect);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `Set pronoun roles for **${targetMember.displayName}**:`,
+            components: [selectRow],
+            flags: (InteractionResponseFlags.EPHEMERAL | (1 << 15)) // Components V2 flag
+          }
+        });
+
+      } catch (error) {
+        console.error('Error handling admin_set_pronouns button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error creating pronoun selection',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_set_timezone_')) {
+      // Admin timezone management
+      try {
+        const guildId = req.body.guild_id;
+        const adminUserId = req.body.member.user.id;
+        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_set_timezone_${playerId}
+        
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Check admin permissions
+        const adminMember = await guild.members.fetch(adminUserId);
+        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get target player
+        let targetMember;
+        try {
+          targetMember = await guild.members.fetch(targetPlayerId);
+        } catch (error) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Unable to find the target player in this server.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get timezone roles from storage
+        const timezoneRoles = await getGuildTimezones(guildId);
+        const timezoneEntries = Object.entries(timezoneRoles || {});
+        
+        if (timezoneEntries.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'No timezone roles found. Add some using /timezones_add first!',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get role objects and sort by UTC offset
+        const rolePromises = timezoneEntries.map(async ([roleId, data]) => {
+          try {
+            const role = await guild.roles.fetch(roleId);
+            return role ? { role, offset: data.offset } : null;
+          } catch (error) {
+            console.error(`Failed to fetch timezone role ${roleId}:`, error);
+            return null;
+          }
+        });
+
+        const roleData = (await Promise.all(rolePromises))
+          .filter(item => item !== null)
+          .sort((a, b) => a.offset - b.offset);
+
+        if (roleData.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'No valid timezone roles found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        if (roleData.length > 25) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Too many timezone roles (maximum 25 supported)',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get target's current timezone role for pre-selection
+        const timezoneRoleIds = roleData.map(item => item.role.id);
+        const userTimezoneRoles = targetMember.roles.cache
+          .filter(role => timezoneRoleIds.includes(role.id))
+          .map(role => role.id);
+
+        // Create select menu with timezone roles
+        const timezoneSelect = new StringSelectMenuBuilder()
+          .setCustomId(`admin_select_timezone_${targetPlayerId}`)
+          .setPlaceholder(userTimezoneRoles.length > 0 ? 
+            `Current: ${targetMember.roles.cache.filter(r => timezoneRoleIds.includes(r.id)).map(r => r.name).join(', ')}` : 
+            'Choose player timezone')
+          .setMinValues(0)
+          .setMaxValues(1) // Only one timezone allowed
+          .addOptions(
+            roleData.map(({ role, offset }) => ({
+              label: role.name,
+              value: role.id,
+              description: `UTC${offset >= 0 ? '+' : ''}${offset}`,
+              emoji: '🌍',
+              default: userTimezoneRoles.includes(role.id)
+            }))
+          );
+
+        const selectRow = new ActionRowBuilder().addComponents(timezoneSelect);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `Set timezone role for **${targetMember.displayName}**:`,
+            components: [selectRow],
+            flags: (InteractionResponseFlags.EPHEMERAL | (1 << 15)) // Components V2 flag
+          }
+        });
+
+      } catch (error) {
+        console.error('Error handling admin_set_timezone button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error creating timezone selection',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_set_age_')) {
+      // Admin age management
+      try {
+        const guildId = req.body.guild_id;
+        const adminUserId = req.body.member.user.id;
+        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_set_age_${playerId}
+        
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Check admin permissions
+        const adminMember = await guild.members.fetch(adminUserId);
+        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get target player
+        let targetMember;
+        try {
+          targetMember = await guild.members.fetch(targetPlayerId);
+        } catch (error) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Unable to find the target player in this server.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get current age if exists
+        const currentAge = getPlayer(guildId, targetPlayerId)?.age || '';
+
+        // Create age input modal
+        const ageModal = new ModalBuilder()
+          .setCustomId(`admin_age_modal_${targetPlayerId}`)
+          .setTitle(`Set Age for ${targetMember.displayName}`);
+
+        const ageInput = new TextInputBuilder()
+          .setCustomId('age_input')
+          .setLabel('Age')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Enter age (numbers only)')
+          .setRequired(false)
+          .setMaxLength(3);
+
+        if (currentAge) {
+          ageInput.setValue(currentAge);
+        }
+
+        const ageRow = new ActionRowBuilder().addComponents(ageInput);
+        ageModal.addComponents(ageRow);
+
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: ageModal
+        });
+
+      } catch (error) {
+        console.error('Error handling admin_set_age button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error creating age input',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_manage_vanity_')) {
+      // Admin vanity roles management
+      try {
+        const guildId = req.body.guild_id;
+        const adminUserId = req.body.member.user.id;
+        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_manage_vanity_${playerId}
+        
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Check admin permissions
+        const adminMember = await guild.members.fetch(adminUserId);
+        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get target player
+        let targetMember;
+        try {
+          targetMember = await guild.members.fetch(targetPlayerId);
+        } catch (error) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Unable to find the target player in this server.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get current vanity roles
+        const playerData = getPlayer(guildId, targetPlayerId);
+        const currentVanityRoles = playerData?.vanityRoles || [];
+
+        // Create role select menu
+        const roleSelect = new RoleSelectMenuBuilder()
+          .setCustomId(`admin_select_vanity_${targetPlayerId}`)
+          .setPlaceholder('Special roles to appear under the player in the castlist')
+          .setMinValues(0)
+          .setMaxValues(25);
+
+        if (currentVanityRoles.length > 0) {
+          roleSelect.setDefaultRoles(currentVanityRoles);
+        }
+
+        const selectRow = new ActionRowBuilder().addComponents(roleSelect);
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `Select vanity roles for **${targetMember.displayName}**:\n*These roles will appear under their name in the castlist.*`,
+            components: [selectRow],
+            flags: (InteractionResponseFlags.EPHEMERAL | (1 << 15)) // Components V2 flag
+          }
+        });
+
+      } catch (error) {
+        console.error('Error handling admin_manage_vanity button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error creating vanity role selection',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -3303,6 +3757,347 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error setting timezone role.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_select_pronouns_')) {
+      // Handle admin pronoun role selection
+      try {
+        const guildId = req.body.guild_id;
+        const adminUserId = req.body.member.user.id;
+        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_select_pronouns_${playerId}
+        const selectedRoleIds = data.values || [];
+
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(targetPlayerId);
+        const adminMember = await guild.members.fetch(adminUserId);
+
+        // Check admin permissions
+        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Check permissions for all selected roles before making any changes
+        for (const roleId of selectedRoleIds) {
+          const permissionCheck = await checkRoleHierarchyPermission(guild, roleId);
+          if (!permissionCheck.allowed) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ ${permissionCheck.reason}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+        }
+
+        // Get all configured pronoun roles for this guild
+        const pronounRoleIDs = await getGuildPronouns(guildId);
+        
+        // Remove all existing pronoun roles first
+        const currentPronounRoles = targetMember.roles.cache.filter(role => 
+          pronounRoleIDs.includes(role.id)
+        );
+        
+        if (currentPronounRoles.size > 0) {
+          await targetMember.roles.remove(currentPronounRoles.map(role => role.id));
+        }
+
+        // Add new selected roles
+        if (selectedRoleIds.length > 0) {
+          await targetMember.roles.add(selectedRoleIds);
+          
+          // Get role names for confirmation message
+          const selectedRoles = await Promise.all(
+            selectedRoleIds.map(id => guild.roles.fetch(id))
+          );
+          const roleNames = selectedRoles.filter(role => role).map(role => role.name);
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Set ${targetMember.displayName}'s pronouns to: ${roleNames.join(', ')}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Removed all pronoun roles from ${targetMember.displayName}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+      } catch (error) {
+        console.error('Error handling admin pronoun selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error setting pronoun roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_select_timezone_')) {
+      // Handle admin timezone role selection
+      try {
+        const guildId = req.body.guild_id;
+        const adminUserId = req.body.member.user.id;
+        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_select_timezone_${playerId}
+        const selectedRoleIds = data.values || [];
+
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(targetPlayerId);
+        const adminMember = await guild.members.fetch(adminUserId);
+
+        // Check admin permissions
+        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Check permissions for selected role before making changes
+        if (selectedRoleIds.length > 0) {
+          const permissionCheck = await checkRoleHierarchyPermission(guild, selectedRoleIds[0]);
+          if (!permissionCheck.allowed) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ ${permissionCheck.reason}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+        }
+
+        // Get all configured timezone roles for this guild
+        const timezoneRoles = await getGuildTimezones(guildId);
+        const timezoneRoleIds = Object.keys(timezoneRoles || {});
+        
+        // Remove all existing timezone roles first
+        const currentTimezoneRoles = targetMember.roles.cache.filter(role => 
+          timezoneRoleIds.includes(role.id)
+        );
+        
+        if (currentTimezoneRoles.size > 0) {
+          await targetMember.roles.remove(currentTimezoneRoles.map(role => role.id));
+        }
+
+        // Add new selected role (only one timezone allowed)
+        if (selectedRoleIds.length > 0) {
+          await targetMember.roles.add(selectedRoleIds[0]);
+          
+          // Get role name and offset for confirmation message
+          const selectedRole = await guild.roles.fetch(selectedRoleIds[0]);
+          const offset = timezoneRoles[selectedRoleIds[0]]?.offset || 0;
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Set ${targetMember.displayName}'s timezone to: ${selectedRole.name} (UTC${offset >= 0 ? '+' : ''}${offset})`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Removed timezone role from ${targetMember.displayName}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+      } catch (error) {
+        console.error('Error handling admin timezone selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error setting timezone role.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_select_vanity_')) {
+      // Handle admin vanity role selection
+      try {
+        const guildId = req.body.guild_id;
+        const adminUserId = req.body.member.user.id;
+        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_select_vanity_${playerId}
+        const selectedRoleIds = data.values || [];
+
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(targetPlayerId);
+        const adminMember = await guild.members.fetch(adminUserId);
+
+        // Check admin permissions
+        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Update player data with vanity roles (additive per user requirement)
+        if (selectedRoleIds.length > 0) {
+          // Get current vanity roles
+          const currentPlayer = getPlayer(guildId, targetPlayerId) || {};
+          const currentVanityRoles = currentPlayer.vanityRoles || [];
+          
+          // Add new roles to existing ones (additive) - avoid duplicates
+          const newVanityRoles = [...new Set([...currentVanityRoles, ...selectedRoleIds])];
+          
+          // Update player data
+          updatePlayer(guildId, targetPlayerId, { vanityRoles: newVanityRoles });
+          
+          // Get role names for confirmation (only show newly added roles)
+          const rolePromises = selectedRoleIds.map(async (roleId) => {
+            try {
+              const role = await guild.roles.fetch(roleId);
+              return role ? role.name : roleId;
+            } catch {
+              return roleId;
+            }
+          });
+          
+          const roleNames = await Promise.all(rolePromises);
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Added vanity roles to ${targetMember.displayName}: ${roleNames.join(', ')}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          // If no roles selected, treat as "clear all"
+          updatePlayer(guildId, targetPlayerId, { vanityRoles: [] });
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Removed all vanity roles from ${targetMember.displayName}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+      } catch (error) {
+        console.error('Error handling admin vanity role selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error setting vanity roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'admin_select_player') {
+      // Handle admin player selection
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const selectedPlayerIds = data.values || [];
+        
+        if (selectedPlayerIds.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please select a player to manage.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        const selectedPlayerId = selectedPlayerIds[0];
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Get selected player info
+        let selectedPlayer;
+        try {
+          selectedPlayer = await guild.members.fetch(selectedPlayerId);
+        } catch (error) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Unable to find the selected player in this server.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Create management interface with Components V2
+        const managementRow1 = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId(`admin_set_pronouns_${selectedPlayerId}`)
+              .setLabel('Set Pronouns')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('💜'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_timezone_${selectedPlayerId}`)
+              .setLabel('Set Timezone')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🌍'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_age_${selectedPlayerId}`)
+              .setLabel('Set Age')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🎂')
+          );
+
+        const managementRow2 = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId(`admin_manage_vanity_${selectedPlayerId}`)
+              .setLabel('🕵️Manage Vanity Roles')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🕵️'),
+            new ButtonBuilder()
+              .setCustomId('admin_manage_player')
+              .setLabel('Change Player')
+              .setStyle(ButtonStyle.Primary)
+              .setEmoji('🔄')
+          );
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `## Manage ${selectedPlayer.displayName}'s Details\n\nSelect an action to manage this player's profile:`,
+            components: [managementRow1, managementRow2],
+            flags: (InteractionResponseFlags.EPHEMERAL | (1 << 15)) // Components V2 flag
+          }
+        });
+
+      } catch (error) {
+        console.error('Error handling admin player selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error processing admin player selection.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -4186,6 +4981,90 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error processing application button configuration.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_age_modal_')) {
+      // Handle admin setting player age
+      try {
+        const guildId = req.body.guild_id;
+        const adminUserId = req.body.member.user.id;
+        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_age_modal_${playerId}
+        const ageValue = components[0]?.components[0]?.value || '';
+
+        const guild = await client.guilds.fetch(guildId);
+        const adminMember = await guild.members.fetch(adminUserId);
+
+        // Check admin permissions
+        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get target player
+        let targetMember;
+        try {
+          targetMember = await guild.members.fetch(targetPlayerId);
+        } catch (error) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Unable to find the target player in this server.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Validate age input (if provided)
+        if (ageValue && ageValue.trim() !== '') {
+          const age = parseInt(ageValue.trim());
+          if (isNaN(age) || age < 1 || age > 150) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Please enter a valid age between 1 and 150.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+
+          // Update player age
+          updatePlayer(guildId, targetPlayerId, { age: age.toString() });
+
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Set ${targetMember.displayName}'s age to ${age}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          // Clear age if empty input
+          updatePlayer(guildId, targetPlayerId, { age: undefined });
+
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Cleared age for ${targetMember.displayName}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+      } catch (error) {
+        console.error('Error handling admin age modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error setting player age.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

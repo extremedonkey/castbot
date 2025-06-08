@@ -19,7 +19,8 @@
     "deploy-commands-remote": "node deploy-remote.js --commands-only",
     "deploy-remote-dry-run": "node deploy-remote.js --dry-run",
     "logs-remote": "node deploy-remote.js --logs",
-    "status-remote": "node deploy-remote.js --status"
+    "status-remote": "node deploy-remote.js --status",
+    "remote-help": "node deploy-remote.js --help"
   },
   "author": "Shay DeWael",
   "license": "MIT",

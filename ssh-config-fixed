@@ -4,7 +4,7 @@
 Host castbot-lightsail
     HostName 13.238.148.170
     User bitnami
-    IdentityFile "C:/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/.supporting/aws/ssh.pem"
+    IdentityFile "~/.ssh/castbot-key.pem"
     StrictHostKeyChecking no
     ServerAliveInterval 60
     ServerAliveCountMax 3
