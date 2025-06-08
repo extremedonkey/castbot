@@ -216,6 +216,7 @@ npm run registerguild  # for development
 
 - /set_tribe: Add or update a tribe in the castlist
 - /castlist: Display the dynamic castlist
+- /castlist2: Display the dynamic castlist using Discord Components V2 with player cards and modern UI
 - /clear_tribe: Clear a specific tribe
 - /cleartribeall: Clear all tribes
 - /set_players_age: Set ages for multiple players at once
