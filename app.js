@@ -797,7 +797,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const validTribes = tribesWithMembers.filter(tribe => tribe !== null);
     
     if (validTribes.length === 0) {
-      return followUp(`No valid tribes found. Some tribe roles may have been deleted. Please use \`/add_tribe\` to set up tribes again.`);
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          content: 'No valid tribes found. Some tribe roles may have been deleted. Please use `/add_tribe` to set up tribes again.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+      return;
     }
 
     // Apply tribe ordering (infrastructure ready, not activated)
@@ -821,7 +829,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
   } catch (error) {
     console.error('Error handling castlist2 command:', error);
-    return followUp(`Error displaying Components V2 castlist: ${error.message}`);
+    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    await DiscordRequest(endpoint, {
+      method: 'PATCH',
+      body: {
+        content: `Error displaying Components V2 castlist: ${error.message}`,
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
   }
   return;
 } else if (name === 'castlist_small') {

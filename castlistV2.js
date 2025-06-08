@@ -320,7 +320,7 @@ function createNavigationButtons(navigationState, castlistName) {
     if (isFirstTribe && isFirstPageOfTribe) {
         lastLabel = '◀ Last Tribe';
         lastDisabled = true;
-        lastAction = 'disabled';
+        lastAction = 'disabled_last';
     } else if (isMultiPageTribe && !isFirstPageOfTribe) {
         lastLabel = '◀ Last Page';
         lastDisabled = false;
@@ -336,7 +336,7 @@ function createNavigationButtons(navigationState, castlistName) {
     if (isLastTribe && isLastPageOfTribe) {
         nextLabel = 'Next Tribe ▶';
         nextDisabled = true;
-        nextAction = 'disabled';
+        nextAction = 'disabled_next';
     } else if (isMultiPageTribe && !isLastPageOfTribe) {
         nextLabel = 'Next Page ▶';
         nextDisabled = false;
