@@ -3819,13 +3819,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Load and process tribe data (reuse castlist2 logic)
         const rawTribes = await getGuildTribes(guildId, castlistName);
         const guild = await client.guilds.fetch(guildId);
-        const fullGuild = await client.guilds.fetch(guildId, { force: true });
-        await fullGuild.roles.fetch();
-        const members = await fullGuild.members.fetch();
+        
+        // Use cached data where possible for better performance
+        const roles = guild.roles.cache.size > 0 ? guild.roles.cache : await guild.roles.fetch();
+        const members = guild.members.cache.size > 0 ? guild.members.cache : await guild.members.fetch();
 
         // Process tribes and gather member data
         const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
-          const role = await fullGuild.roles.fetch(tribe.roleId);
+          const role = roles.get(tribe.roleId);
           if (!role) return null;
           
           const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
@@ -3871,7 +3872,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const navigationState = createNavigationState(orderedTribes, scenario, newTribeIndex, newTribePage);
         
         // Send updated response
-        await sendCastlist2Response(req, fullGuild, orderedTribes, castlistName, navigationState);
+        await sendCastlist2Response(req, guild, orderedTribes, castlistName, navigationState);
         
         console.log(`Successfully navigated to tribe ${newTribeIndex + 1}, page ${newTribePage + 1}`);
 
