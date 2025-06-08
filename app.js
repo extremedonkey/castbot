@@ -3812,7 +3812,8 @@ To fix this:
     } else if (custom_id.startsWith('castlist2_nav_')) {
       // Handle new castlist2 navigation system
       try {
-        console.log('Processing castlist2 navigation:', custom_id);
+        const user = req.body.member?.user || req.body.user;
+        console.log(`Processing castlist2 navigation: ${custom_id} | User: ${user?.username || 'Unknown'}#${user?.discriminator || '0000'} (${user?.id || 'Unknown ID'})`);
         
         // Parse new format: castlist2_nav_${action}_${tribeIndex}_${tribePage}_${castlistName}
         // Example: castlist2_nav_next_page_0_0_default
