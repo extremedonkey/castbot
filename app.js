@@ -3539,22 +3539,21 @@ To fix this:
     } else if (custom_id === 'prod_add_tribe') {
       // Step 1: Role selection for tribe
       try {
-        const roleSelect = {
-          type: 8, // Role select
-          custom_id: 'prod_add_tribe_role_select',
-          placeholder: 'Select the role of the tribe you want to add to the castlist',
-          min_values: 1,
-          max_values: 1
-        };
+        // Use Discord.js RoleSelectMenuBuilder for better compatibility
+        const roleSelect = new RoleSelectMenuBuilder()
+          .setCustomId('prod_add_tribe_role_select')
+          .setPlaceholder('Select the role of the tribe you want to add to the castlist')
+          .setMinValues(1)
+          .setMaxValues(1);
+
+        const row = new ActionRowBuilder()
+          .addComponents(roleSelect);
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '## Select tribe to add to castlist\n\nPlease select the role corresponding to the tribe you want to add to the castlist. If you have not yet created the tribe role, please do so from the discord roles menu.\n\nYou can add your tribes to the castlist before players have been assigned the tribes, however they\'ll appear blank if any spectator views the castlist.',
-            components: [{
-              type: 1, // Action Row
-              components: [roleSelect]
-            }],
+            components: [row.toJSON()],
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
