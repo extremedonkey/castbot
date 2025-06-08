@@ -874,7 +874,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       new ButtonBuilder()
         .setCustomId('show_castlist2_default')
         .setLabel('Show Castlist')
-        .setStyle(ButtonStyle.Success)
+        .setStyle(ButtonStyle.Primary)
         .setEmoji('📋')
     ];
     
@@ -907,8 +907,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       new ButtonBuilder()
         .setCustomId('prod_setup')
         .setLabel('Setup')
-        .setStyle(ButtonStyle.Success)
-        .setEmoji('⚙️'),
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('🪛'),
       new ButtonBuilder()
         .setCustomId('prod_manage_pronouns_timezones')
         .setLabel('Manage Pronouns/Timezones')
@@ -923,7 +923,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         .setLabel('Need Help?')
         .setStyle(ButtonStyle.Link)
         .setEmoji('❓')
-        .setURL('https://discord.com/oauth2/authorize?client_id=1319912453248647170')
+        .setURL('https://discord.gg/vJjUPS6zK9')
     ];
     
     // Add Manage Players button conditionally (3rd position)
@@ -3452,41 +3452,175 @@ To fix this:
         });
       }
     } else if (custom_id === 'prod_edit_timezones') {
-      // Placeholder - role select menus need complex implementation
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: '⚠️ Edit Timezones feature is coming soon! For now, use the existing `/timezones_add` and `/timezones_remove` slash commands.',
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
+      // Show role select menu for timezone editing
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const timezones = await getGuildTimezones(guildId);
+        
+        // Get existing timezone role IDs
+        const existingTimezoneRoles = Object.keys(timezones);
+        
+        const roleSelect = {
+          type: 8, // Role select
+          custom_id: 'prod_edit_timezones_select',
+          placeholder: 'Select roles to add/remove as timezone roles',
+          min_values: 0,
+          max_values: 25,
+          default_values: existingTimezoneRoles.map(roleId => ({
+            id: roleId,
+            type: 'role'
+          }))
+        };
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '## Edit Timezone Roles\n\nSelect which roles should be timezone roles. Currently selected roles are already ticked. Add or remove roles as needed.',
+            components: [{
+              type: 1, // Action Row
+              components: [roleSelect]
+            }],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in prod_edit_timezones:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error loading timezone role editor.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'prod_edit_pronouns') {
-      // Placeholder - role select menus need complex implementation
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: '⚠️ Edit Pronouns feature is coming soon! For now, use the existing `/pronouns_add` and `/remove_pronouns` slash commands.',
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
+      // Show role select menu for pronoun editing
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const pronounRoleIDs = await getGuildPronouns(guildId);
+        
+        const roleSelect = {
+          type: 8, // Role select
+          custom_id: 'prod_edit_pronouns_select',
+          placeholder: 'Select roles to add/remove as pronoun roles',
+          min_values: 0,
+          max_values: 25,
+          default_values: pronounRoleIDs.map(roleId => ({
+            id: roleId,
+            type: 'role'
+          }))
+        };
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '## Edit Pronoun Roles\n\nSelect which roles should be pronoun roles. Currently selected roles are already ticked. Add or remove roles as needed.',
+            components: [{
+              type: 1, // Action Row
+              components: [roleSelect]
+            }],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in prod_edit_pronouns:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error loading pronoun role editor.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'prod_add_tribe') {
-      // Placeholder - 3-step flow needs complex implementation
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: '⚠️ Add Tribe feature is coming soon! For now, use the existing `/add_tribe` slash command.',
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
+      // Step 1: Role selection for tribe
+      try {
+        const roleSelect = {
+          type: 8, // Role select
+          custom_id: 'prod_add_tribe_role_select',
+          placeholder: 'Select the role of the tribe you want to add to the castlist',
+          min_values: 1,
+          max_values: 1
+        };
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '## Select tribe to add to castlist\n\nPlease select the role corresponding to the tribe you want to add to the castlist. If you have not yet created the tribe role, please do so from the discord roles menu.\n\nYou can add your tribes to the castlist before players have been assigned the tribes, however they\'ll appear blank if any spectator views the castlist.',
+            components: [{
+              type: 1, // Action Row
+              components: [roleSelect]
+            }],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in prod_add_tribe:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error loading tribe addition interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'prod_clear_tribe') {
-      // Placeholder - role select needs complex implementation
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: '⚠️ Clear Tribe feature is coming soon! For now, use the existing `/clear_tribe` slash command.',
-          flags: InteractionResponseFlags.EPHEMERAL
+      // Show role select with existing tribes only
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const playerData = await loadPlayerData();
+        const tribes = playerData[guildId]?.tribes || {};
+        
+        if (Object.keys(tribes).length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '## Clear Tribe\n\nNo tribes found to clear. Add some tribes first using **Add Tribe**.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
         }
-      });
+        
+        // Create role select with existing tribe roles only
+        const existingTribeRoles = Object.keys(tribes);
+        const roleSelect = {
+          type: 8, // Role select
+          custom_id: 'prod_clear_tribe_select',
+          placeholder: 'Select tribe roles to remove from castlist',
+          min_values: 1,
+          max_values: Math.min(existingTribeRoles.length, 25),
+          // Filter to only show roles that exist in tribes
+          role_types: [0] // All roles, but we'll validate on server side
+        };
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '## Clear Tribe\n\nSelect the tribe roles you want to remove from the castlist. This will remove them from CastBot but won\'t delete the Discord roles.',
+            components: [{
+              type: 1, // Action Row
+              components: [roleSelect]
+            }],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in prod_clear_tribe:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error loading tribe clearing interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('admin_set_pronouns_')) {
       // Admin pronoun management
       try {
@@ -4516,6 +4650,334 @@ To fix this:
           }
         });
       }
+    } else if (custom_id === 'prod_edit_timezones_select') {
+      // Handle timezone role selection for editing
+      try {
+        const guildId = req.body.guild_id;
+        const selectedRoleIds = data.values || [];
+        
+        // Get current timezone roles
+        const currentTimezones = await getGuildTimezones(guildId);
+        const currentRoleIds = Object.keys(currentTimezones);
+        
+        // Determine which roles to add and remove
+        const rolesToAdd = selectedRoleIds.filter(roleId => !currentRoleIds.includes(roleId));
+        const rolesToRemove = currentRoleIds.filter(roleId => !selectedRoleIds.includes(roleId));
+        
+        // Update playerData
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = {};
+        if (!playerData[guildId].timezones) playerData[guildId].timezones = {};
+        
+        // Remove old roles
+        for (const roleId of rolesToRemove) {
+          delete playerData[guildId].timezones[roleId];
+        }
+        
+        // Add new roles with default UTC offset (admins can adjust via slash commands)
+        for (const roleId of rolesToAdd) {
+          playerData[guildId].timezones[roleId] = { offset: 0 };
+        }
+        
+        // Save data
+        await savePlayerData(playerData);
+        
+        const addedCount = rolesToAdd.length;
+        const removedCount = rolesToRemove.length;
+        let resultMessage = '## Timezone Roles Updated!\n\n';
+        
+        if (addedCount > 0) {
+          resultMessage += `✅ Added ${addedCount} timezone role(s)\n`;
+        }
+        if (removedCount > 0) {
+          resultMessage += `🗑️ Removed ${removedCount} timezone role(s)\n`;
+        }
+        if (addedCount === 0 && removedCount === 0) {
+          resultMessage += '✅ No changes made\n';
+        }
+        
+        resultMessage += '\n**Note:** New timezone roles default to UTC+0. Use `/timezones_add` to set specific offsets.';
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: resultMessage,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling timezone role selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error updating timezone roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_edit_pronouns_select') {
+      // Handle pronoun role selection for editing
+      try {
+        const guildId = req.body.guild_id;
+        const selectedRoleIds = data.values || [];
+        
+        // Update playerData
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = {};
+        
+        // Set new pronoun roles (replace entirely)
+        playerData[guildId].pronounRoleIDs = selectedRoleIds;
+        
+        // Save data
+        await savePlayerData(playerData);
+        
+        const resultMessage = `## Pronoun Roles Updated!\n\n✅ Set ${selectedRoleIds.length} pronoun role(s)`;
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: resultMessage,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling pronoun role selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error updating pronoun roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_add_tribe_role_select') {
+      // Step 2: After role selected, show castlist selection
+      try {
+        const guildId = req.body.guild_id;
+        const selectedRoleIds = data.values || [];
+        
+        if (selectedRoleIds.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Please select a tribe role.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const selectedRoleId = selectedRoleIds[0];
+        
+        // Get existing castlists
+        const playerData = await loadPlayerData();
+        const existingCastlists = new Set();
+        
+        if (playerData[guildId]?.tribes) {
+          Object.values(playerData[guildId].tribes).forEach(tribe => {
+            if (tribe.castlist && tribe.castlist !== 'default') {
+              existingCastlists.add(tribe.castlist);
+            }
+          });
+        }
+        
+        // Build string select options
+        const options = [
+          {
+            label: 'Default Castlist',
+            description: 'Recommended if you don\'t know what you\'re doing',
+            value: 'default',
+            emoji: { name: '✅' }
+          }
+        ];
+        
+        // Add existing custom castlists
+        for (const castlistName of Array.from(existingCastlists).sort()) {
+          options.push({
+            label: castlistName.charAt(0).toUpperCase() + castlistName.slice(1),
+            description: 'Existing custom castlist',
+            value: castlistName,
+            emoji: { name: '📃' }
+          });
+        }
+        
+        // Add "New Custom Castlist" option
+        options.push({
+          label: 'New Custom Castlist',
+          description: 'Custom castlist, typically used for prod / winner / custom challenge teams',
+          value: 'new_custom',
+          emoji: { name: '📝' }
+        });
+        
+        const stringSelect = {
+          type: 3, // String select
+          custom_id: `prod_add_tribe_castlist_select_${selectedRoleId}`,
+          placeholder: 'Select castlist',
+          min_values: 1,
+          max_values: 1,
+          options: options.slice(0, 25) // Discord limit
+        };
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `## Select Castlist\n\nRole selected: <@&${selectedRoleId}>\n\nNow choose which castlist to add this tribe to:`,
+            components: [{
+              type: 1, // Action Row
+              components: [stringSelect]
+            }],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in add tribe role select:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error processing tribe role selection.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('prod_add_tribe_castlist_select_')) {
+      // Step 3: After castlist selected, show modal for emoji input
+      try {
+        const roleId = custom_id.split('_').pop();
+        const selectedCastlist = data.values?.[0];
+        
+        if (!selectedCastlist) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Please select a castlist.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        let finalCastlist = selectedCastlist;
+        
+        // If "new_custom" was selected, we'll handle it in the modal submission
+        // For now, show the modal
+        
+        const modal = {
+          title: 'Add Tribe - Final Step',
+          custom_id: `prod_add_tribe_modal_${roleId}_${selectedCastlist}`,
+          components: [
+            {
+              type: 1, // Action Row
+              components: [
+                {
+                  type: 4, // Text Input
+                  custom_id: 'tribe_emoji',
+                  label: 'Tribe Emoji (Optional)',
+                  style: 1, // Short
+                  min_length: 0,
+                  max_length: 3,
+                  required: false,
+                  placeholder: 'Shows a custom emoji in the tribe header'
+                }
+              ]
+            }
+          ]
+        };
+        
+        // Show additional text input for custom castlist name if needed
+        if (selectedCastlist === 'new_custom') {
+          modal.components.push({
+            type: 1, // Action Row
+            components: [
+              {
+                type: 4, // Text Input
+                custom_id: 'custom_castlist_name',
+                label: 'Custom Castlist Name',
+                style: 1, // Short
+                min_length: 1,
+                max_length: 50,
+                required: true,
+                placeholder: 'e.g. Winners, Production, Alumni'
+              }
+            ]
+          });
+        }
+
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal
+        });
+        
+      } catch (error) {
+        console.error('Error in add tribe castlist select:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error processing castlist selection.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_clear_tribe_select') {
+      // Handle clear tribe selection
+      try {
+        const guildId = req.body.guild_id;
+        const selectedRoleIds = data.values || [];
+        
+        if (selectedRoleIds.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Please select at least one tribe to clear.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Load and update playerData
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]?.tribes) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'No tribes found to clear.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const removedTribes = [];
+        
+        // Remove selected tribes
+        for (const roleId of selectedRoleIds) {
+          if (playerData[guildId].tribes[roleId]) {
+            const guild = await client.guilds.fetch(guildId);
+            const role = guild.roles.cache.get(roleId);
+            removedTribes.push(role?.name || 'Unknown Role');
+            delete playerData[guildId].tribes[roleId];
+          }
+        }
+        
+        await savePlayerData(playerData);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `## Tribes Cleared!\n\n🗑️ Removed ${removedTribes.length} tribe(s):\n${removedTribes.map(name => `• ${name}`).join('\n')}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error clearing tribes:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error clearing tribes.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'admin_select_player') {
       // Handle admin player selection
       try {
@@ -5395,7 +5857,105 @@ To fix this:
   if (type === InteractionType.MODAL_SUBMIT) {
     const { custom_id, components } = data;
     
-    if (custom_id === 'age_modal') {
+    if (custom_id.startsWith('prod_add_tribe_modal_')) {
+      // Handle Add Tribe final submission
+      try {
+        const parts = custom_id.split('_');
+        const roleId = parts[4]; // prod_add_tribe_modal_{roleId}_{castlist}
+        const selectedCastlist = parts.slice(5).join('_'); // Handle multi-word castlist names
+        
+        const emojiValue = components[0].components[0].value?.trim() || null;
+        let customCastlistName = null;
+        
+        // Check if custom castlist name was provided
+        if (components[1]?.components[0]?.value) {
+          customCastlistName = components[1].components[0].value.trim();
+        }
+        
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const role = guild.roles.cache.get(roleId);
+        
+        if (!role) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Error: Selected role not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Determine final castlist name
+        let finalCastlist = selectedCastlist;
+        if (selectedCastlist === 'new_custom' && customCastlistName) {
+          finalCastlist = customCastlistName.toLowerCase().replace(/[^a-z0-9]/g, '');
+        }
+        
+        // Load player data and check for conflicts
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = {};
+        if (!playerData[guildId].tribes) playerData[guildId].tribes = {};
+        
+        // Check if tribe already exists in a different castlist
+        const existingTribe = playerData[guildId].tribes[roleId];
+        if (existingTribe && existingTribe.castlist !== finalCastlist) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ Tribe not added - this tribe already exists in ${existingTribe.castlist}. You can only have each tribe in one castlist.`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Get role color
+        const roleColor = role.hexColor && role.hexColor !== '#000000' ? role.hexColor : null;
+        
+        // Add analytics name
+        let analyticsName = null;
+        try {
+          const emoji = emojiValue || '';
+          analyticsName = emoji ? `${emoji} ${role.name} ${emoji}` : role.name;
+        } catch (error) {
+          console.debug(`Could not set analytics name for role: ${roleId}`);
+        }
+        
+        // Update tribe data (replicating add_tribe logic but without player emoji generation)
+        playerData[guildId].tribes[roleId] = {
+          emoji: emojiValue,
+          castlist: finalCastlist,
+          showPlayerEmojis: false, // Always false per new specification
+          color: roleColor,
+          analyticsName,
+          analyticsAdded: Date.now()
+        };
+        
+        // Save data
+        await savePlayerData(playerData);
+        
+        const emojiDisplay = emojiValue ? ` with emoji ${emojiValue}` : '';
+        const castlistDisplay = finalCastlist === 'default' ? 'default castlist' : `"${finalCastlist}" castlist`;
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `## ✅ Tribe Added Successfully!\n\n**${role.name}** has been added to the ${castlistDisplay}${emojiDisplay}.\n\nPlayers can now view this tribe in the castlist once members are assigned to the role.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling add tribe modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error adding tribe. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'age_modal') {
       try {
         const ageValue = components[0].components[0].value;
         const guildId = req.body.guild_id;
