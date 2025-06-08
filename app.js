@@ -436,7 +436,6 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     errorLines,
     maxEmojiReached,
     tribeRoleId: roleId,
-    totalFields,
     isNew: true, // Always true now that we save before checking existing
     colorMessage
   };
