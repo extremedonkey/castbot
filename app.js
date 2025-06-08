@@ -923,7 +923,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         .setLabel('Need Help?')
         .setStyle(ButtonStyle.Link)
         .setEmoji('❓')
-        .setURL('https://discord.gg/vJjUPS6zK9')
+        .setURL('https://discord.gg/H7MpJEjkwT')
     ];
     
     // Add Manage Players button conditionally (3rd position)
@@ -3588,24 +3588,27 @@ To fix this:
         
         // Create role select with existing tribe roles only
         const existingTribeRoles = Object.keys(tribes);
-        const roleSelect = {
-          type: 8, // Role select
-          custom_id: 'prod_clear_tribe_select',
-          placeholder: 'Select tribe roles to remove from castlist',
-          min_values: 1,
-          max_values: Math.min(existingTribeRoles.length, 25),
-          // Filter to only show roles that exist in tribes
-          role_types: [0] // All roles, but we'll validate on server side
-        };
+        
+        // Use Discord.js RoleSelectMenuBuilder for better compatibility
+        const roleSelect = new RoleSelectMenuBuilder()
+          .setCustomId('prod_clear_tribe_select')
+          .setPlaceholder('Select tribe roles to remove from castlist')
+          .setMinValues(1)
+          .setMaxValues(Math.min(existingTribeRoles.length, 25));
+        
+        // Set default values to show existing tribe roles
+        if (existingTribeRoles.length > 0) {
+          roleSelect.setDefaultRoles(existingTribeRoles);
+        }
+
+        const row = new ActionRowBuilder()
+          .addComponents(roleSelect);
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '## Clear Tribe\n\nSelect the tribe roles you want to remove from the castlist. This will remove them from CastBot but won\'t delete the Discord roles.',
-            components: [{
-              type: 1, // Action Row
-              components: [roleSelect]
-            }],
+            components: [row.toJSON()],
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -4809,23 +4812,22 @@ To fix this:
           emoji: { name: '📝' }
         });
         
-        const stringSelect = {
-          type: 3, // String select
-          custom_id: `prod_add_tribe_castlist_select_${selectedRoleId}`,
-          placeholder: 'Select castlist',
-          min_values: 1,
-          max_values: 1,
-          options: options.slice(0, 25) // Discord limit
-        };
+        // Use Discord.js StringSelectMenuBuilder for better compatibility
+        const stringSelect = new StringSelectMenuBuilder()
+          .setCustomId(`prod_add_tribe_castlist_select_${selectedRoleId}`)
+          .setPlaceholder('Select castlist')
+          .setMinValues(1)
+          .setMaxValues(1)
+          .addOptions(options.slice(0, 25)); // Discord limit
+
+        const row = new ActionRowBuilder()
+          .addComponents(stringSelect);
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: `## Select Castlist\n\nRole selected: <@&${selectedRoleId}>\n\nNow choose which castlist to add this tribe to:`,
-            components: [{
-              type: 1, // Action Row
-              components: [stringSelect]
-            }],
+            components: [row.toJSON()],
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
