@@ -39,6 +39,16 @@ function formatDate(timestamp) {
   }) + ' UTC';
 }
 
+function formatShortDate(timestamp) {
+  if (!timestamp) return '';
+  return new Date(timestamp).toLocaleDateString('en-US', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+}
+
 function formatNumber(num) {
   return num.toLocaleString();
 }
@@ -142,15 +152,27 @@ function analyzePlayerData() {
       if (server.tribes && Object.keys(server.tribes).length > 0) {
         const castlists = {};
         const tribeNames = [];
+        let oldestTribeTimestamp = null;
+        let newestTribeTimestamp = null;
         
         Object.entries(server.tribes).forEach(([roleId, tribe]) => {
           const castlistName = tribe.castlist || 'default';
           if (!castlists[castlistName]) castlists[castlistName] = 0;
           castlists[castlistName]++;
           
-          // Collect tribe names for analytics display
+          // Collect tribe names for analytics display with emoji format
           if (tribe.analyticsName) {
             tribeNames.push(tribe.analyticsName);
+          }
+          
+          // Track tribe timestamps for date range display
+          if (tribe.analyticsAdded) {
+            if (!oldestTribeTimestamp || tribe.analyticsAdded < oldestTribeTimestamp) {
+              oldestTribeTimestamp = tribe.analyticsAdded;
+            }
+            if (!newestTribeTimestamp || tribe.analyticsAdded > newestTribeTimestamp) {
+              newestTribeTimestamp = tribe.analyticsAdded;
+            }
           }
         });
         
@@ -159,12 +181,31 @@ function analyzePlayerData() {
           .join(', ');
         log(`    Castlists: ${castlistSummary}`, 'blue');
         
-        // Show tribe names if available (analytics only)
+        // Show tribe names in comma-separated format with emojis
         if (tribeNames.length > 0) {
           const tribeDisplay = tribeNames.length > 5 
             ? `${tribeNames.slice(0, 5).join(', ')} ... (+${tribeNames.length - 5} more)`
             : tribeNames.join(', ');
           log(`    Tribes: ${tribeDisplay}`, 'cyan');
+        }
+        
+        // Show tribe date range if timestamps are available
+        if (oldestTribeTimestamp || newestTribeTimestamp) {
+          let dateRangeDisplay = '';
+          if (oldestTribeTimestamp === newestTribeTimestamp) {
+            // All tribes added on same day
+            dateRangeDisplay = `(${formatShortDate(oldestTribeTimestamp)})`;
+          } else if (oldestTribeTimestamp && newestTribeTimestamp) {
+            // Range of dates
+            dateRangeDisplay = `(${formatShortDate(oldestTribeTimestamp)} - ${formatShortDate(newestTribeTimestamp)})`;
+          } else {
+            // Only one timestamp available
+            const timestamp = oldestTribeTimestamp || newestTribeTimestamp;
+            dateRangeDisplay = `(${formatShortDate(timestamp)})`;
+          }
+          if (dateRangeDisplay) {
+            log(`    Tribes Added: ${dateRangeDisplay}`, 'magenta');
+          }
         }
       }
 

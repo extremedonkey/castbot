@@ -379,13 +379,18 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     console.debug(`Could not fetch role name for analytics: ${roleId}`);
   }
 
+  // Check if this is a new tribe for analytics tracking
+  const isNewTribe = !data[guildId].tribes[roleId];
+
   // Update or add tribe
   data[guildId].tribes[roleId] = {
     emoji: emojiOption?.value || null,
     castlist: castlistName,
     showPlayerEmojis: showPlayerEmojisOption?.value !== false,  // Default to true, only false if explicitly set to false
     // Analytics only - NEVER use for functionality, always fetch live role name!
-    ...(analyticsName && { analyticsName })
+    ...(analyticsName && { analyticsName }),
+    // Add timestamp when tribe is first added (not on updates)
+    ...(isNewTribe && { analyticsAdded: Date.now() })
   };
 
   // Handle color if provided, or use role color as fallback
