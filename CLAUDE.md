@@ -132,7 +132,7 @@ The bot includes migration support for multi-castlist functionality. When updati
 ## Available Commands
 
 ### Admin Commands (Require Manage Roles/Channels/Server)
-- `add_tribe` - Add tribes to castlists with automatic emoji creation
+- `add_tribe` - Add tribes to castlists with conditional emoji creation (controlled by `show_player_emojis` parameter)
 - `clear_tribe` - Remove tribes from castlists with emoji cleanup  
 - `setup_castbot` - Automated role generation for pronouns and timezones
 - `setup_tycoons` - Specialized role creation for Tycoons game mode
@@ -147,6 +147,7 @@ The bot includes migration support for multi-castlist functionality. When updati
 
 ### Player Commands (No special permissions)
 - `castlist` - Display dynamic castlist (supports named castlists)
+- `castlist2` - Display dynamic castlist with Components V2 (modern layout with player cards)
 - `player_set_age` - Individual player age assignment
 - `player_set_pronouns` - Individual player pronoun assignment
 - `player_set_timezone` - Individual player timezone assignment
@@ -194,6 +195,43 @@ When developing new features:
 - Admin application summary/tabulation
 - Applicant ranking and casting management tools
 
+## Components V2 Castlist System ✅ COMPLETE
+
+**New Feature: Modern Castlist Display with Components V2**
+- **Command**: `/castlist2` - Modern alternative to traditional castlist display
+- **Features**: 
+  - Player cards with inline Discord avatar thumbnails
+  - Dynamic component calculation to handle Discord's 40-component limit
+  - Three-scenario system: ideal (≤40 with separators), no-separators, multi-page pagination
+  - Context-aware navigation with tribe-level pagination
+  - Mobile-optimized UI with concise button indicators
+- **Architecture**: 
+  - `castlistV2.js` module with complete dynamic component system
+  - Automatic scenario detection based on tribe sizes
+  - Even distribution multi-page pagination for large tribes
+  - Hex color support with automatic role color detection
+- **Implementation Details**:
+  - Section components (type 9) with thumbnail accessories (type 11)
+  - Container components (type 17) with accent colors
+  - Text Display components (type 10) with combined player info
+  - Custom ID format: `castlist2_nav_${action}_${tribeIndex}_${tribePage}_${castlistName}`
+  - Components V2 flag (1 << 15 = 32768) for modern Discord UI
+
+**Technical Achievements:**
+- Successfully handles Discord's 40-component limit through intelligent calculation
+- Dynamic scenario switching based on tribe member counts
+- Context-aware "Last Tribe/Page" vs "Next Tribe/Page" navigation
+- Mobile-friendly design with page info in headers rather than buttons
+- Infrastructure ready for future tribe ordering features (user-first display)
+
+## Emoji Management Enhancements ✅ COMPLETE
+
+**Enhanced `/add_tribe` Command**
+- **Conditional Emoji Generation**: New `show_player_emojis` parameter (default: true)
+- **Behavior**: When set to `false`, skips emoji creation while still adding tribe to castlist
+- **Use Case**: Allows testing `/castlist2` without hitting Discord emoji limits
+- **Backwards Compatibility**: Maintains existing behavior when parameter is omitted or set to `true`
+
 ## Production Readiness Status: ✅ READY
 - All error handling patterns standardized and tested
 - Zero syntax errors across all files
@@ -201,3 +239,4 @@ When developing new features:
 - Environment-specific configuration handling
 - Rate limiting and API best practices implemented
 - Application system fully tested and production-ready
+- Components V2 castlist system fully implemented and tested

@@ -389,8 +389,8 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
   let errorLines = [];
   let maxEmojiReached = false;
 
-  // Only proceed with emoji creation if we found members
-  if (targetMembers.size > 0) {
+  // Only proceed with emoji creation if show_player_emojis is enabled and we found members
+  if (showPlayerEmojisOption?.value !== false && targetMembers.size > 0) {
     console.log(`Found ${targetMembers.size} members with tribe role ${role.name} (${roleId})`);
     
     for (const [memberId, member] of targetMembers) {
@@ -428,6 +428,8 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
         errorLines.push(errorMessage);
       }
     }
+  } else if (showPlayerEmojisOption?.value === false) {
+    console.log(`Emoji creation skipped for tribe role ${role.name} (${roleId}) - show_player_emojis set to false`);
   } else {
     console.log(`No members found with tribe role ${role.name} (${roleId})`);
   }
