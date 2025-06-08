@@ -156,10 +156,11 @@ function reorderTribes(tribes, userId = null, strategy = "default") {
  * @param {Object} playerData - Player data from storage (age, emoji, etc.)
  * @param {string} pronouns - Formatted pronouns string (empty if none)
  * @param {string} timezone - Timezone role name (empty if none)
+ * @param {string} formattedTime - Current time in player's timezone (empty if none)
  * @param {boolean} showEmoji - Whether to display player emoji
  * @returns {Object} Player card section component
  */
-function createPlayerCard(member, playerData, pronouns, timezone, showEmoji) {
+function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji) {
     const displayName = capitalize(member.displayName);
     const age = playerData?.age || '';
     const emoji = (showEmoji && playerData?.emojiCode) ? playerData.emojiCode : '';
@@ -171,8 +172,17 @@ function createPlayerCard(member, playerData, pronouns, timezone, showEmoji) {
     const infoElements = [pronouns, age, timezone].filter(info => info && info.trim() !== '');
     const basicInfo = infoElements.length > 0 ? infoElements.join(' • ') : '';
     
-    // Combine name and info, only add newline if there's info to show
-    const allInfo = basicInfo ? `${nameWithEmoji}\n${basicInfo}` : nameWithEmoji;
+    // Add time info if available
+    const timeInfo = formattedTime ? `\`🕛 Local time 🕛\` ${formattedTime}` : '';
+    
+    // Combine all parts, only adding newlines where there's content
+    let allInfo = nameWithEmoji;
+    if (basicInfo) {
+        allInfo += `\n${basicInfo}`;
+    }
+    if (timeInfo) {
+        allInfo += `\n${timeInfo}`;
+    }
 
     return {
         type: 9, // Section component
@@ -229,12 +239,28 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             .map(role => role.name)
             .join(', ') || '';
             
-        // Get player timezone role name (hide if none)
+        // Get player timezone role name and calculate current time
         let memberTimezone = '';
+        let formattedTime = '';
         const timezoneRole = member.roles.cache.find(role => timezones[role.id]);
         
         if (timezoneRole) {
             memberTimezone = timezoneRole.name; // Show role name instead of UTC offset
+            
+            // Calculate current time in their timezone
+            try {
+                const offset = timezones[timezoneRole.id].offset;
+                const now = new Date();
+                const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+                const targetTime = new Date(utcTime + (offset * 3600000));
+                formattedTime = targetTime.toLocaleTimeString('en-US', {
+                    hour12: true,
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (error) {
+                formattedTime = '';
+            }
         }
         
         // Get player data from storage
@@ -246,6 +272,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             playerData, 
             memberPronouns, 
             memberTimezone,
+            formattedTime,
             false // Never show player emojis in castlist2
         );
         
