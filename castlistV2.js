@@ -360,13 +360,8 @@ function createNavigationButtons(navigationState, castlistName) {
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(nextDisabled);
     
-    // Page indicator - show tribe/page context
-    let indicatorLabel;
-    if (scenario === "multi-page" && isMultiPageTribe) {
-        indicatorLabel = `Tribe ${currentTribeIndex + 1}/${totalTribes} • Page ${currentTribePage + 1}/${currentTribe.totalPages}`;
-    } else {
-        indicatorLabel = `Tribe ${currentTribeIndex + 1}/${totalTribes}`;
-    }
+    // Page indicator - show only tribe context (page info is in header)
+    const indicatorLabel = `Tribe ${currentTribeIndex + 1}/${totalTribes}`;
     
     const pageIndicator = new ButtonBuilder()
         .setCustomId(`castlist2_indicator_${currentTribeIndex}_${currentTribePage}`)
