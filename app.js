@@ -834,40 +834,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       });
     }
     
-    // If no castlists found, show default button
-    if (allCastlists.size === 0) {
-      const castlistRow = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId('show_castlist2_default')
-            .setLabel('Show Castlist')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('📋')
-        );
-      
-      const actionRow = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId('getting_started')
-            .setLabel('Getting Started')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('🚀'),
-          new ButtonBuilder()
-            .setCustomId('setup_castbot')
-            .setLabel('Setup')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('⚙️')
-        );
-      
-      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-      await DiscordRequest(endpoint, {
-        method: 'PATCH',
-        body: {
-          components: [castlistRow, actionRow]
-        }
-      });
-      return;
-    }
+    // Note: Always show full menu regardless of tribes - removed simplified fallback
     
     // Always show default castlist button regardless of tribes
     const castlistButtons = [
@@ -3609,7 +3576,7 @@ To fix this:
         // Use string select instead of role select for better UX
         const stringSelect = new StringSelectMenuBuilder()
           .setCustomId('prod_clear_tribe_select')
-          .setPlaceholder('Select ONE tribe to remove from castlist')
+          .setPlaceholder('Select tribe to clear from castlist')
           .setMinValues(1)
           .setMaxValues(1)
           .addOptions(options.slice(0, 25)); // Discord limit
