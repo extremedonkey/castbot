@@ -44,15 +44,23 @@ const VERBOSE = args.includes('--verbose') || args.includes('-v');
 
 function log(message, level = 'info') {
     const prefix = {
-        'info': '📋',
+        'info': '  ',
         'success': '✅',
         'error': '❌',
-        'warning': '⚠️',
-        'debug': '🔍',
-        'exec': '🚀'
-    }[level] || '📋';
+        'warning': '⚠️ ',
+        'debug': '  → ',
+        'exec': '🔧',
+        'header': '🚀'
+    }[level] || '  ';
     
     console.log(`${prefix} ${message}`);
+}
+
+function logSection(title) {
+    console.log('');
+    console.log(`${'='.repeat(50)}`);
+    log(title, 'header');
+    console.log(`${'='.repeat(50)}`);
 }
 
 function execCommand(command, description = '') {
@@ -173,8 +181,10 @@ async function checkSSHConnection() {
     log('Checking SSH connection to Lightsail...', 'info');
     
     try {
-        const result = await execCommand(
-            `ssh castbot-lightsail "echo 'SSH connection successful'"`,
+        const result = await execSSH(
+            'C:/Users/extre/.ssh/castbot-key.pem',
+            'bitnami@13.238.148.170',
+            'echo "SSH connection successful"',
             'Testing SSH connection'
         );
         
@@ -188,21 +198,19 @@ async function checkSSHConnection() {
         log(`SSH connection failed: ${error.message}`, 'error');
         log('', 'info');
         log('SSH Connection Setup Instructions:', 'info');
-        log('1. Copy ssh-config-template to ~/.ssh/config', 'info');
-        log('2. Ensure SSH key exists: ~/.ssh/castbot-key.pem', 'info');
-        log('3. Set correct permissions: chmod 600 ~/.ssh/castbot-key.pem', 'info');
-        log('4. Test manual connection: ssh castbot-lightsail "echo test"', 'info');
+        log('1. Ensure SSH key exists: C:/Users/extre/.ssh/castbot-key.pem', 'info');
+        log('2. Test manual connection: ssh -i "C:/Users/extre/.ssh/castbot-key.pem" bitnami@13.238.148.170 "echo test"', 'info');
         return false;
     }
 }
 
 async function deployToProduction() {
-    log('🚀 Starting production deployment...', 'info');
-    log(`Remote: ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}`, 'debug');
-    log('', 'info');
+    logSection('Starting Production Deployment');
+    log(`Target: ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}`, 'debug');
     
     try {
         // Step 1: Check SSH connection
+        logSection('Step 1: Connection Test');
         const sshConnected = await checkSSHConnection();
         if (!sshConnected) {
             throw new Error('Cannot establish SSH connection');
@@ -210,54 +218,68 @@ async function deployToProduction() {
         
         if (!COMMANDS_ONLY) {
             // Step 2: Stop the bot
-            log('Stopping CastBot service...', 'info');
-            await execCommand(
-                `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && pm2 stop castbot-pm"`,
+            logSection('Step 2: Stop Service');
+            await execSSH(
+                'C:/Users/extre/.ssh/castbot-key.pem',
+                'bitnami@13.238.148.170',
+                'cd /opt/bitnami/projects/castbot && pm2 stop castbot-pm',
                 'Stopping pm2 process'
             );
             
             // Step 3: Backup current version
-            log('Creating backup...', 'info');
+            logSection('Step 3: Create Backup');
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            await execCommand(
-                `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && cp -r . ../castbot-backup-${timestamp}"`,
-                'Backing up current version'
+            await execSSH(
+                'C:/Users/extre/.ssh/castbot-key.pem',
+                'bitnami@13.238.148.170',
+                `cd /opt/bitnami/projects/castbot && rsync -av --exclude='node_modules' --exclude='.git' . ../castbot-backup-${timestamp}/`,
+                'Backing up current version (excluding node_modules)'
             );
             
             // Step 4: Pull latest code
-            log('Pulling latest code from git...', 'info');
-            await execCommand(
-                `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && git pull"`,
+            logSection('Step 4: Update Code');
+            await execSSH(
+                'C:/Users/extre/.ssh/castbot-key.pem',
+                'bitnami@13.238.148.170',
+                'cd /opt/bitnami/projects/castbot && git pull',
                 'Git pull'
             );
             
             // Step 5: Install dependencies
-            log('Installing dependencies...', 'info');
-            await execCommand(
-                `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && npm install"`,
+            logSection('Step 5: Install Dependencies');
+            await execSSH(
+                'C:/Users/extre/.ssh/castbot-key.pem',
+                'bitnami@13.238.148.170',
+                'cd /opt/bitnami/projects/castbot && npm install',
                 'npm install'
             );
         }
         
         // Step 6: Deploy commands
-        log('Deploying Discord commands...', 'info');
-        await execCommand(
-            `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && npm run deploy-commands"`,
+        logSection('Step 6: Deploy Discord Commands');
+        await execSSH(
+            'C:/Users/extre/.ssh/castbot-key.pem',
+            'bitnami@13.238.148.170',
+            'cd /opt/bitnami/projects/castbot && npm run deploy-commands',
             'Deploying commands'
         );
         
         if (!COMMANDS_ONLY) {
             // Step 7: Restart the bot
-            log('Restarting CastBot service...', 'info');
-            await execCommand(
-                `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && pm2 restart castbot-pm"`,
+            logSection('Step 7: Restart Service');
+            await execSSH(
+                'C:/Users/extre/.ssh/castbot-key.pem',
+                'bitnami@13.238.148.170',
+                'cd /opt/bitnami/projects/castbot && pm2 restart castbot-pm',
                 'Restarting pm2 process'
             );
             
             // Step 8: Verify service is running
-            log('Verifying service status...', 'info');
-            const status = await execCommand(
-                `ssh castbot-lightsail "pm2 list | grep castbot-pm"`,
+            logSection('Step 8: Verify Status');
+            const status = await execSSH(
+                'C:/Users/extre/.ssh/castbot-key.pem',
+                'bitnami@13.238.148.170',
+                'pm2 list | grep castbot-pm',
                 'Checking pm2 status'
             );
             
@@ -269,12 +291,12 @@ async function deployToProduction() {
             }
         }
         
-        log('', 'info');
-        log('🎉 Deployment completed successfully!', 'success');
+        logSection('Deployment Complete');
+        log('Deployment completed successfully!', 'success');
         
         if (!COMMANDS_ONLY) {
-            log('📝 Discord commands may take up to 1 hour to propagate globally', 'info');
-            log('💡 Monitor logs: npm run logs-remote', 'info');
+            log('Discord commands may take up to 1 hour to propagate globally', 'info');
+            log('Monitor logs: npm run logs-remote', 'info');
         }
         
     } catch (error) {
@@ -299,8 +321,8 @@ async function showLogs() {
         const result = await execSSH(
             'C:/Users/extre/.ssh/castbot-key.pem',
             'bitnami@13.238.148.170',
-            'echo "SSH connection test successful" && uptime',
-            'Testing SSH connection'
+            'cd /opt/bitnami/projects/castbot && pm2 logs castbot-pm --lines 50 --nostream',
+            'Getting pm2 logs (last 50 lines)'
         );
         
         // Display the output
@@ -319,8 +341,10 @@ async function showStatus() {
     log('Checking remote status...', 'info');
     
     try {
-        const result = await execCommand(
-            `ssh castbot-lightsail "pm2 list && echo '---' && uptime && echo '---' && df -h /opt/bitnami/projects/castbot"`,
+        const result = await execSSH(
+            'C:/Users/extre/.ssh/castbot-key.pem',
+            'bitnami@13.238.148.170',
+            'pm2 list && echo "---" && uptime && echo "---" && df -h /opt/bitnami/projects/castbot',
             'Getting server status'
         );
         
@@ -328,10 +352,8 @@ async function showStatus() {
     } catch (error) {
         log(`Failed to get status: ${error.message}`, 'error');
         log('', 'info');
-        log('SSH Connection Troubleshooting:', 'yellow');
-        log('1. Copy ssh-config-template to ~/.ssh/config', 'info');
-        log('2. Ensure SSH key exists: ~/.ssh/castbot-key.pem', 'info');
-        log('3. Test SSH manually: ssh castbot-lightsail "pm2 list"', 'info');
+        log('Manual alternative:', 'yellow');
+        log('ssh -i "C:/Users/extre/.ssh/castbot-key.pem" bitnami@13.238.148.170 "pm2 list"', 'info');
     }
 }
 
