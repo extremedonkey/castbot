@@ -231,12 +231,19 @@ async function showLogs() {
     log('Fetching remote logs...', 'info');
     
     try {
+        // Always try SSH alias first (as documented in CLAUDE.md)
         await execCommand(
-            `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "pm2 logs castbot-pm --lines 50"`,
+            `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && pm2 logs castbot-pm --lines 50"`,
             'Getting pm2 logs'
         );
     } catch (error) {
         log(`Failed to fetch logs: ${error.message}`, 'error');
+        log('', 'info');
+        log('SSH Connection Troubleshooting:', 'yellow');
+        log('1. Ensure SSH key exists: ~/.ssh/castbot-key.pem', 'info');
+        log('2. Check SSH config: ~/.ssh/config should have castbot-lightsail entry', 'info');
+        log('3. Test SSH manually: ssh castbot-lightsail "echo test"', 'info');
+        log('4. If needed, run: ssh-add ~/.ssh/castbot-key.pem', 'info');
     }
 }
 
@@ -244,14 +251,28 @@ async function showStatus() {
     log('Checking remote status...', 'info');
     
     try {
-        const result = await execCommand(
-            `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "pm2 list && echo '---' && uptime && echo '---' && df -h ${REMOTE_PATH}"`,
-            'Getting server status'
-        );
+        // Try SSH alias first (from CLAUDE.md docs)
+        let result;
+        try {
+            result = await execCommand(
+                `ssh castbot-lightsail "pm2 list && echo '---' && uptime && echo '---' && df -h /opt/bitnami/projects/castbot"`,
+                'Getting server status via SSH alias'
+            );
+        } catch (aliasError) {
+            // Fallback to manual SSH if alias doesn't work
+            if (REMOTE_HOST === 'your-lightsail-ip') {
+                throw new Error('SSH alias "castbot-lightsail" not configured and LIGHTSAIL_HOST not set. Please configure SSH alias or set environment variables.');
+            }
+            result = await execCommand(
+                `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "pm2 list && echo '---' && uptime && echo '---' && df -h ${REMOTE_PATH}"`,
+                'Getting server status via manual SSH'
+            );
+        }
         
         console.log(result.stdout);
     } catch (error) {
         log(`Failed to get status: ${error.message}`, 'error');
+        log('Try running directly: ssh castbot-lightsail "pm2 list"', 'info');
     }
 }
 
