@@ -183,6 +183,7 @@ npm run status-remote               # Check remote status [USE WITH CAUTION]
 - SSH alias `castbot-lightsail` configured for easy access
 - Remote path: `/opt/bitnami/projects/castbot`
 - User: `bitnami`
+- **Windows users**: Use PowerShell commands for SSH setup
 - Always test with `npm run deploy-remote-dry-run` first
 
 **Manual Deployment Process:**

@@ -71,7 +71,13 @@ function execCommand(command, description = '') {
             log(`Executing: ${command}`, 'debug');
         }
         
-        const child = spawn('bash', ['-c', command], {
+        // Use PowerShell on Windows, bash on Linux/Mac
+        // This avoids path translation issues between Windows and WSL
+        const isWindows = process.platform === 'win32';
+        const shell = isWindows ? 'powershell.exe' : 'bash';
+        const shellFlag = isWindows ? '-Command' : '-c';
+        
+        const child = spawn(shell, [shellFlag, command], {
             stdio: ['pipe', 'pipe', 'pipe']
         });
         
@@ -106,12 +112,69 @@ function execCommand(command, description = '') {
     });
 }
 
+// New function for direct SSH execution without shell interpretation
+function execSSH(keyPath, host, remoteCommand, description = '') {
+    return new Promise((resolve, reject) => {
+        if (description) {
+            log(`${description}`, 'exec');
+        }
+        
+        if (DRY_RUN) {
+            log(`[DRY RUN] Would execute SSH: ssh -i ${keyPath} ${host} "${remoteCommand}"`, 'debug');
+            resolve({ stdout: '[DRY RUN]', stderr: '', code: 0 });
+            return;
+        }
+        
+        if (VERBOSE) {
+            log(`Executing SSH: ssh -i ${keyPath} ${host} "${remoteCommand}"`, 'debug');
+        }
+        
+        // Use direct spawn - no shell interpretation, no path mangling
+        const child = spawn('ssh', [
+            '-i', keyPath,
+            host,
+            remoteCommand
+        ], {
+            stdio: ['pipe', 'pipe', 'pipe']
+        });
+        
+        let stdout = '';
+        let stderr = '';
+        
+        child.stdout.on('data', (data) => {
+            stdout += data.toString();
+            if (VERBOSE) {
+                process.stdout.write(data);
+            }
+        });
+        
+        child.stderr.on('data', (data) => {
+            stderr += data.toString();
+            if (VERBOSE) {
+                process.stderr.write(data);
+            }
+        });
+        
+        child.on('close', (code) => {
+            if (code === 0) {
+                resolve({ stdout, stderr, code });
+            } else {
+                reject(new Error(`SSH command failed with code ${code}: ${stderr || stdout}`));
+            }
+        });
+        
+        child.on('error', (error) => {
+            reject(error);
+        });
+    });
+}
+
 async function checkSSHConnection() {
     log('Checking SSH connection to Lightsail...', 'info');
     
     try {
         const result = await execCommand(
-            `ssh -i "${SSH_KEY_PATH}" -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} "echo 'SSH connection successful'"`,
+            `ssh castbot-lightsail "echo 'SSH connection successful'"`,
             'Testing SSH connection'
         );
         
@@ -125,10 +188,10 @@ async function checkSSHConnection() {
         log(`SSH connection failed: ${error.message}`, 'error');
         log('', 'info');
         log('SSH Connection Setup Instructions:', 'info');
-        log('1. Ensure you have your Lightsail SSH key saved locally', 'info');
-        log('2. Set SSH_KEY_PATH environment variable or place key at ~/.ssh/id_rsa', 'info');
-        log(`3. Set LIGHTSAIL_HOST environment variable to your server IP`, 'info');
-        log('4. Test manual connection: ssh -i "path/to/key.pem" ubuntu@your-ip', 'info');
+        log('1. Copy ssh-config-template to ~/.ssh/config', 'info');
+        log('2. Ensure SSH key exists: ~/.ssh/castbot-key.pem', 'info');
+        log('3. Set correct permissions: chmod 600 ~/.ssh/castbot-key.pem', 'info');
+        log('4. Test manual connection: ssh castbot-lightsail "echo test"', 'info');
         return false;
     }
 }
@@ -149,7 +212,7 @@ async function deployToProduction() {
             // Step 2: Stop the bot
             log('Stopping CastBot service...', 'info');
             await execCommand(
-                `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_PATH} && pm2 stop castbot-pm"`,
+                `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && pm2 stop castbot-pm"`,
                 'Stopping pm2 process'
             );
             
@@ -157,21 +220,21 @@ async function deployToProduction() {
             log('Creating backup...', 'info');
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             await execCommand(
-                `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_PATH} && cp -r . ../castbot-backup-${timestamp}"`,
+                `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && cp -r . ../castbot-backup-${timestamp}"`,
                 'Backing up current version'
             );
             
             // Step 4: Pull latest code
             log('Pulling latest code from git...', 'info');
             await execCommand(
-                `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_PATH} && git pull"`,
+                `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && git pull"`,
                 'Git pull'
             );
             
             // Step 5: Install dependencies
             log('Installing dependencies...', 'info');
             await execCommand(
-                `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_PATH} && npm install"`,
+                `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && npm install"`,
                 'npm install'
             );
         }
@@ -179,7 +242,7 @@ async function deployToProduction() {
         // Step 6: Deploy commands
         log('Deploying Discord commands...', 'info');
         await execCommand(
-            `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_PATH} && npm run deploy-commands"`,
+            `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && npm run deploy-commands"`,
             'Deploying commands'
         );
         
@@ -187,14 +250,14 @@ async function deployToProduction() {
             // Step 7: Restart the bot
             log('Restarting CastBot service...', 'info');
             await execCommand(
-                `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "cd ${REMOTE_PATH} && pm2 restart castbot-pm"`,
+                `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && pm2 restart castbot-pm"`,
                 'Restarting pm2 process'
             );
             
             // Step 8: Verify service is running
             log('Verifying service status...', 'info');
             const status = await execCommand(
-                `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "pm2 list | grep castbot-pm"`,
+                `ssh castbot-lightsail "pm2 list | grep castbot-pm"`,
                 'Checking pm2 status'
             );
             
@@ -231,19 +294,24 @@ async function showLogs() {
     log('Fetching remote logs...', 'info');
     
     try {
-        // Always try SSH alias first (as documented in CLAUDE.md)
-        await execCommand(
-            `ssh castbot-lightsail "cd /opt/bitnami/projects/castbot && pm2 logs castbot-pm --lines 50"`,
+        // Use direct SSH spawn - no shell interpretation, no path mangling
+        // Forward slashes work perfectly with direct SSH calls on Windows
+        const result = await execSSH(
+            'C:/Users/extre/.ssh/castbot-key.pem',
+            'bitnami@13.238.148.170',
+            'cd /opt/bitnami/projects/castbot && pm2 logs castbot-pm --lines 50',
             'Getting pm2 logs'
         );
+        
+        // Display the output
+        if (result.stdout) {
+            console.log(result.stdout);
+        }
     } catch (error) {
         log(`Failed to fetch logs: ${error.message}`, 'error');
         log('', 'info');
-        log('SSH Connection Troubleshooting:', 'yellow');
-        log('1. Ensure SSH key exists: ~/.ssh/castbot-key.pem', 'info');
-        log('2. Check SSH config: ~/.ssh/config should have castbot-lightsail entry', 'info');
-        log('3. Test SSH manually: ssh castbot-lightsail "echo test"', 'info');
-        log('4. If needed, run: ssh-add ~/.ssh/castbot-key.pem', 'info');
+        log('Manual alternative:', 'yellow');
+        log('ssh -i "C:/Users/extre/.ssh/castbot-key.pem" bitnami@13.238.148.170 "pm2 logs castbot-pm"', 'info');
     }
 }
 
@@ -251,28 +319,19 @@ async function showStatus() {
     log('Checking remote status...', 'info');
     
     try {
-        // Try SSH alias first (from CLAUDE.md docs)
-        let result;
-        try {
-            result = await execCommand(
-                `ssh castbot-lightsail "pm2 list && echo '---' && uptime && echo '---' && df -h /opt/bitnami/projects/castbot"`,
-                'Getting server status via SSH alias'
-            );
-        } catch (aliasError) {
-            // Fallback to manual SSH if alias doesn't work
-            if (REMOTE_HOST === 'your-lightsail-ip') {
-                throw new Error('SSH alias "castbot-lightsail" not configured and LIGHTSAIL_HOST not set. Please configure SSH alias or set environment variables.');
-            }
-            result = await execCommand(
-                `ssh -i "${SSH_KEY_PATH}" ${REMOTE_USER}@${REMOTE_HOST} "pm2 list && echo '---' && uptime && echo '---' && df -h ${REMOTE_PATH}"`,
-                'Getting server status via manual SSH'
-            );
-        }
+        const result = await execCommand(
+            `ssh castbot-lightsail "pm2 list && echo '---' && uptime && echo '---' && df -h /opt/bitnami/projects/castbot"`,
+            'Getting server status'
+        );
         
         console.log(result.stdout);
     } catch (error) {
         log(`Failed to get status: ${error.message}`, 'error');
-        log('Try running directly: ssh castbot-lightsail "pm2 list"', 'info');
+        log('', 'info');
+        log('SSH Connection Troubleshooting:', 'yellow');
+        log('1. Copy ssh-config-template to ~/.ssh/config', 'info');
+        log('2. Ensure SSH key exists: ~/.ssh/castbot-key.pem', 'info');
+        log('3. Test SSH manually: ssh castbot-lightsail "pm2 list"', 'info');
     }
 }
 
@@ -311,18 +370,22 @@ async function main() {
             return;
         }
         
-        // Validate configuration
-        if (REMOTE_HOST === 'your-lightsail-ip') {
-            log('Please set LIGHTSAIL_HOST environment variable to your server IP', 'error');
-            log('Run with --help for more information', 'info');
-            process.exit(1);
-        }
-        
-        if (!fs.existsSync(SSH_KEY_PATH)) {
-            log(`SSH key not found at: ${SSH_KEY_PATH}`, 'error');
-            log('Please set SSH_KEY_PATH environment variable or place key at ~/.ssh/id_rsa', 'error');
-            log('Run with --help for more information', 'info');
-            process.exit(1);
+        // For logs and status commands, skip configuration validation
+        // since they only use SSH alias
+        if (!args.includes('--logs') && !args.includes('--status')) {
+            // Validate configuration for deployment operations
+            if (REMOTE_HOST === 'your-lightsail-ip') {
+                log('Please set LIGHTSAIL_HOST environment variable to your server IP', 'error');
+                log('Run with --help for more information', 'info');
+                process.exit(1);
+            }
+            
+            if (!fs.existsSync(SSH_KEY_PATH)) {
+                log(`SSH key not found at: ${SSH_KEY_PATH}`, 'error');
+                log('Please set SSH_KEY_PATH environment variable or place key at ~/.ssh/id_rsa', 'error');
+                log('Run with --help for more information', 'info');
+                process.exit(1);
+            }
         }
         
         // Check for special commands
