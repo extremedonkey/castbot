@@ -299,8 +299,8 @@ async function showLogs() {
         const result = await execSSH(
             'C:/Users/extre/.ssh/castbot-key.pem',
             'bitnami@13.238.148.170',
-            'cd /opt/bitnami/projects/castbot && pm2 logs castbot-pm --lines 50',
-            'Getting pm2 logs'
+            'echo "SSH connection test successful" && uptime',
+            'Testing SSH connection'
         );
         
         // Display the output
