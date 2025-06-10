@@ -248,15 +248,8 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
                 type: 10, // Text Display - single component with all info
                 content: allInfo
             }
-        ],
-        // TEMPORARILY DISABLED for debugging
-        // accessory: {
-        //     type: 11, // Thumbnail
-        //     media: {
-        //         url: member.user.displayAvatarURL({ size: 128, extension: 'png' })
-        //     },
-        //     description: `${displayName}'s avatar`
-        // }
+        ]
+        // TEMPORARILY DISABLED: accessory with thumbnail for debugging
     };
 }
 
@@ -299,7 +292,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     
     const combinedHeaderContent = `${castlistDisplay}\n${tribeHeaderText}${paginationText}`;
     
-    // Create tribe header as Section with install button accessory
+    // Create tribe header as Section (install button temporarily disabled)
     const tribeHeader = {
         type: 9, // Section component
         components: [
@@ -307,14 +300,8 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
                 type: 10, // Text Display
                 content: combinedHeaderContent
             }
-        ],
-        // TEMPORARILY DISABLED for debugging
-        // accessory: {
-        //     type: 2, // Button
-        //     style: 5, // Link style
-        //     label: "+Install CastBot",
-        //     url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`
-        // }
+        ]
+        // TEMPORARILY DISABLED: install button accessory for debugging
     };
     
     const playerCards = [];
