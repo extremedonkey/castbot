@@ -25,10 +25,11 @@ import { capitalize } from './utils.js';
  * @returns {number} Total component count
  */
 function calculateComponentsForTribe(playerCount, includeSeparators = true) {
-    const playerComponents = playerCount * 2; // Section + TextDisplay per player (Thumbnail is accessory)
+    // IMPORTANT: Discord DOES count accessories as separate components!
+    const playerComponents = playerCount * 3; // Section + TextDisplay + Thumbnail(accessory) per player
     const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
-    // Tribe overhead: Container + Header Section (install button is accessory, doesn't count) + Separator = 3 components
-    const tribeOverhead = 3; // Container + Header Section + Separator (button is accessory)
+    // Tribe overhead: Container + Header Section + Install Button(accessory) + Separator = 4 components
+    const tribeOverhead = 4; // Container + Header Section + Install Button + Separator
     const messageOverhead = 0; // No ad text - removed completely
     // Navigation: ActionRow (1) + 3 buttons (3) = 4 components
     // Manage Profile: ActionRow (1) + 1 button (1) = 2 components
@@ -248,8 +249,14 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
                 type: 10, // Text Display - single component with all info
                 content: allInfo
             }
-        ]
-        // TEMPORARILY DISABLED: accessory with thumbnail for debugging
+        ],
+        accessory: {
+            type: 11, // Thumbnail
+            media: {
+                url: member.user.displayAvatarURL({ size: 128, extension: 'png' })
+            },
+            description: `${displayName}'s avatar`
+        }
     };
 }
 
@@ -292,7 +299,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     
     const combinedHeaderContent = `${castlistDisplay}\n${tribeHeaderText}${paginationText}`;
     
-    // Create tribe header as Section (install button temporarily disabled)
+    // Create tribe header as Section with install button accessory
     const tribeHeader = {
         type: 9, // Section component
         components: [
@@ -300,8 +307,13 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
                 type: 10, // Text Display
                 content: combinedHeaderContent
             }
-        ]
-        // TEMPORARILY DISABLED: install button accessory for debugging
+        ],
+        accessory: {
+            type: 2, // Button
+            style: 5, // Link style
+            label: "+Install CastBot",
+            url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`
+        }
     };
     
     const playerCards = [];
