@@ -591,6 +591,10 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
         console.error(`❌ COMPONENT LIMIT EXCEEDED: ${componentCount}/40 components`);
     }
 
+    // Add super detailed debugging
+    console.log('🔍 FINAL MESSAGE STRUCTURE:');
+    console.log('finalComponents[0]:', JSON.stringify(finalComponents[0], null, 2));
+    
     return {
         flags: 1 << 15, // IS_COMPONENTS_V2 flag
         components: finalComponents
