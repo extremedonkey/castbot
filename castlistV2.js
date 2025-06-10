@@ -274,8 +274,22 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     const { currentPage, totalPages, playersOnPage } = pageInfo;
     const pageMembers = playersOnPage;
     
-    // Determine if separators should be included
-    const includeSeparators = scenario !== "no-separators";
+    // Determine if separators should be included for this specific tribe
+    // Check if this tribe fits with separators, regardless of global scenario
+    const thisTribeWithSeparators = calculateComponentsForTribe(playersOnPage.length, true);
+    const thisTribeWithoutSeparators = calculateComponentsForTribe(playersOnPage.length, false);
+    
+    let includeSeparators;
+    if (thisTribeWithSeparators <= 40) {
+        includeSeparators = true; // Tribe fits with separators
+        console.log(`Tribe ${tribe.name}: ${playersOnPage.length} players = ${thisTribeWithSeparators} components (WITH separators)`);
+    } else if (thisTribeWithoutSeparators <= 40) {
+        includeSeparators = false; // Remove separators for this tribe
+        console.log(`Tribe ${tribe.name}: ${playersOnPage.length} players = ${thisTribeWithoutSeparators} components (WITHOUT separators)`);
+    } else {
+        includeSeparators = false; // Still won't fit, but try without separators
+        console.log(`Tribe ${tribe.name}: ${playersOnPage.length} players = ${thisTribeWithoutSeparators} components (STILL TOO BIG)`);
+    }
     
     // Create header with just castlist name and tribe info
     const castlistDisplay = castlistName !== 'default' ? `## ${castlistName} Castlist` : '## Castlist';
