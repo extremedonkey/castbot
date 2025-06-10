@@ -314,8 +314,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             label: "", // Blank label - users rely on emoji
             url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`,
             emoji: {
-                id: "1333820342275149824",
-                name: "castbot"
+                name: "⬇️"
             }
         }
     };
