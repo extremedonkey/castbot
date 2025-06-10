@@ -300,15 +300,27 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     const combinedHeaderContent = `${castlistDisplay}\n${tribeHeaderText}${paginationText}`;
     
     // Create tribe header as Section (no accessory since install button moved to bottom)
+    const headerTextDisplay = {
+        type: 10, // Text Display
+        content: combinedHeaderContent
+    };
+    
+    // Defensive: Ensure Text Display has no accessory field (Text Display components shouldn't have accessories)
+    if (headerTextDisplay.accessory !== undefined) {
+        delete headerTextDisplay.accessory;
+        console.log('🛡️ Removed unexpected accessory from headerTextDisplay');
+    }
+    
     const tribeHeader = {
         type: 9, // Section component
-        components: [
-            {
-                type: 10, // Text Display
-                content: combinedHeaderContent
-            }
-        ]
+        components: [headerTextDisplay]
     };
+    
+    // Defensive: Ensure no accessory field exists (in case something adds it later)
+    if (tribeHeader.accessory !== undefined) {
+        delete tribeHeader.accessory;
+        console.log('🛡️ Removed unexpected accessory from tribeHeader');
+    }
     
     console.log('🔍 DEBUG: tribeHeader structure:', JSON.stringify(tribeHeader, null, 2));
     

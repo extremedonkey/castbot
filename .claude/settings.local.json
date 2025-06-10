@@ -55,7 +55,8 @@
       "Bash(cat:*)",
       "Bash(git fetch:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg \"accessory\" castlistV2.js)"
     ],
     "deny": []
   }
