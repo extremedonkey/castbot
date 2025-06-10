@@ -25,7 +25,7 @@ import { capitalize } from './utils.js';
  * @returns {number} Total component count
  */
 function calculateComponentsForTribe(playerCount, includeSeparators = true) {
-    const playerComponents = playerCount * 3; // Section + TextDisplay + Thumbnail per player
+    const playerComponents = playerCount * 2; // Section + TextDisplay per player (Thumbnail is accessory)
     const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
     // Tribe overhead: Container + Header Section (install button is accessory, doesn't count) + Separator = 3 components
     const tribeOverhead = 3; // Container + Header Section + Separator (button is accessory)
