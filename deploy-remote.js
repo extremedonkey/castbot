@@ -236,13 +236,46 @@ async function deployToProduction() {
                 'Backing up current version (excluding node_modules)'
             );
             
-            // Step 4: Pull latest code
+            // Step 4: Pull latest code from main branch
             logSection('Step 4: Update Code');
+            
+            // First fetch all remote branches
             await execSSH(
                 'C:/Users/extre/.ssh/castbot-key.pem',
                 'bitnami@13.238.148.170',
-                'cd /opt/bitnami/projects/castbot && git pull',
-                'Git pull'
+                'cd /opt/bitnami/projects/castbot && git fetch origin',
+                'Fetching remote branches'
+            );
+            
+            // Show what we're about to merge (safety check)
+            log('Checking merge preview...', 'info');
+            const mergePreview = await execSSH(
+                'C:/Users/extre/.ssh/castbot-key.pem',
+                'bitnami@13.238.148.170',
+                'cd /opt/bitnami/projects/castbot && git log --oneline origin/main -5 && echo "---" && git diff HEAD..origin/main --stat',
+                'Preview merge from main'
+            );
+            
+            if (!DRY_RUN) {
+                console.log('Merge Preview:');
+                console.log(mergePreview.stdout);
+                
+                // Check for file size red flags (major deletions could indicate old code)
+                if (mergePreview.stdout.includes('app.js') && mergePreview.stdout.includes('--')) {
+                    const appJsChanges = mergePreview.stdout.split('\n').find(line => line.includes('app.js'));
+                    if (appJsChanges && appJsChanges.includes('--')) {
+                        log('WARNING: app.js showing major deletions - verify this is expected!', 'warning');
+                        log('Review the diff above carefully before proceeding', 'warning');
+                    }
+                }
+            }
+            
+            // Pull from main branch (now contains latest code)
+            await execSSH(
+                'C:/Users/extre/.ssh/castbot-key.pem',
+                'bitnami@13.238.148.170',
+                'cd /opt/bitnami/projects/castbot && git pull origin main',
+                'Git pull from main (latest code)'
             );
             
             // Step 5: Install dependencies

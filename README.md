@@ -5,8 +5,10 @@ CastBot is a Discord bot designed to manage the casting process in Online Realit
 ## Table of Contents
 - [Purpose and Overview](#purpose-and-overview)
 - [Setup](#setup)
+- [Development Workflow](#development-workflow)
+- [Deployment Reference](#deployment-reference)
 - [Environments](#environments)
-* [[#Security, Access and Data Management]]
+- [Security, Access and Data Management](#security-access-and-data-management)
 - [Data Structures](#data-structures)
 - [Commands](#commands)
 - [Interacting with Discord](#interacting-with-discord)
@@ -83,6 +85,107 @@ To register the global and guild-specific slash commands, run the following Powe
 ```powershell
 .\registerslashcommands.ps1
 ```
+
+## Development Workflow
+
+### Git Strategy (Clean & Simple)
+
+**Single Branch Approach:**
+- `main` branch = single source of truth
+- Work directly on `main` for most changes  
+- Production deploys from `main` branch only
+
+**Development → Production Flow:**
+1. **Local Development**: Make changes on `main` branch
+2. **Push to GitHub**: `.\start-and-push.ps1` (pushes to GitHub main)
+3. **Deploy to Production**: `npm run deploy-remote` (pulls from GitHub main)
+
+### Daily Development Commands
+
+**Local Development:**
+```bash
+npm start                    # Start bot locally
+npm run dev                  # Start with auto-restart
+.\start-dev.ps1             # Complete dev environment startup
+```
+
+**Command Updates:**
+```bash
+npm run deploy-commands      # Deploy commands (auto-detects dev/prod)
+npm run verify-commands      # Check current command status
+```
+
+**Git Workflow:**
+```powershell
+.\start-and-push.ps1         # Add, commit, and push to GitHub
+.\start-and-push.ps1 "Custom commit message"  # With custom message
+```
+
+## Deployment Reference
+
+### 🔒 Safe Commands (Ready to Use)
+
+**Local Development:**
+```bash
+npm run deploy-commands        # Deploy commands (auto-detects dev/prod)
+npm run analyze-commands       # Preview command changes (SAFE)
+npm run verify-commands        # Check current command status
+npm run clean-commands         # Clean up command issues
+```
+
+**Remote Access:**
+```bash
+ssh castbot-lightsail          # Connect to production server
+npm run deploy-remote-dry-run  # Preview what deployment would do (SAFE)
+```
+
+### ⚠️ Production Commands (Use with Caution)
+
+**Remote Deployment:**
+```bash
+npm run deploy-remote              # Full deployment (code + commands)
+npm run deploy-commands-remote     # Commands only (faster)
+npm run logs-remote                # View production logs
+npm run status-remote              # Check production status
+```
+
+### 🎯 Recommended Deployment Workflow
+
+**For Command Changes:**
+1. `npm run analyze-commands` - Preview changes
+2. `npm run deploy-commands` - Test in development
+3. `npm run deploy-remote-dry-run` - Preview production changes
+4. `npm run deploy-commands-remote` - Deploy to production
+
+**For Code Changes:**
+1. Commit and push changes: `.\start-and-push.ps1`
+2. `npm run deploy-remote-dry-run` - Preview full deployment
+3. `npm run deploy-remote` - Deploy to production
+
+**For Troubleshooting:**
+1. `ssh castbot-lightsail` - Direct server access
+2. `npm run status-remote` - Check server status
+3. `npm run logs-remote` - View recent logs
+
+### 📍 Server Information
+- **Host**: 13.238.148.170
+- **User**: bitnami
+- **Path**: /opt/bitnami/projects/castbot
+- **SSH Alias**: castbot-lightsail
+
+### 🚨 Deployment Safety Features
+- **Automatic backups** created before each deployment
+- **Merge preview** shows exactly what changes will be applied
+- **File size validation** warns if core files shrink dramatically
+- **Dry-run mode** lets you preview all changes safely
+- **SSH connection testing** ensures connectivity before deployment
+
+### 📚 Key Deployment Lessons
+- **Always run dry-run first** - `npm run deploy-remote-dry-run` shows exactly what will change
+- **Watch file sizes** - If core files (like app.js) get dramatically smaller, STOP and investigate
+- **Verify commit dates** - Ensure you're deploying recent code, not old code
+- **Use safety backups** - Production backup branches save the day when things go wrong
+- **GitHub = Single Source of Truth** - All deployments pull from GitHub main branch
 
 ## Environments
 
