@@ -29,7 +29,10 @@ function calculateComponentsForTribe(playerCount, includeSeparators = true) {
     const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
     const tribeOverhead = 3; // Container + Header + Separator
     const messageOverhead = 2; // Main header + Ad
-    const navigationOverhead = 5; // Navigation buttons (3) + viral buttons (2) = 5 total per row
+    // In Components V2, ActionRows count as components too!
+    // Navigation: ActionRow (1) + 3 buttons (3) = 4 components only
+    // No viral buttons are currently being created despite the calculation expecting them
+    const navigationOverhead = 4; // Navigation ActionRow + 3 navigation buttons
     
     return playerComponents + separatorCount + tribeOverhead + messageOverhead + navigationOverhead;
 }
@@ -436,19 +439,7 @@ function createNavigationButtons(navigationState, castlistName) {
         .setStyle(ButtonStyle.Primary)
         .setDisabled(true);
     
-    // Add viral growth buttons to the navigation row (5 components max per row)
-    const viralMenuButton = new ButtonBuilder()
-        .setCustomId('viral_menu')
-        .setLabel('Manage Profile')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('📇');
-    
-    const installButton = new ButtonBuilder()
-        .setLabel('+Install CastBot')
-        .setStyle(ButtonStyle.Link)
-        .setURL('https://discord.com/oauth2/authorize?client_id=1319912453248647170');
-    
-    row.addComponents(lastButton, pageIndicator, nextButton, viralMenuButton, installButton);
+    row.addComponents(lastButton, pageIndicator, nextButton);
     return row;
 }
 
