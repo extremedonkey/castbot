@@ -1009,7 +1009,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: {
-          content: '**Player Menu**',
+          content: '**CastBot Player Menu**',
           components: [castlistRow, actionRow]
         }
       });
