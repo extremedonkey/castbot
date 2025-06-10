@@ -542,15 +542,48 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
         ]
     };
 
+    const finalComponents = [
+        ...components,
+        ...navigationRows,
+        manageProfileRow
+    ];
+
+    // DEBUG: Count actual components
+    const componentCount = countComponents(finalComponents);
+    console.log(`🔍 ACTUAL COMPONENT COUNT: ${componentCount} components`);
+    console.log(`   Tribe components: ${components.length}`);
+    console.log(`   Navigation rows: ${navigationRows.length}`);
+    console.log(`   Manage profile row: 1`);
+    
+    if (componentCount > 40) {
+        console.error(`❌ COMPONENT LIMIT EXCEEDED: ${componentCount}/40 components`);
+    }
+
     return {
         flags: 1 << 15, // IS_COMPONENTS_V2 flag
-        components: [
-            ...components,
-            ...navigationRows,
-            manageProfileRow
-            // No ad text - removed completely
-        ]
+        components: finalComponents
     };
+}
+
+// DEBUG: Component counting function
+function countComponents(components) {
+    let count = 0;
+    
+    function countRecursive(items) {
+        if (!Array.isArray(items)) return 0;
+        
+        for (const item of items) {
+            count++; // Count the item itself
+            
+            // Recursively count nested components
+            if (item.components) {
+                countRecursive(item.components);
+            }
+        }
+    }
+    
+    countRecursive(components);
+    return count;
 }
 
 export {
