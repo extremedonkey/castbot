@@ -27,9 +27,9 @@ import { capitalize } from './utils.js';
 function calculateComponentsForTribe(playerCount, includeSeparators = true) {
     const playerComponents = playerCount * 3; // Section + TextDisplay + Thumbnail per player
     const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
-    // Tribe overhead now includes: Container + Header Section (with install button accessory) + Separator = 4 components
-    const tribeOverhead = 4; // Container + Header Section + Install Button + Separator
-    const messageOverhead = 1; // CastBot ad at bottom (main header moved to tribe)
+    // Tribe overhead: Container + Header Section (install button is accessory, doesn't count) + Separator = 3 components
+    const tribeOverhead = 3; // Container + Header Section + Separator (button is accessory)
+    const messageOverhead = 0; // No ad text - removed completely
     // Navigation: ActionRow (1) + 3 buttons (3) = 4 components
     // Manage Profile: ActionRow (1) + 1 button (1) = 2 components
     const navigationOverhead = 6; // Navigation ActionRow + buttons + Manage Profile ActionRow + button
@@ -277,12 +277,12 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     // Determine if separators should be included
     const includeSeparators = scenario !== "no-separators";
     
-    // Create combined header with guild name and tribe info
-    const castlistDisplay = castlistName !== 'default' ? ` \`${castlistName} Castlist\`` : '';
+    // Create header with just castlist name and tribe info
+    const castlistDisplay = castlistName !== 'default' ? `## ${castlistName} Castlist` : '## Castlist';
     const tribeHeaderText = `${tribe.emoji || ''} **${tribe.name}** ${tribe.emoji || ''}`.trim();
     const paginationText = totalPages > 1 ? ` \`${currentPage + 1}/${totalPages}\`` : '';
     
-    const combinedHeaderContent = `### ${guild.name}${castlistDisplay}\n${tribeHeaderText}${paginationText}`;
+    const combinedHeaderContent = `${castlistDisplay}\n${tribeHeaderText}${paginationText}`;
     
     // Create tribe header as Section with install button accessory
     const tribeHeader = {
@@ -541,21 +541,14 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
             }
         ]
     };
-    
-    // Create clean CastBot ad (no image)
-    const adComponent = {
-        type: 10, // Text Display
-        content: '_Click CastBot and \'+Add App\' to use in your ORG!_'
-    };
 
     return {
         flags: 1 << 15, // IS_COMPONENTS_V2 flag
         components: [
             ...components,
             ...navigationRows,
-            manageProfileRow,
-            // Add CastBot ad at bottom
-            adComponent
+            manageProfileRow
+            // No ad text - removed completely
         ]
     };
 }
