@@ -3241,25 +3241,26 @@ To fix this:
             sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
           .setColor('#7ED321');
 
-        // Send initial response
-        await res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-        });
-
-        // Send the embed as a follow-up and get the message directly
-        const followUpResponse = await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
-          method: 'POST',
-          body: {
+        // Send initial response with embed directly
+        res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
             embeds: [embed]
           }
         });
 
-        if (!followUpResponse.id) {
-          console.error('Failed to get message ID from follow-up response');
+        // Get the message ID from the interaction response
+        // Since this is the initial response, we need to fetch the message
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for message to be created
+        
+        const channel = await client.channels.fetch(req.body.channel_id);
+        const messages = await channel.messages.fetch({ limit: 1 });
+        const messageId = messages.first()?.id;
+
+        if (!messageId) {
+          console.error('Failed to get message ID from interaction response');
           return;
         }
-
-        const messageId = followUpResponse.id;
 
         // Add reactions with proper error handling
         for (let i = 0; i < sortedRoles.length; i++) {
@@ -3288,13 +3289,16 @@ To fix this:
 
       } catch (error) {
         console.error('Error in prod_timezone_react:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error creating timezone reaction message',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+        // Only send error response if we haven't already sent a response
+        if (!res.headersSent) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: 'Error creating timezone reaction message',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
       }
     } else if (custom_id === 'prod_pronoun_react') {
       // Execute same logic as player_set_pronouns command (available to all users)

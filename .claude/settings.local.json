@@ -57,7 +57,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg \"accessory\" castlistV2.js)",
-      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"install.*button.*header|header.*install.*button\" castlistV2.js)"
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"install.*button.*header|header.*install.*button\" castlistV2.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 20 \"prod_timezone_react\" app.js)"
     ],
     "deny": []
   }
