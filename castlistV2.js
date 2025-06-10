@@ -292,22 +292,17 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         console.log(`Tribe ${tribe.name}: ${playersOnPage.length} players = ${thisTribeWithoutSeparators} components (STILL TOO BIG)`);
     }
     
-    // Create header with just castlist name and tribe info
+    // Create header with proper format: Line 1 = castlist name, Line 2 = tribe info
     const castlistDisplay = castlistName !== 'default' ? `## ${castlistName} Castlist` : '## Castlist';
     const tribeHeaderText = `${tribe.emoji || ''} **${tribe.name}** ${tribe.emoji || ''}`.trim();
     const paginationText = totalPages > 1 ? ` \`${currentPage + 1}/${totalPages}\`` : '';
     
     const combinedHeaderContent = `${castlistDisplay}\n${tribeHeaderText}${paginationText}`;
     
-    // Create tribe header as Section (no accessory since install button moved to bottom)
+    // Create tribe header as simple Text Display (not Section to avoid accessory requirement)
     const tribeHeader = {
-        type: 9, // Section component
-        components: [
-            {
-                type: 10, // Text Display
-                content: combinedHeaderContent
-            }
-        ]
+        type: 10, // Text Display component
+        content: combinedHeaderContent
     };
     
     console.log('🔍 DEBUG: tribeHeader structure:', JSON.stringify(tribeHeader, null, 2));
@@ -605,13 +600,31 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
 function countComponents(components) {
     let count = 0;
     
+    const typeNames = {
+        1: 'ActionRow',
+        2: 'Button', 
+        9: 'Section',
+        10: 'TextDisplay',
+        11: 'Thumbnail',
+        14: 'Separator',
+        17: 'Container'
+    };
+    
     function countRecursive(items, depth = 0) {
         if (!Array.isArray(items)) return;
         
         for (const item of items) {
             count++; // Count the item itself
             const indent = '  '.repeat(depth);
-            console.log(`${indent}Component ${count}: type ${item.type}`);
+            const typeName = typeNames[item.type] || `Unknown(${item.type})`;
+            const hasAccessory = item.accessory ? ' [HAS ACCESSORY]' : '';
+            console.log(`${indent}${count}. ${typeName}${hasAccessory}`);
+            
+            // Show accessory details if present
+            if (item.accessory && depth < 3) {
+                const accessoryType = typeNames[item.accessory.type] || `Unknown(${item.accessory.type})`;
+                console.log(`${indent}   └─ Accessory: ${accessoryType}`);
+            }
             
             // Recursively count nested components
             if (item.components) {
