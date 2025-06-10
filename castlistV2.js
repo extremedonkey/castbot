@@ -569,19 +569,22 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
 function countComponents(components) {
     let count = 0;
     
-    function countRecursive(items) {
-        if (!Array.isArray(items)) return 0;
+    function countRecursive(items, depth = 0) {
+        if (!Array.isArray(items)) return;
         
         for (const item of items) {
             count++; // Count the item itself
+            const indent = '  '.repeat(depth);
+            console.log(`${indent}Component ${count}: type ${item.type}`);
             
             // Recursively count nested components
             if (item.components) {
-                countRecursive(item.components);
+                countRecursive(item.components, depth + 1);
             }
         }
     }
     
+    console.log('📋 DETAILED COMPONENT BREAKDOWN:');
     countRecursive(components);
     return count;
 }
