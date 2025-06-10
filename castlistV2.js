@@ -28,14 +28,14 @@ function calculateComponentsForTribe(playerCount, includeSeparators = true) {
     // IMPORTANT: Discord DOES count accessories as separate components!
     const playerComponents = playerCount * 3; // Section + TextDisplay + Thumbnail(accessory) per player
     const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
-    // Tribe overhead: Container + Header Section + Install Button(accessory) + Separator = 4 components
-    const tribeOverhead = 4; // Container + Header Section + Install Button + Separator
+    // Tribe overhead: Container + Header Section + Separator after header = 3 components (install button moved)
+    const tribeOverhead = 3; // Container + Header Section + Separator
+    const installOverhead = includeSeparators ? 3 : 2; // Separator(conditional) + Install Section + Install Button(accessory)
     const messageOverhead = 0; // No ad text - removed completely
-    // Navigation: ActionRow (1) + 3 buttons (3) = 4 components
-    // Manage Profile: ActionRow (1) + 1 button (1) = 2 components
-    const navigationOverhead = 6; // Navigation ActionRow + buttons + Manage Profile ActionRow + button
+    // Navigation: ActionRow (1) + 3 buttons (2 arrows + manage profile) = 4 components
+    const navigationOverhead = 4; // Navigation ActionRow + 3 buttons (no separate manage profile row)
     
-    return playerComponents + separatorCount + tribeOverhead + messageOverhead + navigationOverhead;
+    return playerComponents + separatorCount + tribeOverhead + installOverhead + messageOverhead + navigationOverhead;
 }
 
 /**
@@ -308,15 +308,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
                 content: combinedHeaderContent
             }
         ],
-        accessory: {
-            type: 2, // Button
-            style: 5, // Link style
-            label: "", // Blank label - users rely on emoji
-            url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`,
-            emoji: {
-                name: "⬇️"
-            }
-        }
+        // Install button moved to bottom section - no accessory here anymore
     };
     
     const playerCards = [];
@@ -376,6 +368,35 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         }
     }
     
+    // Add install section after all players
+    if (includeSeparators) {
+        playerCards.push({
+            type: 14 // Separator before install section
+        });
+    }
+    
+    // Create install section
+    const installSection = {
+        type: 9, // Section
+        components: [
+            {
+                type: 10, // Text Display
+                content: "**Install CastBot**"
+            }
+        ],
+        accessory: {
+            type: 2, // Button
+            style: 5, // Link style
+            label: "+Install CastBot",
+            url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`,
+            emoji: {
+                name: "⬇️"
+            }
+        }
+    };
+    
+    playerCards.push(installSection);
+
     // Convert hex color to integer if needed
     let accentColor = 0x7ED321; // Default green
     if (tribe.color) {
@@ -450,29 +471,26 @@ function createNavigationButtons(navigationState, castlistName) {
         nextAction = 'next_tribe';
     }
     
-    // Create buttons
+    // Create simplified arrow buttons
     const lastButton = new ButtonBuilder()
         .setCustomId(`castlist2_nav_${lastAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}`)
-        .setLabel(lastLabel)
+        .setLabel("◀")
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(lastDisabled);
     
     const nextButton = new ButtonBuilder()
         .setCustomId(`castlist2_nav_${nextAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}`)
-        .setLabel(nextLabel)
+        .setLabel("▶")
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(nextDisabled);
     
-    // Page indicator - show only tribe context (page info is in header)
-    const indicatorLabel = `Tribe ${currentTribeIndex + 1}/${totalTribes}`;
+    // Manage Profile button replaces the indicator
+    const manageProfileButton = new ButtonBuilder()
+        .setCustomId("viral_menu")
+        .setLabel("📋")
+        .setStyle(ButtonStyle.Primary);
     
-    const pageIndicator = new ButtonBuilder()
-        .setCustomId(`castlist2_indicator_${currentTribeIndex}_${currentTribePage}`)
-        .setLabel(indicatorLabel)
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(true);
-    
-    row.addComponents(lastButton, pageIndicator, nextButton);
+    row.addComponents(lastButton, manageProfileButton, nextButton);
     return row;
 }
 
@@ -547,23 +565,12 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
         components.push(tribeComponent);
     }
     
-    // Create manage profile button in separate ActionRow
-    const manageProfileRow = {
-        type: 1, // ActionRow
-        components: [
-            {
-                type: 2, // Button
-                style: 1, // Primary
-                label: "📇 Manage Profile",
-                custom_id: "viral_menu"
-            }
-        ]
-    };
+    // Manage profile button now integrated into navigation row - no separate row needed
 
     const finalComponents = [
         ...components,
-        ...navigationRows,
-        manageProfileRow
+        ...navigationRows
+        // Removed separate manage profile row - now integrated into navigation
     ];
 
     // DEBUG: Count actual components
