@@ -29,10 +29,9 @@ function calculateComponentsForTribe(playerCount, includeSeparators = true) {
     const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
     const tribeOverhead = 3; // Container + Header + Separator
     const messageOverhead = 2; // Main header + Ad
-    const navigationOverhead = 3; // Navigation buttons
-    const viralOverhead = 2; // Viral growth buttons added in latest update
+    const navigationOverhead = 5; // Navigation buttons (3) + viral buttons (2) = 5 total per row
     
-    return playerComponents + separatorCount + tribeOverhead + messageOverhead + navigationOverhead + viralOverhead;
+    return playerComponents + separatorCount + tribeOverhead + messageOverhead + navigationOverhead;
 }
 
 /**
@@ -437,7 +436,19 @@ function createNavigationButtons(navigationState, castlistName) {
         .setStyle(ButtonStyle.Primary)
         .setDisabled(true);
     
-    row.addComponents(lastButton, pageIndicator, nextButton);
+    // Add viral growth buttons to the navigation row (5 components max per row)
+    const viralMenuButton = new ButtonBuilder()
+        .setCustomId('viral_menu')
+        .setLabel('Manage Profile')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('📇');
+    
+    const installButton = new ButtonBuilder()
+        .setLabel('+Install CastBot')
+        .setStyle(ButtonStyle.Link)
+        .setURL('https://discord.com/oauth2/authorize?client_id=1319912453248647170');
+    
+    row.addComponents(lastButton, pageIndicator, nextButton, viralMenuButton, installButton);
     return row;
 }
 

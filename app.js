@@ -164,24 +164,7 @@ async function createCastBotMenu(playerData, guildId, isEphemeral = false) {
   };
 }
 
-/**
- * Create viral growth buttons row for castlists
- * @returns {ActionRowBuilder} Action row with viral growth buttons
- */
-function createViralGrowthButtons() {
-  return new ActionRowBuilder()
-    .addComponents(
-      new ButtonBuilder()
-        .setCustomId('viral_menu')
-        .setLabel('Manage Profile')
-        .setStyle(ButtonStyle.Primary)
-        .setEmoji('📇'),
-      new ButtonBuilder()
-        .setLabel('+Install CastBot')
-        .setStyle(ButtonStyle.Link)
-        .setURL('https://discord.com/oauth2/authorize?client_id=1319912453248647170')
-    );
-}
+// Viral growth buttons are now integrated into navigation buttons in castlistV2.js
 
 // Add these constants near the top with other constants
 const REACTION_NUMBERS = [
@@ -267,11 +250,8 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
     );
   }
   
-  // Create navigation buttons
+  // Create navigation buttons (now includes viral growth buttons)
   const navigationRow = createNavigationButtons(navigationState, castlistName);
-  
-  // Create viral growth buttons
-  const viralRow = createViralGrowthButtons();
   
   // Create complete layout
   const responseData = createCastlistV2Layout(
@@ -279,7 +259,7 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
     castlistName,
     guild,
     [navigationRow.toJSON()],
-    [viralRow.toJSON()],
+    [], // No separate viral buttons needed
     client
   );
   
@@ -5777,16 +5757,13 @@ To fix this:
           navigationRows.push(navRow.toJSON());
         }
 
-        // Create viral growth buttons
-        const viralRow = createViralGrowthButtons();
-        
-        // Create the complete Components V2 layout
+        // Create the complete Components V2 layout (viral buttons now in navigation)
         const responseData = createCastlistV2Layout(
           tribeComponents,
           castlistName,
           fullGuild,
           navigationRows,
-          [viralRow.toJSON()],
+          [], // No separate viral buttons needed
           client
         );
 
