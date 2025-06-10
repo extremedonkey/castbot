@@ -27,12 +27,12 @@ import { capitalize } from './utils.js';
 function calculateComponentsForTribe(playerCount, includeSeparators = true) {
     const playerComponents = playerCount * 3; // Section + TextDisplay + Thumbnail per player
     const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
-    const tribeOverhead = 3; // Container + Header + Separator
-    const messageOverhead = 2; // Main header + Ad
-    // In Components V2, ActionRows count as components too!
-    // Navigation: ActionRow (1) + 3 buttons (3) = 4 components only
-    // No viral buttons are currently being created despite the calculation expecting them
-    const navigationOverhead = 4; // Navigation ActionRow + 3 navigation buttons
+    // Tribe overhead now includes: Container + Header Section (with install button accessory) + Separator = 4 components
+    const tribeOverhead = 4; // Container + Header Section + Install Button + Separator
+    const messageOverhead = 1; // CastBot ad at bottom (main header moved to tribe)
+    // Navigation: ActionRow (1) + 3 buttons (3) = 4 components
+    // Manage Profile: ActionRow (1) + 1 button (1) = 2 components
+    const navigationOverhead = 6; // Navigation ActionRow + buttons + Manage Profile ActionRow + button
     
     return playerComponents + separatorCount + tribeOverhead + messageOverhead + navigationOverhead;
 }
@@ -270,20 +270,35 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
  * @param {string} scenario - Display scenario ("ideal", "no-separators", "multi-page")
  * @returns {Object} Tribe container component
  */
-async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, pageInfo, scenario) {
+async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, pageInfo, scenario, castlistName = 'default') {
     const { currentPage, totalPages, playersOnPage } = pageInfo;
     const pageMembers = playersOnPage;
     
     // Determine if separators should be included
     const includeSeparators = scenario !== "no-separators";
     
-    // Create tribe header with stylistic blockquote and page info
+    // Create combined header with guild name and tribe info
+    const castlistDisplay = castlistName !== 'default' ? ` \`${castlistName} Castlist\`` : '';
     const tribeHeaderText = `${tribe.emoji || ''} **${tribe.name}** ${tribe.emoji || ''}`.trim();
     const paginationText = totalPages > 1 ? ` \`${currentPage + 1}/${totalPages}\`` : '';
     
+    const combinedHeaderContent = `### ${guild.name}${castlistDisplay}\n${tribeHeaderText}${paginationText}`;
+    
+    // Create tribe header as Section with install button accessory
     const tribeHeader = {
-        type: 10, // Text Display
-        content: `### > ${tribeHeaderText}${paginationText}`
+        type: 9, // Section component
+        components: [
+            {
+                type: 10, // Text Display
+                content: combinedHeaderContent
+            }
+        ],
+        accessory: {
+            type: 2, // Button
+            style: 5, // Link style
+            label: "+Install CastBot",
+            url: "https://discord.com/oauth2/authorize?client_id=1320093385609699350&permissions=2684878912&integration_type=0&scope=bot+applications.commands"
+        }
     };
     
     const playerCards = [];
@@ -509,20 +524,23 @@ async function processMemberData(member, pronounRoleIds, timezones, guildId) {
 function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = [], viralRows = [], client = null) {
     const components = [];
     
-    // Medium header text using markdown formatting
-    const headerText = castlistName !== 'default' 
-        ? `## ${guild.name} ${castlistName} Castlist` 
-        : `## ${guild.name} Castlist`;
-    
-    components.push({
-        type: 10, // Text Display
-        content: headerText
-    });
-    
-    // Add all tribe containers with separators after tribe names
+    // Add all tribe containers (header now included in tribe)
     for (const tribeComponent of tribes) {
         components.push(tribeComponent);
     }
+    
+    // Create manage profile button in separate ActionRow
+    const manageProfileRow = {
+        type: 1, // ActionRow
+        components: [
+            {
+                type: 2, // Button
+                style: 1, // Primary
+                label: "📇 Manage Profile",
+                custom_id: "viral_menu"
+            }
+        ]
+    };
     
     // Create clean CastBot ad (no image)
     const adComponent = {
@@ -535,8 +553,8 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
         components: [
             ...components,
             ...navigationRows,
-            ...viralRows,
-            // Add CastBot ad after viral buttons
+            manageProfileRow,
+            // Add CastBot ad at bottom
             adComponent
         ]
     };

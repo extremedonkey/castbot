@@ -246,7 +246,8 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
       pronounRoleIds,
       timezones,
       pageInfo,
-      scenario
+      scenario,
+      castlistName
     );
   }
   
