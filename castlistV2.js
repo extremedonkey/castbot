@@ -394,7 +394,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         components: [
             {
                 type: 10, // Text Display
-                content: "**Install CastBot**"
+                content: "Want CastBot for your season?"
             }
         ],
         accessory: {
