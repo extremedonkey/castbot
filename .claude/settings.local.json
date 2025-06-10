@@ -52,7 +52,8 @@
       "Bash(chmod:*)",
       "Bash(cp:*)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"slice.*9|\\.slice\\(0.*9\" app.js)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git fetch:*)"
     ],
     "deny": []
   }
