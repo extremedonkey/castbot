@@ -310,6 +310,8 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         ]
     };
     
+    console.log('🔍 DEBUG: tribeHeader structure:', JSON.stringify(tribeHeader, null, 2));
+    
     const playerCards = [];
     
     // Process each member into individual Section components with inline thumbnails
@@ -407,7 +409,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         }
     }
 
-    return {
+    const containerResult = {
         type: 17, // Container
         accent_color: accentColor,
         components: [
@@ -418,6 +420,10 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             ...playerCards
         ]
     };
+    
+    console.log('🔍 DEBUG: Final container components[0]:', JSON.stringify(containerResult.components[0], null, 2));
+    
+    return containerResult;
 }
 
 /**
