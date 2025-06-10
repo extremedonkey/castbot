@@ -30,7 +30,7 @@ function calculateComponentsForTribe(playerCount, includeSeparators = true) {
     const separatorCount = includeSeparators ? Math.max(0, playerCount - 1) : 0;
     // Tribe overhead: Container + Header Section + Separator after header = 3 components (install button moved)
     const tribeOverhead = 3; // Container + Header Section + Separator
-    const installOverhead = includeSeparators ? 3 : 2; // Separator(conditional) + Install Section + Install Button(accessory)
+    const installOverhead = includeSeparators ? 3 : 2; // Separator(conditional) + Install ActionRow + Install Button
     const messageOverhead = 0; // No ad text - removed completely
     // Navigation: ActionRow (1) + 3 buttons (2 arrows + manage profile) = 4 components
     const navigationOverhead = 4; // Navigation ActionRow + 3 buttons (no separate manage profile row)
@@ -371,27 +371,23 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         });
     }
     
-    // Create install section (same format as header had when install button was there)
-    const installSection = {
-        type: 9, // Section
+    // Create install action row (just the button, no text)
+    const installActionRow = {
+        type: 1, // ActionRow
         components: [
             {
-                type: 10, // Text Display
-                content: "Want CastBot for your season?"
+                type: 2, // Button
+                style: 5, // Link style
+                label: "+Install CastBot",
+                url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`,
+                emoji: {
+                    name: "⬇️"
+                }
             }
-        ],
-        accessory: {
-            type: 2, // Button
-            style: 5, // Link style
-            label: "+Install CastBot",
-            url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`,
-            emoji: {
-                name: "⬇️"
-            }
-        }
+        ]
     };
     
-    playerCards.push(installSection);
+    playerCards.push(installActionRow);
 
     // Convert hex color to integer if needed
     let accentColor = 0x7ED321; // Default green
@@ -487,7 +483,7 @@ function createNavigationButtons(navigationState, castlistName) {
     // Manage Profile button replaces the indicator
     const manageProfileButton = new ButtonBuilder()
         .setCustomId("viral_menu")
-        .setLabel("📋")
+        .setLabel("Edit Profile")
         .setStyle(ButtonStyle.Primary);
     
     row.addComponents(lastButton, manageProfileButton, nextButton);
