@@ -297,7 +297,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             type: 2, // Button
             style: 5, // Link style
             label: "+Install CastBot",
-            url: "https://discord.com/oauth2/authorize?client_id=1320093385609699350&permissions=2684878912&integration_type=0&scope=bot+applications.commands"
+            url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`
         }
     };
     
