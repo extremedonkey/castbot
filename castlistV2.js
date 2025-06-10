@@ -44,29 +44,20 @@ function calculateComponentsForTribe(playerCount, includeSeparators = true) {
  * @returns {string} Scenario type: "ideal", "no-separators", or "multi-page"
  */
 function determineDisplayScenario(tribes) {
-    const COMPONENT_LIMIT = 40;
+    // Simplified: Use multi-page for tribes with 9+ players, otherwise ideal
+    const needsPagination = tribes.some(tribe => tribe.memberCount >= 9);
     
-    // Scenario 1: Check if all tribes fit with separators
-    const allTribesWithSeparators = tribes.every(tribe => 
-        calculateComponentsForTribe(tribe.memberCount, true) <= COMPONENT_LIMIT
-    );
-    if (allTribesWithSeparators) {
-        console.log('Display scenario: ideal (all tribes fit with separators)');
+    if (needsPagination) {
+        console.log('Display scenario: multi-page (tribe with 9+ players needs pagination)');
+        return "multi-page";
+    } else {
+        console.log('Display scenario: ideal (all tribes have 8 or fewer players)');
         return "ideal";
     }
     
-    // Scenario 2: Check if removing separators fixes all tribes
-    const allTribesWithoutSeparators = tribes.every(tribe => 
-        calculateComponentsForTribe(tribe.memberCount, false) <= COMPONENT_LIMIT
-    );
-    if (allTribesWithoutSeparators) {
-        console.log('Display scenario: no-separators (removing separators fixes all tribes)');
-        return "no-separators";
-    }
-    
-    // Scenario 3: Multi-page required
-    console.log('Display scenario: multi-page (at least one tribe needs pagination)');
-    return "multi-page";
+    // TODO: Future tech debt cleanup - remove old complex scenario logic
+    // Old logic checked component limits and separator scenarios but we now
+    // use simplified 8-player limit with pagination for larger tribes
 }
 
 /**
@@ -78,12 +69,8 @@ function determineDisplayScenario(tribes) {
  */
 function calculateTribePages(tribe, members, includeSeparators = true) {
     const COMPONENT_LIMIT = 40;
-    const baseOverhead = 3 + 2 + 3; // tribe + message + navigation
-    
-    const availableForPlayers = COMPONENT_LIMIT - baseOverhead;
-    const componentsPerPlayer = includeSeparators ? 4 : 3; // +1 for separator if included
-    
-    const maxPlayersPerPage = Math.floor(availableForPlayers / componentsPerPlayer);
+    // Simplified: Always allow 8 players per page with separators
+    const maxPlayersPerPage = 8;
     const totalPages = Math.ceil(members.length / maxPlayersPerPage);
     
     // Distribute players across pages (higher count on first page for odd distributions)
@@ -378,7 +365,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             {
                 type: 2, // Button
                 style: 5, // Link style
-                label: "+Install CastBot",
+                label: "+Add to your ORG",
                 url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`,
                 emoji: {
                     name: "⬇️"
@@ -405,9 +392,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         accent_color: accentColor,
         components: [
             tribeHeader,
-            {
-                type: 14 // Separator after tribe name
-            },
+            // Removed top separator to allow 8 players instead of 7
             ...playerCards
         ]
     };
@@ -467,17 +452,17 @@ function createNavigationButtons(navigationState, castlistName) {
         nextAction = 'next_tribe';
     }
     
-    // Create simplified arrow buttons
+    // Create simplified arrow buttons (blue when enabled)
     const lastButton = new ButtonBuilder()
         .setCustomId(`castlist2_nav_${lastAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}`)
         .setLabel("◀")
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(lastDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
         .setDisabled(lastDisabled);
     
     const nextButton = new ButtonBuilder()
         .setCustomId(`castlist2_nav_${nextAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}`)
         .setLabel("▶")
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(nextDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
         .setDisabled(nextDisabled);
     
     // Manage Profile button replaces the indicator

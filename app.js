@@ -6008,7 +6008,7 @@ To fix this:
         // Determine final castlist name
         let finalCastlist = selectedCastlist;
         if (selectedCastlist === 'new_custom' && customCastlistName) {
-          finalCastlist = customCastlistName.toLowerCase().replace(/[^a-z0-9]/g, '');
+          finalCastlist = customCastlistName; // Preserve capitalization and spaces like /add_tribe command
         }
         
         // Load player data and check for conflicts
