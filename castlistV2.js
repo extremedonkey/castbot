@@ -299,7 +299,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     
     const combinedHeaderContent = `${castlistDisplay}\n${tribeHeaderText}${paginationText}`;
     
-    // Create tribe header as Section with install button accessory
+    // Create tribe header as Section (no accessory since install button moved to bottom)
     const tribeHeader = {
         type: 9, // Section component
         components: [
@@ -307,8 +307,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
                 type: 10, // Text Display
                 content: combinedHeaderContent
             }
-        ],
-        // Install button moved to bottom section - no accessory here anymore
+        ]
     };
     
     const playerCards = [];
