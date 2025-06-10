@@ -30,8 +30,9 @@ function calculateComponentsForTribe(playerCount, includeSeparators = true) {
     const tribeOverhead = 3; // Container + Header + Separator
     const messageOverhead = 2; // Main header + Ad
     const navigationOverhead = 3; // Navigation buttons
+    const viralOverhead = 2; // Viral growth buttons added in latest update
     
-    return playerComponents + separatorCount + tribeOverhead + messageOverhead + navigationOverhead;
+    return playerComponents + separatorCount + tribeOverhead + messageOverhead + navigationOverhead + viralOverhead;
 }
 
 /**
