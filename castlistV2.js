@@ -249,13 +249,14 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
                 content: allInfo
             }
         ],
-        accessory: {
-            type: 11, // Thumbnail
-            media: {
-                url: member.user.displayAvatarURL({ size: 128, extension: 'png' })
-            },
-            description: `${displayName}'s avatar`
-        }
+        // TEMPORARILY DISABLED for debugging
+        // accessory: {
+        //     type: 11, // Thumbnail
+        //     media: {
+        //         url: member.user.displayAvatarURL({ size: 128, extension: 'png' })
+        //     },
+        //     description: `${displayName}'s avatar`
+        // }
     };
 }
 
@@ -307,12 +308,13 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
                 content: combinedHeaderContent
             }
         ],
-        accessory: {
-            type: 2, // Button
-            style: 5, // Link style
-            label: "+Install CastBot",
-            url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`
-        }
+        // TEMPORARILY DISABLED for debugging
+        // accessory: {
+        //     type: 2, // Button
+        //     style: 5, // Link style
+        //     label: "+Install CastBot",
+        //     url: `https://discord.com/oauth2/authorize?client_id=${process.env.APP_ID}&permissions=2684878912&integration_type=0&scope=bot+applications.commands`
+        // }
     };
     
     const playerCards = [];
@@ -568,6 +570,8 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
     console.log(`   Tribe components: ${components.length}`);
     console.log(`   Navigation rows: ${navigationRows.length}`);
     console.log(`   Manage profile row: 1`);
+    
+    // DEBUG: JSON dump removed to avoid spam
     
     if (componentCount > 40) {
         console.error(`❌ COMPONENT LIMIT EXCEEDED: ${componentCount}/40 components`);
