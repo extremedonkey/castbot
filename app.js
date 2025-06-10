@@ -66,6 +66,123 @@ import fetch from 'node-fetch';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 
+/**
+ * Create reusable CastBot menu components
+ * @param {Object} playerData - Guild player data
+ * @param {string} guildId - Discord guild ID
+ * @param {boolean} isEphemeral - Whether menu should be ephemeral (user-only)
+ * @returns {Object} Menu content and components
+ */
+async function createCastBotMenu(playerData, guildId, isEphemeral = false) {
+  const allCastlists = new Set();
+  const castlistTribes = {}; // Track tribes per castlist to get emojis
+  
+  if (playerData[guildId]?.tribes) {
+    Object.entries(playerData[guildId].tribes).forEach(([roleId, tribeData]) => {
+      const castlistName = tribeData.castlist || 'default';
+      allCastlists.add(castlistName);
+      
+      // Store tribe info for each castlist (for emojis)
+      if (!castlistTribes[castlistName]) {
+        castlistTribes[castlistName] = [];
+      }
+      castlistTribes[castlistName].push({
+        roleId,
+        emoji: tribeData.emoji,
+        color: tribeData.color,
+        showPlayerEmojis: tribeData.showPlayerEmojis
+      });
+    });
+  }
+
+  // Handle case where no tribes exist yet
+  if (allCastlists.size === 0) {
+    allCastlists.add('default');
+  }
+
+  // Create buttons for each castlist
+  const buttons = [];
+  const castlistArray = Array.from(allCastlists).sort((a, b) => {
+    // Sort so 'default' comes first
+    if (a === 'default') return -1;
+    if (b === 'default') return 1;
+    return a.localeCompare(b);
+  });
+  
+  for (const castlistName of castlistArray) {
+    if (castlistName === 'default') {
+      // Default castlist gets the primary blue button with 📋 emoji
+      buttons.push(
+        new ButtonBuilder()
+          .setCustomId('show_castlist2_default')
+          .setLabel('Show Castlist')
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('📋')
+      );
+    } else {
+      // Custom castlists get grey buttons with tribe emoji if available
+      const tribes = castlistTribes[castlistName] || [];
+      const tribeWithEmoji = tribes.find(tribe => tribe.emoji);
+      const emoji = tribeWithEmoji?.emoji || '📋';
+      
+      buttons.push(
+        new ButtonBuilder()
+          .setCustomId(`show_castlist2_${castlistName}`)
+          .setLabel(`Show ${castlistName.charAt(0).toUpperCase() + castlistName.slice(1)}`)
+          .setStyle(ButtonStyle.Secondary) // Grey button
+          .setEmoji(emoji)
+      );
+    }
+  }
+  
+  const castlistRow = new ActionRowBuilder().addComponents(buttons);
+  
+  // Add second row with player action buttons
+  const actionRow = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId('player_set_pronouns')
+        .setLabel('Set Your Pronouns')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('🏷️'),
+      new ButtonBuilder()
+        .setCustomId('player_set_timezone')
+        .setLabel('Set Your Timezone')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('🕐'),
+      new ButtonBuilder()
+        .setCustomId('player_set_age')
+        .setLabel('Set Your Age')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('🎂')
+    );
+
+  return {
+    content: '**CastBot Menu**',
+    components: [castlistRow, actionRow],
+    flags: isEphemeral ? InteractionResponseFlags.EPHEMERAL : undefined
+  };
+}
+
+/**
+ * Create viral growth buttons row for castlists
+ * @returns {ActionRowBuilder} Action row with viral growth buttons
+ */
+function createViralGrowthButtons() {
+  return new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId('viral_menu')
+        .setLabel('Manage Profile')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('📇'),
+      new ButtonBuilder()
+        .setLabel('+Install CastBot')
+        .setStyle(ButtonStyle.Link)
+        .setURL('https://discord.com/oauth2/authorize?client_id=1319912453248647170')
+    );
+}
+
 // Add these constants near the top with other constants
 const REACTION_NUMBERS = [
   '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟',
@@ -153,12 +270,16 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
   // Create navigation buttons
   const navigationRow = createNavigationButtons(navigationState, castlistName);
   
+  // Create viral growth buttons
+  const viralRow = createViralGrowthButtons();
+  
   // Create complete layout
   const responseData = createCastlistV2Layout(
     [tribeSection],
     castlistName,
     guild,
     [navigationRow.toJSON()],
+    [viralRow.toJSON()],
     client
   );
   
@@ -940,7 +1061,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     console.log('Processing menu command');
     
     await res.send({
-      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
     });
     
     const guildId = req.body.guild_id;
@@ -2634,6 +2758,30 @@ To fix this:
             content: 'Error displaying castlist.',
             flags: InteractionResponseFlags.EPHEMERAL
           },
+        });
+      }
+      return;
+    } else if (custom_id === 'viral_menu') {
+      // Handle viral growth menu button (from castlist)
+      try {
+        const guildId = req.body.guild_id;
+        const playerData = await loadPlayerData();
+        
+        // Create reusable menu (ephemeral for viral clicks)
+        const menuData = await createCastBotMenu(playerData, guildId, true);
+        
+        await res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: menuData
+        });
+      } catch (error) {
+        console.error('Error handling viral menu:', error);
+        await res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error creating menu.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
         });
       }
       return;
@@ -5629,12 +5777,16 @@ To fix this:
           navigationRows.push(navRow.toJSON());
         }
 
+        // Create viral growth buttons
+        const viralRow = createViralGrowthButtons();
+        
         // Create the complete Components V2 layout
         const responseData = createCastlistV2Layout(
           tribeComponents,
           castlistName,
           fullGuild,
           navigationRows,
+          [viralRow.toJSON()],
           client
         );
 

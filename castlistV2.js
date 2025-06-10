@@ -499,10 +499,11 @@ async function processMemberData(member, pronounRoleIds, timezones, guildId) {
  * @param {string} castlistName - Name of the castlist
  * @param {Object} guild - Discord guild object
  * @param {Array} navigationRows - Action rows with navigation buttons
+ * @param {Array} viralRows - Action rows with viral growth buttons
  * @param {Object} client - Discord client for bot avatar
  * @returns {Object} Complete Components V2 message structure
  */
-function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = [], client = null) {
+function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = [], viralRows = [], client = null) {
     const components = [];
     
     // Medium header text using markdown formatting
@@ -531,7 +532,8 @@ function createCastlistV2Layout(tribes, castlistName, guild, navigationRows = []
         components: [
             ...components,
             ...navigationRows,
-            // Add CastBot ad after navigation buttons
+            ...viralRows,
+            // Add CastBot ad after viral buttons
             adComponent
         ]
     };

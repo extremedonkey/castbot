@@ -187,6 +187,128 @@ npm run status-remote              # Check production status
 - **Use safety backups** - Production backup branches save the day when things go wrong
 - **GitHub = Single Source of Truth** - All deployments pull from GitHub main branch
 
+## 🚀 Development Infrastructure Migration Plan
+
+### Current State vs Target State
+
+**Current Development Setup:**
+- ❌ Local machine with ngrok tunneling (unstable URLs)
+- ❌ Manual `start-and-push.ps1` workflow
+- ❌ URL changes on every restart
+- ❌ Development tied to local machine availability
+
+**Target Development Setup:**
+- ✅ AWS Lightsail development server (stable environment)
+- ✅ Persistent URLs and webhooks
+- ✅ Automated deployment pipeline
+- ✅ Same infrastructure as production
+
+### Migration Steps
+
+#### Phase 1: AWS Infrastructure Setup
+1. **Create Development Lightsail Instance**
+   - Size: Same as production (or smaller for cost savings)
+   - Region: Same as production for consistency
+   - SSH key: Generate new dev-specific key or reuse existing
+
+2. **Domain/DNS Setup**
+   - Option A: Subdomain of existing domain (`dev.castbot.yoursite.com`)
+   - Option B: Separate domain for dev (`castbot-dev.com`)
+   - Configure SSL certificate (Let's Encrypt)
+
+3. **Discord Application Setup**
+   - Update CastBot-Dev webhook URL to permanent dev server URL
+   - No more ngrok URL updates required
+
+#### Phase 2: Development Server Configuration
+1. **Server Setup** (Similar to production)
+   ```bash
+   # Install Node.js, npm, pm2, git
+   # Clone repository to /opt/bitnami/projects/castbot-dev
+   # Set up environment variables for development
+   ```
+
+2. **Development-Specific Scripts**
+   - Modify `deploy-remote.js` for dev server deployment
+   - Create `npm run deploy-dev` command
+   - Set up separate SSH alias: `castbot-dev-lightsail`
+
+3. **Environment Variables**
+   ```
+   DISCORD_TOKEN=dev_bot_token
+   APP_ID=1328366050848411658  # CastBot-Dev
+   PRODUCTION=FALSE
+   PORT=3000
+   DEV_GUILD_ID=1331657596087566398
+   ```
+
+#### Phase 3: Workflow Transition
+1. **New Development Workflow**
+   ```bash
+   # Local changes
+   git add . && git commit -m "feature changes"
+   git push origin main
+   
+   # Deploy to dev server
+   npm run deploy-dev-dry-run  # Preview changes
+   npm run deploy-dev          # Deploy to dev
+   
+   # Test in dev Discord, then deploy to prod
+   npm run deploy-remote-dry-run
+   npm run deploy-remote
+   ```
+
+2. **Scripts to Create**
+   - `npm run deploy-dev` - Deploy to development Lightsail
+   - `npm run logs-dev` - View dev server logs
+   - `npm run status-dev` - Check dev server status
+   - `npm run ssh-dev` - Connect to dev server
+
+#### Phase 4: Migration Benefits
+1. **Consistency**
+   - Same deployment pipeline for dev and prod
+   - Identical server environments
+   - No more local environment differences
+
+2. **Reliability**
+   - Persistent dev URLs (no more ngrok restarts)
+   - Always-available development environment
+   - Proper SSL certificates
+
+3. **Team Development** (Future)
+   - Multiple developers can access same dev environment
+   - Shared development state
+   - Consistent testing environment
+
+#### Phase 5: Cost Optimization
+1. **Development Server Sizing**
+   - Start with smallest Lightsail instance
+   - Scale up if needed for performance testing
+   - Auto-shutdown during non-development hours (optional)
+
+2. **Shared Resources**
+   - Consider if dev and prod can share database/storage
+   - Separate Discord guilds for testing
+   - Isolated player data for development
+
+### Implementation Timeline
+- **Week 1**: AWS setup, domain configuration, server provisioning
+- **Week 2**: Server configuration, script adaptation, testing
+- **Week 3**: Workflow transition, documentation updates
+- **Week 4**: Optimization, monitoring setup, ngrok decommission
+
+### Rollback Plan
+- Keep ngrok setup functional until dev Lightsail is fully proven
+- Maintain `start-and-push.ps1` as backup during transition
+- Document quick revert process if needed
+
+### Success Criteria
+- ✅ Development commands work consistently on dev server
+- ✅ Deployment pipeline matches production
+- ✅ No more ngrok URL management required
+- ✅ Development environment always accessible
+- ✅ Same infrastructure patterns as production
+
 ## Environments
 
 CastBot operates in two distinct environments: Development and Production. Each environment has its own configuration, setup, hosting and application deployment.
