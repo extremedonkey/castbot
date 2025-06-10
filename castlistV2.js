@@ -67,8 +67,7 @@ function determineDisplayScenario(tribes) {
  * @param {boolean} includeSeparators - Whether to include separators
  * @returns {Object} Pagination information
  */
-function calculateTribePages(tribe, members, includeSeparators = true) {
-    const COMPONENT_LIMIT = 40;
+function calculateTribePages(tribe, members) {
     // Simplified: Always allow 8 players per page with separators
     const maxPlayersPerPage = 8;
     const totalPages = Math.ceil(members.length / maxPlayersPerPage);
@@ -113,7 +112,7 @@ function createNavigationState(tribes, scenario, currentTribeIndex = 0, currentT
         tribes: tribes.map(tribe => ({
             ...tribe,
             totalPages: scenario === "multi-page" && tribe.memberCount > 0 ? 
-                calculateTribePages(tribe, tribe.members, true).totalPages : 1
+                calculateTribePages(tribe, tribe.members).totalPages : 1
         }))
     };
 }
@@ -262,22 +261,9 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     const { currentPage, totalPages, playersOnPage } = pageInfo;
     const pageMembers = playersOnPage;
     
-    // Determine if separators should be included for this specific tribe
-    // Check if this tribe fits with separators, regardless of global scenario
-    const thisTribeWithSeparators = calculateComponentsForTribe(playersOnPage.length, true);
-    const thisTribeWithoutSeparators = calculateComponentsForTribe(playersOnPage.length, false);
-    
-    let includeSeparators;
-    if (thisTribeWithSeparators <= 40) {
-        includeSeparators = true; // Tribe fits with separators
-        console.log(`Tribe ${tribe.name}: ${playersOnPage.length} players = ${thisTribeWithSeparators} components (WITH separators)`);
-    } else if (thisTribeWithoutSeparators <= 40) {
-        includeSeparators = false; // Remove separators for this tribe
-        console.log(`Tribe ${tribe.name}: ${playersOnPage.length} players = ${thisTribeWithoutSeparators} components (WITHOUT separators)`);
-    } else {
-        includeSeparators = false; // Still won't fit, but try without separators
-        console.log(`Tribe ${tribe.name}: ${playersOnPage.length} players = ${thisTribeWithoutSeparators} components (STILL TOO BIG)`);
-    }
+    // Simplified: Always include separators - we paginate instead of removing separators
+    const includeSeparators = true;
+    console.log(`Tribe ${tribe.name}: ${playersOnPage.length} players (always with separators)`);
     
     // Create header with proper format: Line 1 = castlist name, Line 2 = tribe info
     const castlistDisplay = castlistName !== 'default' ? `## ${castlistName} Castlist` : '## Castlist';
