@@ -82,18 +82,29 @@ function analyzePlayerData() {
 
     // Custom sorting logic
     const servers = allServers.sort((a, b) => {
-      // 1. Servers with 'First Installed' date first (newest to oldest)
       const aHasInstalled = !!a.firstInstalled;
       const bHasInstalled = !!b.firstInstalled;
+      const aHasRoles = (a.timezoneCount + a.pronounCount) > 0;
+      const bHasRoles = (b.timezoneCount + b.pronounCount) > 0;
       
+      // 1. Servers with 'First Installed' date first (newest to oldest)
       if (aHasInstalled && !bHasInstalled) return -1;
       if (!aHasInstalled && bHasInstalled) return 1;
       if (aHasInstalled && bHasInstalled) {
         return (b.firstInstalled || 0) - (a.firstInstalled || 0); // Newest first
       }
       
-      // 2. For servers without 'First Installed', order by server created date
-      return (b.createdTimestamp || 0) - (a.createdTimestamp || 0); // Newest first
+      // 2. For servers without 'First Installed', separate by pronoun/timezone roles
+      if (!aHasInstalled && !bHasInstalled) {
+        // Servers with roles come before servers without roles
+        if (aHasRoles && !bHasRoles) return -1;
+        if (!aHasRoles && bHasRoles) return 1;
+        
+        // Within same role category, order by server created date (newest first)
+        return (b.createdTimestamp || 0) - (a.createdTimestamp || 0);
+      }
+      
+      return 0;
     });
 
     // Display header
@@ -125,9 +136,16 @@ function analyzePlayerData() {
     servers.forEach((server, index) => {
       // Determine section for this server
       const hasInstalled = !!server.firstInstalled;
-      const newSection = hasInstalled 
-        ? "Section 1: Servers with 'First Installed' date (newest to oldest)"
-        : "Section 2: Servers without 'First Installed', ordered by Server Created date (newest to oldest)";
+      const hasRoles = (server.timezoneCount + server.pronounCount) > 0;
+      
+      let newSection;
+      if (hasInstalled) {
+        newSection = "Section 1: Servers with 'First Installed' date (newest to oldest)";
+      } else if (hasRoles) {
+        newSection = "Section 2: Servers without 'First Installed' BUT with Pronouns/Timezones (newest to oldest)";
+      } else {
+        newSection = "Section 3: Servers with 0 Pronouns/Timezones (newest to oldest)";
+      }
       
       // Add section header if we're entering a new section
       if (newSection !== currentSection) {
