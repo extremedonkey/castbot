@@ -288,22 +288,32 @@ const PROD_MENU_COMMAND = {
 	default_member_permissions: ADMIN_ANY
 };
 
+// DISABLED COMMANDS - Moved to /prod_menu interface
+// const GETTING_STARTED_COMMAND (moved to /prod_menu documentation)
+// const PRONOUNS_ADD_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
+// const PRONOUNS_REMOVE_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
+// const TIMEZONES_ADD_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
+// const TIMEZONES_REMOVE_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
+// const ROLE_GENERATOR_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
+// const APPLY_BUTTON_COMMAND (moved to /prod_menu -> Season Applications)
+// const SETUP_TYCOONS_COMMAND (moved to /prod_menu -> Tycoons)
+
 const ALL_COMMANDS = [
 	// Player commands REMOVED: player_set_age, player_set_pronouns, player_set_timezone
-	ROLE_GENERATOR_COMMAND,
 	CLEAR_TRIBE_COMMAND,     
 	SET_TRIBE_COMMAND,   
 	CASTLIST_COMMAND, // Now points to castlist2 functionality
 	MENU_COMMAND,
 	PROD_MENU_COMMAND,
-	GETTING_STARTED_COMMAND,
 	SET_PLAYERS_AGE_COMMAND,
-	PRONOUNS_ADD_COMMAND,
-	PRONOUNS_REMOVE_COMMAND,
-	TIMEZONES_ADD_COMMAND,
-	TIMEZONES_REMOVE_COMMAND,
-	SETUP_TYCOONS_COMMAND,
-	APPLY_BUTTON_COMMAND,
+	// DISABLED: ROLE_GENERATOR_COMMAND, - moved to /prod_menu
+	// DISABLED: GETTING_STARTED_COMMAND, - moved to /prod_menu
+	// DISABLED: PRONOUNS_ADD_COMMAND, - moved to /prod_menu
+	// DISABLED: PRONOUNS_REMOVE_COMMAND, - moved to /prod_menu
+	// DISABLED: TIMEZONES_ADD_COMMAND, - moved to /prod_menu
+	// DISABLED: TIMEZONES_REMOVE_COMMAND, - moved to /prod_menu
+	// DISABLED: SETUP_TYCOONS_COMMAND, - moved to /prod_menu
+	// DISABLED: APPLY_BUTTON_COMMAND, - moved to /prod_menu
 ];
 
 console.log('Registering commands with:');

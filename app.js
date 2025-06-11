@@ -1012,12 +1012,48 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     
     const adminRow = new ActionRowBuilder().addComponents(adminButtons);
     
+    // Add new administrative action row
+    const adminActionButtons = [
+      new ButtonBuilder()
+        .setCustomId('prod_season_applications')
+        .setLabel('Season Applications')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('📝'),
+      new ButtonBuilder()
+        .setCustomId('prod_setup_tycoons')
+        .setLabel('Tycoons')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('💰')
+    ];
+    
+    const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
+    
+    // Create Components V2 Container for entire production menu
+    const prodMenuContainer = {
+      type: 17, // Container component
+      accent_color: 0x3498DB, // Blue accent color
+      components: [
+        {
+          type: 10, // Text Display component
+          content: `## Production Menu
+
+Welcome to the CastBot production interface. Use the buttons below to manage your ORG season.`
+        },
+        {
+          type: 14 // Separator
+        },
+        castlistRow.toJSON(), // Castlist buttons
+        adminRow.toJSON(), // Admin management buttons
+        adminActionRow.toJSON() // New administrative action buttons
+      ]
+    };
+    
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
     await DiscordRequest(endpoint, {
       method: 'PATCH',
       body: {
-        content: '**Production Menu**',
-        components: [castlistRow, adminRow]
+        flags: (1 << 15), // IS_COMPONENTS_V2 flag
+        components: [prodMenuContainer]
       }
     });
     
@@ -3199,6 +3235,128 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error loading tribe management interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_season_applications') {
+      // Execute same logic as apply_button slash command
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const userId = req.body.member.user.id;
+
+        // Check admin permissions
+        const member = await guild.members.fetch(userId);
+        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Show the application button configuration modal (same as /apply_button)
+        const modal = createApplicationButtonModal();
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal
+        });
+        
+      } catch (error) {
+        console.error('Error handling prod_season_applications button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error loading application button interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_setup_tycoons') {
+      // Execute same logic as setup_tycoons slash command
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const userId = req.body.member.user.id;
+
+        // Check admin permissions
+        const member = await guild.members.fetch(userId);
+        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Same logic as setup_tycoons command - create Tycoons game roles
+        const rolesToCreate = [
+          { name: 'Host', color: 0xFF6B6B, hoist: true, mentionable: false },
+          { name: 'Juror', color: 0x4ECDC4, hoist: false, mentionable: true },
+          { name: 'Spectator', color: 0x95A5A6, hoist: false, mentionable: true },
+          { name: 'Pre-Jury', color: 0xF39C12, hoist: false, mentionable: true }
+        ];
+
+        let createdRoles = [];
+        let skippedRoles = [];
+
+        for (const roleData of rolesToCreate) {
+          const existingRole = guild.roles.cache.find(r => r.name === roleData.name);
+          if (existingRole) {
+            skippedRoles.push(roleData.name);
+            continue;
+          }
+
+          try {
+            const newRole = await guild.roles.create({
+              name: roleData.name,
+              color: roleData.color,
+              hoist: roleData.hoist,
+              mentionable: roleData.mentionable,
+              reason: 'CastBot Tycoons setup'
+            });
+            createdRoles.push(newRole.name);
+          } catch (err) {
+            console.error(`Failed to create role ${roleData.name}:`, err);
+          }
+        }
+
+        let responseMessage = '## Tycoons Setup Complete!\n\n';
+        
+        if (createdRoles.length > 0) {
+          responseMessage += `✅ **Created roles:**\n${createdRoles.map(name => `• ${name}`).join('\n')}\n\n`;
+        }
+        
+        if (skippedRoles.length > 0) {
+          responseMessage += `ℹ️ **Skipped existing roles:**\n${skippedRoles.map(name => `• ${name}`).join('\n')}\n\n`;
+        }
+        
+        responseMessage += 'Your server is now ready for Tycoons gameplay!';
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: responseMessage,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling prod_setup_tycoons button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error setting up Tycoons roles.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

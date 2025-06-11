@@ -231,6 +231,15 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - Update documentation to reflect new pagination-only approach
 - Performance testing to ensure no regression
 
+### Clean Up Disabled Slash Commands
+**Description:** Remove underlying code for slash commands that have been moved to /prod_menu interface
+**Acceptance Criteria:**
+- Remove command handlers for: getting_started, pronouns_add, pronouns_remove, timezones_add, timezones_remove, setup_castbot, apply_button, setup_tycoons
+- Remove command definitions from commands.js (currently disabled)
+- Clean up any references to these commands in documentation
+- Ensure all functionality is properly available through /prod_menu buttons
+- Update help text and documentation to reflect button-based workflow
+
 ---
 
 ## Claude Recommendations Section
