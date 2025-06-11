@@ -1040,10 +1040,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 Welcome to the CastBot production interface. Use the buttons below to manage your ORG season.`
         },
         {
-          type: 14 // Separator
+          type: 14 // Separator after header
         },
         castlistRow.toJSON(), // Castlist buttons
+        {
+          type: 14 // Separator after castlist row
+        },
         adminRow.toJSON(), // Admin management buttons
+        {
+          type: 14 // Separator after admin management row
+        },
         adminActionRow.toJSON() // New administrative action buttons
       ]
     };
@@ -3299,49 +3305,23 @@ To fix this:
           });
         }
 
-        // Same logic as setup_tycoons command - create Tycoons game roles
-        const rolesToCreate = [
-          { name: 'Host', color: 0xFF6B6B, hoist: true, mentionable: false },
-          { name: 'Juror', color: 0x4ECDC4, hoist: false, mentionable: true },
-          { name: 'Spectator', color: 0x95A5A6, hoist: false, mentionable: true },
-          { name: 'Pre-Jury', color: 0xF39C12, hoist: false, mentionable: true }
-        ];
-
-        let createdRoles = [];
-        let skippedRoles = [];
-
-        for (const roleData of rolesToCreate) {
-          const existingRole = guild.roles.cache.find(r => r.name === roleData.name);
-          if (existingRole) {
-            skippedRoles.push(roleData.name);
-            continue;
-          }
-
-          try {
-            const newRole = await guild.roles.create({
-              name: roleData.name,
-              color: roleData.color,
-              hoist: roleData.hoist,
-              mentionable: roleData.mentionable,
-              reason: 'CastBot Tycoons setup'
-            });
-            createdRoles.push(newRole.name);
-          } catch (err) {
-            console.error(`Failed to create role ${roleData.name}:`, err);
-          }
-        }
-
-        let responseMessage = '## Tycoons Setup Complete!\n\n';
+        // Call the original handleSetupTycoons function to get the detailed role output
+        const result = await handleSetupTycoons(guild);
         
-        if (createdRoles.length > 0) {
-          responseMessage += `✅ **Created roles:**\n${createdRoles.map(name => `• ${name}`).join('\n')}\n\n`;
-        }
-        
-        if (skippedRoles.length > 0) {
-          responseMessage += `ℹ️ **Skipped existing roles:**\n${skippedRoles.map(name => `• ${name}`).join('\n')}\n\n`;
-        }
-        
-        responseMessage += 'Your server is now ready for Tycoons gameplay!';
+        // Create the full response with original detailed output + new summary
+        const responseMessage = `Tycoons roles have been created successfully. Here are the role IDs in the format you requested:
+
+${result.formattedOutput}
+
+## Tycoons Setup Complete!
+
+✅ **Created roles:**
+• Host
+• Juror
+• Spectator
+• Pre-Jury
+
+Your server is now ready for Tycoons gameplay!`;
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,

@@ -295,17 +295,19 @@ const PROD_MENU_COMMAND = {
 // const TIMEZONES_ADD_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
 // const TIMEZONES_REMOVE_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
 // const ROLE_GENERATOR_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
+// const SET_TRIBE_COMMAND (moved to /prod_menu -> Manage Tribes -> Add Tribe)
+// const CLEAR_TRIBE_COMMAND (moved to /prod_menu -> Manage Tribes -> Clear Tribe)
 // const APPLY_BUTTON_COMMAND (moved to /prod_menu -> Season Applications)
 // const SETUP_TYCOONS_COMMAND (moved to /prod_menu -> Tycoons)
 
 const ALL_COMMANDS = [
 	// Player commands REMOVED: player_set_age, player_set_pronouns, player_set_timezone
-	CLEAR_TRIBE_COMMAND,     
-	SET_TRIBE_COMMAND,   
 	CASTLIST_COMMAND, // Now points to castlist2 functionality
 	MENU_COMMAND,
 	PROD_MENU_COMMAND,
 	SET_PLAYERS_AGE_COMMAND,
+	// DISABLED: SET_TRIBE_COMMAND, - moved to /prod_menu (was add_tribe)
+	// DISABLED: CLEAR_TRIBE_COMMAND, - moved to /prod_menu
 	// DISABLED: ROLE_GENERATOR_COMMAND, - moved to /prod_menu
 	// DISABLED: GETTING_STARTED_COMMAND, - moved to /prod_menu
 	// DISABLED: PRONOUNS_ADD_COMMAND, - moved to /prod_menu
