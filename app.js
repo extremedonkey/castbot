@@ -975,7 +975,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const hasTimezones = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
     const hasRoles = hasPronouns || hasTimezones;
     
-    // Create admin control buttons
+    // Create admin control buttons (moved Need Help to bottom row)
     const adminButtons = [
       new ButtonBuilder()
         .setCustomId('prod_setup')
@@ -991,12 +991,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         .setCustomId('prod_manage_tribes')
         .setLabel('Manage Tribes')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji('🔥'),
-      new ButtonBuilder()
-        .setLabel('Need Help?')
-        .setStyle(ButtonStyle.Link)
-        .setEmoji('❓')
-        .setURL('https://discord.gg/H7MpJEjkwT')
+        .setEmoji('🔥')
     ];
     
     // Add Manage Players button conditionally (3rd position)
@@ -1012,7 +1007,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     
     const adminRow = new ActionRowBuilder().addComponents(adminButtons);
     
-    // Add new administrative action row
+    // Add new administrative action row (misc features)
     const adminActionButtons = [
       new ButtonBuilder()
         .setCustomId('prod_season_applications')
@@ -1023,10 +1018,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         .setCustomId('prod_setup_tycoons')
         .setLabel('Tycoons')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji('💰')
+        .setEmoji('💰'),
+      new ButtonBuilder()
+        .setLabel('Need Help?')
+        .setStyle(ButtonStyle.Link)
+        .setEmoji('❓')
+        .setURL('https://discord.gg/H7MpJEjkwT')
     ];
     
-    // Add special analytics button only for specific user (Reece)
+    // Add special analytics button only for specific user (Reece) - goes at the end
     const userId = req.body.member.user.id;
     if (userId === '391415444084490240') {
       adminActionButtons.push(
@@ -1047,9 +1047,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       components: [
         {
           type: 10, // Text Display component
-          content: `## Production Menu
-
-Welcome to the CastBot production interface. Use the buttons below to manage your ORG season.`
+          content: `> **\`${guild.name} Castlists\`**`
         },
         {
           type: 14 // Separator after header
@@ -1058,9 +1056,17 @@ Welcome to the CastBot production interface. Use the buttons below to manage you
         {
           type: 14 // Separator after castlist row
         },
+        {
+          type: 10, // Text Display component
+          content: `> **\`Configure Castlists\`**`
+        },
         adminRow.toJSON(), // Admin management buttons
         {
           type: 14 // Separator after admin management row
+        },
+        {
+          type: 10, // Text Display component
+          content: `> **\`Misc\`**`
         },
         adminActionRow.toJSON() // New administrative action buttons
       ]
