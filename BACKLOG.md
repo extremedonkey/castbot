@@ -100,6 +100,45 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - Confirmation workflows for destructive actions
 - Audit logging for application management actions
 
+### Enhanced Analytics and Logging System
+**Description:** Comprehensive analytics collection and clean production logging system for monitoring real-time user activity
+**Acceptance Criteria:**
+
+**Analytics Data Collection:**
+- Track command usage frequency for all major commands (castlist, add_tribe, menu_open, etc.)
+- Record user engagement patterns with userId, timestamp, and interaction details
+- Monitor feature adoption timeline (when features were first used per server)
+- Collect business metrics: churn analysis, growth cohorts, feature conversion funnels
+- Support both enhanced file-based system and separate analytics database options
+
+**Structured Logging System:**
+- Implement log levels: ERROR, WARN, INFO, DEBUG, ANALYTICS
+- Clean user activity logs format: `[ANALYTICS] timestamp | username in servername | action | details`
+- Filter production logs to show only relevant user interactions
+- Remove excessive debug output from production environment
+
+**Live Log Monitoring:**
+- Create `npm run live-analytics` script for real-time log viewing
+- Live updating list showing: ServerName (username) used Command (e.g. view castlist, next page, add tribe)
+- Filter logs to show only analytics events, not debug information
+- Maintain architectural robustness and safety for production environment
+
+**Enhanced Analytics Architecture Options:**
+- Option 1: Enhanced playerData.json with analytics section (commandUsage, userActivity, featureAdoption)
+- Option 2: Separate analyticsData.json with events array and aggregated data
+- Support for daily/monthly aggregates and retention analysis
+
+**Implementation Phases:**
+- Phase 1: Clean logging system (low risk, analytics logs only)
+- Phase 2: Live log viewer script (medium risk, filtered log streaming)
+- Phase 3: Enhanced analytics collection (higher risk, comprehensive tracking)
+
+**Missing Analytics Currently Not Tracked:**
+- Command usage frequency and user engagement patterns
+- Geographic/timezone distribution of users and session length
+- Feature adoption timeline and business metrics
+- Churn analysis and growth cohorts
+
 ### Auto-Generated Application Questions
 **Description:** Expand the application system to automatically generate application questions based on server configuration
 **Acceptance Criteria:**
