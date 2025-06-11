@@ -1026,6 +1026,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         .setEmoji('💰')
     ];
     
+    // Add special analytics button only for specific user (Reece)
+    const userId = req.body.member.user.id;
+    if (userId === '391415444084490240') {
+      adminActionButtons.push(
+        new ButtonBuilder()
+          .setCustomId('prod_analytics_dump')
+          .setLabel('Analytics')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('📊')
+      );
+    }
+    
     const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
     
     // Create Components V2 Container for entire production menu
@@ -3337,6 +3349,91 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error setting up Tycoons roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_analytics_dump') {
+      // Special analytics dump button - only available to specific user ID
+      try {
+        const userId = req.body.member.user.id;
+        
+        // Security check - only allow specific Discord ID
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Import and run analytics function
+        const { analyzePlayerData } = await import('./analytics.js');
+        
+        // Capture analytics output
+        let analyticsOutput = '';
+        const originalLog = console.log;
+        console.log = (...args) => {
+          analyticsOutput += args.join(' ') + '\n';
+        };
+        
+        try {
+          await analyzePlayerData();
+        } finally {
+          console.log = originalLog; // Restore original console.log
+        }
+        
+        // Format the output for Discord
+        const formattedOutput = analyticsOutput
+          .replace(/\x1b\[[0-9;]*m/g, '') // Remove ANSI color codes
+          .trim();
+        
+        // Split into chunks if too long (Discord has 2000 char limit)
+        const chunks = [];
+        const maxLength = 1900; // Leave room for formatting
+        
+        if (formattedOutput.length <= maxLength) {
+          chunks.push(formattedOutput);
+        } else {
+          let remaining = formattedOutput;
+          while (remaining.length > 0) {
+            let chunk = remaining.substring(0, maxLength);
+            // Try to break at a newline
+            const lastNewline = chunk.lastIndexOf('\n');
+            if (lastNewline > maxLength * 0.8) {
+              chunk = chunk.substring(0, lastNewline);
+            }
+            chunks.push(chunk);
+            remaining = remaining.substring(chunk.length);
+          }
+        }
+        
+        // Send first chunk as response
+        res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `## 📊 CastBot Analytics Report\n\n\`\`\`\n${chunks[0]}\n\`\`\``
+          }
+        });
+        
+        // Send additional chunks as follow-ups if needed
+        for (let i = 1; i < chunks.length; i++) {
+          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
+            method: 'POST',
+            body: {
+              content: `\`\`\`\n${chunks[i]}\n\`\`\``
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error running analytics dump:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error running analytics. Check logs for details.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
