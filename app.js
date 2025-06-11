@@ -968,6 +968,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       );
     }
     
+    // Add blank grey plus button at the end
+    castlistButtons.push(
+      new ButtonBuilder()
+        .setCustomId('prod_add_castlist')
+        .setLabel('+')
+        .setStyle(ButtonStyle.Secondary)
+    );
+    
     const castlistRow = new ActionRowBuilder().addComponents(castlistButtons);
     
     // Check if pronouns/timezones exist for conditional buttons
@@ -1047,10 +1055,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       components: [
         {
           type: 10, // Text Display component
-          content: `> **\`${guild.name} Castlists\`**`
+          content: `## CastBot | Prod Menu`
         },
         {
-          type: 14 // Separator after header
+          type: 14 // Separator after title
+        },
+        {
+          type: 10, // Text Display component
+          content: `> **\`View Castlists\`**`
         },
         castlistRow.toJSON(), // Castlist buttons
         {
@@ -3444,6 +3456,15 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'prod_add_castlist') {
+      // Placeholder for future castlist creation functionality
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: 'ℹ️ Castlist creation feature coming soon!',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
     } else if (custom_id === 'prod_timezone_react') {
       // Execute same logic as player_set_timezone command (available to all users)
       try {
