@@ -66,8 +66,8 @@ function analyzePlayerData() {
     const rawData = fs.readFileSync(PLAYER_DATA_FILE, 'utf8');
     const playerData = JSON.parse(rawData);
 
-    // Filter out non-server entries and sort by lastUpdated (most recent first)
-    const servers = Object.entries(playerData)
+    // Filter out non-server entries and exclude Reece's servers (391415444084490240)
+    const allServers = Object.entries(playerData)
       .filter(([key]) => !key.startsWith('/*') && key !== 'undefined') // Filter out comments and invalid entries
       .map(([guildId, data]) => ({
         guildId,
@@ -78,7 +78,23 @@ function analyzePlayerData() {
         pronounCount: data.pronounRoleIDs ? data.pronounRoleIDs.length : 0,
         applicationCount: data.applicationConfigs ? Object.keys(data.applicationConfigs).length : 0
       }))
-      .sort((a, b) => (b.lastUpdated || 0) - (a.lastUpdated || 0));
+      .filter(server => server.ownerId !== '391415444084490240'); // Exclude Reece's servers
+
+    // Custom sorting logic
+    const servers = allServers.sort((a, b) => {
+      // 1. Servers with 'First Installed' date first (newest to oldest)
+      const aHasInstalled = !!a.firstInstalled;
+      const bHasInstalled = !!b.firstInstalled;
+      
+      if (aHasInstalled && !bHasInstalled) return -1;
+      if (!aHasInstalled && bHasInstalled) return 1;
+      if (aHasInstalled && bHasInstalled) {
+        return (b.firstInstalled || 0) - (a.firstInstalled || 0); // Newest first
+      }
+      
+      // 2. For servers without 'First Installed', order by server created date
+      return (b.createdTimestamp || 0) - (a.createdTimestamp || 0); // Newest first
+    });
 
     // Display header
     log('', 'white');
@@ -101,11 +117,25 @@ function analyzePlayerData() {
     log(`Total Application Configs: ${formatNumber(totalApplications)}`, 'yellow');
     log('', 'white');
 
-    // Display servers
-    log('🏰 SERVERS (Most Recent Activity First)', 'bright');
+    // Display servers with section headers
+    log('🏰 SERVERS', 'bright');
     log('-' .repeat(80), 'cyan');
 
+    let currentSection = '';
     servers.forEach((server, index) => {
+      // Determine section for this server
+      const hasInstalled = !!server.firstInstalled;
+      const newSection = hasInstalled 
+        ? "Section 1: Servers with 'First Installed' date (newest to oldest)"
+        : "Section 2: Servers without 'First Installed', ordered by Server Created date (newest to oldest)";
+      
+      // Add section header if we're entering a new section
+      if (newSection !== currentSection) {
+        if (currentSection !== '') log('', 'white'); // Add spacing between sections
+        log(`\n📍 ${newSection}`, 'yellow');
+        log('-' .repeat(60), 'yellow');
+        currentSection = newSection;
+      }
       const rank = (index + 1).toString().padStart(2, ' ');
       const serverName = server.serverName || 'Unknown Server';
       const memberCount = server.memberCount || 0;
