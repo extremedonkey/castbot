@@ -3179,7 +3179,7 @@ To fix this:
               .setEmoji('🧹'),
             new ButtonBuilder()
               .setCustomId('prod_create_emojis')
-              .setLabel('Create Player Emojis')
+              .setLabel('Add/Remove Emojis')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('😀')
           );
@@ -3746,10 +3746,30 @@ To fix this:
         });
       }
     } else if (custom_id === 'prod_create_emojis') {
-      // Show emoji generation interface
+      // Show emoji generation/removal interface
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
+        
+        // Get emoji counts and limits
+        const emojis = await guild.emojis.fetch();
+        const staticCount = emojis.filter(e => !e.animated).size;
+        const animatedCount = emojis.filter(e => e.animated).size;
+        
+        // Calculate emoji limits based on server boost level
+        let staticLimit = 50;
+        let animatedLimit = 50;
+        
+        if (guild.premiumTier === 1) {
+          staticLimit = 100;
+          animatedLimit = 100;
+        } else if (guild.premiumTier === 2) {
+          staticLimit = 150;
+          animatedLimit = 150; 
+        } else if (guild.premiumTier === 3) {
+          staticLimit = 250;
+          animatedLimit = 250;
+        }
         
         // Get all roles in the server (excluding @everyone)
         const roles = await guild.roles.fetch();
@@ -3761,7 +3781,7 @@ To fix this:
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '## Generate Emojis\n\nNo selectable roles found in this server.',
+              content: '## Create or Remove Player Emojis\n\nNo selectable roles found in this server.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -3770,17 +3790,27 @@ To fix this:
         // Create role select menu
         const roleSelect = new RoleSelectMenuBuilder()
           .setCustomId('prod_emoji_role_select')
-          .setPlaceholder('Select a role/tribe to generate emojis for')
+          .setPlaceholder('Select a role to generate/clear emojis for')
           .setMinValues(1)
           .setMaxValues(1);
         
         const row = new ActionRowBuilder()
           .addComponents(roleSelect);
         
+        const contentText = `## Create or Remove Player Emojis
+
+Select a role (tribe) in your server. CastBot will then automatically create emojis in your server based on each player's avatar, that can be used for trust rankings, fan favourite, etc.
+
+Your server emoji limits are as follows:
+\`${staticCount}/${staticLimit}\` static emojis
+\`${animatedCount}/${animatedLimit}\` animated emojis
+
+If you need more emoji space, delete existing ones from Server Settings > Emojis. If you want to remove castbot-created emojis, do it from this menu rather than manually.`;
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '## Generate Emojis\n\nSelect a tribe or role in your server. CastBot will then automatically create emojis in your server based on each player\'s avatar, that can be used for trust rankings, fan favorite, etc.',
+            content: contentText,
             components: [row.toJSON()],
             flags: InteractionResponseFlags.EPHEMERAL
           }
@@ -5153,7 +5183,7 @@ To fix this:
         });
       }
     } else if (custom_id === 'prod_emoji_role_select') {
-      // Handle emoji generation role selection
+      // Handle emoji generation/removal role selection
       try {
         const guildId = req.body.guild_id;
         const selectedRoleIds = data.values || [];
@@ -5162,7 +5192,7 @@ To fix this:
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: 'Please select a role to generate emojis for.',
+              content: 'Please select a role to generate/clear emojis for.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -5187,61 +5217,105 @@ To fix this:
           });
         }
         
-        // Send immediate response to acknowledge the interaction
-        res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `## Generating Emojis for ${role.name}\n\n⏳ Processing emoji generation for members with the **${role.name}** role. This may take a moment...`,
-            flags: InteractionResponseFlags.EPHEMERAL
+        // Check if role has existing emojis generated for it
+        const hasExistingEmojis = await checkRoleHasEmojis(guild, role);
+        
+        if (hasExistingEmojis) {
+          // Clear existing emojis
+          res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `## Clearing Emojis for ${role.name}\n\n⏳ Removing existing emojis for members with the **${role.name}** role. This may take a moment...`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+          
+          const emojiResult = await clearEmojisForRole(guild, role);
+          
+          // Prepare response message
+          const messageLines = [`## Emoji Removal Complete for ${role.name}\n`];
+          
+          if (emojiResult.deletedLines.length > 0) {
+            messageLines.push('✅ **Emojis removed:**');
+            messageLines.push(...emojiResult.deletedLines.map(line => `• ${line}`));
+            messageLines.push('');
           }
-        });
-        
-        // Generate emojis using the same logic as add_tribe (but without adding to castlist)
-        const emojiResult = await generateEmojisForRole(guild, role);
-        
-        // Prepare response message
-        const messageLines = [`## Emoji Generation Complete for ${role.name}\n`];
-        
-        if (emojiResult.resultLines.length > 0) {
-          messageLines.push('✅ **New emojis created:**');
-          messageLines.push(...emojiResult.resultLines.map(line => `• ${line}`));
-          messageLines.push('');
-        }
-        
-        if (emojiResult.existingLines.length > 0) {
-          messageLines.push('ℹ️ **Existing emojis found:**');
-          messageLines.push(...emojiResult.existingLines.map(line => `• ${line}`));
-          messageLines.push('');
-        }
-        
-        if (emojiResult.errorLines.length > 0) {
-          messageLines.push('⚠️ **Errors encountered:**');
-          messageLines.push(...emojiResult.errorLines.map(line => `• ${line}`));
-          messageLines.push('');
-        }
-        
-        if (emojiResult.maxEmojiReached) {
-          messageLines.push('🚨 **Server emoji limit reached.** Some emojis could not be created.');
-        }
-        
-        // Send follow-up response with results
-        await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
-          method: 'POST',
-          body: {
-            content: messageLines.join('\n'),
-            flags: InteractionResponseFlags.EPHEMERAL
+          
+          if (emojiResult.errorLines.length > 0) {
+            messageLines.push('⚠️ **Errors encountered:**');
+            messageLines.push(...emojiResult.errorLines.map(line => `• ${line}`));
+            messageLines.push('');
           }
-        });
+          
+          if (emojiResult.deletedLines.length === 0 && emojiResult.errorLines.length === 0) {
+            messageLines.push('ℹ️ No emojis found to remove for this role.');
+          }
+          
+          // Send follow-up response with results
+          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
+            method: 'POST',
+            body: {
+              content: messageLines.join('\n'),
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+          
+        } else {
+          // Generate new emojis
+          res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `## Generating Emojis for ${role.name}\n\n⏳ Processing emoji generation for members with the **${role.name}** role. This may take a moment...`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+          
+          const emojiResult = await generateEmojisForRole(guild, role);
+          
+          // Prepare response message
+          const messageLines = [`## Emoji Generation Complete for ${role.name}\n`];
+          
+          if (emojiResult.resultLines.length > 0) {
+            messageLines.push('✅ **New emojis created:**');
+            messageLines.push(...emojiResult.resultLines.map(line => `• ${line}`));
+            messageLines.push('');
+          }
+          
+          if (emojiResult.existingLines.length > 0) {
+            messageLines.push('ℹ️ **Existing emojis found:**');
+            messageLines.push(...emojiResult.existingLines.map(line => `• ${line}`));
+            messageLines.push('');
+          }
+          
+          if (emojiResult.errorLines.length > 0) {
+            messageLines.push('⚠️ **Errors encountered:**');
+            messageLines.push(...emojiResult.errorLines.map(line => `• ${line}`));
+            messageLines.push('');
+          }
+          
+          if (emojiResult.maxEmojiReached) {
+            messageLines.push('🚨 **Server emoji limit reached.** Some emojis could not be created.');
+          }
+          
+          // Send follow-up response with results
+          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
+            method: 'POST',
+            body: {
+              content: messageLines.join('\n'),
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
         
       } catch (error) {
-        console.error('Error generating emojis:', error);
+        console.error('Error managing emojis:', error);
         
         // Send error follow-up
         try {
           await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
             method: 'POST',
             body: {
-              content: 'Error generating emojis. Please try again later.',
+              content: 'Error managing emojis. Please try again later.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -6550,9 +6624,10 @@ async function generateEmojisForRole(guild, role) {
 
 async function createEmojiForUser(member, guild) {
     try {
-        // Create sanitized emoji name from username
-        const emojiName = sanitizeEmojiName(member.user.username);
-        console.log(`Using emoji name: ${emojiName} (from username: ${member.user.username})`);
+        // Create sanitized emoji name from server display name (not username)
+        const displayName = member.displayName || member.user.username;
+        const emojiName = sanitizeEmojiName(displayName);
+        console.log(`Using emoji name: ${emojiName} (from display name: ${displayName})`);
         
         // Check both user and member avatars for animation
         const userHasAnimatedAvatar = member.user.avatar?.startsWith('a_');
@@ -6778,6 +6853,139 @@ async function createEmojiForUser(member, guild) {
         console.error(`Complete emoji creation failure for ${member.displayName}:`, error);
         throw error;
     }
+}
+
+// Check if a role has existing emojis generated for its members
+async function checkRoleHasEmojis(guild, role) {
+  try {
+    const guildId = guild.id;
+    const roleId = role.id;
+    
+    // Load current player data
+    const data = await loadPlayerData();
+    if (!data[guildId] || !data[guildId].players) {
+      return false;
+    }
+    
+    // Fetch all members to ensure we have fresh data
+    await guild.members.fetch();
+    
+    // Get members with this role
+    const targetMembers = guild.members.cache.filter(member => 
+      member.roles.cache.has(roleId) && !member.user.bot
+    );
+    
+    // Check if any members with this role have emojis
+    for (const [memberId, member] of targetMembers) {
+      const playerData = data[guildId].players[memberId];
+      if (playerData?.emojiCode) {
+        console.log(`Found existing emoji for role ${role.name}: ${member.displayName} has ${playerData.emojiCode}`);
+        return true;
+      }
+    }
+    
+    return false;
+  } catch (error) {
+    console.error('Error checking role emojis:', error);
+    return false;
+  }
+}
+
+// Clear emojis for all members with a specific role
+async function clearEmojisForRole(guild, role) {
+  const deletedLines = [];
+  const errorLines = [];
+  
+  try {
+    const guildId = guild.id;
+    const roleId = role.id;
+    
+    // Load current player data
+    const data = await loadPlayerData();
+    if (!data[guildId] || !data[guildId].players) {
+      return {
+        deletedLines: [],
+        errorLines: ['No player data found for this server']
+      };
+    }
+    
+    // Fetch all members to ensure we have fresh data
+    await guild.members.fetch();
+    
+    // Get members with this role
+    const targetMembers = guild.members.cache.filter(member => 
+      member.roles.cache.has(roleId) && !member.user.bot
+    );
+    
+    console.log(`Clearing emojis for ${targetMembers.size} members with role ${role.name} (${roleId})`);
+    
+    if (targetMembers.size === 0) {
+      return {
+        deletedLines: [],
+        errorLines: ['No members found with this role']
+      };
+    }
+    
+    // Process each member with the role
+    for (const [memberId, member] of targetMembers) {
+      try {
+        const playerData = data[guildId].players[memberId];
+        
+        if (playerData?.emojiCode) {
+          const emojiCode = playerData.emojiCode;
+          const emoji = parseEmojiCode(emojiCode);
+          
+          if (emoji?.id) {
+            try {
+              const guildEmoji = await guild.emojis.fetch(emoji.id);
+              if (guildEmoji) {
+                await guildEmoji.delete();
+                console.log(`Deleted ${emoji.animated ? 'animated' : 'static'} emoji for ${member.displayName}`);
+                deletedLines.push(`${member.displayName}: Deleted ${emoji.animated ? 'animated' : 'static'} emoji ${emojiCode}`);
+              } else {
+                console.log(`Emoji ${emoji.id} not found in guild for ${member.displayName}`);
+                deletedLines.push(`${member.displayName}: Emoji was already removed from server`);
+              }
+            } catch (err) {
+              console.error(`Error deleting emoji for ${member.displayName}:`, {
+                error: err,
+                emojiCode: emojiCode,
+                emojiData: emoji
+              });
+              errorLines.push(`${member.displayName}: Failed to delete emoji`);
+            }
+          } else {
+            console.log(`Invalid emoji code for ${member.displayName}: ${emojiCode}`);
+            errorLines.push(`${member.displayName}: Invalid emoji code format`);
+          }
+          
+          // Clear emoji code from player data regardless of deletion success
+          data[guildId].players[memberId].emojiCode = null;
+        } else {
+          console.log(`No emoji found for ${member.displayName}`);
+          // Don't add to error lines, just skip silently
+        }
+      } catch (error) {
+        console.error(`Error processing member ${member.displayName}:`, error);
+        errorLines.push(`${member.displayName}: Error processing emoji removal`);
+      }
+    }
+    
+    // Save updated player data
+    await savePlayerData(data);
+    
+    return {
+      deletedLines,
+      errorLines
+    };
+    
+  } catch (error) {
+    console.error('Error clearing role emojis:', error);
+    return {
+      deletedLines: [],
+      errorLines: ['Error accessing player data']
+    };
+  }
 }
 
 // Update calculateCastlistFields to handle role ID correctly and manage spacers intelligently

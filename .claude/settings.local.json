@@ -78,7 +78,16 @@
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 15 \"name.*===.*add_tribe\" app.js)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 20 -B 5 \"handleSetTribe.*guild_id.*roleOption\" app.js)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 20 \"async function handleSetTribe\" app.js)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 10 \"guild.emojis.fetch\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 10 \"function parseEmojiCode\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"prod_create_emojis|prod_emoji_role_select|generateEmojisForRole|parseEmojiCode\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -B 10 -A 10 \"prod_create_emojis.*button\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -B 20 \"prod_emoji_role_select\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -B 30 -A 30 \"prod_create_emojis\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -i \"emoji.*remov|remov.*emoji|delet.*emoji|emoji.*delet\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -B 10 -A 10 \"await guildEmoji.delete()\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -B 30 -A 20 \"Deleted.*emoji for.*member.displayName\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")"
     ],
     "deny": []
   }
