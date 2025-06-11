@@ -78,7 +78,7 @@ function analyzePlayerData() {
         pronounCount: data.pronounRoleIDs ? data.pronounRoleIDs.length : 0,
         applicationCount: data.applicationConfigs ? Object.keys(data.applicationConfigs).length : 0
       }))
-      .filter(server => server.ownerId !== '391415444084490240'); // Exclude Reece's servers
+      .filter(server => !['391415444084490240', '696456309762949141', '245470919600898048'].includes(server.ownerId)); // Exclude specific owner servers
 
     // Custom sorting logic
     const servers = allServers.sort((a, b) => {
