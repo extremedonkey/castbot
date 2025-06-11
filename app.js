@@ -3778,11 +3778,22 @@ To fix this:
           .first(25); // Discord select menu limit
         
         if (selectableRoles.size === 0) {
+          const errorContainer = {
+            type: 17, // Container component
+            accent_color: 0xFF6B6B, // Red accent color for error
+            components: [
+              {
+                type: 10, // Text Display component
+                content: `## Create or Remove Player Emojis\n\nNo selectable roles found in this server.`
+              }
+            ]
+          };
+          
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '## Create or Remove Player Emojis\n\nNo selectable roles found in this server.',
-              flags: InteractionResponseFlags.EPHEMERAL
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+              components: [errorContainer]
             }
           });
         }
@@ -3797,7 +3808,14 @@ To fix this:
         const row = new ActionRowBuilder()
           .addComponents(roleSelect);
         
-        const contentText = `## Create or Remove Player Emojis
+        // Create Components V2 Container with all emoji management content
+        const emojiContainer = {
+          type: 17, // Container component
+          accent_color: 0x7ED321, // Green accent color
+          components: [
+            {
+              type: 10, // Text Display component
+              content: `## Create or Remove Player Emojis
 
 Select a role (tribe) in your server. CastBot will then automatically create emojis in your server based on each player's avatar, that can be used for trust rankings, fan favourite, etc.
 
@@ -3805,14 +3823,20 @@ Your server emoji limits are as follows:
 \`${staticCount}/${staticLimit}\` static emojis
 \`${animatedCount}/${animatedLimit}\` animated emojis
 
-If you need more emoji space, delete existing ones from Server Settings > Emojis. If you want to remove castbot-created emojis, do it from this menu rather than manually.`;
+If you need more emoji space, delete existing ones from Server Settings > Emojis. If you want to remove castbot-created emojis, do it from this menu rather than manually.`
+            },
+            {
+              type: 14 // Separator
+            },
+            row.toJSON() // Role select menu ActionRow
+          ]
+        };
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: contentText,
-            components: [row.toJSON()],
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [emojiContainer]
           }
         });
         
