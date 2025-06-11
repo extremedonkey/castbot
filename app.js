@@ -5170,7 +5170,12 @@ To fix this:
         
         const roleId = selectedRoleIds[0]; // Only one role can be selected
         const guild = await client.guilds.fetch(guildId);
-        const role = guild.roles.cache.get(roleId);
+        
+        // Fetch the role specifically to ensure we have the latest data
+        const role = await guild.roles.fetch(roleId);
+        
+        console.log(`DEBUG: Selected role ID: ${roleId}`);
+        console.log(`DEBUG: Fetched role: ${role?.name} (${role?.id})`);
         
         if (!role) {
           return res.send({
@@ -6479,6 +6484,9 @@ async function generateEmojisForRole(guild, role) {
   const data = await loadPlayerData();
   if (!data[guildId]) data[guildId] = {};
   if (!data[guildId].players) data[guildId].players = {};
+  
+  // Fetch all members to ensure we have fresh data
+  await guild.members.fetch();
   
   // Get members with this role
   const targetMembers = guild.members.cache.filter(member => 
