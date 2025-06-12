@@ -2665,15 +2665,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Regenerate ranking interface with updated scores
         console.log('🔍 DEBUG: Creating Media Gallery component...');
         
-        // Media Gallery component for testing
+        // Get user's avatar URL (prefer guild avatar, fallback to global avatar, then default)
+        const userAvatarURL = member.displayAvatarURL({ size: 512 });
+        console.log('🔍 DEBUG: Ranking handler - User avatar URL:', userAvatarURL);
+        
+        // Media Gallery component for displaying user avatar
         const galleryComponent = {
           type: 12, // Media Gallery component
           items: [
             {
               media: {
-                url: "https://cdn.discordapp.com/attachments/1337754151655833694/1382731526407589989/Labrador20Retriever.png?ex=684c3895&is=684ae715&hm=33aa2a0edbd490741fe67557b01e3bc987879363e9bfc30be671624dd10b9a60&"
+                url: userAvatarURL
               },
-              description: "Test Labrador image for Gallery component debugging"
+              description: `Avatar of ${member.displayName || member.user.username} who clicked Cast Ranking`
             }
           ]
         };
@@ -2889,15 +2893,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Regenerate interface for new applicant
           console.log('🔍 DEBUG: Creating navigation Media Gallery component...');
           
-          // Media Gallery component for testing
+          // Get user's avatar URL (prefer guild avatar, fallback to global avatar, then default)
+          const userAvatarURL = member.displayAvatarURL({ size: 512 });
+          console.log('🔍 DEBUG: Navigation handler - User avatar URL:', userAvatarURL);
+          
+          // Media Gallery component for displaying user avatar
           const galleryComponent = {
             type: 12, // Media Gallery component
             items: [
               {
                 media: {
-                  url: "https://cdn.discordapp.com/attachments/1337754151655833694/1382731526407589989/Labrador20Retriever.png?ex=684c3895&is=684ae715&hm=33aa2a0edbd490741fe67557b01e3bc987879363e9bfc30be671624dd10b9a60&"
+                  url: userAvatarURL
                 },
-                description: "Test Labrador image for Gallery component debugging"
+                description: `Avatar of ${member.displayName || member.user.username} who clicked Cast Ranking`
               }
             ]
           };
@@ -3875,15 +3883,19 @@ To fix this:
         const currentApp = allApplications[0];
         const appIndex = 0;
         
-        // Create Media Gallery component for displaying test image
+        // Get user's avatar URL (prefer guild avatar, fallback to global avatar, then default)
+        const userAvatarURL = member.displayAvatarURL({ size: 512 });
+        console.log('🔍 DEBUG: User avatar URL:', userAvatarURL);
+        
+        // Create Media Gallery component for displaying user avatar
         const avatarDisplayComponent = {
           type: 12, // Media Gallery component
           items: [
             {
               media: {
-                url: "https://cdn.discordapp.com/attachments/1337754151655833694/1382731526407589989/Labrador20Retriever.png?ex=684c3895&is=684ae715&hm=33aa2a0edbd490741fe67557b01e3bc987879363e9bfc30be671624dd10b9a60&"
+                url: userAvatarURL
               },
-              description: "Test Labrador image for Gallery component debugging"
+              description: `Avatar of ${member.displayName || member.user.username} who clicked Cast Ranking`
             }
           ]
         };
