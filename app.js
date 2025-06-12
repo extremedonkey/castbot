@@ -2645,6 +2645,370 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
       }
       return;
+    } else if (custom_id.startsWith('rank_')) {
+      // Handle ranking button clicks (rank_1_channelId_appIndex, rank_2_channelId_appIndex, etc.)
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const userId = req.body.member.user.id;
+
+        // Check admin permissions
+        const member = await guild.members.fetch(userId);
+        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need admin permissions to rank applicants.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX
+        const rankMatch = custom_id.match(/^rank_(\d+)_(.+)_(\d+)$/);
+        if (!rankMatch) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid ranking button format.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        const [, score, channelId, appIndexStr] = rankMatch;
+        const rankingScore = parseInt(score);
+        const appIndex = parseInt(appIndexStr);
+
+        // Load and update ranking data
+        const playerData = loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = {};
+        if (!playerData[guildId].rankings) playerData[guildId].rankings = {};
+        if (!playerData[guildId].rankings[channelId]) playerData[guildId].rankings[channelId] = {};
+
+        // Record the user's ranking for this application
+        playerData[guildId].rankings[channelId][userId] = rankingScore;
+        savePlayerData(playerData);
+
+        // Get updated application data
+        const guildApplications = playerData[guildId]?.applications || {};
+        const allApplications = Object.values(guildApplications);
+        const currentApp = allApplications[appIndex];
+
+        if (!currentApp) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Application not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Regenerate ranking interface with updated scores
+        const galleryItems = [{
+          type: 11, // Media component (thumbnail)
+          url: currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+        }];
+        
+        const galleryComponent = {
+          type: 18, // Gallery component  
+          items: galleryItems
+        };
+
+        // Create updated ranking buttons
+        const rankingButtons = [];
+        const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+        
+        for (let i = 1; i <= 5; i++) {
+          const isSelected = userRanking === i;
+          rankingButtons.push(
+            new ButtonBuilder()
+              .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
+              .setLabel(i.toString())
+              .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+              .setDisabled(isSelected)
+          );
+        }
+        
+        const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
+        
+        // Create navigation buttons
+        const navButtons = [];
+        if (allApplications.length > 1) {
+          navButtons.push(
+            new ButtonBuilder()
+              .setCustomId(`ranking_prev_${appIndex}`)
+              .setLabel('◀ Previous')
+              .setStyle(ButtonStyle.Secondary)
+              .setDisabled(appIndex === 0),
+            new ButtonBuilder()
+              .setCustomId(`ranking_next_${appIndex}`)
+              .setLabel('Next ▶')
+              .setStyle(ButtonStyle.Secondary)
+              .setDisabled(appIndex === allApplications.length - 1)
+          );
+        }
+        
+        navButtons.push(
+          new ButtonBuilder()
+            .setCustomId('ranking_view_all_scores')
+            .setLabel('📊 View All Scores')
+            .setStyle(ButtonStyle.Primary)
+        );
+        
+        const navRow = new ActionRowBuilder().addComponents(navButtons);
+        
+        // Calculate updated average score
+        const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+        const rankings = Object.values(allRankings).filter(r => r !== undefined);
+        const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
+        
+        // Create updated container
+        const castRankingContainer = {
+          type: 17,
+          accent_color: 0x9B59B6,
+          components: [
+            {
+              type: 10,
+              content: `## Cast Ranking | ${guild.name}`
+            },
+            {
+              type: 14
+            },
+            {
+              type: 10,
+              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}`
+            },
+            galleryComponent,
+            {
+              type: 10,
+              content: `> **Rate this applicant (1-5):**`
+            },
+            rankingRow.toJSON(),
+            {
+              type: 14
+            },
+            navRow.toJSON()
+          ]
+        };
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15),
+            components: [castRankingContainer]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling ranking button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error processing ranking.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('ranking_')) {
+      // Handle ranking navigation and view all scores
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const userId = req.body.member.user.id;
+
+        // Check admin permissions
+        const member = await guild.members.fetch(userId);
+        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need admin permissions to access rankings.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        const playerData = loadPlayerData();
+        const guildApplications = playerData[guildId]?.applications || {};
+        const allApplications = Object.values(guildApplications);
+
+        if (custom_id === 'ranking_view_all_scores') {
+          // Generate comprehensive score summary
+          let scoreSummary = `## All Cast Rankings | ${guild.name}\n\n`;
+          
+          // Calculate scores for each applicant
+          const applicantScores = allApplications.map((app, index) => {
+            const rankings = playerData[guildId]?.rankings?.[app.channelId] || {};
+            const scores = Object.values(rankings).filter(r => r !== undefined);
+            const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+            
+            return {
+              name: app.displayName || app.username,
+              avgScore,
+              voteCount: scores.length,
+              index: index + 1
+            };
+          });
+          
+          // Sort by average score (highest first)
+          applicantScores.sort((a, b) => b.avgScore - a.avgScore);
+          
+          // Build ranking display
+          scoreSummary += '> **Ranked by Average Score:**\n\n';
+          applicantScores.forEach((applicant, rank) => {
+            const medal = rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
+            const scoreDisplay = applicant.avgScore > 0 ? applicant.avgScore.toFixed(1) : 'Unrated';
+            scoreSummary += `${medal} **${applicant.name}** - ${scoreDisplay}/5.0 (${applicant.voteCount} vote${applicant.voteCount !== 1 ? 's' : ''})\n`;
+          });
+          
+          const summaryContainer = {
+            type: 17,
+            accent_color: 0xF39C12,
+            components: [
+              {
+                type: 10,
+                content: scoreSummary
+              }
+            ]
+          };
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+              components: [summaryContainer]
+            }
+          });
+        }
+        
+        // Handle navigation (prev/next)
+        const navMatch = custom_id.match(/^ranking_(prev|next)_(\d+)$/);
+        if (navMatch) {
+          const [, direction, currentIndexStr] = navMatch;
+          const currentIndex = parseInt(currentIndexStr);
+          const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+          
+          if (newIndex < 0 || newIndex >= allApplications.length) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Invalid navigation.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          const currentApp = allApplications[newIndex];
+          
+          // Regenerate interface for new applicant
+          const galleryItems = [{
+            type: 11,
+            url: currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+          }];
+          
+          const galleryComponent = {
+            type: 18,
+            items: galleryItems
+          };
+
+          const rankingButtons = [];
+          const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+          
+          for (let i = 1; i <= 5; i++) {
+            const isSelected = userRanking === i;
+            rankingButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`rank_${i}_${currentApp.channelId}_${newIndex}`)
+                .setLabel(i.toString())
+                .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+                .setDisabled(isSelected)
+            );
+          }
+          
+          const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
+          
+          const navButtons = [];
+          if (allApplications.length > 1) {
+            navButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`ranking_prev_${newIndex}`)
+                .setLabel('◀ Previous')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(newIndex === 0),
+              new ButtonBuilder()
+                .setCustomId(`ranking_next_${newIndex}`)
+                .setLabel('Next ▶')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(newIndex === allApplications.length - 1)
+            );
+          }
+          
+          navButtons.push(
+            new ButtonBuilder()
+              .setCustomId('ranking_view_all_scores')
+              .setLabel('📊 View All Scores')
+              .setStyle(ButtonStyle.Primary)
+          );
+          
+          const navRow = new ActionRowBuilder().addComponents(navButtons);
+          
+          const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+          const rankings = Object.values(allRankings).filter(r => r !== undefined);
+          const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
+          
+          const castRankingContainer = {
+            type: 17,
+            accent_color: 0x9B59B6,
+            components: [
+              {
+                type: 10,
+                content: `## Cast Ranking | ${guild.name}`
+              },
+              {
+                type: 14
+              },
+              {
+                type: 10,
+                content: `> **Applicant ${newIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}`
+              },
+              galleryComponent,
+              {
+                type: 10,
+                content: `> **Rate this applicant (1-5):**`
+              },
+              rankingRow.toJSON(),
+              {
+                type: 14
+              },
+              navRow.toJSON()
+            ]
+          };
+          
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              flags: (1 << 15),
+              components: [castRankingContainer]
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error handling ranking navigation:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error processing ranking navigation.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('show_castlist')) {
       // Extract castlist name from custom_id if present
       const castlistMatch = custom_id.match(/^show_castlist(?:_(.+))?$/);
@@ -3329,7 +3693,7 @@ To fix this:
         });
       }
     } else if (custom_id === 'prod_season_applications') {
-      // Execute same logic as apply_button slash command
+      // Show Season Applications submenu with two options
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
@@ -3349,7 +3713,82 @@ To fix this:
           });
         }
 
-        // Show the application button configuration modal (same as /apply_button)
+        // Create Season Applications submenu with two buttons
+        const seasonAppsButtons = [
+          new ButtonBuilder()
+            .setCustomId('season_app_creation')
+            .setLabel('Creation Application Process')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('📝'),
+          new ButtonBuilder()
+            .setCustomId('season_app_ranking')
+            .setLabel('Cast Ranking')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🏆')
+        ];
+        
+        const seasonAppsRow = new ActionRowBuilder().addComponents(seasonAppsButtons);
+        
+        // Create Components V2 Container for Season Applications submenu
+        const seasonAppsContainer = {
+          type: 17, // Container component
+          accent_color: 0x3498DB, // Blue accent color
+          components: [
+            {
+              type: 10, // Text Display component
+              content: `## Season Applications | ${guild.name}`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **Choose an option below:**`
+            },
+            seasonAppsRow.toJSON()
+          ]
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [seasonAppsContainer]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling prod_season_applications button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error loading Season Applications interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'season_app_creation') {
+      // Handle Creation Application Process - show the original application modal
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const userId = req.body.member.user.id;
+
+        // Check admin permissions
+        const member = await guild.members.fetch(userId);
+        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Show the application button configuration modal (original logic)
         const modal = createApplicationButtonModal();
         
         return res.send({
@@ -3358,11 +3797,158 @@ To fix this:
         });
         
       } catch (error) {
-        console.error('Error handling prod_season_applications button:', error);
+        console.error('Error handling season_app_creation button:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: 'Error loading application button interface.',
+            content: 'Error loading application creation interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'season_app_ranking') {
+      // Handle Cast Ranking - show gallery with ranking system
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const userId = req.body.member.user.id;
+
+        // Check admin permissions
+        const member = await guild.members.fetch(userId);
+        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Load applications data
+        const playerData = loadPlayerData();
+        const guildApplications = playerData[guildId]?.applications || {};
+        const allApplications = Object.values(guildApplications);
+
+        if (allApplications.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '📝 No applications found for this server. Create application buttons first using "Creation Application Process".',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Get first application for initial display (we'll implement pagination later)
+        const currentApp = allApplications[0];
+        const appIndex = 0;
+        
+        // Create Gallery component for displaying applicant avatar
+        const galleryItems = [{
+          type: 11, // Media component (thumbnail)
+          url: currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+        }];
+        
+        const galleryComponent = {
+          type: 18, // Gallery component  
+          items: galleryItems
+        };
+
+        // Create ranking buttons (1-5)
+        const rankingButtons = [];
+        const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+        
+        for (let i = 1; i <= 5; i++) {
+          const isSelected = userRanking === i;
+          rankingButtons.push(
+            new ButtonBuilder()
+              .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
+              .setLabel(i.toString())
+              .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+              .setDisabled(isSelected)
+          );
+        }
+        
+        const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
+        
+        // Create navigation buttons if there are multiple applications
+        const navButtons = [];
+        if (allApplications.length > 1) {
+          navButtons.push(
+            new ButtonBuilder()
+              .setCustomId(`ranking_prev_${appIndex}`)
+              .setLabel('◀ Previous')
+              .setStyle(ButtonStyle.Secondary)
+              .setDisabled(appIndex === 0),
+            new ButtonBuilder()
+              .setCustomId(`ranking_next_${appIndex}`)
+              .setLabel('Next ▶')
+              .setStyle(ButtonStyle.Secondary)
+              .setDisabled(appIndex === allApplications.length - 1)
+          );
+        }
+        
+        // Add View All Scores button
+        navButtons.push(
+          new ButtonBuilder()
+            .setCustomId('ranking_view_all_scores')
+            .setLabel('📊 View All Scores')
+            .setStyle(ButtonStyle.Primary)
+        );
+        
+        const navRow = new ActionRowBuilder().addComponents(navButtons);
+        
+        // Calculate average score for current applicant
+        const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+        const rankings = Object.values(allRankings).filter(r => r !== undefined);
+        const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
+        
+        // Create Components V2 Container for Cast Ranking interface
+        const castRankingContainer = {
+          type: 17, // Container component
+          accent_color: 0x9B59B6, // Purple accent color
+          components: [
+            {
+              type: 10, // Text Display component
+              content: `## Cast Ranking | ${guild.name}`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})`
+            },
+            galleryComponent, // Applicant avatar gallery
+            {
+              type: 10, // Text Display component  
+              content: `> **Rate this applicant (1-5):**`
+            },
+            rankingRow.toJSON(), // Ranking buttons
+            {
+              type: 14 // Separator
+            },
+            navRow.toJSON() // Navigation and view all scores
+          ]
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [castRankingContainer]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling season_app_ranking button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error loading cast ranking interface.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
