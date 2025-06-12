@@ -107,7 +107,14 @@
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 50 \"createApplicationChannel\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/app.js\")",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 30 \"async function createApplicationChannel\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/applicationManager.js\")",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 50 \"// Save application data\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/applicationManager.js\")",
-      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"applications.*=\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/applicationManager.js\")"
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"applications.*=\" \"/mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/applicationManager.js\")",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 3 -B 3 \"getAllApplicationsFromData\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -B 15 \"getAllApplicationsFromData\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -B 50 \"getAllApplicationsFromData\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 5 -B 5 \"type.*===.*InteractionType.MESSAGE_COMPONENT\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 5 -B 5 \"app.post.*interactions.*async\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -C 2 \"loadPlayerData\\(\\)\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"savePlayerData\\(\" app.js)"
     ],
     "deny": []
   }

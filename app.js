@@ -71,8 +71,8 @@ import { pipeline } from 'stream/promises';
  * @param {string} guildId - Discord guild ID
  * @returns {Array} Array of application objects
  */
-function getAllApplicationsFromData(guildId) {
-  const playerData = loadPlayerData();
+async function getAllApplicationsFromData(guildId) {
+  const playerData = await loadPlayerData();
   const guildApplications = playerData[guildId]?.applications || {};
   return Object.values(guildApplications);
 }
@@ -2694,17 +2694,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const appIndex = parseInt(appIndexStr);
 
         // Load and update ranking data
-        const playerData = loadPlayerData();
+        const playerData = await loadPlayerData();
         if (!playerData[guildId]) playerData[guildId] = {};
         if (!playerData[guildId].rankings) playerData[guildId].rankings = {};
         if (!playerData[guildId].rankings[channelId]) playerData[guildId].rankings[channelId] = {};
 
         // Record the user's ranking for this application
         playerData[guildId].rankings[channelId][userId] = rankingScore;
-        savePlayerData(playerData);
+        await savePlayerData(playerData);
 
         // Get updated application data using helper function
-        const allApplications = getAllApplicationsFromData(guildId);
+        const allApplications = await getAllApplicationsFromData(guildId);
         
         const currentApp = allApplications[appIndex];
 
@@ -2845,8 +2845,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
 
-        const playerData = loadPlayerData();
-        const allApplications = getAllApplicationsFromData(guildId);
+        const playerData = await loadPlayerData();
+        const allApplications = await getAllApplicationsFromData(guildId);
 
         if (custom_id === 'ranking_view_all_scores') {
           // Generate comprehensive score summary
@@ -3838,13 +3838,13 @@ To fix this:
         }
 
         // Load applications data - Use helper function to get all applications from stored data
-        const allApplications = getAllApplicationsFromData(guildId);
+        const allApplications = await getAllApplicationsFromData(guildId);
         
         console.log(`Found ${allApplications.length} applications for ranking`);
         console.log('Debug - Guild ID:', guildId);
         
         // Debug: Check what's actually in playerData
-        const playerData = loadPlayerData();
+        const playerData = await loadPlayerData();
         console.log('Debug - Guild exists in playerData:', !!playerData[guildId]);
         console.log('Debug - Applications section exists:', !!playerData[guildId]?.applications);
         if (playerData[guildId]?.applications) {
