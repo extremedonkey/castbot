@@ -2785,10 +2785,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log('🔍 DEBUG: Navigation - Guild ID:', guildId, 'User ID:', userId);
 
         // Check admin permissions
+        console.log('🔍 DEBUG: Checking navigation admin permissions...');
         const member = await guild.members.fetch(userId);
+        console.log('🔍 DEBUG: Navigation member permissions:', member.permissions.bitfield.toString());
         if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
             !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
             !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          console.log('🔍 DEBUG: Navigation user lacks admin permissions, sending error response');
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -2797,9 +2800,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }
           });
         }
+        console.log('🔍 DEBUG: Navigation admin permissions verified');
 
+        console.log('🔍 DEBUG: Loading navigation data...');
         const playerData = await loadPlayerData();
         const allApplications = await getAllApplicationsFromData(guildId);
+        console.log('🔍 DEBUG: Navigation found', allApplications.length, 'applications');
 
         if (custom_id === 'ranking_view_all_scores') {
           // Generate comprehensive score summary
@@ -2851,13 +2857,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
         
         // Handle navigation (prev/next)
+        console.log('🔍 DEBUG: Checking for navigation match...');
         const navMatch = custom_id.match(/^ranking_(prev|next)_(\d+)$/);
         if (navMatch) {
+          console.log('🔍 DEBUG: Navigation match found:', navMatch);
           const [, direction, currentIndexStr] = navMatch;
           const currentIndex = parseInt(currentIndexStr);
           const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+          console.log('🔍 DEBUG: Navigation - Direction:', direction, 'Current:', currentIndex, 'New:', newIndex);
           
           if (newIndex < 0 || newIndex >= allApplications.length) {
+            console.log('🔍 DEBUG: Invalid navigation index, sending error');
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
               data: {
@@ -2868,17 +2878,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
           
           const currentApp = allApplications[newIndex];
+          console.log('🔍 DEBUG: Navigation found current app:', currentApp.displayName || currentApp.username);
           
           // Regenerate interface for new applicant
-          const galleryItems = [{
-            type: 11,
-            url: currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
-          }];
+          console.log('🔍 DEBUG: Creating navigation text display component (Gallery replacement)...');
           
+          // TEMPORARY: Replace Gallery with Text Display for debugging (same fix as ranking buttons)
           const galleryComponent = {
-            type: 18,
-            items: galleryItems
+            type: 10, // Text Display component (temporary replacement)
+            content: `👤 **${currentApp.displayName || currentApp.username}**\n🖼️ *Avatar temporarily shown as text due to Gallery component debugging*`
           };
+          console.log('🔍 DEBUG: Navigation text display component created');
 
           const rankingButtons = [];
           const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
