@@ -273,10 +273,10 @@ const ROLE_GENERATOR_COMMAND = {
 // Player commands - REMOVED from registration (handlers remain active for legacy support)
 // These are now replaced by the enhanced /menu system
 
-// Menu command that displays buttons for castlists and player actions
+// Unified menu command that shows player menu for regular users, admin menu for admins
 const MENU_COMMAND = {
 	name: maybePrependDev('menu'),
-	description: 'Display interactive menu with castlist buttons and player actions',
+	description: 'Display interactive menu - shows admin controls if you have admin permissions',
 	type: 1
 };
 

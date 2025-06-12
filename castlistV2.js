@@ -451,10 +451,10 @@ function createNavigationButtons(navigationState, castlistName) {
         .setStyle(nextDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
         .setDisabled(nextDisabled);
     
-    // Manage Profile button replaces the indicator
+    // Menu button (shows admin menu for admins, player menu for regular users)
     const manageProfileButton = new ButtonBuilder()
         .setCustomId("viral_menu")
-        .setLabel("Edit Profile")
+        .setLabel("📋 Menu")
         .setStyle(ButtonStyle.Primary);
     
     row.addComponents(lastButton, manageProfileButton, nextButton);

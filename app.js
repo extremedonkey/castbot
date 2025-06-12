@@ -78,6 +78,25 @@ async function getAllApplicationsFromData(guildId) {
 }
 
 /**
+ * Check if user has admin permissions (any of: Manage Channels, Manage Guild, Manage Roles, Administrator)
+ * @param {Object} member - Discord member object from interaction
+ * @returns {boolean} True if user has admin permissions
+ */
+function hasAdminPermissions(member) {
+  if (!member || !member.permissions) return false;
+  
+  // Convert permissions string to BigInt for comparison
+  const permissions = BigInt(member.permissions);
+  const adminPermissions = 
+    PermissionFlagsBits.ManageChannels | 
+    PermissionFlagsBits.ManageGuild | 
+    PermissionFlagsBits.ManageRoles | 
+    PermissionFlagsBits.Administrator;
+  
+  return (permissions & BigInt(adminPermissions)) !== 0n;
+}
+
+/**
  * Create reusable CastBot menu components
  * @param {Object} playerData - Guild player data
  * @param {string} guildId - Discord guild ID
@@ -172,6 +191,235 @@ async function createCastBotMenu(playerData, guildId, isEphemeral = false) {
     content: '**CastBot Menu**',
     components: [castlistRow, actionRow],
     flags: isEphemeral ? InteractionResponseFlags.EPHEMERAL : undefined
+  };
+}
+
+/**
+ * Create production menu interface with Components V2 structure
+ * @param {Object} guild - Discord guild object
+ * @param {Object} playerData - Guild player data
+ * @param {string} guildId - Discord guild ID
+ * @param {string} userId - User ID for special features (optional)
+ * @returns {Object} Production menu response object
+ */
+async function createProductionMenuInterface(guild, playerData, guildId, userId = null) {
+  // Get all tribes to find unique castlists
+  const allCastlists = new Set();
+  const castlistTribes = {}; // Track tribes per castlist to get emojis
+  
+  if (playerData[guildId]?.tribes) {
+    Object.entries(playerData[guildId].tribes).forEach(([roleId, tribeData]) => {
+      const castlistName = tribeData.castlist || 'default';
+      allCastlists.add(castlistName);
+      
+      // Store tribe info for each castlist (for emojis)
+      if (!castlistTribes[castlistName]) {
+        castlistTribes[castlistName] = [];
+      }
+      castlistTribes[castlistName].push({
+        roleId,
+        emoji: tribeData.emoji
+      });
+    });
+  }
+  
+  /**
+   * Create castlist button rows with pagination to handle Discord's 5-button ActionRow limit
+   * @param {Set} allCastlists - Set of all castlist names
+   * @param {Object} castlistTribes - Mapping of castlists to their tribe data
+   * @returns {Array} Array of ActionRow JSON objects
+   */
+  function createCastlistRows(allCastlists, castlistTribes) {
+    const castlistButtons = [];
+    
+    // Add default castlist button
+    castlistButtons.push(
+      new ButtonBuilder()
+        .setCustomId('show_castlist2_default')
+        .setLabel('Show Castlist')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('📋')
+    );
+    
+    // Add custom castlist buttons (excluding default which is already added)
+    const customCastlists = Array.from(allCastlists).filter(name => name !== 'default').sort();
+    
+    for (const castlistName of customCastlists) {
+      const tribes = castlistTribes[castlistName] || [];
+      const tribeWithEmoji = tribes.find(tribe => tribe.emoji);
+      const emoji = tribeWithEmoji?.emoji || '📋';
+      
+      castlistButtons.push(
+        new ButtonBuilder()
+          .setCustomId(`show_castlist2_${castlistName}`)
+          .setLabel(`Show ${castlistName.charAt(0).toUpperCase() + castlistName.slice(1)}`)
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji(emoji)
+      );
+    }
+    
+    // Add plus button to the end
+    castlistButtons.push(
+      new ButtonBuilder()
+        .setCustomId('prod_add_castlist')
+        .setLabel('+')
+        .setStyle(ButtonStyle.Secondary)
+    );
+    
+    // Split buttons into rows of max 5 buttons each
+    const rows = [];
+    const maxButtonsPerRow = 5;
+    
+    for (let i = 0; i < castlistButtons.length; i += maxButtonsPerRow) {
+      const rowButtons = castlistButtons.slice(i, i + maxButtonsPerRow);
+      const row = new ActionRowBuilder().addComponents(rowButtons);
+      rows.push(row.toJSON());
+    }
+    
+    return rows;
+  }
+
+  // Create castlist rows with pagination support
+  const castlistRows = createCastlistRows(allCastlists, castlistTribes);
+  
+  // Debug logging for castlist pagination
+  console.log(`Created ${castlistRows.length} castlist row(s) for ${allCastlists.size} castlist(s)`);
+  if (castlistRows.length > 1) {
+    console.log('Pagination active: castlists split across multiple rows to prevent Discord ActionRow limit');
+  }
+  
+  // Check if pronouns/timezones exist for conditional buttons
+  const hasPronouns = playerData[guildId]?.pronounRoleIDs?.length > 0;
+  const hasTimezones = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
+  const hasRoles = hasPronouns || hasTimezones;
+  
+  // Create admin control buttons (moved Need Help to bottom row)
+  const adminButtons = [
+    new ButtonBuilder()
+      .setCustomId('prod_setup')
+      .setLabel('Setup')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🪛'),
+    new ButtonBuilder()
+      .setCustomId('prod_manage_pronouns_timezones')
+      .setLabel('Manage Pronouns/Timezones')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💜'),
+    new ButtonBuilder()
+      .setCustomId('prod_manage_tribes')
+      .setLabel('Manage Tribes')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🔥')
+  ];
+  
+  // Add Manage Players button conditionally (3rd position)
+  if (hasRoles) {
+    adminButtons.splice(2, 0, 
+      new ButtonBuilder()
+        .setCustomId('admin_manage_player')
+        .setLabel('Manage Players')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('🧑‍🤝‍🧑')
+    );
+  }
+  
+  const adminRow = new ActionRowBuilder().addComponents(adminButtons);
+  
+  // Add new administrative action row (misc features)
+  const adminActionButtons = [
+    new ButtonBuilder()
+      .setCustomId('prod_season_applications')
+      .setLabel('Season Applications')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('📝'),
+    new ButtonBuilder()
+      .setCustomId('prod_setup_tycoons')
+      .setLabel('Tycoons')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💰'),
+    new ButtonBuilder()
+      .setLabel('Need Help?')
+      .setStyle(ButtonStyle.Link)
+      .setEmoji('❓')
+      .setURL('https://discord.gg/H7MpJEjkwT')
+  ];
+  
+  // Add special analytics button only for specific user (Reece) - goes at the end
+  if (userId === '391415444084490240') {
+    adminActionButtons.push(
+      new ButtonBuilder()
+        .setCustomId('prod_analytics_dump')
+        .setLabel('Analytics')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('📊')
+    );
+  }
+  
+  const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
+  
+  /**
+   * Validate container component limits to prevent Discord API errors
+   * @param {Array} components - Array of components to validate
+   * @returns {boolean} True if within limits, false otherwise
+   */
+  function validateContainerLimits(components) {
+    const maxComponents = 25; // Discord's container component limit
+    
+    if (components.length > maxComponents) {
+      console.error(`Container exceeds component limit: ${components.length}/${maxComponents}`);
+      return false;
+    }
+    
+    return true;
+  }
+  
+  // Build container components array with pagination support
+  const containerComponents = [
+    {
+      type: 10, // Text Display component
+      content: `## CastBot | Prod Menu`
+    },
+    {
+      type: 14 // Separator after title
+    },
+    {
+      type: 10, // Text Display component
+      content: `> **\`View Castlists\`**`
+    },
+    ...castlistRows, // Multiple castlist rows with pagination
+    {
+      type: 14 // Separator after castlist rows
+    },
+    {
+      type: 10, // Text Display component
+      content: `> **\`Configure Castlists\`**`
+    },
+    adminRow.toJSON(), // Admin management buttons
+    {
+      type: 14 // Separator after admin management row
+    },
+    {
+      type: 10, // Text Display component
+      content: `> **\`Misc\`**`
+    },
+    adminActionRow.toJSON() // New administrative action buttons
+  ];
+  
+  // Validate component limits before creating container
+  if (!validateContainerLimits(containerComponents)) {
+    throw new Error('Container component limit exceeded - too many castlists or buttons');
+  }
+  
+  // Create Components V2 Container for entire production menu
+  const prodMenuContainer = {
+    type: 17, // Container component
+    accent_color: 0x3498DB, // Blue accent color
+    components: containerComponents
+  };
+  
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2 flag
+    components: [prodMenuContainer]
   };
 }
 
@@ -1175,14 +1423,27 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   }
 } else if (name === 'menu') {
   try {
-    console.log('Processing menu command');
+    console.log('Processing unified menu command');
     
-    await res.send({
-      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        flags: InteractionResponseFlags.EPHEMERAL
-      }
-    });
+    const member = req.body.member;
+    const isAdmin = hasAdminPermissions(member);
+    
+    console.log(`Menu access: Admin=${isAdmin}, User=${member?.user?.username || 'unknown'}`);
+    
+    if (isAdmin) {
+      // Admin user - show production menu (public message)
+      await res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+      });
+    } else {
+      // Regular user - show player menu (ephemeral)
+      await res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+    }
     
     const guildId = req.body.guild_id;
     const guild = await client.guilds.fetch(guildId);
@@ -1210,129 +1471,47 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       });
     }
     
-    // Always include default castlist even if no tribes exist yet
-    if (allCastlists.size === 0) {
-      allCastlists.add('default');
-    }
-    
-    // If only default castlist exists, show single button layout
-    if (allCastlists.size === 1 && allCastlists.has('default')) {
-      const castlistRow = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId('show_castlist2_default')
-            .setLabel('Show Castlist')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('📋')
-        );
+    if (isAdmin) {
+      // Admin user - use createProductionMenuInterface function
+      const userId = req.body.member?.user?.id;
+      const menuResponse = await createProductionMenuInterface(guild, playerData, guildId, userId);
       
-      // Add second row with player action buttons
-      const actionRow = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId('player_set_pronouns')
-            .setLabel('Set Your Pronouns')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('💜'),
-          new ButtonBuilder()
-            .setCustomId('player_set_timezone')
-            .setLabel('Set Your Timezone')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🗺️'),
-          new ButtonBuilder()
-            .setCustomId('player_set_age')
-            .setLabel('Set Your Age')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🎂')
-        );
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: menuResponse
+      });
+      
+    } else {
+      // Regular user - use createCastBotMenu function
+      const menuResponse = await createCastBotMenu(playerData, guildId, true); // ephemeral for regular users
       
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: {
-          content: '**CastBot Player Menu**',
-          components: [castlistRow, actionRow]
+          content: menuResponse.content,
+          components: menuResponse.components,
+          flags: menuResponse.flags
         }
       });
-      return;
     }
-    
-    // Create buttons for each castlist
-    const buttons = [];
-    const castlistArray = Array.from(allCastlists).sort((a, b) => {
-      // Sort so 'default' comes first
-      if (a === 'default') return -1;
-      if (b === 'default') return 1;
-      return a.localeCompare(b);
-    });
-    
-    for (const castlistName of castlistArray) {
-      if (castlistName === 'default') {
-        // Default castlist gets the primary blue button with 📋 emoji
-        buttons.push(
-          new ButtonBuilder()
-            .setCustomId('show_castlist2_default')
-            .setLabel('Show Castlist')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('📋')
-        );
-      } else {
-        // Custom castlists get grey buttons with tribe emoji if available
-        const tribes = castlistTribes[castlistName] || [];
-        const tribeWithEmoji = tribes.find(tribe => tribe.emoji);
-        const emoji = tribeWithEmoji?.emoji || '📋';
-        
-        buttons.push(
-          new ButtonBuilder()
-            .setCustomId(`show_castlist2_${castlistName}`)
-            .setLabel(`Show ${castlistName.charAt(0).toUpperCase() + castlistName.slice(1)}`)
-            .setStyle(ButtonStyle.Secondary) // Grey button
-            .setEmoji(emoji)
-        );
-      }
-    }
-    
-    const castlistRow = new ActionRowBuilder().addComponents(buttons);
-    
-    // Add second row with player action buttons
-    const actionRow = new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId('player_set_pronouns')
-          .setLabel('Set Your Pronouns')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('💜'),
-        new ButtonBuilder()
-          .setCustomId('player_set_timezone')
-          .setLabel('Set Your Timezone')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('🗺️'),
-        new ButtonBuilder()
-          .setCustomId('player_set_age')
-          .setLabel('Set Your Age')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('🎂')
-      );
-    
-    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-    await DiscordRequest(endpoint, {
-      method: 'PATCH',
-      body: {
-        content: '**CastBot Player Menu**',
-        components: [castlistRow, actionRow]
-      }
-    });
     
   } catch (error) {
     console.error('Error handling menu command:', error);
-    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-    await DiscordRequest(endpoint, {
-      method: 'PATCH',
-      body: {
-        content: 'Error creating menu.',
-        flags: InteractionResponseFlags.EPHEMERAL
-      }
-    });
+    
+    try {
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: {
+          content: '❌ Error loading menu. Please try again.',
+          components: []
+        }
+      });
+    } catch (updateError) {
+      console.error('Failed to update message with error:', updateError);
+    }
   }
   return;
 } else if (name === 'clear_tribe') {
@@ -3242,20 +3421,44 @@ To fix this:
       }
       return;
     } else if (custom_id === 'viral_menu') {
-      // Handle viral growth menu button (from castlist)
+      // Handle menu button click from castlist (admin/user routing)
       try {
+        const member = req.body.member;
+        const isAdmin = hasAdminPermissions(member);
         const guildId = req.body.guild_id;
-        const playerData = await loadPlayerData();
         
-        // Create reusable menu (ephemeral for viral clicks)
-        const menuData = await createCastBotMenu(playerData, guildId, true);
+        console.log(`Menu button clicked: Admin=${isAdmin}, User=${member?.user?.username || 'unknown'}`);
         
-        await res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: menuData
-        });
+        if (isAdmin) {
+          // Admin user - redirect to production menu interface (same as /prod_menu command)
+          await res.send({
+            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+          });
+          
+          const guild = await client.guilds.fetch(guildId);
+          const playerData = await loadPlayerData();
+          
+          // Create the full Components V2 admin interface (same as prod_menu)
+          const userId = member?.user?.id;
+          const menuResponse = await createProductionMenuInterface(guild, playerData, guildId, userId);
+          
+          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: menuResponse
+          });
+        } else {
+          // Regular user - show player menu (ephemeral)
+          const playerData = await loadPlayerData();
+          const menuData = await createCastBotMenu(playerData, guildId, true);
+          
+          await res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: menuData
+          });
+        }
       } catch (error) {
-        console.error('Error handling viral menu:', error);
+        console.error('Error handling menu button:', error);
         await res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
