@@ -2663,15 +2663,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
 
         // Regenerate ranking interface with updated scores
-        console.log('🔍 DEBUG: Creating temporary text display component (Gallery replacement)...');
+        console.log('🔍 DEBUG: Creating Media Gallery component...');
         
-        // TEMPORARY: Replace Gallery with Text Display for debugging
-        // TODO: Restore Gallery component once interaction issue is resolved
+        // Media Gallery component for testing
         const galleryComponent = {
-          type: 10, // Text Display component (temporary replacement)
-          content: `👤 **${currentApp.displayName || currentApp.username}**\n🖼️ *Avatar temporarily shown as text due to Gallery component debugging*`
+          type: 12, // Media Gallery component
+          items: [
+            {
+              media: {
+                url: "https://cdn.discordapp.com/attachments/1337754151655833694/1382731526407589989/Labrador20Retriever.png?ex=684c3895&is=684ae715&hm=33aa2a0edbd490741fe67557b01e3bc987879363e9bfc30be671624dd10b9a60&"
+              },
+              description: "Test Labrador image for Gallery component debugging"
+            }
+          ]
         };
-        console.log('🔍 DEBUG: Text display component created (temporary Gallery replacement)');
+        console.log('🔍 DEBUG: Media Gallery component created');
 
         // Create updated ranking buttons
         const rankingButtons = [];
@@ -2881,14 +2887,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           console.log('🔍 DEBUG: Navigation found current app:', currentApp.displayName || currentApp.username);
           
           // Regenerate interface for new applicant
-          console.log('🔍 DEBUG: Creating navigation text display component (Gallery replacement)...');
+          console.log('🔍 DEBUG: Creating navigation Media Gallery component...');
           
-          // TEMPORARY: Replace Gallery with Text Display for debugging (same fix as ranking buttons)
+          // Media Gallery component for testing
           const galleryComponent = {
-            type: 10, // Text Display component (temporary replacement)
-            content: `👤 **${currentApp.displayName || currentApp.username}**\n🖼️ *Avatar temporarily shown as text due to Gallery component debugging*`
+            type: 12, // Media Gallery component
+            items: [
+              {
+                media: {
+                  url: "https://cdn.discordapp.com/attachments/1337754151655833694/1382731526407589989/Labrador20Retriever.png?ex=684c3895&is=684ae715&hm=33aa2a0edbd490741fe67557b01e3bc987879363e9bfc30be671624dd10b9a60&"
+                },
+                description: "Test Labrador image for Gallery component debugging"
+              }
+            ]
           };
-          console.log('🔍 DEBUG: Navigation text display component created');
+          console.log('🔍 DEBUG: Navigation Media Gallery component created');
 
           const rankingButtons = [];
           const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
@@ -3862,11 +3875,17 @@ To fix this:
         const currentApp = allApplications[0];
         const appIndex = 0;
         
-        // Create Gallery component for displaying applicant avatar
-        // Using a simpler approach with Text Display since Gallery might have issues
+        // Create Media Gallery component for displaying test image
         const avatarDisplayComponent = {
-          type: 10, // Text Display component
-          content: `🖼️ **Applicant Avatar:** [View Avatar](${currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`})`
+          type: 12, // Media Gallery component
+          items: [
+            {
+              media: {
+                url: "https://cdn.discordapp.com/attachments/1337754151655833694/1382731526407589989/Labrador20Retriever.png?ex=684c3895&is=684ae715&hm=33aa2a0edbd490741fe67557b01e3bc987879363e9bfc30be671624dd10b9a60&"
+              },
+              description: "Test Labrador image for Gallery component debugging"
+            }
+          ]
         };
 
         // Create ranking buttons (1-5)
