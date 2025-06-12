@@ -2886,7 +2886,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+              flags: (1 << 15), // IS_COMPONENTS_V2 flag only, remove EPHEMERAL to make public
               components: [summaryContainer]
             }
           });
