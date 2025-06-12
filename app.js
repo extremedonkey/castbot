@@ -2665,30 +2665,45 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Regenerate ranking interface with updated scores
         console.log('🔍 DEBUG: Creating Media Gallery component...');
         
-        // Get user's avatar URL (prefer guild avatar, fallback to global avatar, then default)
-        const userAvatarURL = member.displayAvatarURL({ size: 512 });
-        console.log('🔍 DEBUG: Ranking handler - User avatar URL:', userAvatarURL);
+        // Fetch the applicant as a guild member to get their current avatar
+        let applicantMember;
+        try {
+          applicantMember = await guild.members.fetch(currentApp.userId);
+          console.log('🔍 DEBUG: Ranking handler - Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
+        } catch (error) {
+          console.log('🔍 DEBUG: Ranking handler - Could not fetch applicant member, using fallback:', error.message);
+          // Fallback: create a basic user object for avatar URL generation
+          applicantMember = {
+            displayName: currentApp.displayName,
+            user: { username: currentApp.username },
+            displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+          };
+        }
+        
+        // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
+        const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
+        console.log('🔍 DEBUG: Ranking handler - Applicant avatar URL:', applicantAvatarURL);
         
         // Pre-fetch avatar to warm up Discord CDN cache
         try {
-          console.log('🔍 DEBUG: Ranking handler - Pre-fetching avatar to warm CDN cache...');
+          console.log('🔍 DEBUG: Ranking handler - Pre-fetching applicant avatar to warm CDN cache...');
           const prefetchStart = Date.now();
-          await fetch(userAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
+          await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
           const prefetchTime = Date.now() - prefetchStart;
-          console.log(`🔍 DEBUG: Ranking handler - Avatar pre-fetch completed in ${prefetchTime}ms`);
+          console.log(`🔍 DEBUG: Ranking handler - Applicant avatar pre-fetch completed in ${prefetchTime}ms`);
         } catch (error) {
-          console.log('🔍 DEBUG: Ranking handler - Avatar pre-fetch failed (non-critical):', error.message);
+          console.log('🔍 DEBUG: Ranking handler - Applicant avatar pre-fetch failed (non-critical):', error.message);
         }
         
-        // Media Gallery component for displaying user avatar
+        // Media Gallery component for displaying applicant avatar
         const galleryComponent = {
           type: 12, // Media Gallery component
           items: [
             {
               media: {
-                url: userAvatarURL
+                url: applicantAvatarURL
               },
-              description: `Avatar of ${member.displayName || member.user.username} who clicked Cast Ranking`
+              description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
             }
           ]
         };
@@ -2904,30 +2919,45 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Regenerate interface for new applicant
           console.log('🔍 DEBUG: Creating navigation Media Gallery component...');
           
-          // Get user's avatar URL (prefer guild avatar, fallback to global avatar, then default)
-          const userAvatarURL = member.displayAvatarURL({ size: 512 });
-          console.log('🔍 DEBUG: Navigation handler - User avatar URL:', userAvatarURL);
+          // Fetch the applicant as a guild member to get their current avatar
+          let applicantMember;
+          try {
+            applicantMember = await guild.members.fetch(currentApp.userId);
+            console.log('🔍 DEBUG: Navigation handler - Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
+          } catch (error) {
+            console.log('🔍 DEBUG: Navigation handler - Could not fetch applicant member, using fallback:', error.message);
+            // Fallback: create a basic user object for avatar URL generation
+            applicantMember = {
+              displayName: currentApp.displayName,
+              user: { username: currentApp.username },
+              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+            };
+          }
+          
+          // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
+          const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
+          console.log('🔍 DEBUG: Navigation handler - Applicant avatar URL:', applicantAvatarURL);
           
           // Pre-fetch avatar to warm up Discord CDN cache
           try {
-            console.log('🔍 DEBUG: Navigation handler - Pre-fetching avatar to warm CDN cache...');
+            console.log('🔍 DEBUG: Navigation handler - Pre-fetching applicant avatar to warm CDN cache...');
             const prefetchStart = Date.now();
-            await fetch(userAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
+            await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
             const prefetchTime = Date.now() - prefetchStart;
-            console.log(`🔍 DEBUG: Navigation handler - Avatar pre-fetch completed in ${prefetchTime}ms`);
+            console.log(`🔍 DEBUG: Navigation handler - Applicant avatar pre-fetch completed in ${prefetchTime}ms`);
           } catch (error) {
-            console.log('🔍 DEBUG: Navigation handler - Avatar pre-fetch failed (non-critical):', error.message);
+            console.log('🔍 DEBUG: Navigation handler - Applicant avatar pre-fetch failed (non-critical):', error.message);
           }
           
-          // Media Gallery component for displaying user avatar
+          // Media Gallery component for displaying applicant avatar
           const galleryComponent = {
             type: 12, // Media Gallery component
             items: [
               {
                 media: {
-                  url: userAvatarURL
+                  url: applicantAvatarURL
                 },
-                description: `Avatar of ${member.displayName || member.user.username} who clicked Cast Ranking`
+                description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
               }
             ]
           };
@@ -3753,7 +3783,7 @@ To fix this:
           });
         }
 
-        // Create Season Applications submenu with three buttons
+        // Create Season Applications submenu with two buttons
         const seasonAppsButtons = [
           new ButtonBuilder()
             .setCustomId('season_app_creation')
@@ -3764,12 +3794,7 @@ To fix this:
             .setCustomId('season_app_ranking')
             .setLabel('Cast Ranking')
             .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🏆'),
-          new ButtonBuilder()
-            .setCustomId('gallery_test')
-            .setLabel('Gallery')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🖼️')
+            .setEmoji('🏆')
         ];
         
         const seasonAppsRow = new ActionRowBuilder().addComponents(seasonAppsButtons);
@@ -3905,30 +3930,45 @@ To fix this:
         const currentApp = allApplications[0];
         const appIndex = 0;
         
-        // Get user's avatar URL (prefer guild avatar, fallback to global avatar, then default)
-        const userAvatarURL = member.displayAvatarURL({ size: 512 });
-        console.log('🔍 DEBUG: User avatar URL:', userAvatarURL);
+        // Fetch the applicant as a guild member to get their current avatar
+        let applicantMember;
+        try {
+          applicantMember = await guild.members.fetch(currentApp.userId);
+          console.log('🔍 DEBUG: Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
+        } catch (error) {
+          console.log('🔍 DEBUG: Could not fetch applicant member, using fallback:', error.message);
+          // Fallback: create a basic user object for avatar URL generation
+          applicantMember = {
+            displayName: currentApp.displayName,
+            user: { username: currentApp.username },
+            displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+          };
+        }
+        
+        // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
+        const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
+        console.log('🔍 DEBUG: Applicant avatar URL:', applicantAvatarURL);
         
         // Pre-fetch avatar to warm up Discord CDN cache
         try {
-          console.log('🔍 DEBUG: Pre-fetching avatar to warm CDN cache...');
+          console.log('🔍 DEBUG: Pre-fetching applicant avatar to warm CDN cache...');
           const prefetchStart = Date.now();
-          await fetch(userAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
+          await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
           const prefetchTime = Date.now() - prefetchStart;
-          console.log(`🔍 DEBUG: Avatar pre-fetch completed in ${prefetchTime}ms`);
+          console.log(`🔍 DEBUG: Applicant avatar pre-fetch completed in ${prefetchTime}ms`);
         } catch (error) {
-          console.log('🔍 DEBUG: Avatar pre-fetch failed (non-critical):', error.message);
+          console.log('🔍 DEBUG: Applicant avatar pre-fetch failed (non-critical):', error.message);
         }
         
-        // Create Media Gallery component for displaying user avatar
+        // Create Media Gallery component for displaying applicant avatar
         const avatarDisplayComponent = {
           type: 12, // Media Gallery component
           items: [
             {
               media: {
-                url: userAvatarURL
+                url: applicantAvatarURL
               },
-              description: `Avatar of ${member.displayName || member.user.username} who clicked Cast Ranking`
+              description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
             }
           ]
         };
@@ -4030,69 +4070,6 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: `❌ Error loading cast ranking interface: ${error.message}`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id === 'gallery_test') {
-      // Handle Gallery Test - show simple Media Gallery component
-      try {
-        console.log('Gallery test button clicked');
-        
-        // Create a simple Media Gallery component with the provided image
-        const mediaGalleryComponent = {
-          type: 12, // Media Gallery component
-          items: [
-            {
-              media: {
-                url: "https://cdn.discordapp.com/attachments/1337754151655833694/1382731526407589989/Labrador20Retriever.png?ex=684c3895&is=684ae715&hm=33aa2a0edbd490741fe67557b01e3bc987879363e9bfc30be671624dd10b9a60&"
-              },
-              description: "A cute Labrador Retriever test image"
-            }
-          ]
-        };
-
-        // Create Components V2 Container for Gallery test
-        const galleryTestContainer = {
-          type: 17, // Container component
-          accent_color: 0x9B59B6, // Purple accent color
-          components: [
-            {
-              type: 10, // Text Display component
-              content: "## Gallery Component Test\nTesting Media Gallery component (type 12) with Components V2"
-            },
-            {
-              type: 14 // Separator
-            },
-            mediaGalleryComponent,
-            {
-              type: 14 // Separator
-            },
-            {
-              type: 10, // Text Display component
-              content: "✅ Gallery component successfully displayed!"
-            }
-          ]
-        };
-        
-        console.log('Sending gallery test response...');
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag (32768)
-            components: [galleryTestContainer]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error handling gallery_test button:', error);
-        console.error('Error stack:', error.stack);
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `❌ Error loading gallery test: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
