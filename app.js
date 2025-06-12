@@ -3710,7 +3710,7 @@ To fix this:
           });
         }
 
-        // Create Season Applications submenu with two buttons
+        // Create Season Applications submenu with three buttons
         const seasonAppsButtons = [
           new ButtonBuilder()
             .setCustomId('season_app_creation')
@@ -3721,7 +3721,12 @@ To fix this:
             .setCustomId('season_app_ranking')
             .setLabel('Cast Ranking')
             .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🏆')
+            .setEmoji('🏆'),
+          new ButtonBuilder()
+            .setCustomId('gallery_test')
+            .setLabel('Gallery')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🖼️')
         ];
         
         const seasonAppsRow = new ActionRowBuilder().addComponents(seasonAppsButtons);
@@ -3961,6 +3966,69 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: `❌ Error loading cast ranking interface: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'gallery_test') {
+      // Handle Gallery Test - show simple Media Gallery component
+      try {
+        console.log('Gallery test button clicked');
+        
+        // Create a simple Media Gallery component with the provided image
+        const mediaGalleryComponent = {
+          type: 12, // Media Gallery component
+          items: [
+            {
+              media: {
+                url: "https://cdn.discordapp.com/attachments/1337754151655833694/1382731526407589989/Labrador20Retriever.png?ex=684c3895&is=684ae715&hm=33aa2a0edbd490741fe67557b01e3bc987879363e9bfc30be671624dd10b9a60&"
+              },
+              description: "A cute Labrador Retriever test image"
+            }
+          ]
+        };
+
+        // Create Components V2 Container for Gallery test
+        const galleryTestContainer = {
+          type: 17, // Container component
+          accent_color: 0x9B59B6, // Purple accent color
+          components: [
+            {
+              type: 10, // Text Display component
+              content: "## Gallery Component Test\nTesting Media Gallery component (type 12) with Components V2"
+            },
+            {
+              type: 14 // Separator
+            },
+            mediaGalleryComponent,
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display component
+              content: "✅ Gallery component successfully displayed!"
+            }
+          ]
+        };
+        
+        console.log('Sending gallery test response...');
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag (32768)
+            components: [galleryTestContainer]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling gallery_test button:', error);
+        console.error('Error stack:', error.stack);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error loading gallery test: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
