@@ -262,6 +262,11 @@ async function createApplicationChannel(guild, user, config) {
         if (!data[guild.id]) data[guild.id] = {};
         if (!data[guild.id].applications) data[guild.id].applications = {};
         
+        console.log('Debug - Storing application data:');
+        console.log('Debug - Guild ID:', guild.id);
+        console.log('Debug - Channel ID:', channel.id);
+        console.log('Debug - User:', user.displayName || user.user?.username || user.username);
+        
         data[guild.id].applications[channel.id] = {
             userId: user.id,
             channelId: channel.id,
@@ -275,6 +280,7 @@ async function createApplicationChannel(guild, user, config) {
         
         await savePlayerData(data);
         console.log(`Stored application data for ${data[guild.id].applications[channel.id].displayName} in channel ${channel.name}`);
+        console.log('Debug - Application stored in playerData:', JSON.stringify(data[guild.id].applications[channel.id], null, 2));
 
         return { success: true, channel };
 

@@ -3841,6 +3841,17 @@ To fix this:
         const allApplications = getAllApplicationsFromData(guildId);
         
         console.log(`Found ${allApplications.length} applications for ranking`);
+        console.log('Debug - Guild ID:', guildId);
+        
+        // Debug: Check what's actually in playerData
+        const playerData = loadPlayerData();
+        console.log('Debug - Guild exists in playerData:', !!playerData[guildId]);
+        console.log('Debug - Applications section exists:', !!playerData[guildId]?.applications);
+        if (playerData[guildId]?.applications) {
+          console.log('Debug - Application keys:', Object.keys(playerData[guildId].applications));
+          console.log('Debug - Application data:', JSON.stringify(playerData[guildId].applications, null, 2));
+        }
+        
         if (allApplications.length > 0) {
           console.log('Applications:', allApplications.map(app => `${app.displayName} (${app.channelName})`).join(', '));
         }
