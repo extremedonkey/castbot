@@ -3821,14 +3821,10 @@ To fix this:
         const appIndex = 0;
         
         // Create Gallery component for displaying applicant avatar
-        const galleryItems = [{
-          type: 11, // Media component (thumbnail)
-          url: currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
-        }];
-        
-        const galleryComponent = {
-          type: 18, // Gallery component  
-          items: galleryItems
+        // Using a simpler approach with Text Display since Gallery might have issues
+        const avatarDisplayComponent = {
+          type: 10, // Text Display component
+          content: `🖼️ **Applicant Avatar:** [View Avatar](${currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`})`
         };
 
         // Create ranking buttons (1-5)
@@ -3896,7 +3892,7 @@ To fix this:
               type: 10, // Text Display component
               content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})`
             },
-            galleryComponent, // Applicant avatar gallery
+            avatarDisplayComponent, // Applicant avatar display
             {
               type: 10, // Text Display component  
               content: `> **Rate this applicant (1-5):**`
@@ -3909,6 +3905,9 @@ To fix this:
           ]
         };
         
+        console.log('Sending cast ranking interface...');
+        console.log('Container component count:', castRankingContainer.components.length);
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
@@ -3919,10 +3918,12 @@ To fix this:
         
       } catch (error) {
         console.error('Error handling season_app_ranking button:', error);
+        console.error('Error stack:', error.stack);
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: 'Error loading cast ranking interface.',
+            content: `❌ Error loading cast ranking interface: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
