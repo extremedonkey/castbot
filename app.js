@@ -67,49 +67,14 @@ import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 
 /**
- * Helper function to get all applications from channel permissions
- * @param {Guild} guild - Discord guild object
+ * Helper function to get all applications from stored playerData
+ * @param {string} guildId - Discord guild ID
  * @returns {Array} Array of application objects
  */
-async function getAllApplicationsFromChannels(guild) {
-  const allChannels = await guild.channels.fetch();
-  const applicationChannels = allChannels.filter(channel => 
-    channel.type === 0 && // Text channel
-    channel.parent && // Has a parent category
-    channel.permissionOverwrites.cache.some(overwrite => 
-      overwrite.type === 1 && // Member type
-      overwrite.allow.has(PermissionFlagsBits.ViewChannel) &&
-      !overwrite.id.equals(guild.ownerId) // Not the server owner
-    )
-  );
-
-  const allApplications = [];
-  for (const channel of applicationChannels.values()) {
-    const userOverwrite = channel.permissionOverwrites.cache.find(overwrite => 
-      overwrite.type === 1 && // Member type
-      overwrite.allow.has(PermissionFlagsBits.ViewChannel) &&
-      !overwrite.id.equals(guild.ownerId) // Not the server owner
-    );
-    
-    if (userOverwrite) {
-      try {
-        const applicantUser = await guild.members.fetch(userOverwrite.id);
-        allApplications.push({
-          channelId: channel.id,
-          userId: userOverwrite.id,
-          username: applicantUser.user.username,
-          displayName: applicantUser.displayName || applicantUser.user.username,
-          avatarURL: applicantUser.user.displayAvatarURL({ size: 128 }),
-          channelName: channel.name,
-          createdAt: channel.createdAt
-        });
-      } catch (error) {
-        console.log(`Could not fetch user ${userOverwrite.id} for application channel ${channel.name}`);
-      }
-    }
-  }
-  
-  return allApplications;
+function getAllApplicationsFromData(guildId) {
+  const playerData = loadPlayerData();
+  const guildApplications = playerData[guildId]?.applications || {};
+  return Object.values(guildApplications);
 }
 
 /**
@@ -2739,7 +2704,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         savePlayerData(playerData);
 
         // Get updated application data using helper function
-        const allApplications = await getAllApplicationsFromChannels(guild);
+        const allApplications = getAllApplicationsFromData(guildId);
         
         const currentApp = allApplications[appIndex];
 
@@ -2881,7 +2846,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
 
         const playerData = loadPlayerData();
-        const allApplications = await getAllApplicationsFromChannels(guild);
+        const allApplications = getAllApplicationsFromData(guildId);
 
         if (custom_id === 'ranking_view_all_scores') {
           // Generate comprehensive score summary
@@ -3872,9 +3837,8 @@ To fix this:
           });
         }
 
-        // Load applications data - Use helper function to get all applications
-        const playerData = loadPlayerData();
-        const allApplications = await getAllApplicationsFromChannels(guild);
+        // Load applications data - Use helper function to get all applications from stored data
+        const allApplications = getAllApplicationsFromData(guildId);
         
         console.log(`Found ${allApplications.length} applications for ranking`);
         if (allApplications.length > 0) {

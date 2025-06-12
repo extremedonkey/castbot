@@ -6,7 +6,36 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.
 
-## LATEST DEVELOPMENT: PRODUCTION MENU V2 IMPLEMENTATION ✅
+## LATEST DEVELOPMENT: CAST RANKING SYSTEM (IN PROGRESS) 🚧
+
+**Major Feature Addition: Complete Cast Ranking System for Application Management**
+- **Season Applications Submenu**: `/prod_menu` → Season Applications now shows two options
+- **Creation Application Process** (blue button): Original application button functionality moved here
+- **Cast Ranking** (grey button): New comprehensive applicant ranking system with modern UI
+
+**Cast Ranking Features Implemented:**
+- **Gallery Interface**: Shows applicant Discord avatars using Components V2 Gallery component
+- **1-5 Ranking System**: Interactive buttons with smart state management (selected=green+disabled)
+- **Multi-Admin Support**: Each admin can rank independently, scores stored per user per application
+- **Real-time Scoring**: Live average calculation with vote counts displayed
+- **Navigation System**: Previous/Next buttons for multiple applicants
+- **View All Scores**: Comprehensive ranking summary with medal system (🥇🥈🥉) sorted by average
+
+**Technical Implementation:**
+- **Data Structure**: Rankings stored in `playerData[guildId].rankings[channelId][userId]`
+- **Permission-Based**: Admin-only access (Manage Roles/Channels/Server required)  
+- **Components V2 UI**: Modern Discord interface with purple accent color
+- **Button State Management**: Dynamic enable/disable based on user's current ranking
+
+**🚨 CURRENT ISSUE - Application Discovery:**
+- Cast ranking system shows "No applications found" despite working application channels
+- Root cause: `getAllApplicationsFromChannels()` logic not properly detecting application channels
+- Need to debug channel permission detection logic vs actual permissions set by `createApplicationChannel()`
+- See `CAST_RANKING_DEBUG.md` for detailed analysis and fix recommendations
+
+**Production Status**: Core ranking functionality complete, application discovery needs debugging
+
+## PREVIOUS DEVELOPMENT: PRODUCTION MENU V2 IMPLEMENTATION ✅
 
 **Major Feature Addition: Complete Production Menu Redesign**
 - **New Multi-Level Interface**: `/prod_menu` now features comprehensive admin management with always-visible castlist and setup buttons

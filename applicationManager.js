@@ -257,6 +257,25 @@ async function createApplicationChannel(guild, user, config) {
 
         await channel.send({ embeds: [welcomeEmbed] });
 
+        // Store application data in playerData for cast ranking system
+        const data = await loadPlayerData();
+        if (!data[guild.id]) data[guild.id] = {};
+        if (!data[guild.id].applications) data[guild.id].applications = {};
+        
+        data[guild.id].applications[channel.id] = {
+            userId: user.id,
+            channelId: channel.id,
+            username: user.user ? user.user.username : user.username,
+            displayName: user.displayName || user.user?.username || user.username,
+            avatarURL: user.user ? user.user.displayAvatarURL({ size: 128 }) : user.displayAvatarURL({ size: 128 }),
+            channelName: channel.name,
+            createdAt: new Date().toISOString(),
+            configId: config.id || 'unknown'
+        };
+        
+        await savePlayerData(data);
+        console.log(`Stored application data for ${data[guild.id].applications[channel.id].displayName} in channel ${channel.name}`);
+
         return { success: true, channel };
 
     } catch (error) {
