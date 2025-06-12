@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import fetch from 'node-fetch';
 import {
   InteractionType,
   InteractionResponseType,
@@ -62,7 +63,6 @@ import {
   createCastlistV2Layout
 } from './castlistV2.js';
 import fs from 'fs';
-import fetch from 'node-fetch';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 
@@ -2669,6 +2669,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const userAvatarURL = member.displayAvatarURL({ size: 512 });
         console.log('🔍 DEBUG: Ranking handler - User avatar URL:', userAvatarURL);
         
+        // Pre-fetch avatar to warm up Discord CDN cache
+        try {
+          console.log('🔍 DEBUG: Ranking handler - Pre-fetching avatar to warm CDN cache...');
+          const prefetchStart = Date.now();
+          await fetch(userAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
+          const prefetchTime = Date.now() - prefetchStart;
+          console.log(`🔍 DEBUG: Ranking handler - Avatar pre-fetch completed in ${prefetchTime}ms`);
+        } catch (error) {
+          console.log('🔍 DEBUG: Ranking handler - Avatar pre-fetch failed (non-critical):', error.message);
+        }
+        
         // Media Gallery component for displaying user avatar
         const galleryComponent = {
           type: 12, // Media Gallery component
@@ -2896,6 +2907,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Get user's avatar URL (prefer guild avatar, fallback to global avatar, then default)
           const userAvatarURL = member.displayAvatarURL({ size: 512 });
           console.log('🔍 DEBUG: Navigation handler - User avatar URL:', userAvatarURL);
+          
+          // Pre-fetch avatar to warm up Discord CDN cache
+          try {
+            console.log('🔍 DEBUG: Navigation handler - Pre-fetching avatar to warm CDN cache...');
+            const prefetchStart = Date.now();
+            await fetch(userAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
+            const prefetchTime = Date.now() - prefetchStart;
+            console.log(`🔍 DEBUG: Navigation handler - Avatar pre-fetch completed in ${prefetchTime}ms`);
+          } catch (error) {
+            console.log('🔍 DEBUG: Navigation handler - Avatar pre-fetch failed (non-critical):', error.message);
+          }
           
           // Media Gallery component for displaying user avatar
           const galleryComponent = {
@@ -3886,6 +3908,17 @@ To fix this:
         // Get user's avatar URL (prefer guild avatar, fallback to global avatar, then default)
         const userAvatarURL = member.displayAvatarURL({ size: 512 });
         console.log('🔍 DEBUG: User avatar URL:', userAvatarURL);
+        
+        // Pre-fetch avatar to warm up Discord CDN cache
+        try {
+          console.log('🔍 DEBUG: Pre-fetching avatar to warm CDN cache...');
+          const prefetchStart = Date.now();
+          await fetch(userAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
+          const prefetchTime = Date.now() - prefetchStart;
+          console.log(`🔍 DEBUG: Avatar pre-fetch completed in ${prefetchTime}ms`);
+        } catch (error) {
+          console.log('🔍 DEBUG: Avatar pre-fetch failed (non-critical):', error.message);
+        }
         
         // Create Media Gallery component for displaying user avatar
         const avatarDisplayComponent = {
