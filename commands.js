@@ -280,13 +280,8 @@ const MENU_COMMAND = {
 	type: 1
 };
 
-// Production menu command that displays buttons for castlists and production actions
-const PROD_MENU_COMMAND = {
-	name: maybePrependDev('prod_menu'),
-	description: 'Display production menu with castlist buttons and admin actions',
-	type: 1,
-	default_member_permissions: ADMIN_ANY
-};
+// DISABLED: Production menu command - merged into unified /menu command
+// const PROD_MENU_COMMAND (functionality moved to /menu with admin detection)
 
 // DISABLED COMMANDS - Moved to /prod_menu interface
 // const GETTING_STARTED_COMMAND (moved to /prod_menu documentation)
@@ -303,8 +298,7 @@ const PROD_MENU_COMMAND = {
 const ALL_COMMANDS = [
 	// Player commands REMOVED: player_set_age, player_set_pronouns, player_set_timezone
 	CASTLIST_COMMAND, // Now points to castlist2 functionality
-	MENU_COMMAND,
-	PROD_MENU_COMMAND,
+	MENU_COMMAND, // Unified menu with admin detection (replaces PROD_MENU_COMMAND)
 	SET_PLAYERS_AGE_COMMAND,
 	// DISABLED: SET_TRIBE_COMMAND, - moved to /prod_menu (was add_tribe)
 	// DISABLED: CLEAR_TRIBE_COMMAND, - moved to /prod_menu
