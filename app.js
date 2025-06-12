@@ -2473,6 +2473,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
    */
   if (type === InteractionType.MESSAGE_COMPONENT) {
     const { custom_id } = data;
+    console.log('Processing MESSAGE_COMPONENT with custom_id:', custom_id);
     
     if (custom_id.startsWith('show_castlist2')) {
       // Extract castlist name from custom_id if present
@@ -2584,6 +2585,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return;
     } else if (custom_id.startsWith('rank_')) {
       // Handle ranking button clicks (rank_1_channelId_appIndex, rank_2_channelId_appIndex, etc.)
+      console.log('Processing rank button click:', custom_id);
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
@@ -2752,6 +2754,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     } else if (custom_id.startsWith('ranking_')) {
       // Handle ranking navigation and view all scores
+      console.log('Processing ranking navigation click:', custom_id);
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
@@ -7094,6 +7097,16 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           console.error('Error sending error response:', updateError);
         }
       }
+    } else {
+      // Fallback for unhandled button interactions
+      console.log('Unhandled MESSAGE_COMPONENT custom_id:', custom_id);
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: `❌ Unknown button interaction: ${custom_id}`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
     }
   } // end if MESSAGE_COMPONENT
 
