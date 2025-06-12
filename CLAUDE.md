@@ -6,20 +6,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.
 
-## LATEST DEVELOPMENT: CAST RANKING SYSTEM (IN PROGRESS) 🚧
+## LATEST DEVELOPMENT: CAST RANKING SYSTEM ✅ (GALLERY COMPONENT ISSUE 🔍)
 
 **Major Feature Addition: Complete Cast Ranking System for Application Management**
 - **Season Applications Submenu**: `/prod_menu` → Season Applications now shows two options
 - **Creation Application Process** (blue button): Original application button functionality moved here
 - **Cast Ranking** (grey button): New comprehensive applicant ranking system with modern UI
 
-**Cast Ranking Features Implemented:**
-- **Gallery Interface**: Shows applicant Discord avatars using Components V2 Gallery component
-- **1-5 Ranking System**: Interactive buttons with smart state management (selected=green+disabled)
-- **Multi-Admin Support**: Each admin can rank independently, scores stored per user per application
-- **Real-time Scoring**: Live average calculation with vote counts displayed
-- **Navigation System**: Previous/Next buttons for multiple applicants
-- **View All Scores**: Comprehensive ranking summary with medal system (🥇🥈🥉) sorted by average
+**Cast Ranking Features Fully Implemented ✅:**
+- **1-5 Ranking System**: Interactive buttons with smart state management (selected=green+disabled) ✅
+- **Multi-Admin Support**: Each admin can rank independently, scores stored per user per application ✅
+- **Real-time Scoring**: Live average calculation with vote counts displayed ✅
+- **Navigation System**: Previous/Next buttons for multiple applicants ✅
+- **View All Scores**: Comprehensive ranking summary with medal system (🥇🥈🥉) sorted by average ✅
+- **Application Discovery**: Fixed using playerData.json storage instead of channel scanning ✅
 
 **Technical Implementation:**
 - **Data Structure**: Rankings stored in `playerData[guildId].rankings[channelId][userId]`
@@ -27,13 +27,53 @@ CastBot has undergone a major optimization initiative that has been fully comple
 - **Components V2 UI**: Modern Discord interface with purple accent color
 - **Button State Management**: Dynamic enable/disable based on user's current ranking
 
-**🚨 CURRENT ISSUE - Application Discovery:**
-- Cast ranking system shows "No applications found" despite working application channels
-- Root cause: `getAllApplicationsFromChannels()` logic not properly detecting application channels
-- Need to debug channel permission detection logic vs actual permissions set by `createApplicationChannel()`
-- See `CAST_RANKING_DEBUG.md` for detailed analysis and fix recommendations
+**🔍 CURRENT ISSUE - Gallery Component Investigation:**
 
-**Production Status**: Core ranking functionality complete, application discovery needs debugging
+**Status**: Cast ranking system is **fully functional** but using Text Display components instead of Gallery components due to interaction failures.
+
+**Problem**: Gallery components (type 18) cause "This interaction failed" errors in Discord despite:
+- ✅ Handler logic working perfectly (all debug steps complete)
+- ✅ Proper Components V2 structure 
+- ✅ Valid response format
+- ✅ Correct permission handling
+- ✅ Data persistence working
+
+**Debugging Evidence:**
+```
+🔍 DEBUG: Processing rank button click: rank_4_1382698115748073574_0
+🔍 DEBUG: Extracting guild and user info...
+🔍 DEBUG: Guild ID: 1331657596087566398 User ID: 391415444084490240
+🔍 DEBUG: Admin permissions verified
+🔍 DEBUG: Parsed values - Score: 4 Channel ID: 1382698115748073574 App Index: 0
+🔍 DEBUG: Loading player data...
+🔍 DEBUG: Ranking data saved successfully
+🔍 DEBUG: Loading application data...
+🔍 DEBUG: Found 6 applications
+🔍 DEBUG: Current app: Found
+🔍 DEBUG: Creating gallery component...
+🔍 DEBUG: Gallery component created
+🔍 DEBUG: Sending updated message response...
+```
+
+**Current Workaround**: Gallery components replaced with Text Display components in:
+- `app.js:2670` - Ranking button handler
+- `app.js:2887` - Navigation handler
+
+**Gallery Component Hypothesis:**
+1. **Structural Issue**: Gallery component may require different nesting or additional properties
+2. **Media URL Problem**: Avatar URLs might need specific format or CDN requirements
+3. **Components V2 Specification**: Our Gallery structure might not match Discord's exact requirements
+4. **Container Context**: Gallery might not work properly inside Container components (type 17)
+5. **Flag Requirements**: Gallery might need specific message flags beyond IS_COMPONENTS_V2
+
+**Investigation Needed:**
+- Review ComponentsV2.md specification for exact Gallery component requirements
+- Test Gallery component in isolation (outside Container)
+- Validate media URL format requirements
+- Check if Gallery needs different accessory or thumbnail structure
+- Test with different component arrangements
+
+**Production Status**: System is production-ready with Text Display workaround. Gallery investigation can proceed in parallel without blocking deployment.
 
 ## PREVIOUS DEVELOPMENT: PRODUCTION MENU V2 IMPLEMENTATION ✅
 
