@@ -942,41 +942,70 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     
     // Note: Always show full menu regardless of tribes - removed simplified fallback
     
-    // Always show default castlist button regardless of tribes
-    const castlistButtons = [
-      new ButtonBuilder()
-        .setCustomId('show_castlist2_default')
-        .setLabel('Show Castlist')
-        .setStyle(ButtonStyle.Primary)
-        .setEmoji('📋')
-    ];
-    
-    // Add custom castlist buttons (excluding default which is already added)
-    const customCastlists = Array.from(allCastlists).filter(name => name !== 'default').sort();
-    
-    for (const castlistName of customCastlists) {
-      const tribes = castlistTribes[castlistName] || [];
-      const tribeWithEmoji = tribes.find(tribe => tribe.emoji);
-      const emoji = tribeWithEmoji?.emoji || '📋';
+    /**
+     * Create castlist button rows with pagination to handle Discord's 5-button ActionRow limit
+     * @param {Set} allCastlists - Set of all castlist names
+     * @param {Object} castlistTribes - Mapping of castlists to their tribe data
+     * @returns {Array} Array of ActionRow JSON objects
+     */
+    function createCastlistRows(allCastlists, castlistTribes) {
+      const castlistButtons = [];
       
+      // Add default castlist button
       castlistButtons.push(
         new ButtonBuilder()
-          .setCustomId(`show_castlist2_${castlistName}`)
-          .setLabel(`Show ${castlistName.charAt(0).toUpperCase() + castlistName.slice(1)}`)
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji(emoji)
+          .setCustomId('show_castlist2_default')
+          .setLabel('Show Castlist')
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('📋')
       );
+      
+      // Add custom castlist buttons (excluding default which is already added)
+      const customCastlists = Array.from(allCastlists).filter(name => name !== 'default').sort();
+      
+      for (const castlistName of customCastlists) {
+        const tribes = castlistTribes[castlistName] || [];
+        const tribeWithEmoji = tribes.find(tribe => tribe.emoji);
+        const emoji = tribeWithEmoji?.emoji || '📋';
+        
+        castlistButtons.push(
+          new ButtonBuilder()
+            .setCustomId(`show_castlist2_${castlistName}`)
+            .setLabel(`Show ${castlistName.charAt(0).toUpperCase() + castlistName.slice(1)}`)
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji(emoji)
+        );
+      }
+      
+      // Add plus button to the end
+      castlistButtons.push(
+        new ButtonBuilder()
+          .setCustomId('prod_add_castlist')
+          .setLabel('+')
+          .setStyle(ButtonStyle.Secondary)
+      );
+      
+      // Split buttons into rows of max 5 buttons each
+      const rows = [];
+      const maxButtonsPerRow = 5;
+      
+      for (let i = 0; i < castlistButtons.length; i += maxButtonsPerRow) {
+        const rowButtons = castlistButtons.slice(i, i + maxButtonsPerRow);
+        const row = new ActionRowBuilder().addComponents(rowButtons);
+        rows.push(row.toJSON());
+      }
+      
+      return rows;
     }
+
+    // Create castlist rows with pagination support
+    const castlistRows = createCastlistRows(allCastlists, castlistTribes);
     
-    // Add blank grey plus button at the end
-    castlistButtons.push(
-      new ButtonBuilder()
-        .setCustomId('prod_add_castlist')
-        .setLabel('+')
-        .setStyle(ButtonStyle.Secondary)
-    );
-    
-    const castlistRow = new ActionRowBuilder().addComponents(castlistButtons);
+    // Debug logging for castlist pagination
+    console.log(`Created ${castlistRows.length} castlist row(s) for ${allCastlists.size} castlist(s)`);
+    if (castlistRows.length > 1) {
+      console.log('Pagination active: castlists split across multiple rows to prevent Discord ActionRow limit');
+    }
     
     // Check if pronouns/timezones exist for conditional buttons
     const hasPronouns = playerData[guildId]?.pronounRoleIDs?.length > 0;
@@ -1048,40 +1077,64 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     
     const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
     
+    /**
+     * Validate container component limits to prevent Discord API errors
+     * @param {Array} components - Array of components to validate
+     * @returns {boolean} True if within limits, false otherwise
+     */
+    function validateContainerLimits(components) {
+      const maxComponents = 25; // Discord's container component limit
+      
+      if (components.length > maxComponents) {
+        console.error(`Container exceeds component limit: ${components.length}/${maxComponents}`);
+        return false;
+      }
+      
+      return true;
+    }
+    
+    // Build container components array with pagination support
+    const containerComponents = [
+      {
+        type: 10, // Text Display component
+        content: `## CastBot | Prod Menu`
+      },
+      {
+        type: 14 // Separator after title
+      },
+      {
+        type: 10, // Text Display component
+        content: `> **\`View Castlists\`**`
+      },
+      ...castlistRows, // Multiple castlist rows with pagination
+      {
+        type: 14 // Separator after castlist rows
+      },
+      {
+        type: 10, // Text Display component
+        content: `> **\`Configure Castlists\`**`
+      },
+      adminRow.toJSON(), // Admin management buttons
+      {
+        type: 14 // Separator after admin management row
+      },
+      {
+        type: 10, // Text Display component
+        content: `> **\`Misc\`**`
+      },
+      adminActionRow.toJSON() // New administrative action buttons
+    ];
+    
+    // Validate component limits before creating container
+    if (!validateContainerLimits(containerComponents)) {
+      throw new Error('Container component limit exceeded - too many castlists or buttons');
+    }
+    
     // Create Components V2 Container for entire production menu
     const prodMenuContainer = {
       type: 17, // Container component
       accent_color: 0x3498DB, // Blue accent color
-      components: [
-        {
-          type: 10, // Text Display component
-          content: `## CastBot | Prod Menu`
-        },
-        {
-          type: 14 // Separator after title
-        },
-        {
-          type: 10, // Text Display component
-          content: `> **\`View Castlists\`**`
-        },
-        castlistRow.toJSON(), // Castlist buttons
-        {
-          type: 14 // Separator after castlist row
-        },
-        {
-          type: 10, // Text Display component
-          content: `> **\`Configure Castlists\`**`
-        },
-        adminRow.toJSON(), // Admin management buttons
-        {
-          type: 14 // Separator after admin management row
-        },
-        {
-          type: 10, // Text Display component
-          content: `> **\`Misc\`**`
-        },
-        adminActionRow.toJSON() // New administrative action buttons
-      ]
+      components: containerComponents
     };
     
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
