@@ -2585,17 +2585,22 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return;
     } else if (custom_id.startsWith('rank_')) {
       // Handle ranking button clicks (rank_1_channelId_appIndex, rank_2_channelId_appIndex, etc.)
-      console.log('Processing rank button click:', custom_id);
+      console.log('🔍 DEBUG: Processing rank button click:', custom_id);
       try {
+        console.log('🔍 DEBUG: Extracting guild and user info...');
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
         const userId = req.body.member.user.id;
+        console.log('🔍 DEBUG: Guild ID:', guildId, 'User ID:', userId);
 
         // Check admin permissions
+        console.log('🔍 DEBUG: Checking admin permissions...');
         const member = await guild.members.fetch(userId);
+        console.log('🔍 DEBUG: Member permissions:', member.permissions.bitfield.toString());
         if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
             !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
             !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          console.log('🔍 DEBUG: User lacks admin permissions, sending error response');
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -2604,10 +2609,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             }
           });
         }
+        console.log('🔍 DEBUG: Admin permissions verified');
 
         // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX
+        console.log('🔍 DEBUG: Parsing custom_id...');
         const rankMatch = custom_id.match(/^rank_(\d+)_(.+)_(\d+)$/);
         if (!rankMatch) {
+          console.log('🔍 DEBUG: Invalid custom_id format, sending error response');
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -2620,23 +2628,31 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const [, score, channelId, appIndexStr] = rankMatch;
         const rankingScore = parseInt(score);
         const appIndex = parseInt(appIndexStr);
+        console.log('🔍 DEBUG: Parsed values - Score:', rankingScore, 'Channel ID:', channelId, 'App Index:', appIndex);
 
         // Load and update ranking data
+        console.log('🔍 DEBUG: Loading player data...');
         const playerData = await loadPlayerData();
         if (!playerData[guildId]) playerData[guildId] = {};
         if (!playerData[guildId].rankings) playerData[guildId].rankings = {};
         if (!playerData[guildId].rankings[channelId]) playerData[guildId].rankings[channelId] = {};
 
         // Record the user's ranking for this application
+        console.log('🔍 DEBUG: Recording ranking score...');
         playerData[guildId].rankings[channelId][userId] = rankingScore;
         await savePlayerData(playerData);
+        console.log('🔍 DEBUG: Ranking data saved successfully');
 
         // Get updated application data using helper function
+        console.log('🔍 DEBUG: Loading application data...');
         const allApplications = await getAllApplicationsFromData(guildId);
+        console.log('🔍 DEBUG: Found', allApplications.length, 'applications');
         
         const currentApp = allApplications[appIndex];
+        console.log('🔍 DEBUG: Current app:', currentApp ? 'Found' : 'Not found');
 
         if (!currentApp) {
+          console.log('🔍 DEBUG: Application not found, sending error response');
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -2647,6 +2663,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
 
         // Regenerate ranking interface with updated scores
+        console.log('🔍 DEBUG: Creating gallery component...');
         const galleryItems = [{
           type: 11, // Media component (thumbnail)
           url: currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
@@ -2656,6 +2673,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           type: 18, // Gallery component  
           items: galleryItems
         };
+        console.log('🔍 DEBUG: Gallery component created');
 
         // Create updated ranking buttons
         const rankingButtons = [];
@@ -2734,6 +2752,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           ]
         };
         
+        console.log('🔍 DEBUG: Sending updated message response...');
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
@@ -2754,11 +2773,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     } else if (custom_id.startsWith('ranking_')) {
       // Handle ranking navigation and view all scores
-      console.log('Processing ranking navigation click:', custom_id);
+      console.log('🔍 DEBUG: Processing ranking navigation click:', custom_id);
       try {
+        console.log('🔍 DEBUG: Extracting guild and user info for navigation...');
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
         const userId = req.body.member.user.id;
+        console.log('🔍 DEBUG: Navigation - Guild ID:', guildId, 'User ID:', userId);
 
         // Check admin permissions
         const member = await guild.members.fetch(userId);
