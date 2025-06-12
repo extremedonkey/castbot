@@ -2750,14 +2750,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           ]
         };
         
+        console.log('🔍 DEBUG: Final container structure:', JSON.stringify(castRankingContainer, null, 2));
         console.log('🔍 DEBUG: Sending updated message response...');
-        return res.send({
+        
+        const response = {
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
             flags: (1 << 15),
             components: [castRankingContainer]
           }
-        });
+        };
+        
+        console.log('🔍 DEBUG: Full response structure:', JSON.stringify(response, null, 2));
+        return res.send(response);
         
       } catch (error) {
         console.error('Error handling ranking button:', error);
