@@ -2663,17 +2663,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
 
         // Regenerate ranking interface with updated scores
-        console.log('🔍 DEBUG: Creating gallery component...');
-        const galleryItems = [{
-          type: 11, // Media component (thumbnail)
-          url: currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
-        }];
+        console.log('🔍 DEBUG: Creating temporary text display component (Gallery replacement)...');
         
+        // TEMPORARY: Replace Gallery with Text Display for debugging
+        // TODO: Restore Gallery component once interaction issue is resolved
         const galleryComponent = {
-          type: 18, // Gallery component  
-          items: galleryItems
+          type: 10, // Text Display component (temporary replacement)
+          content: `👤 **${currentApp.displayName || currentApp.username}**\n🖼️ *Avatar temporarily shown as text due to Gallery component debugging*`
         };
-        console.log('🔍 DEBUG: Gallery component created');
+        console.log('🔍 DEBUG: Text display component created (temporary Gallery replacement)');
 
         // Create updated ranking buttons
         const rankingButtons = [];
