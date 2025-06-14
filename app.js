@@ -5460,7 +5460,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           await savePlayerData(playerData);
         }
 
-        // Silently update interface by rebuilding the main player management interface
+        // Rebuild interface maintaining active state and updated select values
         // Create user select menu (preserves current selection)
         const userSelectRow = new ActionRowBuilder()
           .addComponents(
@@ -5472,18 +5472,18 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               .setDefaultUsers([playerId])
           );
 
-        // Create management buttons (all enabled since player is selected)
+        // Create management buttons with the active action highlighted
         const managementRow1 = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
               .setCustomId(`admin_set_pronouns_${playerId}`)
               .setLabel('Pronouns')
-              .setStyle(ButtonStyle.Secondary)
+              .setStyle(actionType === 'pronouns' ? ButtonStyle.Primary : ButtonStyle.Secondary)
               .setEmoji('💜'),
             new ButtonBuilder()
               .setCustomId(`admin_set_timezone_${playerId}`)
               .setLabel('Timezone')
-              .setStyle(ButtonStyle.Secondary)
+              .setStyle(actionType === 'timezone' ? ButtonStyle.Primary : ButtonStyle.Secondary)
               .setEmoji('🌍'),
             new ButtonBuilder()
               .setCustomId(`admin_set_age_${playerId}`)
@@ -5493,21 +5493,101 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             new ButtonBuilder()
               .setCustomId(`admin_manage_vanity_${playerId}`)
               .setLabel('Vanity Roles')
-              .setStyle(ButtonStyle.Secondary)
+              .setStyle(actionType === 'vanity' ? ButtonStyle.Primary : ButtonStyle.Secondary)
               .setEmoji('🕵️')
           );
 
-        // Create integrated role select (enabled/disabled based on selection)
-        const selectPlaceholder = 'Click a button..';
-        const integratedSelectRow = new ActionRowBuilder()
-          .addComponents(
-            new RoleSelectMenuBuilder()
-              .setCustomId('admin_integrated_select_pending')
-              .setPlaceholder(selectPlaceholder)
-              .setMinValues(0)
-              .setMaxValues(1)
-              .setDisabled(true) // Always disabled until an action button is clicked
+        // Rebuild the active select with updated values
+        let integratedSelectRow;
+        
+        if (actionType === 'pronouns') {
+          // Rebuild pronouns select with updated values
+          const pronounRoleIDs = playerData[guildId]?.pronounRoleIDs || [];
+          const guild = await client.guilds.fetch(guildId);
+          const roles = await Promise.all(
+            pronounRoleIDs.map(id => guild.roles.fetch(id))
           );
+          const validRoles = roles
+            .filter(role => role)
+            .sort((a, b) => a.name.localeCompare(b.name));
+          
+          const currentPronouns = targetPlayer.roles.cache
+            .filter(role => pronounRoleIDs.includes(role.id))
+            .map(role => role.id);
+          
+          integratedSelectRow = new ActionRowBuilder()
+            .addComponents(
+              new StringSelectMenuBuilder()
+                .setCustomId(`admin_integrated_pronouns_${playerId}`)
+                .setPlaceholder(currentPronouns.length > 0 ? 'Update pronouns..' : 'Select pronouns..')
+                .setMinValues(0)
+                .setMaxValues(Math.min(validRoles.length, 3))
+                .addOptions(
+                  validRoles.map(role => ({
+                    label: role.name,
+                    value: role.id,
+                    emoji: '💜',
+                    default: currentPronouns.includes(role.id)
+                  }))
+                )
+            );
+            
+        } else if (actionType === 'timezone') {
+          // Rebuild timezone select with updated values
+          const timezoneRoles = playerData[guildId]?.timezones || {};
+          const timezoneEntries = Object.entries(timezoneRoles);
+          const guild = await client.guilds.fetch(guildId);
+          
+          const rolePromises = timezoneEntries.map(async ([roleId, data]) => {
+            try {
+              const role = await guild.roles.fetch(roleId);
+              return role ? { role, offset: data.offset } : null;
+            } catch (error) {
+              return null;
+            }
+          });
+          
+          const roleData = (await Promise.all(rolePromises))
+            .filter(item => item !== null)
+            .sort((a, b) => a.offset - b.offset);
+          
+          const timezoneRoleIds = roleData.map(item => item.role.id);
+          const currentTimezone = targetPlayer.roles.cache
+            .filter(role => timezoneRoleIds.includes(role.id))
+            .map(role => role.id);
+          
+          integratedSelectRow = new ActionRowBuilder()
+            .addComponents(
+              new StringSelectMenuBuilder()
+                .setCustomId(`admin_integrated_timezone_${playerId}`)
+                .setPlaceholder(currentTimezone.length > 0 ? 'Update timezone..' : 'Select timezone..')
+                .setMinValues(0)
+                .setMaxValues(1)
+                .addOptions(
+                  roleData.map(({ role, offset }) => ({
+                    label: role.name,
+                    value: role.id,
+                    description: `UTC${offset >= 0 ? '+' : ''}${offset}`,
+                    emoji: '🌍',
+                    default: currentTimezone.includes(role.id)
+                  }))
+                )
+            );
+            
+        } else if (actionType === 'vanity') {
+          // Rebuild vanity select with updated values
+          const currentVanity = playerData[guildId]?.players?.[playerId]?.vanityRoles || [];
+          
+          integratedSelectRow = new ActionRowBuilder()
+            .addComponents(
+              new RoleSelectMenuBuilder()
+                .setCustomId(`admin_integrated_vanity_${playerId}`)
+                .setPlaceholder(currentVanity.length > 0 ? 'Update vanity roles..' : 'Select vanity roles..')
+                .setMinValues(0)
+                .setMaxValues(25)
+                .setDefaultRoles(currentVanity)
+            );
+        }
 
         // Create Components V2 Container
         const playerManagementComponents = [
@@ -5579,7 +5659,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         playerData[guildId].players[playerId].age = parseInt(age);
         await savePlayerData(playerData);
 
-        // Silently complete age update by rebuilding the main player management interface
+        // Silently complete age update by rebuilding interface with age button blue
         // Create user select menu (preserves current selection)
         const userSelectRow = new ActionRowBuilder()
           .addComponents(
@@ -5591,7 +5671,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               .setDefaultUsers([playerId])
           );
 
-        // Create management buttons (all enabled since player is selected)
+        // Create management buttons with age highlighted as the last action
         const managementRow1 = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
@@ -5607,7 +5687,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             new ButtonBuilder()
               .setCustomId(`admin_set_age_${playerId}`)
               .setLabel('Age')
-              .setStyle(ButtonStyle.Secondary)
+              .setStyle(ButtonStyle.Primary) // Keep age blue
               .setEmoji('🎂'),
             new ButtonBuilder()
               .setCustomId(`admin_manage_vanity_${playerId}`)
@@ -5616,16 +5696,15 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               .setEmoji('🕵️')
           );
 
-        // Create integrated role select (enabled/disabled based on selection)
-        const selectPlaceholder = 'Click a button..';
+        // Create placeholder select since age doesn't use an active select
         const integratedSelectRow = new ActionRowBuilder()
           .addComponents(
             new RoleSelectMenuBuilder()
               .setCustomId('admin_integrated_select_pending')
-              .setPlaceholder(selectPlaceholder)
+              .setPlaceholder('Click a button..')
               .setMinValues(0)
               .setMaxValues(1)
-              .setDisabled(true) // Always disabled until an action button is clicked
+              .setDisabled(true)
           );
 
         // Create Components V2 Container
