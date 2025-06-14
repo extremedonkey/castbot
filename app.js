@@ -2517,7 +2517,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       .addComponents(
         new ButtonBuilder()
           .setCustomId('prod_menu_back')
-          .setLabel('← Back to Main Menu')
+          .setLabel('Menu')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('⬅️')
       );
@@ -3516,36 +3516,43 @@ To fix this:
               .setMaxValues(1)
           );
 
-        // Create management buttons (initially disabled)
+        // Create management buttons (initially disabled) - reordered with simplified labels
         const managementRow1 = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
+              .setCustomId('admin_manage_vanity_pending')
+              .setLabel('Vanity Roles')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🕵️')
+              .setDisabled(true),
+            new ButtonBuilder()
               .setCustomId('admin_set_pronouns_pending')
-              .setLabel('Set Pronouns')
+              .setLabel('Pronouns')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('💜')
               .setDisabled(true),
             new ButtonBuilder()
               .setCustomId('admin_set_timezone_pending')
-              .setLabel('Set Timezone')
+              .setLabel('Timezone')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('🌍')
               .setDisabled(true),
             new ButtonBuilder()
               .setCustomId('admin_set_age_pending')
-              .setLabel('Set Age')
+              .setLabel('Age')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('🎂')
               .setDisabled(true)
           );
 
-        const managementRow2 = new ActionRowBuilder()
+        // Create integrated role select (initially disabled)
+        const integratedSelectRow = new ActionRowBuilder()
           .addComponents(
-            new ButtonBuilder()
-              .setCustomId('admin_manage_vanity_pending')
-              .setLabel('Manage Vanity Roles')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🕵️')
+            new RoleSelectMenuBuilder()
+              .setCustomId('admin_integrated_select_pending')
+              .setPlaceholder('Select player first..')
+              .setMinValues(0)
+              .setMaxValues(1)
               .setDisabled(true)
           );
 
@@ -3563,11 +3570,21 @@ To fix this:
             type: 14 // Separator
           },
           managementRow1.toJSON(),
-          managementRow2.toJSON()
+          {
+            type: 14 // Separator
+          },
+          integratedSelectRow.toJSON()
         ];
         
         // Always add Back to Main Menu button
-        const backRow = createBackToMainMenuButton();
+        const backRow = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('prod_menu_back')
+              .setLabel('Menu')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('⬅️')
+          );
         playerManagementComponents.push(
           { type: 14 }, // Separator
           backRow.toJSON()
@@ -5129,7 +5146,321 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id.startsWith('admin_set_pronouns_')) {
+    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_age_')) {
+      // Handle integrated player management actions - activate appropriate select
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Extract player ID and action type
+        const parts = custom_id.split('_');
+        const playerId = parts[parts.length - 1];
+        const actionType = parts.slice(1, -1).join('_'); // e.g., 'set_pronouns', 'manage_vanity'
+        
+        // Get selected player info
+        const selectedPlayer = await guild.members.fetch(playerId);
+        
+        // Load player data to check current selections
+        const playerData = await loadPlayerData();
+        
+        // Create user select menu (preserves current selection)
+        const userSelectRow = new ActionRowBuilder()
+          .addComponents(
+            new UserSelectMenuBuilder()
+              .setCustomId('admin_player_select_update')
+              .setPlaceholder('Select user to manage..')
+              .setMinValues(0)
+              .setMaxValues(1)
+              .setDefaultUsers([playerId])
+          );
+
+        // Create management buttons (all enabled since player is selected)
+        const managementRow1 = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId(`admin_manage_vanity_${playerId}`)
+              .setLabel('Vanity Roles')
+              .setStyle(actionType === 'manage_vanity' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+              .setEmoji('🕵️'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_pronouns_${playerId}`)
+              .setLabel('Pronouns')
+              .setStyle(actionType === 'set_pronouns' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+              .setEmoji('💜'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_timezone_${playerId}`)
+              .setLabel('Timezone')
+              .setStyle(actionType === 'set_timezone' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+              .setEmoji('🌍'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_age_${playerId}`)
+              .setLabel('Age')
+              .setStyle(actionType === 'set_age' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+              .setEmoji('🎂')
+          );
+
+        let integratedSelectRow;
+        
+        if (actionType === 'set_pronouns') {
+          // Create pronoun role select with current values
+          const currentPronouns = [];
+          if (playerData[guildId]?.pronounRoleIDs) {
+            for (const roleId of playerData[guildId].pronounRoleIDs) {
+              if (selectedPlayer.roles.cache.has(roleId)) {
+                currentPronouns.push(roleId);
+              }
+            }
+          }
+          
+          integratedSelectRow = new ActionRowBuilder()
+            .addComponents(
+              new RoleSelectMenuBuilder()
+                .setCustomId(`admin_integrated_pronouns_${playerId}`)
+                .setPlaceholder(currentPronouns.length > 0 ? 'Update pronouns..' : 'Select pronouns..')
+                .setMinValues(0)
+                .setMaxValues(playerData[guildId]?.pronounRoleIDs?.length || 10)
+                .setDefaultRoles(currentPronouns)
+            );
+            
+        } else if (actionType === 'set_timezone') {
+          // Create timezone role select with current value
+          const currentTimezone = [];
+          if (playerData[guildId]?.timezones) {
+            for (const [roleId] of Object.entries(playerData[guildId].timezones)) {
+              if (selectedPlayer.roles.cache.has(roleId)) {
+                currentTimezone.push(roleId);
+                break; // Only one timezone allowed
+              }
+            }
+          }
+          
+          integratedSelectRow = new ActionRowBuilder()
+            .addComponents(
+              new RoleSelectMenuBuilder()
+                .setCustomId(`admin_integrated_timezone_${playerId}`)
+                .setPlaceholder(currentTimezone.length > 0 ? 'Update timezone..' : 'Select timezone..')
+                .setMinValues(0)
+                .setMaxValues(1)
+                .setDefaultRoles(currentTimezone)
+            );
+            
+        } else if (actionType === 'manage_vanity') {
+          // Create vanity role select with current values
+          const currentVanity = [];
+          if (playerData[guildId]?.players?.[playerId]?.vanityRoles) {
+            currentVanity.push(...playerData[guildId].players[playerId].vanityRoles);
+          }
+          
+          integratedSelectRow = new ActionRowBuilder()
+            .addComponents(
+              new RoleSelectMenuBuilder()
+                .setCustomId(`admin_integrated_vanity_${playerId}`)
+                .setPlaceholder(currentVanity.length > 0 ? 'Update vanity roles..' : 'Select vanity roles..')
+                .setMinValues(0)
+                .setMaxValues(25)
+                .setDefaultRoles(currentVanity)
+            );
+            
+        } else if (actionType === 'set_age') {
+          // For age, show a modal instead of a select
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: {
+              title: `Set Age for ${selectedPlayer.displayName}`,
+              custom_id: `admin_age_modal_${playerId}`,
+              components: [
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('age_input')
+                    .setLabel('Age')
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder('Enter age (e.g., 25)')
+                    .setRequired(true)
+                    .setMinLength(1)
+                    .setMaxLength(3)
+                ).toJSON()
+              ]
+            }
+          });
+        }
+
+        // Create Components V2 Container
+        const playerManagementComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## Player Management | ${selectedPlayer.displayName}`
+          },
+          {
+            type: 14 // Separator
+          },
+          userSelectRow.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          managementRow1.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          integratedSelectRow.toJSON()
+        ];
+        
+        // Always add Back to Main Menu button
+        const backRow = createBackToMainMenuButton();
+        playerManagementComponents.push(
+          { type: 14 }, // Separator
+          backRow.toJSON()
+        );
+        
+        const playerManagementContainer = {
+          type: 17, // Container component
+          accent_color: 0x3498DB, // Blue accent color for player management
+          components: playerManagementComponents
+        };
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [playerManagementContainer]
+          }
+        });
+
+      } catch (error) {
+        console.error('Error handling integrated player management action:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: 'Error activating player management interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_integrated_pronouns_') || custom_id.startsWith('admin_integrated_timezone_') || custom_id.startsWith('admin_integrated_vanity_')) {
+      // Handle integrated select menu changes - apply silently without success messages
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const selectedRoles = data.values || [];
+        
+        // Extract player ID and action type
+        const parts = custom_id.split('_');
+        const playerId = parts[parts.length - 1];
+        const actionType = parts[2]; // 'pronouns', 'timezone', or 'vanity'
+        
+        const targetPlayer = await guild.members.fetch(playerId);
+        const playerData = await loadPlayerData();
+
+        if (actionType === 'pronouns') {
+          // Handle pronouns - remove all current pronouns, add selected ones
+          if (playerData[guildId]?.pronounRoleIDs) {
+            for (const roleId of playerData[guildId].pronounRoleIDs) {
+              if (targetPlayer.roles.cache.has(roleId)) {
+                await targetPlayer.roles.remove(roleId);
+              }
+            }
+          }
+          
+          // Add selected pronoun roles
+          for (const roleId of selectedRoles) {
+            await targetPlayer.roles.add(roleId);
+          }
+          
+        } else if (actionType === 'timezone') {
+          // Handle timezone - remove current timezone, add selected one
+          if (playerData[guildId]?.timezones) {
+            for (const [roleId] of Object.entries(playerData[guildId].timezones)) {
+              if (targetPlayer.roles.cache.has(roleId)) {
+                await targetPlayer.roles.remove(roleId);
+              }
+            }
+          }
+          
+          // Add selected timezone role (only one allowed)
+          if (selectedRoles.length > 0) {
+            await targetPlayer.roles.add(selectedRoles[0]);
+          }
+          
+        } else if (actionType === 'vanity') {
+          // Handle vanity roles - store in player data
+          if (!playerData[guildId]) playerData[guildId] = {};
+          if (!playerData[guildId].players) playerData[guildId].players = {};
+          if (!playerData[guildId].players[playerId]) playerData[guildId].players[playerId] = {};
+          
+          // Remove old vanity roles
+          if (playerData[guildId].players[playerId].vanityRoles) {
+            for (const roleId of playerData[guildId].players[playerId].vanityRoles) {
+              if (targetPlayer.roles.cache.has(roleId)) {
+                await targetPlayer.roles.remove(roleId);
+              }
+            }
+          }
+          
+          // Add new vanity roles and update player data
+          playerData[guildId].players[playerId].vanityRoles = selectedRoles;
+          for (const roleId of selectedRoles) {
+            await targetPlayer.roles.add(roleId);
+          }
+          
+          await savePlayerData(playerData);
+        }
+
+        // Return updated interface with the same select active
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: `✅ Updated ${actionType} for ${targetPlayer.displayName}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+
+      } catch (error) {
+        console.error('Error handling integrated select:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: 'Error updating player information.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_age_modal_')) {
+      // Handle age modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const playerId = custom_id.split('_')[3];
+        const age = data.components[0].components[0].value;
+        
+        const targetPlayer = await guild.members.fetch(playerId);
+        const playerData = await loadPlayerData();
+
+        // Save age to player data
+        if (!playerData[guildId]) playerData[guildId] = {};
+        if (!playerData[guildId].players) playerData[guildId].players = {};
+        if (!playerData[guildId].players[playerId]) playerData[guildId].players[playerId] = {};
+        
+        playerData[guildId].players[playerId].age = parseInt(age);
+        await savePlayerData(playerData);
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: `✅ Updated age for ${targetPlayer.displayName}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+
+      } catch (error) {
+        console.error('Error handling age modal:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: 'Error setting age.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_original_set_pronouns_')) {
       // Admin pronoun management
       try {
         const guildId = req.body.guild_id;
@@ -6662,37 +6993,45 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         }
 
-        // Create management buttons (enabled/disabled based on selection)
+        // Create management buttons (enabled/disabled based on selection) - reordered with simplified labels
         const managementRow1 = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
+              .setCustomId(buttonsEnabled ? `admin_manage_vanity_${selectedPlayerId}` : 'admin_manage_vanity_pending')
+              .setLabel('Vanity Roles')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🕵️')
+              .setDisabled(!buttonsEnabled),
+            new ButtonBuilder()
               .setCustomId(buttonsEnabled ? `admin_set_pronouns_${selectedPlayerId}` : 'admin_set_pronouns_pending')
-              .setLabel('Set Pronouns')
+              .setLabel('Pronouns')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('💜')
               .setDisabled(!buttonsEnabled),
             new ButtonBuilder()
               .setCustomId(buttonsEnabled ? `admin_set_timezone_${selectedPlayerId}` : 'admin_set_timezone_pending')
-              .setLabel('Set Timezone')
+              .setLabel('Timezone')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('🌍')
               .setDisabled(!buttonsEnabled),
             new ButtonBuilder()
               .setCustomId(buttonsEnabled ? `admin_set_age_${selectedPlayerId}` : 'admin_set_age_pending')
-              .setLabel('Set Age')
+              .setLabel('Age')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('🎂')
               .setDisabled(!buttonsEnabled)
           );
 
-        const managementRow2 = new ActionRowBuilder()
+        // Create integrated role select (enabled/disabled based on selection)
+        const selectPlaceholder = buttonsEnabled ? 'Select player action..' : 'Select player first..';
+        const integratedSelectRow = new ActionRowBuilder()
           .addComponents(
-            new ButtonBuilder()
-              .setCustomId(buttonsEnabled ? `admin_manage_vanity_${selectedPlayerId}` : 'admin_manage_vanity_pending')
-              .setLabel('Manage Vanity Roles')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🕵️')
-              .setDisabled(!buttonsEnabled)
+            new RoleSelectMenuBuilder()
+              .setCustomId('admin_integrated_select_pending')
+              .setPlaceholder(selectPlaceholder)
+              .setMinValues(0)
+              .setMaxValues(1)
+              .setDisabled(true) // Always disabled until an action button is clicked
           );
 
         // Create Components V2 Container
@@ -6709,7 +7048,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             type: 14 // Separator
           },
           managementRow1.toJSON(),
-          managementRow2.toJSON()
+          {
+            type: 14 // Separator
+          },
+          integratedSelectRow.toJSON()
         ];
         
         // Always add Back to Main Menu button
