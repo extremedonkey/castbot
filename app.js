@@ -5881,7 +5881,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id.startsWith('admin_set_timezone_')) {
+    } else if (false && custom_id.startsWith('admin_set_timezone_')) { // DISABLED - using integrated handler
       // Admin timezone management
       try {
         const guildId = req.body.guild_id;
@@ -6012,7 +6012,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id.startsWith('admin_set_age_')) {
+    } else if (false && custom_id.startsWith('admin_set_age_')) { // DISABLED - using integrated handler
       // Admin age management
       try {
         const guildId = req.body.guild_id;
@@ -6087,7 +6087,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id.startsWith('admin_manage_vanity_')) {
+    } else if (false && custom_id.startsWith('admin_manage_vanity_')) { // DISABLED - using integrated handler
       // Admin vanity roles management
       try {
         const guildId = req.body.guild_id;
