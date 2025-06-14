@@ -21,6 +21,12 @@
     "logs-remote": "node deploy-remote.js --logs",
     "status-remote": "node deploy-remote.js --status",
     "remote-help": "node deploy-remote.js --help",
+    "deploy-remote-wsl": "node deploy-remote-wsl.js",
+    "deploy-commands-wsl": "node deploy-remote-wsl.js --commands-only",
+    "deploy-remote-wsl-dry": "node deploy-remote-wsl.js --dry-run",
+    "logs-remote-wsl": "node deploy-remote-wsl.js --logs",
+    "status-remote-wsl": "node deploy-remote-wsl.js --status",
+    "ssh-test": "node ssh-test-wsl.js",
     "analytics": "node analytics.js"
   },
   "author": "Shay DeWael",

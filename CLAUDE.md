@@ -439,3 +439,15 @@ When developing new features:
 - ✅ **NEW**: Menu systems updated to use castlist2 for improved user experience
 - ✅ **NEW**: Performance optimizations implemented (70-80% faster navigation)
 - ✅ **NEW**: User-first tribe ordering for enhanced UX in default castlists
+
+## Feature Backlog
+
+**BACKLOG.md** contains the product backlog with user stories and feature requests organized by priority. This serves as the roadmap for future development and includes:
+
+- **Immediate Priority**: Critical fixes and development environment improvements
+- **High Priority**: Core feature enhancements and cleanup tasks  
+- **Medium Priority**: Advanced features like enhanced emoji management, analytics, and application system expansions
+- **Low Priority**: Infrastructure improvements and advanced integrations
+- **Future Tech Debt**: Code cleanup and modernization tasks
+
+The backlog is continuously updated based on user feedback and development priorities.
