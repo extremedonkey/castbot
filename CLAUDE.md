@@ -112,7 +112,54 @@ CastBot has undergone a major optimization initiative that has been fully comple
 
 ## Development Commands
 
-### Local Development
+### WSL Development Environment (Phase 1 - Active) ✅
+
+**Note: This is a SOLO DEVELOPMENT PROJECT - always work on main branch unless explicitly instructed otherwise.**
+
+**Primary Development Workflow:**
+```bash
+# Once per development session (or when ngrok URL changes)
+./dev-start.sh [optional-commit-message]
+# → Starts persistent ngrok daemon (stable URL across restarts)
+# → Handles git operations (safety net like start-and-push.ps1)
+# → Starts CastBot with pm2 for process management
+# → Shows Discord webhook URL for copy/paste
+
+# Your new "Ctrl+C" - restart app anytime during development
+./dev-restart.sh [optional-commit-message]  
+# → Git add, commit, push (preserves safety net)
+# → Restarts ONLY the app (ngrok URL unchanged)
+# → Use as much as you want - same muscle memory, better results
+
+# Check status and get URLs anytime
+./dev-status.sh
+# → Shows ngrok URL + Discord developer console link
+# → Shows pm2 app status
+# → Shows git status and recent commits
+
+# Clean shutdown when done
+./dev-stop.sh
+# → Stops pm2 app cleanly
+# → Leaves ngrok running (preserves URL for next session)
+```
+
+**Claude Code Integration:**
+```bash
+# Commands for Claude to use during development:
+pm2 restart castbot-dev    # Deploy changes after Claude modifications
+pm2 logs castbot-dev       # Monitor application logs  
+./dev-status.sh            # Check complete environment status
+./dev-restart.sh           # Full restart with git operations (Claude can use this)
+```
+
+**Benefits of WSL Setup:**
+- ✅ **Stable ngrok URL** - No more Discord console updates every restart
+- ✅ **Production tooling** - pm2 process management matches production
+- ✅ **Git safety net** - Automatic commit/push like start-and-push.ps1
+- ✅ **Claude integration** - I can restart your app after making changes
+- ✅ **Familiar workflow** - ./dev-restart.sh is your new Ctrl+C
+
+### Legacy PowerShell Development (Deprecated)
 - `npm start` - Start the bot with app.js
 - `npm run dev` - Start with nodemon for auto-restart during development
 - `npm install` - Install dependencies
