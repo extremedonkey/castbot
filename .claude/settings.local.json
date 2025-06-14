@@ -150,7 +150,9 @@
       "Bash(ngrok version)",
       "Bash(./dev-start.sh:*)",
       "Bash(dos2unix:*)",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "Bash(pgrep:*)",
+      "Bash(git config:*)"
     ],
     "deny": []
   }

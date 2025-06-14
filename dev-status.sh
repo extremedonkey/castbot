@@ -32,8 +32,11 @@ echo "🌐 NGROK STATUS:"
 if check_ngrok_running $NGROK_PORT; then
     NGROK_URL=$(get_ngrok_url $NGROK_PORT)
     echo "   ✅ Running: $NGROK_URL"
-    echo "   📋 Discord webhook: $NGROK_URL/interactions"
-    echo "   🔗 Update at: https://discord.com/developers/applications/1328366050848411658/information"
+    echo ""
+    echo "   ═══════════════════════════════════════════════════════════"
+    echo "   📋 DISCORD WEBHOOK URL: $NGROK_URL/interactions"
+    echo "   🔗 UPDATE HERE: https://discord.com/developers/applications/1328366050848411658/information"
+    echo "   ═══════════════════════════════════════════════════════════"
 else
     echo "   ❌ Not running (use './dev-start.sh' to start)"
 fi

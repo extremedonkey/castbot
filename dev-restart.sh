@@ -35,10 +35,31 @@ fi
 echo "🔄 Restarting CastBot..."
 pm2 restart castbot-dev
 
-# Show status
+# Get current ngrok URL and show prominently
 echo ""
-echo "✅ App restarted successfully"
-echo "✅ ngrok tunnel unchanged (stable URL)"
+export PATH="$HOME/.local/bin:$PATH"
+NGROK_URL=$(curl -s "http://localhost:4040/api/tunnels" 2>/dev/null | grep -o 'https://[^"]*\.ngrok-free\.app' | head -1)
+
+if [ -n "$NGROK_URL" ]; then
+    echo "═══════════════════════════════════════════════════════════"
+    echo "🌐 NGROK URL READY FOR DISCORD CONSOLE:"
+    echo ""
+    echo "   📋 Copy this: $NGROK_URL/interactions"
+    echo ""
+    echo "   🔗 Paste here: https://discord.com/developers/applications/1328366050848411658/information"
+    echo "   (Update 'Interactions Endpoint URL' field)"
+    echo "═══════════════════════════════════════════════════════════"
+    echo ""
+    echo "✅ App restarted successfully"
+    echo "✅ ngrok tunnel active and stable"
+else
+    echo "⚠️  WARNING: ngrok not detected!"
+    echo "   Run './dev-start.sh' to start ngrok tunnel"
+    echo ""
+    echo "✅ App restarted successfully"
+    echo "❌ ngrok tunnel not found"
+fi
+
 echo ""
 echo "📊 Use './dev-status.sh' to see full status"
 echo "📋 Use 'pm2 logs castbot-dev' to monitor logs"
