@@ -152,7 +152,9 @@
       "Bash(dos2unix:*)",
       "Bash(bash:*)",
       "Bash(pgrep:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(./dev-status.sh:*)",
+      "Bash(./dev-restart.sh:*)"
     ],
     "deny": []
   }
