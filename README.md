@@ -192,9 +192,9 @@ npm run status-remote              # Check production status
 ### Current State vs Target State
 
 **Current Development Setup:**
-- ❌ Local machine with ngrok tunneling (unstable URLs)
-- ❌ Manual `start-and-push.ps1` workflow
-- ❌ URL changes on every restart
+- ✅ Usage of windows subsystem for linux (WSL) - Claude code + Personal commands
+- ✅ Local machine with ngrok tunneling (static url)
+- ✅  Semi-automated ./dev-start workflow which also pushes to main
 - ❌ Development tied to local machine availability
 
 **Target Development Setup:**
@@ -202,8 +202,6 @@ npm run status-remote              # Check production status
 - ✅ Persistent URLs and webhooks
 - ✅ Automated deployment pipeline
 - ✅ Same infrastructure as production
-
-### Migration Steps
 
 #### Phase 1: AWS Infrastructure Setup
 1. **Create Development Lightsail Instance**
