@@ -1,0 +1,80 @@
+#!/bin/bash
+
+# CastBot Development Status Script
+# Shows current status of all development services
+
+echo "=== CastBot Development Status ==="
+echo ""
+
+# Configuration
+export PATH="$HOME/.local/bin:$PATH"
+NGROK_PORT=3000
+
+# Function to check if ngrok is running
+check_ngrok_running() {
+    local port=$1
+    if curl -s "http://localhost:4040/api/tunnels" 2>/dev/null | grep -q "http://localhost:$port"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Function to get ngrok URL
+get_ngrok_url() {
+    local port=$1
+    local url=$(curl -s "http://localhost:4040/api/tunnels" 2>/dev/null | grep -o 'https://[^"]*\.ngrok-free\.app' | head -1)
+    echo "$url"
+}
+
+# Check ngrok status
+echo "🌐 NGROK STATUS:"
+if check_ngrok_running $NGROK_PORT; then
+    NGROK_URL=$(get_ngrok_url $NGROK_PORT)
+    echo "   ✅ Running: $NGROK_URL"
+    echo "   📋 Discord webhook: $NGROK_URL/interactions"
+    echo "   🔗 Update at: https://discord.com/developers/applications/1328366050848411658/information"
+else
+    echo "   ❌ Not running (use './dev-start.sh' to start)"
+fi
+
+echo ""
+
+# Check pm2 status
+echo "🚀 PM2 APP STATUS:"
+if pm2 list | grep -q "castbot-dev"; then
+    pm2 list | grep castbot-dev | awk '{print "   ✅ " $2 " - Status: " $10 " - CPU: " $8 " - Memory: " $9}'
+    echo "   📋 Logs: pm2 logs castbot-dev"
+    echo "   🔄 Restart: ./dev-restart.sh"
+else
+    echo "   ❌ Not running (use './dev-start.sh' to start)"
+fi
+
+echo ""
+
+# Check git status
+echo "📝 GIT STATUS:"
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "   🌿 Branch: $CURRENT_BRANCH"
+
+# Check for uncommitted changes
+if ! git diff --quiet || ! git diff --staged --quiet; then
+    echo "   📋 Uncommitted changes detected"
+    git status --porcelain | head -5
+else
+    echo "   ✅ Working directory clean"
+fi
+
+echo ""
+
+# Show recent commits
+echo "📚 RECENT COMMITS:"
+git log --oneline -3 | sed 's/^/   /'
+
+echo ""
+echo "=== QUICK COMMANDS ==="
+echo "./dev-restart.sh      - Restart app (your new Ctrl+C)"
+echo "./dev-stop.sh         - Stop everything cleanly"
+echo "pm2 logs castbot-dev   - Monitor real-time logs"
+echo "pm2 monit             - PM2 monitoring dashboard"
+echo ""

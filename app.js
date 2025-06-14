@@ -3768,6 +3768,25 @@ To fix this:
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
         const userId = req.body.member.user.id;
+        const channelId = req.body.channel_id;
+
+        // Check if the last message in the channel is from CastBot
+        let shouldUpdateMessage = false;
+        try {
+          const channel = await client.channels.fetch(channelId);
+          const lastMessages = await channel.messages.fetch({ limit: 1 });
+          const lastMessage = lastMessages.first();
+          
+          if (lastMessage && lastMessage.author.id === client.user.id) {
+            shouldUpdateMessage = true;
+            console.log('🔍 DEBUG: Last message is from CastBot, will update message');
+          } else {
+            console.log('🔍 DEBUG: Last message is not from CastBot, will create new message');
+          }
+        } catch (error) {
+          console.log('🔍 DEBUG: Could not check last message, defaulting to new message:', error.message);
+          shouldUpdateMessage = false;
+        }
 
         // Check admin permissions
         const member = await guild.members.fetch(userId);
@@ -3800,27 +3819,53 @@ To fix this:
         const seasonAppsRow = new ActionRowBuilder().addComponents(seasonAppsButtons);
         
         // Create Components V2 Container for Season Applications submenu
+        const seasonAppsComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## Season Applications | ${guild.name}`
+          },
+          {
+            type: 14 // Separator
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Choose an option below:**`
+          },
+          seasonAppsRow.toJSON()
+        ];
+        
+        // Only add Back button if we're updating the message (replacing the main menu)
+        if (shouldUpdateMessage) {
+          const backRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_menu_back')
+                .setLabel('← Back to Main Menu')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⬅️')
+            );
+          
+          seasonAppsComponents.push(
+            { type: 14 }, // Separator
+            backRow.toJSON()
+          );
+        }
+        
         const seasonAppsContainer = {
           type: 17, // Container component
           accent_color: 0x3498DB, // Blue accent color
-          components: [
-            {
-              type: 10, // Text Display component
-              content: `## Season Applications | ${guild.name}`
-            },
-            {
-              type: 14 // Separator
-            },
-            {
-              type: 10, // Text Display component
-              content: `> **Choose an option below:**`
-            },
-            seasonAppsRow.toJSON()
-          ]
+          components: seasonAppsComponents
         };
         
+        // Use conditional response type based on last message check
+        const responseType = shouldUpdateMessage 
+          ? InteractionResponseType.UPDATE_MESSAGE 
+          : InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
+        
+        console.log(`🔍 DEBUG: Using response type: ${shouldUpdateMessage ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'}`);
+        
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: responseType,
           data: {
             flags: (1 << 15), // IS_COMPONENTS_V2 flag
             components: [seasonAppsContainer]
@@ -3833,6 +3878,46 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error loading Season Applications interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_menu_back') {
+      // Handle Back to Main Menu - restore production menu interface
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const userId = req.body.member.user.id;
+
+        // Check admin permissions
+        const member = await guild.members.fetch(userId);
+        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Load player data and create main production menu
+        const playerData = await loadPlayerData();
+        const menuData = await createProductionMenuInterface(guild, playerData, guildId, userId);
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: menuData
+        });
+
+      } catch (error) {
+        console.error('Error handling prod_menu_back button:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: 'Error loading main menu interface.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

@@ -140,7 +140,17 @@
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -B 10 \"} // end if MESSAGE_COMPONENT\" app.js)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 50 -B 5 \"startsWith.*rank\" /mnt/c/Users/extre/OneDrive/ORG/01\\ Zeldavivor/Tagscript/Castbot/castbot/app.js)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"Processing rank button click:\" app.js)",
-      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"Processing.*click\" app.js)"
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"Processing.*click\" app.js)",
+      "Bash(pm2:*)",
+      "Bash(npm install:*)",
+      "Bash(wget:*)",
+      "Bash(tar:*)",
+      "Bash(sudo mv:*)",
+      "Bash(export PATH=\"$HOME/.local/bin:$PATH\")",
+      "Bash(ngrok version)",
+      "Bash(./dev-start.sh:*)",
+      "Bash(dos2unix:*)",
+      "Bash(bash:*)"
     ],
     "deny": []
   }
