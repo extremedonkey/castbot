@@ -154,7 +154,8 @@
       "Bash(pgrep:*)",
       "Bash(git config:*)",
       "Bash(./dev-status.sh:*)",
-      "Bash(./dev-restart.sh:*)"
+      "Bash(./dev-restart.sh:*)",
+      "Bash(ngrok config:*)"
     ],
     "deny": []
   }
