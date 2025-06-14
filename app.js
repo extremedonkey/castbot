@@ -2488,7 +2488,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               component.customId === 'prod_manage_pronouns_timezones' ||
               component.customId === 'prod_manage_tribes' ||
               component.customId === 'prod_setup' ||
-              component.customId === 'prod_setup_tycoons'
+              component.customId === 'prod_setup_tycoons' ||
+              component.customId === 'admin_manage_player'
             )
           )
         );
@@ -3485,9 +3486,11 @@ To fix this:
         });
       }
     } else if (custom_id === 'admin_manage_player') {
-      // Admin player management - show user select menu
+      // Admin player management - integrated UI with user select and disabled buttons
       try {
-        const guild = await client.guilds.fetch(req.body.guild_id);
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const channelId = req.body.channel_id;
         
         // Check admin permissions
         const member = await guild.members.fetch(req.body.member.user.id);
@@ -3503,24 +3506,80 @@ To fix this:
           });
         }
 
-        // Create user select menu with Components V2
+        // Create user select menu
         const userSelectRow = new ActionRowBuilder()
           .addComponents(
             new UserSelectMenuBuilder()
-              .setCustomId('admin_select_player')
+              .setCustomId('admin_player_select_update')
               .setPlaceholder('Select user to manage..')
-              .setMinValues(1)
+              .setMinValues(0)
               .setMaxValues(1)
           );
 
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '**Player Management**\n\nSelect a player to manage their details:',
-            components: [userSelectRow],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+        // Create management buttons (initially disabled)
+        const managementRow1 = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('admin_set_pronouns_pending')
+              .setLabel('Set Pronouns')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('💜')
+              .setDisabled(true),
+            new ButtonBuilder()
+              .setCustomId('admin_set_timezone_pending')
+              .setLabel('Set Timezone')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🌍')
+              .setDisabled(true),
+            new ButtonBuilder()
+              .setCustomId('admin_set_age_pending')
+              .setLabel('Set Age')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🎂')
+              .setDisabled(true)
+          );
+
+        const managementRow2 = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('admin_manage_vanity_pending')
+              .setLabel('Manage Vanity Roles')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🕵️')
+              .setDisabled(true)
+          );
+
+        // Create Components V2 Container
+        const playerManagementComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## Player Management | ${guild.name}`
+          },
+          {
+            type: 14 // Separator
+          },
+          userSelectRow.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          managementRow1.toJSON(),
+          managementRow2.toJSON()
+        ];
+        
+        // Always add Back to Main Menu button
+        const backRow = createBackToMainMenuButton();
+        playerManagementComponents.push(
+          { type: 14 }, // Separator
+          backRow.toJSON()
+        );
+        
+        const playerManagementContainer = {
+          type: 17, // Container component
+          accent_color: 0x3498DB, // Blue accent color for player management
+          components: playerManagementComponents
+        };
+
+        return await sendProductionSubmenuResponse(res, channelId, [playerManagementContainer]);
         
       } catch (error) {
         console.error('Error handling admin_manage_player button:', error);
@@ -6567,93 +6626,133 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           console.error('Error sending follow-up error message:', followUpError);
         }
       }
-    } else if (custom_id === 'admin_select_player') {
-      // Handle admin player selection
+    } else if (custom_id === 'admin_player_select_update') {
+      // Handle admin player selection with dynamic button updates
       try {
         const guildId = req.body.guild_id;
-        const userId = req.body.member.user.id;
+        const guild = await client.guilds.fetch(guildId);
         const selectedPlayerIds = data.values || [];
         
-        if (selectedPlayerIds.length === 0) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Please select a player to manage.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+        // Create user select menu (preserves current selection)
+        const userSelectRow = new ActionRowBuilder()
+          .addComponents(
+            new UserSelectMenuBuilder()
+              .setCustomId('admin_player_select_update')
+              .setPlaceholder('Select user to manage..')
+              .setMinValues(0)
+              .setMaxValues(1)
+              .setDefaultUsers(selectedPlayerIds) // Keep current selection
+          );
+
+        let titleContent = `## Player Management | ${guild.name}`;
+        let buttonsEnabled = false;
+        let selectedPlayerId = null;
+
+        // Handle player selection/deselection
+        if (selectedPlayerIds.length > 0) {
+          selectedPlayerId = selectedPlayerIds[0];
+          
+          // Get selected player info
+          try {
+            const selectedPlayer = await guild.members.fetch(selectedPlayerId);
+            titleContent = `## Player Management | ${selectedPlayer.displayName}`;
+            buttonsEnabled = true;
+          } catch (error) {
+            console.log('Player not found, keeping buttons disabled');
+          }
         }
 
-        const selectedPlayerId = selectedPlayerIds[0];
-        const guild = await client.guilds.fetch(guildId);
-        
-        // Get selected player info
-        let selectedPlayer;
-        try {
-          selectedPlayer = await guild.members.fetch(selectedPlayerId);
-        } catch (error) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Unable to find the selected player in this server.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Create management interface with Components V2
+        // Create management buttons (enabled/disabled based on selection)
         const managementRow1 = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
-              .setCustomId(`admin_set_pronouns_${selectedPlayerId}`)
+              .setCustomId(buttonsEnabled ? `admin_set_pronouns_${selectedPlayerId}` : 'admin_set_pronouns_pending')
               .setLabel('Set Pronouns')
               .setStyle(ButtonStyle.Secondary)
-              .setEmoji('💜'),
+              .setEmoji('💜')
+              .setDisabled(!buttonsEnabled),
             new ButtonBuilder()
-              .setCustomId(`admin_set_timezone_${selectedPlayerId}`)
+              .setCustomId(buttonsEnabled ? `admin_set_timezone_${selectedPlayerId}` : 'admin_set_timezone_pending')
               .setLabel('Set Timezone')
               .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🌍'),
+              .setEmoji('🌍')
+              .setDisabled(!buttonsEnabled),
             new ButtonBuilder()
-              .setCustomId(`admin_set_age_${selectedPlayerId}`)
+              .setCustomId(buttonsEnabled ? `admin_set_age_${selectedPlayerId}` : 'admin_set_age_pending')
               .setLabel('Set Age')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('🎂')
+              .setDisabled(!buttonsEnabled)
           );
 
         const managementRow2 = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
-              .setCustomId(`admin_manage_vanity_${selectedPlayerId}`)
-              .setLabel('🕵️Manage Vanity Roles')
+              .setCustomId(buttonsEnabled ? `admin_manage_vanity_${selectedPlayerId}` : 'admin_manage_vanity_pending')
+              .setLabel('Manage Vanity Roles')
               .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🕵️'),
-            new ButtonBuilder()
-              .setCustomId('admin_manage_player')
-              .setLabel('Change Player')
-              .setStyle(ButtonStyle.Primary)
-              .setEmoji('🔄')
+              .setEmoji('🕵️')
+              .setDisabled(!buttonsEnabled)
           );
 
+        // Create Components V2 Container
+        const playerManagementComponents = [
+          {
+            type: 10, // Text Display component
+            content: titleContent
+          },
+          {
+            type: 14 // Separator
+          },
+          userSelectRow.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          managementRow1.toJSON(),
+          managementRow2.toJSON()
+        ];
+        
+        // Always add Back to Main Menu button
+        const backRow = createBackToMainMenuButton();
+        playerManagementComponents.push(
+          { type: 14 }, // Separator
+          backRow.toJSON()
+        );
+        
+        const playerManagementContainer = {
+          type: 17, // Container component
+          accent_color: 0x3498DB, // Blue accent color for player management
+          components: playerManagementComponents
+        };
+
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: `## Manage ${selectedPlayer.displayName}'s Details\n\nSelect an action to manage this player's profile:`,
-            components: [managementRow1, managementRow2],
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [playerManagementContainer]
           }
         });
 
       } catch (error) {
-        console.error('Error handling admin player selection:', error);
+        console.error('Error handling admin player selection update:', error);
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: 'Error processing admin player selection.',
+            content: 'Error updating player management interface.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
       }
+    } else if (custom_id === 'admin_select_player') {
+      // Legacy handler - redirect to new system
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: '🔄 Please use the updated Player Management interface from the main menu.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+
     } else if (custom_id.startsWith('apply_')) {
       try {
         console.log('Processing apply button click:', custom_id);
