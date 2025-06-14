@@ -3520,12 +3520,6 @@ To fix this:
         const managementRow1 = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
-              .setCustomId('admin_manage_vanity_pending')
-              .setLabel('Vanity Roles')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🕵️')
-              .setDisabled(true),
-            new ButtonBuilder()
               .setCustomId('admin_set_pronouns_pending')
               .setLabel('Pronouns')
               .setStyle(ButtonStyle.Secondary)
@@ -3542,6 +3536,12 @@ To fix this:
               .setLabel('Age')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('🎂')
+              .setDisabled(true),
+            new ButtonBuilder()
+              .setCustomId('admin_manage_vanity_pending')
+              .setLabel('Vanity Roles')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🕵️')
               .setDisabled(true)
           );
 
@@ -5178,11 +5178,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const managementRow1 = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
-              .setCustomId(`admin_manage_vanity_${playerId}`)
-              .setLabel('Vanity Roles')
-              .setStyle(actionType === 'manage_vanity' ? ButtonStyle.Primary : ButtonStyle.Secondary)
-              .setEmoji('🕵️'),
-            new ButtonBuilder()
               .setCustomId(`admin_set_pronouns_${playerId}`)
               .setLabel('Pronouns')
               .setStyle(actionType === 'set_pronouns' ? ButtonStyle.Primary : ButtonStyle.Secondary)
@@ -5196,7 +5191,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               .setCustomId(`admin_set_age_${playerId}`)
               .setLabel('Age')
               .setStyle(actionType === 'set_age' ? ButtonStyle.Primary : ButtonStyle.Secondary)
-              .setEmoji('🎂')
+              .setEmoji('🎂'),
+            new ButtonBuilder()
+              .setCustomId(`admin_manage_vanity_${playerId}`)
+              .setLabel('Vanity Roles')
+              .setStyle(actionType === 'manage_vanity' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+              .setEmoji('🕵️')
           );
 
         let integratedSelectRow;
@@ -5460,12 +5460,93 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           await savePlayerData(playerData);
         }
 
-        // Silently update interface without success message - return to main player management
+        // Silently update interface by rebuilding the main player management interface
+        // Create user select menu (preserves current selection)
+        const userSelectRow = new ActionRowBuilder()
+          .addComponents(
+            new UserSelectMenuBuilder()
+              .setCustomId('admin_player_select_update')
+              .setPlaceholder('Select user to manage..')
+              .setMinValues(0)
+              .setMaxValues(1)
+              .setDefaultUsers([playerId])
+          );
+
+        // Create management buttons (all enabled since player is selected)
+        const managementRow1 = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId(`admin_set_pronouns_${playerId}`)
+              .setLabel('Pronouns')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('💜'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_timezone_${playerId}`)
+              .setLabel('Timezone')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🌍'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_age_${playerId}`)
+              .setLabel('Age')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🎂'),
+            new ButtonBuilder()
+              .setCustomId(`admin_manage_vanity_${playerId}`)
+              .setLabel('Vanity Roles')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🕵️')
+          );
+
+        // Create integrated role select (enabled/disabled based on selection)
+        const selectPlaceholder = 'Click a button..';
+        const integratedSelectRow = new ActionRowBuilder()
+          .addComponents(
+            new RoleSelectMenuBuilder()
+              .setCustomId('admin_integrated_select_pending')
+              .setPlaceholder(selectPlaceholder)
+              .setMinValues(0)
+              .setMaxValues(1)
+              .setDisabled(true) // Always disabled until an action button is clicked
+          );
+
+        // Create Components V2 Container
+        const playerManagementComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## Player Management | ${targetPlayer.displayName}`
+          },
+          {
+            type: 14 // Separator
+          },
+          userSelectRow.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          managementRow1.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          integratedSelectRow.toJSON()
+        ];
+        
+        // Always add Back to Main Menu button
+        const backRow = createBackToMainMenuButton();
+        playerManagementComponents.push(
+          { type: 14 }, // Separator
+          backRow.toJSON()
+        );
+        
+        const playerManagementContainer = {
+          type: 17, // Container component
+          accent_color: 0x3498DB, // Blue accent color for player management
+          components: playerManagementComponents
+        };
+
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: `## Player Management | ${targetPlayer.displayName}\n\n✅ ${actionType.charAt(0).toUpperCase() + actionType.slice(1)} updated successfully.`,
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [playerManagementContainer]
           }
         });
 
@@ -5498,12 +5579,93 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         playerData[guildId].players[playerId].age = parseInt(age);
         await savePlayerData(playerData);
 
-        // Silently complete age update without additional interface
+        // Silently complete age update by rebuilding the main player management interface
+        // Create user select menu (preserves current selection)
+        const userSelectRow = new ActionRowBuilder()
+          .addComponents(
+            new UserSelectMenuBuilder()
+              .setCustomId('admin_player_select_update')
+              .setPlaceholder('Select user to manage..')
+              .setMinValues(0)
+              .setMaxValues(1)
+              .setDefaultUsers([playerId])
+          );
+
+        // Create management buttons (all enabled since player is selected)
+        const managementRow1 = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId(`admin_set_pronouns_${playerId}`)
+              .setLabel('Pronouns')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('💜'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_timezone_${playerId}`)
+              .setLabel('Timezone')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🌍'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_age_${playerId}`)
+              .setLabel('Age')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🎂'),
+            new ButtonBuilder()
+              .setCustomId(`admin_manage_vanity_${playerId}`)
+              .setLabel('Vanity Roles')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🕵️')
+          );
+
+        // Create integrated role select (enabled/disabled based on selection)
+        const selectPlaceholder = 'Click a button..';
+        const integratedSelectRow = new ActionRowBuilder()
+          .addComponents(
+            new RoleSelectMenuBuilder()
+              .setCustomId('admin_integrated_select_pending')
+              .setPlaceholder(selectPlaceholder)
+              .setMinValues(0)
+              .setMaxValues(1)
+              .setDisabled(true) // Always disabled until an action button is clicked
+          );
+
+        // Create Components V2 Container
+        const playerManagementComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## Player Management | ${targetPlayer.displayName}`
+          },
+          {
+            type: 14 // Separator
+          },
+          userSelectRow.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          managementRow1.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          integratedSelectRow.toJSON()
+        ];
+        
+        // Always add Back to Main Menu button
+        const backRow = createBackToMainMenuButton();
+        playerManagementComponents.push(
+          { type: 14 }, // Separator
+          backRow.toJSON()
+        );
+        
+        const playerManagementContainer = {
+          type: 17, // Container component
+          accent_color: 0x3498DB, // Blue accent color for player management
+          components: playerManagementComponents
+        };
+
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: `## Player Management | ${targetPlayer.displayName}\n\n✅ Age updated successfully.`,
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [playerManagementContainer]
           }
         });
 
