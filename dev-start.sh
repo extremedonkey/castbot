@@ -30,13 +30,13 @@ get_ngrok_url() {
     echo "$url"
 }
 
-# Function to start ngrok in background
+# Function to start ngrok in background with static domain
 start_ngrok() {
     local port=$1
-    echo "Starting ngrok tunnel on port $port..."
+    echo "Starting ngrok tunnel on port $port with static domain..."
     
-    # Start ngrok in background
-    nohup ngrok http $port > /dev/null 2>&1 &
+    # Start ngrok with static domain in background
+    nohup ngrok http --url=adapted-deeply-stag.ngrok-free.app $port > /dev/null 2>&1 &
     local ngrok_pid=$!
     
     # Wait for ngrok to initialize
@@ -104,19 +104,16 @@ echo "════════════════════════�
 echo "🎉 DEVELOPMENT ENVIRONMENT READY!"
 echo "═══════════════════════════════════════════════════════════════════"
 echo ""
-echo "🚨 IMPORTANT: UPDATE DISCORD CONSOLE NOW!"
+echo "✅ Static ngrok tunnel: https://adapted-deeply-stag.ngrok-free.app"
+echo "✅ CastBot running with pm2 (castbot-dev)"
 echo ""
-echo "   📋 Copy this URL: $NGROK_URL/interactions"
+echo "🌟 STATIC DOMAIN SETUP:"
+echo "   Your Discord webhook is permanently set to:"
+echo "   https://adapted-deeply-stag.ngrok-free.app/interactions"
 echo ""
-echo "   🔗 Paste it here: https://discord.com/developers/applications/1328366050848411658/information"
-echo "   (Update the 'Interactions Endpoint URL' field)"
-echo ""
-echo "⚠️  Your bot won't work until you update Discord with the URL above!"
+echo "   ✨ No more manual Discord console updates needed!"
 echo ""
 echo "═══════════════════════════════════════════════════════════════════"
-echo ""
-echo "✅ ngrok tunnel: $NGROK_URL"
-echo "✅ CastBot running with pm2 (castbot-dev)"
 echo ""
 echo "📋 DEVELOPMENT COMMANDS:"
 echo "   ./dev-restart.sh     - Restart app (your new Ctrl+C)"

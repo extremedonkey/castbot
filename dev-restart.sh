@@ -35,29 +35,24 @@ fi
 echo "🔄 Restarting CastBot..."
 pm2 restart castbot-dev
 
-# Get current ngrok URL and show prominently
+# Check static domain status
 echo ""
 export PATH="$HOME/.local/bin:$PATH"
-NGROK_URL=$(curl -s "http://localhost:4040/api/tunnels" 2>/dev/null | grep -o 'https://[^"]*\.ngrok-free\.app' | head -1)
+STATIC_URL="https://adapted-deeply-stag.ngrok-free.app"
 
-if [ -n "$NGROK_URL" ]; then
-    echo "═══════════════════════════════════════════════════════════"
-    echo "🌐 NGROK URL READY FOR DISCORD CONSOLE:"
-    echo ""
-    echo "   📋 Copy this: $NGROK_URL/interactions"
-    echo ""
-    echo "   🔗 Paste here: https://discord.com/developers/applications/1328366050848411658/information"
-    echo "   (Update 'Interactions Endpoint URL' field)"
-    echo "═══════════════════════════════════════════════════════════"
-    echo ""
+# Check if ngrok is running with our static domain
+NGROK_RUNNING=$(curl -s "http://localhost:4040/api/tunnels" 2>/dev/null | grep -c "adapted-deeply-stag.ngrok-free.app" || echo "0")
+
+if [ "$NGROK_RUNNING" -gt 0 ]; then
     echo "✅ App restarted successfully"
-    echo "✅ ngrok tunnel active and stable"
+    echo "✅ Static ngrok tunnel active: $STATIC_URL"
+    echo "🌟 Discord webhook permanently set - no updates needed!"
 else
-    echo "⚠️  WARNING: ngrok not detected!"
-    echo "   Run './dev-start.sh' to start ngrok tunnel"
+    echo "⚠️  WARNING: Static ngrok tunnel not detected!"
+    echo "   Run './dev-start.sh' to start static tunnel"
     echo ""
     echo "✅ App restarted successfully"
-    echo "❌ ngrok tunnel not found"
+    echo "❌ Static ngrok tunnel not found"
 fi
 
 echo ""
