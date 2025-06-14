@@ -21,12 +21,13 @@ if ! git diff --staged --quiet; then
     echo "📝 Committing: $COMMIT_MESSAGE"
     git commit -m "$COMMIT_MESSAGE"
     
-    echo "🚀 Attempting to push to $CURRENT_BRANCH..."
-    if git push origin $CURRENT_BRANCH 2>/dev/null; then
-        echo "✅ Changes pushed successfully"
+    echo "🚀 Pushing to GitHub ($CURRENT_BRANCH)..."
+    if git push origin $CURRENT_BRANCH; then
+        echo "✅ Changes pushed to GitHub successfully"
     else
-        echo "⚠️ Push failed (auth needed) - changes committed locally"
-        echo "💡 Run 'git push' manually when convenient"
+        echo "❌ Push failed - check authentication"
+        echo "💡 Run 'git push' manually or check GitHub token"
+        echo "ℹ️  Changes are committed locally, safe to continue"
     fi
 else
     echo "📝 No changes to commit"
