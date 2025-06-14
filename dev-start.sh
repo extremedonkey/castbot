@@ -97,7 +97,7 @@ fi
 # Start the app with pm2
 echo "Starting CastBot with pm2..."
 pm2 delete castbot-dev 2>/dev/null || true  # Delete if exists
-pm2 start app.js --name castbot-dev --watch --ignore-watch="*.log" --log-file="./bot.log"
+pm2 start app.js --name castbot-dev --watch --ignore-watch="*.log"
 
 echo ""
 echo "═══════════════════════════════════════════════════════════════════"
