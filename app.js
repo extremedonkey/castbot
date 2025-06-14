@@ -2468,6 +2468,91 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
   } // end if APPLICATION_COMMAND
 
+  // Helper function for production menu message replacement logic
+  async function shouldUpdateProductionMenuMessage(channelId) {
+    try {
+      const channel = await client.channels.fetch(channelId);
+      const lastMessages = await channel.messages.fetch({ limit: 1 });
+      const lastMessage = lastMessages.first();
+      
+      if (lastMessage && 
+          lastMessage.author.id === client.user.id && 
+          lastMessage.components && 
+          lastMessage.components.length > 0) {
+        
+        // Check if this message contains production menu buttons
+        const hasProductionMenuButton = lastMessage.components.some(row => 
+          row.components && row.components.some(component => 
+            component.customId && (
+              component.customId === 'prod_season_applications' ||
+              component.customId === 'prod_manage_pronouns_timezones' ||
+              component.customId === 'prod_manage_tribes' ||
+              component.customId === 'prod_setup' ||
+              component.customId === 'prod_setup_tycoons'
+            )
+          )
+        );
+        
+        if (hasProductionMenuButton) {
+          console.log('🔍 DEBUG: Last message is CastBot Production Menu, will update message');
+          return true;
+        } else {
+          console.log('🔍 DEBUG: Last message is CastBot but not Production Menu, will create new message');
+          return false;
+        }
+      } else {
+        console.log('🔍 DEBUG: Last message is not from CastBot, will create new message');
+        return false;
+      }
+    } catch (error) {
+      console.log('🔍 DEBUG: Could not check last message, defaulting to new message:', error.message);
+      return false;
+    }
+  }
+
+  // Helper function to create back button for production submenus
+  function createBackToMainMenuButton() {
+    return new ActionRowBuilder()
+      .addComponents(
+        new ButtonBuilder()
+          .setCustomId('prod_menu_back')
+          .setLabel('← Back to Main Menu')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('⬅️')
+      );
+  }
+
+  // Helper function to send production submenu response with consistent UX
+  async function sendProductionSubmenuResponse(res, channelId, components, shouldUpdateMessage = null) {
+    // If shouldUpdateMessage not provided, check automatically
+    if (shouldUpdateMessage === null) {
+      shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
+    }
+    
+    const responseType = shouldUpdateMessage 
+      ? InteractionResponseType.UPDATE_MESSAGE 
+      : InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
+
+    console.log(`🔍 DEBUG: Using response type: ${shouldUpdateMessage ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'}`);
+    
+    // Prepare response data
+    const responseData = {
+      flags: (1 << 15), // IS_COMPONENTS_V2 flag
+      components: components
+    };
+    
+    // Add ephemeral flag for new messages (user-only visibility)
+    if (!shouldUpdateMessage) {
+      responseData.flags |= InteractionResponseFlags.EPHEMERAL;
+      console.log('🔍 DEBUG: Adding ephemeral flag - only user can see this message');
+    }
+    
+    return res.send({
+      type: responseType,
+      data: responseData
+    });
+  }
+
   /**
    * Handle button interactions (MESSAGE_COMPONENT) 
    */
@@ -3659,6 +3744,10 @@ To fix this:
     } else if (custom_id === 'prod_manage_pronouns_timezones') {
       // Show pronouns/timezones management menu
       try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const channelId = req.body.channel_id;
+        
         const managementRow1 = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
@@ -3697,14 +3786,37 @@ To fix this:
               .setEmoji('👍')
           );
 
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '## Manage Pronouns & Timezones\n\nSelect an action to manage your server\'s pronoun and timezone roles:',
-            components: [managementRow1, managementRow2],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+        // Create Components V2 Container
+        const pronounsTimezoneComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## Manage Pronouns & Timezones | ${guild.name}`
+          },
+          {
+            type: 14 // Separator
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Select an action to manage your server's pronoun and timezone roles:**`
+          },
+          managementRow1.toJSON(),
+          managementRow2.toJSON()
+        ];
+        
+        // Always add Back to Main Menu button
+        const backRow = createBackToMainMenuButton();
+        pronounsTimezoneComponents.push(
+          { type: 14 }, // Separator
+          backRow.toJSON()
+        );
+        
+        const pronounsTimezoneContainer = {
+          type: 17, // Container component
+          accent_color: 0x9B59B6, // Purple accent color for pronouns/timezones
+          components: pronounsTimezoneComponents
+        };
+
+        return await sendProductionSubmenuResponse(res, channelId, [pronounsTimezoneContainer]);
         
       } catch (error) {
         console.error('Error handling prod_manage_pronouns_timezones button:', error);
@@ -3719,6 +3831,10 @@ To fix this:
     } else if (custom_id === 'prod_manage_tribes') {
       // Show tribe management menu
       try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const channelId = req.body.channel_id;
+        
         const tribeRow = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
@@ -3743,14 +3859,40 @@ To fix this:
               .setEmoji('😀')
           );
 
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '## Tribe Management\n\n> **⚠️ Warning:** Spectators will be able to view your tribe names if you add them before marooning using `/castlist`. It is recommended not adding any tribes until players have been assigned the tribe role, after marooning.\n\nSelect an action to manage your tribes:',
-            components: [tribeRow],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+        // Create Components V2 Container
+        const tribesComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## Tribe Management | ${guild.name}`
+          },
+          {
+            type: 14 // Separator
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **⚠️ Warning:** Spectators will be able to view your tribe names if you add them before marooning using \`/castlist\`. It is recommended not adding any tribes until players have been assigned the tribe role, after marooning.`
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Select an action to manage your tribes:**`
+          },
+          tribeRow.toJSON()
+        ];
+        
+        // Always add Back to Main Menu button
+        const backRow = createBackToMainMenuButton();
+        tribesComponents.push(
+          { type: 14 }, // Separator
+          backRow.toJSON()
+        );
+        
+        const tribesContainer = {
+          type: 17, // Container component
+          accent_color: 0xE67E22, // Orange accent color for tribes
+          components: tribesComponents
+        };
+
+        return await sendProductionSubmenuResponse(res, channelId, [tribesContainer]);
         
       } catch (error) {
         console.error('Error handling prod_manage_tribes button:', error);
@@ -3770,38 +3912,8 @@ To fix this:
         const userId = req.body.member.user.id;
         const channelId = req.body.channel_id;
 
-        // Check if the last message in the channel is the CastBot Production Menu
-        let shouldUpdateMessage = false;
-        try {
-          const channel = await client.channels.fetch(channelId);
-          const lastMessages = await channel.messages.fetch({ limit: 1 });
-          const lastMessage = lastMessages.first();
-          
-          if (lastMessage && 
-              lastMessage.author.id === client.user.id && 
-              lastMessage.components && 
-              lastMessage.components.length > 0) {
-            
-            // Check if this message contains production menu buttons (specifically Season Applications)
-            const hasSeasonAppsButton = lastMessage.components.some(row => 
-              row.components && row.components.some(component => 
-                component.customId === 'prod_season_applications'
-              )
-            );
-            
-            if (hasSeasonAppsButton) {
-              shouldUpdateMessage = true;
-              console.log('🔍 DEBUG: Last message is CastBot Production Menu, will update message');
-            } else {
-              console.log('🔍 DEBUG: Last message is CastBot but not Production Menu, will create new message');
-            }
-          } else {
-            console.log('🔍 DEBUG: Last message is not from CastBot, will create new message');
-          }
-        } catch (error) {
-          console.log('🔍 DEBUG: Could not check last message, defaulting to new message:', error.message);
-          shouldUpdateMessage = false;
-        }
+        // Use helper function to check if we should update the production menu
+        const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
 
         // Check admin permissions
         const member = await guild.members.fetch(userId);
@@ -3870,29 +3982,7 @@ To fix this:
           components: seasonAppsComponents
         };
         
-        // Use conditional response type based on last message check
-        const responseType = shouldUpdateMessage 
-          ? InteractionResponseType.UPDATE_MESSAGE 
-          : InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
-        
-        console.log(`🔍 DEBUG: Using response type: ${shouldUpdateMessage ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'}`);
-        
-        // Prepare response data
-        const responseData = {
-          flags: (1 << 15), // IS_COMPONENTS_V2 flag
-          components: [seasonAppsContainer]
-        };
-        
-        // Add ephemeral flag for new messages (user-only visibility)
-        if (!shouldUpdateMessage) {
-          responseData.flags |= InteractionResponseFlags.EPHEMERAL;
-          console.log('🔍 DEBUG: Adding ephemeral flag - only user can see this message');
-        }
-        
-        return res.send({
-          type: responseType,
-          data: responseData
-        });
+        return await sendProductionSubmenuResponse(res, channelId, [seasonAppsContainer], shouldUpdateMessage);
         
       } catch (error) {
         console.error('Error handling prod_season_applications button:', error);
