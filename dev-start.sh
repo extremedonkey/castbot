@@ -94,10 +94,13 @@ else
     echo "No changes to commit"
 fi
 
-# Start the app with pm2
-echo "Starting CastBot with pm2..."
-pm2 delete castbot-dev 2>/dev/null || true  # Delete if exists
-pm2 start app.js --name castbot-dev --watch --ignore-watch="*.log"
+# Start the app with node in background (pm2 has WSL networking issues)
+echo "Starting CastBot with node..."
+pkill -f "node app.js" 2>/dev/null || true  # Kill any existing instances
+nohup node app.js > /tmp/castbot-dev.log 2>&1 &
+APP_PID=$!
+echo $APP_PID > /tmp/castbot-dev.pid
+echo "✅ CastBot started with PID $APP_PID"
 
 echo ""
 echo "═══════════════════════════════════════════════════════════════════"
@@ -116,8 +119,8 @@ echo ""
 echo "═══════════════════════════════════════════════════════════════════"
 echo ""
 echo "📋 DEVELOPMENT COMMANDS:"
-echo "   ./dev-restart.sh     - Restart app (your new Ctrl+C)"
-echo "   ./dev-status.sh      - Check status + show URLs"
-echo "   pm2 logs castbot-dev - Monitor real-time logs"
-echo "   ./dev-stop.sh        - Stop everything"
+echo "   ./dev-restart.sh       - Restart app (your new Ctrl+C)"
+echo "   ./dev-status.sh        - Check status + show URLs"
+echo "   tail -f /tmp/castbot-dev.log - Monitor real-time logs"
+echo "   ./dev-stop.sh          - Stop everything"
 echo ""

@@ -5,13 +5,15 @@
 
 echo "=== Stopping CastBot Development Environment ==="
 
-# Stop pm2 app
-echo "🛑 Stopping pm2 app..."
-if pm2 list | grep -q "castbot-dev"; then
-    pm2 delete castbot-dev
+# Stop node app
+echo "🛑 Stopping CastBot app..."
+if [ -f /tmp/castbot-dev.pid ] && kill -0 $(cat /tmp/castbot-dev.pid) 2>/dev/null; then
+    kill $(cat /tmp/castbot-dev.pid)
+    rm -f /tmp/castbot-dev.pid
     echo "✅ CastBot app stopped"
 else
-    echo "📝 App not running"
+    pkill -f "node app.js" 2>/dev/null || true
+    echo "✅ CastBot processes cleaned up"
 fi
 
 # Stop ngrok (optional - you might want to keep it running)

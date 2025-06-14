@@ -33,7 +33,12 @@ fi
 
 # Restart the app
 echo "🔄 Restarting CastBot..."
-pm2 restart castbot-dev
+pkill -f "node app.js" 2>/dev/null || true
+sleep 2
+nohup node app.js > /tmp/castbot-dev.log 2>&1 &
+APP_PID=$!
+echo $APP_PID > /tmp/castbot-dev.pid
+echo "✅ CastBot restarted with PID $APP_PID"
 
 # Check static domain status
 echo ""
@@ -57,5 +62,5 @@ fi
 
 echo ""
 echo "📊 Use './dev-status.sh' to see full status"
-echo "📋 Use 'pm2 logs castbot-dev' to monitor logs"
+echo "📋 Use 'tail -f /tmp/castbot-dev.log' to monitor logs"
 echo ""

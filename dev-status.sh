@@ -43,11 +43,12 @@ fi
 
 echo ""
 
-# Check pm2 status
-echo "🚀 PM2 APP STATUS:"
-if pm2 list | grep -q "castbot-dev"; then
-    pm2 list | grep castbot-dev | awk '{print "   ✅ " $2 " - Status: " $10 " - CPU: " $8 " - Memory: " $9}'
-    echo "   📋 Logs: pm2 logs castbot-dev"
+# Check app status
+echo "🚀 CASTBOT APP STATUS:"
+if [ -f /tmp/castbot-dev.pid ] && kill -0 $(cat /tmp/castbot-dev.pid) 2>/dev/null; then
+    APP_PID=$(cat /tmp/castbot-dev.pid)
+    echo "   ✅ Running (PID: $APP_PID)"
+    echo "   📋 Logs: tail -f /tmp/castbot-dev.log"
     echo "   🔄 Restart: ./dev-restart.sh"
 else
     echo "   ❌ Not running (use './dev-start.sh' to start)"
