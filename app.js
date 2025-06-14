@@ -3770,16 +3770,31 @@ To fix this:
         const userId = req.body.member.user.id;
         const channelId = req.body.channel_id;
 
-        // Check if the last message in the channel is from CastBot
+        // Check if the last message in the channel is the CastBot Production Menu
         let shouldUpdateMessage = false;
         try {
           const channel = await client.channels.fetch(channelId);
           const lastMessages = await channel.messages.fetch({ limit: 1 });
           const lastMessage = lastMessages.first();
           
-          if (lastMessage && lastMessage.author.id === client.user.id) {
-            shouldUpdateMessage = true;
-            console.log('🔍 DEBUG: Last message is from CastBot, will update message');
+          if (lastMessage && 
+              lastMessage.author.id === client.user.id && 
+              lastMessage.components && 
+              lastMessage.components.length > 0) {
+            
+            // Check if this message contains production menu buttons (specifically Season Applications)
+            const hasSeasonAppsButton = lastMessage.components.some(row => 
+              row.components && row.components.some(component => 
+                component.customId === 'prod_season_applications'
+              )
+            );
+            
+            if (hasSeasonAppsButton) {
+              shouldUpdateMessage = true;
+              console.log('🔍 DEBUG: Last message is CastBot Production Menu, will update message');
+            } else {
+              console.log('🔍 DEBUG: Last message is CastBot but not Production Menu, will create new message');
+            }
           } else {
             console.log('🔍 DEBUG: Last message is not from CastBot, will create new message');
           }
@@ -3834,22 +3849,20 @@ To fix this:
           seasonAppsRow.toJSON()
         ];
         
-        // Only add Back button if we're updating the message (replacing the main menu)
-        if (shouldUpdateMessage) {
-          const backRow = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_menu_back')
-                .setLabel('← Back to Main Menu')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('⬅️')
-            );
-          
-          seasonAppsComponents.push(
-            { type: 14 }, // Separator
-            backRow.toJSON()
+        // Always add Back to Main Menu button for consistent UX
+        const backRow = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('prod_menu_back')
+              .setLabel('← Back to Main Menu')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('⬅️')
           );
-        }
+        
+        seasonAppsComponents.push(
+          { type: 14 }, // Separator
+          backRow.toJSON()
+        );
         
         const seasonAppsContainer = {
           type: 17, // Container component
@@ -3864,12 +3877,21 @@ To fix this:
         
         console.log(`🔍 DEBUG: Using response type: ${shouldUpdateMessage ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'}`);
         
+        // Prepare response data
+        const responseData = {
+          flags: (1 << 15), // IS_COMPONENTS_V2 flag
+          components: [seasonAppsContainer]
+        };
+        
+        // Add ephemeral flag for new messages (user-only visibility)
+        if (!shouldUpdateMessage) {
+          responseData.flags |= InteractionResponseFlags.EPHEMERAL;
+          console.log('🔍 DEBUG: Adding ephemeral flag - only user can see this message');
+        }
+        
         return res.send({
           type: responseType,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [seasonAppsContainer]
-          }
+          data: responseData
         });
         
       } catch (error) {
@@ -3907,6 +3929,7 @@ To fix this:
         const playerData = await loadPlayerData();
         const menuData = await createProductionMenuInterface(guild, playerData, guildId, userId);
 
+        // Always use UPDATE_MESSAGE for Back button since it should replace the current message
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: menuData

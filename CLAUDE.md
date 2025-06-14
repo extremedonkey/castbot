@@ -164,6 +164,66 @@ tail -f /tmp/castbot-dev.log # Monitor application logs
 - ✅ **Claude integration** - I can restart your app after making changes
 - ✅ **Familiar workflow** - ./dev-restart.sh is your new Ctrl+C
 
+### Development vs Production Deployment Comparison
+
+| **Aspect** | **`./dev-start.sh` (Development)** | **`npm run deploy-remote-wsl` (Production)** |
+|------------|-------------------------------------|-----------------------------------------------|
+| **Purpose** | Start local development environment | Deploy to remote production server |
+| **Environment** | WSL (local machine) | AWS Lightsail (remote server) |
+| **Execution** | Your local WSL environment | SSH commands to remote server |
+| **Target** | Development bot (local testing) | Production bot (live Discord servers) |
+| **Process Manager** | Direct `node app.js` (PID tracking) | `pm2` (castbot-pm process) |
+| **Networking** | Local port 3000 via ngrok tunnel | Direct HTTPS on port 3000 |
+| **Domain** | Static ngrok: `adapted-deeply-stag.ngrok-free.app` | Production domain on AWS |
+| **Git Flow** | Local → GitHub (push) | GitHub → Remote (pull) |
+| **Safety** | 🟢 Low risk (only affects testing) | 🔴 High risk (affects all Discord servers) |
+| **Restart Speed** | ⚡ ~3 seconds | ⚡ ~5-10 seconds |
+| **Backup** | ❌ None needed | ✅ Timestamped backup before deployment |
+| **Usage Pattern** | Multiple times daily during development | Infrequent major deployments |
+
+**Key Principle**: Development optimized for fast iteration, Production optimized for stability and safety.
+
+## Deployment Scripts Analysis & Evolution
+
+### **🟢 ACTIVE DEPLOYMENT TOOLING**
+
+**Primary WSL Development Workflow:**
+- `./dev-start.sh` - Complete development environment startup with static ngrok domain
+- `./dev-restart.sh` - Quick restart with auto-commit and GitHub push ("new Ctrl+C")
+- `./dev-status.sh` - Environment status monitoring (ngrok, app, git status)
+- `./dev-stop.sh` - Clean shutdown with optional ngrok preservation
+
+**WSL Production Deployment:**
+- `npm run deploy-remote-wsl` - Full production deployment with risk indicators
+- `npm run deploy-commands-wsl` - Commands-only deployment (faster, lower risk)
+- `npm run deploy-remote-wsl-dry` - Safe preview of deployment changes
+- `npm run logs-remote-wsl` - Remote log monitoring
+- `npm run status-remote-wsl` - Production server status check
+- `npm run ssh-test` - SSH connectivity verification
+
+### **📦 DEPRECATED TOOLING (Cleaned Up June 2025)**
+
+**Removed PowerShell Scripts:**
+- ~~`start-and-push.ps1`~~ - Replaced by `dev-restart.sh`
+- ~~`start-dev.ps1`~~ - Replaced by `dev-start.sh` 
+- ~~`launch-terminals.ps1`~~ - Obsolete with WSL workflow
+- ~~`deploy-remote.js`~~ - Replaced by `deploy-remote-wsl.js`
+
+**Removed NPM Scripts:**
+- ~~`npm run deploy-remote`~~ - Windows-based deployment (replaced by WSL variants)
+- ~~`npm run logs-remote`~~ - Windows-based log viewing (replaced by WSL variant)
+- ~~`npm run status-remote`~~ - Windows-based status (replaced by WSL variant)
+
+### **🔄 Evolution Timeline**
+
+| **Phase** | **Period** | **Platform** | **Key Features** | **Status** |
+|-----------|------------|--------------|------------------|------------|
+| **Phase 1** | Pre-June 10 | PowerShell/Windows | Manual ngrok URLs, complex shell patterns | ❌ Deprecated |
+| **Phase 2** | June 10-14 | WSL Migration | Static ngrok domain, simplified processes | ✅ Active |
+| **Phase 3** | June 14+ | WSL Native | Risk indicators, SSH automation, auto-git-push | ✅ Current |
+
+**Current Philosophy:** Development optimized for fast iteration, Production optimized for stability and safety.
+
 ### Legacy PowerShell Development (Deprecated)
 - `npm start` - Start the bot with app.js
 - `npm run dev` - Start with nodemon for auto-restart during development
