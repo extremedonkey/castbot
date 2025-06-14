@@ -97,10 +97,22 @@ fi
 # Start the app with node in background (pm2 has WSL networking issues)
 echo "Starting CastBot with node..."
 pkill -f "node app.js" 2>/dev/null || true  # Kill any existing instances
+
+# Ensure we're in the right directory
+cd "$(dirname "$0")"
+
 nohup node app.js > /tmp/castbot-dev.log 2>&1 &
 APP_PID=$!
 echo $APP_PID > /tmp/castbot-dev.pid
 echo "✅ CastBot started with PID $APP_PID"
+
+# Wait a moment and verify it's running
+sleep 3
+if kill -0 $APP_PID 2>/dev/null; then
+    echo "✅ Process confirmed running"
+else
+    echo "❌ Process failed to start - check logs: tail /tmp/castbot-dev.log"
+fi
 
 echo ""
 echo "═══════════════════════════════════════════════════════════════════"
