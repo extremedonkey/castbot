@@ -5460,6 +5460,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           await savePlayerData(playerData);
         }
 
+        // Reload the target player to get updated roles after Discord API changes
+        await targetPlayer.fetch();
+        
         // Rebuild interface maintaining active state and updated select values
         // Create user select menu (preserves current selection)
         const userSelectRow = new ActionRowBuilder()
@@ -8440,22 +8443,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           updatePlayer(guildId, targetPlayerId, { age: age.toString() });
 
           return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `✅ Set ${targetMember.displayName}'s age to ${age}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
+            type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
           });
         } else {
           // Clear age if empty input
           updatePlayer(guildId, targetPlayerId, { age: undefined });
 
           return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `✅ Cleared age for ${targetMember.displayName}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
+            type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
           });
         }
 
