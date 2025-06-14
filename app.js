@@ -5203,45 +5203,101 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         if (actionType === 'set_pronouns') {
           // Create pronoun role select with current values
-          const currentPronouns = [];
-          if (playerData[guildId]?.pronounRoleIDs) {
-            for (const roleId of playerData[guildId].pronounRoleIDs) {
-              if (selectedPlayer.roles.cache.has(roleId)) {
-                currentPronouns.push(roleId);
+          const pronounRoleIDs = playerData[guildId]?.pronounRoleIDs || [];
+          if (pronounRoleIDs.length === 0) {
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                content: 'No pronoun roles configured. Use the production menu to add some first.',
+                flags: InteractionResponseFlags.EPHEMERAL
               }
-            }
+            });
           }
+          
+          // Get role objects and sort alphabetically
+          const guild = await client.guilds.fetch(guildId);
+          const roles = await Promise.all(
+            pronounRoleIDs.map(id => guild.roles.fetch(id))
+          );
+          const validRoles = roles
+            .filter(role => role) // Remove any null roles
+            .sort((a, b) => a.name.localeCompare(b.name));
+          
+          // Get current pronouns for defaults
+          const currentPronouns = selectedPlayer.roles.cache
+            .filter(role => pronounRoleIDs.includes(role.id))
+            .map(role => role.id);
           
           integratedSelectRow = new ActionRowBuilder()
             .addComponents(
-              new RoleSelectMenuBuilder()
+              new StringSelectMenuBuilder()
                 .setCustomId(`admin_integrated_pronouns_${playerId}`)
                 .setPlaceholder(currentPronouns.length > 0 ? 'Update pronouns..' : 'Select pronouns..')
                 .setMinValues(0)
-                .setMaxValues(playerData[guildId]?.pronounRoleIDs?.length || 10)
-                .setDefaultRoles(currentPronouns)
+                .setMaxValues(Math.min(validRoles.length, 3))
+                .addOptions(
+                  validRoles.map(role => ({
+                    label: role.name,
+                    value: role.id,
+                    emoji: '💜',
+                    default: currentPronouns.includes(role.id)
+                  }))
+                )
             );
             
         } else if (actionType === 'set_timezone') {
           // Create timezone role select with current value
-          const currentTimezone = [];
-          if (playerData[guildId]?.timezones) {
-            for (const [roleId] of Object.entries(playerData[guildId].timezones)) {
-              if (selectedPlayer.roles.cache.has(roleId)) {
-                currentTimezone.push(roleId);
-                break; // Only one timezone allowed
+          const timezoneRoles = playerData[guildId]?.timezones || {};
+          const timezoneEntries = Object.entries(timezoneRoles);
+          
+          if (timezoneEntries.length === 0) {
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                content: 'No timezone roles configured. Use the production menu to add some first.',
+                flags: InteractionResponseFlags.EPHEMERAL
               }
-            }
+            });
           }
+          
+          // Get role objects and sort by UTC offset
+          const guild = await client.guilds.fetch(guildId);
+          const rolePromises = timezoneEntries.map(async ([roleId, data]) => {
+            try {
+              const role = await guild.roles.fetch(roleId);
+              return role ? { role, offset: data.offset } : null;
+            } catch (error) {
+              console.error(`Failed to fetch timezone role ${roleId}:`, error);
+              return null;
+            }
+          });
+          
+          const roleData = (await Promise.all(rolePromises))
+            .filter(item => item !== null)
+            .sort((a, b) => a.offset - b.offset);
+          
+          // Get current timezone for defaults
+          const timezoneRoleIds = roleData.map(item => item.role.id);
+          const currentTimezone = selectedPlayer.roles.cache
+            .filter(role => timezoneRoleIds.includes(role.id))
+            .map(role => role.id);
           
           integratedSelectRow = new ActionRowBuilder()
             .addComponents(
-              new RoleSelectMenuBuilder()
+              new StringSelectMenuBuilder()
                 .setCustomId(`admin_integrated_timezone_${playerId}`)
                 .setPlaceholder(currentTimezone.length > 0 ? 'Update timezone..' : 'Select timezone..')
                 .setMinValues(0)
                 .setMaxValues(1)
-                .setDefaultRoles(currentTimezone)
+                .addOptions(
+                  roleData.map(({ role, offset }) => ({
+                    label: role.name,
+                    value: role.id,
+                    description: `UTC${offset >= 0 ? '+' : ''}${offset}`,
+                    emoji: '🌍',
+                    default: currentTimezone.includes(role.id)
+                  }))
+                )
             );
             
         } else if (actionType === 'manage_vanity') {
@@ -5404,11 +5460,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           await savePlayerData(playerData);
         }
 
-        // Return updated interface with the same select active
+        // Silently update interface without success message - return to main player management
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: `✅ Updated ${actionType} for ${targetPlayer.displayName}`,
+            content: `## Player Management | ${targetPlayer.displayName}\n\n✅ ${actionType.charAt(0).toUpperCase() + actionType.slice(1)} updated successfully.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -5442,10 +5498,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         playerData[guildId].players[playerId].age = parseInt(age);
         await savePlayerData(playerData);
 
+        // Silently complete age update without additional interface
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: `✅ Updated age for ${targetPlayer.displayName}`,
+            content: `## Player Management | ${targetPlayer.displayName}\n\n✅ Age updated successfully.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -5824,8 +5881,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
 
         // Get current vanity roles
-        const playerData = getPlayer(guildId, targetPlayerId);
-        const currentVanityRoles = playerData?.vanityRoles || [];
+        const playerData = await loadPlayerData();
+        const currentVanityRoles = playerData[guildId]?.players?.[targetPlayerId]?.vanityRoles || [];
 
         // Create role select menu
         const roleSelect = new RoleSelectMenuBuilder()
@@ -6997,12 +7054,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const managementRow1 = new ActionRowBuilder()
           .addComponents(
             new ButtonBuilder()
-              .setCustomId(buttonsEnabled ? `admin_manage_vanity_${selectedPlayerId}` : 'admin_manage_vanity_pending')
-              .setLabel('Vanity Roles')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🕵️')
-              .setDisabled(!buttonsEnabled),
-            new ButtonBuilder()
               .setCustomId(buttonsEnabled ? `admin_set_pronouns_${selectedPlayerId}` : 'admin_set_pronouns_pending')
               .setLabel('Pronouns')
               .setStyle(ButtonStyle.Secondary)
@@ -7019,11 +7070,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               .setLabel('Age')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('🎂')
+              .setDisabled(!buttonsEnabled),
+            new ButtonBuilder()
+              .setCustomId(buttonsEnabled ? `admin_manage_vanity_${selectedPlayerId}` : 'admin_manage_vanity_pending')
+              .setLabel('Vanity Roles')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🕵️')
               .setDisabled(!buttonsEnabled)
           );
 
         // Create integrated role select (enabled/disabled based on selection)
-        const selectPlaceholder = buttonsEnabled ? 'Select player action..' : 'Select player first..';
+        const selectPlaceholder = buttonsEnabled ? 'Click a button..' : 'Select player first..';
         const integratedSelectRow = new ActionRowBuilder()
           .addComponents(
             new RoleSelectMenuBuilder()
