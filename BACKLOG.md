@@ -19,6 +19,31 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - Includes rollback capability if deployment fails
 - Maintains current safety checks and dry-run functionality
 
+### Setup GitHub Authentication for WSL Development Environment
+**Description:** Configure proper GitHub authentication for WSL environment to enable automated git push operations
+**Acceptance Criteria:**
+- Set up Personal Access Token authentication for GitHub in WSL
+- `./dev-restart.sh` can push changes without manual authentication prompts
+- Follow GitHub's recommended authentication methods (no username/password)
+- Test automated git operations work seamlessly
+
+### Consider PM2 WSL Networking Investigation
+**Description:** Investigate why pm2 has networking binding issues in WSL while direct node works fine
+**Acceptance Criteria:**
+- Research pm2 WSL networking limitations
+- Determine if pm2 can be configured to work properly in WSL
+- If fixable, update development scripts to use pm2 for consistency with production
+- If not fixable, document the limitation and keep current node-based approach
+
+### Evaluate Development Script Consolidation
+**Description:** Consider merging multiple development scripts into a single unified script or tool
+**Current Scripts:** dev-start.sh, dev-restart.sh, dev-status.sh, dev-stop.sh
+**Acceptance Criteria:**
+- Analyze pros/cons of script consolidation vs. separate focused scripts
+- Consider user experience and simplicity
+- If consolidation beneficial, design unified interface (e.g., `./dev.sh start|restart|status|stop`)
+- Maintain backward compatibility during transition
+
 ## HIGH Priority
 
 ### Remove Legacy /castlist2 Command

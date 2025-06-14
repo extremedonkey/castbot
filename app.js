@@ -377,7 +377,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   const containerComponents = [
     {
       type: 10, // Text Display component
-      content: `## CastBot | Prod Menu`
+      content: `## CastBot | Production Menu`
     },
     {
       type: 14 // Separator after title

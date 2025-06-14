@@ -146,11 +146,16 @@ CastBot has undergone a major optimization initiative that has been fully comple
 **Claude Code Integration:**
 ```bash
 # Commands for Claude to use during development:
-pm2 restart castbot-dev    # Deploy changes after Claude modifications
-pm2 logs castbot-dev       # Monitor application logs  
+./dev-restart.sh           # Deploy changes after Claude modifications (ALWAYS USE THIS)
+tail -f /tmp/castbot-dev.log # Monitor application logs  
 ./dev-status.sh            # Check complete environment status
-./dev-restart.sh           # Full restart with git operations (Claude can use this)
 ```
+
+**🚨 IMPORTANT: Claude Development Protocol:**
+- **ALWAYS restart the development service after making ANY code changes**
+- **Use `./dev-restart.sh` to deploy changes immediately**  
+- **Inform the user that dev has been restarted and they can test changes**
+- **This ensures the user can immediately test changes without manual intervention**
 
 **Benefits of WSL Setup:**
 - ✅ **Stable ngrok URL** - No more Discord console updates every restart
