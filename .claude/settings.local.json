@@ -155,7 +155,8 @@
       "Bash(git config:*)",
       "Bash(./dev-status.sh:*)",
       "Bash(./dev-restart.sh:*)",
-      "Bash(ngrok config:*)"
+      "Bash(ngrok config:*)",
+      "Bash(true)"
     ],
     "deny": []
   }

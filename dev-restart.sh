@@ -12,7 +12,7 @@ echo "=== CastBot Dev Restart ==="
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 COMMIT_MESSAGE="${1:-Dev checkpoint - $(date '+%H:%M:%S')}"
 
-# Git operations (safety net)
+# Git operations (safety net) - non-blocking
 echo "🔄 Handling git operations..."
 git add .
 
@@ -21,12 +21,13 @@ if ! git diff --staged --quiet; then
     echo "📝 Committing: $COMMIT_MESSAGE"
     git commit -m "$COMMIT_MESSAGE"
     
-    echo "🚀 Pushing to $CURRENT_BRANCH..."
-    if ! git push origin $CURRENT_BRANCH 2>/dev/null; then
-        echo "Setting upstream and pushing..."
-        git push --set-upstream origin $CURRENT_BRANCH
+    echo "🚀 Attempting to push to $CURRENT_BRANCH..."
+    if git push origin $CURRENT_BRANCH 2>/dev/null; then
+        echo "✅ Changes pushed successfully"
+    else
+        echo "⚠️ Push failed (auth needed) - changes committed locally"
+        echo "💡 Run 'git push' manually when convenient"
     fi
-    echo "✅ Changes safely committed and pushed"
 else
     echo "📝 No changes to commit"
 fi
@@ -35,10 +36,20 @@ fi
 echo "🔄 Restarting CastBot..."
 pkill -f "node app.js" 2>/dev/null || true
 sleep 2
+
+# Start in background
+cd "$(dirname "$0")"
 nohup node app.js > /tmp/castbot-dev.log 2>&1 &
 APP_PID=$!
 echo $APP_PID > /tmp/castbot-dev.pid
-echo "✅ CastBot restarted with PID $APP_PID"
+
+# Quick verification
+sleep 3
+if kill -0 $APP_PID 2>/dev/null; then
+    echo "✅ CastBot restarted successfully (PID $APP_PID)"
+else
+    echo "❌ App failed to start - check logs: tail /tmp/castbot-dev.log"
+fi
 
 # Check static domain status
 echo ""
