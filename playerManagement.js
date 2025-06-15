@@ -6,10 +6,12 @@ import {
   UserSelectMenuBuilder,
   ModalBuilder,
   TextInputBuilder,
-  TextInputStyle,
+  TextInputStyle
+} from 'discord.js';
+import {
   InteractionResponseType,
   InteractionResponseFlags
-} from 'discord.js';
+} from 'discord-interactions';
 import { createPlayerCard } from './castlistV2.js';
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
 
