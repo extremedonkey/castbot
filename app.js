@@ -122,61 +122,110 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
       .filter(role => pronounRoleIDs.includes(role.id))
       .map(role => role.name)
       .sort();
-    pronounsText = pronounRoles.length > 0 ? pronounRoles.join(', ') : 'None';
-  } else {
-    pronounsText = 'None';
+    pronounsText = pronounRoles.length > 0 ? pronounRoles.join(', ') : '';
   }
   
   // Get age
-  const age = storedPlayer.age ? storedPlayer.age.toString() : 'Not set';
+  const age = storedPlayer.age ? storedPlayer.age.toString() : '';
   
-  // Get timezone from roles  
-  let timezoneText = 'None';
+  // Get timezone from roles and calculate current time
+  let timezoneText = '';
+  let formattedTime = '';
   const timezoneRoles = playerData[guildId]?.timezones || {};
   if (Object.keys(timezoneRoles).length > 0) {
     for (const [roleId, data] of Object.entries(timezoneRoles)) {
       if (player.roles.cache.has(roleId)) {
         const role = player.roles.cache.get(roleId);
-        timezoneText = `${role.name} (UTC${data.offset >= 0 ? '+' : ''}${data.offset})`;
+        timezoneText = role.name;
+        
+        // Calculate current time in player's timezone
+        const offset = parseFloat(data.offset);
+        const utcTime = new Date();
+        const localTime = new Date(utcTime.getTime() + (offset * 60 * 60 * 1000));
+        const timeString = localTime.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit', 
+          hour12: true 
+        });
+        formattedTime = `🕒 ${timeString}`;
         break;
       }
     }
   }
   
-  // Get vanity roles
-  let vanityText = '';
+  // Get vanity roles with Discord mentions
+  let vanityRolesInfo = '';
   const vanityRoles = storedPlayer.vanityRoles || [];
   if (vanityRoles.length > 0) {
-    const vanityRoleNames = vanityRoles
-      .map(roleId => {
+    const validVanityRoles = [];
+    for (const roleId of vanityRoles) {
+      try {
         const role = player.roles.cache.get(roleId);
-        return role ? role.name : null;
-      })
-      .filter(name => name !== null)
-      .sort();
-    vanityText = vanityRoleNames.length > 0 ? vanityRoleNames.join(', ') : '';
+        if (role) {
+          validVanityRoles.push(`<@&${roleId}>`);
+        }
+      } catch (error) {
+        // Silently skip invalid roles
+      }
+    }
+    
+    if (validVanityRoles.length > 0) {
+      vanityRolesInfo = validVanityRoles.join(' ');
+    }
   }
   
-  // Build content lines
-  const contentLines = [
-    `**${displayName}**`,
-    `**Pronouns:** ${pronounsText} • **Age:** ${age} • **Timezone:** ${timezoneText}`
-  ];
+  // Build content similar to castlist2 format
+  let nameWithEmoji = `**${displayName}**`;
   
-  if (vanityText) {
-    contentLines.push(`**Roles:** ${vanityText}`);
+  // Basic info line (pronouns and age)
+  let basicInfo = '';
+  const infoParts = [];
+  if (pronounsText) infoParts.push(pronounsText);
+  if (age) infoParts.push(`${age} years old`);
+  if (infoParts.length > 0) {
+    basicInfo = infoParts.join(' • ');
   }
   
-  // Construct avatar URL manually
+  // Time info line
+  let timeInfo = '';
+  if (timezoneText && formattedTime) {
+    timeInfo = `${timezoneText} ${formattedTime}`;
+  }
+  
+  // Combine all parts, only adding newlines where there's content
+  let allInfo = nameWithEmoji;
+  if (basicInfo) {
+    allInfo += `\n${basicInfo}`;
+  }
+  if (timeInfo) {
+    allInfo += `\n${timeInfo}`;
+  }
+  if (vanityRolesInfo) {
+    allInfo += `\n${vanityRolesInfo}`;
+  }
+
+  // Construct avatar URL manually for webhook context
   const avatarHash = player.user.avatar;
   const userId = player.user.id;
   const avatarUrl = avatarHash 
     ? `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.png?size=128`
-    : `https://cdn.discordapp.com/embed/avatars/${userId % 5}.png`; // Default avatar
-  
+    : `https://cdn.discordapp.com/embed/avatars/${userId % 5}.png`;
+
   return {
-    type: 10, // Text Display component for now (simplified)
-    content: `**${displayName}** (${avatarUrl})\n${contentLines.slice(1).join('\n')}`
+    type: 9, // Section component (same as castlist2)
+    components: [
+      {
+        type: 10, // Text Display - single component with all info
+        content: allInfo
+      }
+    ],
+    accessory: {
+      type: 11, // Thumbnail
+      media: {
+        url: avatarUrl
+      },
+      description: `${displayName}'s avatar`
+    }
   };
 }
 
