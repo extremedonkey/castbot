@@ -333,7 +333,7 @@ npm run status-remote               # Check remote status [USE WITH CAUTION]
 - Always test with `npm run deploy-remote-dry-run` first
 
 **Manual Deployment Process:**
-1. Stop bot: `pm2 stop castbot-pm`
+~~1. Stop bot: `pm2 stop castbot-pm`~~ Removed: approach below allows us to carefully restart as required. As soon as the restart happens, the bot will load up the newly deployed code, minimising outages for users (especially in case of issues)
 2. Deploy commands: `npm run deploy-commands`
 3. Restart: `pm2 restart castbot-pm`
 4. Monitor: `pm2 logs castbot-pm`
@@ -345,6 +345,7 @@ The bot includes migration support for multi-castlist functionality. When updati
 ## Available Commands
 
 ### Admin Commands (Require Manage Roles/Channels/Server)
+NOTE: all of the below has been replaced with /menu.
 - `add_tribe` - Add tribes to castlists with conditional emoji creation (controlled by `show_player_emojis` parameter)
 - `clear_tribe` - Remove tribes from castlists with emoji cleanup  
 - `setup_castbot` - Automated role generation for pronouns and timezones
@@ -356,15 +357,12 @@ The bot includes migration support for multi-castlist functionality. When updati
 - `react_timezones` - Create reaction-based timezone selection
 - `react_pronouns` - Create reaction-based pronoun selection
 - `set_players_age` - Bulk age assignment for multiple players
-- `apply_button` - Create application buttons for prospective player recruitment
+- `apply_button` - Create application buttons for prospective player recruitment~~
 
 ### Player Commands (No special permissions)
-- `castlist` - Display dynamic castlist (supports named castlists)
-- `castlist2` - Display dynamic castlist with Components V2 (modern layout with player cards)
+- `castlist` - Display dynamic castlist with Components V2 (modern layout with player cards)
 - `player_set_age` - Individual player age assignment
-- `player_set_pronouns` - Individual player pronoun assignment
-- `player_set_timezone` - Individual player timezone assignment
-- `getting_started` - Information command
+- /menu: Allows players to set age / pronouns / timezone and possible future features.
 
 ## Error Handling Architecture
 

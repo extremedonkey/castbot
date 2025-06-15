@@ -542,40 +542,90 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
       const pronounRoleIds = await getGuildPronouns(guildId);
       if (!pronounRoleIds || pronounRoleIds.length === 0) return null;
 
+      // Get role objects and filter by configured pronoun roles
+      const guild = await client.guilds.fetch(guildId);
+      const pronounRoles = [];
+      for (const roleId of pronounRoleIds) {
+        try {
+          const role = await guild.roles.fetch(roleId);
+          if (role) pronounRoles.push(role);
+        } catch (error) {
+          console.warn(`Could not fetch pronoun role ${roleId}:`, error.message);
+        }
+      }
+      
+      if (pronounRoles.length === 0) return null;
+      
       const currentPronouns = targetMember.roles.cache
         .filter(role => pronounRoleIds.includes(role.id))
         .map(role => role.id);
 
+      const customId = `${prefix}_integrated_pronouns${userIdPart}`;
+      console.log('🔍 DEBUG: Creating pronouns select with custom_id:', customId);
+
       return {
         type: 1, // ActionRow
         components: [{
-          type: 6, // Role Select
-          custom_id: `${prefix}_integrated_pronouns${userIdPart}`,
+          type: 3, // String Select (not Role Select)
+          custom_id: customId,
           placeholder: 'Select pronouns',
           min_values: 0,
-          max_values: pronounRoleIds.length,
-          default_values: currentPronouns.map(id => ({ id, type: 'role' }))
+          max_values: Math.min(pronounRoles.length, 3),
+          options: pronounRoles.sort((a, b) => a.name.localeCompare(b.name)).map(role => ({
+            label: role.name,
+            value: role.id,
+            emoji: { name: '💜' },
+            default: currentPronouns.includes(role.id)
+          }))
         }]
       };
     }
 
     case 'timezone': {
       const timezones = await getGuildTimezones(guildId);
-      const timezoneRoleIds = Object.keys(timezones);
-      if (timezoneRoleIds.length === 0) return null;
+      const timezoneEntries = Object.entries(timezones || {});
+      if (timezoneEntries.length === 0) return null;
 
+      // Get role objects and sort by UTC offset
+      const guild = await client.guilds.fetch(guildId);
+      const timezoneRoles = [];
+      
+      for (const [roleId, data] of timezoneEntries) {
+        try {
+          const role = await guild.roles.fetch(roleId);
+          if (role) {
+            timezoneRoles.push({ role, offset: data.offset });
+          }
+        } catch (error) {
+          console.warn(`Could not fetch timezone role ${roleId}:`, error.message);
+        }
+      }
+      
+      if (timezoneRoles.length === 0) return null;
+      
+      timezoneRoles.sort((a, b) => a.offset - b.offset);
+      
       const currentTimezone = targetMember.roles.cache
-        .find(role => timezoneRoleIds.includes(role.id));
+        .find(role => Object.keys(timezones).includes(role.id));
+
+      const customId = `${prefix}_integrated_timezone${userIdPart}`;
+      console.log('🔍 DEBUG: Creating timezone select with custom_id:', customId);
 
       return {
         type: 1, // ActionRow
         components: [{
-          type: 6, // Role Select
-          custom_id: `${prefix}_integrated_timezone${userIdPart}`,
+          type: 3, // String Select (not Role Select)
+          custom_id: customId,
           placeholder: 'Select timezone',
           min_values: 0,
           max_values: 1,
-          default_values: currentTimezone ? [{ id: currentTimezone.id, type: 'role' }] : []
+          options: timezoneRoles.map(({ role, offset }) => ({
+            label: role.name,
+            value: role.id,
+            description: `UTC${offset >= 0 ? '+' : ''}${offset}`,
+            emoji: { name: '🌍' },
+            default: currentTimezone?.id === role.id
+          }))
         }]
       };
     }
@@ -604,11 +654,14 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
       // Get current age
       const currentAge = playerData[guildId]?.players?.[targetMember.id]?.age;
 
+      const customId = `${prefix}_integrated_age${userIdPart}`;
+      console.log('🔍 DEBUG: Creating age select with custom_id:', customId);
+
       return {
         type: 1, // ActionRow
         components: [{
           type: 3, // String Select
-          custom_id: `${prefix}_integrated_age${userIdPart}`,
+          custom_id: customId,
           placeholder: currentAge ? `Current age: ${currentAge}` : 'Select age',
           min_values: 0,
           max_values: 1,

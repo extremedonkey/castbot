@@ -5980,6 +5980,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                custom_id.startsWith('admin_integrated_pronouns_') || custom_id.startsWith('player_integrated_pronouns_') ||
                custom_id.startsWith('admin_integrated_timezone_') || custom_id.startsWith('player_integrated_timezone_') ||
                custom_id.startsWith('admin_integrated_vanity_')) {
+      // 🔍 DEBUG: Log which integrated handler is being used
+      console.log('🔍 DEBUG: Integrated select handler triggered for custom_id:', custom_id);
       // Handle ALL integrated select changes with auto-refresh
       try {
         const guildId = req.body.guild_id;
@@ -8045,7 +8047,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       }
     } else {
       // Fallback for unhandled button interactions
-      console.log('Unhandled MESSAGE_COMPONENT custom_id:', custom_id);
+      console.log('🔍 DEBUG: Unhandled MESSAGE_COMPONENT custom_id:', custom_id);
+      console.log('🔍 DEBUG: Interaction data:', JSON.stringify(data, null, 2));
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
