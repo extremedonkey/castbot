@@ -63,6 +63,16 @@ import {
   createCastlistV2Layout,
   createPlayerCard
 } from './castlistV2.js';
+import {
+  PlayerManagementMode,
+  PlayerButtonType,
+  createPlayerManagementUI,
+  createPlayerDisplaySection,
+  createManagementButtons,
+  createAgeModal,
+  handlePlayerButtonClick,
+  handlePlayerModalSubmit
+} from './playerManagement.js';
 import fs from 'fs';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
@@ -97,83 +107,7 @@ function hasAdminPermissions(member) {
   return (permissions & BigInt(adminPermissions)) !== 0n;
 }
 
-/**
- * Create a player display section showing castlist-style player information
- * @param {Object} player - Discord member object
- * @param {Object} playerData - Guild player data
- * @param {string} guildId - Discord guild ID
- * @returns {Object} Player display section component
- */
-async function createPlayerDisplaySection(player, playerData, guildId) {
-  if (!player) {
-    return null;
-  }
-
-  // Prepare parameters exactly like castlistV2.js lines 287-315
-  const pronounRoleIds = playerData[guildId]?.pronounRoleIDs || [];
-  const timezones = playerData[guildId]?.timezones || {};
-  
-  // Get player pronouns (hide if none) - exact castlist2 logic
-  const memberPronouns = player.roles.cache
-    .filter(role => pronounRoleIds.includes(role.id))
-    .map(role => role.name)
-    .join(', ') || '';
-    
-  // Get player timezone role name and calculate current time - exact castlist2 logic
-  let memberTimezone = '';
-  let formattedTime = '';
-  const timezoneRole = player.roles.cache.find(role => timezones[role.id]);
-  
-  if (timezoneRole) {
-    memberTimezone = timezoneRole.name; // Show role name ONLY (no UTC offset)
-    
-    // Calculate current time in their timezone - exact castlist2 logic
-    try {
-      const offset = timezones[timezoneRole.id].offset;
-      const now = new Date();
-      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-      const targetTime = new Date(utcTime + (offset * 3600000));
-      formattedTime = targetTime.toLocaleTimeString('en-US', {
-        hour12: true,
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    } catch (error) {
-      formattedTime = '';
-    }
-  }
-  
-  // Get player data from storage
-  const storedPlayerData = playerData[guildId]?.players?.[player.id] || {};
-  
-  // Call the actual castlistV2 createPlayerCard function
-  const playerCard = createPlayerCard(
-    player,              // member
-    storedPlayerData,    // playerData  
-    memberPronouns,      // pronouns
-    memberTimezone,      // timezone (role name only)
-    formattedTime,       // formattedTime (correctly calculated)
-    false                // showEmoji (false for player management)
-  );
-  
-  // Fix avatar URL for webhook context (createPlayerCard uses member.user.displayAvatarURL which doesn't work in webhook)
-  const avatarHash = player.user.avatar;
-  const userId = player.user.id;
-  const avatarUrl = avatarHash 
-    ? `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.png?size=128`
-    : `https://cdn.discordapp.com/embed/avatars/${userId % 5}.png`;
-  
-  // Return the player card with corrected avatar URL
-  return {
-    ...playerCard,
-    accessory: {
-      ...playerCard.accessory,
-      media: {
-        url: avatarUrl
-      }
-    }
-  };
-}
+// createPlayerDisplaySection has been moved to playerManagement.js module
 
 /**
  * Create reusable CastBot menu components
@@ -246,19 +180,19 @@ async function createCastBotMenu(playerData, guildId, isEphemeral = false) {
   
   const castlistRow = new ActionRowBuilder().addComponents(buttons);
   
-  // Add second row with player action buttons
+  // Add second row with player action buttons (using modern emojis)
   const actionRow = new ActionRowBuilder()
     .addComponents(
       new ButtonBuilder()
         .setCustomId('player_set_pronouns')
         .setLabel('Set Your Pronouns')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji('🏷️'),
+        .setEmoji('💜'),
       new ButtonBuilder()
         .setCustomId('player_set_timezone')
         .setLabel('Set Your Timezone')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji('🕐'),
+        .setEmoji('🌍'),
       new ButtonBuilder()
         .setCustomId('player_set_age')
         .setLabel('Set Your Age')
@@ -3570,7 +3504,7 @@ To fix this:
         });
       }
     } else if (custom_id === 'admin_manage_player') {
-      // Admin player management - integrated UI with user select and disabled buttons
+      // Admin player management - use new modular system
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
@@ -3578,9 +3512,7 @@ To fix this:
         
         // Check admin permissions
         const member = await guild.members.fetch(req.body.member.user.id);
-        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+        if (!hasAdminPermissions(member)) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -3590,97 +3522,29 @@ To fix this:
           });
         }
 
-        // Create user select menu
-        const userSelectRow = new ActionRowBuilder()
-          .addComponents(
-            new UserSelectMenuBuilder()
-              .setCustomId('admin_player_select_update')
-              .setPlaceholder('Select user to manage..')
-              .setMinValues(0)
-              .setMaxValues(1)
-          );
+        // Load player data
+        const playerData = await loadPlayerData();
 
-        // Create management buttons (initially disabled) - reordered with simplified labels
-        const managementRow1 = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('admin_set_pronouns_pending')
-              .setLabel('Pronouns')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('💜')
-              .setDisabled(true),
-            new ButtonBuilder()
-              .setCustomId('admin_set_timezone_pending')
-              .setLabel('Timezone')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🌍')
-              .setDisabled(true),
-            new ButtonBuilder()
-              .setCustomId('admin_set_age_pending')
-              .setLabel('Age')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🎂')
-              .setDisabled(true),
-            new ButtonBuilder()
-              .setCustomId('admin_manage_vanity_pending')
-              .setLabel('Vanity Roles')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🕵️')
-              .setDisabled(true)
-          );
+        // Create player management UI using the new module
+        const managementUI = await createPlayerManagementUI({
+          mode: PlayerManagementMode.ADMIN,
+          targetMember: null, // No member selected initially
+          playerData,
+          guildId,
+          showUserSelect: true,
+          showVanityRoles: true,
+          title: `Player Management | ${guild.name}`,
+          bottomLeftButton: {
+            label: '⬅️ Menu',
+            customId: 'prod_menu_back',
+            style: ButtonStyle.Secondary
+          }
+        });
 
-        // Create integrated role select (initially disabled)
-        const integratedSelectRow = new ActionRowBuilder()
-          .addComponents(
-            new RoleSelectMenuBuilder()
-              .setCustomId('admin_integrated_select_pending')
-              .setPlaceholder('Select player first..')
-              .setMinValues(0)
-              .setMaxValues(1)
-              .setDisabled(true)
-          );
+        // Remove ephemeral flag for production menu context
+        managementUI.flags = (1 << 15); // Only IS_COMPONENTS_V2
 
-        // Create Components V2 Container
-        const playerManagementComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## Player Management | ${guild.name}`
-          },
-          {
-            type: 14 // Separator
-          },
-          userSelectRow.toJSON(),
-          {
-            type: 14 // Separator
-          },
-          managementRow1.toJSON(),
-          {
-            type: 14 // Separator
-          },
-          integratedSelectRow.toJSON()
-        ];
-        
-        // Always add Back to Main Menu button
-        const backRow = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('prod_menu_back')
-              .setLabel('Menu')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('⬅️')
-          );
-        playerManagementComponents.push(
-          { type: 14 }, // Separator
-          backRow.toJSON()
-        );
-        
-        const playerManagementContainer = {
-          type: 17, // Container component
-          accent_color: 0x3498DB, // Blue accent color for player management
-          components: playerManagementComponents
-        };
-
-        return await sendProductionSubmenuResponse(res, channelId, [playerManagementContainer]);
+        return await sendProductionSubmenuResponse(res, channelId, managementUI.components);
         
       } catch (error) {
         console.error('Error handling admin_manage_player button:', error);
@@ -4578,6 +4442,8 @@ Your server is now ready for Tycoons gameplay!`;
       // Special player menu button - only available to specific user ID
       try {
         const userId = req.body.member.user.id;
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
         
         // Security check - only allow specific Discord ID
         if (userId !== '391415444084490240') {
@@ -4590,22 +4456,33 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
 
-        // Load player data and show the regular player menu
+        // Load player data and current member
         console.log('🔍 DEBUG: Player Menu button clicked, loading player interface...');
-        const guildId = req.body.guild_id;
         const playerData = await loadPlayerData();
+        const member = await guild.members.fetch(userId);
         
-        // Use the existing createCastBotMenu function (same as /menu for regular users)
-        const menuResponse = await createCastBotMenu(playerData, guildId, true);
-        console.log('🔍 DEBUG: Menu response created, sending...');
+        // Create player management UI using the new module
+        const managementUI = await createPlayerManagementUI({
+          mode: PlayerManagementMode.PLAYER,
+          targetMember: member,
+          playerData,
+          guildId,
+          userId,
+          showUserSelect: false,
+          showVanityRoles: false,
+          title: 'CastBot | Player Menu',
+          bottomLeftButton: {
+            label: '📋 Show Castlist',
+            customId: 'show_castlist2_default',
+            style: ButtonStyle.Primary
+          }
+        });
+        
+        console.log('🔍 DEBUG: Player management UI created, sending...');
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: menuResponse.content,
-            components: menuResponse.components,
-            flags: menuResponse.flags
-          }
+          data: managementUI
         });
         
       } catch (error) {
@@ -5274,16 +5151,19 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_manage_vanity_') || custom_id.startsWith('admin_set_age_')) {
-      // Handle integrated player management actions - activate appropriate select
+    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_')) {
+      // Use new modular handler for admin buttons
+      const playerData = await loadPlayerData();
+      return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
+    } else if (custom_id.startsWith('admin_manage_vanity_')) {
+      // Vanity roles still handled separately for now
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
         
-        // Extract player ID and action type
+        // Extract player ID
         const parts = custom_id.split('_');
         const playerId = parts[parts.length - 1];
-        const actionType = parts.slice(1, -1).join('_'); // e.g., 'set_pronouns', 'manage_vanity'
         
         // Get selected player info
         const selectedPlayer = await guild.members.fetch(playerId);
@@ -6233,231 +6113,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
     } else if (custom_id === 'player_set_pronouns') {
-      // Show select menu for pronoun roles
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-
-        // Get pronoun roles from storage
-        const pronounRoleIDs = await getGuildPronouns(guildId);
-        if (!pronounRoleIDs?.length) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'No pronoun roles found. Ask an admin to add some using /pronouns_add first!',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get role objects and sort alphabetically
-        const roles = await Promise.all(
-          pronounRoleIDs.map(id => guild.roles.fetch(id))
-        );
-        const validRoles = roles
-          .filter(role => role) // Remove any null roles
-          .sort((a, b) => a.name.localeCompare(b.name));
-
-        if (validRoles.length === 0) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'No valid pronoun roles found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        if (validRoles.length > 25) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'Too many pronoun roles (maximum 25 supported)',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get user's current pronoun roles for pre-selection
-        const userId = req.body.member.user.id;
-        const member = await guild.members.fetch(userId);
-        const userPronounRoles = member.roles.cache
-          .filter(role => pronounRoleIDs.includes(role.id))
-          .map(role => role.id);
-
-        // Create select menu with pronoun roles
-        const pronounSelect = new StringSelectMenuBuilder()
-          .setCustomId('select_pronouns')
-          .setPlaceholder(userPronounRoles.length > 0 ? 
-            `Current: ${member.roles.cache.filter(r => pronounRoleIDs.includes(r.id)).map(r => r.name).join(', ')}` : 
-            'Choose your pronouns')
-          .setMinValues(0)
-          .setMaxValues(Math.min(validRoles.length, 3)) // Allow up to 3 pronoun roles
-          .addOptions(
-            validRoles.map(role => ({
-              label: role.name,
-              value: role.id,
-              emoji: '💜',
-              default: userPronounRoles.includes(role.id)
-            }))
-          );
-
-        const selectRow = new ActionRowBuilder().addComponents(pronounSelect);
-
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Select your pronoun roles:',
-            components: [selectRow],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-
-      } catch (error) {
-        console.error('Error handling player_set_pronouns button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error creating pronoun selection',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Use new modular handler
+      const playerData = await loadPlayerData();
+      return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
     } else if (custom_id === 'player_set_timezone') {
-      // Show select menu for timezone roles
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member.user.id;
-        const guild = await client.guilds.fetch(guildId);
-        const member = await guild.members.fetch(userId);
-
-        // Get timezone roles from storage
-        const timezones = await getGuildTimezones(guildId);
-        const timezoneEntries = Object.entries(timezones);
-        
-        if (!timezoneEntries?.length) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'No timezone roles found. Ask an admin to add some using /timezones_add first!',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get role objects, sort by offset, and validate existence
-        const timezoneRoles = await Promise.all(
-          timezoneEntries.map(async ([roleId, data]) => {
-            try {
-              const role = await guild.roles.fetch(roleId);
-              return role ? { role, offset: data.offset } : null;
-            } catch (error) {
-              console.warn(`Could not fetch timezone role ${roleId}:`, error);
-              return null;
-            }
-          })
-        );
-
-        const validTimezones = timezoneRoles
-          .filter(item => item !== null)
-          .sort((a, b) => a.offset - b.offset);
-
-        if (validTimezones.length === 0) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'No valid timezone roles found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        if (validTimezones.length > 25) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'Too many timezone roles (maximum 25 supported)',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get user's current timezone role for pre-selection
-        const timezoneRoleIds = Object.keys(timezones);
-        const userTimezoneRole = member.roles.cache.find(role => timezoneRoleIds.includes(role.id));
-
-        // Create select menu with timezone roles
-        const timezoneSelect = new StringSelectMenuBuilder()
-          .setCustomId('select_timezone')
-          .setPlaceholder(userTimezoneRole ? 
-            `Current: ${userTimezoneRole.name}` : 
-            'Choose your timezone')
-          .setMinValues(0)
-          .setMaxValues(1) // Only one timezone allowed
-          .addOptions(
-            validTimezones.map(item => ({
-              label: item.role.name,
-              description: `UTC${item.offset >= 0 ? '+' : ''}${item.offset}`,
-              value: item.role.id,
-              emoji: '🗺️',
-              default: userTimezoneRole ? userTimezoneRole.id === item.role.id : false
-            }))
-          );
-
-        const selectRow = new ActionRowBuilder().addComponents(timezoneSelect);
-
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Select your timezone:',
-            components: [selectRow],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-
-      } catch (error) {
-        console.error('Error handling player_set_timezone button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error creating timezone selection',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Use new modular handler
+      const playerData = await loadPlayerData();
+      return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
     } else if (custom_id === 'player_set_age') {
-      // Show modal dialog for setting age
-      try {
-        const modal = new ModalBuilder()
-          .setCustomId('age_modal')
-          .setTitle('Set Your Age');
-
-        const ageInput = new TextInputBuilder()
-          .setCustomId('age_input')
-          .setLabel('Your Age')
-          .setPlaceholder('Type your age')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setMaxLength(3);
-
-        const ageRow = new ActionRowBuilder().addComponents(ageInput);
-        modal.addComponents(ageRow);
-
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-
-      } catch (error) {
-        console.error('Error handling player_set_age button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error opening age dialog.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Use new modular handler
+      const playerData = await loadPlayerData();
+      return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
     } else if (custom_id === 'select_pronouns') {
       // Handle pronoun role selection
       try {
@@ -7331,157 +6997,53 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       }
     } else if (custom_id === 'admin_player_select_update') {
-      // Handle admin player selection with dynamic button updates
+      // Handle admin player selection using new modular system
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
         const selectedPlayerIds = data.values || [];
         
-        // Create user select menu (preserves current selection)
-        const userSelectRow = new ActionRowBuilder()
-          .addComponents(
-            new UserSelectMenuBuilder()
-              .setCustomId('admin_player_select_update')
-              .setPlaceholder('Select user to manage..')
-              .setMinValues(0)
-              .setMaxValues(1)
-              .setDefaultUsers(selectedPlayerIds) // Keep current selection
-          );
-
-        let titleContent = `## Player Management | ${guild.name}`;
-        let buttonsEnabled = false;
-        let selectedPlayerId = null;
-        let selectedPlayer = null;
-        let playerDisplaySection = null;
+        // Load player data
+        const playerData = await loadPlayerData();
+        let targetMember = null;
+        let titleContent = `Player Management | ${guild.name}`;
 
         // Handle player selection/deselection
         if (selectedPlayerIds.length > 0) {
-          selectedPlayerId = selectedPlayerIds[0];
+          const selectedPlayerId = selectedPlayerIds[0];
           
           // Get selected player info
           try {
-            selectedPlayer = await guild.members.fetch(selectedPlayerId);
-            titleContent = `## Player Management | ${selectedPlayer.displayName}`;
-            buttonsEnabled = true;
-            
-            // Create player display section
-            try {
-              const playerData = await loadPlayerData();
-              playerDisplaySection = await createPlayerDisplaySection(selectedPlayer, playerData, guildId);
-              console.log('👍 Successfully created player display section');
-            } catch (displayError) {
-              console.error('❌ Error creating player display section:', displayError);
-              playerDisplaySection = null;
-            }
+            targetMember = await guild.members.fetch(selectedPlayerId);
+            titleContent = `Player Management | ${targetMember.displayName}`;
           } catch (error) {
-            console.log('Player not found, keeping buttons disabled');
+            console.log('Player not found, keeping no selection');
+            targetMember = null;
           }
         }
 
-        // Create management buttons (enabled/disabled based on selection) - reordered with simplified labels
-        const managementRow1 = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId(buttonsEnabled ? `admin_set_pronouns_${selectedPlayerId}` : 'admin_set_pronouns_pending')
-              .setLabel('Pronouns')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('💜')
-              .setDisabled(!buttonsEnabled),
-            new ButtonBuilder()
-              .setCustomId(buttonsEnabled ? `admin_set_timezone_${selectedPlayerId}` : 'admin_set_timezone_pending')
-              .setLabel('Timezone')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🌍')
-              .setDisabled(!buttonsEnabled),
-            new ButtonBuilder()
-              .setCustomId(buttonsEnabled ? `admin_set_age_${selectedPlayerId}` : 'admin_set_age_pending')
-              .setLabel('Age')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🎂')
-              .setDisabled(!buttonsEnabled),
-            new ButtonBuilder()
-              .setCustomId(buttonsEnabled ? `admin_manage_vanity_${selectedPlayerId}` : 'admin_manage_vanity_pending')
-              .setLabel('Vanity Roles')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🕵️')
-              .setDisabled(!buttonsEnabled)
-          );
-
-        // Create integrated role select (enabled/disabled based on selection)
-        const selectPlaceholder = buttonsEnabled ? 'Click a button..' : 'Select player first..';
-        const integratedSelectRow = new ActionRowBuilder()
-          .addComponents(
-            new RoleSelectMenuBuilder()
-              .setCustomId('admin_integrated_select_pending')
-              .setPlaceholder(selectPlaceholder)
-              .setMinValues(0)
-              .setMaxValues(1)
-              .setDisabled(true) // Always disabled until an action button is clicked
-          );
-
-        // Create Components V2 Container
-        const playerManagementComponents = [
-          {
-            type: 10, // Text Display component
-            content: titleContent
-          },
-          {
-            type: 14 // Separator
-          },
-          userSelectRow.toJSON()
-        ];
-        
-        // Add player display section if player is selected
-        if (playerDisplaySection) {
-          playerManagementComponents.push(
-            {
-              type: 14 // Separator
-            },
-            playerDisplaySection
-          );
-        }
-        
-        // Add management buttons and select
-        playerManagementComponents.push(
-          {
-            type: 14 // Separator
-          },
-          managementRow1.toJSON(),
-          {
-            type: 14 // Separator
-          },
-          integratedSelectRow.toJSON()
-        );
-        
-        // Always add Back to Main Menu button
-        const backRow = createBackToMainMenuButton();
-        playerManagementComponents.push(
-          { type: 14 }, // Separator
-          backRow.toJSON()
-        );
-        
-        const playerManagementContainer = {
-          type: 17, // Container component
-          accent_color: 0x3498DB, // Blue accent color for player management
-          components: playerManagementComponents
-        };
-
-        // Debug: Log the exact structure being sent to Discord
-        console.log('🔍 DETAILED DEBUG: Full container structure:');
-        console.log(JSON.stringify({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [playerManagementContainer]
+        // Create player management UI using the new module
+        const managementUI = await createPlayerManagementUI({
+          mode: PlayerManagementMode.ADMIN,
+          targetMember,
+          playerData,
+          guildId,
+          showUserSelect: true,
+          showVanityRoles: true,
+          title: titleContent,
+          bottomLeftButton: {
+            label: '⬅️ Menu',
+            customId: 'prod_menu_back',
+            style: ButtonStyle.Secondary
           }
-        }, null, 2));
+        });
+
+        // Remove ephemeral flag for update message
+        managementUI.flags = (1 << 15); // Only IS_COMPONENTS_V2
 
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [playerManagementContainer]
-          }
+          data: managementUI
         });
 
       } catch (error) {
@@ -8406,62 +7968,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id === 'age_modal') {
-      try {
-        const ageValue = components[0].components[0].value;
-        const guildId = req.body.guild_id;
-        const userId = req.body.member.user.id;
-        const userName = req.body.member.nick || req.body.member.user.username;
-
-        // Validate age input
-        const age = parseInt(ageValue);
-        if (isNaN(age) || age < 1 || age > 150) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'Please enter a valid age between 1 and 150.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Load player data
-        const playerData = await loadPlayerData();
-        
-        // Ensure guild and player data structures exist
-        if (!playerData[guildId]) {
-          playerData[guildId] = { players: {} };
-        }
-        if (!playerData[guildId].players) {
-          playerData[guildId].players = {};
-        }
-        if (!playerData[guildId].players[userId]) {
-          playerData[guildId].players[userId] = {};
-        }
-
-        // Update age
-        playerData[guildId].players[userId].age = ageValue;
-        
-        // Save data
-        await savePlayerData(playerData);
-
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `${userName} has set their age to ${ageValue}`
-          }
-        });
-
-      } catch (error) {
-        console.error('Error in age modal handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error setting age.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+    } else if (custom_id === 'age_modal' || custom_id === 'player_age_modal') {
+      // Use new modular handler for player age modal
+      const playerData = await loadPlayerData();
+      return await handlePlayerModalSubmit(req, res, custom_id, playerData, client);
     } else if (custom_id === 'application_button_modal') {
       try {
         console.log('Processing application_button_modal submission');
@@ -8498,185 +8008,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
     } else if (custom_id.startsWith('admin_age_modal_')) {
-      // Handle admin setting player age
-      console.log(`🔍 DEBUG: Processing admin_age_modal - custom_id: ${custom_id}`);
-      try {
-        const guildId = req.body.guild_id;
-        const adminUserId = req.body.member.user.id;
-        const targetPlayerId = custom_id.split('_')[3]; // Extract player ID from admin_age_modal_${playerId}
-        const ageValue = components[0]?.components[0]?.value || '';
-
-        const guild = await client.guilds.fetch(guildId);
-        const adminMember = await guild.members.fetch(adminUserId);
-
-        // Check admin permissions
-        if (!adminMember.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !adminMember.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get target player
-        let targetMember;
-        try {
-          targetMember = await guild.members.fetch(targetPlayerId);
-        } catch (error) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Unable to find the target player in this server.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Validate age input (if provided)
-        if (ageValue && ageValue.trim() !== '') {
-          const age = parseInt(ageValue.trim());
-          if (isNaN(age) || age < 1 || age > 150) {
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: {
-                content: '❌ Please enter a valid age between 1 and 150.',
-                flags: InteractionResponseFlags.EPHEMERAL
-              }
-            });
-          }
-
-          // Update player age
-          updatePlayer(guildId, targetPlayerId, { age: age.toString() });
-        } else {
-          // Clear age if empty input
-          updatePlayer(guildId, targetPlayerId, { age: undefined });
-        }
-
-        // Rebuild the player management interface with age action highlighted
-        console.log('🔍 DEBUG: Age saved, rebuilding interface with age highlighted...');
-        
-        // Use the same interface rebuilding logic as the button handler  
-        // Note: We already have the age saved, no need to reload playerData
-        
-        // Create user select menu (preserves current selection)
-        const userSelectRow = new ActionRowBuilder()
-          .addComponents(
-            new UserSelectMenuBuilder()
-              .setCustomId('admin_player_select_update')
-              .setPlaceholder('Select user to manage..')
-              .setMinValues(0)
-              .setMaxValues(1)
-              .setDefaultUsers([targetPlayerId])
-          );
-
-        // Create management buttons with age highlighted (actionType = 'set_age')
-        const actionType = 'set_age';
-        const managementRow1 = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId(`admin_set_pronouns_${targetPlayerId}`)
-              .setLabel('Pronouns')
-              .setStyle(actionType === 'set_pronouns' ? ButtonStyle.Primary : ButtonStyle.Secondary)
-              .setEmoji('💜'),
-            new ButtonBuilder()
-              .setCustomId(`admin_set_timezone_${targetPlayerId}`)
-              .setLabel('Timezone')
-              .setStyle(actionType === 'set_timezone' ? ButtonStyle.Primary : ButtonStyle.Secondary)
-              .setEmoji('🌍'),
-            new ButtonBuilder()
-              .setCustomId(`admin_set_age_${targetPlayerId}`)
-              .setLabel('Age')
-              .setStyle(actionType === 'set_age' ? ButtonStyle.Primary : ButtonStyle.Secondary)
-              .setEmoji('🎂'),
-            new ButtonBuilder()
-              .setCustomId(`admin_manage_vanity_${targetPlayerId}`)
-              .setLabel('Vanity Roles')
-              .setStyle(actionType === 'manage_vanity' ? ButtonStyle.Primary : ButtonStyle.Secondary)
-              .setEmoji('🕵️')
-          );
-
-        // Create age summary select to show the updated age
-        // Use the age value we just saved instead of reloading from storage
-        const currentAge = (ageValue && ageValue.trim() !== '') ? parseInt(ageValue.trim()).toString() : 'Not set';
-        const integratedSelectRow = new ActionRowBuilder()
-          .addComponents(
-            new StringSelectMenuBuilder()
-              .setCustomId('admin_integrated_select_pending')
-              .setPlaceholder(`Age: ${currentAge}`)
-              .setMinValues(0)
-              .setMaxValues(1)
-              .setDisabled(true)
-              .addOptions([{
-                label: `Age: ${currentAge}`,
-                value: 'age_display',
-                description: 'Age has been updated'
-              }])
-          );
-
-        // Create player display section with updated information
-        // Load fresh player data to get the updated age
-        const freshPlayerData = await loadPlayerData();
-        const playerDisplaySection = await createPlayerDisplaySection(targetMember, freshPlayerData, guildId);
-        
-        // Create Components V2 Container
-        const playerManagementComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## Player Management | ${targetMember.displayName}`
-          },
-          {
-            type: 14 // Separator
-          },
-          userSelectRow.toJSON(),
-          {
-            type: 14 // Separator
-          },
-          playerDisplaySection,
-          {
-            type: 14 // Separator
-          },
-          managementRow1.toJSON(),
-          {
-            type: 14 // Separator
-          },
-          integratedSelectRow.toJSON()
-        ];
-        
-        // Always add Back to Main Menu button
-        const backRow = createBackToMainMenuButton();
-        playerManagementComponents.push(
-          { type: 14 }, // Separator
-          backRow.toJSON()
-        );
-        
-        const playerManagementContainer = {
-          type: 17, // Container component
-          accent_color: 0x3498DB, // Blue accent color for player management
-          components: playerManagementComponents
-        };
-
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [playerManagementContainer]
-          }
-        });
-
-      } catch (error) {
-        console.error('Error handling admin age modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error setting player age.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Use new modular handler for admin age modal
+      const playerData = await loadPlayerData();
+      return await handlePlayerModalSubmit(req, res, custom_id, playerData, client);
     } else {
       console.log(`⚠️ DEBUG: Unhandled MODAL_SUBMIT custom_id: ${custom_id}`);
     }
