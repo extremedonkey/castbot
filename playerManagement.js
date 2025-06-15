@@ -634,8 +634,8 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
       // Create age select menu with 16-40 + Custom Age option
       const ageOptions = [];
       
-      // Add ages 16-40
-      for (let age = 16; age <= 40; age++) {
+      // Add ages 16-39 (24 options to stay within Discord's 25 option limit)
+      for (let age = 16; age <= 39; age++) {
         ageOptions.push({
           label: age.toString(),
           value: `age_${age}`,
