@@ -97,6 +97,94 @@ function hasAdminPermissions(member) {
 }
 
 /**
+ * Create a player display section showing castlist-style player information
+ * @param {Object} player - Discord member object
+ * @param {Object} playerData - Guild player data
+ * @param {string} guildId - Discord guild ID
+ * @returns {Object} Player display section component
+ */
+async function createPlayerDisplaySection(player, playerData, guildId) {
+  if (!player) {
+    return null;
+  }
+
+  const playerId = player.id;
+  const storedPlayer = playerData[guildId]?.players?.[playerId] || {};
+  
+  // Get player's display name (nickname or username)
+  const displayName = player.displayName || player.user.username;
+  
+  // Get pronouns from roles
+  let pronounsText = '';
+  const pronounRoleIDs = playerData[guildId]?.pronounRoleIDs || [];
+  if (pronounRoleIDs.length > 0) {
+    const pronounRoles = player.roles.cache
+      .filter(role => pronounRoleIDs.includes(role.id))
+      .map(role => role.name)
+      .sort();
+    pronounsText = pronounRoles.length > 0 ? pronounRoles.join(', ') : 'None';
+  } else {
+    pronounsText = 'None';
+  }
+  
+  // Get age
+  const age = storedPlayer.age ? storedPlayer.age.toString() : 'Not set';
+  
+  // Get timezone from roles  
+  let timezoneText = 'None';
+  const timezoneRoles = playerData[guildId]?.timezones || {};
+  if (Object.keys(timezoneRoles).length > 0) {
+    for (const [roleId, data] of Object.entries(timezoneRoles)) {
+      if (player.roles.cache.has(roleId)) {
+        const role = player.roles.cache.get(roleId);
+        timezoneText = `${role.name} (UTC${data.offset >= 0 ? '+' : ''}${data.offset})`;
+        break;
+      }
+    }
+  }
+  
+  // Get vanity roles
+  let vanityText = '';
+  const vanityRoles = storedPlayer.vanityRoles || [];
+  if (vanityRoles.length > 0) {
+    const vanityRoleNames = vanityRoles
+      .map(roleId => {
+        const role = player.roles.cache.get(roleId);
+        return role ? role.name : null;
+      })
+      .filter(name => name !== null)
+      .sort();
+    vanityText = vanityRoleNames.length > 0 ? vanityRoleNames.join(', ') : '';
+  }
+  
+  // Build content lines
+  const contentLines = [
+    `**${displayName}**`,
+    `**Pronouns:** ${pronounsText} • **Age:** ${age} • **Timezone:** ${timezoneText}`
+  ];
+  
+  if (vanityText) {
+    contentLines.push(`**Roles:** ${vanityText}`);
+  }
+  
+  return {
+    type: 9, // Section component
+    components: [
+      {
+        type: 10, // Text Display component
+        content: contentLines.join('\n')
+      }
+    ],
+    accessories: [
+      {
+        type: 11, // Thumbnail accessory
+        url: player.user.displayAvatarURL({ dynamic: true, size: 128 })
+      }
+    ]
+  };
+}
+
+/**
  * Create reusable CastBot menu components
  * @param {Object} playerData - Guild player data
  * @param {string} guildId - Discord guild ID
@@ -5592,6 +5680,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             );
         }
 
+        // Create player display section with updated information
+        const playerDisplaySection = await createPlayerDisplaySection(targetPlayer, playerData, guildId);
+        
         // Create Components V2 Container
         const playerManagementComponents = [
           {
@@ -5602,6 +5693,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             type: 14 // Separator
           },
           userSelectRow.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          playerDisplaySection,
           {
             type: 14 // Separator
           },
@@ -5710,6 +5805,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               .setDisabled(true)
           );
 
+        // Create player display section with updated information (including new age)
+        const playerData = await loadPlayerData();
+        const playerDisplaySection = await createPlayerDisplaySection(targetPlayer, playerData, guildId);
+        
         // Create Components V2 Container
         const playerManagementComponents = [
           {
@@ -5720,6 +5819,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             type: 14 // Separator
           },
           userSelectRow.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          playerDisplaySection,
           {
             type: 14 // Separator
           },
@@ -7279,6 +7382,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         let titleContent = `## Player Management | ${guild.name}`;
         let buttonsEnabled = false;
         let selectedPlayerId = null;
+        let selectedPlayer = null;
+        let playerDisplaySection = null;
 
         // Handle player selection/deselection
         if (selectedPlayerIds.length > 0) {
@@ -7286,9 +7391,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           // Get selected player info
           try {
-            const selectedPlayer = await guild.members.fetch(selectedPlayerId);
+            selectedPlayer = await guild.members.fetch(selectedPlayerId);
             titleContent = `## Player Management | ${selectedPlayer.displayName}`;
             buttonsEnabled = true;
+            
+            // Create player display section
+            const playerData = await loadPlayerData();
+            playerDisplaySection = await createPlayerDisplaySection(selectedPlayer, playerData, guildId);
           } catch (error) {
             console.log('Player not found, keeping buttons disabled');
           }
@@ -7344,7 +7453,21 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           {
             type: 14 // Separator
           },
-          userSelectRow.toJSON(),
+          userSelectRow.toJSON()
+        ];
+        
+        // Add player display section if player is selected
+        if (playerDisplaySection) {
+          playerManagementComponents.push(
+            {
+              type: 14 // Separator
+            },
+            playerDisplaySection
+          );
+        }
+        
+        // Add management buttons and select
+        playerManagementComponents.push(
           {
             type: 14 // Separator
           },
@@ -7353,7 +7476,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             type: 14 // Separator
           },
           integratedSelectRow.toJSON()
-        ];
+        );
         
         // Always add Back to Main Menu button
         const backRow = createBackToMainMenuButton();
