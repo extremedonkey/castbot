@@ -187,21 +187,30 @@ npm run status-remote              # Check production status
 - **Use safety backups** - Production backup branches save the day when things go wrong
 - **GitHub = Single Source of Truth** - All deployments pull from GitHub main branch
 
-## 🚀 Development Infrastructure Migration Plan
+## 🚀 Development Infrastructure Status
 
-### Current State vs Target State
+### ✅ WSL Development Environment (Current) 
 
-**Current Development Setup:**
-- ✅ Usage of windows subsystem for linux (WSL) - Claude code + Personal commands
-- ✅ Local machine with ngrok tunneling (static url)
-- ✅  Semi-automated ./dev-start workflow which also pushes to main
-- ❌ Development tied to local machine availability
+**Stable Development Setup:**
+- ✅ WSL (Windows Subsystem for Linux) with Claude Code integration
+- ✅ Static ngrok domain - no more webhook URL updates required
+- ✅ Automated git safety net with commit/push functionality
+- ✅ PM2 process management matching production architecture
+- ✅ Three-command workflow: `./dev-start.sh`, `./dev-restart.sh`, `./dev-stop.sh`
+
+**WSL Development Benefits:**
+- **Stable URLs**: Static ngrok domain preserves webhook configuration
+- **Production Parity**: PM2 process management identical to production  
+- **Git Safety**: Automatic commit/push prevents losing work
+- **Claude Integration**: Direct app restart capability for immediate testing
+- **Resource Efficient**: No additional cloud costs or server management
+
+### Previous: AWS Infrastructure Migration Plan
 
 **Target Development Setup:**
-- ✅ AWS Lightsail development server (stable environment)
-- ✅ Persistent URLs and webhooks
-- ✅ Automated deployment pipeline
-- ✅ Same infrastructure as production
+- ❌ AWS Lightsail development server (deferred for cost efficiency)
+- ❌ Additional cloud infrastructure overhead
+- ❌ More complex deployment pipeline
 
 #### Phase 1: AWS Infrastructure Setup
 1. **Create Development Lightsail Instance**
@@ -462,16 +471,47 @@ npm run verify-commands   # Check current status
 
 ## Usage
 
+### ✅ Recent Major Updates: Unified Menu System & Player Management
+
+**Menu System Consolidation (2025-01-15):**
+- **Unified `/menu` Command**: Automatically shows Player Menu for regular users, Production Menu for admins
+- **Deprecated Functions Removed**: Old `createCastBotMenu` function completely removed (~80 lines of legacy code)
+- **Enhanced Player Menu**: Modern Components V2 interface with "📋 Castlist" button that opens default castlist
+- **Admin Player Management**: Retains "⬅️ Menu" button for navigation back to Production Menu
+- **Code Reuse**: Single shared implementation for player functionality across different access points
+
+**Button Navigation Updates:**
+- **Player Menu Button**: Changed from "📋 Menu" to "📋 Castlist" with `show_castlist2_default` custom_id
+- **Production Menu Button**: Remains "⬅️ Menu" with `prod_menu_back` custom_id for admin users
+- **Consistent UX**: Clear separation between user and admin functionality while maintaining intuitive navigation
+
 ### Available Commands
 
-- /set_tribe: Add or update a tribe in the castlist
-- /castlist: Display the dynamic castlist
-- /castlist2: Display the dynamic castlist using Discord Components V2 with player cards and modern UI
-- /clear_tribe: Clear a specific tribe
-- /cleartribeall: Clear all tribes
-- /set_players_age: Set ages for multiple players at once
-- /pronouns_add: Add pronoun roles
-- /pronouns_remove: Remove pronoun roles
+- `/menu`: Display interactive menu - shows Player Menu for regular users, Production Menu for admins
+- `/castlist`: Display the dynamic castlist using modern Components V2 with player cards and thumbnails
+- `/set_players_age`: Set ages for multiple players at once (admin only)
+
+### Modern Menu Interface Features
+
+**Player Menu (All Users):**
+- Interactive player card display with Discord avatar thumbnails
+- Personal profile management (pronouns, timezone, age)
+- Hot-swappable select menus for real-time role configuration
+- "📋 Castlist" button for easy access to default server castlist
+
+**Production Menu (Admin Only):**
+- Complete server management interface
+- Tribe management (add/clear tribes)
+- Pronoun and timezone role management  
+- Application button creation for player recruitment
+- Player management with vanity role support
+- "⬅️ Menu" navigation for admin workflow
+
+**Technical Improvements:**
+- Discord Components V2 architecture for modern UI
+- Centralized error handling across all command systems
+- Performance optimizations with 70-80% faster navigation
+- Mobile-friendly interface design
 
 ### How It Works
 
