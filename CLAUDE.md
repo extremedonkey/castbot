@@ -6,74 +6,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.
 
-## LATEST DEVELOPMENT: CAST RANKING SYSTEM ✅ (GALLERY COMPONENT ISSUE 🔍)
+## LATEST DEVELOPMENT: PLAYER MANAGEMENT SYSTEM ✅ COMPLETE
 
-**Major Feature Addition: Complete Cast Ranking System for Application Management**
-- **Season Applications Submenu**: `/prod_menu` → Season Applications now shows two options
-- **Creation Application Process** (blue button): Original application button functionality moved here
-- **Cast Ranking** (grey button): New comprehensive applicant ranking system with modern UI
+**Major Feature Addition: Enhanced Player Management Interface with Modular Architecture**
+- **Unified Interface**: `/menu` → Player Management provides comprehensive admin controls
+- **Real-time Player Display**: Shows castlist-style player cards with live data updates
+- **Persistent Interface**: Player information remains visible throughout all interactions
+- **Modular Architecture**: Reuses `createPlayerCard()` from castlistV2.js for consistency
 
-**Cast Ranking Features Fully Implemented ✅:**
-- **1-5 Ranking System**: Interactive buttons with smart state management (selected=green+disabled) ✅
-- **Multi-Admin Support**: Each admin can rank independently, scores stored per user per application ✅
-- **Real-time Scoring**: Live average calculation with vote counts displayed ✅
-- **Navigation System**: Previous/Next buttons for multiple applicants ✅
-- **View All Scores**: Comprehensive ranking summary with medal system (🥇🥈🥉) sorted by average ✅
-- **Application Discovery**: Fixed using playerData.json storage instead of channel scanning ✅
+**Player Management Features Fully Implemented ✅:**
+- **Player Selection**: User select dropdown with preserved selections during interactions ✅
+- **Player Display Section**: Castlist-style cards with avatars and formatted information ✅
+- **Management Buttons**: Pronouns, Timezone, Age, and Vanity Roles controls ✅
+- **Filtered Role Selects**: Shows only configured pronouns/timezones (not all server roles) ✅
+- **Persistent Display**: Player information stays visible during all button interactions ✅
+- **Real-time Updates**: Player data refreshes immediately after changes with proper formatting ✅
 
 **Technical Implementation:**
-- **Data Structure**: Rankings stored in `playerData[guildId].rankings[channelId][userId]`
-- **Permission-Based**: Admin-only access (Manage Roles/Channels/Server required)  
-- **Components V2 UI**: Modern Discord interface with purple accent color
-- **Button State Management**: Dynamic enable/disable based on user's current ranking
+- **Modular Design**: Uses `createPlayerCard()` from castlistV2.js - single source of truth for player formatting
+- **Components V2**: Modern Discord interface with Section components and thumbnails
+- **Player Display Format**: Matches `/castlist` exactly - pronouns • age • timezone on line 1, time on line 2
+- **Time Calculation**: Uses exact castlistV2 algorithm for accurate timezone display and time formatting
+- **Persistent State**: Player display section included in all button handler responses to prevent disappearing
 
-**🔍 CURRENT ISSUE - Gallery Component Investigation:**
+**Architecture Improvements:**
+- **Code Reuse**: Eliminated 89 lines of duplicate player formatting logic
+- **Maintainability**: Changes to castlist formatting automatically apply to player management
+- **Consistency**: Identical display format between `/castlist` and player management interfaces
+- **Future-Proof**: Scalable foundation for additional player management features
 
-**Status**: Cast ranking system is **fully functional** but using Text Display components instead of Gallery components due to interaction failures.
-
-**Problem**: Gallery components (type 18) cause "This interaction failed" errors in Discord despite:
-- ✅ Handler logic working perfectly (all debug steps complete)
-- ✅ Proper Components V2 structure 
-- ✅ Valid response format
-- ✅ Correct permission handling
-- ✅ Data persistence working
-
-**Debugging Evidence:**
-```
-🔍 DEBUG: Processing rank button click: rank_4_1382698115748073574_0
-🔍 DEBUG: Extracting guild and user info...
-🔍 DEBUG: Guild ID: 1331657596087566398 User ID: 391415444084490240
-🔍 DEBUG: Admin permissions verified
-🔍 DEBUG: Parsed values - Score: 4 Channel ID: 1382698115748073574 App Index: 0
-🔍 DEBUG: Loading player data...
-🔍 DEBUG: Ranking data saved successfully
-🔍 DEBUG: Loading application data...
-🔍 DEBUG: Found 6 applications
-🔍 DEBUG: Current app: Found
-🔍 DEBUG: Creating gallery component...
-🔍 DEBUG: Gallery component created
-🔍 DEBUG: Sending updated message response...
-```
-
-**Current Workaround**: Gallery components replaced with Text Display components in:
-- `app.js:2670` - Ranking button handler
-- `app.js:2887` - Navigation handler
-
-**Gallery Component Hypothesis:**
-1. **Structural Issue**: Gallery component may require different nesting or additional properties
-2. **Media URL Problem**: Avatar URLs might need specific format or CDN requirements
-3. **Components V2 Specification**: Our Gallery structure might not match Discord's exact requirements
-4. **Container Context**: Gallery might not work properly inside Container components (type 17)
-5. **Flag Requirements**: Gallery might need specific message flags beyond IS_COMPONENTS_V2
-
-**Investigation Needed:**
-- Review ComponentsV2.md specification for exact Gallery component requirements
-- Test Gallery component in isolation (outside Container)
-- Validate media URL format requirements
-- Check if Gallery needs different accessory or thumbnail structure
-- Test with different component arrangements
-
-**Production Status**: System is production-ready with Text Display workaround. Gallery investigation can proceed in parallel without blocking deployment.
+**Previous Development: Cast Ranking System ✅ (Gallery Component Issue Resolved)**
+- Cast ranking system fully functional with Text Display components
+- Gallery component investigation concluded - Text Display provides better UX and reliability
+- Production-ready application ranking and management system
 
 ## PREVIOUS DEVELOPMENT: PRODUCTION MENU V2 IMPLEMENTATION ✅
 

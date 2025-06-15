@@ -5514,30 +5514,50 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Handle pronouns - remove all current pronouns, add selected ones
           if (playerData[guildId]?.pronounRoleIDs) {
             for (const roleId of playerData[guildId].pronounRoleIDs) {
-              if (targetPlayer.roles.cache.has(roleId)) {
-                await targetPlayer.roles.remove(roleId);
+              try {
+                if (targetPlayer.roles.cache.has(roleId)) {
+                  await targetPlayer.roles.remove(roleId);
+                }
+              } catch (roleError) {
+                console.warn(`Failed to remove pronoun role ${roleId} from player ${playerId}:`, roleError.message);
+                // Continue with other roles instead of failing completely
               }
             }
           }
           
           // Add selected pronoun roles
           for (const roleId of selectedRoles) {
-            await targetPlayer.roles.add(roleId);
+            try {
+              await targetPlayer.roles.add(roleId);
+            } catch (roleError) {
+              console.warn(`Failed to add pronoun role ${roleId} to player ${playerId}:`, roleError.message);
+              // Continue with other roles instead of failing completely
+            }
           }
           
         } else if (actionType === 'timezone') {
           // Handle timezone - remove current timezone, add selected one
           if (playerData[guildId]?.timezones) {
             for (const [roleId] of Object.entries(playerData[guildId].timezones)) {
-              if (targetPlayer.roles.cache.has(roleId)) {
-                await targetPlayer.roles.remove(roleId);
+              try {
+                if (targetPlayer.roles.cache.has(roleId)) {
+                  await targetPlayer.roles.remove(roleId);
+                }
+              } catch (roleError) {
+                console.warn(`Failed to remove timezone role ${roleId} from player ${playerId}:`, roleError.message);
+                // Continue with other roles instead of failing completely
               }
             }
           }
           
           // Add selected timezone role (only one allowed)
           if (selectedRoles.length > 0) {
-            await targetPlayer.roles.add(selectedRoles[0]);
+            try {
+              await targetPlayer.roles.add(selectedRoles[0]);
+            } catch (roleError) {
+              console.warn(`Failed to add timezone role ${selectedRoles[0]} to player ${playerId}:`, roleError.message);
+              // Continue execution instead of failing completely
+            }
           }
           
         } else if (actionType === 'vanity') {
@@ -5549,8 +5569,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Remove old vanity roles
           if (playerData[guildId].players[playerId].vanityRoles) {
             for (const roleId of playerData[guildId].players[playerId].vanityRoles) {
-              if (targetPlayer.roles.cache.has(roleId)) {
-                await targetPlayer.roles.remove(roleId);
+              try {
+                if (targetPlayer.roles.cache.has(roleId)) {
+                  await targetPlayer.roles.remove(roleId);
+                }
+              } catch (roleError) {
+                console.warn(`Failed to remove vanity role ${roleId} from player ${playerId}:`, roleError.message);
+                // Continue with other roles instead of failing completely
               }
             }
           }
@@ -5558,7 +5583,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Add new vanity roles and update player data
           playerData[guildId].players[playerId].vanityRoles = selectedRoles;
           for (const roleId of selectedRoles) {
-            await targetPlayer.roles.add(roleId);
+            try {
+              await targetPlayer.roles.add(roleId);
+            } catch (roleError) {
+              console.warn(`Failed to add vanity role ${roleId} to player ${playerId}:`, roleError.message);
+              // Continue with other roles instead of failing completely
+            }
           }
           
           await savePlayerData(playerData);
@@ -5810,15 +5840,21 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               .setEmoji('🕵️')
           );
 
-        // Create placeholder select since age doesn't use an active select
+        // Create age summary select to show the updated age
+        const ageValue = playerData[guildId]?.players?.[playerId]?.age || 'Not set';
         const integratedSelectRow = new ActionRowBuilder()
           .addComponents(
-            new RoleSelectMenuBuilder()
+            new StringSelectMenuBuilder()
               .setCustomId('admin_integrated_select_pending')
-              .setPlaceholder('Click a button..')
+              .setPlaceholder(`Age: ${ageValue}`)
               .setMinValues(0)
               .setMaxValues(1)
               .setDisabled(true)
+              .addOptions([{
+                label: `Age: ${ageValue}`,
+                value: 'age_display',
+                description: 'Age has been updated'
+              }])
           );
 
         // Create player display section with updated information (including new age)
