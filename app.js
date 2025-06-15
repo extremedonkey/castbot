@@ -60,7 +60,8 @@ import {
   createTribeSection,
   createNavigationButtons,
   processMemberData,
-  createCastlistV2Layout
+  createCastlistV2Layout,
+  createPlayerCard
 } from './castlistV2.js';
 import fs from 'fs';
 import { Readable } from 'stream';
@@ -108,110 +109,68 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
     return null;
   }
 
-  const playerId = player.id;
-  const storedPlayer = playerData[guildId]?.players?.[playerId] || {};
+  // Prepare parameters exactly like castlistV2.js lines 287-315
+  const pronounRoleIds = playerData[guildId]?.pronounRoleIDs || [];
+  const timezones = playerData[guildId]?.timezones || {};
   
-  // Use castlist2 logic exactly - get pronouns from roles
-  let pronounsText = '';
-  const pronounRoleIDs = playerData[guildId]?.pronounRoleIDs || [];
-  if (pronounRoleIDs.length > 0) {
-    const pronounRoles = player.roles.cache
-      .filter(role => pronounRoleIDs.includes(role.id))
-      .map(role => role.name)
-      .sort();
-    pronounsText = pronounRoles.length > 0 ? pronounRoles.join(', ') : '';
-  }
-  
-  // Get timezone from roles and calculate current time (castlist2 format)
-  let timezoneText = '';
-  let formattedTime = '';
-  const timezoneRoles = playerData[guildId]?.timezones || {};
-  if (Object.keys(timezoneRoles).length > 0) {
-    for (const [roleId, data] of Object.entries(timezoneRoles)) {
-      if (player.roles.cache.has(roleId)) {
-        const role = player.roles.cache.get(roleId);
-        const offset = parseFloat(data.offset);
-        const utcOffsetText = offset >= 0 ? `+${offset}` : `${offset}`;
-        timezoneText = `${role.name} (UTC${utcOffsetText})`;
-        
-        // Calculate current time in player's timezone (castlist2 format)
-        const utcTime = new Date();
-        const localTime = new Date(utcTime.getTime() + (offset * 60 * 60 * 1000));
-        const timeString = localTime.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
-          minute: '2-digit', 
-          hour12: true 
-        });
-        formattedTime = timeString;
-        break;
-      }
-    }
-  }
-
-  // Use the exact castlist2 createPlayerCard logic
-  const displayName = capitalize(player.displayName || player.user.username);
-  const age = storedPlayer.age || '';
-  
-  // Build info array exactly like castlist2 (pronouns, age, timezone)
-  const infoElements = [pronounsText, age, timezoneText].filter(info => info && info.trim() !== '');
-  const basicInfo = infoElements.length > 0 ? infoElements.join(' • ') : '';
-  
-  // Add time info exactly like castlist2 (with backticks around "Local time")
-  const timeInfo = formattedTime ? `\`🕛 Local time 🕛\` ${formattedTime}` : '';
-  
-  // Get vanity roles exactly like castlist2
-  let vanityRolesInfo = '';
-  if (storedPlayer?.vanityRoles && storedPlayer.vanityRoles.length > 0) {
-    const validVanityRoles = [];
-    for (const roleId of storedPlayer.vanityRoles) {
-      try {
-        const role = player.roles.cache.get(roleId);
-        if (role) {
-          validVanityRoles.push(`<@&${roleId}>`);
-        }
-      } catch (error) {
-        // Silently skip invalid roles
-      }
-    }
+  // Get player pronouns (hide if none) - exact castlist2 logic
+  const memberPronouns = player.roles.cache
+    .filter(role => pronounRoleIds.includes(role.id))
+    .map(role => role.name)
+    .join(', ') || '';
     
-    if (validVanityRoles.length > 0) {
-      vanityRolesInfo = validVanityRoles.join(' ');
+  // Get player timezone role name and calculate current time - exact castlist2 logic
+  let memberTimezone = '';
+  let formattedTime = '';
+  const timezoneRole = player.roles.cache.find(role => timezones[role.id]);
+  
+  if (timezoneRole) {
+    memberTimezone = timezoneRole.name; // Show role name ONLY (no UTC offset)
+    
+    // Calculate current time in their timezone - exact castlist2 logic
+    try {
+      const offset = timezones[timezoneRole.id].offset;
+      const now = new Date();
+      const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const targetTime = new Date(utcTime + (offset * 3600000));
+      formattedTime = targetTime.toLocaleTimeString('en-US', {
+        hour12: true,
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      formattedTime = '';
     }
   }
   
-  // Combine exactly like castlist2 createPlayerCard
-  let allInfo = `**${displayName}**`;
-  if (basicInfo) {
-    allInfo += `\n${basicInfo}`;
-  }
-  if (timeInfo) {
-    allInfo += `\n${timeInfo}`;
-  }
-  if (vanityRolesInfo) {
-    allInfo += `\n${vanityRolesInfo}`;
-  }
-
-  // Construct avatar URL manually for webhook context
+  // Get player data from storage
+  const storedPlayerData = playerData[guildId]?.players?.[player.id] || {};
+  
+  // Call the actual castlistV2 createPlayerCard function
+  const playerCard = createPlayerCard(
+    player,              // member
+    storedPlayerData,    // playerData  
+    memberPronouns,      // pronouns
+    memberTimezone,      // timezone (role name only)
+    formattedTime,       // formattedTime (correctly calculated)
+    false                // showEmoji (false for player management)
+  );
+  
+  // Fix avatar URL for webhook context (createPlayerCard uses member.user.displayAvatarURL which doesn't work in webhook)
   const avatarHash = player.user.avatar;
   const userId = player.user.id;
   const avatarUrl = avatarHash 
     ? `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.png?size=128`
     : `https://cdn.discordapp.com/embed/avatars/${userId % 5}.png`;
-
+  
+  // Return the player card with corrected avatar URL
   return {
-    type: 9, // Section component (same as castlist2)
-    components: [
-      {
-        type: 10, // Text Display - single component with all info
-        content: allInfo
-      }
-    ],
+    ...playerCard,
     accessory: {
-      type: 11, // Thumbnail
+      ...playerCard.accessory,
       media: {
         url: avatarUrl
-      },
-      description: `${displayName}'s avatar`
+      }
     }
   };
 }
