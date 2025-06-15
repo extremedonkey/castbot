@@ -4459,11 +4459,7 @@ Your server is now ready for Tycoons gameplay!`;
           showUserSelect: false,
           showVanityRoles: false,
           title: 'CastBot | Player Menu',
-          bottomLeftButton: {
-            label: '📋 Show Castlist',
-            customId: 'show_castlist2_default',
-            style: ButtonStyle.Primary
-          }
+          client
         });
         
         console.log('🔍 DEBUG: Player management UI created, sending...');
@@ -5145,10 +5141,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
     // Removed disabled legacy vanity handler
     // Removed disabled legacy timezone handler
-    } else if (custom_id.startsWith('admin_integrated_age_') || custom_id.startsWith('player_integrated_age_') ||
-               custom_id.startsWith('admin_integrated_pronouns_') || custom_id.startsWith('player_integrated_pronouns_') ||
-               custom_id.startsWith('admin_integrated_timezone_') || custom_id.startsWith('player_integrated_timezone_') ||
-               custom_id.startsWith('admin_integrated_vanity_')) {
+    } else if (custom_id.startsWith('admin_integrated_age') || custom_id.startsWith('player_integrated_age') ||
+               custom_id.startsWith('admin_integrated_pronouns') || custom_id.startsWith('player_integrated_pronouns') ||
+               custom_id.startsWith('admin_integrated_timezone') || custom_id.startsWith('player_integrated_timezone') ||
+               custom_id.startsWith('admin_integrated_vanity')) {
       // 🔍 DEBUG: Log which integrated handler is being used
       console.log('🔍 DEBUG: Integrated select handler triggered for custom_id:', custom_id);
       // Handle ALL integrated select changes with auto-refresh
