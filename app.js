@@ -116,88 +116,6 @@ function hasAdminPermissions(member) {
  * @param {boolean} isEphemeral - Whether menu should be ephemeral (user-only)
  * @returns {Object} Menu content and components
  */
-async function createCastBotMenu(playerData, guildId, isEphemeral = false, userId = null) {
-  const allCastlists = new Set();
-  const castlistTribes = {}; // Track tribes per castlist to get emojis
-  
-  if (playerData[guildId]?.tribes) {
-    Object.entries(playerData[guildId].tribes).forEach(([roleId, tribeData]) => {
-      const castlistName = tribeData.castlist || 'default';
-      allCastlists.add(castlistName);
-      
-      // Store tribe info for each castlist (for emojis)
-      if (!castlistTribes[castlistName]) {
-        castlistTribes[castlistName] = [];
-      }
-      castlistTribes[castlistName].push({
-        roleId,
-        emoji: tribeData.emoji,
-        color: tribeData.color,
-        showPlayerEmojis: tribeData.showPlayerEmojis
-      });
-    });
-  }
-
-  // Handle case where no tribes exist yet
-  if (allCastlists.size === 0) {
-    allCastlists.add('default');
-  }
-
-  // Create buttons for each castlist
-  const buttons = [];
-  const castlistArray = Array.from(allCastlists).sort((a, b) => {
-    // Sort so 'default' comes first
-    if (a === 'default') return -1;
-    if (b === 'default') return 1;
-    return a.localeCompare(b);
-  });
-  
-  for (const castlistName of castlistArray) {
-    if (castlistName === 'default') {
-      // Default castlist gets the primary blue button with 📋 emoji
-      buttons.push(
-        new ButtonBuilder()
-          .setCustomId('show_castlist2_default')
-          .setLabel('Show Castlist')
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji('📋')
-      );
-    } else {
-      // Custom castlists get grey buttons with tribe emoji if available
-      const tribes = castlistTribes[castlistName] || [];
-      const tribeWithEmoji = tribes.find(tribe => tribe.emoji);
-      const emoji = tribeWithEmoji?.emoji || '📋';
-      
-      buttons.push(
-        new ButtonBuilder()
-          .setCustomId(`show_castlist2_${castlistName}`)
-          .setLabel(`Show ${castlistName.charAt(0).toUpperCase() + castlistName.slice(1)}`)
-          .setStyle(ButtonStyle.Secondary) // Grey button
-          .setEmoji(emoji)
-      );
-    }
-  }
-  
-  const castlistRow = new ActionRowBuilder().addComponents(buttons);
-  
-  // Add second row with player menu button
-  const actionButtons = [
-    new ButtonBuilder()
-      .setCustomId('player_menu')
-      .setLabel('Player Menu')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('👤')
-  ];
-  
-  const actionRow = new ActionRowBuilder().addComponents(actionButtons);
-
-  return {
-    content: '**CastBot Menu**',
-    components: [castlistRow, actionRow],
-    flags: isEphemeral ? InteractionResponseFlags.EPHEMERAL : undefined
-  };
-}
-
 /**
  * Create production menu interface with Components V2 structure
  * @param {Object} guild - Discord guild object
@@ -1239,17 +1157,27 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       });
       
     } else {
-      // Regular user - use createCastBotMenu function
-      const menuResponse = await createCastBotMenu(playerData, guildId, true, member.user.id); // ephemeral for regular users
+      // Regular user - use new player management UI
+      const userId = member.user.id;
+      const targetMember = await guild.members.fetch(userId);
+      
+      // Create player management UI
+      const managementUI = await createPlayerManagementUI({
+        mode: PlayerManagementMode.PLAYER,
+        targetMember,
+        playerData,
+        guildId,
+        userId,
+        showUserSelect: false,
+        showVanityRoles: false,
+        title: 'CastBot | Player Menu',
+        client
+      });
       
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
       await DiscordRequest(endpoint, {
         method: 'PATCH',
-        body: {
-          content: menuResponse.content,
-          components: menuResponse.components,
-          flags: menuResponse.flags
-        }
+        body: managementUI
       });
     }
     
@@ -3400,13 +3328,28 @@ To fix this:
             body: menuResponse
           });
         } else {
-          // Regular user - show player menu (ephemeral)
+          // Regular user - use new player management UI
           const playerData = await loadPlayerData();
-          const menuData = await createCastBotMenu(playerData, guildId, true, req.body.member.user.id);
+          const userId = member.user.id;
+          const guild = await client.guilds.fetch(guildId);
+          const targetMember = await guild.members.fetch(userId);
+          
+          // Create player management UI
+          const managementUI = await createPlayerManagementUI({
+            mode: PlayerManagementMode.PLAYER,
+            targetMember,
+            playerData,
+            guildId,
+            userId,
+            showUserSelect: false,
+            showVanityRoles: false,
+            title: 'CastBot | Player Menu',
+            client
+          });
           
           await res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: menuData
+            data: managementUI
           });
         }
       } catch (error) {
