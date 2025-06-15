@@ -4590,11 +4590,18 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
 
-        // Placeholder response for Player Menu
+        // Load player data and show the regular player menu
+        const guildId = req.body.guild_id;
+        const playerData = await loadPlayerData();
+        
+        // Use the existing createCastBotMenu function (same as /menu for regular users)
+        const menuComponents = await createCastBotMenu(playerData, guildId, true);
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '👤 **Player Menu**\n\nThis feature is under development. Coming soon!',
+            content: '👤 **Player Menu**',
+            components: menuComponents,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
