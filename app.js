@@ -423,14 +423,19 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setURL('https://discord.gg/H7MpJEjkwT')
   ];
   
-  // Add special analytics button only for specific user (Reece) - goes at the end
+  // Add special buttons only for specific user (Reece) - goes at the end
   if (userId === '391415444084490240') {
     adminActionButtons.push(
       new ButtonBuilder()
         .setCustomId('prod_analytics_dump')
         .setLabel('Analytics')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('📊')
+        .setEmoji('📊'),
+      new ButtonBuilder()
+        .setCustomId('prod_player_menu')
+        .setLabel('Player Menu')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('👤')
     );
   }
   
@@ -4565,6 +4570,41 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error running analytics. Check logs for details.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_player_menu') {
+      // Special player menu button - only available to specific user ID
+      try {
+        const userId = req.body.member.user.id;
+        
+        // Security check - only allow specific Discord ID
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Placeholder response for Player Menu
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '👤 **Player Menu**\n\nThis feature is under development. Coming soon!',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error accessing player menu:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error accessing player menu. Check logs for details.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
