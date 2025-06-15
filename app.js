@@ -8389,6 +8389,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
    */
   if (type === InteractionType.MODAL_SUBMIT) {
     const { custom_id, components } = data;
+    console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
     
     if (custom_id.startsWith('prod_add_tribe_modal_')) {
       // Handle Add Tribe final submission
@@ -8581,6 +8582,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       }
     } else if (custom_id.startsWith('admin_age_modal_')) {
       // Handle admin setting player age
+      console.log(`🔍 DEBUG: Processing admin_age_modal - custom_id: ${custom_id}`);
       try {
         const guildId = req.body.guild_id;
         const adminUserId = req.body.member.user.id;
@@ -8655,6 +8657,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    } else {
+      console.log(`⚠️ DEBUG: Unhandled MODAL_SUBMIT custom_id: ${custom_id}`);
     }
   } // end if MODAL_SUBMIT
   // ...rest of interaction handling...
