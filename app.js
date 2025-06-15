@@ -5163,11 +5163,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_')) {
-      // Use new modular handler for admin buttons
+    } else if (custom_id.startsWith('admin_set_pronouns_') || custom_id.startsWith('admin_set_timezone_') || custom_id.startsWith('admin_set_age_') || custom_id.startsWith('admin_manage_vanity_')) {
+      // Use new modular handler for all admin buttons
       const playerData = await loadPlayerData();
       return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
-    } else if (custom_id.startsWith('admin_manage_vanity_')) {
+    } else if (false && custom_id.startsWith('admin_manage_vanity_')) { // DISABLED - now using modular handler
       // Vanity roles still handled separately for now
       try {
         const guildId = req.body.guild_id;
