@@ -8551,18 +8551,119 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
           // Update player age
           updatePlayer(guildId, targetPlayerId, { age: age.toString() });
-
-          return res.send({
-            type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
-          });
         } else {
           // Clear age if empty input
           updatePlayer(guildId, targetPlayerId, { age: undefined });
-
-          return res.send({
-            type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
-          });
         }
+
+        // Rebuild the player management interface with age action highlighted
+        console.log('🔍 DEBUG: Age saved, rebuilding interface with age highlighted...');
+        
+        // Use the same interface rebuilding logic as the button handler
+        const playerData = await loadPlayerData();
+        
+        // Create user select menu (preserves current selection)
+        const userSelectRow = new ActionRowBuilder()
+          .addComponents(
+            new UserSelectMenuBuilder()
+              .setCustomId('admin_player_select_update')
+              .setPlaceholder('Select user to manage..')
+              .setMinValues(0)
+              .setMaxValues(1)
+              .setDefaultUsers([targetPlayerId])
+          );
+
+        // Create management buttons with age highlighted (actionType = 'set_age')
+        const actionType = 'set_age';
+        const managementRow1 = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId(`admin_set_pronouns_${targetPlayerId}`)
+              .setLabel('Pronouns')
+              .setStyle(actionType === 'set_pronouns' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+              .setEmoji('💜'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_timezone_${targetPlayerId}`)
+              .setLabel('Timezone')
+              .setStyle(actionType === 'set_timezone' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+              .setEmoji('🌍'),
+            new ButtonBuilder()
+              .setCustomId(`admin_set_age_${targetPlayerId}`)
+              .setLabel('Age')
+              .setStyle(actionType === 'set_age' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+              .setEmoji('🎂'),
+            new ButtonBuilder()
+              .setCustomId(`admin_manage_vanity_${targetPlayerId}`)
+              .setLabel('Vanity Roles')
+              .setStyle(actionType === 'manage_vanity' ? ButtonStyle.Primary : ButtonStyle.Secondary)
+              .setEmoji('🕵️')
+          );
+
+        // Create age summary select to show the updated age
+        const updatedPlayerData = await loadPlayerData();
+        const ageValue = updatedPlayerData[guildId]?.players?.[targetPlayerId]?.age || 'Not set';
+        const integratedSelectRow = new ActionRowBuilder()
+          .addComponents(
+            new StringSelectMenuBuilder()
+              .setCustomId('admin_integrated_select_pending')
+              .setPlaceholder(`Age: ${ageValue}`)
+              .setMinValues(0)
+              .setMaxValues(1)
+              .setDisabled(true)
+              .addOptions([{
+                label: `Age: ${ageValue}`,
+                value: 'age_display',
+                description: 'Age has been updated'
+              }])
+          );
+
+        // Create player display section with updated information
+        const playerDisplaySection = await createPlayerDisplaySection(targetMember, updatedPlayerData, guildId);
+        
+        // Create Components V2 Container
+        const playerManagementComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## Player Management | ${targetMember.displayName}`
+          },
+          {
+            type: 14 // Separator
+          },
+          userSelectRow.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          playerDisplaySection,
+          {
+            type: 14 // Separator
+          },
+          managementRow1.toJSON(),
+          {
+            type: 14 // Separator
+          },
+          integratedSelectRow.toJSON()
+        ];
+        
+        // Always add Back to Main Menu button
+        const backRow = createBackToMainMenuButton();
+        playerManagementComponents.push(
+          { type: 14 }, // Separator
+          backRow.toJSON()
+        );
+        
+        const playerManagementContainer = {
+          type: 17, // Container component
+          accent_color: 0x3498DB, // Blue accent color for player management
+          components: playerManagementComponents
+        };
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [playerManagementContainer]
+          }
+        });
 
       } catch (error) {
         console.error('Error handling admin age modal:', error);
