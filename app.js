@@ -4591,18 +4591,20 @@ Your server is now ready for Tycoons gameplay!`;
         }
 
         // Load player data and show the regular player menu
+        console.log('🔍 DEBUG: Player Menu button clicked, loading player interface...');
         const guildId = req.body.guild_id;
         const playerData = await loadPlayerData();
         
         // Use the existing createCastBotMenu function (same as /menu for regular users)
-        const menuComponents = await createCastBotMenu(playerData, guildId, true);
+        const menuResponse = await createCastBotMenu(playerData, guildId, true);
+        console.log('🔍 DEBUG: Menu response created, sending...');
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '👤 **Player Menu**',
-            components: menuComponents,
-            flags: InteractionResponseFlags.EPHEMERAL
+            content: menuResponse.content,
+            components: menuResponse.components,
+            flags: menuResponse.flags
           }
         });
         
