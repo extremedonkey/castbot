@@ -167,6 +167,13 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
     contentLines.push(`**Roles:** ${vanityText}`);
   }
   
+  // Construct avatar URL manually
+  const avatarHash = player.user.avatar;
+  const userId = player.user.id;
+  const avatarUrl = avatarHash 
+    ? `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.png?size=128`
+    : `https://cdn.discordapp.com/embed/avatars/${userId % 5}.png`; // Default avatar
+  
   return {
     type: 9, // Section component
     components: [
@@ -178,7 +185,7 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
     accessories: [
       {
         type: 11, // Thumbnail accessory
-        url: player.user.displayAvatarURL({ dynamic: true, size: 128 })
+        url: avatarUrl
       }
     ]
   };
