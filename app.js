@@ -175,21 +175,8 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
     : `https://cdn.discordapp.com/embed/avatars/${userId % 5}.png`; // Default avatar
   
   return {
-    type: 9, // Section component
-    components: [
-      {
-        type: 10, // Text Display component
-        content: contentLines.join('\n')
-      }
-    ],
-    accessories: [
-      {
-        type: 11, // Thumbnail accessory
-        media: {
-          url: avatarUrl
-        }
-      }
-    ]
+    type: 10, // Text Display component for now (simplified)
+    content: `**${displayName}** (${avatarUrl})\n${contentLines.slice(1).join('\n')}`
   };
 }
 
@@ -7505,6 +7492,16 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           accent_color: 0x3498DB, // Blue accent color for player management
           components: playerManagementComponents
         };
+
+        // Debug: Log the exact structure being sent to Discord
+        console.log('🔍 DETAILED DEBUG: Full container structure:');
+        console.log(JSON.stringify({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [playerManagementContainer]
+          }
+        }, null, 2));
 
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
