@@ -326,10 +326,10 @@ export async function createPlayerManagementUI(options) {
       .setLabel('⬅️ Menu')
       .setStyle(ButtonStyle.Secondary));
   } else {
-    // For player mode, could be viral_menu or another appropriate handler
+    // For player mode, show Castlist button that opens default castlist
     bottomRow.components.push(new ButtonBuilder()
-      .setCustomId('viral_menu')
-      .setLabel('📋 Menu')
+      .setCustomId('show_castlist2_default')
+      .setLabel('📋 Castlist')
       .setStyle(ButtonStyle.Primary));
   }
 
