@@ -8559,8 +8559,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Rebuild the player management interface with age action highlighted
         console.log('🔍 DEBUG: Age saved, rebuilding interface with age highlighted...');
         
-        // Use the same interface rebuilding logic as the button handler
-        const playerData = await loadPlayerData();
+        // Use the same interface rebuilding logic as the button handler  
+        // Note: We already have the age saved, no need to reload playerData
         
         // Create user select menu (preserves current selection)
         const userSelectRow = new ActionRowBuilder()
@@ -8600,8 +8600,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           );
 
         // Create age summary select to show the updated age
-        const updatedPlayerData = await loadPlayerData();
-        const currentAge = updatedPlayerData[guildId]?.players?.[targetPlayerId]?.age || 'Not set';
+        // Use the age value we just saved instead of reloading from storage
+        const currentAge = (ageValue && ageValue.trim() !== '') ? parseInt(ageValue.trim()).toString() : 'Not set';
         const integratedSelectRow = new ActionRowBuilder()
           .addComponents(
             new StringSelectMenuBuilder()
@@ -8618,7 +8618,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           );
 
         // Create player display section with updated information
-        const playerDisplaySection = await createPlayerDisplaySection(targetMember, updatedPlayerData, guildId);
+        const playerDisplaySection = await createPlayerDisplaySection(targetMember, null, guildId);
         
         // Create Components V2 Container
         const playerManagementComponents = [
