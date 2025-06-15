@@ -116,7 +116,7 @@ function hasAdminPermissions(member) {
  * @param {boolean} isEphemeral - Whether menu should be ephemeral (user-only)
  * @returns {Object} Menu content and components
  */
-async function createCastBotMenu(playerData, guildId, isEphemeral = false) {
+async function createCastBotMenu(playerData, guildId, isEphemeral = false, userId = null) {
   const allCastlists = new Set();
   const castlistTribes = {}; // Track tribes per castlist to get emojis
   
@@ -181,24 +181,36 @@ async function createCastBotMenu(playerData, guildId, isEphemeral = false) {
   const castlistRow = new ActionRowBuilder().addComponents(buttons);
   
   // Add second row with player action buttons (using modern emojis)
-  const actionRow = new ActionRowBuilder()
-    .addComponents(
+  const actionButtons = [
+    new ButtonBuilder()
+      .setCustomId('player_set_pronouns')
+      .setLabel('Set Your Pronouns')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💜'),
+    new ButtonBuilder()
+      .setCustomId('player_set_timezone')
+      .setLabel('Set Your Timezone')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🌍'),
+    new ButtonBuilder()
+      .setCustomId('player_set_age')
+      .setLabel('Set Your Age')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🎂')
+  ];
+  
+  // Add Player Menu button for specific user
+  if (userId === '391415444084490240') {
+    actionButtons.push(
       new ButtonBuilder()
-        .setCustomId('player_set_pronouns')
-        .setLabel('Set Your Pronouns')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('💜'),
-      new ButtonBuilder()
-        .setCustomId('player_set_timezone')
-        .setLabel('Set Your Timezone')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('🌍'),
-      new ButtonBuilder()
-        .setCustomId('player_set_age')
-        .setLabel('Set Your Age')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('🎂')
+        .setCustomId('player_menu')
+        .setLabel('Player Menu')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('👤')
     );
+  }
+  
+  const actionRow = new ActionRowBuilder().addComponents(actionButtons);
 
   return {
     content: '**CastBot Menu**',
@@ -1249,7 +1261,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       
     } else {
       // Regular user - use createCastBotMenu function
-      const menuResponse = await createCastBotMenu(playerData, guildId, true); // ephemeral for regular users
+      const menuResponse = await createCastBotMenu(playerData, guildId, true, member.user.id); // ephemeral for regular users
       
       const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
       await DiscordRequest(endpoint, {
@@ -3411,7 +3423,7 @@ To fix this:
         } else {
           // Regular user - show player menu (ephemeral)
           const playerData = await loadPlayerData();
-          const menuData = await createCastBotMenu(playerData, guildId, true);
+          const menuData = await createCastBotMenu(playerData, guildId, true, req.body.member.user.id);
           
           await res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -5964,6 +5976,150 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    } else if (custom_id.startsWith('admin_integrated_age_') || custom_id.startsWith('player_integrated_age_') ||
+               custom_id.startsWith('admin_integrated_pronouns_') || custom_id.startsWith('player_integrated_pronouns_') ||
+               custom_id.startsWith('admin_integrated_timezone_') || custom_id.startsWith('player_integrated_timezone_') ||
+               custom_id.startsWith('admin_integrated_vanity_')) {
+      // Handle ALL integrated select changes with auto-refresh
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const selectedValues = data.values || [];
+        
+        // Parse action type and target player
+        let actionType, targetPlayerId, mode;
+        
+        if (custom_id.startsWith('player_integrated_')) {
+          mode = 'player';
+          targetPlayerId = req.body.member.user.id;
+          actionType = custom_id.replace('player_integrated_', '').split('_')[0];
+        } else {
+          mode = 'admin';
+          const parts = custom_id.split('_');
+          actionType = parts[2]; // pronouns, timezone, age, or vanity
+          targetPlayerId = parts[3];
+        }
+
+        const targetMember = await guild.members.fetch(targetPlayerId);
+
+        // Handle the selection based on type
+        if (actionType === 'pronouns') {
+          // Remove all current pronoun roles
+          const pronounRoleIDs = await getGuildPronouns(guildId);
+          const currentPronounRoles = targetMember.roles.cache.filter(role => 
+            pronounRoleIDs.includes(role.id)
+          );
+          if (currentPronounRoles.size > 0) {
+            await targetMember.roles.remove(currentPronounRoles.map(role => role.id));
+          }
+          // Add new roles
+          if (selectedValues.length > 0) {
+            await targetMember.roles.add(selectedValues);
+          }
+        } else if (actionType === 'timezone') {
+          // Remove current timezone role
+          const timezones = await getGuildTimezones(guildId);
+          const timezoneRoleIds = Object.keys(timezones);
+          const currentTimezoneRole = targetMember.roles.cache.find(role => 
+            timezoneRoleIds.includes(role.id)
+          );
+          if (currentTimezoneRole) {
+            await targetMember.roles.remove(currentTimezoneRole.id);
+          }
+          // Add new timezone
+          if (selectedValues.length > 0) {
+            await targetMember.roles.add(selectedValues[0]);
+          }
+        } else if (actionType === 'age') {
+          // Handle age selection
+          if (selectedValues.length > 0) {
+            const ageValue = selectedValues[0];
+            if (ageValue === 'age_custom') {
+              // Show modal for custom age
+              const modal = new ModalBuilder()
+                .setCustomId(mode === 'admin' ? `admin_age_modal_${targetPlayerId}` : 'player_age_modal')
+                .setTitle('Set Player Age');
+
+              const ageInput = new TextInputBuilder()
+                .setCustomId('age')
+                .setLabel('Enter your age')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setMaxLength(10)
+                .setPlaceholder("e.g. 25 or '30s'");
+
+              const row = new ActionRowBuilder().addComponents(ageInput);
+              modal.addComponents(row);
+
+              return res.send({
+                type: InteractionResponseType.MODAL,
+                data: modal.toJSON()
+              });
+            } else {
+              // Direct age selection
+              const age = ageValue.replace('age_', '');
+              await updatePlayer(guildId, targetPlayerId, { age });
+            }
+          }
+        } else if (actionType === 'vanity') {
+          // Handle vanity roles (admin only)
+          const playerData = await loadPlayerData();
+          if (!playerData[guildId].players[targetPlayerId]) {
+            playerData[guildId].players[targetPlayerId] = {};
+          }
+          
+          // Remove old vanity roles
+          const oldVanityRoles = playerData[guildId].players[targetPlayerId].vanityRoles || [];
+          if (oldVanityRoles.length > 0) {
+            await targetMember.roles.remove(oldVanityRoles).catch(console.error);
+          }
+          
+          // Save and add new vanity roles
+          playerData[guildId].players[targetPlayerId].vanityRoles = selectedValues;
+          await savePlayerData(playerData);
+          
+          if (selectedValues.length > 0) {
+            await targetMember.roles.add(selectedValues);
+          }
+        }
+
+        // Rebuild the interface with the same active button
+        const freshPlayerData = await loadPlayerData();
+        const activeButton = actionType === 'vanity' ? 'vanity' : actionType;
+        
+        const updatedUI = await createPlayerManagementUI({
+          mode: mode === 'admin' ? PlayerManagementMode.ADMIN : PlayerManagementMode.PLAYER,
+          targetMember,
+          playerData: freshPlayerData,
+          guildId,
+          userId: req.body.member.user.id,
+          showUserSelect: mode === 'admin',
+          showVanityRoles: mode === 'admin',
+          title: mode === 'admin' ? 
+            `Player Management | ${targetMember.displayName}` : 
+            'CastBot | Player Menu',
+          activeButton,
+          client
+        });
+
+        // Remove ephemeral flag for update
+        updatedUI.flags = (1 << 15); // Only IS_COMPONENTS_V2
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: updatedUI
+        });
+
+      } catch (error) {
+        console.error('Error handling integrated select:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: 'Error updating selection.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (false && custom_id.startsWith('admin_set_age_')) { // DISABLED - using integrated handler
       // Admin age management
       try {
@@ -6124,6 +6280,43 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       // Use new modular handler
       const playerData = await loadPlayerData();
       return await handlePlayerButtonClick(req, res, custom_id, playerData, client);
+    } else if (custom_id === 'player_menu') {
+      // Show player management menu
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const guild = await client.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
+        const playerData = await loadPlayerData();
+        
+        // Create player management UI
+        const playerMenuUI = await createPlayerManagementUI({
+          mode: PlayerManagementMode.PLAYER,
+          targetMember: member,
+          playerData,
+          guildId,
+          userId,
+          showUserSelect: false,
+          showVanityRoles: false,
+          title: 'CastBot | Player Menu',
+          activeButton: null,
+          client
+        });
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: playerMenuUI
+        });
+      } catch (error) {
+        console.error('Error showing player menu:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error loading player menu.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'select_pronouns') {
       // Handle pronoun role selection
       try {

@@ -114,41 +114,57 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
  * @param {string} targetUserId - Target user ID
  * @param {string} mode - PlayerManagementMode
  * @param {boolean} enabled - Whether buttons should be enabled
+ * @param {string} activeButton - Which button is currently active
+ * @param {boolean} showVanityRoles - Whether to show vanity roles button (admin only)
  * @returns {Object} ActionRow with buttons
  */
-export function createManagementButtons(targetUserId, mode, enabled = true) {
+export function createManagementButtons(targetUserId, mode, enabled = true, activeButton = null, showVanityRoles = false) {
   const prefix = mode === PlayerManagementMode.ADMIN ? 'admin' : 'player';
   const suffix = mode === PlayerManagementMode.ADMIN && !enabled ? '_pending' : '';
   const userIdPart = mode === PlayerManagementMode.ADMIN && enabled ? `_${targetUserId}` : '';
   
+  const components = [
+    {
+      type: 2, // Button
+      style: activeButton === 'pronouns' ? ButtonStyle.Primary : ButtonStyle.Secondary,
+      label: 'Pronouns',
+      custom_id: `${prefix}_set_pronouns${suffix}${userIdPart}`,
+      emoji: { name: '💜' },
+      disabled: !enabled
+    },
+    {
+      type: 2, // Button
+      style: activeButton === 'timezone' ? ButtonStyle.Primary : ButtonStyle.Secondary,
+      label: 'Timezone',
+      custom_id: `${prefix}_set_timezone${suffix}${userIdPart}`,
+      emoji: { name: '🌍' },
+      disabled: !enabled
+    },
+    {
+      type: 2, // Button
+      style: activeButton === 'age' ? ButtonStyle.Primary : ButtonStyle.Secondary,
+      label: 'Age',
+      custom_id: `${prefix}_set_age${suffix}${userIdPart}`,
+      emoji: { name: '🎂' },
+      disabled: !enabled
+    }
+  ];
+
+  // Add vanity roles button for admin mode
+  if (mode === PlayerManagementMode.ADMIN && showVanityRoles) {
+    components.push({
+      type: 2, // Button
+      style: activeButton === 'vanity' ? ButtonStyle.Primary : ButtonStyle.Secondary,
+      label: 'Vanity Roles',
+      custom_id: `admin_manage_vanity${suffix}${userIdPart}`,
+      emoji: { name: '🎭' },
+      disabled: !enabled
+    });
+  }
+
   return {
     type: 1, // ActionRow
-    components: [
-      {
-        type: 2, // Button
-        style: ButtonStyle.Secondary,
-        label: 'Pronouns',
-        custom_id: `${prefix}_set_pronouns${suffix}${userIdPart}`,
-        emoji: { name: '💜' },
-        disabled: !enabled
-      },
-      {
-        type: 2, // Button
-        style: ButtonStyle.Secondary,
-        label: 'Timezone',
-        custom_id: `${prefix}_set_timezone${suffix}${userIdPart}`,
-        emoji: { name: '🌍' },
-        disabled: !enabled
-      },
-      {
-        type: 2, // Button
-        style: ButtonStyle.Secondary,
-        label: 'Age',
-        custom_id: `${prefix}_set_age${suffix}${userIdPart}`,
-        emoji: { name: '🎂' },
-        disabled: !enabled
-      }
-    ]
+    components
   };
 }
 
@@ -167,15 +183,14 @@ export async function createPlayerManagementUI(options) {
     showUserSelect = (mode === PlayerManagementMode.ADMIN),
     showVanityRoles = (mode === PlayerManagementMode.ADMIN),
     title = mode === PlayerManagementMode.ADMIN ? 'CastBot | Player Management' : 'CastBot | Player Menu',
-    bottomLeftButton = mode === PlayerManagementMode.ADMIN ? 
-      { label: '🔄 Refresh', customId: 'refresh_player_display', style: ButtonStyle.Primary } :
-      { label: '📋 Show Castlist', customId: 'show_castlist2_default', style: ButtonStyle.Primary }
+    activeButton = null, // Which button is currently active
+    client = null // Discord client for fetching data
   } = options;
 
   // Create container
   const container = {
     type: 17, // Container
-    accent_color: 0x9B59B6, // Purple accent
+    accent_color: 0x3498DB, // Blue accent (matching production menu)
     components: []
   };
 
@@ -229,91 +244,81 @@ export async function createPlayerManagementUI(options) {
       type: 14 // Separator
     });
 
-    // Add management buttons (enabled if we have a member)
+    // Add management buttons with active state
     const managementButtons = createManagementButtons(
       targetMember.id, 
       mode, 
-      true // Enabled since we have a member
+      true, // Enabled since we have a member
+      activeButton,
+      showVanityRoles
     );
     container.components.push(managementButtons);
 
-    // Add integrated select menus for admin mode
-    if (mode === PlayerManagementMode.ADMIN) {
-      // Pronouns select
-      const pronounRoleIds = await getGuildPronouns(guildId);
-      if (pronounRoleIds && pronounRoleIds.length > 0) {
-        const currentPronouns = targetMember.roles.cache
-          .filter(role => pronounRoleIds.includes(role.id))
-          .map(role => role.id);
+    // Add separator before hot-swappable select
+    container.components.push({
+      type: 14 // Separator
+    });
 
-        container.components.push({
-          type: 1, // ActionRow
-          components: [{
-            type: 6, // Role Select
-            custom_id: `admin_integrated_pronouns_${targetMember.id}`,
-            placeholder: 'Select pronouns to assign',
-            min_values: 0,
-            max_values: pronounRoleIds.length,
-            default_values: currentPronouns.map(id => ({ id, type: 'role' }))
-          }]
-        });
-      }
-
-      // Timezone select
-      const timezones = await getGuildTimezones(guildId);
-      const timezoneRoleIds = Object.keys(timezones);
-      if (timezoneRoleIds.length > 0) {
-        const currentTimezone = targetMember.roles.cache
-          .find(role => timezoneRoleIds.includes(role.id));
-
-        container.components.push({
-          type: 1, // ActionRow
-          components: [{
-            type: 6, // Role Select
-            custom_id: `admin_integrated_timezone_${targetMember.id}`,
-            placeholder: 'Select timezone to assign',
-            min_values: 0,
-            max_values: 1,
-            default_values: currentTimezone ? [{ id: currentTimezone.id, type: 'role' }] : []
-          }]
-        });
-      }
+    // Add hot-swappable select based on active button
+    const selectMenu = await createHotSwappableSelect(
+      activeButton,
+      targetMember,
+      playerData,
+      guildId,
+      mode,
+      client
+    );
+    if (selectMenu) {
+      container.components.push(selectMenu);
     }
+
+    // Don't add any select menus here - they're handled by hot-swappable select
   } else if (mode === PlayerManagementMode.ADMIN) {
     // No member selected - show disabled buttons
     container.components.push({
       type: 14 // Separator
     });
 
-    const disabledButtons = createManagementButtons(null, mode, false);
+    const disabledButtons = createManagementButtons(null, mode, false, null, showVanityRoles);
     container.components.push(disabledButtons);
+
+    // Add separator and disabled select placeholder
+    container.components.push({
+      type: 14 // Separator
+    });
+
+    container.components.push({
+      type: 1, // ActionRow
+      components: [{
+        type: 6, // Role Select
+        custom_id: 'admin_integrated_select_pending',
+        placeholder: 'Select player first..',
+        min_values: 0,
+        max_values: 1,
+        disabled: true
+      }]
+    });
   }
 
-  // Create bottom action row
+  // Create bottom action row with Menu button
   const bottomRow = {
     type: 1, // ActionRow
     components: []
   };
 
-  // Add bottom left button
-  bottomRow.components.push(new ButtonBuilder()
-    .setCustomId(bottomLeftButton.customId)
-    .setLabel(bottomLeftButton.label)
-    .setStyle(bottomLeftButton.style));
-
-  // Add vanity roles button for admin mode
-  if (showVanityRoles && targetMember) {
+  // Add Menu button (far left)
+  if (mode === PlayerManagementMode.ADMIN) {
     bottomRow.components.push(new ButtonBuilder()
-      .setCustomId(`admin_manage_vanity_${targetMember.id}`)
-      .setLabel('🎭 Vanity Roles')
+      .setCustomId('prod_menu_back')
+      .setLabel('⬅️ Menu')
       .setStyle(ButtonStyle.Secondary));
+  } else {
+    // For player mode, could be viral_menu or another appropriate handler
+    bottomRow.components.push(new ButtonBuilder()
+      .setCustomId('viral_menu')
+      .setLabel('📋 Menu')
+      .setStyle(ButtonStyle.Primary));
   }
-
-  // Add close button
-  bottomRow.components.push(new ButtonBuilder()
-    .setCustomId('close_interaction')
-    .setLabel('❌ Close')
-    .setStyle(ButtonStyle.Danger));
 
   container.components.push(bottomRow);
 
@@ -377,136 +382,63 @@ export async function handlePlayerButtonClick(req, res, customId, playerData, cl
     const parts = customId.split('_');
     buttonType = parts[2]; // pronouns, timezone, or age
     targetUserId = parts[3] || userId;
+  } else if (customId.startsWith('admin_manage_vanity_')) {
+    mode = PlayerManagementMode.ADMIN;
+    buttonType = 'vanity';
+    targetUserId = customId.replace('admin_manage_vanity_', '');
   } else {
     console.error('Unknown button pattern:', customId);
     return;
   }
 
-  switch (buttonType) {
-    case 'pronouns': {
-      const pronounRoleIds = await getGuildPronouns(guildId);
-      if (!pronounRoleIds || pronounRoleIds.length === 0) {
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: "No pronoun roles have been set up by server administrators.",
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-
-      // Create role select menu
-      const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId(mode === PlayerManagementMode.ADMIN ? 
-          `admin_select_pronouns_${targetUserId}` : 
-          'player_select_pronouns')
-        .setPlaceholder('Select your pronouns')
-        .setMinValues(0)
-        .setMaxValues(pronounRoleIds.length);
-
-      // Fetch role names from interaction data if client not available
-      if (client) {
-        const guild = await client.guilds.fetch(guildId);
-        for (const roleId of pronounRoleIds) {
-          const role = guild.roles.cache.get(roleId);
-          if (role) {
-            selectMenu.addOptions({
-              label: role.name,
-              value: roleId
-            });
-          }
-        }
-      } else {
-        // Fallback: use role IDs as labels (not ideal but functional)
-        for (const roleId of pronounRoleIds) {
-          selectMenu.addOptions({
-            label: `Role ${roleId}`,
-            value: roleId
-          });
-        }
-      }
-
-      const row = new ActionRowBuilder().addComponents(selectMenu);
-      
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: "Select your pronouns from the dropdown below:",
-          components: [row],
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
-    }
-
-    case 'timezone': {
-      const timezones = await getGuildTimezones(guildId);
-      const timezoneRoleIds = Object.keys(timezones);
-      
-      if (timezoneRoleIds.length === 0) {
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: "No timezone roles have been set up by server administrators.",
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-
-      // Create role select menu
-      const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId(mode === PlayerManagementMode.ADMIN ? 
-          `admin_select_timezone_${targetUserId}` : 
-          'player_select_timezone')
-        .setPlaceholder('Select your timezone')
-        .setMinValues(0)
-        .setMaxValues(1);
-
-      // Fetch role names from interaction data if client not available
-      if (client) {
-        const guild = await client.guilds.fetch(guildId);
-        for (const roleId of timezoneRoleIds) {
-          const role = guild.roles.cache.get(roleId);
-          if (role) {
-            selectMenu.addOptions({
-              label: role.name,
-              value: roleId
-            });
-          }
-        }
-      } else {
-        // Fallback: use role IDs as labels (not ideal but functional)
-        for (const roleId of timezoneRoleIds) {
-          selectMenu.addOptions({
-            label: `Timezone ${roleId}`,
-            value: roleId
-          });
-        }
-      }
-
-      const row = new ActionRowBuilder().addComponents(selectMenu);
-      
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: "Select your timezone from the dropdown below:",
-          components: [row],
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
-    }
-
-    case 'age': {
-      const modal = createAgeModal(targetUserId, mode);
-      
-      return res.send({
-        type: InteractionResponseType.MODAL,
-        data: modal.toJSON()
-      });
-    }
-
-    default:
-      console.error('Unknown button type:', buttonType);
+  // Special handling for age button - show modal for custom age
+  if (buttonType === 'age' && req.body.data?.values?.[0] === 'age_custom') {
+    const modal = createAgeModal(targetUserId, mode);
+    return res.send({
+      type: InteractionResponseType.MODAL,
+      data: modal.toJSON()
+    });
   }
+
+  // For all other buttons, rebuild the UI with the active button
+  if (!client) {
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: "Error: Discord client not available",
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+
+  const guild = await client.guilds.fetch(guildId);
+  const targetMember = await guild.members.fetch(targetUserId);
+
+  // Rebuild the UI with the active button
+  const updatedUI = await createPlayerManagementUI({
+    mode,
+    targetMember,
+    playerData,
+    guildId,
+    userId: mode === PlayerManagementMode.PLAYER ? userId : req.body.member.user.id,
+    showUserSelect: mode === PlayerManagementMode.ADMIN,
+    showVanityRoles: mode === PlayerManagementMode.ADMIN,
+    title: mode === PlayerManagementMode.ADMIN ? 
+      `Player Management | ${targetMember.displayName}` : 
+      'CastBot | Player Menu',
+    activeButton: buttonType,
+    client
+  });
+
+  // Remove ephemeral flag for update
+  if (mode === PlayerManagementMode.ADMIN) {
+    updatedUI.flags = (1 << 15); // Only IS_COMPONENTS_V2
+  }
+
+  return res.send({
+    type: InteractionResponseType.UPDATE_MESSAGE,
+    data: updatedUI
+  });
 }
 
 /**
@@ -588,3 +520,127 @@ export async function handlePlayerModalSubmit(req, res, customId, playerData, cl
     });
   }
 }
+
+/**
+ * Creates a hot-swappable select menu based on the active button
+ * @param {string} activeButton - Which button is active
+ * @param {Object} targetMember - Target Discord member
+ * @param {Object} playerData - Guild player data
+ * @param {string} guildId - Guild ID
+ * @param {string} mode - Player management mode
+ * @param {Object} client - Discord client
+ * @returns {Object|null} ActionRow with select menu or null
+ */
+async function createHotSwappableSelect(activeButton, targetMember, playerData, guildId, mode, client) {
+  if (!activeButton || !targetMember) return null;
+
+  const prefix = mode === PlayerManagementMode.ADMIN ? 'admin' : 'player';
+  const userIdPart = mode === PlayerManagementMode.ADMIN ? `_${targetMember.id}` : '';
+
+  switch (activeButton) {
+    case 'pronouns': {
+      const pronounRoleIds = await getGuildPronouns(guildId);
+      if (!pronounRoleIds || pronounRoleIds.length === 0) return null;
+
+      const currentPronouns = targetMember.roles.cache
+        .filter(role => pronounRoleIds.includes(role.id))
+        .map(role => role.id);
+
+      return {
+        type: 1, // ActionRow
+        components: [{
+          type: 6, // Role Select
+          custom_id: `${prefix}_integrated_pronouns${userIdPart}`,
+          placeholder: 'Select pronouns',
+          min_values: 0,
+          max_values: pronounRoleIds.length,
+          default_values: currentPronouns.map(id => ({ id, type: 'role' }))
+        }]
+      };
+    }
+
+    case 'timezone': {
+      const timezones = await getGuildTimezones(guildId);
+      const timezoneRoleIds = Object.keys(timezones);
+      if (timezoneRoleIds.length === 0) return null;
+
+      const currentTimezone = targetMember.roles.cache
+        .find(role => timezoneRoleIds.includes(role.id));
+
+      return {
+        type: 1, // ActionRow
+        components: [{
+          type: 6, // Role Select
+          custom_id: `${prefix}_integrated_timezone${userIdPart}`,
+          placeholder: 'Select timezone',
+          min_values: 0,
+          max_values: 1,
+          default_values: currentTimezone ? [{ id: currentTimezone.id, type: 'role' }] : []
+        }]
+      };
+    }
+
+    case 'age': {
+      // Create age select menu with 16-40 + Custom Age option
+      const ageOptions = [];
+      
+      // Add ages 16-40
+      for (let age = 16; age <= 40; age++) {
+        ageOptions.push({
+          label: age.toString(),
+          value: `age_${age}`,
+          description: `${age} years old`
+        });
+      }
+
+      // Add Custom Age option
+      ageOptions.push({
+        label: 'Custom Age',
+        value: 'age_custom',
+        description: "Age not shown or '30s' style age",
+        emoji: { name: '✏️' }
+      });
+
+      // Get current age
+      const currentAge = playerData[guildId]?.players?.[targetMember.id]?.age;
+
+      return {
+        type: 1, // ActionRow
+        components: [{
+          type: 3, // String Select
+          custom_id: `${prefix}_integrated_age${userIdPart}`,
+          placeholder: currentAge ? `Current age: ${currentAge}` : 'Select age',
+          min_values: 0,
+          max_values: 1,
+          options: ageOptions
+        }]
+      };
+    }
+
+    case 'vanity': {
+      if (mode !== PlayerManagementMode.ADMIN) return null;
+
+      // Get current vanity roles
+      const currentVanityRoles = playerData[guildId]?.players?.[targetMember.id]?.vanityRoles || [];
+
+      return {
+        type: 1, // ActionRow
+        components: [{
+          type: 6, // Role Select
+          custom_id: `admin_integrated_vanity_${targetMember.id}`,
+          placeholder: 'Select vanity roles',
+          min_values: 0,
+          max_values: 25, // Discord limit
+          default_values: currentVanityRoles.map(id => ({ id, type: 'role' }))
+        }]
+      };
+    }
+
+    default:
+      return null;
+  }
+}
+
+export {
+  createHotSwappableSelect
+};
