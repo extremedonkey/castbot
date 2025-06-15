@@ -185,7 +185,9 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
     accessories: [
       {
         type: 11, // Thumbnail accessory
-        url: avatarUrl
+        media: {
+          url: avatarUrl
+        }
       }
     ]
   };
@@ -7403,8 +7405,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             buttonsEnabled = true;
             
             // Create player display section
-            const playerData = await loadPlayerData();
-            playerDisplaySection = await createPlayerDisplaySection(selectedPlayer, playerData, guildId);
+            try {
+              const playerData = await loadPlayerData();
+              playerDisplaySection = await createPlayerDisplaySection(selectedPlayer, playerData, guildId);
+              console.log('👍 Successfully created player display section');
+            } catch (displayError) {
+              console.error('❌ Error creating player display section:', displayError);
+              playerDisplaySection = null;
+            }
           } catch (error) {
             console.log('Player not found, keeping buttons disabled');
           }
