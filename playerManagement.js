@@ -270,6 +270,19 @@ export async function createPlayerManagementUI(options) {
     );
     if (selectMenu) {
       container.components.push(selectMenu);
+    } else if (!activeButton) {
+      // Show disabled placeholder select when member is selected but no button is active
+      container.components.push({
+        type: 1, // ActionRow
+        components: [{
+          type: 6, // Role Select
+          custom_id: 'admin_integrated_select_inactive',
+          placeholder: 'Click a button above to configure..',
+          min_values: 0,
+          max_values: 1,
+          disabled: true
+        }]
+      });
     }
 
     // Don't add any select menus here - they're handled by hot-swappable select
