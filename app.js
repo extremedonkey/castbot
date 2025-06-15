@@ -5806,8 +5806,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           );
 
         // Create player display section with updated information (including new age)
-        const playerData = await loadPlayerData();
-        const playerDisplaySection = await createPlayerDisplaySection(targetPlayer, playerData, guildId);
+        const updatedPlayerData = await loadPlayerData();
+        const playerDisplaySection = await createPlayerDisplaySection(targetPlayer, updatedPlayerData, guildId);
         
         // Create Components V2 Container
         const playerManagementComponents = [
