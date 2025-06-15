@@ -111,10 +111,7 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
   const playerId = player.id;
   const storedPlayer = playerData[guildId]?.players?.[playerId] || {};
   
-  // Get player's display name (nickname or username)
-  const displayName = player.displayName || player.user.username;
-  
-  // Get pronouns from roles
+  // Use castlist2 logic exactly - get pronouns from roles
   let pronounsText = '';
   const pronounRoleIDs = playerData[guildId]?.pronounRoleIDs || [];
   if (pronounRoleIDs.length > 0) {
@@ -125,10 +122,7 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
     pronounsText = pronounRoles.length > 0 ? pronounRoles.join(', ') : '';
   }
   
-  // Get age
-  const age = storedPlayer.age ? storedPlayer.age.toString() : '';
-  
-  // Get timezone from roles and calculate current time
+  // Get timezone from roles and calculate current time (castlist2 format)
   let timezoneText = '';
   let formattedTime = '';
   const timezoneRoles = playerData[guildId]?.timezones || {};
@@ -136,10 +130,11 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
     for (const [roleId, data] of Object.entries(timezoneRoles)) {
       if (player.roles.cache.has(roleId)) {
         const role = player.roles.cache.get(roleId);
-        timezoneText = role.name;
-        
-        // Calculate current time in player's timezone
         const offset = parseFloat(data.offset);
+        const utcOffsetText = offset >= 0 ? `+${offset}` : `${offset}`;
+        timezoneText = `${role.name} (UTC${utcOffsetText})`;
+        
+        // Calculate current time in player's timezone (castlist2 format)
         const utcTime = new Date();
         const localTime = new Date(utcTime.getTime() + (offset * 60 * 60 * 1000));
         const timeString = localTime.toLocaleTimeString('en-US', { 
@@ -147,18 +142,28 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
           minute: '2-digit', 
           hour12: true 
         });
-        formattedTime = `🕒 ${timeString}`;
+        formattedTime = timeString;
         break;
       }
     }
   }
+
+  // Use the exact castlist2 createPlayerCard logic
+  const displayName = capitalize(player.displayName || player.user.username);
+  const age = storedPlayer.age || '';
   
-  // Get vanity roles with Discord mentions
+  // Build info array exactly like castlist2 (pronouns, age, timezone)
+  const infoElements = [pronounsText, age, timezoneText].filter(info => info && info.trim() !== '');
+  const basicInfo = infoElements.length > 0 ? infoElements.join(' • ') : '';
+  
+  // Add time info exactly like castlist2 (with backticks around "Local time")
+  const timeInfo = formattedTime ? `\`🕛 Local time 🕛\` ${formattedTime}` : '';
+  
+  // Get vanity roles exactly like castlist2
   let vanityRolesInfo = '';
-  const vanityRoles = storedPlayer.vanityRoles || [];
-  if (vanityRoles.length > 0) {
+  if (storedPlayer?.vanityRoles && storedPlayer.vanityRoles.length > 0) {
     const validVanityRoles = [];
-    for (const roleId of vanityRoles) {
+    for (const roleId of storedPlayer.vanityRoles) {
       try {
         const role = player.roles.cache.get(roleId);
         if (role) {
@@ -174,26 +179,8 @@ async function createPlayerDisplaySection(player, playerData, guildId) {
     }
   }
   
-  // Build content similar to castlist2 format
-  let nameWithEmoji = `**${displayName}**`;
-  
-  // Basic info line (pronouns and age)
-  let basicInfo = '';
-  const infoParts = [];
-  if (pronounsText) infoParts.push(pronounsText);
-  if (age) infoParts.push(`${age} years old`);
-  if (infoParts.length > 0) {
-    basicInfo = infoParts.join(' • ');
-  }
-  
-  // Time info line
-  let timeInfo = '';
-  if (timezoneText && formattedTime) {
-    timeInfo = `${timezoneText} ${formattedTime}`;
-  }
-  
-  // Combine all parts, only adding newlines where there's content
-  let allInfo = nameWithEmoji;
+  // Combine exactly like castlist2 createPlayerCard
+  let allInfo = `**${displayName}**`;
   if (basicInfo) {
     allInfo += `\n${basicInfo}`;
   }
@@ -5473,6 +5460,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
 
+        // Create player display section
+        let playerDisplaySection = null;
+        try {
+          const playerData = await loadPlayerData();
+          playerDisplaySection = await createPlayerDisplaySection(selectedPlayer, playerData, guildId);
+          console.log('👍 Successfully created player display section for button handler');
+        } catch (displayError) {
+          console.error('❌ Error creating player display section in button handler:', displayError);
+          playerDisplaySection = null;
+        }
+
         // Create Components V2 Container
         const playerManagementComponents = [
           {
@@ -5482,7 +5480,21 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           {
             type: 14 // Separator
           },
-          userSelectRow.toJSON(),
+          userSelectRow.toJSON()
+        ];
+        
+        // Add player display section if available
+        if (playerDisplaySection) {
+          playerManagementComponents.push(
+            {
+              type: 14 // Separator
+            },
+            playerDisplaySection
+          );
+        }
+        
+        // Add management buttons and select
+        playerManagementComponents.push(
           {
             type: 14 // Separator
           },
@@ -5491,7 +5503,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             type: 14 // Separator
           },
           integratedSelectRow.toJSON()
-        ];
+        );
         
         // Always add Back to Main Menu button
         const backRow = createBackToMainMenuButton();
