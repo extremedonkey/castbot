@@ -8601,17 +8601,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
         // Create age summary select to show the updated age
         const updatedPlayerData = await loadPlayerData();
-        const ageValue = updatedPlayerData[guildId]?.players?.[targetPlayerId]?.age || 'Not set';
+        const currentAge = updatedPlayerData[guildId]?.players?.[targetPlayerId]?.age || 'Not set';
         const integratedSelectRow = new ActionRowBuilder()
           .addComponents(
             new StringSelectMenuBuilder()
               .setCustomId('admin_integrated_select_pending')
-              .setPlaceholder(`Age: ${ageValue}`)
+              .setPlaceholder(`Age: ${currentAge}`)
               .setMinValues(0)
               .setMaxValues(1)
               .setDisabled(true)
               .addOptions([{
-                label: `Age: ${ageValue}`,
+                label: `Age: ${currentAge}`,
                 value: 'age_display',
                 description: 'Age has been updated'
               }])
