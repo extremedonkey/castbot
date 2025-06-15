@@ -3522,14 +3522,11 @@ To fix this:
           targetMember: null, // No member selected initially
           playerData,
           guildId,
+          userId: req.body.member.user.id,
           showUserSelect: true,
           showVanityRoles: true,
           title: `Player Management | ${guild.name}`,
-          bottomLeftButton: {
-            label: '⬅️ Menu',
-            customId: 'prod_menu_back',
-            style: ButtonStyle.Secondary
-          }
+          client
         });
 
         // Remove ephemeral flag for production menu context

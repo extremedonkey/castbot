@@ -46,7 +46,16 @@ This is a living requirements backlog for CastBot features and improvements, ord
 
 ## HIGH Priority
 
-### Remove Legacy /castlist2 Command
+### Tech Debt - Legacy Code Cleanup
+**castlist2 References Cleanup:**
+- Remove all `castlist2_` custom IDs, function names, and comments since /castlist2 became /castlist
+- Update navigation handlers to use `castlist_` prefixes for consistency
+
+**Post React Button Code Duplication:**
+- Refactor prod_timezone_react and prod_pronoun_react handlers in app.js 
+- Replace duplicated legacy player_set_timezone/player_set_pronouns code with calls to modern playerManagement.js system
+
+### Remove Legacy /castlist2 Command  
 **Description:** Clean up retired commands like /castlist2 now that Components V2 is the default castlist system
 **Acceptance Criteria:**
 - Remove /castlist2 command definition from commands.js

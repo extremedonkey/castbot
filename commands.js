@@ -40,7 +40,7 @@ const CASTLIST_COMMAND = {
 	]
 };
 
-// Adding the Tycoons setup command - only available in dev mode, not in production
+// Only active slash commands - admin commands moved to /menu interface
 const SETUP_TYCOONS_COMMAND = {
 	name: maybePrependDev('setup_tycoons'),
 	description: 'Setup roles for the Tycoons game (development command)',
