@@ -335,34 +335,30 @@ export async function createPlayerManagementUI(options) {
     container.components.push(menuRow);
   }
 
-  // Handle castlist rows differently for admin vs player modes
-  let castlistRows = [];
-  
-  if (allCastlists && allCastlists.size > 0) {
-    // For player mode, don't include the "+" button (includeAddButton = false)
-    const includeAddButton = (mode === PlayerManagementMode.ADMIN);
-    castlistRows = createCastlistRows(allCastlists, castlistTribes, includeAddButton);
-  } else {
-    // Fallback: single default castlist button if no castlist data found
-    castlistRows = [{
-      type: 1, // ActionRow
-      components: [new ButtonBuilder()
-        .setCustomId('show_castlist2_default')
-        .setLabel('📋 Castlist')
-        .setStyle(ButtonStyle.Primary)]
-    }];
-  }
-
   if (mode === PlayerManagementMode.ADMIN) {
-    // Admin mode: Keep castlist rows inside the container
-    castlistRows.forEach(row => container.components.push(row));
-    
+    // Admin mode (Player Management): No castlist buttons - focus on player management only
     return {
       flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
       components: [container]
     };
   } else {
-    // Player mode: Move castlist rows outside the container
+    // Player mode (Player Menu): Add castlist buttons outside the container
+    let castlistRows = [];
+    
+    if (allCastlists && allCastlists.size > 0) {
+      // Player mode: don't include the "+" button (includeAddButton = false)
+      castlistRows = createCastlistRows(allCastlists, castlistTribes, false);
+    } else {
+      // Fallback: single default castlist button if no castlist data found
+      castlistRows = [{
+        type: 1, // ActionRow
+        components: [new ButtonBuilder()
+          .setCustomId('show_castlist2_default')
+          .setLabel('📋 Castlist')
+          .setStyle(ButtonStyle.Primary)]
+      }];
+    }
+    
     return {
       flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
       components: [container, ...castlistRows]
