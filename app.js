@@ -3641,9 +3641,13 @@ To fix this:
               .setEmoji('🌍'),
             new ButtonBuilder()
               .setCustomId('prod_edit_timezones')
-              .setLabel('Edit Timezones')
+              .setLabel('Bulk Modify (no offset)')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('⏲️'),
+            new ButtonBuilder()
+              .setCustomId('prod_add_timezone')
+              .setLabel('🗺️ Add Timezone (incl. Offset)')
+              .setStyle(ButtonStyle.Secondary),
             new ButtonBuilder()
               .setCustomId('prod_timezone_react')
               .setLabel('Post React for Timezones')
@@ -4745,7 +4749,7 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '## Edit Timezone Roles\n\nSelect which roles should be timezone roles. Currently selected roles are already ticked. Add or remove roles as needed.',
+            content: '## Edit Timezone Roles\n\nSelect which roles should be timezone roles. Currently selected roles are already ticked. Add or remove roles as needed.\n\n**Note:** If you add any new timezones, you need to set the offset afterwards using the \'Add Timezone\' button.',
             components: [row.toJSON()],
             flags: InteractionResponseFlags.EPHEMERAL
           }
@@ -5824,6 +5828,76 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error updating timezone roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_add_timezone') {
+      // Show role select menu for adding a timezone with offset
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        
+        // Use Discord.js RoleSelectMenuBuilder for selecting existing roles
+        const roleSelect = new RoleSelectMenuBuilder()
+          .setCustomId('prod_add_timezone_select')
+          .setPlaceholder('Select an existing role from your server')
+          .setMinValues(1)
+          .setMaxValues(1);
+        
+        const row = new ActionRowBuilder().addComponents(roleSelect);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '## Add Timezone\n\nSelect an existing role from your server',
+            components: [row.toJSON()],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in prod_add_timezone:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error displaying role selection.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_add_timezone_select') {
+      // Handle role selection for adding timezone - show offset modal
+      try {
+        const selectedRoleId = data.values[0]; // Single role selection
+        
+        // Create offset input modal
+        const modal = new ModalBuilder()
+          .setCustomId(`prod_timezone_offset_modal_${selectedRoleId}`)
+          .setTitle('Set Offset');
+
+        const offsetInput = new TextInputBuilder()
+          .setCustomId('offset')
+          .setLabel('Set the UTC offset of your timezone')
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(true)
+          .setMaxLength(200)
+          .setPlaceholder('Example Positive UTC values: 4 corresponds to UTC+4, 5.5 corresponds to UTC+5:30.\nExample negative UTC values: -5, -3.5.\nEnter 0 where the offset is 0, like GMT.');
+
+        const row = new ActionRowBuilder().addComponents(offsetInput);
+        modal.addComponents(row);
+
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error handling timezone role selection for offset:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error showing offset input.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -7246,6 +7320,74 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       // Use new modular handler for admin age modal
       const playerData = await loadPlayerData();
       return await handlePlayerModalSubmit(req, res, custom_id, playerData, client);
+    } else if (custom_id.startsWith('prod_timezone_offset_modal_')) {
+      // Handle timezone offset modal submission
+      try {
+        const roleId = custom_id.replace('prod_timezone_offset_modal_', '');
+        const offsetValue = components[0].components[0].value?.trim();
+        
+        // Validate offset input
+        const offset = parseFloat(offsetValue);
+        if (isNaN(offset) || offset < -12 || offset > 14) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **Invalid offset value**\n\nPlease enter a valid UTC offset between -12 and +14 (e.g., 4, -5, 5.5, -3.5, 0)',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const role = guild.roles.cache.get(roleId);
+        
+        if (!role) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error: Selected role not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update playerData with timezone role and offset
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = {};
+        if (!playerData[guildId].timezones) playerData[guildId].timezones = {};
+        
+        // Check if timezone already exists
+        const existingOffset = playerData[guildId].timezones[roleId]?.offset;
+        const isUpdate = existingOffset !== undefined;
+        
+        // Add or update timezone with offset
+        playerData[guildId].timezones[roleId] = { offset };
+        
+        // Save data
+        await savePlayerData(playerData);
+        
+        const offsetText = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
+        const actionText = isUpdate ? 'updated' : 'added';
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Timezone ${actionText}!**\n\n**Role:** ${role.name}\n**Offset:** ${offsetText}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling timezone offset modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error processing timezone offset.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else {
       console.log(`⚠️ DEBUG: Unhandled MODAL_SUBMIT custom_id: ${custom_id}`);
     }
