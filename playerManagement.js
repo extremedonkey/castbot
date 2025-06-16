@@ -12,7 +12,7 @@ import {
   InteractionResponseType,
   InteractionResponseFlags
 } from 'discord-interactions';
-import { createPlayerCard } from './castlistV2.js';
+import { createPlayerCard, extractCastlistData, createCastlistRows } from './castlistV2.js';
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
 
 /**
@@ -313,27 +313,47 @@ export async function createPlayerManagementUI(options) {
     });
   }
 
-  // Create bottom action row with Menu button
-  const bottomRow = {
+  // Extract castlist data for multiple castlist support
+  const { allCastlists, castlistTribes } = extractCastlistData(playerData, guildId);
+
+  // Create Menu button row
+  const menuRow = {
     type: 1, // ActionRow
     components: []
   };
 
   // Add Menu button (far left)
   if (mode === PlayerManagementMode.ADMIN) {
-    bottomRow.components.push(new ButtonBuilder()
+    menuRow.components.push(new ButtonBuilder()
       .setCustomId('prod_menu_back')
       .setLabel('⬅️ Menu')
       .setStyle(ButtonStyle.Secondary));
-  } else {
-    // For player mode, show Castlist button that opens default castlist
-    bottomRow.components.push(new ButtonBuilder()
-      .setCustomId('show_castlist2_default')
-      .setLabel('📋 Castlist')
-      .setStyle(ButtonStyle.Primary));
   }
 
-  container.components.push(bottomRow);
+  // Only add menu row if it has buttons (admin mode)
+  if (menuRow.components.length > 0) {
+    container.components.push(menuRow);
+  }
+
+  // Add castlist rows for both admin and player modes
+  if (allCastlists && allCastlists.size > 0) {
+    // For player mode, don't include the "+" button (includeAddButton = false)
+    const includeAddButton = (mode === PlayerManagementMode.ADMIN);
+    const castlistRows = createCastlistRows(allCastlists, castlistTribes, includeAddButton);
+    
+    // Add all castlist rows to the container
+    castlistRows.forEach(row => container.components.push(row));
+  } else {
+    // Fallback: single default castlist button if no castlist data found
+    const fallbackRow = {
+      type: 1, // ActionRow
+      components: [new ButtonBuilder()
+        .setCustomId('show_castlist2_default')
+        .setLabel('📋 Castlist')
+        .setStyle(ButtonStyle.Primary)]
+    };
+    container.components.push(fallbackRow);
+  }
 
   return {
     flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL

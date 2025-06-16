@@ -605,6 +605,97 @@ function countComponents(components) {
     return count;
 }
 
+/**
+ * Extract castlist data from guild tribes for UI components
+ * @param {Object} playerData - Guild player data
+ * @param {string} guildId - Discord guild ID
+ * @returns {Object} Object containing allCastlists Set and castlistTribes mapping
+ */
+function extractCastlistData(playerData, guildId) {
+    const allCastlists = new Set();
+    const castlistTribes = {}; // Track tribes per castlist to get emojis
+    
+    if (playerData[guildId]?.tribes) {
+        Object.entries(playerData[guildId].tribes).forEach(([roleId, tribeData]) => {
+            const castlistName = tribeData.castlist || 'default';
+            allCastlists.add(castlistName);
+            
+            // Store tribe info for each castlist (for emojis)
+            if (!castlistTribes[castlistName]) {
+                castlistTribes[castlistName] = [];
+            }
+            castlistTribes[castlistName].push({
+                roleId,
+                emoji: tribeData.emoji
+            });
+        });
+    }
+    
+    return { allCastlists, castlistTribes };
+}
+
+/**
+ * Create castlist button rows with pagination to handle Discord's 5-button ActionRow limit
+ * @param {Set} allCastlists - Set of all castlist names
+ * @param {Object} castlistTribes - Mapping of castlists to their tribe data
+ * @param {boolean} includeAddButton - Whether to include the "+" button for adding castlists
+ * @returns {Array} Array of ActionRow JSON objects
+ */
+function createCastlistRows(allCastlists, castlistTribes, includeAddButton = true) {
+    const castlistButtons = [];
+    
+    // Add default castlist button
+    castlistButtons.push(
+        new ButtonBuilder()
+            .setCustomId('show_castlist2_default')
+            .setLabel('Show Castlist')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('📋')
+    );
+    
+    // Add buttons for custom castlists (sorted alphabetically, excluding "default")
+    const customCastlists = Array.from(allCastlists)
+        .filter(name => name !== 'default')
+        .sort();
+        
+    for (const castlistName of customCastlists) {
+        // Get emoji from first tribe with an emoji in this castlist
+        const tribesInCastlist = castlistTribes[castlistName] || [];
+        const emojiTribe = tribesInCastlist.find(tribe => tribe.emoji);
+        const emoji = emojiTribe?.emoji || '📋';
+        
+        castlistButtons.push(
+            new ButtonBuilder()
+                .setCustomId(`show_castlist2_${castlistName}`)
+                .setLabel(castlistName)
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji(emoji)
+        );
+    }
+    
+    // Add plus button to the end (only if requested)
+    if (includeAddButton) {
+        castlistButtons.push(
+            new ButtonBuilder()
+                .setCustomId('prod_add_castlist')
+                .setLabel('+')
+                .setStyle(ButtonStyle.Secondary)
+        );
+    }
+    
+    // Split buttons into rows of max 5 buttons each
+    const rows = [];
+    const maxButtonsPerRow = 5;
+    
+    for (let i = 0; i < castlistButtons.length; i += maxButtonsPerRow) {
+        const rowButtons = castlistButtons.slice(i, i + maxButtonsPerRow);
+        const row = new ActionRowBuilder().addComponents(rowButtons);
+        rows.push(row.toJSON());
+    }
+    
+    return rows;
+}
+
 export {
     calculateComponentsForTribe,
     determineDisplayScenario,
@@ -615,5 +706,7 @@ export {
     createTribeSection, 
     createNavigationButtons,
     processMemberData,
-    createCastlistV2Layout
+    createCastlistV2Layout,
+    extractCastlistData,
+    createCastlistRows
 };
