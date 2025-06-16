@@ -335,30 +335,39 @@ export async function createPlayerManagementUI(options) {
     container.components.push(menuRow);
   }
 
-  // Add castlist rows for both admin and player modes
+  // Handle castlist rows differently for admin vs player modes
+  let castlistRows = [];
+  
   if (allCastlists && allCastlists.size > 0) {
     // For player mode, don't include the "+" button (includeAddButton = false)
     const includeAddButton = (mode === PlayerManagementMode.ADMIN);
-    const castlistRows = createCastlistRows(allCastlists, castlistTribes, includeAddButton);
-    
-    // Add all castlist rows to the container
-    castlistRows.forEach(row => container.components.push(row));
+    castlistRows = createCastlistRows(allCastlists, castlistTribes, includeAddButton);
   } else {
     // Fallback: single default castlist button if no castlist data found
-    const fallbackRow = {
+    castlistRows = [{
       type: 1, // ActionRow
       components: [new ButtonBuilder()
         .setCustomId('show_castlist2_default')
         .setLabel('📋 Castlist')
         .setStyle(ButtonStyle.Primary)]
-    };
-    container.components.push(fallbackRow);
+    }];
   }
 
-  return {
-    flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
-    components: [container]
-  };
+  if (mode === PlayerManagementMode.ADMIN) {
+    // Admin mode: Keep castlist rows inside the container
+    castlistRows.forEach(row => container.components.push(row));
+    
+    return {
+      flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+      components: [container]
+    };
+  } else {
+    // Player mode: Move castlist rows outside the container
+    return {
+      flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+      components: [container, ...castlistRows]
+    };
+  }
 }
 
 /**
