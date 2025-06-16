@@ -3817,7 +3817,7 @@ To fix this:
         const seasonAppsButtons = [
           new ButtonBuilder()
             .setCustomId('season_app_creation')
-            .setLabel('Creation Application Process')
+            .setLabel('Create Application Process')
             .setStyle(ButtonStyle.Primary)
             .setEmoji('📝'),
           new ButtonBuilder()
