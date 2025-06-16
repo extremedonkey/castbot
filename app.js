@@ -5850,7 +5850,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '## Add Timezone\n\nSelect an existing role from your server',
+            content: '## Add Timezone\n\nSelect an existing role from your server.\n\n**Example Positive UTC values:** 4 corresponds to UTC+4, 5.5 corresponds to UTC+5:30.\n**Example negative UTC values:** -5, -3.5.\n**Enter 0** where the offset is 0, like GMT.',
             components: [row.toJSON()],
             flags: InteractionResponseFlags.EPHEMERAL
           }
@@ -5878,7 +5878,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
         const offsetInput = new TextInputBuilder()
           .setCustomId('offset')
-          .setLabel('UTC offset (positive: 4 = UTC+4, negative: -5 = UTC-5)')
+          .setLabel('UTC Offset')
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(10)
