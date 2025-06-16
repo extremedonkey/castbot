@@ -1652,7 +1652,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          content: 'No timezone roles found. Add some using /timezones_add first!',
+          content: 'No timezone roles found. Ask an admin to add some using the "🗺️ Add Timezone" button in the admin menu first!',
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
@@ -1912,7 +1912,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          content: 'No timezone roles found. Add some using /timezones_add first!',
+          content: 'No timezone roles found. Ask an admin to add some using the "🗺️ Add Timezone" button in the admin menu first!',
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
@@ -4376,7 +4376,7 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: 'No timezone roles found. Ask an admin to add some using /timezones_add first!',
+              content: 'No timezone roles found. Ask an admin to add some using the "🗺️ Add Timezone" button in the admin menu first!',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -5812,7 +5812,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           resultMessage += '✅ No changes made\n';
         }
         
-        resultMessage += '\n**Note:** New timezone roles default to UTC+0. Use `/timezones_add` to set specific offsets.';
+        resultMessage += '\n**Note:** New timezone roles default to UTC+0. Use the "🗺️ Add Timezone" button to set specific offsets.';
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
