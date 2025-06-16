@@ -5878,11 +5878,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
         const offsetInput = new TextInputBuilder()
           .setCustomId('offset')
-          .setLabel('Set the UTC offset of your timezone')
-          .setStyle(TextInputStyle.Paragraph)
+          .setLabel('UTC offset (positive: 4 = UTC+4, negative: -5 = UTC-5)')
+          .setStyle(TextInputStyle.Short)
           .setRequired(true)
-          .setMaxLength(200)
-          .setPlaceholder('Example Positive UTC values: 4 corresponds to UTC+4, 5.5 corresponds to UTC+5:30.\nExample negative UTC values: -5, -3.5.\nEnter 0 where the offset is 0, like GMT.');
+          .setMaxLength(10)
+          .setPlaceholder('e.g. 4, -5, 5.5, 0');
 
         const row = new ActionRowBuilder().addComponents(offsetInput);
         modal.addComponents(row);
