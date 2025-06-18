@@ -338,7 +338,7 @@ export async function createPlayerManagementUI(options) {
   if (mode === PlayerManagementMode.ADMIN) {
     // Admin mode (Player Management): No castlist buttons - focus on player management only
     return {
-      flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+      flags: (1 << 15), // IS_COMPONENTS_V2 only - ephemeral handled by caller
       components: [container]
     };
   } else {
@@ -360,7 +360,7 @@ export async function createPlayerManagementUI(options) {
     }
     
     return {
-      flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+      flags: (1 << 15), // IS_COMPONENTS_V2 only - ephemeral handled by caller
       components: [container, ...castlistRows]
     };
   }
