@@ -21,17 +21,23 @@ Usage:
 
 Options:
   --help, -h          Show this help message
+  --historical        Show historical data instead of live mode
   --filter-out [buttons]  Comma-separated list of button patterns to filter out
-  --recent [days]     Show only recent entries (default: all historical data)
-  --live              Follow live updates (like tail -f)
+  --recent [days]     Show only recent entries (default: all data)
 
 Examples:
-  npm run live-analytics                    # Show all historical data
-  npm run live-analytics --live             # Follow live updates
-  npm run live-analytics --recent 3         # Show last 3 days only
+  npm run live-analytics                    # Follow live updates (DEFAULT)
+  npm run live-analytics --historical       # Show all historical data
+  npm run live-analytics --recent 3         # Show last 3 days live
+  npm run live-analytics --historical --recent 3  # Show last 3 days historical
   npm run live-analytics --filter-out "disabled_,test_"  # Filter out specific buttons
 
 Default filtered buttons: ${DEFAULT_FILTERED_BUTTONS.join(', ')}
+
+Live Mode Commands:
+  Ctrl+C              Stop monitoring
+  
+Note: Live mode is now the default behavior!
 `);
 }
 
@@ -39,7 +45,7 @@ function parseArgs() {
   const args = process.argv.slice(2);
   const options = {
     help: false,
-    live: false,
+    live: true,  // DEFAULT is now live mode
     recent: null,
     filterOut: [...DEFAULT_FILTERED_BUTTONS]
   };
@@ -49,8 +55,8 @@ function parseArgs() {
     
     if (arg === '--help' || arg === '-h') {
       options.help = true;
-    } else if (arg === '--live') {
-      options.live = true;
+    } else if (arg === '--historical') {
+      options.live = false;  // Switch to historical mode
     } else if (arg === '--recent') {
       const days = parseInt(args[i + 1]);
       if (!isNaN(days)) {
@@ -107,7 +113,7 @@ function displayAnalytics(options) {
   if (options.recent) {
     console.log(`📅 Showing last ${options.recent} days`);
   } else {
-    console.log('📅 Showing all historical data');
+    console.log('📅 Showing all data');
   }
   
   console.log('═'.repeat(60));
@@ -116,6 +122,13 @@ function displayAnalytics(options) {
   if (options.live) {
     // Live mode - use tail -f
     console.log('🔴 LIVE MODE - Press Ctrl+C to stop');
+    console.log('');
+    console.log('💡 Quick Commands:');
+    console.log('   node liveAnalytics.js --historical     # View historical data');
+    console.log('   node liveAnalytics.js --recent 3       # Last 3 days live');
+    console.log('   node liveAnalytics.js --filter-out "disabled_"  # Filter buttons');
+    console.log('');
+    console.log('═'.repeat(60));
     console.log('');
     
     const tail = spawn('tail', ['-f', ANALYTICS_LOG_FILE]);

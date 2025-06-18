@@ -1,7 +1,47 @@
 import fs from 'fs';
 import path from 'path';
+import { loadPlayerData } from './storage.js';
 
 const ANALYTICS_LOG_FILE = './logs/user-analytics.log';
+
+// Button label mappings for common buttons that may not be extractable from components
+const BUTTON_LABEL_MAP = {
+  // Production menu buttons
+  'prod_setup': '🪛 Setup',
+  'prod_manage_pronouns_timezones': '💜 Manage Pronouns/Timezones',
+  'prod_manage_tribes': '🔥 Manage Tribes',
+  'admin_manage_player': '🧑‍🤝‍🧑 Manage Players',
+  'prod_season_applications': '📝 Season Applications',
+  'prod_setup_tycoons': '💰 Tycoons',
+  'prod_analytics_dump': '📊 Analytics',
+  'prod_player_menu': '👤 Player Menu',
+  
+  // Tribe management buttons
+  'prod_view_tribes': 'View Tribes',
+  'prod_add_tribe': 'Add Tribe',
+  'prod_clear_tribe': 'Clear Tribe',
+  'prod_create_emojis': 'Create Emojis',
+  
+  // Season applications
+  'season_app_creation': 'App Creation',
+  'season_app_ranking': '🏆 Cast Ranking',
+  'ranking_view_all_scores': 'View All Scores',
+  
+  // Castlist display
+  'show_castlist2_default': 'Show Default Castlist',
+  'show_castlist2': 'Show Castlist',
+  
+  // Menu buttons
+  'viral_menu': '📋 Menu',
+  'prod_menu_back': 'Back to Production Menu',
+  
+  // Navigation patterns
+  'castlist2_nav_next_page': '▶ Next Page',
+  'castlist2_nav_last_tribe': '▶ Last Tribe',
+  'castlist2_nav_first_tribe': '◀ First Tribe',
+  'castlist2_prev': '◀ Previous',
+  'castlist2_next': '▶ Next'
+};
 
 /**
  * Extract human-readable button label from Discord components
@@ -10,42 +50,76 @@ const ANALYTICS_LOG_FILE = './logs/user-analytics.log';
  * @returns {string} Human-readable button label with emoji, or custom ID as fallback
  */
 function getButtonLabel(customId, components) {
-  if (!components || !Array.isArray(components)) {
-    return customId;
-  }
-
-  try {
-    for (const row of components) {
-      if (row.components && Array.isArray(row.components)) {
-        for (const component of row.components) {
-          if (component.custom_id === customId) {
-            // Build human-readable label
-            let label = '';
-            
-            // Add emoji if present
-            if (component.emoji) {
-              if (component.emoji.name) {
-                label += `${component.emoji.name} `;
+  // First try to extract from components
+  if (components && Array.isArray(components)) {
+    try {
+      for (const row of components) {
+        if (row.components && Array.isArray(row.components)) {
+          for (const component of row.components) {
+            if (component.custom_id === customId) {
+              // Build human-readable label
+              let label = '';
+              
+              // Add emoji if present
+              if (component.emoji) {
+                if (component.emoji.name) {
+                  label += `${component.emoji.name} `;
+                }
+              }
+              
+              // Add text label
+              if (component.label) {
+                label += component.label;
+              }
+              
+              // Return enhanced label if found
+              if (label.trim()) {
+                return label.trim();
               }
             }
-            
-            // Add text label
-            if (component.label) {
-              label += component.label;
-            }
-            
-            // Return enhanced label or fallback to custom_id
-            return label.trim() || customId;
           }
         }
       }
+    } catch (error) {
+      console.error('Error extracting button label:', error);
     }
-  } catch (error) {
-    console.error('Error extracting button label:', error);
   }
   
-  // Fallback to custom_id if no label found
-  return customId;
+  // Try predefined button mapping
+  if (BUTTON_LABEL_MAP[customId]) {
+    return BUTTON_LABEL_MAP[customId];
+  }
+  
+  // Check for pattern matches (like navigation buttons)
+  for (const [pattern, label] of Object.entries(BUTTON_LABEL_MAP)) {
+    if (customId.startsWith(pattern)) {
+      return label;
+    }
+  }
+  
+  // Special handling for ranking buttons
+  if (customId.startsWith('rank_')) {
+    const parts = customId.split('_');
+    if (parts.length >= 2) {
+      return `🏆 Rank ${parts[1]}`;
+    }
+  }
+  
+  // Special handling for castlist navigation
+  if (customId.includes('castlist2_nav_')) {
+    if (customId.includes('next_page')) return '▶ Next Page';
+    if (customId.includes('last_tribe')) return '▶ Last Tribe';
+    if (customId.includes('first_tribe')) return '◀ First Tribe';
+  }
+  
+  // Special handling for show castlist buttons
+  if (customId.startsWith('show_castlist2_')) {
+    const castlistName = customId.replace('show_castlist2_', '');
+    return `📋 Show ${castlistName || 'Default'} Castlist`;
+  }
+  
+  // Fallback - return "Unknown" for button clicks, custom_id for everything else
+  return 'Unknown';
 }
 
 /**
@@ -57,20 +131,40 @@ function getButtonLabel(customId, components) {
  * @param {string} username - Discord username
  * @param {string} guildName - Discord guild name
  * @param {Array} components - Discord message components (for button label extraction)
+ * @param {string} channelName - Discord channel name (optional)
+ * @param {string} displayName - User's server display name (optional)
  */
-function logInteraction(userId, guildId, action, details, username, guildName, components = null) {
+function logInteraction(userId, guildId, action, details, username, guildName, components = null, channelName = null, displayName = null) {
   try {
     const timestamp = new Date().toISOString();
     let logDetails = details;
     
-    // If it's a button click, try to get human-readable label
-    if (action === 'BUTTON_CLICK' && components) {
+    // If it's a button click, try to get human-readable label with fallback mapping
+    if (action === 'BUTTON_CLICK') {
       const humanLabel = getButtonLabel(details, components);
-      logDetails = humanLabel;
+      // Format as "ButtonName (command)" if we have a mapped label
+      if (humanLabel !== 'Unknown' && humanLabel !== details) {
+        logDetails = `${humanLabel} (${details})`;
+      } else {
+        logDetails = `Unknown (${details})`;
+      }
     }
     
-    // Create log entry in exact BACKLOG.md format
-    const logEntry = `[ANALYTICS] ${timestamp} | ${username} in ${guildName} | ${action} | ${logDetails}\n`;
+    // Enhanced user display: "DisplayName (username)" or just "username"
+    const userDisplay = displayName && displayName !== username 
+      ? `${displayName} (${username})`
+      : username;
+    
+    // Enhanced server display: "ServerName (guildId)"
+    const serverDisplay = guildName && guildName !== 'Unknown Server'
+      ? `${guildName} (${guildId})`
+      : `Unknown Server (${guildId})`;
+    
+    // Enhanced action display: include channel if available
+    const actionDisplay = channelName ? `#${channelName}` : action;
+    
+    // Create enhanced log entry format
+    const logEntry = `[ANALYTICS] ${timestamp} | ${userDisplay} in ${serverDisplay} | ${actionDisplay} | ${logDetails}\n`;
     
     // Ensure logs directory exists
     const logDir = path.dirname(ANALYTICS_LOG_FILE);

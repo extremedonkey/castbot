@@ -735,14 +735,38 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     // Analytics logging for slash commands
     const user = req.body.member?.user || req.body.user;
     const guild = req.body.guild;
+    const member = req.body.member;
+    const channelId = req.body.channel_id;
+    
     if (user && guild) {
+      // Get display name (nickname or global_name)
+      const displayName = member?.nick || user.global_name || user.username;
+      
+      // Get channel name from Discord API if possible
+      let channelName = null;
+      if (channelId) {
+        try {
+          // Try to get channel info from Discord API
+          const channelResponse = await DiscordRequest(`channels/${channelId}`, { method: 'GET' });
+          if (channelResponse.ok) {
+            const channelData = await channelResponse.json();
+            channelName = channelData.name;
+          }
+        } catch (error) {
+          console.log('Could not fetch channel name for analytics:', error.message);
+        }
+      }
+      
       logInteraction(
         user.id,
         req.body.guild_id,
         'SLASH_COMMAND',
         `/${name}`,
         user.username,
-        guild.name || 'Unknown Server'
+        guild.name || 'Unknown Server',
+        null, // no components for slash commands
+        channelName,
+        displayName
       );
     }
 
@@ -2445,8 +2469,29 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     // Analytics logging for button interactions
     const user = req.body.member?.user || req.body.user;
     const guild = req.body.guild;
+    const member = req.body.member;
     const components = req.body.message?.components;
+    const channelId = req.body.channel_id;
+    
     if (user && guild) {
+      // Get display name (nickname or global_name)
+      const displayName = member?.nick || user.global_name || user.username;
+      
+      // Get channel name from Discord API if possible
+      let channelName = null;
+      if (channelId) {
+        try {
+          // Try to get channel info from Discord API
+          const channelResponse = await DiscordRequest(`channels/${channelId}`, { method: 'GET' });
+          if (channelResponse.ok) {
+            const channelData = await channelResponse.json();
+            channelName = channelData.name;
+          }
+        } catch (error) {
+          console.log('Could not fetch channel name for analytics:', error.message);
+        }
+      }
+      
       logInteraction(
         user.id,
         req.body.guild_id,
@@ -2454,7 +2499,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         custom_id,
         user.username,
         guild.name || 'Unknown Server',
-        components
+        components,
+        channelName,
+        displayName
       );
     }
     
