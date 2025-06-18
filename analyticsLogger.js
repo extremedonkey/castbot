@@ -163,7 +163,10 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
     // First try playerData.json (most reliable)
     try {
       const playerData = loadPlayerData();
+      console.log(`DEBUG: playerData loaded successfully, keys:`, Object.keys(playerData));
       console.log(`DEBUG: Looking up guild ${guildId}, found data:`, playerData[guildId]?.serverName);
+      console.log(`DEBUG: Full guild data:`, JSON.stringify(playerData[guildId], null, 2));
+      
       if (playerData[guildId] && playerData[guildId].serverName) {
         serverDisplay = `${playerData[guildId].serverName} (${guildId})`;
         console.log(`DEBUG: Server name resolved from playerData: ${serverDisplay}`);
@@ -177,6 +180,7 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
       }
     } catch (error) {
       console.log('DEBUG: Error loading playerData:', error.message);
+      console.log('DEBUG: Error stack:', error.stack);
       // Fallback to Discord API guild name if available
       if (guildName && guildName !== 'Unknown Server') {
         serverDisplay = `${guildName} (${guildId})`;
