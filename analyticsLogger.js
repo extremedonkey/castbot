@@ -186,7 +186,24 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
     // Convert to AWST (UTC+8) for display
     const utcDate = new Date();
     const awstDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000)); // Add 8 hours in milliseconds
-    const timestamp = awstDate.toISOString().replace('Z', '+08:00'); // Format as AWST
+    
+    // Format as Australian-style timestamp: [12:34PM] Thurs 19 Jun 25
+    const timeStr = awstDate.toLocaleString('en-AU', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'UTC' // Already converted to AWST manually
+    });
+    
+    const dateStr = awstDate.toLocaleString('en-AU', {
+      weekday: 'short',
+      day: 'numeric', 
+      month: 'short',
+      year: '2-digit',
+      timeZone: 'UTC' // Already converted to AWST manually
+    });
+    
+    const timestamp = `[${timeStr}] ${dateStr}`;
     let logDetails = details;
     
     
@@ -232,8 +249,8 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
     // Enhanced action display: include channel if available
     const actionDisplay = channelName ? `#${channelName}` : action;
     
-    // Create enhanced log entry format
-    const logEntry = `[ANALYTICS] ${timestamp} | ${userDisplay} in ${serverDisplay} | ${actionDisplay} | ${logDetails}\n`;
+    // Create enhanced log entry format - remove [ANALYTICS] prefix for cleaner display
+    const logEntry = `${timestamp} | ${userDisplay} in ${serverDisplay} | ${actionDisplay} | ${logDetails}\n`;
     
     // Ensure logs directory exists
     const logDir = path.dirname(ANALYTICS_LOG_FILE);
