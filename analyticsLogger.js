@@ -187,21 +187,20 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
     const utcDate = new Date();
     const awstDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000)); // Add 8 hours in milliseconds
     
-    // Format as Australian-style timestamp: [12:34PM] Thurs 19 Jun 25
-    const timeStr = awstDate.toLocaleString('en-AU', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-      timeZone: 'UTC' // Already converted to AWST manually
-    });
+    // Format as Australian-style timestamp manually: [12:34PM] Thu 19 Jun 25
+    const hours = awstDate.getHours();
+    const minutes = awstDate.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    const timeStr = `${displayHours}:${minutes}${ampm}`;
     
-    const dateStr = awstDate.toLocaleString('en-AU', {
-      weekday: 'short',
-      day: 'numeric', 
-      month: 'short',
-      year: '2-digit',
-      timeZone: 'UTC' // Already converted to AWST manually
-    });
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayName = days[awstDate.getDay()];
+    const day = awstDate.getDate();
+    const month = months[awstDate.getMonth()];
+    const year = awstDate.getFullYear().toString().slice(-2);
+    const dateStr = `${dayName} ${day} ${month} ${year}`;
     
     const timestamp = `[${timeStr}] ${dateStr}`;
     let logDetails = details;
