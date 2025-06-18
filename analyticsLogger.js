@@ -155,10 +155,21 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
       ? `${displayName} (${username})`
       : username;
     
-    // Enhanced server display: "ServerName (guildId)"
-    const serverDisplay = guildName && guildName !== 'Unknown Server'
-      ? `${guildName} (${guildId})`
-      : `Unknown Server (${guildId})`;
+    // Enhanced server display: "ServerName (guildId)" - try to get from playerData if Discord doesn't provide
+    let serverDisplay = `Unknown Server (${guildId})`;
+    if (guildName && guildName !== 'Unknown Server') {
+      serverDisplay = `${guildName} (${guildId})`;
+    } else {
+      // Try to get server name from playerData.json
+      try {
+        const playerData = loadPlayerData();
+        if (playerData[guildId] && playerData[guildId].serverName) {
+          serverDisplay = `${playerData[guildId].serverName} (${guildId})`;
+        }
+      } catch (error) {
+        // Ignore errors, use fallback
+      }
+    }
     
     // Enhanced action display: include channel if available
     const actionDisplay = channelName ? `#${channelName}` : action;
