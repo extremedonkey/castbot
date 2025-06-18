@@ -139,6 +139,8 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
     const timestamp = new Date().toISOString();
     let logDetails = details;
     
+    console.log(`DEBUG: Analytics called with guildName: "${guildName}", guildId: "${guildId}"`);
+    
     // If it's a button click, try to get human-readable label with fallback mapping
     if (action === 'BUTTON_CLICK') {
       const humanLabel = getButtonLabel(details, components);
@@ -163,11 +165,15 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
       // Try to get server name from playerData.json
       try {
         const playerData = loadPlayerData();
+        console.log(`DEBUG: Looking up guild ${guildId}, found data:`, playerData[guildId]?.serverName);
         if (playerData[guildId] && playerData[guildId].serverName) {
           serverDisplay = `${playerData[guildId].serverName} (${guildId})`;
+          console.log(`DEBUG: Server name resolved to: ${serverDisplay}`);
+        } else {
+          console.log(`DEBUG: No server name found for guild ${guildId}`);
         }
       } catch (error) {
-        // Ignore errors, use fallback
+        console.log('DEBUG: Error loading playerData:', error.message);
       }
     }
     
