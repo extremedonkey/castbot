@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { loadPlayerData } from './storage.js';
 
 const ANALYTICS_LOG_FILE = './logs/user-analytics.log';
 
@@ -160,18 +159,18 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
     // Enhanced server display: "ServerName (guildId)" - prioritize playerData.json since it's more reliable
     let serverDisplay = `Unknown Server (${guildId})`;
     
-    // First try playerData.json (most reliable)
+    // Try to get server name from playerData.json file directly
     try {
-      const playerData = loadPlayerData();
-      console.log(`DEBUG: playerData loaded successfully, keys:`, Object.keys(playerData));
-      console.log(`DEBUG: Looking up guild ${guildId}, found data:`, playerData[guildId]?.serverName);
-      console.log(`DEBUG: Full guild data:`, JSON.stringify(playerData[guildId], null, 2));
+      console.log(`DEBUG: Attempting direct playerData.json read for guild ${guildId}...`);
+      const rawData = fs.readFileSync('./playerData.json', 'utf8');
+      const playerData = JSON.parse(rawData);
+      console.log(`DEBUG: File loaded successfully, found ${Object.keys(playerData).length} guilds`);
       
       if (playerData[guildId] && playerData[guildId].serverName) {
         serverDisplay = `${playerData[guildId].serverName} (${guildId})`;
-        console.log(`DEBUG: Server name resolved from playerData: ${serverDisplay}`);
+        console.log(`DEBUG: Server name resolved: ${serverDisplay}`);
       } else {
-        console.log(`DEBUG: No server name found in playerData for guild ${guildId}`);
+        console.log(`DEBUG: No server name found for guild ${guildId} in playerData`);
         // Fallback to Discord API guild name if available
         if (guildName && guildName !== 'Unknown Server') {
           serverDisplay = `${guildName} (${guildId})`;
@@ -179,8 +178,7 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
         }
       }
     } catch (error) {
-      console.log('DEBUG: Error loading playerData:', error.message);
-      console.log('DEBUG: Error stack:', error.stack);
+      console.log('DEBUG: Error reading playerData.json:', error.message);
       // Fallback to Discord API guild name if available
       if (guildName && guildName !== 'Unknown Server') {
         serverDisplay = `${guildName} (${guildId})`;
