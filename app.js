@@ -738,6 +738,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const member = req.body.member;
     const channelId = req.body.channel_id;
     
+    console.log('DEBUG: Discord guild object:', JSON.stringify(guild, null, 2));
+    
     if (user && guild) {
       // Get display name (nickname or global_name)
       const displayName = member?.nick || user.global_name || user.username;
@@ -2472,6 +2474,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const member = req.body.member;
     const components = req.body.message?.components;
     const channelId = req.body.channel_id;
+    
+    console.log('DEBUG: Discord guild object (button):', JSON.stringify(guild, null, 2));
     
     if (user && guild) {
       // Get display name (nickname or global_name)
