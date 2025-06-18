@@ -175,6 +175,17 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
   
+  // Add Live Analytics button for specific user (Reece) to this row
+  if (userId === '391415444084490240') {
+    adminButtons.push(
+      new ButtonBuilder()
+        .setCustomId('prod_live_analytics')
+        .setLabel('Live Analytics')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🔴')
+    );
+  }
+  
   const adminRow = new ActionRowBuilder().addComponents(adminButtons);
   
   // Add new administrative action row (misc features)
@@ -204,11 +215,6 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
         .setLabel('Analytics')
         .setStyle(ButtonStyle.Danger)
         .setEmoji('📊'),
-      new ButtonBuilder()
-        .setCustomId('prod_live_analytics')
-        .setLabel('Live Analytics')
-        .setStyle(ButtonStyle.Danger)
-        .setEmoji('🔴'),
       new ButtonBuilder()
         .setCustomId('prod_player_menu')
         .setLabel('Player Menu')
