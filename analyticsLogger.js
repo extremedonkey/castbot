@@ -183,7 +183,10 @@ function getButtonLabel(customId, components) {
  */
 function logInteraction(userId, guildId, action, details, username, guildName, components = null, channelName = null, displayName = null) {
   try {
-    const timestamp = new Date().toISOString();
+    // Convert to AWST (UTC+8) for display
+    const utcDate = new Date();
+    const awstDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000)); // Add 8 hours in milliseconds
+    const timestamp = awstDate.toISOString().replace('Z', '+08:00'); // Format as AWST
     let logDetails = details;
     
     
