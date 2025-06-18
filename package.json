@@ -21,7 +21,8 @@
     "logs-remote-wsl": "node deploy-remote-wsl.js --logs",
     "status-remote-wsl": "node deploy-remote-wsl.js --status",
     "ssh-test": "node ssh-test-wsl.js",
-    "analytics": "node analytics.js"
+    "analytics": "node analytics.js",
+    "live-analytics": "node liveAnalytics.js"
   },
   "author": "Shay DeWael",
   "license": "MIT",

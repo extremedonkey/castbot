@@ -51,6 +51,7 @@ import {
   createApplicationButton,
   BUTTON_STYLES
 } from './applicationManager.js';
+import { logInteraction } from './analyticsLogger.js';
 import {
   calculateComponentsForTribe,
   determineDisplayScenario,
@@ -730,6 +731,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const name = rawName.replace(/^dev_/, '');
 
     console.log(`Received command: ${rawName}`);
+
+    // Analytics logging for slash commands
+    const user = req.body.member?.user || req.body.user;
+    const guild = req.body.guild;
+    if (user && guild) {
+      logInteraction(
+        user.id,
+        req.body.guild_id,
+        'SLASH_COMMAND',
+        `/${name}`,
+        user.username,
+        guild.name || 'Unknown Server'
+      );
+    }
 
     // Update the readOnlyCommands array to use new command names
     const readOnlyCommands = ['castlist', 'castlist2', 'getting_started', 'player_set_age', 'player_set_pronouns','player_set_timezone', 'menu'];  // Updated from set_age
@@ -2426,6 +2441,22 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   if (type === InteractionType.MESSAGE_COMPONENT) {
     const { custom_id } = data;
     console.log('Processing MESSAGE_COMPONENT with custom_id:', custom_id);
+
+    // Analytics logging for button interactions
+    const user = req.body.member?.user || req.body.user;
+    const guild = req.body.guild;
+    const components = req.body.message?.components;
+    if (user && guild) {
+      logInteraction(
+        user.id,
+        req.body.guild_id,
+        'BUTTON_CLICK',
+        custom_id,
+        user.username,
+        guild.name || 'Unknown Server',
+        components
+      );
+    }
     
     if (custom_id.startsWith('show_castlist2')) {
       // Extract castlist name from custom_id if present
