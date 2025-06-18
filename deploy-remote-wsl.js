@@ -198,12 +198,25 @@ async function deployToProduction() {
                 }
             }
             
-            // Pull from main branch
-            await execSSH(
-                `cd ${REMOTE_PATH} && git pull origin main`,
-                'Git pull from main (latest code)',
-                'risk-high'
-            );
+            // Pull from main branch with conflict resolution
+            try {
+                await execSSH(
+                    `cd ${REMOTE_PATH} && git pull origin main`,
+                    'Git pull from main (latest code)',
+                    'risk-high'
+                );
+            } catch (pullError) {
+                if (pullError.message.includes('would be overwritten by merge')) {
+                    log('Git conflict detected, stashing local changes and retrying...', 'warning');
+                    await execSSH(
+                        `cd ${REMOTE_PATH} && git stash && git pull origin main`,
+                        'Stashing changes and pulling from main',
+                        'risk-high'
+                    );
+                } else {
+                    throw pullError;
+                }
+            }
             
             // Step 4: Install dependencies
             logSection('Step 4: Install Dependencies', 'risk-medium');
