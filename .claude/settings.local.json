@@ -157,7 +157,8 @@
       "Bash(./dev-restart.sh:*)",
       "Bash(ngrok config:*)",
       "Bash(true)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(scp:*)"
     ],
     "deny": []
   }

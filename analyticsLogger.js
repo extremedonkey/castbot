@@ -13,6 +13,7 @@ const BUTTON_LABEL_MAP = {
   'prod_season_applications': '📝 Season Applications',
   'prod_setup_tycoons': '💰 Tycoons',
   'prod_analytics_dump': '📊 Analytics',
+  'prod_live_analytics': '🔴 Live Analytics',
   'prod_player_menu': '👤 Player Menu',
   
   // Tribe management buttons

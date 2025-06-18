@@ -205,6 +205,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
         .setStyle(ButtonStyle.Danger)
         .setEmoji('📊'),
       new ButtonBuilder()
+        .setCustomId('prod_live_analytics')
+        .setLabel('Live Analytics')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🔴'),
+      new ButtonBuilder()
         .setCustomId('prod_player_menu')
         .setLabel('Player Menu')
         .setStyle(ButtonStyle.Secondary)
@@ -4378,6 +4383,142 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error running analytics. Check logs for details.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_live_analytics') {
+      // Special live analytics button - only available to specific user ID
+      try {
+        const userId = req.body.member.user.id;
+        
+        // Security check - only allow specific Discord ID
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Import fs and capture live analytics output
+        const fs = await import('fs');
+        const { getLogFilePath } = await import('./analyticsLogger.js');
+        
+        const ANALYTICS_LOG_FILE = getLogFilePath();
+        
+        // Default buttons to filter out (same as liveAnalytics.js)
+        const DEFAULT_FILTERED_BUTTONS = [
+          'disabled_',
+          'castlist2_nav_disabled',
+        ];
+        
+        function shouldFilterOut(logLine, filterPatterns) {
+          if (!filterPatterns || filterPatterns.length === 0) return false;
+          return filterPatterns.some(pattern => logLine.includes(pattern));
+        }
+        
+        function isWithinRecentDays(logLine, days) {
+          if (!days) return true;
+          
+          // Match format: [8:18AM] Thu 19 Jun 25
+          const timestampMatch = logLine.match(/^\[(\d{1,2}:\d{2}[AP]M)\] (\w{3}) (\d{1,2}) (\w{3}) (\d{2})/);
+          if (!timestampMatch) return true;
+          
+          const [, time, dayName, day, month, year] = timestampMatch;
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const monthIndex = months.indexOf(month);
+          
+          if (monthIndex === -1) return true;
+          
+          const logDate = new Date(2000 + parseInt(year), monthIndex, parseInt(day));
+          const cutoffDate = new Date();
+          cutoffDate.setDate(cutoffDate.getDate() - days);
+          
+          return logDate >= cutoffDate;
+        }
+        
+        let analyticsOutput = '🔴 LIVE ANALYTICS - Last 3 Days\n';
+        analyticsOutput += '═'.repeat(50) + '\n\n';
+        
+        if (!fs.default.existsSync(ANALYTICS_LOG_FILE)) {
+          analyticsOutput += '📊 No analytics data found yet.\n';
+          analyticsOutput += 'Use CastBot to generate some interactions!';
+        } else {
+          const logContent = fs.default.readFileSync(ANALYTICS_LOG_FILE, 'utf8');
+          const lines = logContent.split('\n').filter(line => line.trim());
+          let displayedCount = 0;
+          
+          lines.forEach(line => {
+            // Check if line matches format: [8:18AM] Thu 19 Jun 25 | ...
+            if (line.match(/^\[\d{1,2}:\d{2}[AP]M\]/)) {
+              if (!shouldFilterOut(line, DEFAULT_FILTERED_BUTTONS) && isWithinRecentDays(line, 3)) {
+                analyticsOutput += line + '\n';
+                displayedCount++;
+              }
+            }
+          });
+          
+          if (displayedCount === 0) {
+            analyticsOutput += '💡 No interactions found in the last 3 days.\n';
+            analyticsOutput += 'Try running CastBot commands to generate data!';
+          } else {
+            analyticsOutput += '\n' + '═'.repeat(50) + '\n';
+            analyticsOutput += `📊 Displayed ${displayedCount} interactions from last 3 days`;
+          }
+        }
+        
+        // Format the output for Discord
+        const formattedOutput = analyticsOutput.trim();
+        
+        // Split into chunks if too long (Discord has 2000 char limit)
+        const chunks = [];
+        const maxLength = 1900; // Leave room for formatting
+        
+        if (formattedOutput.length <= maxLength) {
+          chunks.push(formattedOutput);
+        } else {
+          let remaining = formattedOutput;
+          while (remaining.length > 0) {
+            let chunk = remaining.substring(0, maxLength);
+            // Try to break at a newline
+            const lastNewline = chunk.lastIndexOf('\n');
+            if (lastNewline > maxLength * 0.8) {
+              chunk = remaining.substring(0, lastNewline);
+              remaining = remaining.substring(lastNewline + 1);
+            } else {
+              remaining = remaining.substring(maxLength);
+            }
+            chunks.push(chunk);
+          }
+        }
+        
+        // Send initial response with first chunk
+        await res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `\`\`\`\n${chunks[0]}\n\`\`\``
+          }
+        });
+        
+        // Send additional chunks as follow-ups if needed
+        for (let i = 1; i < chunks.length; i++) {
+          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
+            method: 'POST',
+            body: {
+              content: `\`\`\`\n${chunks[i]}\n\`\`\``
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error running live analytics:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error running live analytics. Check logs for details.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

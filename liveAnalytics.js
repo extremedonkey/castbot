@@ -86,10 +86,17 @@ function shouldFilterOut(logLine, filterPatterns) {
 function isWithinRecentDays(logLine, days) {
   if (!days) return true;
   
-  const timestampMatch = logLine.match(/\[ANALYTICS\] (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z)/);
+  // Match new format: [8:18AM] Thu 19 Jun 25
+  const timestampMatch = logLine.match(/^\[(\d{1,2}:\d{2}[AP]M)\] (\w{3}) (\d{1,2}) (\w{3}) (\d{2})/);
   if (!timestampMatch) return true;
   
-  const logDate = new Date(timestampMatch[1]);
+  const [, time, dayName, day, month, year] = timestampMatch;
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const monthIndex = months.indexOf(month);
+  
+  if (monthIndex === -1) return true;
+  
+  const logDate = new Date(2000 + parseInt(year), monthIndex, parseInt(day));
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - days);
   
@@ -137,11 +144,10 @@ function displayAnalytics(options) {
       const lines = data.toString().split('\n').filter(line => line.trim());
       
       lines.forEach(line => {
-        if (line.includes('[ANALYTICS]')) {
+        // Check if line matches our new format: [8:18AM] Thu 19 Jun 25 | ...
+        if (line.match(/^\[\d{1,2}:\d{2}[AP]M\]/)) {
           if (!shouldFilterOut(line, options.filterOut) && isWithinRecentDays(line, options.recent)) {
-            // Clean up the timestamp for display
-            const cleanLine = line.replace(/\[ANALYTICS\] \d{4}-\d{2}-\d{2}T(\d{2}:\d{2}:\d{2})\.\d{3}Z/, '[$1]');
-            console.log(cleanLine);
+            console.log(line);
           }
         }
       });
@@ -166,11 +172,10 @@ function displayAnalytics(options) {
       let displayedCount = 0;
       
       lines.forEach(line => {
-        if (line.includes('[ANALYTICS]')) {
+        // Check if line matches our new format: [8:18AM] Thu 19 Jun 25 | ...
+        if (line.match(/^\[\d{1,2}:\d{2}[AP]M\]/)) {
           if (!shouldFilterOut(line, options.filterOut) && isWithinRecentDays(line, options.recent)) {
-            // Clean up the timestamp for display
-            const cleanLine = line.replace(/\[ANALYTICS\] \d{4}-\d{2}-\d{2}T(\d{2}:\d{2}:\d{2})\.\d{3}Z/, '[$1]');
-            console.log(cleanLine);
+            console.log(line);
             displayedCount++;
           }
         }
