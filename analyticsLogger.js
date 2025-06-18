@@ -34,6 +34,9 @@ const BUTTON_LABEL_MAP = {
   'viral_menu': '📋 Menu',
   'prod_menu_back': 'Back to Production Menu',
   
+  // Player Management buttons
+  'admin_player_select_update': '🔄 Update Player Selection',
+  
   // Navigation patterns
   'castlist2_nav_next_page': '▶ Next Page',
   'castlist2_nav_last_tribe': '▶ Last Tribe',
@@ -111,10 +114,55 @@ function getButtonLabel(customId, components) {
     if (customId.includes('first_tribe')) return '◀ First Tribe';
   }
   
+  // Special handling for player management buttons with user IDs
+  if (customId.startsWith('admin_set_pronouns_')) {
+    return '🏷️ Set Player Pronouns';
+  }
+  if (customId.startsWith('admin_set_timezone_')) {
+    return '🌍 Set Player Timezone';
+  }
+  if (customId.startsWith('admin_set_age_')) {
+    return '🎂 Set Player Age';
+  }
+  if (customId.startsWith('admin_manage_vanity_')) {
+    return '✨ Manage Player Vanity Roles';
+  }
+  if (customId.startsWith('admin_integrated_vanity_')) {
+    return '✨ Integrated Vanity Management';
+  }
+  if (customId.startsWith('admin_integrated_pronouns_')) {
+    return '🏷️ Integrated Pronouns Management';
+  }
+  if (customId.startsWith('admin_integrated_timezone_')) {
+    return '🌍 Integrated Timezone Management';
+  }
+  if (customId.startsWith('admin_integrated_age_')) {
+    return '🎂 Integrated Age Management';
+  }
+  
+  // Player-side management buttons
+  if (customId.startsWith('player_set_pronouns_')) {
+    return '🏷️ Set My Pronouns';
+  }
+  if (customId.startsWith('player_set_timezone_')) {
+    return '🌍 Set My Timezone';
+  }
+  if (customId.startsWith('player_set_age_')) {
+    return '🎂 Set My Age';
+  }
+  if (customId.startsWith('player_integrated_')) {
+    return '⚙️ Player Management';
+  }
+  
   // Special handling for show castlist buttons
   if (customId.startsWith('show_castlist2_')) {
     const castlistName = customId.replace('show_castlist2_', '');
     return `📋 Show ${castlistName || 'Default'} Castlist`;
+  }
+  
+  // Special handling for select menu interactions (these might be components, not buttons)
+  if (customId.includes('_select_')) {
+    return '📋 Select Menu Interaction';
   }
   
   // Fallback - return "Unknown" for button clicks, custom_id for everything else
@@ -138,7 +186,6 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
     const timestamp = new Date().toISOString();
     let logDetails = details;
     
-    console.log(`DEBUG: Analytics called with guildName: "${guildName}", guildId: "${guildId}"`);
     
     // If it's a button click, try to get human-readable label with fallback mapping
     if (action === 'BUTTON_CLICK') {
@@ -161,28 +208,21 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
     
     // Try to get server name from playerData.json file directly
     try {
-      console.log(`DEBUG: Attempting direct playerData.json read for guild ${guildId}...`);
       const rawData = fs.readFileSync('./playerData.json', 'utf8');
       const playerData = JSON.parse(rawData);
-      console.log(`DEBUG: File loaded successfully, found ${Object.keys(playerData).length} guilds`);
       
       if (playerData[guildId] && playerData[guildId].serverName) {
         serverDisplay = `${playerData[guildId].serverName} (${guildId})`;
-        console.log(`DEBUG: Server name resolved: ${serverDisplay}`);
       } else {
-        console.log(`DEBUG: No server name found for guild ${guildId} in playerData`);
         // Fallback to Discord API guild name if available
         if (guildName && guildName !== 'Unknown Server') {
           serverDisplay = `${guildName} (${guildId})`;
-          console.log(`DEBUG: Server name resolved from Discord API: ${serverDisplay}`);
         }
       }
     } catch (error) {
-      console.log('DEBUG: Error reading playerData.json:', error.message);
       // Fallback to Discord API guild name if available
       if (guildName && guildName !== 'Unknown Server') {
         serverDisplay = `${guildName} (${guildId})`;
-        console.log(`DEBUG: Server name resolved from Discord API (fallback): ${serverDisplay}`);
       }
     }
     
