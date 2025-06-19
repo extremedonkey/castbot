@@ -204,6 +204,12 @@ async function analyzePlayerData() {
         let newestTribeTimestamp = null;
         
         Object.entries(server.tribes).forEach(([roleId, tribe]) => {
+          // Skip null tribe entries
+          if (!tribe) {
+            console.warn(`Skipping null tribe entry for roleId: ${roleId} in server: ${server.serverName}`);
+            return;
+          }
+          
           const castlistName = tribe.castlist || 'default';
           if (!castlists[castlistName]) castlists[castlistName] = 0;
           castlists[castlistName]++;
