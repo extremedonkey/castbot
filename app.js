@@ -4808,11 +4808,14 @@ Your server is now ready for Tycoons gameplay!`;
         const member = req.body.member;
         
         // Security check - require admin permissions
-        if (!member.permissions || !(member.permissions & (PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild))) {
+        const userPermissions = BigInt(member.permissions || '0');
+        const requiredPermissions = PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild;
+        
+        if (!(userPermissions & requiredPermissions)) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Access denied. This feature requires admin permissions.',
+              content: '❌ Access denied. This feature requires admin permissions (Manage Roles, Channels, or Guild).',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
