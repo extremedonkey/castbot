@@ -53,17 +53,17 @@ function formatNumber(num) {
   return num.toLocaleString();
 }
 
-function analyzePlayerData() {
+async function analyzePlayerData() {
   try {
     // Check if file exists
     if (!fs.existsSync(PLAYER_DATA_FILE)) {
       log(`❌ PlayerData file not found: ${PLAYER_DATA_FILE}`, 'red');
       log('Make sure you run this command from the CastBot directory.', 'yellow');
-      process.exit(1);
+      throw new Error('PlayerData file not found');
     }
 
-    // Load and parse data
-    const rawData = fs.readFileSync(PLAYER_DATA_FILE, 'utf8');
+    // Load and parse data asynchronously
+    const rawData = await fs.promises.readFile(PLAYER_DATA_FILE, 'utf8');
     const playerData = JSON.parse(rawData);
 
     // Filter out non-server entries and exclude Reece's servers (391415444084490240)
@@ -275,13 +275,13 @@ function analyzePlayerData() {
     if (error.name === 'SyntaxError') {
       log('The playerData.json file appears to be corrupted or invalid JSON.', 'yellow');
     }
-    process.exit(1);
+    throw error; // Re-throw instead of process.exit for Discord bot context
   }
 }
 
 // Run analytics if this script is executed directly
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('analytics.js')) {
-  analyzePlayerData();
+  analyzePlayerData().catch(console.error);
 }
 
 export { analyzePlayerData };
