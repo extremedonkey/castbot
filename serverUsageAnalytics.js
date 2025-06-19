@@ -117,7 +117,7 @@ function parseLogLine(line) {
     let timestamp, userInfo, serverInfo, actionType, actionDetail;
     
     if (line.includes('[ANALYTICS]')) {
-      // Old format parsing
+      // Format 1: [ANALYTICS] 2025-06-18T15:01:16.725Z | extremedonkey in Unknown Server | SLASH_COMMAND | /castlist
       timestamp = parseTimestamp(parts[0]);
       const userServerPart = parts[1];
       actionType = parts[2];
@@ -128,8 +128,23 @@ function parseLogLine(line) {
         userInfo = { username: userMatch[1], displayName: userMatch[1] };
         serverInfo = { name: userMatch[2], id: 'unknown' };
       }
+    } else if (parts[1] && (parts[1].includes('SLASH_COMMAND in') || parts[1].includes('BUTTON_CLICK in'))) {
+      // Format 3: [5:52PM] Thu 19 Jun 25 | SLASH_COMMAND in /dev_menu (TestUser) | 1331657596087566398 | 1385059476243218552
+      timestamp = parseTimestamp(parts[0]);
+      const actionPart = parts[1];
+      const serverId = parts[2];
+      const channelId = parts[3] || '';
+      
+      // Extract action type and details from "SLASH_COMMAND in /dev_menu (TestUser)"
+      const actionMatch = actionPart.match(/(SLASH_COMMAND|BUTTON_CLICK) in (.+?) \((.+?)\)/);
+      if (actionMatch) {
+        actionType = actionMatch[1];
+        actionDetail = actionMatch[2];
+        userInfo = { username: actionMatch[3], displayName: actionMatch[3] };
+        serverInfo = { name: 'CastBot', id: serverId.trim() };
+      }
     } else {
-      // New format parsing
+      // Format 2: [8:18AM] Thu 19 Jun 25 | ReeceBot (extremedonkey) in CastBot (1331657596087566398) | BUTTON_CLICK | 📋 Menu (viral_menu)
       timestamp = parseTimestamp(parts[0]);
       const userServerPart = parts[1];
       actionType = parts[2];
