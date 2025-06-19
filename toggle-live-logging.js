@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import 'dotenv/config';
-import { loadEnvironmentConfig, updateLiveLoggingStatus } from './storage.js';
+import { loadEnvironmentConfig, updateLiveLoggingStatus, saveEnvironmentConfig } from './storage.js';
 
 /**
  * Toggle Live Discord Logging System
@@ -9,10 +9,12 @@ import { loadEnvironmentConfig, updateLiveLoggingStatus } from './storage.js';
  *   node toggle-live-logging.js                 # Show current status
  *   node toggle-live-logging.js enable          # Enable live logging
  *   node toggle-live-logging.js disable         # Disable live logging
+ *   node toggle-live-logging.js exclude <userID> # Add/remove user from exclusion list
  */
 
 const args = process.argv.slice(2);
 const command = args[0]?.toLowerCase();
+const userIdArg = args[1]; // For exclude command
 
 async function main() {
   try {
@@ -28,10 +30,14 @@ async function main() {
       console.log(`Target Guild: ${loggingConfig.targetGuildId}`);
       console.log(`Target Channel: ${loggingConfig.targetChannelId}`);
       console.log(`Excluded Users: ${loggingConfig.excludedUserIds.length} user(s)`);
+      if (loggingConfig.excludedUserIds.length > 0) {
+        console.log(`  → ${loggingConfig.excludedUserIds.join(', ')}`);
+      }
       console.log(`Rate Limit Queue: ${loggingConfig.rateLimitQueue.length} messages`);
       console.log('\nUsage:');
       console.log('  node toggle-live-logging.js enable   # Enable live logging');
       console.log('  node toggle-live-logging.js disable  # Disable live logging');
+      console.log('  node toggle-live-logging.js exclude <userID>  # Toggle user exclusion');
       return;
     }
     
@@ -46,8 +52,44 @@ async function main() {
       const updatedConfig = await updateLiveLoggingStatus(false);
       console.log('✅ Live Discord logging DISABLED');
       console.log('📄 Only file logging will continue');
+    } else if (command === 'exclude') {
+      if (!userIdArg) {
+        console.error('❌ Please provide a Discord user ID');
+        console.log('Usage: node toggle-live-logging.js exclude <userID>');
+        process.exit(1);
+      }
+      
+      // Validate user ID format (Discord IDs are 17-19 digit numbers)
+      if (!/^\d{17,19}$/.test(userIdArg)) {
+        console.error('❌ Invalid Discord user ID format. Should be a 17-19 digit number.');
+        process.exit(1);
+      }
+      
+      console.log(`🔄 Toggling exclusion for user ID: ${userIdArg}...`);
+      
+      const config = await loadEnvironmentConfig();
+      const excludedUsers = config.liveDiscordLogging.excludedUserIds;
+      
+      if (excludedUsers.includes(userIdArg)) {
+        // Remove from exclusion list
+        config.liveDiscordLogging.excludedUserIds = excludedUsers.filter(id => id !== userIdArg);
+        await saveEnvironmentConfig(config);
+        console.log(`✅ User ${userIdArg} REMOVED from exclusion list`);
+        console.log('📤 This user\'s interactions will now appear in Discord logs');
+      } else {
+        // Add to exclusion list
+        config.liveDiscordLogging.excludedUserIds.push(userIdArg);
+        await saveEnvironmentConfig(config);
+        console.log(`✅ User ${userIdArg} ADDED to exclusion list`);
+        console.log('🚫 This user\'s interactions will be filtered out of Discord logs');
+      }
+      
+      console.log(`📊 Current exclusion list: ${config.liveDiscordLogging.excludedUserIds.length} user(s)`);
+      if (config.liveDiscordLogging.excludedUserIds.length > 0) {
+        console.log(`  → ${config.liveDiscordLogging.excludedUserIds.join(', ')}`);
+      }
     } else {
-      console.error('❌ Invalid command. Use "enable", "disable", or no arguments for status');
+      console.error('❌ Invalid command. Use "enable", "disable", "exclude <userID>", or no arguments for status');
       process.exit(1);
     }
     
