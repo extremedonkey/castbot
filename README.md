@@ -28,11 +28,14 @@ Players are typically divided into tribes, and can only communicate with their o
 
 The bot provides several essential features for ORG hosts and players:
 
-1. **Dynamic Castlists**: Displays real-time information about which players are on each tribe
+1. **Dynamic Castlists**: Modern Components V2 interface with player cards, inline thumbnails, and real-time information
 2. **Player Information**: Shows each player's age, pronouns, timezone, and current local time
 3. **Custom Emojis**: Automatically creates custom emojis for each player using their Discord avatar
 4. **Multiple Castlists**: Supports multiple castlists for different phases of the game (e.g., pre-merge, post-merge)
 5. **Role Management**: Uses Discord's role system to track player information and tribe membership
+6. **Live Analytics**: Real-time Discord logging of user interactions with formatted analytics data
+7. **User Management**: Enhanced player management interface with persistent display and modular architecture
+8. **Analytics Logging**: Comprehensive interaction tracking with file-based logging and optional Discord posting
 
 ### Use Cases
 
@@ -491,6 +494,43 @@ npm run verify-commands   # Check current status
 - `/castlist`: Display the dynamic castlist using modern Components V2 with player cards and thumbnails
 - `/set_players_age`: Set ages for multiple players at once (admin only)
 
+### Live Analytics System
+
+**Real-time Discord Logging**
+CastBot includes a comprehensive live analytics system that posts formatted interaction logs to a Discord channel in real-time:
+
+- **Formatted Logs**: Uses same styling as Live Analytics button with Markdown bullets and bold formatting
+- **User Exclusion**: Configure excluded users to filter out admin/test interactions
+- **Rate Limiting**: Built-in message queuing to respect Discord API limits (1.2 second intervals)
+- **Non-blocking**: Error handling ensures main bot functionality is never interrupted
+- **Environment Aware**: Separate configuration for development and production environments
+
+**Management Commands**
+```bash
+# Toggle live logging on/off
+node toggle-live-logging.js on|off
+
+# Manage user exclusions (toggle users in/out of exclusion list)
+node toggle-live-logging.js exclude <userID>
+
+# Check current configuration
+node toggle-live-logging.js status
+```
+
+**Configuration**
+Live logging settings are stored in `playerData.json` under `environmentConfig.liveDiscordLogging`:
+- `enabled`: Boolean to enable/disable live logging
+- `targetGuildId`: Discord server ID where logs are posted
+- `targetChannelId`: Discord channel ID for log messages (e.g., #logs)
+- `excludedUserIds`: Array of Discord user IDs to filter out
+- `rateLimitQueue`: Internal queue for managing message posting
+- `lastMessageTime`: Timestamp tracking for rate limiting
+
+**Log Format Example**
+```
+* [9:06AM] Thu 19 Jun 25 | **ReeceBot (extremedonkey)** in **CastBot** (1331657596087566398) | **BUTTON_CLICK** | 🧑‍🤝‍🧑 Manage Players (admin_manage_player)
+```
+
 ### Modern Menu Interface Features
 
 **Player Menu (All Users):**
@@ -508,7 +548,7 @@ npm run verify-commands   # Check current status
 - "⬅️ Menu" navigation for admin workflow
 
 **Technical Improvements:**
-- Discord Components V2 architecture for modern UI
+- Discord Components V2 architecture for modern UI (see [ComponentsV2.md](ComponentsV2.md) for complete API reference)
 - Centralized error handling across all command systems
 - Performance optimizations with 70-80% faster navigation
 - Mobile-friendly interface design

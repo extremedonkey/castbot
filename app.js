@@ -175,16 +175,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
   
-  // Add Live Analytics button for specific user (Reece) to this row
-  if (userId === '391415444084490240') {
-    adminButtons.push(
-      new ButtonBuilder()
-        .setCustomId('prod_live_analytics')
-        .setLabel('Live Analytics')
-        .setStyle(ButtonStyle.Danger)
-        .setEmoji('🔴')
-    );
-  }
+  // Live Analytics button moved to Reece Stuff submenu
   
   const adminRow = new ActionRowBuilder().addComponents(adminButtons);
   
@@ -211,15 +202,10 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   if (userId === '391415444084490240') {
     adminActionButtons.push(
       new ButtonBuilder()
-        .setCustomId('prod_analytics_dump')
-        .setLabel('Analytics')
+        .setCustomId('reece_stuff_menu')
+        .setLabel('Reece Stuff')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('📊'),
-      new ButtonBuilder()
-        .setCustomId('prod_player_menu')
-        .setLabel('Player Menu')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('👤')
+        .setEmoji('😌')
     );
   }
   
@@ -288,6 +274,62 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2 flag
     components: [prodMenuContainer]
+  };
+}
+
+/**
+ * Create Reece Stuff submenu interface (admin-only special features)
+ */
+async function createReeceStuffMenu() {
+  // Create analytics action buttons
+  const analyticsButtons = [
+    new ButtonBuilder()
+      .setCustomId('prod_analytics_dump')
+      .setLabel('Analytics')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('📊'),
+    new ButtonBuilder()
+      .setCustomId('prod_live_analytics')
+      .setLabel('Live Analytics')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🔴')
+  ];
+  
+  const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
+  
+  // Create back button
+  const backButton = [
+    new ButtonBuilder()
+      .setCustomId('prod_menu_back')
+      .setLabel('⬅ Menu')
+      .setStyle(ButtonStyle.Secondary)
+  ];
+  
+  const backRow = new ActionRowBuilder().addComponents(backButton);
+  
+  // Build container components
+  const containerComponents = [
+    {
+      type: 10, // Text Display component
+      content: `## Reece Stuff`
+    },
+    analyticsRow.toJSON(), // Analytics buttons
+    {
+      type: 14 // Separator
+    },
+    backRow.toJSON() // Back navigation
+  ];
+  
+  // Create Components V2 Container
+  const reeceMenuContainer = {
+    type: 17, // Container component
+    accent_color: 0xe74c3c, // Red accent color to match danger style
+    components: containerComponents
+  };
+  
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2 flag
+    components: [reeceMenuContainer]
   };
 }
 
@@ -3973,6 +4015,48 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error loading Season Applications interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'reece_stuff_menu') {
+      // Handle Reece Stuff submenu - special admin features
+      try {
+        const userId = req.body.member.user.id;
+        
+        // Security check - only allow specific Discord ID
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        const channelId = req.body.channel_id;
+        const guildId = req.body.guild_id;
+        const shouldUpdateMessage = await shouldUpdateExistingMessage(channelId);
+        
+        // Create Reece Stuff submenu
+        const reeceMenuData = await createReeceStuffMenu();
+        
+        const responseType = shouldUpdateMessage ? 
+          InteractionResponseType.UPDATE_MESSAGE : 
+          InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
+        
+        return res.send({
+          type: responseType,
+          data: reeceMenuData
+        });
+        
+      } catch (error) {
+        console.error('Error handling reece_stuff_menu button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: 'Error loading Reece Stuff interface.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

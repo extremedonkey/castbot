@@ -6,7 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.
 
-## LATEST DEVELOPMENT: PLAYER MANAGEMENT SYSTEM ✅ COMPLETE
+## LATEST DEVELOPMENT: LIVE DISCORD ANALYTICS LOGGING ✅ COMPLETE
+
+**Major Feature Addition: Real-time Discord Analytics Logging System**
+- **Real-time Discord Posting**: Analytics events automatically posted to Discord channel (#logs, ID: 1385059476243218552) with Markdown formatting
+- **Node.js Command Interface**: `toggle-live-logging.js` script for system management without cluttering Discord UI
+- **User Exclusion Management**: Toggle Discord users in/out of exclusion list to filter admin interactions
+- **Environment Configuration**: Stored in `playerData.json` under `environmentConfig.liveDiscordLogging` structure
+- **Rate Limiting & Error Handling**: 1.2-second message queuing with non-blocking error handling to protect main bot
+- **Production Deployment**: Successfully deployed and operational in production environment
+
+**Technical Implementation:**
+- **Discord Client Integration**: `analyticsLogger.js` enhanced with `setDiscordClient()` and async Discord posting
+- **Configuration Management**: New storage functions in `storage.js` for environment config persistence
+- **Command-line Interface**: Three-mode script (on/off/exclude) with Discord ID validation and status reporting
+- **Async Integration**: All `logInteraction()` calls made async throughout `app.js` for real-time posting
+
+## PREVIOUS DEVELOPMENT: PLAYER MANAGEMENT SYSTEM ✅ COMPLETE
 
 **Major Feature Addition: Enhanced Player Management Interface with Modular Architecture**
 - **Unified Interface**: `/menu` → Player Management provides comprehensive admin controls
