@@ -11,6 +11,50 @@ import path from 'path';
 const USER_ANALYTICS_LOG = './logs/user-analytics.log';
 
 /**
+ * Parse timestamp from log line
+ * @param {string} timestampStr - Timestamp string to parse
+ * @returns {Date|null} Parsed date or null if invalid
+ */
+function parseTimestamp(timestampStr) {
+  try {
+    // Handle different timestamp formats
+    
+    // Format 1: [8:18AM] Thu 19 Jun 25
+    const newFormatMatch = timestampStr.match(/\[(\d{1,2}:\d{2}[AP]M)\] (\w{3}) (\d{1,2}) (\w{3}) (\d{2})/);
+    if (newFormatMatch) {
+      const [, time, dayName, day, month, year] = newFormatMatch;
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthIndex = months.indexOf(month);
+      
+      if (monthIndex === -1) return null;
+      
+      // Convert to 24-hour format
+      let [hours, minutes] = time.slice(0, -2).split(':').map(Number);
+      const ampm = time.slice(-2);
+      if (ampm === 'PM' && hours !== 12) hours += 12;
+      if (ampm === 'AM' && hours === 12) hours = 0;
+      
+      const date = new Date(2000 + parseInt(year), monthIndex, parseInt(day), hours, parseInt(minutes));
+      return date;
+    }
+    
+    // Format 2: [ANALYTICS] 2025-06-18T15:01:16.725Z
+    if (timestampStr.includes('[ANALYTICS]')) {
+      const isoMatch = timestampStr.match(/\[ANALYTICS\] (.+)/);
+      if (isoMatch) {
+        return new Date(isoMatch[1]);
+      }
+    }
+    
+    // Fallback: try to parse directly
+    return new Date(timestampStr);
+  } catch (error) {
+    console.warn('Failed to parse timestamp:', timestampStr, error.message);
+    return null;
+  }
+}
+
+/**
  * Parse a log line and extract relevant data
  * @param {string} line - Log line to parse
  * @returns {Object|null} Parsed log data or null if invalid
@@ -30,7 +74,7 @@ function parseLogLine(line) {
     
     if (line.includes('[ANALYTICS]')) {
       // Old format parsing
-      timestamp = parts[0].match(/\[(.*?)\]/)?.[1];
+      timestamp = parseTimestamp(parts[0]);
       const userServerPart = parts[1];
       actionType = parts[2];
       actionDetail = parts[3] || '';
@@ -42,7 +86,7 @@ function parseLogLine(line) {
       }
     } else {
       // New format parsing
-      timestamp = parts[0];
+      timestamp = parseTimestamp(parts[0]);
       const userServerPart = parts[1];
       actionType = parts[2];
       actionDetail = parts[3] || '';
@@ -66,7 +110,7 @@ function parseLogLine(line) {
     }
     
     return {
-      timestamp: new Date(timestamp),
+      timestamp,
       user: userInfo,
       server: serverInfo,
       actionType: actionType.trim(),
@@ -93,13 +137,19 @@ async function parseUserAnalyticsLog() {
     const logData = await fs.promises.readFile(USER_ANALYTICS_LOG, 'utf8');
     const lines = logData.split('\n').filter(line => line.trim());
     
+    console.log(`📈 DEBUG: Found ${lines.length} lines in analytics log`);
+    
     const parsedEntries = [];
     for (const line of lines) {
       const parsed = parseLogLine(line);
       if (parsed) {
         parsedEntries.push(parsed);
+      } else {
+        console.log(`📈 DEBUG: Failed to parse line: ${line.substring(0, 80)}...`);
       }
     }
+    
+    console.log(`📈 DEBUG: Successfully parsed ${parsedEntries.length} entries`);
     
     return parsedEntries.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   } catch (error) {
@@ -118,10 +168,20 @@ function calculateServerStats(logEntries, daysBack = 7) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - daysBack);
   
+  console.log(`📈 DEBUG: Calculating stats for ${logEntries.length} log entries`);
+  console.log(`📈 DEBUG: Cutoff date: ${cutoffDate.toISOString()}`);
+  
   // Filter entries within time period
-  const recentEntries = logEntries.filter(entry => 
-    new Date(entry.timestamp) >= cutoffDate
-  );
+  const recentEntries = logEntries.filter(entry => {
+    const entryDate = entry.timestamp;
+    const isRecent = entryDate >= cutoffDate;
+    if (!isRecent) {
+      console.log(`📈 DEBUG: Filtering out old entry: ${entry.rawLine.substring(0, 50)}... (${entryDate.toISOString()})`);
+    }
+    return isRecent;
+  });
+  
+  console.log(`📈 DEBUG: ${recentEntries.length} entries within ${daysBack} days`);
   
   const serverStats = {};
   const userActivity = {};
