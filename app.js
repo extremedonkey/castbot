@@ -4461,7 +4461,7 @@ Your server is now ready for Tycoons gameplay!`;
             // Check if line matches format: [8:18AM] Thu 19 Jun 25 | ...
             if (line.match(/^\[\d{1,2}:\d{2}[AP]M\]/)) {
               if (!shouldFilterOut(line, DEFAULT_FILTERED_BUTTONS) && isWithinRecentDays(line, 3)) {
-                analyticsOutput += line + '\n';
+                analyticsOutput += `• ${line}\n`;
                 displayedCount++;
               }
             }
@@ -4505,7 +4505,7 @@ Your server is now ready for Tycoons gameplay!`;
         await res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `\`\`\`\n${chunks[0]}\n\`\`\``
+            content: chunks[0]
           }
         });
         
@@ -4514,7 +4514,7 @@ Your server is now ready for Tycoons gameplay!`;
           await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
             method: 'POST',
             body: {
-              content: `\`\`\`\n${chunks[i]}\n\`\`\``
+              content: chunks[i]
             }
           });
         }
