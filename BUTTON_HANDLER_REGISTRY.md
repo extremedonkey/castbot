@@ -13,6 +13,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `admin_manage_player` | 🧑‍🤝‍🧑 Manage Players | app.js:~3500 | Direct handler | ✅ Active |
 | `prod_season_applications` | 📝 Season Applications | app.js:~3600 | Direct handler | ✅ Active |
 | `prod_setup_tycoons` | 💰 Tycoons | app.js:~3700 | Direct handler | ✅ Active |
+| `prod_player_menu` | 👤 My Profile | app.js:~4797 | Direct handler | ✅ Active |
 | `reece_stuff_menu` | 😌 Reece Stuff | app.js:~4022 | Direct handler | ✅ Active |
 
 ### **Reece Stuff Submenu Buttons**

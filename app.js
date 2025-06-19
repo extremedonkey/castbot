@@ -194,6 +194,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💰'),
     new ButtonBuilder()
+      .setCustomId('prod_player_menu')
+      .setLabel('My Profile')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('👤'),
+    new ButtonBuilder()
       .setLabel('Need Help?')
       .setStyle(ButtonStyle.Link)
       .setEmoji('❓')
@@ -4795,38 +4800,39 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'prod_player_menu') {
-      // Special player menu button - only available to specific user ID
+      // My Profile button - available to users with admin permissions
       try {
         const userId = req.body.member.user.id;
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
+        const member = req.body.member;
         
-        // Security check - only allow specific Discord ID
-        if (userId !== '391415444084490240') {
+        // Security check - require admin permissions
+        if (!member.permissions || !(member.permissions & (PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild))) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Access denied. This feature is restricted.',
+              content: '❌ Access denied. This feature requires admin permissions.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
 
         // Load player data and current member
-        console.log('🔍 DEBUG: Player Menu button clicked, loading player interface...');
+        console.log('🔍 DEBUG: My Profile button clicked, loading player interface...');
         const playerData = await loadPlayerData();
-        const member = await guild.members.fetch(userId);
+        const guildMember = await guild.members.fetch(userId);
         
         // Create player management UI using the new module
         const managementUI = await createPlayerManagementUI({
           mode: PlayerManagementMode.PLAYER,
-          targetMember: member,
+          targetMember: guildMember,
           playerData,
           guildId,
           userId,
           showUserSelect: false,
           showVanityRoles: false,
-          title: 'CastBot | Player Menu',
+          title: 'CastBot | My Profile',
           client
         });
         
@@ -4838,11 +4844,11 @@ Your server is now ready for Tycoons gameplay!`;
         });
         
       } catch (error) {
-        console.error('Error accessing player menu:', error);
+        console.error('Error accessing My Profile:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error accessing player menu. Check logs for details.',
+            content: '❌ Error accessing My Profile. Check logs for details.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
