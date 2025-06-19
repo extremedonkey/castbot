@@ -136,16 +136,29 @@ function parseLogLine(line) {
       actionDetail = parts[3] || '';
       
       // Extract user info: "ReeceBot (extremedonkey) in CastBot (1331657596087566398)"
-      const userServerMatch = userServerPart.match(/(.+?) \((.+?)\) in (.+?) \((\d+)\)/);
+      // Handle both "Server (ID)" and "Server Name" formats
+      const userServerMatch = userServerPart.match(/(.+?) \((.+?)\) in (.+?)$/);
       if (userServerMatch) {
         userInfo = { 
           displayName: userServerMatch[1], 
           username: userServerMatch[2] 
         };
-        serverInfo = { 
-          name: userServerMatch[3], 
-          id: userServerMatch[4] 
-        };
+        
+        const serverPart = userServerMatch[3].trim();
+        // Check if server part ends with (ID)
+        const serverIdMatch = serverPart.match(/^(.+?) \((\d+)\)$/);
+        if (serverIdMatch) {
+          serverInfo = { 
+            name: serverIdMatch[1], 
+            id: serverIdMatch[2] 
+          };
+        } else {
+          // Server name without explicit ID
+          serverInfo = { 
+            name: serverPart, 
+            id: 'unknown' 
+          };
+        }
       }
     }
     
@@ -194,7 +207,7 @@ async function parseUserAnalyticsLog() {
       if (parsed) {
         parsedEntries.push(parsed);
       } else {
-        console.log(`📈 DEBUG: Failed to parse line: ${line.substring(0, 80)}...`);
+        console.log(`📈 DEBUG: Failed to parse line: ${line.substring(0, 100)}...`);
       }
     }
     
