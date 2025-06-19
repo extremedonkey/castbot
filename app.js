@@ -1317,60 +1317,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     }
     return;
-} else if (name === 'toggle_live_logging' || name === 'dev_toggle_live_logging') {
-    try {
-      const userId = req.body.member.user.id;
-      
-      // Security check - only allow specific Discord ID
-      if (userId !== '391415444084490240') {
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Access denied. This command is restricted to Reece only.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-
-      const enabled = data.options?.find(opt => opt.name === 'enabled')?.value;
-      
-      if (enabled === undefined) {
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Missing required parameter: enabled',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-
-      // Import the storage functions
-      const { updateLiveLoggingStatus, loadEnvironmentConfig } = await import('./storage.js');
-      
-      const updatedConfig = await updateLiveLoggingStatus(enabled);
-      
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: `✅ Live Discord logging ${enabled ? '**ENABLED**' : '**DISABLED**'}\n\n` +
-                   `**Target Guild:** ${updatedConfig.targetGuildId}\n` +
-                   `**Target Channel:** <#${updatedConfig.targetChannelId}>\n` +
-                   `**Excluded Users:** ${updatedConfig.excludedUserIds.length} user(s)\n` +
-                   `**Status:** ${enabled ? '🟢 Active - logs will flow to Discord' : '🔴 Inactive - file logging only'}`,
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
-    } catch (error) {
-      console.error('Error in toggle_live_logging command:', error);
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: '❌ Error updating live logging status. Check console for details.',
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
-    }
-    return;
 } else if (name === 'set_players_age') {  // Changed from setageall
       try {
         console.log('Processing setageall command');

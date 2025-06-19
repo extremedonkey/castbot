@@ -273,7 +273,7 @@ export async function loadEnvironmentConfig() {
         lastMessageTime: 0
       }
     };
-    await saveAllPlayerData(data);
+    await savePlayerData(data);
   }
   return data.environmentConfig;
 }
@@ -281,7 +281,7 @@ export async function loadEnvironmentConfig() {
 export async function saveEnvironmentConfig(config) {
   const data = await loadPlayerData();
   data.environmentConfig = config;
-  await saveAllPlayerData(data);
+  await savePlayerData(data);
 }
 
 export async function updateLiveLoggingStatus(enabled) {

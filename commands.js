@@ -280,20 +280,6 @@ const MENU_COMMAND = {
 	type: 1
 };
 
-const TOGGLE_LIVE_LOGGING_COMMAND = {
-	name: maybePrependDev('toggle_live_logging'),
-	description: 'Toggle real-time Discord logging system (Reece only)',
-	type: 1,
-	options: [
-		{
-			name: 'enabled',
-			description: 'Enable or disable live Discord logging',
-			type: 5, // BOOLEAN
-			required: true
-		}
-	]
-};
-
 // DISABLED: Production menu command - merged into unified /menu command
 // const PROD_MENU_COMMAND (functionality moved to /menu with admin detection)
 
@@ -313,7 +299,6 @@ const ALL_COMMANDS = [
 	// Player commands REMOVED: player_set_age, player_set_pronouns, player_set_timezone
 	CASTLIST_COMMAND, // Now points to castlist2 functionality
 	MENU_COMMAND, // Unified menu with admin detection (replaces PROD_MENU_COMMAND)
-	TOGGLE_LIVE_LOGGING_COMMAND, // Real-time Discord logging toggle
 	SET_PLAYERS_AGE_COMMAND,
 	// DISABLED: SET_TRIBE_COMMAND, - moved to /prod_menu (was add_tribe)
 	// DISABLED: CLEAR_TRIBE_COMMAND, - moved to /prod_menu
