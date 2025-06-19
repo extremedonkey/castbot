@@ -40,7 +40,9 @@ import {
   getGuildPronouns,  // Add this import
   updateGuildPronouns, // Add this import
   getGuildTimezones, // Add this import
-  getTimezoneOffset // Add this import
+  getTimezoneOffset, // Add this import
+  loadEnvironmentConfig,
+  updateLiveLoggingStatus
 } from './storage.js';
 import {
   createApplicationButtonModal,
@@ -292,7 +294,12 @@ async function createReeceStuffMenu() {
       .setCustomId('prod_live_analytics')
       .setLabel('Live Analytics')
       .setStyle(ButtonStyle.Danger)
-      .setEmoji('🔴')
+      .setEmoji('🔴'),
+    new ButtonBuilder()
+      .setCustomId('prod_toggle_live_analytics')
+      .setLabel('Toggle Live Analytics')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🪵')
   ];
   
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
@@ -4666,6 +4673,66 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error running live analytics. Check logs for details.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_toggle_live_analytics') {
+      // Toggle live analytics logging on/off
+      try {
+        const userId = req.body.member.user.id;
+        
+        // Security check - only allow specific Discord ID
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log('🪵 DEBUG: Starting live analytics toggle for user:', userId);
+        
+        // Load current configuration
+        const config = await loadEnvironmentConfig();
+        const currentStatus = config.liveDiscordLogging.enabled;
+        
+        console.log('🪵 DEBUG: Current live logging status:', currentStatus);
+        
+        // Toggle the status
+        const newStatus = !currentStatus;
+        const updatedConfig = await updateLiveLoggingStatus(newStatus);
+        
+        console.log('🪵 DEBUG: New live logging status:', newStatus);
+        
+        // Prepare response message
+        let responseMessage;
+        if (newStatus) {
+          responseMessage = `✅ **Live Analytics Logging ENABLED**\n\n` +
+                          `📤 Analytics events will now be posted to <#${updatedConfig.targetChannelId}>\n` +
+                          `🚫 Excluded users: ${updatedConfig.excludedUserIds.length}`;
+        } else {
+          responseMessage = `🔴 **Live Analytics Logging DISABLED**\n\n` +
+                          `📄 Only file logging will continue\n` +
+                          `🚫 Discord channel logging has been paused`;
+        }
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: responseMessage,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error toggling live analytics:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error toggling live analytics. Check logs for details.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
