@@ -20,6 +20,8 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 |-----------|-------|----------|------------------|--------|
 | `prod_analytics_dump` | 📊 Analytics | app.js:~4315 | Direct handler | ✅ Active |
 | `prod_live_analytics` | 🔴 Live Analytics | app.js:~4400 | Direct handler | ✅ Active |
+| `prod_server_usage_stats` | 📈 Server Usage Stats | app.js:~4750 | Direct handler | ✅ Active |
+| `prod_toggle_live_analytics` | 🪵 Toggle Live Analytics | app.js:~4690 | Direct handler | ✅ Active |
 | `prod_menu_back` | ⬅ Menu | app.js:~4064 | Direct handler | ✅ Active |
 
 ### **Castlist Navigation Buttons**

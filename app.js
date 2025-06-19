@@ -283,8 +283,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
  * Create Reece Stuff submenu interface (admin-only special features)
  */
 async function createReeceStuffMenu() {
-  // Create analytics action buttons
-  const analyticsButtons = [
+  // Create analytics action buttons (split into rows due to 5-button limit)
+  const analyticsButtonsRow1 = [
     new ButtonBuilder()
       .setCustomId('prod_analytics_dump')
       .setLabel('Analytics')
@@ -296,13 +296,22 @@ async function createReeceStuffMenu() {
       .setStyle(ButtonStyle.Danger)
       .setEmoji('🔴'),
     new ButtonBuilder()
+      .setCustomId('prod_server_usage_stats')
+      .setLabel('Server Usage Stats')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('📈')
+  ];
+
+  const analyticsButtonsRow2 = [
+    new ButtonBuilder()
       .setCustomId('prod_toggle_live_analytics')
       .setLabel('Toggle Live Analytics')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪵')
   ];
   
-  const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
+  const analyticsRow1 = new ActionRowBuilder().addComponents(analyticsButtonsRow1);
+  const analyticsRow2 = new ActionRowBuilder().addComponents(analyticsButtonsRow2);
   
   // Create back button
   const backButton = [
@@ -320,7 +329,8 @@ async function createReeceStuffMenu() {
       type: 10, // Text Display component
       content: `## Reece Stuff`
     },
-    analyticsRow.toJSON(), // Analytics buttons
+    analyticsRow1.toJSON(), // Analytics buttons row 1
+    analyticsRow2.toJSON(), // Analytics buttons row 2
     {
       type: 14 // Separator
     },
@@ -4733,6 +4743,53 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error toggling live analytics. Check logs for details.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'prod_server_usage_stats') {
+      // Server usage analytics button - only available to specific user ID
+      try {
+        console.log('📈 DEBUG: Starting server usage stats for user:', req.body.member.user.id);
+        const userId = req.body.member.user.id;
+        
+        // Security check - only allow specific Discord ID
+        if (userId !== '391415444084490240') {
+          console.log('❌ DEBUG: Access denied for user:', userId);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log('✅ DEBUG: User authorized, importing server usage analytics...');
+        // Import and run server usage analytics
+        const { generateServerUsageSummary, formatServerUsageForDiscord } = await import('./serverUsageAnalytics.js');
+        console.log('✅ DEBUG: Server usage analytics imported successfully');
+        
+        // Generate 7-day usage summary
+        console.log('✅ DEBUG: Generating server usage summary...');
+        const summary = await generateServerUsageSummary(7);
+        console.log('✅ DEBUG: Summary generated, formatting for Discord...');
+        
+        // Format for Discord display
+        const discordResponse = formatServerUsageForDiscord(summary);
+        console.log('✅ DEBUG: Formatted for Discord, sending response...');
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: discordResponse
+        });
+        
+      } catch (error) {
+        console.error('Error running server usage stats:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error running server usage analytics. Check logs for details.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
