@@ -4429,9 +4429,28 @@ Your server is now ready for Tycoons gameplay!`;
           // Format components with Markdown
           const formattedUser = `**\`${user}\`**`;
           const formattedServer = `__\`${serverName}\`__`;
-          const formattedAction = `**${actionType}**`;
           
-          return `${timestamp} | ${formattedUser} in ${formattedServer} (${serverId}) | ${formattedAction} | ${details}`;
+          // Format the action details based on action type
+          let formattedDetails;
+          if (actionType === 'SLASH_COMMAND') {
+            // Bold the entire command for slash commands (e.g., **/menu**)
+            formattedDetails = `**${details}**`;
+          } else if (actionType === 'BUTTON_CLICK') {
+            // For button clicks, bold just the button name (first part before parentheses)
+            const buttonMatch = details.match(/^(.+?)\s+\((.+)\)$/);
+            if (buttonMatch) {
+              const [, buttonName, buttonId] = buttonMatch;
+              formattedDetails = `**${buttonName}** (${buttonId})`;
+            } else {
+              // Fallback if no parentheses found, bold the whole thing
+              formattedDetails = `**${details}**`;
+            }
+          } else {
+            // For other action types, keep details as-is
+            formattedDetails = details;
+          }
+          
+          return `${timestamp} | ${formattedUser} in ${formattedServer} (${serverId}) | ${actionType} | ${formattedDetails}`;
         }
         
         // Default buttons to filter out (same as liveAnalytics.js)
