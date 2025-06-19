@@ -258,3 +258,35 @@ export async function getTimezoneOffset(guildId, roleId) {
   const timezones = await getGuildTimezones(guildId);
   return timezones[roleId]?.offset || 0;
 }
+
+// Environment configuration functions
+export async function loadEnvironmentConfig() {
+  const data = await loadPlayerData();
+  if (!data.environmentConfig) {
+    data.environmentConfig = {
+      liveDiscordLogging: {
+        enabled: false,
+        targetGuildId: "1331657596087566398",
+        targetChannelId: "1385059476243218552",
+        excludedUserIds: ["391415444084490240"],
+        rateLimitQueue: [],
+        lastMessageTime: 0
+      }
+    };
+    await saveAllPlayerData(data);
+  }
+  return data.environmentConfig;
+}
+
+export async function saveEnvironmentConfig(config) {
+  const data = await loadPlayerData();
+  data.environmentConfig = config;
+  await saveAllPlayerData(data);
+}
+
+export async function updateLiveLoggingStatus(enabled) {
+  const config = await loadEnvironmentConfig();
+  config.liveDiscordLogging.enabled = enabled;
+  await saveEnvironmentConfig(config);
+  return config.liveDiscordLogging;
+}

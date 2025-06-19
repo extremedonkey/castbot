@@ -182,7 +182,7 @@ function getButtonLabel(customId, components) {
  * @param {string} channelName - Discord channel name (optional)
  * @param {string} displayName - User's server display name (optional)
  */
-function logInteraction(userId, guildId, action, details, username, guildName, components = null, channelName = null, displayName = null) {
+async function logInteraction(userId, guildId, action, details, username, guildName, components = null, channelName = null, displayName = null) {
   try {
     // Convert to AWST (UTC+8) for display
     const utcDate = new Date();
@@ -261,6 +261,9 @@ function logInteraction(userId, guildId, action, details, username, guildName, c
     // Append to log file
     fs.appendFileSync(ANALYTICS_LOG_FILE, logEntry);
     
+    // Try Discord logging (non-blocking)
+    await postToDiscordLogs(logEntry.trim(), userId, action, details, components);
+    
   } catch (error) {
     console.error('Analytics logging error:', error);
     // Don't throw - analytics shouldn't break the bot
@@ -274,4 +277,170 @@ function getLogFilePath() {
   return ANALYTICS_LOG_FILE;
 }
 
-export { logInteraction, getLogFilePath };
+// Discord client reference (will be set from app.js)
+let discordClient = null;
+let targetChannel = null;
+
+/**
+ * Set Discord client reference for posting logs
+ * @param {Client} client - Discord.js client instance
+ */
+function setDiscordClient(client) {
+  discordClient = client;
+}
+
+/**
+ * Format analytics line with Markdown (reused from app.js Live Analytics)
+ * @param {string} line - Raw log line
+ * @returns {string} Formatted line with Discord Markdown
+ */
+function formatAnalyticsLine(line) {
+  // Parse format: [8:33AM] Thu 19 Jun 25 | User (username) in Server Name (1234567890) | ACTION_TYPE | details
+  const match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
+  
+  if (!match) {
+    return line; // Return original if parsing fails
+  }
+  
+  const [, timestamp, user, serverName, serverId, actionType, details] = match;
+  
+  // Format components with Markdown
+  const formattedUser = `**\`${user}\`**`;
+  const formattedServer = `__\`${serverName}\`__`;
+  
+  // Format the action details based on action type
+  let formattedDetails;
+  if (actionType === 'SLASH_COMMAND') {
+    // Bold the entire command for slash commands (e.g., **/menu**)
+    formattedDetails = `**${details}**`;
+  } else if (actionType === 'BUTTON_CLICK') {
+    // For button clicks, bold just the button name (first part before parentheses)
+    const buttonMatch = details.match(/^(.+?)\s+\((.+)\)$/);
+    if (buttonMatch) {
+      const [, buttonName, buttonId] = buttonMatch;
+      formattedDetails = `**${buttonName}** (${buttonId})`;
+    } else {
+      // Fallback if no parentheses found, bold the whole thing
+      formattedDetails = `**${details}**`;
+    }
+  } else {
+    // For other action types, keep details as-is
+    formattedDetails = details;
+  }
+  
+  return `${timestamp} | ${formattedUser} in ${formattedServer} (${serverId}) | ${actionType} | ${formattedDetails}`;
+}
+
+/**
+ * Post formatted log message to Discord channel
+ * @param {string} logEntry - Raw log entry
+ * @param {string} userId - Discord user ID
+ * @param {string} action - Action type
+ * @param {string} details - Action details
+ * @param {Array} components - Discord components for button label extraction
+ */
+async function postToDiscordLogs(logEntry, userId, action, details, components) {
+  try {
+    // Skip if Discord client not available
+    if (!discordClient) {
+      return;
+    }
+
+    // Load environment config
+    const { loadEnvironmentConfig } = await import('./storage.js');
+    const envConfig = await loadEnvironmentConfig();
+    
+    const loggingConfig = envConfig.liveDiscordLogging;
+    
+    // Check if logging is enabled
+    if (!loggingConfig.enabled) {
+      return;
+    }
+    
+    // Check user exclusion (Option A: Complete Exclusion)
+    if (loggingConfig.excludedUserIds.includes(userId)) {
+      return;
+    }
+    
+    // Get target channel if not cached
+    if (!targetChannel) {
+      try {
+        const targetGuild = await discordClient.guilds.fetch(loggingConfig.targetGuildId);
+        targetChannel = await targetGuild.channels.fetch(loggingConfig.targetChannelId);
+        
+        if (!targetChannel) {
+          console.error('Discord Logging: Target channel not found');
+          return;
+        }
+      } catch (error) {
+        console.error('Discord Logging: Error fetching target channel:', error);
+        return;
+      }
+    }
+    
+    // Format the log entry for Discord
+    const formattedMessage = `* ${formatAnalyticsLine(logEntry)}`;
+    
+    // Rate limiting check (simple implementation)
+    const now = Date.now();
+    if (now - loggingConfig.lastMessageTime < 1200) { // 1.2 seconds between messages
+      // Add to queue for later processing
+      loggingConfig.rateLimitQueue.push({
+        message: formattedMessage,
+        timestamp: now
+      });
+      
+      // Limit queue size
+      if (loggingConfig.rateLimitQueue.length > 50) {
+        loggingConfig.rateLimitQueue.shift(); // Remove oldest
+      }
+      
+      return;
+    }
+    
+    // Update last message time
+    loggingConfig.lastMessageTime = now;
+    
+    // Send message to Discord
+    await targetChannel.send(formattedMessage);
+    
+    // Process any queued messages
+    if (loggingConfig.rateLimitQueue.length > 0) {
+      setTimeout(async () => {
+        await processQueuedMessages(loggingConfig);
+      }, 1200);
+    }
+    
+  } catch (error) {
+    console.error('Discord Logging Error (non-critical):', error);
+    // Don't throw - this should never break the main bot functionality
+  }
+}
+
+/**
+ * Process queued messages with rate limiting
+ * @param {Object} loggingConfig - Logging configuration object
+ */
+async function processQueuedMessages(loggingConfig) {
+  try {
+    if (loggingConfig.rateLimitQueue.length === 0 || !targetChannel) {
+      return;
+    }
+    
+    const message = loggingConfig.rateLimitQueue.shift();
+    await targetChannel.send(message.message);
+    
+    loggingConfig.lastMessageTime = Date.now();
+    
+    // Schedule next message if queue not empty
+    if (loggingConfig.rateLimitQueue.length > 0) {
+      setTimeout(async () => {
+        await processQueuedMessages(loggingConfig);
+      }, 1200);
+    }
+  } catch (error) {
+    console.error('Discord Logging Queue Error (non-critical):', error);
+  }
+}
+
+export { logInteraction, getLogFilePath, setDiscordClient };
