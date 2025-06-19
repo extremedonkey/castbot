@@ -4415,6 +4415,25 @@ Your server is now ready for Tycoons gameplay!`;
         
         const ANALYTICS_LOG_FILE = getLogFilePath();
         
+        // Function to format analytics line with Markdown
+        function formatAnalyticsLine(line) {
+          // Parse format: [8:33AM] Thu 19 Jun 25 | User (username) in Server Name (1234567890) | ACTION_TYPE | details
+          const match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
+          
+          if (!match) {
+            return line; // Return original if parsing fails
+          }
+          
+          const [, timestamp, user, serverName, serverId, actionType, details] = match;
+          
+          // Format components with Markdown
+          const formattedUser = `**\`${user}\`**`;
+          const formattedServer = `__\`${serverName}\`__`;
+          const formattedAction = `**${actionType}**`;
+          
+          return `${timestamp} | ${formattedUser} in ${formattedServer} (${serverId}) | ${formattedAction} | ${details}`;
+        }
+        
         // Default buttons to filter out (same as liveAnalytics.js)
         const DEFAULT_FILTERED_BUTTONS = [
           'disabled_',
@@ -4461,7 +4480,9 @@ Your server is now ready for Tycoons gameplay!`;
             // Check if line matches format: [8:18AM] Thu 19 Jun 25 | ...
             if (line.match(/^\[\d{1,2}:\d{2}[AP]M\]/)) {
               if (!shouldFilterOut(line, DEFAULT_FILTERED_BUTTONS) && isWithinRecentDays(line, 3)) {
-                analyticsOutput += `• ${line}\n`;
+                // Parse and format the log line with Markdown
+                const formattedLine = formatAnalyticsLine(line);
+                analyticsOutput += `* ${formattedLine}\n`;
                 displayedCount++;
               }
             }
