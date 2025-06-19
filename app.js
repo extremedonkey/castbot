@@ -4037,7 +4037,7 @@ To fix this:
 
         const channelId = req.body.channel_id;
         const guildId = req.body.guild_id;
-        const shouldUpdateMessage = await shouldUpdateExistingMessage(channelId);
+        const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
         
         // Create Reece Stuff submenu
         const reeceMenuData = await createReeceStuffMenu();
