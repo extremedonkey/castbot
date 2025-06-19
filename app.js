@@ -4399,10 +4399,12 @@ Your server is now ready for Tycoons gameplay!`;
     } else if (custom_id === 'prod_analytics_dump') {
       // Special analytics dump button - only available to specific user ID
       try {
+        console.log('🔍 DEBUG: Starting analytics dump for user:', req.body.member.user.id);
         const userId = req.body.member.user.id;
         
         // Security check - only allow specific Discord ID
         if (userId !== '391415444084490240') {
+          console.log('❌ DEBUG: Access denied for user:', userId);
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -4412,8 +4414,10 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
 
+        console.log('✅ DEBUG: User authorized, importing analytics function...');
         // Import and run analytics function
         const { analyzePlayerData } = await import('./analytics.js');
+        console.log('✅ DEBUG: Analytics function imported successfully');
         
         // Capture analytics output
         let analyticsOutput = '';
@@ -4423,9 +4427,12 @@ Your server is now ready for Tycoons gameplay!`;
         };
         
         try {
+          console.log('✅ DEBUG: Running analytics function...');
           await analyzePlayerData();
+          console.log('✅ DEBUG: Analytics function completed');
         } finally {
           console.log = originalLog; // Restore original console.log
+          console.log('✅ DEBUG: Console restored, analytics output length:', analyticsOutput.length);
         }
         
         // Format the output for Discord
@@ -4454,6 +4461,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
         
         // Send first chunk as response
+        console.log('✅ DEBUG: Sending response with', chunks.length, 'chunks');
         res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
@@ -4484,10 +4492,12 @@ Your server is now ready for Tycoons gameplay!`;
     } else if (custom_id === 'prod_live_analytics') {
       // Special live analytics button - only available to specific user ID
       try {
+        console.log('🔍 DEBUG: Starting live analytics for user:', req.body.member.user.id);
         const userId = req.body.member.user.id;
         
         // Security check - only allow specific Discord ID
         if (userId !== '391415444084490240') {
+          console.log('❌ DEBUG: Access denied for live analytics user:', userId);
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -4496,6 +4506,8 @@ Your server is now ready for Tycoons gameplay!`;
             }
           });
         }
+
+        console.log('✅ DEBUG: Live analytics user authorized...');
 
         // Import fs and capture live analytics output
         const fs = await import('fs');
@@ -4630,6 +4642,7 @@ Your server is now ready for Tycoons gameplay!`;
         }
         
         // Send initial response with first chunk
+        console.log('✅ DEBUG: Sending live analytics response with', chunks.length, 'chunks, content length:', chunks[0].length);
         await res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
