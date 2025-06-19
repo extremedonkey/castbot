@@ -35,6 +35,13 @@ function parseTimestamp(timestampStr) {
       if (ampm === 'AM' && hours === 12) hours = 0;
       
       const date = new Date(2000 + parseInt(year), monthIndex, parseInt(day), hours, parseInt(minutes));
+      
+      // Validate the created date
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date created from:', timestampStr);
+        return null;
+      }
+      
       return date;
     }
     
@@ -42,12 +49,49 @@ function parseTimestamp(timestampStr) {
     if (timestampStr.includes('[ANALYTICS]')) {
       const isoMatch = timestampStr.match(/\[ANALYTICS\] (.+)/);
       if (isoMatch) {
-        return new Date(isoMatch[1]);
+        const date = new Date(isoMatch[1]);
+        // Validate the created date
+        if (isNaN(date.getTime())) {
+          console.warn('Invalid ISO date from:', isoMatch[1]);
+          return null;
+        }
+        return date;
       }
     }
     
+    // Format 3: [12:14 am] Thu, 19 June 25
+    const timeAmPmMatch = timestampStr.match(/\[(\d{1,2}:\d{2}\s?[ap]m)\]\s*(\w{3}),?\s*(\d{1,2})\s*(\w+)\s*(\d{2})/i);
+    if (timeAmPmMatch) {
+      const [, time, dayName, day, month, year] = timeAmPmMatch;
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthIndex = months.indexOf(month) % 12; // Handle both short and long month names
+      
+      if (monthIndex === -1) return null;
+      
+      // Parse time with proper handling of spaces
+      const timeClean = time.replace(/\s/g, '').toLowerCase();
+      let [hours, minutes] = timeClean.slice(0, -2).split(':').map(Number);
+      const ampm = timeClean.slice(-2);
+      if (ampm === 'pm' && hours !== 12) hours += 12;
+      if (ampm === 'am' && hours === 12) hours = 0;
+      
+      const date = new Date(2000 + parseInt(year), monthIndex, parseInt(day), hours, parseInt(minutes));
+      
+      // Validate the created date
+      if (isNaN(date.getTime())) {
+        console.warn('Invalid date created from time format:', timestampStr);
+        return null;
+      }
+      
+      return date;
+    }
+    
     // Fallback: try to parse directly
-    return new Date(timestampStr);
+    const fallbackDate = new Date(timestampStr);
+    if (isNaN(fallbackDate.getTime())) {
+      return null;
+    }
+    return fallbackDate;
   } catch (error) {
     console.warn('Failed to parse timestamp:', timestampStr, error.message);
     return null;
@@ -106,6 +150,11 @@ function parseLogLine(line) {
     }
     
     if (!userInfo || !serverInfo || !timestamp || !actionType) {
+      return null;
+    }
+    
+    // Final validation that timestamp is a valid Date
+    if (isNaN(timestamp.getTime())) {
       return null;
     }
     
@@ -174,6 +223,13 @@ function calculateServerStats(logEntries, daysBack = 7) {
   // Filter entries within time period
   const recentEntries = logEntries.filter(entry => {
     const entryDate = entry.timestamp;
+    
+    // Validate that entryDate is a valid Date object
+    if (!entryDate || isNaN(entryDate.getTime())) {
+      console.log(`📈 DEBUG: Skipping entry with invalid date: ${entry.rawLine.substring(0, 50)}...`);
+      return false;
+    }
+    
     const isRecent = entryDate >= cutoffDate;
     if (!isRecent) {
       console.log(`📈 DEBUG: Filtering out old entry: ${entry.rawLine.substring(0, 50)}... (${entryDate.toISOString()})`);

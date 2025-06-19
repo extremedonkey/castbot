@@ -6,7 +6,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.
 
-## LATEST DEVELOPMENT: LIVE DISCORD ANALYTICS LOGGING ✅ COMPLETE
+## LATEST DEVELOPMENT: SERVER USAGE ANALYTICS VISUALIZATION ✅ PHASE 1 COMPLETE
+
+**Major Feature Addition: Phase 1 - Basic Text Analytics for Server Usage Tracking**
+- **📈 Server Usage Stats Button**: Added to Reece Stuff submenu (restricted access) for server usage analysis
+- **Log Parsing System**: Comprehensive parsing of `/logs/user-analytics.log` supporting both old and new formats
+- **Server Ranking Analytics**: 7-day activity analysis with server-by-server interaction tracking
+- **Rich Discord Display**: Professional embeds showing rankings, user engagement, and usage insights
+- **Debug Logging**: Comprehensive logging for troubleshooting timestamp parsing and data processing
+
+**Technical Implementation (Phase 1):**
+- **New Module**: `serverUsageAnalytics.js` with complete log parsing and analytics engine
+- **Timestamp Parsing**: Handles multiple log formats including `[8:45AM] Fri 20 Jun 25` and ISO timestamps
+- **Button Integration**: Added `prod_server_usage_stats` handler with security restrictions
+- **Discord Formatting**: Rich embeds with medal rankings, user counts, and server insights
+- **Performance Tracking**: Command vs button interaction analysis and user engagement metrics
+
+**Analytics Output Features:**
+- **Top 10 Server Rankings**: Medal emojis for top 3, detailed interaction breakdowns
+- **User Engagement Metrics**: Unique user counts, command/button ratios, activity patterns
+- **Smart Insights**: Identifies command-heavy vs button-heavy servers, high engagement patterns
+- **7-Day Period Analysis**: Configurable time periods with automatic date filtering
+
+**Phase 1 Implementation Status:** ✅ COMPLETE
+- ✅ Button added to Reece Stuff submenu with proper security
+- ✅ Complete log parsing system with timestamp handling
+- ✅ Server ranking and statistics calculation engine
+- ✅ Discord embed formatting with rich insights
+- ✅ Debug logging for troubleshooting and monitoring
+- ✅ BUTTON_HANDLER_REGISTRY.md updated with new handler
+
+**Next Phase:** Phase 2 - Visual Charts and Enhanced Analytics Dashboard
+
+## PREVIOUS DEVELOPMENT: LIVE DISCORD ANALYTICS LOGGING ✅ COMPLETE
 
 **Major Feature Addition: Real-time Discord Analytics Logging System**
 - **Real-time Discord Posting**: Analytics events automatically posted to Discord channel (#logs, ID: 1385059476243218552) with Markdown formatting
@@ -90,6 +122,75 @@ CastBot has undergone a major optimization initiative that has been fully comple
 - **Performance Optimized**: 70-80% faster navigation through smart caching and reduced API calls
 - **User-First Ordering**: Shows tribes containing the user first in default castlists
 - **Mobile-Friendly UI**: Optimized button layout and page indicators for mobile viewing
+
+## 🔧 DEVELOPMENT STANDARDS & DEFINITION OF DONE
+
+### **Definition of Done (DoD) for All New Features** 🎯
+
+Every new feature implementation MUST include the following before being considered complete:
+
+#### **1. Comprehensive Logging Requirements** 📋
+- **Debug Logging**: Add detailed debug logs at key execution points using consistent format:
+  ```javascript
+  console.log('🔍 DEBUG: [Feature] Starting [action] for user:', userId);
+  console.log('✅ DEBUG: [Feature] [step] completed successfully');
+  console.log('❌ DEBUG: [Feature] [error] occurred:', error.message);
+  ```
+- **Error Logging**: All try-catch blocks must log errors with context
+- **Performance Logging**: Add timing logs for operations > 100ms
+- **User Action Logging**: All user interactions logged via `logInteraction()` 
+- **State Change Logging**: Log before/after states for data modifications
+
+#### **2. Error Handling Standards** ⚠️
+- **Try-catch blocks** around all async operations
+- **Graceful fallbacks** for non-critical failures
+- **User-friendly error messages** with ephemeral responses
+- **Error recovery mechanisms** where possible
+
+#### **3. Documentation Requirements** 📚
+- **Function JSDoc comments** with parameters and return types
+- **BUTTON_HANDLER_REGISTRY.md updates** for all new buttons
+- **CLAUDE.md updates** documenting the feature implementation
+- **Inline code comments** for complex logic
+
+#### **4. Testing Verification** ✅
+- **Manual testing** in development environment
+- **Edge case testing** (missing data, invalid inputs, etc.)
+- **Error scenario testing** (network failures, permission issues)
+- **Cross-browser/mobile compatibility** for Discord interfaces
+
+#### **5. Code Quality Standards** 🏗️
+- **Consistent naming conventions** following existing patterns
+- **Single Responsibility Principle** for functions
+- **Avoid code duplication** - reuse existing utilities
+- **Performance considerations** for Discord's 3-second interaction limit
+
+#### **6. Integration Requirements** 🔗
+- **Security checks** appropriate for the feature (admin permissions, user ID restrictions)
+- **Button handler registration** in proper location in app.js
+- **Proper component cleanup** (remove unused imports, variables)
+- **Environment configuration** stored in appropriate location
+
+### **Logging Standards by Feature Type** 📊
+
+| Feature Type | Required Logs | Examples |
+|--------------|---------------|----------|
+| **Button Handlers** | Start, authorization, action, completion | `🔍 DEBUG: Button [id] clicked by user [id]` |
+| **Menu Systems** | Navigation, component creation, user flow | `✅ DEBUG: Menu [name] created with [x] components` |
+| **Data Processing** | Input validation, processing steps, output | `📊 DEBUG: Processing [x] records, found [y] matches` |
+| **API Calls** | Request start, parameters, response, errors | `🌐 DEBUG: Discord API call [endpoint] completed in [time]ms` |
+| **File Operations** | File access, read/write operations, errors | `📁 DEBUG: File [path] read successfully, [size] bytes` |
+
+### **Pre-Deployment Checklist** ✅
+
+Before running `./dev-restart.sh`, verify:
+- [ ] All debug logs added and tested
+- [ ] Error handling covers all failure scenarios  
+- [ ] BUTTON_HANDLER_REGISTRY.md updated
+- [ ] Manual testing completed successfully
+- [ ] No console errors in browser/Discord
+- [ ] Performance is acceptable (< 3 seconds)
+- [ ] Security checks implemented appropriately
 
 ## Development Commands
 
