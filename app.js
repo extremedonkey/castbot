@@ -5033,11 +5033,76 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log('📤 DEBUG: Post Custom Button clicked');
         
+        const guildId = req.body.guild_id;
+        
+        // Import Safari manager functions
+        const { listCustomButtons } = await import('./safariManager.js');
+        
+        // Get all custom buttons for this guild
+        const buttons = await listCustomButtons(guildId);
+        
+        if (buttons.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **No custom buttons found**\n\nCreate a custom button first using **📝 Create Custom Button**.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create button selection dropdown (limit to 25 options for Discord)
+        const buttonOptions = buttons.slice(0, 25).map(button => ({
+          label: button.label,
+          value: button.id,
+          description: `${button.actions.length} action${button.actions.length !== 1 ? 's' : ''} • Created ${new Date(button.metadata.createdAt).toLocaleDateString()}`,
+          emoji: button.emoji ? { name: button.emoji } : undefined
+        }));
+        
+        const buttonSelect = new StringSelectMenuBuilder()
+          .setCustomId('safari_post_select_button')
+          .setPlaceholder('Choose a button to post...')
+          .addOptions(buttonOptions);
+        
+        const selectRow = new ActionRowBuilder().addComponents(buttonSelect);
+        
+        // Create cancel button
+        const cancelButton = new ButtonBuilder()
+          .setCustomId('prod_safari_menu')
+          .setLabel('Cancel')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('❌');
+        
+        const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 📤 Post Custom Button\n\nSelect a button to post to a channel:`
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Available Buttons:** ${buttons.length}\n> **Showing:** ${Math.min(buttons.length, 25)}`
+          },
+          selectRow.toJSON(), // Button selection dropdown
+          {
+            type: 14 // Separator
+          },
+          cancelRow.toJSON() // Cancel button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0xf39c12, // Orange accent color
+          components: containerComponents
+        };
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '🚧 **Post Custom Button (Coming Soon)**\n\nThis feature will allow you to post your created buttons to any channel.\n\nImplementation in progress...',
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
           }
         });
         
@@ -6943,6 +7008,174 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error updating pronoun roles.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_post_select_button') {
+      // Handle Safari button selection for posting
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const selectedButtonId = data.values[0];
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to post custom buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`📤 DEBUG: Selected button ${selectedButtonId} to post`);
+        
+        // Import Safari manager functions
+        const { getCustomButton } = await import('./safariManager.js');
+        
+        // Get the selected button details
+        const button = await getCustomButton(guildId, selectedButtonId);
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Selected button not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create channel selection dropdown
+        const channelSelect = new ChannelSelectMenuBuilder()
+          .setCustomId(`safari_post_channel_${selectedButtonId}`)
+          .setPlaceholder('Choose a channel to post the button...')
+          .setChannelTypes([ChannelType.GuildText, ChannelType.GuildAnnouncement]);
+        
+        const channelSelectRow = new ActionRowBuilder().addComponents(channelSelect);
+        
+        // Create cancel button
+        const cancelButton = new ButtonBuilder()
+          .setCustomId('safari_post_button')
+          .setLabel('⬅ Back')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 📤 Post Custom Button\n\n**Selected:** ${button.label} ${button.emoji || ''}`
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Actions:** ${button.actions.length}\n> **Created:** ${new Date(button.metadata.createdAt).toLocaleDateString()}\n> **Usage:** ${button.metadata.usageCount} time${button.metadata.usageCount !== 1 ? 's' : ''}`
+          },
+          {
+            type: 10, // Text Display component
+            content: `**Choose a channel to post this button:**`
+          },
+          channelSelectRow.toJSON(), // Channel selection dropdown
+          {
+            type: 14 // Separator
+          },
+          cancelRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0xf39c12, // Orange accent color
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling safari button selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error selecting button.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_post_channel_')) {
+      // Handle Safari channel selection for posting button
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const buttonId = custom_id.replace('safari_post_channel_', '');
+        const selectedChannelId = data.values[0];
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to post custom buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`📤 DEBUG: Posting button ${buttonId} to channel ${selectedChannelId}`);
+        
+        // Import Safari manager functions
+        const { getCustomButton, postButtonToChannel } = await import('./safariManager.js');
+        
+        // Get the button details
+        const button = await getCustomButton(guildId, buttonId);
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Button not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Post the button to the selected channel
+        try {
+          await postButtonToChannel(guildId, buttonId, selectedChannelId, client);
+          
+          // Get channel info for confirmation
+          const channel = await client.channels.fetch(selectedChannelId);
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ **Button posted successfully!**\n\n**Button:** ${button.label} ${button.emoji || ''}\n**Channel:** <#${selectedChannelId}>\n\nPlayers can now interact with your custom button!`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+          
+        } catch (postError) {
+          console.error('Error posting button to channel:', postError);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Failed to post button to channel. Please check bot permissions.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error handling safari channel selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error posting button.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

@@ -69,6 +69,31 @@
             "COOL!"
           ]
         }
+      },
+      "belle_s_adventure_436918": {
+        "id": "belle_s_adventure_436918",
+        "label": "Belle's Adventure",
+        "emoji": "👨‍👩‍👧‍",
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "display_text",
+            "order": 1,
+            "config": {
+              "title": "BELLE IS COOL",
+              "content": "Wooo"
+            }
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750430436918,
+          "lastModified": 1750430436918,
+          "usageCount": 0,
+          "tags": [
+            "HJaving fun"
+          ]
+        }
       }
     },
     "safaris": {},
