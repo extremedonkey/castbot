@@ -2663,7 +2663,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       try {
         const parts = custom_id.split('_');
         const guildId = parts[1];
-        const buttonId = parts[2];
+        // Button ID is everything between guildId and timestamp (last part)
+        const buttonId = parts.slice(2, -1).join('_');
         const userId = req.body.member.user.id;
           
           console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${buttonId}, User: ${userId}`);
