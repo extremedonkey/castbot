@@ -5462,7 +5462,7 @@ Your server is now ready for Tycoons gameplay!`;
           actionType = 'update_currency';
           buttonId = custom_id.replace('safari_add_action_', '').replace('_update_currency', '');
         } else if (custom_id.endsWith('_follow_up')) {
-          actionType = 'follow_up';
+          actionType = 'follow_up_button';
           buttonId = custom_id.replace('safari_add_action_', '').replace('_follow_up', '');
         } else {
           // Fallback to old method for any unknown action types
@@ -5545,7 +5545,7 @@ Your server is now ready for Tycoons gameplay!`;
             data: modal.toJSON()
           });
           
-        } else if (actionType === 'follow_up') {
+        } else if (actionType === 'follow_up_button') {
           // Get existing buttons to show in dropdown
           const { listCustomButtons } = await import('./safariManager.js');
           const guildId = req.body.guild_id; // Ensure guildId is defined
@@ -8976,7 +8976,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           actionType = 'update_currency';
           buttonId = custom_id.replace('safari_action_modal_', '').replace('_update_currency', '');
         } else if (custom_id.endsWith('_follow_up')) {
-          actionType = 'follow_up';
+          actionType = 'follow_up_button';
           buttonId = custom_id.replace('safari_action_modal_', '').replace('_follow_up', '');
         } else {
           // Fallback to old method for any unknown action types

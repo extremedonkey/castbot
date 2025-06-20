@@ -195,6 +195,70 @@
           "usageCount": 0,
           "tags": []
         }
+      },
+      "link_button_linky_mc_242545": {
+        "id": "link_button_linky_mc_242545",
+        "label": "Link Button Linky mcLinkAlot",
+        "emoji": null,
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "follow_up",
+            "order": 1,
+            "config": {
+              "buttonId": "belle_is_cool_button_195340",
+              "delay": 0,
+              "replaceMessage": false
+            }
+          },
+          {
+            "type": "display_text",
+            "order": 2,
+            "config": {
+              "title": "THIS IS A FOLLOW UPPP",
+              "content": "folow follow follow"
+            }
+          },
+          {
+            "type": "update_currency",
+            "order": 3,
+            "config": {
+              "amount": -50,
+              "message": "You got a moon!"
+            }
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750443242545,
+          "lastModified": 1750443242545,
+          "usageCount": 2,
+          "tags": []
+        }
+      },
+      "linkme_412308": {
+        "id": "linkme_412308",
+        "label": "LINKME",
+        "emoji": null,
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "follow_up",
+            "order": 1,
+            "config": {
+              "buttonId": "link_button_linky_mc_242545",
+              "delay": 1,
+              "replaceMessage": false
+            }
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750443412308,
+          "lastModified": 1750443412308,
+          "usageCount": 1,
+          "tags": []
+        }
       }
     },
     "safaris": {},
