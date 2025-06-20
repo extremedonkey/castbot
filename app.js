@@ -194,11 +194,6 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🦁'),
     new ButtonBuilder()
-      .setCustomId('prod_setup_tycoons')
-      .setLabel('Tycoons')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💰'),
-    new ButtonBuilder()
       .setCustomId('prod_player_menu')
       .setLabel('My Profile')
       .setStyle(ButtonStyle.Secondary)
@@ -385,7 +380,12 @@ async function createSafariMenu() {
       .setCustomId('safari_view_buttons')
       .setLabel('View All Buttons')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📊')
+      .setEmoji('📊'),
+    new ButtonBuilder()
+      .setCustomId('prod_setup_tycoons')
+      .setLabel('Setup Tycoons')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💰')
   ];
   
   const safariRow = new ActionRowBuilder().addComponents(safariButtons);
