@@ -5087,37 +5087,14 @@ Your server is now ready for Tycoons gameplay!`;
         const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
         console.log('📤 DEBUG: Cancel row created');
         
-        // Create response with Components V2
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## 📤 Post Custom Button\n\nSelect a button to post to a channel:`
-          },
-          {
-            type: 10, // Text Display component
-            content: `> **Available Buttons:** ${buttons.length}\n> **Showing:** ${Math.min(buttons.length, 25)}`
-          },
-          selectRow.toJSON(), // Button selection dropdown
-          {
-            type: 14 // Separator
-          },
-          cancelRow.toJSON() // Cancel button
-        ];
-        
-        console.log('📤 DEBUG: Creating container...');
-        const container = {
-          type: 17, // Container component
-          accent_color: 0xf39c12, // Orange accent color
-          components: containerComponents
-        };
-        console.log('📤 DEBUG: Container created');
-        
-        console.log('📤 DEBUG: Sending response...');
+        // Create traditional Discord response (not Components V2)
+        console.log('📤 DEBUG: Creating traditional response...');
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [container]
+            content: `## 📤 Post Custom Button\n\nSelect a button to post to a channel:\n\n**Available Buttons:** ${buttons.length}\n**Showing:** ${Math.min(buttons.length, 25)}`,
+            components: [selectRow, cancelRow],
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         
