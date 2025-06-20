@@ -5156,10 +5156,23 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
 
-        const parts = custom_id.split('_');
-        // Reconstruct button ID (everything between safari_add_action_ and the last underscore)
-        const actionType = parts[parts.length - 1]; // Last part is action type
-        const buttonId = parts.slice(3, parts.length - 1).join('_'); // Everything in between
+        // Match against known action types that may contain underscores
+        let actionType, buttonId;
+        if (custom_id.endsWith('_display_text')) {
+          actionType = 'display_text';
+          buttonId = custom_id.replace('safari_add_action_', '').replace('_display_text', '');
+        } else if (custom_id.endsWith('_update_currency')) {
+          actionType = 'update_currency';
+          buttonId = custom_id.replace('safari_add_action_', '').replace('_update_currency', '');
+        } else if (custom_id.endsWith('_follow_up')) {
+          actionType = 'follow_up';
+          buttonId = custom_id.replace('safari_add_action_', '').replace('_follow_up', '');
+        } else {
+          // Fallback to old method for any unknown action types
+          const parts = custom_id.split('_');
+          actionType = parts[parts.length - 1];
+          buttonId = parts.slice(3, parts.length - 1).join('_');
+        }
         
         console.log(`🔧 DEBUG: Adding ${actionType} action to button ${buttonId}`);
         
