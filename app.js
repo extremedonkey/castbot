@@ -5134,11 +5134,100 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log('💰 DEBUG: Manage Currency clicked');
         
+        const guildId = req.body.guild_id;
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const playerData = await loadPlayerData();
+        
+        // Get all players with safari currency data
+        const guildPlayers = playerData[guildId]?.players || {};
+        const playersWithCurrency = Object.entries(guildPlayers)
+          .filter(([userId, player]) => player.safari?.currency !== undefined)
+          .sort(([, a], [, b]) => (b.safari?.currency || 0) - (a.safari?.currency || 0)); // Sort by currency desc
+        
+        // Create currency management buttons
+        const managementButtons = [
+          new ButtonBuilder()
+            .setCustomId('safari_currency_view_all')
+            .setLabel('View All Balances')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('👥'),
+          new ButtonBuilder()
+            .setCustomId('safari_currency_set_player')
+            .setLabel('Set Player Currency')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('💰'),
+          new ButtonBuilder()
+            .setCustomId('safari_currency_reset_all')
+            .setLabel('Reset All Currency')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🗑️')
+        ];
+        
+        const managementRow = new ActionRowBuilder().addComponents(managementButtons);
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('prod_safari_menu')
+          .setLabel('⬅ Back to Safari')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        // Create summary content
+        const totalPlayers = playersWithCurrency.length;
+        const totalCurrency = playersWithCurrency.reduce((sum, [, player]) => sum + (player.safari?.currency || 0), 0);
+        const averageCurrency = totalPlayers > 0 ? Math.round(totalCurrency / totalPlayers) : 0;
+        
+        // Show top players (limit to 5)
+        let topPlayersText = '';
+        if (totalPlayers > 0) {
+          const topPlayers = playersWithCurrency.slice(0, 5);
+          topPlayersText = topPlayers.map(([userId, player], index) => {
+            const rank = index + 1;
+            const currency = player.safari?.currency || 0;
+            return `**${rank}.** <@${userId}> - ${currency} coins`;
+          }).join('\n');
+        } else {
+          topPlayersText = '*No players have currency yet.*';
+        }
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 💰 Manage Currency\n\nCurrency system overview and management tools.`
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Players with Currency:** ${totalPlayers}\n> **Total Currency:** ${totalCurrency} coins\n> **Average per Player:** ${averageCurrency} coins`
+          },
+          {
+            type: 10, // Text Display component
+            content: `**🏆 Top Players:**\n${topPlayersText}`
+          },
+          {
+            type: 14 // Separator
+          },
+          managementRow.toJSON(), // Currency management buttons
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0xf1c40f, // Gold accent color for currency theme
+          components: containerComponents
+        };
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '🚧 **Manage Currency (Coming Soon)**\n\nThis feature will allow you to:\n\n• View player currency balances\n• Set currency amounts\n• Reset all player currency\n\nImplementation in progress...',
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
           }
         });
         
@@ -5201,6 +5290,233 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error viewing custom buttons.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_currency_view_all') {
+      // Handle View All Currency Balances
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to view currency balances.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log('👥 DEBUG: View All Currency Balances clicked');
+        
+        const playerData = await loadPlayerData();
+        const guildPlayers = playerData[guildId]?.players || {};
+        const playersWithCurrency = Object.entries(guildPlayers)
+          .filter(([userId, player]) => player.safari?.currency !== undefined)
+          .sort(([, a], [, b]) => (b.safari?.currency || 0) - (a.safari?.currency || 0));
+        
+        let content = '## 👥 All Currency Balances\n\n';
+        
+        if (playersWithCurrency.length === 0) {
+          content += '*No players have currency yet.*\n\nPlayers will appear here once they interact with Safari buttons that grant currency.';
+        } else {
+          content += `**Total Players:** ${playersWithCurrency.length}\n\n`;
+          playersWithCurrency.forEach(([userId, player], index) => {
+            const rank = index + 1;
+            const currency = player.safari?.currency || 0;
+            const lastInteraction = player.safari?.lastInteraction 
+              ? new Date(player.safari.lastInteraction).toLocaleDateString()
+              : 'Unknown';
+            content += `**${rank}.** <@${userId}>\n`;
+            content += `└ Balance: **${currency} coins** | Last active: ${lastInteraction}\n\n`;
+          });
+        }
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: content,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error viewing all currency balances:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error viewing currency balances.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_currency_set_player') {
+      // Handle Set Player Currency - show user select and modal
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to set player currency.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log('💰 DEBUG: Set Player Currency clicked');
+        
+        // Create user selection dropdown
+        const userSelect = new UserSelectMenuBuilder()
+          .setCustomId('safari_currency_select_user')
+          .setPlaceholder('Choose a player to set currency for...')
+          .setMinValues(1)
+          .setMaxValues(1);
+        
+        const userSelectRow = new ActionRowBuilder().addComponents(userSelect);
+        
+        // Create cancel button
+        const cancelButton = new ButtonBuilder()
+          .setCustomId('safari_manage_currency')
+          .setLabel('⬅ Back')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 💰 Set Player Currency\n\nSelect a player to modify their currency balance:`
+          },
+          userSelectRow.toJSON(), // User selection dropdown
+          {
+            type: 14 // Separator
+          },
+          cancelRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0xf1c40f, // Gold accent color
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in set player currency:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error setting player currency.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_currency_reset_all') {
+      // Handle Reset All Currency - confirmation dialog
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to reset currency.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log('🗑️ DEBUG: Reset All Currency clicked');
+        
+        const playerData = await loadPlayerData();
+        const guildPlayers = playerData[guildId]?.players || {};
+        const playersWithCurrency = Object.entries(guildPlayers)
+          .filter(([userId, player]) => player.safari?.currency !== undefined);
+        
+        if (playersWithCurrency.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **No currency to reset**\n\nNo players have currency balances to reset.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create confirmation buttons
+        const confirmButton = new ButtonBuilder()
+          .setCustomId('safari_currency_reset_confirm')
+          .setLabel('Yes, Reset All Currency')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🗑️');
+        
+        const cancelButton = new ButtonBuilder()
+          .setCustomId('safari_manage_currency')
+          .setLabel('Cancel')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('❌');
+        
+        const confirmRow = new ActionRowBuilder().addComponents(confirmButton, cancelButton);
+        
+        const totalCurrency = playersWithCurrency.reduce((sum, [, player]) => sum + (player.safari?.currency || 0), 0);
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 🗑️ Reset All Currency\n\n⚠️ **Warning: This action cannot be undone!**`
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Players affected:** ${playersWithCurrency.length}\n> **Total currency to be reset:** ${totalCurrency} coins`
+          },
+          {
+            type: 10, // Text Display component
+            content: `**Are you sure you want to reset all player currency to 0?**`
+          },
+          {
+            type: 14 // Separator
+          },
+          confirmRow.toJSON() // Confirmation buttons
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0xe74c3c, // Red accent color for warning
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in reset all currency:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error resetting currency.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -7180,6 +7496,119 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    } else if (custom_id === 'safari_currency_select_user') {
+      // Handle user selection for setting currency - show currency input modal
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const selectedUserId = data.values[0];
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to set player currency.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`💰 DEBUG: Selected user ${selectedUserId} for currency setting`);
+        
+        // Get current currency balance
+        const playerData = await loadPlayerData();
+        const currentCurrency = playerData[guildId]?.players?.[selectedUserId]?.safari?.currency || 0;
+        
+        // Create currency input modal
+        const modal = new ModalBuilder()
+          .setCustomId(`safari_currency_modal_${selectedUserId}`)
+          .setTitle('Set Player Currency');
+
+        const currencyInput = new TextInputBuilder()
+          .setCustomId('currency_amount')
+          .setLabel('Currency Amount')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(10)
+          .setPlaceholder('Enter amount (0-999999)')
+          .setValue(currentCurrency.toString());
+
+        const row = new ActionRowBuilder().addComponents(currencyInput);
+        modal.addComponents(row);
+
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error handling currency user selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error selecting user for currency.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_currency_reset_confirm') {
+      // Handle confirmation to reset all currency
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to reset currency.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log('🗑️ DEBUG: Currency reset confirmed');
+        
+        // Reset all currency
+        const playerData = await loadPlayerData();
+        const guildPlayers = playerData[guildId]?.players || {};
+        
+        let playersResetCount = 0;
+        let totalCurrencyReset = 0;
+        
+        for (const [userId, player] of Object.entries(guildPlayers)) {
+          if (player.safari?.currency !== undefined) {
+            totalCurrencyReset += player.safari.currency;
+            player.safari.currency = 0;
+            player.safari.lastInteraction = Date.now();
+            playersResetCount++;
+          }
+        }
+        
+        if (playersResetCount > 0) {
+          await savePlayerData(playerData);
+        }
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Currency Reset Complete!**\n\n**Players affected:** ${playersResetCount}\n**Total currency reset:** ${totalCurrencyReset} coins\n\nAll player balances have been set to 0.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error confirming currency reset:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error resetting currency.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'prod_add_tribe_role_select') {
       // Step 2: After role selected, show castlist selection
       try {
@@ -8902,6 +9331,73 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error processing timezone offset.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_currency_modal_')) {
+      // Handle Safari currency setting modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const userId = custom_id.replace('safari_currency_modal_', '');
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to set player currency.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Get currency amount from modal
+        const currencyAmount = components[0].components[0].value?.trim();
+        
+        // Validate currency input
+        const amount = parseInt(currencyAmount, 10);
+        if (isNaN(amount) || amount < 0 || amount > 999999) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **Invalid currency amount**\n\nPlease enter a number between 0 and 999,999.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`💰 DEBUG: Setting currency for user ${userId} to ${amount}`);
+        
+        // Import Safari manager functions
+        const { updateCurrency, getCurrency } = await import('./safariManager.js');
+        
+        // Get current currency to calculate difference
+        const currentCurrency = await getCurrency(guildId, userId);
+        const difference = amount - currentCurrency;
+        
+        // Update currency (set to exact amount)
+        await updateCurrency(guildId, userId, difference);
+        
+        // Get user info for confirmation
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(userId);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Currency Updated!**\n\n**Player:** ${targetMember.displayName}\n**Previous Balance:** ${currentCurrency} coins\n**New Balance:** ${amount} coins\n**Change:** ${difference >= 0 ? '+' : ''}${difference} coins`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling currency modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error setting player currency.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
