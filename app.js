@@ -5047,6 +5047,7 @@ Your server is now ready for Tycoons gameplay!`;
         console.log('📤 DEBUG: Found buttons:', buttons.length);
         
         if (buttons.length === 0) {
+          console.log('📤 DEBUG: No buttons found, returning error message');
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -5056,6 +5057,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
+        console.log('📤 DEBUG: Creating button options...');
         // Create button selection dropdown (limit to 25 options for Discord)
         const buttonOptions = buttons.slice(0, 25).map(button => ({
           label: button.label,
@@ -5063,13 +5065,17 @@ Your server is now ready for Tycoons gameplay!`;
           description: `${button.actions.length} action${button.actions.length !== 1 ? 's' : ''} • Created ${new Date(button.metadata.createdAt).toLocaleDateString()}`,
           emoji: button.emoji ? { name: button.emoji } : undefined
         }));
+        console.log('📤 DEBUG: Button options created:', buttonOptions.length);
         
+        console.log('📤 DEBUG: Creating StringSelectMenuBuilder...');
         const buttonSelect = new StringSelectMenuBuilder()
           .setCustomId('safari_post_select_button')
           .setPlaceholder('Choose a button to post...')
           .addOptions(buttonOptions);
+        console.log('📤 DEBUG: StringSelectMenuBuilder created');
         
         const selectRow = new ActionRowBuilder().addComponents(buttonSelect);
+        console.log('📤 DEBUG: Select row created');
         
         // Create cancel button
         const cancelButton = new ButtonBuilder()
@@ -5079,6 +5085,7 @@ Your server is now ready for Tycoons gameplay!`;
           .setEmoji('❌');
         
         const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
+        console.log('📤 DEBUG: Cancel row created');
         
         // Create response with Components V2
         const containerComponents = [
@@ -5097,12 +5104,15 @@ Your server is now ready for Tycoons gameplay!`;
           cancelRow.toJSON() // Cancel button
         ];
         
+        console.log('📤 DEBUG: Creating container...');
         const container = {
           type: 17, // Container component
           accent_color: 0xf39c12, // Orange accent color
           components: containerComponents
         };
+        console.log('📤 DEBUG: Container created');
         
+        console.log('📤 DEBUG: Sending response...');
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {

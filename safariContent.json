@@ -117,6 +117,29 @@
           "usageCount": 0,
           "tags": []
         }
+      },
+      "jnjknjk_588849": {
+        "id": "jnjknjk_588849",
+        "label": "jnjknjk",
+        "emoji": null,
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "display_text",
+            "order": 1,
+            "config": {
+              "title": "kk",
+              "content": "kmk"
+            }
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750432588849,
+          "lastModified": 1750432588849,
+          "usageCount": 0,
+          "tags": []
+        }
       }
     },
     "safaris": {},
