@@ -4945,7 +4945,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_create_button') {
-      // Handle Create Custom Button - MVP1 placeholder
+      // Handle Create Custom Button - show initial modal
       try {
         const member = req.body.member;
         
@@ -4962,12 +4962,47 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log('📝 DEBUG: Create Custom Button clicked');
         
+        // Create button creation modal
+        const modal = new ModalBuilder()
+          .setCustomId('safari_button_modal')
+          .setTitle('Create Custom Button');
+
+        // Button label input
+        const labelInput = new TextInputBuilder()
+          .setCustomId('button_label')
+          .setLabel('Button Label')
+          .setPlaceholder('e.g., "Start Adventure"')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(80);
+
+        // Button emoji input
+        const emojiInput = new TextInputBuilder()
+          .setCustomId('button_emoji')
+          .setLabel('Button Emoji (optional)')
+          .setPlaceholder('e.g., 🗺️')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(10);
+
+        // Button description input
+        const descInput = new TextInputBuilder()
+          .setCustomId('button_description')
+          .setLabel('Button Description (for your reference)')
+          .setPlaceholder('e.g., "Starts the jungle adventure safari"')
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(false)
+          .setMaxLength(200);
+
+        const labelRow = new ActionRowBuilder().addComponents(labelInput);
+        const emojiRow = new ActionRowBuilder().addComponents(emojiInput);
+        const descRow = new ActionRowBuilder().addComponents(descInput);
+
+        modal.addComponents(labelRow, emojiRow, descRow);
+        
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '🚧 **Create Custom Button (Coming Soon)**\n\nThis feature will allow you to create interactive buttons with custom actions:\n\n• Display custom text and content\n• Update player currency\n• Chain to other buttons\n\nImplementation in progress...',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
         });
         
       } catch (error) {
@@ -5101,6 +5136,159 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error viewing custom buttons.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_add_action_')) {
+      // Handle adding actions to safari buttons
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to add actions.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        const parts = custom_id.split('_');
+        const buttonId = parts[3];
+        const actionType = parts[4];
+        
+        console.log(`🔧 DEBUG: Adding ${actionType} action to button ${buttonId}`);
+        
+        // Show appropriate modal based on action type
+        if (actionType === 'display_text') {
+          const modal = new ModalBuilder()
+            .setCustomId(`safari_action_modal_${buttonId}_display_text`)
+            .setTitle('Add Text Display Action');
+
+          const titleInput = new TextInputBuilder()
+            .setCustomId('action_title')
+            .setLabel('Title (optional)')
+            .setPlaceholder('e.g., "Welcome to the Adventure!"')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(100);
+
+          const contentInput = new TextInputBuilder()
+            .setCustomId('action_content')
+            .setLabel('Content')
+            .setPlaceholder('The text to display when the button is clicked...')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(2000);
+
+          const colorInput = new TextInputBuilder()
+            .setCustomId('action_color')
+            .setLabel('Accent Color (optional)')
+            .setPlaceholder('e.g., #3498db or 3447003')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(10);
+
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(titleInput),
+            new ActionRowBuilder().addComponents(contentInput),
+            new ActionRowBuilder().addComponents(colorInput)
+          );
+          
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          });
+          
+        } else if (actionType === 'update_currency') {
+          const modal = new ModalBuilder()
+            .setCustomId(`safari_action_modal_${buttonId}_update_currency`)
+            .setTitle('Add Currency Change Action');
+
+          const amountInput = new TextInputBuilder()
+            .setCustomId('action_amount')
+            .setLabel('Currency Amount')
+            .setPlaceholder('e.g., 100 or -50 (positive adds, negative subtracts)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(10);
+
+          const messageInput = new TextInputBuilder()
+            .setCustomId('action_message')
+            .setLabel('Message to Player')
+            .setPlaceholder('e.g., "You found a treasure chest!"')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(200);
+
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(amountInput),
+            new ActionRowBuilder().addComponents(messageInput)
+          );
+          
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          });
+          
+        } else if (actionType === 'follow_up') {
+          // For follow-up buttons, we'll show a simple message for now
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '🚧 **Follow-up Button Action**\n\nThis feature will allow you to chain to other buttons. Coming in next update!',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error adding action:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error adding action. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_finish_button_')) {
+      // Handle finishing button creation
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to finish buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        const buttonId = custom_id.replace('safari_finish_button_', '');
+        
+        console.log(`✅ DEBUG: Finishing button ${buttonId}`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `🎉 **Button "${buttonId}" created successfully!**\n\nYou can now:\n• View it in **📊 View All Buttons**\n• Post it to a channel with **📤 Post Custom Button**\n• Add more actions anytime`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error finishing button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error finishing button.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -7986,7 +8174,269 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
     
-    if (custom_id.startsWith('prod_add_tribe_modal_')) {
+    if (custom_id === 'safari_button_modal') {
+      // Handle Safari button creation modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const userId = member.user.id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to create custom buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log('📝 DEBUG: Safari button modal submitted');
+        
+        const buttonLabel = components[0].components[0].value?.trim();
+        const buttonEmoji = components[1].components[0].value?.trim() || null;
+        const buttonDesc = components[2].components[0].value?.trim() || null;
+        
+        if (!buttonLabel) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Button label is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Create basic button with no actions yet
+        const { createCustomButton } = await import('./safariManager.js');
+        const buttonId = await createCustomButton(guildId, {
+          label: buttonLabel,
+          emoji: buttonEmoji,
+          style: 'Primary',
+          actions: [],
+          tags: buttonDesc ? [buttonDesc] : []
+        }, userId);
+        
+        console.log(`✅ DEBUG: Created button ${buttonId} successfully`);
+        
+        // Show action selection menu
+        const actionMenu = {
+          flags: (1 << 15), // IS_COMPONENTS_V2
+          components: [{
+            type: 17, // Container
+            accent_color: 0xf39c12,
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 🎉 Button Created: ${buttonLabel} ${buttonEmoji || ''}\n\nNow add actions to your button (up to 5):`
+              },
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: `safari_add_action_${buttonId}_display_text`,
+                    label: 'Add Text Display',
+                    style: 1,
+                    emoji: { name: '📄' }
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: `safari_add_action_${buttonId}_update_currency`,
+                    label: 'Add Currency Change',
+                    style: 1,
+                    emoji: { name: '💰' }
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: `safari_add_action_${buttonId}_follow_up`,
+                    label: 'Add Follow-up Button',
+                    style: 1,
+                    emoji: { name: '🔗' }
+                  }
+                ]
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: `safari_finish_button_${buttonId}`,
+                    label: 'Finish & Save Button',
+                    style: 3,
+                    emoji: { name: '✅' }
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: 'prod_safari_menu',
+                    label: 'Cancel',
+                    style: 4,
+                    emoji: { name: '❌' }
+                  }
+                ]
+              }
+            ]
+          }]
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: actionMenu
+        });
+        
+      } catch (error) {
+        console.error('Error handling safari button modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating button. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_action_modal_')) {
+      // Handle Safari action modal submissions
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to add actions.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        const parts = custom_id.split('_');
+        const buttonId = parts[3];
+        const actionType = parts[4];
+        
+        console.log(`🔧 DEBUG: Processing ${actionType} action for button ${buttonId}`);
+        
+        // Import safari manager to update the button
+        const { getCustomButton } = await import('./safariManager.js');
+        const button = await getCustomButton(guildId, buttonId);
+        
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Button not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        let actionConfig = {};
+        
+        if (actionType === 'display_text') {
+          const title = components[0].components[0].value?.trim() || null;
+          const content = components[1].components[0].value?.trim();
+          const colorStr = components[2].components[0].value?.trim();
+          
+          if (!content) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Content is required for text display actions.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          actionConfig = {
+            title: title,
+            content: content
+          };
+          
+          // Parse color if provided
+          if (colorStr) {
+            let accentColor = null;
+            if (colorStr.startsWith('#')) {
+              accentColor = parseInt(colorStr.slice(1), 16);
+            } else if (/^\d+$/.test(colorStr)) {
+              accentColor = parseInt(colorStr);
+            }
+            if (accentColor !== null && !isNaN(accentColor)) {
+              actionConfig.accentColor = accentColor;
+            }
+          }
+          
+        } else if (actionType === 'update_currency') {
+          const amountStr = components[0].components[0].value?.trim();
+          const message = components[1].components[0].value?.trim();
+          
+          const amount = parseInt(amountStr);
+          if (isNaN(amount)) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Currency amount must be a valid number.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          if (!message) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Message is required for currency actions.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          actionConfig = {
+            amount: amount,
+            message: message
+          };
+        }
+        
+        // Add action to button
+        const newAction = {
+          type: actionType,
+          order: button.actions.length + 1,
+          config: actionConfig
+        };
+        
+        button.actions.push(newAction);
+        
+        // Save updated button
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        safariData[guildId].buttons[buttonId] = button;
+        await saveSafariContent(safariData);
+        
+        console.log(`✅ DEBUG: Added ${actionType} action to button ${buttonId}`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **${actionType.replace('_', ' ')} action added!**\n\nAction count: ${button.actions.length}/5\n\nAdd more actions or click **Finish & Save Button** when ready.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error processing action modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error adding action. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('prod_add_tribe_modal_')) {
       // Handle Add Tribe final submission
       try {
         const parts = custom_id.split('_');

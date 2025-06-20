@@ -461,5 +461,7 @@ export {
     postButtonToChannel,
     getCurrency,
     updateCurrency,
-    generateCustomId
+    generateCustomId,
+    loadSafariContent,
+    saveSafariContent
 };
