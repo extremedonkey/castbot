@@ -140,6 +140,31 @@
           "usageCount": 0,
           "tags": []
         }
+      },
+      "enter_belle_s_shed_819680": {
+        "id": "enter_belle_s_shed_819680",
+        "label": "Enter Belle's Shed",
+        "emoji": "🏠",
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "display_text",
+            "order": 1,
+            "config": {
+              "title": "My name belle",
+              "content": "Im so cool"
+            }
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750433819680,
+          "lastModified": 1750433819680,
+          "usageCount": 0,
+          "tags": [
+            "Bell smells in here"
+          ]
+        }
       }
     },
     "safaris": {},

@@ -5057,24 +5057,22 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        console.log('📤 DEBUG: Creating button options...');
+        // Create working button selection interface
+        console.log('📤 DEBUG: Creating working button selection interface...');
+        
         // Create button selection dropdown (limit to 25 options for Discord)
         const buttonOptions = buttons.slice(0, 25).map(button => ({
-          label: button.label,
+          label: button.label.substring(0, 100), // Ensure label length is valid
           value: button.id,
-          description: `${button.actions.length} action${button.actions.length !== 1 ? 's' : ''}`
+          description: `${button.actions.length} action${button.actions.length !== 1 ? 's' : ''}`.substring(0, 100)
         }));
-        console.log('📤 DEBUG: Button options created:', buttonOptions.length);
         
-        console.log('📤 DEBUG: Creating StringSelectMenuBuilder...');
         const buttonSelect = new StringSelectMenuBuilder()
           .setCustomId('safari_post_select_button')
           .setPlaceholder('Choose a button to post...')
           .addOptions(buttonOptions);
-        console.log('📤 DEBUG: StringSelectMenuBuilder created');
         
         const selectRow = new ActionRowBuilder().addComponents(buttonSelect);
-        console.log('📤 DEBUG: Select row created');
         
         // Create cancel button
         const cancelButton = new ButtonBuilder()
@@ -5084,14 +5082,12 @@ Your server is now ready for Tycoons gameplay!`;
           .setEmoji('❌');
         
         const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
-        console.log('📤 DEBUG: Cancel row created');
         
-        // Create simple text response to test interaction mechanism
-        console.log('📤 DEBUG: Creating simple test response...');
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `## 📤 Post Custom Button - TESTING\n\n**Available Buttons:** ${buttons.length}\n\n**Debug:** Handler executed successfully through all steps.\n\n**Button List:**\n${buttons.map(b => `• ${b.label} (${b.actions.length} actions)`).join('\n')}`,
+            content: `## 📤 Post Custom Button\n\nSelect a button to post to a channel:\n\n**Available Buttons:** ${buttons.length}`,
+            components: [selectRow, cancelRow],
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
