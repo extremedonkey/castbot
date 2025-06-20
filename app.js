@@ -5034,12 +5034,17 @@ Your server is now ready for Tycoons gameplay!`;
         console.log('📤 DEBUG: Post Custom Button clicked');
         
         const guildId = req.body.guild_id;
+        console.log('📤 DEBUG: Guild ID:', guildId);
         
         // Import Safari manager functions
+        console.log('📤 DEBUG: Importing safariManager...');
         const { listCustomButtons } = await import('./safariManager.js');
+        console.log('📤 DEBUG: safariManager imported successfully');
         
         // Get all custom buttons for this guild
+        console.log('📤 DEBUG: Listing custom buttons for guild...');
         const buttons = await listCustomButtons(guildId);
+        console.log('📤 DEBUG: Found buttons:', buttons.length);
         
         if (buttons.length === 0) {
           return res.send({

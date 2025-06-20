@@ -94,6 +94,29 @@
             "HJaving fun"
           ]
         }
+      },
+      "ilhjiuhu_155558": {
+        "id": "ilhjiuhu_155558",
+        "label": "ilhjiuhu",
+        "emoji": null,
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "display_text",
+            "order": 1,
+            "config": {
+              "title": "kmkn",
+              "content": "lmkm"
+            }
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750432155558,
+          "lastModified": 1750432155558,
+          "usageCount": 0,
+          "tags": []
+        }
       }
     },
     "safaris": {},
