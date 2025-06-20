@@ -436,7 +436,15 @@ async function postButtonToChannel(guildId, buttonId, channelId, client) {
             .setStyle(BUTTON_STYLES[button.style]);
         
         if (button.emoji) {
-            discordButton.setEmoji(button.emoji);
+            try {
+                // Only set simple emojis - skip complex multi-character emojis that Discord rejects
+                const emojiLength = [...button.emoji].length;
+                if (emojiLength <= 2) {
+                    discordButton.setEmoji(button.emoji);
+                }
+            } catch (error) {
+                console.log(`⚠️ DEBUG: Skipping invalid emoji for button ${buttonId}: ${button.emoji}`);
+            }
         }
         
         const actionRow = new ActionRowBuilder().addComponents(discordButton);
