@@ -4946,6 +4946,7 @@ Your server is now ready for Tycoons gameplay!`;
       }
     } else if (custom_id === 'safari_create_button') {
       // Handle Create Custom Button - show initial modal
+      console.log('🔍 DEBUG: safari_create_button handler reached');
       try {
         const member = req.body.member;
         
