@@ -170,6 +170,7 @@ Every new feature implementation MUST include the following before being conside
 #### **6. Integration Requirements** 🔗
 - **Security checks** appropriate for the feature (admin permissions, user ID restrictions)
 - **Button handler registration** in proper location in app.js
+- **BUTTON_HANDLER_REGISTRY.md updates** - ALWAYS update this file when adding new buttons
 - **Proper component cleanup** (remove unused imports, variables)
 - **Environment configuration** stored in appropriate location
 
