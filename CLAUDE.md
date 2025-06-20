@@ -8,7 +8,58 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.
 
-## LATEST DEVELOPMENT: SERVER USAGE ANALYTICS VISUALIZATION ✅ PHASE 1 COMPLETE
+## LATEST DEVELOPMENT: SAFARI DYNAMIC CONTENT SYSTEM ✅ MVP1 COMPLETE
+
+**Major Feature Addition: Safari Dynamic Content Management System MVP1**
+- **🦁 Safari Submenu**: Complete dynamic content management interface in Production Menu
+- **📝 Create Custom Button**: Modal-driven button creation with action configuration (display_text, update_currency, follow_up_button)
+- **📤 Post Custom Button**: Channel selection workflow for posting interactive buttons to any text channel
+- **💰 Manage Currency**: Complete currency management with view all balances, set player currency, and reset all functionality
+- **📊 View All Buttons**: Comprehensive listing of created buttons with usage statistics and metadata
+- **🚀 Dynamic Execution**: Real-time button interaction handling with action chaining and currency updates
+
+**Technical Implementation:**
+- **New Module**: `safariManager.js` with complete button lifecycle management and action execution engine
+- **Data Storage**: `safariContent.json` for button definitions separate from critical `playerData.json`
+- **Button Handler System**: Dynamic button execution with `safari_{guildId}_{buttonId}_{timestamp}` custom ID pattern
+- **Action Types**: Three core action types - display_text (Components V2 formatting), update_currency (with balance tracking), follow_up_button (action chaining)
+- **Permission Model**: Admin-only creation (ManageRoles permission) with public interaction capability
+- **Currency System**: Full CRUD operations on player currency with audit trails and usage tracking
+
+**MVP1 Features Completed:**
+- ✅ **Button Creation Flow**: Modal → Action Selection → Action Configuration → Data Persistence
+- ✅ **Post to Channel**: Button Selection → Channel Selection → Discord Posting with proper custom IDs
+- ✅ **Currency Management**: Overview Dashboard → View All → Set Individual → Reset All with confirmation
+- ✅ **View All Interface**: Sortable list with creation dates, action counts, and usage statistics
+- ✅ **Dynamic Execution**: Click → Action Processing → Response Generation with usage count tracking
+- ✅ **Components V2 Integration**: Modern Discord UI with Container components and IS_COMPONENTS_V2 flag
+- ✅ **Error Handling**: Comprehensive error handling with user-friendly messages and debug logging
+- ✅ **Data Validation**: Input validation for currency amounts, button labels, and emoji codes
+
+**Safari System Integration:**
+- **Production Menu**: Safari submenu accessible via 🦁 Safari button in Production Menu
+- **Admin Permissions**: All Safari functions require ManageRoles permission for security
+- **Player Interactions**: Posted buttons are clickable by all server members for dynamic experiences
+- **Analytics Integration**: Button usage tracked and logged via existing analytics system
+- **Scalable Architecture**: Ready for MVP2 expansion with conditional logic, shop systems, and advanced features
+
+**MVP1 Technical Achievements:**
+- **Button Lifecycle**: Complete CRUD operations for custom buttons with metadata tracking
+- **Action Engine**: Modular action system supporting multiple action types per button with ordering
+- **Currency Backend**: Player currency system with persistence, validation, and audit trails
+- **Channel Integration**: Seamless posting to any text/announcement channel with permission checking
+- **UI Excellence**: Modern Discord Components V2 interface with proper container components and styling
+
+**MVP1 Status:** ✅ PRODUCTION READY
+- All core functionality implemented and tested
+- Complete admin interface with intuitive workflows
+- Player interaction system fully functional
+- Currency management system operational
+- Ready for community deployment and feedback
+
+**Next Phase:** MVP2 - Conditional Logic, Shop System, Random Outcomes, and Advanced Action Types
+
+## PREVIOUS DEVELOPMENT: SERVER USAGE ANALYTICS VISUALIZATION ✅ PHASE 1 COMPLETE
 
 **Major Feature Addition: Phase 1 - Basic Text Analytics for Server Usage Tracking**
 - **📈 Server Usage Stats Button**: Added to Reece Stuff submenu (restricted access) for server usage analysis
