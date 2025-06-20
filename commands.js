@@ -41,14 +41,6 @@ const CASTLIST_COMMAND = {
 };
 
 // Only active slash commands - admin commands moved to /menu interface
-const SETUP_TYCOONS_COMMAND = {
-	name: maybePrependDev('setup_tycoons'),
-	description: 'Setup roles for the Tycoons game (development command)',
-	type: 1,
-	default_member_permissions: ADMIN_ANY,
-	// This command will only be available in dev mode
-	production_disabled: true
-};
 
 const APPLY_BUTTON_COMMAND = {
 	name: maybePrependDev('apply_button'),
@@ -286,7 +278,6 @@ const MENU_COMMAND = {
 // const SET_TRIBE_COMMAND (moved to /prod_menu -> Manage Tribes -> Add Tribe)
 // const CLEAR_TRIBE_COMMAND (moved to /prod_menu -> Manage Tribes -> Clear Tribe)
 // const APPLY_BUTTON_COMMAND (moved to /prod_menu -> Season Applications)
-// const SETUP_TYCOONS_COMMAND (moved to /prod_menu -> Tycoons)
 
 const ALL_COMMANDS = [
 	// Player commands REMOVED: player_set_age, player_set_pronouns, player_set_timezone
@@ -300,7 +291,6 @@ const ALL_COMMANDS = [
 	// DISABLED: PRONOUNS_REMOVE_COMMAND, - moved to /prod_menu
 	// DISABLED: TIMEZONES_ADD_COMMAND, - moved to /prod_menu
 	// DISABLED: TIMEZONES_REMOVE_COMMAND, - moved to /prod_menu
-	// DISABLED: SETUP_TYCOONS_COMMAND, - moved to /prod_menu
 	// DISABLED: APPLY_BUTTON_COMMAND, - moved to /prod_menu
 ];
 

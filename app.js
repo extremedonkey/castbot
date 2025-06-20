@@ -2373,54 +2373,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
-} else if (name === 'setup_tycoons') {
-  try {
-    console.log('Processing setup_tycoons command');
-    await res.send({
-      type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-    });
-
-    const guildId = req.body.guild_id;
-    const guild = await client.guilds.fetch(guildId);
-    
-    // Check if we're in production mode and this command should be disabled
-    const isProduction = process.env.PRODUCTION === 'TRUE';
-    if (isProduction) {
-      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-      await DiscordRequest(endpoint, {
-        method: 'PATCH',
-        body: {
-          content: 'This command is only available in development mode.',
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
-      return;
-    }
-    
-    // Call the helper function to create the roles
-    const result = await handleSetupTycoons(guild);
-    
-    // Send the formatted output back to the user
-    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-    await DiscordRequest(endpoint, {
-      method: 'PATCH',
-      body: {
-        content: `Tycoons roles have been created successfully. Here are the role IDs in the format you requested:\n\n${result.formattedOutput}`,
-      }
-    });
-  } catch (error) {
-    console.error('Error in setup_tycoons command:', error);
-    const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-    await DiscordRequest(endpoint, {
-      method: 'PATCH',
-      body: {
-        content: 'Error setting up Tycoons roles.',
-        flags: InteractionResponseFlags.EPHEMERAL
-      }
-    });
-  }
-  return;
-
 } else if (name === 'apply_button') {
   try {
     console.log('Processing apply_button command');

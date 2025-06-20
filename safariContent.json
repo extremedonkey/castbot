@@ -64,7 +64,7 @@
           "createdBy": "391415444084490240",
           "createdAt": 1750430195340,
           "lastModified": 1750430195340,
-          "usageCount": 0,
+          "usageCount": 2,
           "tags": [
             "COOL!"
           ]
@@ -232,7 +232,7 @@
           "createdBy": "391415444084490240",
           "createdAt": 1750443242545,
           "lastModified": 1750443242545,
-          "usageCount": 3,
+          "usageCount": 4,
           "tags": []
         }
       },
@@ -256,7 +256,7 @@
           "createdBy": "391415444084490240",
           "createdAt": 1750443412308,
           "lastModified": 1750443412308,
-          "usageCount": 2,
+          "usageCount": 3,
           "tags": []
         }
       },
@@ -278,6 +278,32 @@
           "lastModified": 1750443911597,
           "usageCount": 1,
           "tags": []
+        }
+      },
+      "belle_s_badass_adven_360306": {
+        "id": "belle_s_badass_adven_360306",
+        "label": "Belle's Badass Adventure",
+        "emoji": "😡",
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "follow_up_button",
+            "order": 1,
+            "config": {
+              "buttonId": "linkme_412308",
+              "delay": 1,
+              "replaceMessage": false
+            }
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750444360306,
+          "lastModified": 1750444360306,
+          "usageCount": 1,
+          "tags": [
+            "Meowth"
+          ]
         }
       }
     },
