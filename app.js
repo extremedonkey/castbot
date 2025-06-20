@@ -9065,7 +9065,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             amount: amount,
             message: message
           };
-        } else if (actionType === 'follow_up') {
+        } else if (actionType === 'follow_up_button') {
           const buttonId = components[0].components[0].value?.trim();
           const delayStr = components[1].components[0].value?.trim() || '0';
           const replaceStr = components[2].components[0].value?.trim() || 'false';

@@ -387,6 +387,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
                     break;
                     
                 case 'follow_up_button':
+                case 'follow_up': // Legacy support for old buttons
                     result = await executeFollowUpButton(action.config, guildId, interaction);
                     responses.push(result);
                     break;

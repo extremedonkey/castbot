@@ -232,7 +232,7 @@
           "createdBy": "391415444084490240",
           "createdAt": 1750443242545,
           "lastModified": 1750443242545,
-          "usageCount": 2,
+          "usageCount": 3,
           "tags": []
         }
       },
@@ -256,6 +256,26 @@
           "createdBy": "391415444084490240",
           "createdAt": 1750443412308,
           "lastModified": 1750443412308,
+          "usageCount": 2,
+          "tags": []
+        }
+      },
+      "link_another_button__911597": {
+        "id": "link_another_button__911597",
+        "label": "Link another button yes",
+        "emoji": "💫",
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "follow_up_button",
+            "order": 1,
+            "config": {}
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750443911597,
+          "lastModified": 1750443911597,
           "usageCount": 1,
           "tags": []
         }
