@@ -261,28 +261,18 @@ async function createApplicationChannel(guild, user, config) {
         const welcomeButtons = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
-                    .setCustomId('player_set_pronouns')
-                    .setLabel('Set Your Pronouns')
+                    .setCustomId('player_menu')
+                    .setLabel('Start your application')
                     .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🏷️'),
-                new ButtonBuilder()
-                    .setCustomId('player_set_timezone')
-                    .setLabel('Set Your Timezone')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🕐'),
-                new ButtonBuilder()
-                    .setCustomId('player_set_age')
-                    .setLabel('Set Your Age')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🎂')
+                    .setEmoji('🚀')
             );
 
         const welcomeMenuEmbed = new EmbedBuilder()
             .setTitle('🚀 Get Started with Your Application')
-            .setDescription('To get your application started, please set up your basic information using the buttons below:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help us understand your availability\n• **Age** - Required for most applications\n\nClick the buttons below to get started!')
+            .setDescription('To get your application started, please set up your basic information using the button below:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button below to get started!')
             .setColor('#3498db')
             .setFooter({ 
-                text: 'You can update this information anytime',
+                text: 'You can update this information from any channel at any time by typing `/menu`',
                 iconURL: guild.iconURL() 
             });
 
