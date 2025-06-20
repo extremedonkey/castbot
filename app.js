@@ -189,6 +189,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Primary)
       .setEmoji('📝'),
     new ButtonBuilder()
+      .setCustomId('prod_safari_menu')
+      .setLabel('Safari')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🦁'),
+    new ButtonBuilder()
       .setCustomId('prod_setup_tycoons')
       .setLabel('Tycoons')
       .setStyle(ButtonStyle.Secondary)
@@ -352,6 +357,72 @@ async function createReeceStuffMenu() {
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2 flag
     components: [reeceMenuContainer]
+  };
+}
+
+/**
+ * Create Safari submenu interface for dynamic content management
+ */
+async function createSafariMenu() {
+  // Create safari management buttons
+  const safariButtons = [
+    new ButtonBuilder()
+      .setCustomId('safari_create_button')
+      .setLabel('Create Custom Button')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('📝'),
+    new ButtonBuilder()
+      .setCustomId('safari_post_button')
+      .setLabel('Post Custom Button')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📤'),
+    new ButtonBuilder()
+      .setCustomId('safari_manage_currency')
+      .setLabel('Manage Currency')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💰'),
+    new ButtonBuilder()
+      .setCustomId('safari_view_buttons')
+      .setLabel('View All Buttons')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📊')
+  ];
+  
+  const safariRow = new ActionRowBuilder().addComponents(safariButtons);
+  
+  // Create back button
+  const backButton = [
+    new ButtonBuilder()
+      .setCustomId('prod_menu_back')
+      .setLabel('⬅ Menu')
+      .setStyle(ButtonStyle.Secondary)
+  ];
+  
+  const backRow = new ActionRowBuilder().addComponents(backButton);
+  
+  // Build container components
+  const containerComponents = [
+    {
+      type: 10, // Text Display component
+      content: `## 🦁 Safari - Dynamic Content Manager\n\nCreate interactive experiences with custom buttons, currency systems, and chained actions.`
+    },
+    safariRow.toJSON(), // Safari management buttons
+    {
+      type: 14 // Separator
+    },
+    backRow.toJSON() // Back navigation
+  ];
+  
+  // Create Components V2 Container
+  const safariMenuContainer = {
+    type: 17, // Container component
+    accent_color: 0xf39c12, // Orange accent color for safari theme
+    components: containerComponents
+  };
+  
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2 flag
+    components: [safariMenuContainer]
   };
 }
 
@@ -2586,7 +2657,37 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       );
     }
     
-    if (custom_id.startsWith('show_castlist2')) {
+    // Handle safari dynamic buttons
+    if (custom_id.startsWith('safari_')) {
+      try {
+        const parts = custom_id.split('_');
+        if (parts.length >= 4) {
+          const guildId = parts[1];
+          const buttonId = parts[2];
+          const userId = req.body.member.user.id;
+          
+          console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${buttonId}, User: ${userId}`);
+          
+          // Import safari manager and execute actions
+          const { executeButtonActions } = await import('./safariManager.js');
+          const result = await executeButtonActions(guildId, buttonId, userId, req.body);
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: result
+          });
+        }
+      } catch (error) {
+        console.error('Error handling safari button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error executing safari action. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('show_castlist2')) {
       // Extract castlist name from custom_id if present
       const castlistMatch = custom_id.match(/^show_castlist2(?:_(.+))?$/);
       const requestedCastlist = castlistMatch?.[1] || 'default';
@@ -4041,6 +4142,50 @@ To fix this:
           }
         });
       }
+    } else if (custom_id === 'prod_safari_menu') {
+      // Handle Safari submenu - dynamic content management
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to access Safari features.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        const channelId = req.body.channel_id;
+        const guildId = req.body.guild_id;
+        const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
+        
+        console.log('🦁 DEBUG: Creating Safari submenu');
+        
+        // Create Safari submenu
+        const safariMenuData = await createSafariMenu();
+        
+        const responseType = shouldUpdateMessage ? 
+          InteractionResponseType.UPDATE_MESSAGE : 
+          InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
+        
+        return res.send({
+          type: responseType,
+          data: safariMenuData
+        });
+        
+      } catch (error) {
+        console.error('Error loading Safari interface:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading Safari interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'reece_stuff_menu') {
       // Handle Reece Stuff submenu - special admin features
       try {
@@ -4795,6 +4940,167 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error running server usage analytics. Check logs for details.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_create_button') {
+      // Handle Create Custom Button - MVP1 placeholder
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to create custom buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log('📝 DEBUG: Create Custom Button clicked');
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '🚧 **Create Custom Button (Coming Soon)**\n\nThis feature will allow you to create interactive buttons with custom actions:\n\n• Display custom text and content\n• Update player currency\n• Chain to other buttons\n\nImplementation in progress...',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_create_button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating custom button.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_post_button') {
+      // Handle Post Custom Button - MVP1 placeholder
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to post custom buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log('📤 DEBUG: Post Custom Button clicked');
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '🚧 **Post Custom Button (Coming Soon)**\n\nThis feature will allow you to post your created buttons to any channel.\n\nImplementation in progress...',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_post_button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error posting custom button.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_manage_currency') {
+      // Handle Manage Currency - MVP1 placeholder
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to manage currency.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log('💰 DEBUG: Manage Currency clicked');
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '🚧 **Manage Currency (Coming Soon)**\n\nThis feature will allow you to:\n\n• View player currency balances\n• Set currency amounts\n• Reset all player currency\n\nImplementation in progress...',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_manage_currency:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error managing currency.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_view_buttons') {
+      // Handle View All Buttons - MVP1 implementation
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to view custom buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log('📊 DEBUG: View All Buttons clicked');
+        
+        // Import safari manager and list buttons
+        const { listCustomButtons } = await import('./safariManager.js');
+        const buttons = await listCustomButtons(guildId);
+        
+        let content = '## 📊 Custom Buttons\n\n';
+        
+        if (buttons.length === 0) {
+          content += '*No custom buttons created yet.*\n\nUse **Create Custom Button** to get started!';
+        } else {
+          buttons.forEach((button, index) => {
+            const createdDate = new Date(button.metadata.createdAt).toLocaleDateString();
+            content += `**${index + 1}.** ${button.label} ${button.emoji || ''}\n`;
+            content += `└ Created: ${createdDate} | Actions: ${button.actions.length} | Used: ${button.metadata.usageCount} times\n\n`;
+          });
+        }
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: content,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_view_buttons:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error viewing custom buttons.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

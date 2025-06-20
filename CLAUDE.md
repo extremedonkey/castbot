@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**🦁 SAFARI SYSTEM REFERENCE:** When prompts mention Safari, Idol Hunt, Questions, custom buttons, currency systems, dynamic content, or application builders, refer to [Safari.md](Safari.md) for complete documentation and implementation guidelines.
+
 ## PROJECT STATUS: 100% OPTIMIZATION COMPLETE ✅
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.
