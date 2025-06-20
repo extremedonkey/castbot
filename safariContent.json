@@ -3,5 +3,27 @@
     "buttons": {},
     "safaris": {},
     "applications": {}
+  },
+  "1331657596087566398": {
+    "buttons": {
+      "start_adventure_780142": {
+        "id": "start_adventure_780142",
+        "label": "Start Adventure",
+        "emoji": "🦁",
+        "style": "Primary",
+        "actions": [],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750429780142,
+          "lastModified": 1750429780142,
+          "usageCount": 0,
+          "tags": [
+            "Gogogo"
+          ]
+        }
+      }
+    },
+    "safaris": {},
+    "applications": {}
   }
 }
