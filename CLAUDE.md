@@ -869,3 +869,50 @@ Before committing ANY button handler:
 5. Check console for any undefined errors
 
 **⚠️ IF YOU DO NOT FOLLOW THIS TEMPLATE, YOUR IMPLEMENTATION WILL FAIL ⚠️**
+
+### **BUTTON HANDLER UTILITIES MODULE** 🛠️
+
+**NEW: Use `buttonHandlerUtils.js` for consistent implementations:**
+
+```javascript
+import { 
+    extractButtonContext, 
+    hasPermission, 
+    sendErrorResponse,
+    sendPermissionDenied,
+    createButtonHandler 
+} from './buttonHandlerUtils.js';
+import { PermissionFlagsBits } from 'discord.js';
+
+// Example using the utility module
+} else if (custom_id === 'my_new_button') {
+    const handler = createButtonHandler('my_new_button', async (context, req, res, client) => {
+        const { guildId, userId, member } = context;
+        
+        // Permission check
+        if (!hasPermission(member, PermissionFlagsBits.ManageRoles)) {
+            return sendPermissionDenied(res, 'manage roles');
+        }
+        
+        // Your logic here
+        const result = await doSomething(guildId, userId);
+        
+        return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+                content: 'Success!',
+                components: []
+            }
+        });
+    });
+    
+    return handler(req, res, client);
+}
+```
+
+**Benefits of using buttonHandlerUtils.js:**
+- ✅ Automatic context extraction - no missing variables
+- ✅ Standardized error handling
+- ✅ Consistent permission checks
+- ✅ Reduced boilerplate code
+- ✅ Prevention of common mistakes
