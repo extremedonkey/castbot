@@ -5157,8 +5157,9 @@ Your server is now ready for Tycoons gameplay!`;
         }
 
         const parts = custom_id.split('_');
-        const buttonId = parts[3];
-        const actionType = parts[4];
+        // Reconstruct button ID (everything between safari_add_action_ and the last underscore)
+        const actionType = parts[parts.length - 1]; // Last part is action type
+        const buttonId = parts.slice(3, parts.length - 1).join('_'); // Everything in between
         
         console.log(`🔧 DEBUG: Adding ${actionType} action to button ${buttonId}`);
         

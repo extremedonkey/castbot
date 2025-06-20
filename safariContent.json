@@ -21,6 +21,22 @@
             "Gogogo"
           ]
         }
+      },
+      "have_fun_930238": {
+        "id": "have_fun_930238",
+        "label": "Have fun",
+        "emoji": "🦁",
+        "style": "Primary",
+        "actions": [],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750429930238,
+          "lastModified": 1750429930238,
+          "usageCount": 0,
+          "tags": [
+            "asdasd"
+          ]
+        }
       }
     },
     "safaris": {},
