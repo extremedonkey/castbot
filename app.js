@@ -5620,6 +5620,7 @@ Your server is now ready for Tycoons gameplay!`;
         } else if (actionType === 'follow_up') {
           // Get existing buttons to show in dropdown
           const { listCustomButtons } = await import('./safariManager.js');
+          const guildId = req.body.guild_id; // Ensure guildId is defined
           const existingButtons = await listCustomButtons(guildId);
           
           if (existingButtons.length === 0) {
