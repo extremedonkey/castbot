@@ -53,6 +53,22 @@
             "BELLE"
           ]
         }
+      },
+      "belle_is_cool_button_195340": {
+        "id": "belle_is_cool_button_195340",
+        "label": "Belle is cool button",
+        "emoji": "👧",
+        "style": "Primary",
+        "actions": [],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750430195340,
+          "lastModified": 1750430195340,
+          "usageCount": 0,
+          "tags": [
+            "COOL!"
+          ]
+        }
       }
     },
     "safaris": {},

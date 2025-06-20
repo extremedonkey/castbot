@@ -8329,9 +8329,23 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
 
-        const parts = custom_id.split('_');
-        const buttonId = parts[3];
-        const actionType = parts[4];
+        // Match against known action types that may contain underscores  
+        let actionType, buttonId;
+        if (custom_id.endsWith('_display_text')) {
+          actionType = 'display_text';
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_display_text', '');
+        } else if (custom_id.endsWith('_update_currency')) {
+          actionType = 'update_currency';
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_update_currency', '');
+        } else if (custom_id.endsWith('_follow_up')) {
+          actionType = 'follow_up';
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_follow_up', '');
+        } else {
+          // Fallback to old method for any unknown action types
+          const parts = custom_id.split('_');
+          actionType = parts[parts.length - 1];
+          buttonId = parts.slice(3, parts.length - 1).join('_');
+        }
         
         console.log(`🔧 DEBUG: Processing ${actionType} action for button ${buttonId}`);
         
