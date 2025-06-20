@@ -2658,14 +2658,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       );
     }
     
-    // Handle safari dynamic buttons
-    if (custom_id.startsWith('safari_')) {
+    // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
+    if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4) {
       try {
         const parts = custom_id.split('_');
-        if (parts.length >= 4) {
-          const guildId = parts[1];
-          const buttonId = parts[2];
-          const userId = req.body.member.user.id;
+        const guildId = parts[1];
+        const buttonId = parts[2];
+        const userId = req.body.member.user.id;
           
           console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${buttonId}, User: ${userId}`);
           
