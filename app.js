@@ -2676,7 +2676,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: result
           });
-        }
       } catch (error) {
         console.error('Error handling safari button:', error);
         return res.send({
