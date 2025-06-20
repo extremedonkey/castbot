@@ -648,3 +648,224 @@ The backlog is continuously updated based on user feedback and development prior
 
 ## Test Deployment - 2025-06-14
 Testing automated git push in dev-restart.sh workflow.
+
+## 🚨 CRITICAL: Discord Button/Component Implementation Standards
+
+### **MANDATORY CHECKLIST FOR ALL BUTTON HANDLERS** ✅
+
+**⚠️ FAILURE TO FOLLOW THESE INSTRUCTIONS WILL RESULT IN BROKEN IMPLEMENTATIONS**
+
+When implementing ANY Discord button, select menu, modal, or component handler, you MUST follow this exact pattern EVERY TIME:
+
+#### **1. Context Extraction (ALWAYS FIRST)** 🎯
+```javascript
+// MANDATORY - Extract ALL these variables at the START of EVERY handler
+const guildId = req.body.guild_id;
+const userId = req.body.member?.user?.id || req.body.user?.id;
+const member = req.body.member;
+const channelId = req.body.channel_id;
+const messageId = req.body.message?.id;
+const token = req.body.token;
+const applicationId = req.body.application_id || process.env.APP_ID;
+
+// ONLY if you need Discord.js client
+const guild = client?.guilds?.cache?.get(guildId);
+const channel = client?.channels?.cache?.get(channelId);
+```
+
+#### **2. Security/Permission Checks (IF REQUIRED)** 🔒
+```javascript
+// Admin permission check - ALWAYS use BigInt conversion
+if (!member?.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+    return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+            content: '❌ You need Manage Roles permission to use this feature.',
+            flags: InteractionResponseFlags.EPHEMERAL
+        }
+    });
+}
+
+// User-specific restriction
+if (userId !== '391415444084490240') {
+    return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+            content: '❌ This feature is restricted.',
+            flags: InteractionResponseFlags.EPHEMERAL
+        }
+    });
+}
+```
+
+#### **3. Try-Catch Block (MANDATORY)** ⚠️
+```javascript
+try {
+    // ALL handler logic goes here
+} catch (error) {
+    console.error(`Error in ${custom_id} handler:`, error);
+    return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+        }
+    });
+}
+```
+
+#### **4. Response Type Selection** 📤
+```javascript
+// For updating existing messages (e.g., menu navigation)
+const responseType = InteractionResponseType.UPDATE_MESSAGE;
+
+// For new messages
+const responseType = InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
+
+// For modals
+const responseType = InteractionResponseType.MODAL;
+
+// For deferred responses (long operations)
+await res.send({
+    type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+});
+// Then use webhook endpoint for follow-up
+```
+
+### **COMPLETE BUTTON HANDLER TEMPLATE** 📋
+
+```javascript
+} else if (custom_id === 'your_button_id' || custom_id.startsWith('your_pattern_')) {
+    try {
+        // 1. MANDATORY CONTEXT EXTRACTION
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const member = req.body.member;
+        const channelId = req.body.channel_id;
+        const messageId = req.body.message?.id;
+        
+        // 2. SECURITY CHECK (if needed)
+        if (!member?.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: '❌ You need Manage Roles permission.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            });
+        }
+        
+        // 3. PARSE CUSTOM_ID (if it contains data)
+        // Example: "safari_add_action_buttonId_actionType"
+        const parts = custom_id.split('_');
+        const buttonId = parts[3];
+        const actionType = parts[4];
+        
+        // 4. YOUR HANDLER LOGIC
+        console.log(`🔍 DEBUG: Processing ${custom_id} for user ${userId}`);
+        
+        // 5. IMPORT MODULES (if needed)
+        const { someFunction } = await import('./someModule.js');
+        
+        // 6. PERFORM OPERATIONS
+        const result = await someFunction(guildId, userId);
+        
+        // 7. SEND RESPONSE
+        return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+                content: 'Success!',
+                components: [...],
+                flags: (1 << 15) // IS_COMPONENTS_V2 if using Components V2
+            }
+        });
+        
+    } catch (error) {
+        console.error(`Error in ${custom_id} handler:`, error);
+        return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+                content: '❌ An error occurred. Please try again.',
+                flags: InteractionResponseFlags.EPHEMERAL
+            }
+        });
+    }
+}
+```
+
+### **COMMON MISTAKES TO AVOID** ❌
+
+1. **Missing variable definitions**
+   ```javascript
+   // ❌ WRONG - guildId not defined
+   const buttons = await listButtons(guildId);
+   
+   // ✅ CORRECT - Extract from req.body first
+   const guildId = req.body.guild_id;
+   const buttons = await listButtons(guildId);
+   ```
+
+2. **Inconsistent permission checks**
+   ```javascript
+   // ❌ WRONG - Direct comparison without BigInt
+   if (member.permissions & PermissionFlagsBits.ManageRoles)
+   
+   // ✅ CORRECT - Use BigInt conversion
+   if (BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)
+   ```
+
+3. **Using client without checking**
+   ```javascript
+   // ❌ WRONG - client might be undefined
+   const guild = client.guilds.cache.get(guildId);
+   
+   // ✅ CORRECT - Use optional chaining
+   const guild = client?.guilds?.cache?.get(guildId);
+   ```
+
+4. **Missing error handling**
+   ```javascript
+   // ❌ WRONG - No try-catch
+   const data = await loadData();
+   
+   // ✅ CORRECT - Always wrap in try-catch
+   try {
+       const data = await loadData();
+   } catch (error) {
+       console.error('Error:', error);
+       // Handle error appropriately
+   }
+   ```
+
+### **BUTTON HANDLER REGISTRY UPDATE** 📝
+
+**ALWAYS update BUTTON_HANDLER_REGISTRY.md when adding new handlers:**
+
+```markdown
+| Custom ID | Label | Location | Handler Function | Status |
+|-----------|-------|----------|------------------|--------|
+| `your_button_id` | Button Label | app.js:~5000 | Direct handler | ✅ Active |
+```
+
+### **VALIDATION CHECKLIST** ✔️
+
+Before committing ANY button handler:
+- [ ] All variables extracted from `req.body` at handler start
+- [ ] `guildId`, `userId`, `member`, `channelId` defined before use
+- [ ] Permission checks use BigInt conversion if needed
+- [ ] Entire handler wrapped in try-catch block
+- [ ] Error messages are user-friendly with ephemeral flag
+- [ ] Debug logging added for troubleshooting
+- [ ] BUTTON_HANDLER_REGISTRY.md updated
+- [ ] Response type appropriate for the interaction
+- [ ] No undefined variables or missing imports
+
+### **TESTING REQUIREMENTS** 🧪
+
+1. Test with missing permissions
+2. Test with invalid input data
+3. Test error scenarios (network failures, missing data)
+4. Verify all variables are defined before use
+5. Check console for any undefined errors
+
+**⚠️ IF YOU DO NOT FOLLOW THIS TEMPLATE, YOUR IMPLEMENTATION WILL FAIL ⚠️**

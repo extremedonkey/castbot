@@ -256,12 +256,6 @@ const TIMEZONES_REMOVE_COMMAND = {
 	default_member_permissions: ADMIN_ANY
 };
 
-const GETTING_STARTED_COMMAND = {
-	name: maybePrependDev('getting_started'),
-	description: 'Learn how to set up the dynamic castlist',
-	type: 1,
-	default_member_permissions: ADMIN_ANY
-};
 
 const ROLE_GENERATOR_COMMAND = {
 	name: maybePrependDev('setup_castbot'),  // Changed from role_generator
@@ -284,7 +278,6 @@ const MENU_COMMAND = {
 // const PROD_MENU_COMMAND (functionality moved to /menu with admin detection)
 
 // DISABLED COMMANDS - Moved to /prod_menu interface
-// const GETTING_STARTED_COMMAND (moved to /prod_menu documentation)
 // const PRONOUNS_ADD_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
 // const PRONOUNS_REMOVE_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
 // const TIMEZONES_ADD_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
@@ -303,7 +296,6 @@ const ALL_COMMANDS = [
 	// DISABLED: SET_TRIBE_COMMAND, - moved to /prod_menu (was add_tribe)
 	// DISABLED: CLEAR_TRIBE_COMMAND, - moved to /prod_menu
 	// DISABLED: ROLE_GENERATOR_COMMAND, - moved to /prod_menu
-	// DISABLED: GETTING_STARTED_COMMAND, - moved to /prod_menu
 	// DISABLED: PRONOUNS_ADD_COMMAND, - moved to /prod_menu
 	// DISABLED: PRONOUNS_REMOVE_COMMAND, - moved to /prod_menu
 	// DISABLED: TIMEZONES_ADD_COMMAND, - moved to /prod_menu

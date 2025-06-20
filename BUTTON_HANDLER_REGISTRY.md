@@ -25,6 +25,19 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `prod_toggle_live_analytics` | 🪵 Toggle Live Analytics | app.js:~4690 | Direct handler | ✅ Active |
 | `prod_menu_back` | ⬅ Menu | app.js:~4064 | Direct handler | ✅ Active |
 
+### **Safari System Buttons**
+| Custom ID | Label | Location | Handler Function | Status |
+|-----------|-------|----------|------------------|--------|
+| `prod_safari_menu` | 🦁 Safari | app.js:~4145 | Direct handler | ✅ Active |
+| `safari_create_button` | 📝 Create Custom Button | app.js:~4947 | Direct handler | ✅ Active |
+| `safari_post_button` | 📤 Post Custom Button | app.js:~5019 | Direct handler | ✅ Active |
+| `safari_manage_currency` | 💰 Manage Currency | app.js:~5106 | Direct handler | ✅ Active |
+| `safari_view_buttons` | 📊 View All Buttons | app.js:~5231 | Direct handler | ✅ Active |
+| `safari_add_action_*` | Add Action buttons | app.js:~5511 | Pattern handler | ✅ Active |
+| `safari_finish_button_*` | Finish & Save | app.js:~5640 | Pattern handler | ✅ Active |
+| `safari_currency_*` | Currency actions | app.js:~5284+ | Pattern handlers | ✅ Active |
+| `safari_{guildId}_{buttonId}_{timestamp}` | Dynamic Safari buttons | app.js:~2661 | Dynamic handler | ✅ Active |
+
 ### **Castlist Navigation Buttons**
 | Custom ID | Label | Location | Handler Function | Status |
 |-----------|-------|----------|------------------|--------|
