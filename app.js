@@ -5512,6 +5512,7 @@ Your server is now ready for Tycoons gameplay!`;
       // Handle adding actions to safari buttons
       try {
         const member = req.body.member;
+        const guildId = req.body.guild_id;
         
         // Check admin permissions
         if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {

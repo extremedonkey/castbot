@@ -181,6 +181,20 @@
             "Button"
           ]
         }
+      },
+      "link_to_this_other_t_265787": {
+        "id": "link_to_this_other_t_265787",
+        "label": "Link to this other thing",
+        "emoji": null,
+        "style": "Primary",
+        "actions": [],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750442265787,
+          "lastModified": 1750442265787,
+          "usageCount": 0,
+          "tags": []
+        }
       }
     },
     "safaris": {},
