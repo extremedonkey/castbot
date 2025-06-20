@@ -263,14 +263,77 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - Update documentation to reflect new pagination-only approach
 - Performance testing to ensure no regression
 
-### Clean Up Disabled Slash Commands
+### Clean Up Disabled Slash Commands - DETAILED ANALYSIS COMPLETE
 **Description:** Remove underlying code for slash commands that have been moved to /prod_menu interface
+
+**⚠️ IMPLEMENTATION CAUTION:** This cleanup requires careful verification that all functionality is preserved in the menu system before deletion. Test each removed command's functionality through the menu interface after removal.
+
+**✅ ACTIVE COMMANDS (3 total - These should stay):**
+| Command | Lines | Status | Description |
+|---------|-------|--------|-------------|
+| `castlist` | ~100 | ✅ **KEEP** | Active slash command that displays dynamic castlist using Components V2 |
+| `menu` | ~100 | ✅ **KEEP** | Active unified menu - shows player menu for users, admin menu for admins |
+| `set_players_age` | ~80 | ✅ **KEEP** | Active admin command to bulk set ages for up to 12 players |
+
+**❌ REMOVABLE COMMAND HANDLERS (16 total - ~1,285 lines of code):**
+
+**📖 Static Documentation (1 command):**
+- `getting_started` (~70 lines) - Static FAQ embed with setup instructions - moved to menu system
+
+**🔧 Admin Commands Moved to Menu System (9 commands):**
+- `clear_tribe` (~135 lines) - Clears specific tribe from castlist
+- `pronouns_add` (~65 lines) - Adds pronoun roles to server
+- `remove_pronouns` (~60 lines) - Removes pronoun roles (misnamed handler)
+- `timezones_add` (~95 lines) - Adds timezone roles with UTC offsets
+- `timezones_remove` (~75 lines) - Removes timezone roles
+- `add_tribe` (~65 lines) - Adds tribe role to castlist
+- `pronouns_remove` (~65 lines) - Removes pronoun roles (correctly named handler)
+- `setup_castbot` (~145 lines) - Auto-creates standard pronoun/timezone roles
+- `setup_tycoons` (~50 lines) - Special setup for Tycoons game mode
+- `apply_button` (~45 lines) - Creates application buttons for recruitment
+
+**👤 Player Commands (3 commands - Not registered, legacy):**
+- `player_set_pronouns` (~95 lines) - Players self-assign pronouns via reactions
+- `player_set_timezone` (~95 lines) - Players self-assign timezone via reactions  
+- `player_set_age` (~45 lines) - Players set their own age
+
+**🗂️ Legacy/Orphaned Commands (3 commands):**
+- `react_timezones` (~90 lines) - Creates timezone reaction interface (not in commands.js)
+- `castlist2` (~100 lines) - Identical to `castlist` command (duplicate functionality)
+
+**🔍 ORPHANED DEFINITIONS (1 total):**
+- `CLEAR_TRIBEALL_COMMAND` - Defined in commands.js but no handler in app.js
+
 **Acceptance Criteria:**
-- Remove command handlers for: getting_started, pronouns_add, pronouns_remove, timezones_add, timezones_remove, setup_castbot, add_tribe, clear_tribe, apply_button, setup_tycoons
-- Remove command definitions from commands.js (currently disabled)
-- Clean up any references to these commands in documentation
-- Ensure all functionality is properly available through /prod_menu buttons
-- Update help text and documentation to reflect button-based workflow
+1. **Pre-Cleanup Verification:**
+   - Test each command's functionality through /menu interface before removing handlers
+   - Verify all admin functions accessible via Production Menu
+   - Confirm player functions work through Player Management interface
+   - Document any functionality gaps discovered
+
+2. **Handler Removal:**
+   - Remove all 16 command handlers from app.js (~1,285 lines total)
+   - Remove `CLEAR_TRIBEALL_COMMAND` definition from commands.js
+   - Keep the 3 active command handlers: `castlist`, `menu`, `set_players_age`
+
+3. **Safety Measures:**
+   - Create backup branch before cleanup
+   - Remove handlers in small batches with testing between each batch
+   - Test full menu functionality after each removal batch
+   - Monitor production for any regression issues
+
+4. **Post-Cleanup Tasks:**
+   - Update help text and documentation to reflect button-based workflow
+   - Remove any dead imports or utility functions only used by removed commands
+   - Run full regression testing suite
+   - Update command count in documentation
+
+**Claude Implementation Instructions:**
+1. **Phase 1:** Remove static/documentation commands first (`getting_started`)
+2. **Phase 2:** Remove legacy player commands (`player_set_*`, `react_*`)
+3. **Phase 3:** Remove orphaned/duplicate commands (`castlist2`, `react_timezones`)
+4. **Phase 4:** Remove admin commands moved to menus (test menu functionality between each removal)
+5. **Phase 5:** Final cleanup of imports and utility functions
 
 ---
 

@@ -5617,13 +5617,72 @@ Your server is now ready for Tycoons gameplay!`;
           });
           
         } else if (actionType === 'follow_up') {
-          // For follow-up buttons, we'll show a simple message for now
+          // Get existing buttons to show in dropdown
+          const { listCustomButtons } = await import('./safariManager.js');
+          const existingButtons = await listCustomButtons(guildId);
+          
+          if (existingButtons.length === 0) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ **No other buttons available**\n\nYou need to create at least one other button before adding follow-up actions. Create another button first, then come back to add the follow-up.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          const modal = new ModalBuilder()
+            .setCustomId(`safari_action_modal_${buttonId}_follow_up`)
+            .setTitle('Add Follow-up Button Action');
+
+          // Create options for button selection (showing max 25 as per Discord limit)
+          const buttonOptions = existingButtons
+            .filter(btn => btn.id !== buttonId) // Don't include current button
+            .slice(0, 25)
+            .map(btn => `${btn.id}|${btn.label}`)
+            .join('\n');
+
+          const buttonSelectInput = new TextInputBuilder()
+            .setCustomId('action_button_id')
+            .setLabel('Target Button ID')
+            .setPlaceholder('Enter the exact Button ID to chain to')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(50);
+
+          const delayInput = new TextInputBuilder()
+            .setCustomId('action_delay')
+            .setLabel('Delay (seconds)')
+            .setPlaceholder('0-60 seconds delay before showing button')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(3);
+
+          const replaceInput = new TextInputBuilder()
+            .setCustomId('action_replace')
+            .setLabel('Replace Current Message (true/false)')
+            .setPlaceholder('true = replace message, false = add below')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(5);
+
+          const availableButtonsInput = new TextInputBuilder()
+            .setCustomId('available_buttons')
+            .setLabel('Available Button IDs')
+            .setValue(buttonOptions || 'No other buttons available')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(false);
+
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(buttonSelectInput),
+            new ActionRowBuilder().addComponents(delayInput),
+            new ActionRowBuilder().addComponents(replaceInput),
+            new ActionRowBuilder().addComponents(availableButtonsInput)
+          );
+          
           return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '🚧 **Follow-up Button Action**\n\nThis feature will allow you to chain to other buttons. Coming in next update!',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
           });
         }
         
@@ -9075,6 +9134,47 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           actionConfig = {
             amount: amount,
             message: message
+          };
+        } else if (actionType === 'follow_up') {
+          const buttonId = components[0].components[0].value?.trim();
+          const delayStr = components[1].components[0].value?.trim() || '0';
+          const replaceStr = components[2].components[0].value?.trim() || 'false';
+          
+          if (!buttonId) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Target Button ID is required for follow-up actions.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          // Validate that the target button exists
+          const { getCustomButton } = await import('./safariManager.js');
+          const targetButton = await getCustomButton(guildId, buttonId);
+          
+          if (!targetButton) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ Target button "${buttonId}" not found. Please check the Button ID and try again.`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          // Parse delay (default 0, max 60)
+          let delay = parseInt(delayStr) || 0;
+          delay = Math.max(0, Math.min(60, delay));
+          
+          // Parse replace message option
+          const replaceMessage = replaceStr.toLowerCase() === 'true';
+          
+          actionConfig = {
+            buttonId: buttonId,
+            delay: delay,
+            replaceMessage: replaceMessage
           };
         }
         
