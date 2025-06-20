@@ -4,10 +4,12 @@ import { fileURLToPath } from 'url';
 import { 
     ActionRowBuilder,
     ButtonBuilder,
-    ButtonStyle,
+    ButtonStyle
+} from 'discord.js';
+import { 
     InteractionResponseType,
     InteractionResponseFlags
-} from 'discord.js';
+} from 'discord-interactions';
 import { loadPlayerData, savePlayerData } from './storage.js';
 
 const __filename = fileURLToPath(import.meta.url);
