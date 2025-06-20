@@ -5062,8 +5062,7 @@ Your server is now ready for Tycoons gameplay!`;
         const buttonOptions = buttons.slice(0, 25).map(button => ({
           label: button.label,
           value: button.id,
-          description: `${button.actions.length} action${button.actions.length !== 1 ? 's' : ''} • Created ${new Date(button.metadata.createdAt).toLocaleDateString()}`,
-          emoji: button.emoji ? { name: button.emoji } : undefined
+          description: `${button.actions.length} action${button.actions.length !== 1 ? 's' : ''}`
         }));
         console.log('📤 DEBUG: Button options created:', buttonOptions.length);
         
@@ -5087,13 +5086,12 @@ Your server is now ready for Tycoons gameplay!`;
         const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
         console.log('📤 DEBUG: Cancel row created');
         
-        // Create traditional Discord response (not Components V2)
-        console.log('📤 DEBUG: Creating traditional response...');
+        // Create simple text response to test interaction mechanism
+        console.log('📤 DEBUG: Creating simple test response...');
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `## 📤 Post Custom Button\n\nSelect a button to post to a channel:\n\n**Available Buttons:** ${buttons.length}\n**Showing:** ${Math.min(buttons.length, 25)}`,
-            components: [selectRow, cancelRow],
+            content: `## 📤 Post Custom Button - TESTING\n\n**Available Buttons:** ${buttons.length}\n\n**Debug:** Handler executed successfully through all steps.\n\n**Button List:**\n${buttons.map(b => `• ${b.label} (${b.actions.length} actions)`).join('\n')}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
