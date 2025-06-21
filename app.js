@@ -78,6 +78,11 @@ import {
   handlePlayerButtonClick,
   handlePlayerModalSubmit
 } from './playerManagement.js';
+import {
+  executeSetup,
+  generateSetupResponse,
+  checkRoleHierarchy
+} from './roleManager.js';
 import fs from 'fs';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
@@ -536,30 +541,7 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
   });
 }
 
-// Add this near other constants
-const STANDARD_PRONOUN_ROLES = [
-  'He/Him',
-  'She/Her',
-  'They/Them',
-  'They/He',
-  'She/They',
-  'Ask',
-  'Any',
-  'All Pronouns'
-];
-
-// Add this near other constants
-const STANDARD_TIMEZONE_ROLES = [
-  { name: 'PDT (UTC-7)', offset: -7 },
-  { name: 'MDT (UTC-6)', offset: -6 },
-  { name: 'CDT (UTC-5)', offset: -5 },
-  { name: 'EDT (UTC-4)', offset: -4 },
-  { name: 'GMT (UTC+0)', offset: 0 },
-  { name: 'BST (UTC+1)', offset: 1 },
-  { name: 'CEST (UTC+2)', offset: 2 },
-  { name: 'GMT+8 (UTC+8)', offset: 8 },
-  { name: 'AEST (UTC+10)', offset: 10 }
-];
+// Role constants moved to roleManager.js module
 
 // Update ensureServerData function
 async function ensureServerData(guild) {
@@ -2229,7 +2211,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 // ...existing code...
 } else if (name === 'setup_castbot') {  // Changed from role_generator
   try {
-    console.log('Processing setup_castbot command');
+    console.log('🔍 DEBUG: Processing setup_castbot slash command');
     await res.send({
       type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
     });
@@ -2237,137 +2219,32 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const guildId = req.body.guild_id;
     const guild = await client.guilds.fetch(guildId);
     
-    // Track results for both pronouns and timezones
-    const created = { pronouns: [], timezones: [] };
-    const failed = { pronouns: [], timezones: [] };
-    const existingRoles = { pronouns: [], timezones: [] };
-
-    // Create pronoun roles
-    console.log('Creating pronoun roles...');
-    for (const pronounRole of STANDARD_PRONOUN_ROLES) {
-      try {
-        const existing = guild.roles.cache.find(r => r.name === pronounRole);
-        if (existing) {
-          console.log(`Pronoun role ${pronounRole} already exists with ID ${existing.id}`);
-          existingRoles.pronouns.push({ name: pronounRole, id: existing.id });
-          continue;
-        }
-
-        const newRole = await guild.roles.create({
-          name: pronounRole,
-          mentionable: true,
-          reason: 'CastBot pronoun role generation'
-        });
-        console.log(`Created pronoun role ${pronounRole} with ID ${newRole.id}`);
-        created.pronouns.push({ name: pronounRole, id: newRole.id });
-      } catch (error) {
-        console.error(`Failed to create pronoun role ${pronounRole}:`, error);
-        failed.pronouns.push(pronounRole);
-      }
-    }
-
-    // Create timezone roles
-    console.log('Creating timezone roles...');
-    for (const timezone of STANDARD_TIMEZONE_ROLES) {
-      try {
-        const existing = guild.roles.cache.find(r => r.name === timezone.name);
-        if (existing) {
-          console.log(`Timezone role ${timezone.name} already exists with ID ${existing.id}`);
-          existingRoles.timezones.push({ ...timezone, id: existing.id });
-          continue;
-        }
-
-        const newRole = await guild.roles.create({
-          name: timezone.name,
-          mentionable: true,
-          reason: 'CastBot timezone role generation'
-        });
-        console.log(`Created timezone role ${timezone.name} with ID ${newRole.id}`);
-        created.timezones.push({ ...timezone, id: newRole.id });
-      } catch (error) {
-        console.error(`Failed to create timezone role ${timezone.name}:`, error);
-        failed.timezones.push(timezone.name);
-      }
-    }
-
-    // Update storage
-    const playerData = await loadPlayerData();
-    if (!playerData[guildId]) {
-      playerData[guildId] = { pronounRoleIDs: [], timezones: {} };
-    }
-
-    // Update pronounRoleIDs
-    const allPronounIds = [...created.pronouns, ...existingRoles.pronouns].map(role => role.id);
-    playerData[guildId].pronounRoleIDs = [
-      ...new Set([...playerData[guildId].pronounRoleIDs || [], ...allPronounIds])
-    ];
-
-    // Update timezones
-    if (!playerData[guildId].timezones) {
-      playerData[guildId].timezones = {};
-    }
+    // Execute comprehensive setup using roleManager
+    console.log('🔍 DEBUG: Calling executeSetup from roleManager (slash command)');
+    const setupResults = await executeSetup(guildId, guild);
     
-    // Add new and existing timezone roles
-    [...created.timezones, ...existingRoles.timezones].forEach(tz => {
-      playerData[guildId].timezones[tz.id] = {
-        offset: tz.offset
-      };
-    });
-
-    await savePlayerData(playerData);
-
-    // Prepare response message
-    const messageLines = [];
+    // Generate detailed response message with new format
+    const responseMessage = generateSetupResponse(setupResults);
     
-    // Pronouns section
-    if (created.pronouns.length > 0) {
-      messageLines.push('Created pronoun roles:');
-      messageLines.push(...created.pronouns.map(role => `• ${role.name} (<@&${role.id}>)`));
-    }
-    if (existingRoles.pronouns.length > 0) {
-      messageLines.push('\nExisting pronoun roles found:');
-      messageLines.push(...existingRoles.pronouns.map(role => `• ${role.name} (<@&${role.id}>)`));
-    }
-    if (failed.pronouns.length > 0) {
-      messageLines.push('\nFailed to create pronoun roles:');
-      messageLines.push(...failed.pronouns.map(name => `• ${name}`));
-    }
-
-    // Timezone section
-    messageLines.push('\n--- Timezones ---');
-    if (created.timezones.length > 0) {
-      messageLines.push('\nCreated timezone roles:');
-      messageLines.push(...created.timezones.map(tz => 
-        `• ${tz.name} (<@&${tz.id}>) [offset: ${tz.offset}]`));
-    }
-    if (existingRoles.timezones.length > 0) {
-      messageLines.push('\nExisting timezone roles found:');
-      messageLines.push(...existingRoles.timezones.map(tz => 
-        `• ${tz.name} (<@&${tz.id}>) [offset: ${tz.offset}]`));
-    }
-    if (failed.timezones.length > 0) {
-      messageLines.push('\nFailed to create timezone roles:');
-      messageLines.push(...failed.timezones.map(name => `• ${name}`));
-    }
-
-    messageLines.push('\nCastBot has finished setting up Pronoun and Timezone Roles! Assign these roles to players to have them show up on the castlist.');
-
+    // Send response
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
     await DiscordRequest(endpoint, {
       method: 'PATCH',
       body: {
-        content: messageLines.join('\n'),
+        content: responseMessage,
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
+    
+    console.log('✅ DEBUG: Slash command setup completed successfully');
 
   } catch (error) {
-    console.error('Error in role_generator command:', error);
+    console.error('❌ ERROR: setup_castbot slash command failed:', error);
     const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
     await DiscordRequest(endpoint, {
       method: 'PATCH',
       body: {
-        content: 'Error generating roles.',
+        content: '❌ Error during role setup. Please check bot permissions and try again.',
         flags: InteractionResponseFlags.EPHEMERAL
       }
     });
@@ -3557,8 +3434,10 @@ To fix this:
         });
       }
     } else if (custom_id === 'setup_castbot') {
-      // Execute the same logic as the setup_castbot command
+      // Execute setup using new roleManager module
       try {
+        console.log('🔍 DEBUG: Starting setup_castbot handler');
+        
         // Send deferred response first
         await res.send({
           type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
@@ -3570,143 +3449,38 @@ To fix this:
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
         
-        // Track results for both pronouns and timezones
-        const created = { pronouns: [], timezones: [] };
-        const failed = { pronouns: [], timezones: [] };
-        const existingRoles = { pronouns: [], timezones: [] };
-
-        // Create pronoun roles
-        console.log('Creating pronoun roles...');
-        for (const pronounRole of STANDARD_PRONOUN_ROLES) {
-          try {
-            const existing = guild.roles.cache.find(r => r.name === pronounRole);
-            if (existing) {
-              console.log(`Pronoun role ${pronounRole} already exists with ID ${existing.id}`);
-              existingRoles.pronouns.push({ name: pronounRole, id: existing.id });
-              continue;
-            }
-
-            const newRole = await guild.roles.create({
-              name: pronounRole,
-              mentionable: true,
-              reason: 'CastBot pronoun role generation'
-            });
-            console.log(`Created pronoun role ${pronounRole} with ID ${newRole.id}`);
-            created.pronouns.push({ name: pronounRole, id: newRole.id });
-          } catch (error) {
-            console.error(`Failed to create pronoun role ${pronounRole}:`, error);
-            failed.pronouns.push(pronounRole);
-          }
-        }
-
-        // Create timezone roles
-        console.log('Creating timezone roles...');
-        for (const timezone of STANDARD_TIMEZONE_ROLES) {
-          try {
-            const existing = guild.roles.cache.find(r => r.name === timezone.name);
-            if (existing) {
-              console.log(`Timezone role ${timezone.name} already exists with ID ${existing.id}`);
-              existingRoles.timezones.push({ ...timezone, id: existing.id });
-              continue;
-            }
-
-            const newRole = await guild.roles.create({
-              name: timezone.name,
-              mentionable: true,
-              reason: 'CastBot timezone role generation'
-            });
-            console.log(`Created timezone role ${timezone.name} with ID ${newRole.id}`);
-            created.timezones.push({ ...timezone, id: newRole.id });
-          } catch (error) {
-            console.error(`Failed to create timezone role ${timezone.name}:`, error);
-            failed.timezones.push(timezone.name);
-          }
-        }
-
-        // Update storage
-        const playerData = await loadPlayerData();
-        if (!playerData[guildId]) {
-          playerData[guildId] = { pronounRoleIDs: [], timezones: {} };
-        }
-
-        // Update pronounRoleIDs
-        const allPronounIds = [...created.pronouns, ...existingRoles.pronouns].map(role => role.id);
-        playerData[guildId].pronounRoleIDs = [
-          ...new Set([...playerData[guildId].pronounRoleIDs || [], ...allPronounIds])
-        ];
-
-        // Update timezones
-        if (!playerData[guildId].timezones) {
-          playerData[guildId].timezones = {};
-        }
+        // Execute comprehensive setup using roleManager
+        console.log('🔍 DEBUG: Calling executeSetup from roleManager');
+        const setupResults = await executeSetup(guildId, guild);
         
-        // Add new and existing timezone roles
-        [...created.timezones, ...existingRoles.timezones].forEach(tz => {
-          playerData[guildId].timezones[tz.id] = {
-            offset: tz.offset
-          };
-        });
-
-        await savePlayerData(playerData);
-
-        // Prepare response message
-        const messageLines = [];
+        // Generate detailed response message with new format
+        const responseMessage = generateSetupResponse(setupResults);
         
-        // Pronouns section
-        if (created.pronouns.length > 0) {
-          messageLines.push('Created pronoun roles:');
-          messageLines.push(...created.pronouns.map(role => `• ${role.name} (<@&${role.id}>)`));
-        }
-        if (existingRoles.pronouns.length > 0) {
-          messageLines.push('\nExisting pronoun roles found:');
-          messageLines.push(...existingRoles.pronouns.map(role => `• ${role.name} (<@&${role.id}>)`));
-        }
-        if (failed.pronouns.length > 0) {
-          messageLines.push('\nFailed to create pronoun roles:');
-          messageLines.push(...failed.pronouns.map(name => `• ${name}`));
-        }
-
-        // Timezone section
-        messageLines.push('\n--- Timezones ---');
-        if (created.timezones.length > 0) {
-          messageLines.push('\nCreated timezone roles:');
-          messageLines.push(...created.timezones.map(tz => 
-            `• ${tz.name} (<@&${tz.id}>) [offset: ${tz.offset}]`));
-        }
-        if (existingRoles.timezones.length > 0) {
-          messageLines.push('\nExisting timezone roles found:');
-          messageLines.push(...existingRoles.timezones.map(tz => 
-            `• ${tz.name} (<@&${tz.id}>) [offset: ${tz.offset}]`));
-        }
-        if (failed.timezones.length > 0) {
-          messageLines.push('\nFailed to create timezone roles:');
-          messageLines.push(...failed.timezones.map(name => `• ${name}`));
-        }
-
-        messageLines.push('\nCastBot has finished setting up Pronoun and Timezone Roles! Assign these roles to players to have them show up on the castlist.');
-
+        // Send response with enhanced formatting
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            content: messageLines.join('\n'),
+            content: responseMessage,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         
+        console.log('✅ DEBUG: Setup completed successfully');
+        
       } catch (error) {
-        console.error('Error handling setup_castbot button:', error);
+        console.error('❌ ERROR: setup_castbot handler failed:', error);
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            content: 'Error setting up roles.',
+            content: '❌ Error during role setup. Please check bot permissions and try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
       }
     } else if (custom_id === 'prod_setup') {
-      // Smart setup - check if roles exist and run setup accordingly
+      // Setup - always show setup interface (no "subsequent run" detection)
       try {
         await res.send({
           type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
@@ -3715,44 +3489,24 @@ To fix this:
           }
         });
 
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const playerData = await loadPlayerData();
-        
-        const hasPronouns = playerData[guildId]?.pronounRoleIDs?.length > 0;
-        const hasTimezones = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
-        
-        if (!hasPronouns && !hasTimezones) {
-          // Run full setup_castbot logic (reuse existing code)
-          // This would duplicate the setup_castbot handler logic here
-          // For now, let's redirect to that handler
-          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-          await DiscordRequest(endpoint, {
-            method: 'PATCH',
-            body: {
-              content: 'Click the Setup button to automatically create pronoun and timezone roles for your server.',
-              components: [
-                new ActionRowBuilder()
-                  .addComponents(
-                    new ButtonBuilder()
-                      .setCustomId('setup_castbot')
-                      .setLabel('Run Full Setup')
-                      .setStyle(ButtonStyle.Primary)
-                      .setEmoji('⚙️')
-                  )
-              ]
-            }
-          });
-        } else {
-          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-          await DiscordRequest(endpoint, {
-            method: 'PATCH',
-            body: {
-              content: '# Setup\n\n✅ Server already has roles configured!\n☐ Players have assigned pronouns / timezones\n☐ You\'ve officially kicked off marooning\n☐ You\'ve assigned players from Discord their tribe roles\n☐ You\'ve used Castbot to add tribes to the castlist.',
-              components: []
-            }
-          });
-        }
+        // Always show setup button - removed first run vs subsequent run detection
+        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        await DiscordRequest(endpoint, {
+          method: 'PATCH',
+          body: {
+            content: '# Setup\n\nClick the Setup button to create/configure pronoun and timezone roles for your server.\n\n💡 This setup can be run multiple times safely - existing roles will be detected and added to CastBot.',
+            components: [
+              new ActionRowBuilder()
+                .addComponents(
+                  new ButtonBuilder()
+                    .setCustomId('setup_castbot')
+                    .setLabel('Run Setup')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('⚙️')
+                )
+            ]
+          }
+        });
         
       } catch (error) {
         console.error('Error handling prod_setup button:', error);

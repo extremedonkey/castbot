@@ -46,6 +46,71 @@ This is a living requirements backlog for CastBot features and improvements, ord
 
 ## HIGH Priority
 
+### CastBot Role Management System - Multi-Phase Implementation
+**Description:** Comprehensive role management architecture for all role types that CastBot manages (pronouns, timezones, tribes, vanity roles)
+
+**Current Problem:** Role management logic is scattered across multiple handlers with duplicated code, inconsistent patterns, and manual role hierarchy issues that prevent role assignment.
+
+**Architecture Vision:** Unified `roleManager.js` module that provides centralized management for all CastBot role types with consistent storage patterns, validation, hierarchy checking, and assignment workflows.
+
+**🔧 PHASE 1: Setup System Refactor (CURRENT)** - ✅ IN PROGRESS
+**Scope:** Refactor setup button functionality with role hierarchy checking and improved user feedback
+**Implementation:**
+- Create `roleManager.js` module with setup functionality only
+- Add role hierarchy validation (check if roles are above bot role in Discord hierarchy)
+- Remove "subsequent run" detection (always show setup interface)
+- Improve user feedback for different scenarios:
+  - Role exists in Discord but not in CastBot → Add to CastBot + hierarchy warning
+  - Role already exists in CastBot → Show as already configured  
+  - Role doesn't exist → Create new role
+- Add new timezone roles: NDT (UTC-2:30, offset -2.5) and ADT (UTC-3, offset -3)
+- Use Discord role tag syntax `<@&roleId>` for role mentions in setup feedback
+- Design timezone data structure to support future daylight savings functionality
+
+**⚠️ Critical Fix:** Address role hierarchy issue where existing pronoun/timezone roles above bot role cannot be assigned to users
+
+**🔧 PHASE 2: Pronoun & Timezone Management (FUTURE)**
+**Scope:** Migrate all pronoun and timezone management to roleManager.js
+- Extract STANDARD_PRONOUN_ROLES and STANDARD_TIMEZONE_ROLES constants
+- Unified pronoun/timezone creation, addition, removal functions
+- Consistent metadata storage and retrieval patterns
+- Role validation and cleanup utilities
+
+**🔧 PHASE 3: Tribe Role Integration (FUTURE)**  
+**Scope:** Integrate tribe role management into unified system
+- Centralized tribe metadata management (colors, emojis, castlist assignment)
+- Consistent tribe creation, modification, deletion workflows
+- Enhanced tribe ordering and display options
+
+**🔧 PHASE 4: Vanity Role System (FUTURE)**
+**Scope:** Complete vanity role management integration
+- Streamlined vanity role assignment workflows
+- Bulk vanity role operations
+- Role conflict detection and resolution
+
+**🔧 PHASE 5: Advanced Role Features (FUTURE)**
+**Scope:** Enhanced role management capabilities
+- Automatic daylight savings time adjustment for timezone roles
+- Role template system for quick server setup
+- Role analytics and usage tracking
+- Cross-server role configuration import/export
+
+**Acceptance Criteria (Phase 1):**
+- ✅ `roleManager.js` module created with setup functionality
+- ✅ Role hierarchy checking prevents assignment failures
+- ✅ Setup button provides clear feedback for all role scenarios
+- ✅ New timezone roles added: NDT (UTC-2:30) and ADT (UTC-3)
+- ✅ Discord role tag syntax used for role mentions
+- ✅ Timezone data structure supports future DST functionality
+- ✅ Setup can be clicked repeatedly without creating duplicates
+- ✅ "Subsequent run" detection removed (always show setup interface)
+
+**Benefits:**
+- **Immediate:** Fixes critical role hierarchy bug preventing role assignment
+- **Short-term:** Eliminates code duplication in setup functionality
+- **Long-term:** Provides scalable foundation for advanced role management features
+- **User Experience:** Clear feedback and reliable role assignment workflows
+
 ### Tech Debt - Legacy Code Cleanup
 **castlist2 References Cleanup:**
 - Remove all `castlist2_` custom IDs, function names, and comments since /castlist2 became /castlist
