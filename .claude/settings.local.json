@@ -158,7 +158,8 @@
       "Bash(ngrok config:*)",
       "Bash(true)",
       "Bash(timeout:*)",
-      "Bash(scp:*)"
+      "Bash(scp:*)",
+      "Bash(python3:*)"
     ],
     "deny": []
   }

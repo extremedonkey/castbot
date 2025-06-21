@@ -81,7 +81,10 @@ import {
 import {
   executeSetup,
   generateSetupResponse,
-  checkRoleHierarchy
+  checkRoleHierarchy,
+  REACTION_EMOJIS,
+  createTimezoneReactionMessage,
+  createPronounReactionMessage
 } from './roleManager.js';
 import fs from 'fs';
 import { Readable } from 'stream';
@@ -433,12 +436,8 @@ async function createSafariMenu() {
 
 // Viral growth buttons are now integrated into navigation buttons in castlistV2.js
 
-// Add these constants near the top with other constants
-const REACTION_NUMBERS = [
-  '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟',
-  '🇦', '🇧', '🇨', '🇩', '🇪', '🇫', '🇬', '🇭', '🇮', '🇯',
-  '🇰', '🇱', '🇲', '🇳', '🇴', '🇵', '🇶', '🇷', '🇸', '🇹'
-];
+// REACTION_EMOJIS moved to roleManager.js as REACTION_EMOJIS
+// Using Discord's conservative 20-reaction limit for maximum compatibility
 
 /**
  * Send castlist2 response with dynamic component optimization
@@ -1766,11 +1765,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       .filter(role => role) // Remove any null roles
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    if (sortedRoles.length > REACTION_NUMBERS.length) {
+    if (sortedRoles.length > REACTION_EMOJIS.length) {
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          content: `Too many timezone roles (maximum ${REACTION_NUMBERS.length} supported)`,
+          content: `Too many timezone roles (maximum ${REACTION_EMOJIS.length} supported due to Discord limits)`,
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
@@ -1780,7 +1779,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const embed = new EmbedBuilder()
       .setTitle('Timezone Role Selection')
       .setDescription('React with the emoji corresponding to your timezone:\n\n' + 
-        sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
+        sortedRoles.map((role, i) => `${REACTION_EMOJIS[i]} - ${role.name}`).join('\n'))
       .setColor('#7ED321');
 
     // Send the message
@@ -1807,7 +1806,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     // Add reactions
     for (let i = 0; i < sortedRoles.length; i++) {
       await fetch(
-        `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${message.id}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+        `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${message.id}/reactions/${encodeURIComponent(REACTION_EMOJIS[i])}/@me`,
         {
           method: 'PUT',
           headers: {
@@ -1820,7 +1819,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     // Store role-emoji mappings in memory for reaction handler
     if (!client.roleReactions) client.roleReactions = new Map();
     client.roleReactions.set(message.id, 
-      Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]))
+      Object.fromEntries(sortedRoles.map((role, i) => [REACTION_EMOJIS[i], role.id]))
     );
 
   } catch (error) {
@@ -1928,11 +1927,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       .filter(role => role) // Remove any null roles
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    if (sortedRoles.length > REACTION_NUMBERS.length) {
+    if (sortedRoles.length > REACTION_EMOJIS.length) {
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          content: `Too many pronoun roles (maximum ${REACTION_NUMBERS.length} supported)`,
+          content: `Too many pronoun roles (maximum ${REACTION_EMOJIS.length} supported due to Discord limits)`,
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
@@ -1942,7 +1941,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const embed = new EmbedBuilder()
       .setTitle('Pronoun Role Selection')
       .setDescription('React with the emoji corresponding to your pronouns:\n\n' + 
-        sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
+        sortedRoles.map((role, i) => `${REACTION_EMOJIS[i]} - ${role.name}`).join('\n'))
       .setColor('#7ED321');
 
     // Send initial response
@@ -1969,7 +1968,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     for (let i = 0; i < sortedRoles.length; i++) {
       try {
         await fetch(
-          `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${messageId}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+          `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${messageId}/reactions/${encodeURIComponent(REACTION_EMOJIS[i])}/@me`,
           {
             method: 'PUT',
             headers: {
@@ -1980,14 +1979,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Small delay to avoid rate limits
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
-        console.error(`Failed to add reaction ${REACTION_NUMBERS[i]}:`, error);
+        console.error(`Failed to add reaction ${REACTION_EMOJIS[i]}:`, error);
       }
     }
 
     // Store role-emoji mappings in memory for reaction handler
     if (!client.roleReactions) client.roleReactions = new Map();
     client.roleReactions.set(messageId, 
-      Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]))
+      Object.fromEntries(sortedRoles.map((role, i) => [REACTION_EMOJIS[i], role.id]))
     );
 
   } catch (error) {
@@ -2026,11 +2025,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       .filter(role => role) // Remove any null roles
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    if (sortedRoles.length > REACTION_NUMBERS.length) {
+    if (sortedRoles.length > REACTION_EMOJIS.length) {
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          content: `Too many timezone roles (maximum ${REACTION_NUMBERS.length} supported)`,
+          content: `Too many timezone roles (maximum ${REACTION_EMOJIS.length} supported due to Discord limits)`,
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
@@ -2040,7 +2039,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const embed = new EmbedBuilder()
       .setTitle('Timezone Role Selection')
       .setDescription('React with the emoji corresponding to your timezone:\n\n' + 
-        sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
+        sortedRoles.map((role, i) => `${REACTION_EMOJIS[i]} - ${role.name}`).join('\n'))
       .setColor('#7ED321');
 
     // Send initial response
@@ -2067,7 +2066,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     for (let i = 0; i < sortedRoles.length; i++) {
       try {
         await fetch(
-          `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${messageId}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+          `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${messageId}/reactions/${encodeURIComponent(REACTION_EMOJIS[i])}/@me`,
           {
             method: 'PUT',
             headers: {
@@ -2078,13 +2077,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Small delay to avoid rate limits
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
-        console.error(`Failed to add reaction ${REACTION_NUMBERS[i]}:`, error);
+        console.error(`Failed to add reaction ${REACTION_EMOJIS[i]}:`, error);
       }
     }
 
     // Store role-emoji mappings in memory for reaction handler with timezone metadata
     if (!client.roleReactions) client.roleReactions = new Map();
-    const roleMapping = Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]));
+    const roleMapping = Object.fromEntries(sortedRoles.map((role, i) => [REACTION_EMOJIS[i], role.id]));
     roleMapping.isTimezone = true;  // Mark this as a timezone role mapping
     client.roleReactions.set(messageId, roleMapping);
 
@@ -5462,11 +5461,11 @@ Your server is now ready for Tycoons gameplay!`;
           .filter(role => role) // Remove any null roles
           .sort((a, b) => a.name.localeCompare(b.name));
 
-        if (sortedRoles.length > REACTION_NUMBERS.length) {
+        if (sortedRoles.length > REACTION_EMOJIS.length) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: `Too many timezone roles (maximum ${REACTION_NUMBERS.length} supported)`,
+              content: `Too many timezone roles (maximum ${REACTION_EMOJIS.length} supported due to Discord limits)`,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -5476,7 +5475,7 @@ Your server is now ready for Tycoons gameplay!`;
         const embed = new EmbedBuilder()
           .setTitle('Timezone Role Selection')
           .setDescription('React with the emoji corresponding to your timezone:\n\n' + 
-            sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
+            sortedRoles.map((role, i) => `${REACTION_EMOJIS[i]} - ${role.name}`).join('\n'))
           .setColor('#7ED321');
 
         // Send initial response with embed directly
@@ -5504,7 +5503,7 @@ Your server is now ready for Tycoons gameplay!`;
         for (let i = 0; i < sortedRoles.length; i++) {
           try {
             await fetch(
-              `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${messageId}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+              `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${messageId}/reactions/${encodeURIComponent(REACTION_EMOJIS[i])}/@me`,
               {
                 method: 'PUT',
                 headers: {
@@ -5515,13 +5514,13 @@ Your server is now ready for Tycoons gameplay!`;
             // Small delay to avoid rate limits
             await new Promise(resolve => setTimeout(resolve, 100));
           } catch (error) {
-            console.error(`Failed to add reaction ${REACTION_NUMBERS[i]}:`, error);
+            console.error(`Failed to add reaction ${REACTION_EMOJIS[i]}:`, error);
           }
         }
 
         // Store role-emoji mappings in memory for reaction handler with timezone metadata
         if (!client.roleReactions) client.roleReactions = new Map();
-        const roleMapping = Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]));
+        const roleMapping = Object.fromEntries(sortedRoles.map((role, i) => [REACTION_EMOJIS[i], role.id]));
         roleMapping.isTimezone = true;  // Mark this as a timezone role mapping
         client.roleReactions.set(messageId, roleMapping);
 
@@ -5564,11 +5563,11 @@ Your server is now ready for Tycoons gameplay!`;
           .filter(role => role) // Remove any null roles
           .sort((a, b) => a.name.localeCompare(b.name));
 
-        if (sortedRoles.length > REACTION_NUMBERS.length) {
+        if (sortedRoles.length > REACTION_EMOJIS.length) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: `Too many pronoun roles (maximum ${REACTION_NUMBERS.length} supported)`,
+              content: `Too many pronoun roles (maximum ${REACTION_EMOJIS.length} supported due to Discord limits)`,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -5578,7 +5577,7 @@ Your server is now ready for Tycoons gameplay!`;
         const embed = new EmbedBuilder()
           .setTitle('Pronoun Role Selection')
           .setDescription('React with the emoji corresponding to your pronouns:\n\n' + 
-            sortedRoles.map((role, i) => `${REACTION_NUMBERS[i]} - ${role.name}`).join('\n'))
+            sortedRoles.map((role, i) => `${REACTION_EMOJIS[i]} - ${role.name}`).join('\n'))
           .setColor('#7ED321');
 
         // Send initial response
@@ -5605,7 +5604,7 @@ Your server is now ready for Tycoons gameplay!`;
         for (let i = 0; i < sortedRoles.length; i++) {
           try {
             await fetch(
-              `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${messageId}/reactions/${encodeURIComponent(REACTION_NUMBERS[i])}/@me`,
+              `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${messageId}/reactions/${encodeURIComponent(REACTION_EMOJIS[i])}/@me`,
               {
                 method: 'PUT',
                 headers: {
@@ -5616,14 +5615,14 @@ Your server is now ready for Tycoons gameplay!`;
             // Small delay to avoid rate limits
             await new Promise(resolve => setTimeout(resolve, 100));
           } catch (error) {
-            console.error(`Failed to add reaction ${REACTION_NUMBERS[i]}:`, error);
+            console.error(`Failed to add reaction ${REACTION_EMOJIS[i]}:`, error);
           }
         }
 
         // Store role-emoji mappings in memory for reaction handler
         if (!client.roleReactions) client.roleReactions = new Map();
         client.roleReactions.set(messageId, 
-          Object.fromEntries(sortedRoles.map((role, i) => [REACTION_NUMBERS[i], role.id]))
+          Object.fromEntries(sortedRoles.map((role, i) => [REACTION_EMOJIS[i], role.id]))
         );
 
       } catch (error) {
