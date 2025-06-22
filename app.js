@@ -84,7 +84,11 @@ import {
   checkRoleHierarchy,
   REACTION_EMOJIS,
   createTimezoneReactionMessage,
-  createPronounReactionMessage
+  createPronounReactionMessage,
+  canBotManageRole,
+  canBotManageRoles,
+  generateHierarchyWarning,
+  testRoleHierarchy
 } from './roleManager.js';
 import fs from 'fs';
 import { Readable } from 'stream';
@@ -320,7 +324,12 @@ async function createReeceStuffMenu() {
       .setCustomId('prod_toggle_live_analytics')
       .setLabel('Toggle Live Analytics')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🪵')
+      .setEmoji('🪵'),
+    new ButtonBuilder()
+      .setCustomId('test_role_hierarchy')
+      .setLabel('Test Role Hierarchy')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🔧')
   ];
   
   const analyticsRow1 = new ActionRowBuilder().addComponents(analyticsButtonsRow1);
@@ -4573,6 +4582,89 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error running server usage analytics. Check logs for details.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'test_role_hierarchy') {
+      // Test role hierarchy functionality - admin only
+      try {
+        const userId = req.body.member.user.id;
+        
+        // Security check - only allow specific Discord ID
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        
+        console.log('🔧 DEBUG: Starting role hierarchy test...');
+        
+        // Run the test function with your specified roles
+        const testResults = testRoleHierarchy(guild, client);
+        
+        // Create comprehensive response
+        const responseLines = [
+          '# 🔧 Role Hierarchy Test Results',
+          '',
+          `**Tests Run:** ${testResults.details.length}`,
+          `**Passed:** ${testResults.testsPassed} ✅`,
+          `**Failed:** ${testResults.testsFailed} ❌`,
+          ''
+        ];
+
+        // Add detailed results for each test
+        for (const test of testResults.details) {
+          const statusEmoji = test.passed ? '✅' : '❌';
+          responseLines.push(`${statusEmoji} **${test.roleName}**`);
+          responseLines.push(`   Expected: ${test.expected}, Got: ${test.actual}`);
+          responseLines.push(`   Details: ${test.details}`);
+          responseLines.push('');
+        }
+
+        // Add individual role checks using the new general-purpose function
+        responseLines.push('## 🔍 Individual Role Analysis');
+        responseLines.push('');
+
+        const testRoleIds = ['1335645022774886490', '1385964464393949276'];
+        for (const roleId of testRoleIds) {
+          const check = canBotManageRole(guild, roleId, client);
+          const statusEmoji = check.canManage ? '✅' : '⚠️';
+          
+          responseLines.push(`${statusEmoji} **Role:** ${check.targetRoleName} (ID: ${roleId})`);
+          responseLines.push(`   **Can Manage:** ${check.canManage}`);
+          responseLines.push(`   **Bot Role:** ${check.botRoleName} (position ${check.botPosition})`);
+          responseLines.push(`   **Target Role:** ${check.targetRoleName} (position ${check.targetPosition})`);
+          responseLines.push(`   **Position Difference:** ${check.positionDifference}`);
+          
+          if (!check.canManage && !check.error) {
+            responseLines.push('   **Warning:** This role cannot be assigned to users!');
+          }
+          
+          responseLines.push('');
+        }
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: responseLines.join('\n'),
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in role hierarchy test:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error running role hierarchy test. Check logs for details.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

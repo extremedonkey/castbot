@@ -72,25 +72,217 @@ const STANDARD_TIMEZONE_ROLES = [
 ];
 
 /**
- * Check role hierarchy to determine if bot can manage a role
- * Critical for preventing role assignment failures due to Discord hierarchy rules
+ * Discord Role Hierarchy Management Utilities
+ * 
+ * Discord's role hierarchy determines what a bot can and cannot manage:
+ * - Bots cannot manage roles equal to or higher than their highest role
+ * - Role position (higher number = higher in hierarchy)
+ * - When bots join, they get a role with their name at the bottom
+ * - Server admins can move bot roles up/down or assign additional roles
+ */
+
+/**
+ * Check if bot can manage a specific role in a guild
+ * @param {Guild} guild - Discord guild object
+ * @param {string} targetRoleId - Role ID to check
+ * @param {Client} client - Discord.js client (optional, defaults to guild.client)
+ * @returns {Object} Detailed hierarchy analysis
+ */
+function canBotManageRole(guild, targetRoleId, client = null) {
+    try {
+        // Get bot member - try multiple methods for reliability
+        const botClient = client || guild.client;
+        const botMember = guild.members.me || guild.members.cache.get(botClient.user.id);
+        
+        if (!botMember) {
+            return {
+                canManage: false,
+                error: 'Bot member not found in guild',
+                botPosition: 0,
+                targetPosition: 0,
+                botRoleName: 'Unknown',
+                targetRoleName: 'Unknown',
+                details: 'Bot member not cached or accessible'
+            };
+        }
+
+        // Get target role
+        const targetRole = guild.roles.cache.get(targetRoleId);
+        if (!targetRole) {
+            return {
+                canManage: false,
+                error: 'Target role not found',
+                botPosition: botMember.roles.highest.position,
+                targetPosition: 0,
+                botRoleName: botMember.roles.highest.name,
+                targetRoleName: 'Unknown',
+                details: `Role ${targetRoleId} not found in guild cache`
+            };
+        }
+
+        // Get bot's highest role
+        const botHighestRole = botMember.roles.highest;
+        const canManage = botHighestRole.position > targetRole.position;
+
+        return {
+            canManage,
+            error: null,
+            botPosition: botHighestRole.position,
+            targetPosition: targetRole.position,
+            botRoleName: botHighestRole.name,
+            targetRoleName: targetRole.name,
+            details: canManage 
+                ? `Bot role "${botHighestRole.name}" (pos ${botHighestRole.position}) can manage "${targetRole.name}" (pos ${targetRole.position})`
+                : `Bot role "${botHighestRole.name}" (pos ${botHighestRole.position}) CANNOT manage "${targetRole.name}" (pos ${targetRole.position}) - target is equal or higher`,
+            positionDifference: botHighestRole.position - targetRole.position
+        };
+
+    } catch (error) {
+        console.error('Error in canBotManageRole:', error);
+        return {
+            canManage: false,
+            error: error.message,
+            botPosition: 0,
+            targetPosition: 0,
+            botRoleName: 'Error',
+            targetRoleName: 'Error',
+            details: `Exception: ${error.message}`
+        };
+    }
+}
+
+/**
+ * Check multiple roles at once for batch operations
+ * @param {Guild} guild - Discord guild object
+ * @param {string[]} roleIds - Array of role IDs to check
+ * @param {Client} client - Discord.js client (optional)
+ * @returns {Object} Summary of manageable vs unmanageable roles
+ */
+function canBotManageRoles(guild, roleIds, client = null) {
+    const results = {
+        manageable: [],
+        unmanageable: [],
+        errors: [],
+        summary: {
+            total: roleIds.length,
+            manageableCount: 0,
+            unmanageableCount: 0,
+            errorCount: 0
+        }
+    };
+
+    for (const roleId of roleIds) {
+        const check = canBotManageRole(guild, roleId, client);
+        
+        if (check.error) {
+            results.errors.push({ roleId, ...check });
+            results.summary.errorCount++;
+        } else if (check.canManage) {
+            results.manageable.push({ roleId, ...check });
+            results.summary.manageableCount++;
+        } else {
+            results.unmanageable.push({ roleId, ...check });
+            results.summary.unmanageableCount++;
+        }
+    }
+
+    return results;
+}
+
+/**
+ * Generate user-friendly warning message for hierarchy issues
+ * @param {Object} hierarchyCheck - Result from canBotManageRole
+ * @returns {string} Formatted warning message
+ */
+function generateHierarchyWarning(hierarchyCheck) {
+    if (hierarchyCheck.canManage) {
+        return null; // No warning needed
+    }
+
+    if (hierarchyCheck.error) {
+        return `❌ **Role Check Error**: ${hierarchyCheck.error}`;
+    }
+
+    return [
+        `⚠️ **ROLE HIERARCHY WARNING**`,
+        ``,
+        `The role **${hierarchyCheck.targetRoleName}** is positioned above or equal to the **${hierarchyCheck.botRoleName}** role in your server's hierarchy.`,
+        ``,
+        `**Current Positions:**`,
+        `• Bot role: **${hierarchyCheck.botRoleName}** (position ${hierarchyCheck.botPosition})`,
+        `• Target role: **${hierarchyCheck.targetRoleName}** (position ${hierarchyCheck.targetPosition})`,
+        ``,
+        `**Impact:** CastBot cannot assign this role to users until it's moved below the bot role.`,
+        ``,
+        `**How to fix:** Server Settings → Roles → Drag **${hierarchyCheck.targetRoleName}** below **${hierarchyCheck.botRoleName}**`
+    ].join('\n');
+}
+
+/**
+ * Test role hierarchy with specific role IDs for debugging
+ * @param {Guild} guild - Discord guild object
+ * @param {Client} client - Discord.js client
+ * @returns {Object} Test results for debugging
+ */
+function testRoleHierarchy(guild, client) {
+    console.log('🔍 DEBUG: Testing role hierarchy with specific test roles...');
+    
+    // Test roles as specified by user
+    const testRoles = [
+        { id: '1335645022774886490', name: 'He/Him (should FAIL - above bot)', expectedResult: false },
+        { id: '1385964464393949276', name: 'NZST (should SUCCEED - below bot)', expectedResult: true }
+    ];
+
+    const results = {
+        testsPassed: 0,
+        testsFailed: 0,
+        details: []
+    };
+
+    for (const testRole of testRoles) {
+        const check = canBotManageRole(guild, testRole.id, client);
+        const passed = check.canManage === testRole.expectedResult;
+        
+        const result = {
+            roleId: testRole.id,
+            roleName: testRole.name,
+            expected: testRole.expectedResult,
+            actual: check.canManage,
+            passed,
+            details: check.details,
+            hierarchyInfo: check
+        };
+
+        results.details.push(result);
+        
+        if (passed) {
+            results.testsPassed++;
+            console.log(`✅ TEST PASSED: ${testRole.name} - Expected: ${testRole.expectedResult}, Got: ${check.canManage}`);
+        } else {
+            results.testsFailed++;
+            console.log(`❌ TEST FAILED: ${testRole.name} - Expected: ${testRole.expectedResult}, Got: ${check.canManage}`);
+        }
+        
+        console.log(`   Details: ${check.details}`);
+    }
+
+    console.log(`🎯 Role Hierarchy Test Summary: ${results.testsPassed} passed, ${results.testsFailed} failed`);
+    return results;
+}
+
+/**
+ * Legacy function for backward compatibility - maps to new implementation
  * @param {Guild} guild - Discord guild object
  * @param {Role} role - Discord role object to check
- * @returns {Object} { canManage: boolean, botPosition: number, rolePosition: number, botRoleName: string }
+ * @returns {Object} Legacy format result
  */
 function checkRoleHierarchy(guild, role) {
-    const botMember = guild.members.cache.get(guild.client.user.id);
-    if (!botMember) {
-        return { canManage: false, botPosition: 0, rolePosition: role.position, botRoleName: 'Unknown' };
-    }
-    
-    const botHighestRole = botMember.roles.highest;
-    
+    const check = canBotManageRole(guild, role.id);
     return {
-        canManage: botHighestRole.position > role.position,
-        botPosition: botHighestRole.position,
-        rolePosition: role.position,
-        botRoleName: botHighestRole.name
+        canManage: check.canManage,
+        botPosition: check.botPosition,
+        rolePosition: check.targetPosition,
+        botRoleName: check.botRoleName
     };
 }
 
@@ -625,5 +817,9 @@ export {
     generateSetupResponse,
     checkRoleHierarchy,
     createTimezoneReactionMessage,
-    createPronounReactionMessage
+    createPronounReactionMessage,
+    canBotManageRole,
+    canBotManageRoles,
+    generateHierarchyWarning,
+    testRoleHierarchy
 };

@@ -106,13 +106,22 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - ✅ "Subsequent run" detection removed (always show setup interface)
 
 **📋 Implementation Summary (Phase 1):**
-- **Created:** `roleManager.js` module (478 lines) with comprehensive setup functionality
+- **Created:** `roleManager.js` module (629 lines) with comprehensive setup functionality
 - **Eliminated:** ~320 lines of duplicated setup code from app.js (moved to centralized module)
 - **Enhanced:** Setup user feedback with role hierarchy warnings and Discord tag syntax
 - **Added:** NDT (UTC-2:30, offset -2.5) and ADT (UTC-3, offset -3) timezone roles
 - **Implemented:** Role hierarchy checking with `checkRoleHierarchy()` function
 - **Structured:** Timezone data for future DST support (dstObserved, standardName fields)
 - **Simplified:** Setup UX - removed confusing "subsequent run" logic, always shows setup button
+
+**🚨 CRITICAL FIX: Discord Reaction Limits (Phase 1B):**
+- **Discovered:** Discord has 20-reaction limit per message (50 for boosted servers)
+- **Analyzed:** Current servers had 18+ timezone roles → would break with user's +15 expansion
+- **Optimized:** Curated 20 most essential timezone roles covering major global regions
+- **Migrated:** Reaction functionality to `roleManager.js` with `REACTION_EMOJIS` constant
+- **Fixed:** All 27 references to old `REACTION_NUMBERS` across app.js handlers
+- **Enhanced:** Error messages now mention "Discord limits" for user clarity
+- **Architecture:** Foundation ready for future boosted server detection (50-reaction support)
 
 **Benefits:**
 - **Immediate:** Fixes critical role hierarchy bug preventing role assignment
