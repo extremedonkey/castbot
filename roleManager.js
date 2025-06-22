@@ -329,13 +329,12 @@ async function executeSetup(guildId, guild) {
                 if (currentPronounIds.includes(existingRole.id)) {
                     console.log(`✅ DEBUG: Pronoun role ${pronounRole} already in CastBot`);
                     
-                    // Check hierarchy even for existing roles
+                    // Check hierarchy even for existing roles but don't store canManage in results
                     const hierarchyCheck = checkRoleHierarchy(guild, existingRole);
                     
                     results.pronouns.alreadyInCastBot.push({
                         name: pronounRole,
-                        id: existingRole.id,
-                        canManage: hierarchyCheck.canManage
+                        id: existingRole.id
                     });
                     
                     if (!hierarchyCheck.canManage) {
@@ -399,13 +398,12 @@ async function executeSetup(guildId, guild) {
                 if (currentTimezones[existingRole.id]) {
                     console.log(`✅ DEBUG: Timezone role ${timezone.name} already in CastBot`);
                     
-                    // Check hierarchy even for existing roles
+                    // Check hierarchy even for existing roles but don't store canManage in results
                     const hierarchyCheck = checkRoleHierarchy(guild, existingRole);
                     
                     results.timezones.alreadyInCastBot.push({
                         ...timezone,
-                        id: existingRole.id,
-                        canManage: hierarchyCheck.canManage
+                        id: existingRole.id
                     });
                     
                     if (!hierarchyCheck.canManage) {
