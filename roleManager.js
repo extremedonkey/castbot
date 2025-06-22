@@ -328,10 +328,23 @@ async function executeSetup(guildId, guild) {
                 // Role exists in Discord - check if it's already in CastBot
                 if (currentPronounIds.includes(existingRole.id)) {
                     console.log(`✅ DEBUG: Pronoun role ${pronounRole} already in CastBot`);
+                    
+                    // Check hierarchy even for existing roles
+                    const hierarchyCheck = checkRoleHierarchy(guild, existingRole);
+                    
                     results.pronouns.alreadyInCastBot.push({
                         name: pronounRole,
-                        id: existingRole.id
+                        id: existingRole.id,
+                        canManage: hierarchyCheck.canManage
                     });
+                    
+                    if (!hierarchyCheck.canManage) {
+                        results.pronouns.hierarchyWarnings.push({
+                            name: pronounRole,
+                            id: existingRole.id,
+                            botRoleName: hierarchyCheck.botRoleName
+                        });
+                    }
                 } else {
                     // Add existing Discord role to CastBot
                     console.log(`🔄 DEBUG: Adding existing pronoun role ${pronounRole} to CastBot`);
@@ -385,10 +398,23 @@ async function executeSetup(guildId, guild) {
                 // Role exists in Discord - check if it's already in CastBot
                 if (currentTimezones[existingRole.id]) {
                     console.log(`✅ DEBUG: Timezone role ${timezone.name} already in CastBot`);
+                    
+                    // Check hierarchy even for existing roles
+                    const hierarchyCheck = checkRoleHierarchy(guild, existingRole);
+                    
                     results.timezones.alreadyInCastBot.push({
                         ...timezone,
-                        id: existingRole.id
+                        id: existingRole.id,
+                        canManage: hierarchyCheck.canManage
                     });
+                    
+                    if (!hierarchyCheck.canManage) {
+                        results.timezones.hierarchyWarnings.push({
+                            ...timezone,
+                            id: existingRole.id,
+                            botRoleName: hierarchyCheck.botRoleName
+                        });
+                    }
                 } else {
                     // Add existing Discord role to CastBot
                     console.log(`🔄 DEBUG: Adding existing timezone role ${timezone.name} to CastBot`);
