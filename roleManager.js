@@ -555,14 +555,14 @@ function generateSetupResponse(results) {
     const allWarnings = [...results.pronouns.hierarchyWarnings, ...results.timezones.hierarchyWarnings];
     if (allWarnings.length > 0) {
         const warningText = [
-            `⚠️ **WARNING: Below CastBot in role hierarchy (role still added)**`,
+            `## ⚠️ WARNING: Below CastBot in role hierarchy (role still added)`,
             '',
             `${allWarnings.length} role(s) are positioned above the **${allWarnings[0].botRoleName}** role in your server's hierarchy.`,
             `CastBot cannot assign these roles to users until they are moved below the bot role:`,
             '',
             allWarnings.map(role => `   • <@&${role.id}> (${role.name})`).join('\n'),
             '',
-            '💡 **How to fix:** Server Settings → Roles → Drag highlighted roles below the CastBot role'
+            `💡 **How to fix:** Drag the 'CastBot' role up to the top - it's faster.`
         ].join('\n');
         
         sections.push(warningText);
