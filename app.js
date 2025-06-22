@@ -5022,6 +5022,111 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'safari_my_status') {
+      // MVP2: Show user's currency and inventory status
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        console.log(`💎 DEBUG: User ${userId} checking Safari status`);
+        
+        // Import Safari manager functions
+        const { getCurrencyAndInventoryDisplay } = await import('./safariManager.js');
+        
+        const statusDisplay = await getCurrencyAndInventoryDisplay(guildId, userId);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: statusDisplay,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_my_status:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading your status.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_manage_shops') {
+      // MVP2: Shop management interface (placeholder for now)
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to manage shops.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🏪 DEBUG: Opening shop management interface`);
+        
+        // For MVP2, show a simple placeholder interface
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `## 🏪 Shop Management\n\n**Coming Soon!** Shop creation and management interface.\n\n**Planned Features:**\n• Create multiple shops per server\n• Add items to shops with custom prices\n• Set shopkeeper text and themes\n• Role-based shop access\n\nFor now, shops can be created via the button system with \`shop_display\` actions.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_manage_shops:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading shop management.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_manage_items') {
+      // MVP2: Item management interface (placeholder for now)
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to manage items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`📦 DEBUG: Opening item management interface`);
+        
+        // For MVP2, show a simple placeholder interface  
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `## 📦 Item Management\n\n**Coming Soon!** Item creation and management interface.\n\n**Planned Features:**\n• Create reusable items with emojis\n• Set base prices and descriptions\n• Item categories and max quantities\n• Cross-shop item usage\n\nFor now, items are created via the conditional action system.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_manage_items:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading item management.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'safari_currency_view_all') {
       // Handle View All Currency Balances
       try {
@@ -9228,111 +9333,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error setting player currency.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id === 'safari_my_status') {
-      // MVP2: Show user's currency and inventory status
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        
-        console.log(`💎 DEBUG: User ${userId} checking Safari status`);
-        
-        // Import Safari manager functions
-        const { getCurrencyAndInventoryDisplay } = await import('./safariManager.js');
-        
-        const statusDisplay = await getCurrencyAndInventoryDisplay(guildId, userId);
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: statusDisplay,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_my_status:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading your status.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id === 'safari_manage_shops') {
-      // MVP2: Shop management interface (placeholder for now)
-      try {
-        const member = req.body.member;
-        
-        // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to manage shops.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        console.log(`🏪 DEBUG: Opening shop management interface`);
-        
-        // For MVP2, show a simple placeholder interface
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `## 🏪 Shop Management\n\n**Coming Soon!** Shop creation and management interface.\n\n**Planned Features:**\n• Create multiple shops per server\n• Add items to shops with custom prices\n• Set shopkeeper text and themes\n• Role-based shop access\n\nFor now, shops can be created via the button system with \`shop_display\` actions.`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_manage_shops:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading shop management.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id === 'safari_manage_items') {
-      // MVP2: Item management interface (placeholder for now)
-      try {
-        const member = req.body.member;
-        
-        // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to manage items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        console.log(`📦 DEBUG: Opening item management interface`);
-        
-        // For MVP2, show a simple placeholder interface  
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `## 📦 Item Management\n\n**Coming Soon!** Item creation and management interface.\n\n**Planned Features:**\n• Create reusable items with emojis\n• Set base prices and descriptions\n• Item categories and max quantities\n• Cross-shop item usage\n\nFor now, items are created via the conditional action system.`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_manage_items:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading item management.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

@@ -308,7 +308,9 @@
       }
     },
     "safaris": {},
-    "applications": {}
+    "applications": {},
+    "shops": {},
+    "items": {}
   },
   "1385042963310055515": {
     "buttons": {
@@ -363,6 +365,8 @@
       }
     },
     "safaris": {},
-    "applications": {}
+    "applications": {},
+    "shops": {},
+    "items": {}
   }
 }

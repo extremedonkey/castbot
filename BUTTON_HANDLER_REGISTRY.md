@@ -36,6 +36,9 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_add_action_*` | Add Action buttons | app.js:~5511 | Pattern handler | ✅ Active |
 | `safari_finish_button_*` | Finish & Save | app.js:~5640 | Pattern handler | ✅ Active |
 | `safari_currency_*` | Currency actions | app.js:~5284+ | Pattern handlers | ✅ Active |
+| `safari_my_status` | 💎 My Status | app.js:~5025 | Direct handler | ✅ Active |
+| `safari_manage_shops` | 🏪 Manage Shops | app.js:~5056 | Direct handler | ✅ Active |
+| `safari_manage_items` | 📦 Manage Items | app.js:~5093 | Direct handler | ✅ Active |
 | `safari_{guildId}_{buttonId}_{timestamp}` | Dynamic Safari buttons | app.js:~2661 | Dynamic handler | ✅ Active |
 
 ### **Castlist Navigation Buttons**
