@@ -129,6 +129,54 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - **Long-term:** Provides scalable foundation for advanced role management features
 - **User Experience:** Clear feedback and reliable role assignment workflows
 
+### Safari Dynamic Content System - Phase 2 (MVP2)
+**Description:** Advanced Safari dynamic content management with conditional logic, shop systems, and enhanced action types
+**Current Status:** Phase 1 (MVP1) Complete ✅ - Basic button creation, currency management, and action execution operational
+
+**🔧 PHASE 2: Advanced Action Types & Conditional Logic**
+**Scope:** Expand Safari beyond basic actions to intelligent, conditional content management
+**Implementation:**
+- **Conditional Logic Actions**: If/then logic for button behavior based on user state, currency, roles, or previous interactions
+- **Advanced Action Types**: 
+  - `conditional_display`: Show different text based on conditions
+  - `currency_check`: Verify currency before allowing actions
+  - `role_requirement`: Require specific roles for button access
+  - `random_outcome`: Random results with weighted probabilities
+  - `multi_step_sequence`: Chain multiple actions with branching logic
+- **Enhanced Currency System**:
+  - Currency spending/earning actions
+  - Currency-gated content access
+  - Multi-currency support (points, tokens, coins, etc.)
+- **Shop System Foundation**:
+  - Purchase actions that deduct currency
+  - Inventory management for purchased items
+  - Shop button templates for common purchase flows
+- **Action Chaining & Sequences**:
+  - Complex multi-button workflows
+  - State persistence across button interactions
+  - Progress tracking for multi-step processes
+
+**Technical Architecture:**
+- **Action Engine Expansion**: Extend `safariManager.js` with conditional logic processing
+- **State Management**: Enhanced player state tracking for complex interactions
+- **Action Validator**: Pre-execution validation for conditions and requirements
+- **Result Generator**: Dynamic response generation based on action outcomes
+
+**Acceptance Criteria:**
+- Conditional actions execute based on user state (currency, roles, history)
+- Shop system allows currency-based purchases with inventory tracking
+- Random outcome actions provide weighted probability results
+- Multi-step sequences maintain state across interactions
+- Action chaining supports complex workflow creation
+- Currency system supports multiple currency types per server
+- All actions maintain backwards compatibility with MVP1 buttons
+
+**Benefits:**
+- **Server Hosts**: Create sophisticated interactive experiences and games
+- **Players**: Engaging, dynamic content that responds to their actions and progress
+- **Scalability**: Foundation for complex ORG mini-games and interactive storylines
+- **Community**: Rich content creation possibilities for server customization
+
 ### Tech Debt - Legacy Code Cleanup
 **castlist2 References Cleanup:**
 - Remove all `castlist2_` custom IDs, function names, and comments since /castlist2 became /castlist

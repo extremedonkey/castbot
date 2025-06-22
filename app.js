@@ -376,8 +376,8 @@ async function createReeceStuffMenu() {
  * Create Safari submenu interface for dynamic content management
  */
 async function createSafariMenu() {
-  // Create safari management buttons
-  const safariButtons = [
+  // Create safari management buttons - Row 1: Core Functions
+  const safariButtonsRow1 = [
     new ButtonBuilder()
       .setCustomId('safari_create_button')
       .setLabel('Create Custom Button')
@@ -389,23 +389,38 @@ async function createSafariMenu() {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📤'),
     new ButtonBuilder()
-      .setCustomId('safari_manage_currency')
-      .setLabel('Manage Currency')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💰'),
-    new ButtonBuilder()
       .setCustomId('safari_view_buttons')
       .setLabel('View All Buttons')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📊'),
     new ButtonBuilder()
-      .setCustomId('prod_setup_tycoons')
-      .setLabel('Setup Tycoons')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💰')
+      .setCustomId('safari_my_status')
+      .setLabel('My Status')
+      .setStyle(ButtonStyle.Success)
+      .setEmoji('💎')
   ];
   
-  const safariRow = new ActionRowBuilder().addComponents(safariButtons);
+  // Row 2: Admin & Management Functions
+  const safariButtonsRow2 = [
+    new ButtonBuilder()
+      .setCustomId('safari_manage_currency')
+      .setLabel('Manage Currency')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💰'),
+    new ButtonBuilder()
+      .setCustomId('safari_manage_shops')
+      .setLabel('Manage Shops')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏪'),
+    new ButtonBuilder()
+      .setCustomId('safari_manage_items')
+      .setLabel('Manage Items')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📦')
+  ];
+  
+  const safariRow1 = new ActionRowBuilder().addComponents(safariButtonsRow1);
+  const safariRow2 = new ActionRowBuilder().addComponents(safariButtonsRow2);
   
   // Create back button
   const backButton = [
@@ -421,9 +436,10 @@ async function createSafariMenu() {
   const containerComponents = [
     {
       type: 10, // Text Display component
-      content: `## 🦁 Safari - Dynamic Content Manager\n\nCreate interactive experiences with custom buttons, currency systems, and chained actions.`
+      content: `## 🦁 Safari - Dynamic Content Manager\n\nCreate interactive experiences with custom buttons, currency systems, shops, and chained actions.\n\n**NEW in MVP2:** Shop systems, conditional actions, and inventory management!`
     },
-    safariRow.toJSON(), // Safari management buttons
+    safariRow1.toJSON(), // Core safari buttons
+    safariRow2.toJSON(), // Admin management buttons
     {
       type: 14 // Separator
     },
@@ -9212,6 +9228,160 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error setting player currency.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_my_status') {
+      // MVP2: Show user's currency and inventory status
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        console.log(`💎 DEBUG: User ${userId} checking Safari status`);
+        
+        // Import Safari manager functions
+        const { getCurrencyAndInventoryDisplay } = await import('./safariManager.js');
+        
+        const statusDisplay = await getCurrencyAndInventoryDisplay(guildId, userId);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: statusDisplay,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_my_status:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading your status.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_manage_shops') {
+      // MVP2: Shop management interface (placeholder for now)
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to manage shops.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🏪 DEBUG: Opening shop management interface`);
+        
+        // For MVP2, show a simple placeholder interface
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `## 🏪 Shop Management\n\n**Coming Soon!** Shop creation and management interface.\n\n**Planned Features:**\n• Create multiple shops per server\n• Add items to shops with custom prices\n• Set shopkeeper text and themes\n• Role-based shop access\n\nFor now, shops can be created via the button system with \`shop_display\` actions.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_manage_shops:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading shop management.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_manage_items') {
+      // MVP2: Item management interface (placeholder for now)
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to manage items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`📦 DEBUG: Opening item management interface`);
+        
+        // For MVP2, show a simple placeholder interface  
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `## 📦 Item Management\n\n**Coming Soon!** Item creation and management interface.\n\n**Planned Features:**\n• Create reusable items with emojis\n• Set base prices and descriptions\n• Item categories and max quantities\n• Cross-shop item usage\n\nFor now, items are created via the conditional action system.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_manage_items:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading item management.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_buy_')) {
+      // MVP2: Handle item purchases (format: safari_buy_guildId_shopId_itemId_timestamp)
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        // Parse custom ID to extract shop and item info
+        const parts = custom_id.split('_');
+        if (parts.length < 5) {
+          throw new Error('Invalid buy button custom ID format');
+        }
+        
+        const extractedGuildId = parts[2];
+        const shopId = parts[3];
+        const itemId = parts[4];
+        
+        // Verify guild ID matches
+        if (extractedGuildId !== guildId) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid purchase request.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`💳 DEBUG: Processing purchase: ${itemId} from shop ${shopId} by user ${userId}`);
+        
+        // Import Safari manager functions
+        const { buyItem } = await import('./safariManager.js');
+        
+        const result = await buyItem(guildId, shopId, itemId, userId);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: result
+        });
+        
+      } catch (error) {
+        console.error('Error handling item purchase:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error processing purchase. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
