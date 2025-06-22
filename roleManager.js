@@ -529,54 +529,26 @@ async function updateCastBotStorage(guildId, results) {
 function generateSetupResponse(results) {
     const sections = [];
     
-    // Pronouns section
-    const pronounSections = [];
+    // Summary section with counts only
+    const pronounTotal = results.pronouns.created.length + results.pronouns.existingAdded.length + results.pronouns.alreadyInCastBot.length;
+    const timezoneTotal = results.timezones.created.length + results.timezones.existingAdded.length + results.timezones.alreadyInCastBot.length;
     
-    if (results.pronouns.created.length > 0) {
-        pronounSections.push(`✅ **Created ${results.pronouns.created.length} new pronoun roles:**\n${
-            results.pronouns.created.map(role => `   • ${role.name}`).join('\n')
-        }`);
+    if (pronounTotal > 0) {
+        const pronounParts = [];
+        if (results.pronouns.created.length > 0) pronounParts.push(`${results.pronouns.created.length} created`);
+        if (results.pronouns.existingAdded.length > 0) pronounParts.push(`${results.pronouns.existingAdded.length} added`);
+        if (results.pronouns.alreadyInCastBot.length > 0) pronounParts.push(`${results.pronouns.alreadyInCastBot.length} already configured`);
+        
+        sections.push(`**🔀 Pronoun Roles:** ${pronounTotal} total (${pronounParts.join(', ')})`);
     }
     
-    if (results.pronouns.existingAdded.length > 0) {
-        pronounSections.push(`🔄 **Added ${results.pronouns.existingAdded.length} existing pronoun roles to CastBot:**\n${
-            results.pronouns.existingAdded.map(role => `   • <@&${role.id}> (${role.name})`).join('\n')
-        }`);
-    }
-    
-    if (results.pronouns.alreadyInCastBot.length > 0) {
-        pronounSections.push(`✅ **Already configured in CastBot:**\n${
-            results.pronouns.alreadyInCastBot.map(role => `   • <@&${role.id}>`).join('\n')
-        }`);
-    }
-    
-    if (pronounSections.length > 0) {
-        sections.push(`**🔀 Pronoun Roles:**\n${pronounSections.join('\n\n')}`);
-    }
-    
-    // Timezones section
-    const timezoneSections = [];
-    
-    if (results.timezones.created.length > 0) {
-        timezoneSections.push(`✅ **Created ${results.timezones.created.length} new timezone roles:**\n${
-            results.timezones.created.map(role => `   • ${role.name}`).join('\n')
-        }`);
-    }
-    
-    if (results.timezones.existingAdded.length > 0) {
-        timezoneSections.push(`🔄 **Added ${results.timezones.existingAdded.length} existing timezone roles to CastBot:**\n${
-            results.timezones.existingAdded.map(role => `   • <@&${role.id}> (${role.name})`).join('\n')
-        }`);
-    }
-    
-    if (results.timezones.alreadyInCastBot.length > 0) {
-        timezoneSections.push(`✅ **Already configured in CastBot:**\n${
-            results.timezones.alreadyInCastBot.map(role => `   • <@&${role.id}>`).join('\n')
-        }`);
-    }
-    
-    if (timezoneSections.length > 0) {
-        sections.push(`**🌍 Timezone Roles:**\n${timezoneSections.join('\n\n')}`);
+    if (timezoneTotal > 0) {
+        const timezoneParts = [];
+        if (results.timezones.created.length > 0) timezoneParts.push(`${results.timezones.created.length} created`);
+        if (results.timezones.existingAdded.length > 0) timezoneParts.push(`${results.timezones.existingAdded.length} added`);
+        if (results.timezones.alreadyInCastBot.length > 0) timezoneParts.push(`${results.timezones.alreadyInCastBot.length} already configured`);
+        
+        sections.push(`**🌍 Timezone Roles:** ${timezoneTotal} total (${timezoneParts.join(', ')})`);
     }
     
     // Critical hierarchy warnings - shown prominently
