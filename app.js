@@ -2440,7 +2440,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     }
     
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
-    if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && !custom_id.startsWith('safari_add_action_') && !custom_id.startsWith('safari_finish_button_') && !custom_id.startsWith('safari_action_modal_') && custom_id !== 'safari_post_select_button' && !custom_id.startsWith('safari_post_channel_')) {
+    if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
+        !custom_id.startsWith('safari_add_action_') && 
+        !custom_id.startsWith('safari_finish_button_') && 
+        !custom_id.startsWith('safari_action_modal_') && 
+        !custom_id.startsWith('safari_currency_') && 
+        !custom_id.startsWith('safari_create_') && 
+        !custom_id.startsWith('safari_post_') && 
+        !custom_id.startsWith('safari_manage_') && 
+        !custom_id.startsWith('safari_view_') && 
+        !custom_id.startsWith('safari_my_') &&
+        custom_id !== 'safari_post_select_button' && 
+        !custom_id.startsWith('safari_post_channel_')) {
       try {
         const parts = custom_id.split('_');
         const guildId = parts[1];
