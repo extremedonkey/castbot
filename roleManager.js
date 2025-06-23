@@ -33,6 +33,93 @@ const STANDARD_PRONOUN_ROLES = [
     'All Pronouns'
 ];
 
+// Pronoun role colors matching heart emojis (RGB to integer conversion)
+const PRONOUN_COLORS = {
+    'He/Him': 0xFF0000,      // ❤️ Red
+    'She/Her': 0xFFC0CB,     // 🩷 Pink 
+    'They/Them': 0x800080,   // 💜 Purple
+    'They/He': 0x00FF00,     // 💚 Green
+    'She/They': 0x87CEEB,    // 🩵 Light Blue
+    'Ask': 0xFFFF00,         // 💛 Yellow
+    'Any': 0xFFFFFF,         // 🤍 White
+    'All Pronouns': 0xFFFFFF // 🤍 White (same as Any)
+};
+
+// Heart emojis for pronoun reactions
+const PRONOUN_HEART_EMOJIS = {
+    'He/Him': '❤️',
+    'She/Her': '🩷', 
+    'They/Them': '💜',
+    'They/He': '💚',
+    'She/They': '🩵',
+    'Ask': '💛',
+    'Any': '🤍',
+    'All Pronouns': '🤍'
+};
+
+// Enhanced pronoun matching patterns for fuzzy role detection
+const PRONOUN_PATTERNS = {
+    'He/Him': [
+        'he/him', 'he / him', 'him/he', 'him / he', 
+        'he', 'him', 'he-him', 'him-he'
+    ],
+    'She/Her': [
+        'she/her', 'she / her', 'her/she', 'her / she',
+        'she', 'her', 'she-her', 'her-she'
+    ],
+    'They/Them': [
+        'they/them', 'they / them', 'them/they', 'them / they',
+        'they', 'them', 'they-them', 'them-they'
+    ],
+    'They/He': [
+        'they/he', 'they / he', 'he/they', 'he / they',
+        'they-he', 'he-they'
+    ],
+    'She/They': [
+        'she/they', 'she / they', 'they/she', 'they / she',
+        'she-they', 'they-she'
+    ],
+    'Ask': [
+        'ask', 'ask pronouns', 'ask me', 'just ask'
+    ],
+    'Any': [
+        'any', 'any pronouns', 'all', 'whatever', 'dont care', "don't care"
+    ],
+    'All Pronouns': [
+        'all pronouns', 'all', 'any pronouns', 'any/all'
+    ]
+};
+
+/**
+ * Find existing pronoun role using fuzzy matching
+ * @param {Guild} guild - Discord guild object
+ * @param {string} standardName - Standard pronoun name (e.g., 'She/Her')
+ * @returns {Role|null} Found Discord role or null
+ */
+function findExistingPronounRole(guild, standardName) {
+    // First try exact match (current behavior)
+    let existingRole = guild.roles.cache.find(r => r.name === standardName);
+    if (existingRole) {
+        console.log(`✅ DEBUG: Found exact match for ${standardName}: ${existingRole.name}`);
+        return existingRole;
+    }
+    
+    // Try fuzzy matching with patterns
+    const patterns = PRONOUN_PATTERNS[standardName] || [];
+    for (const pattern of patterns) {
+        existingRole = guild.roles.cache.find(r => 
+            r.name.toLowerCase().trim() === pattern.toLowerCase()
+        );
+        if (existingRole) {
+            console.log(`🔍 DEBUG: Found fuzzy match for ${standardName}: "${existingRole.name}" matches pattern "${pattern}"`);
+            return existingRole;
+        }
+    }
+    
+    console.log(`❌ DEBUG: No existing role found for ${standardName} (tried ${patterns.length + 1} patterns)`);
+    return null;
+}
+
 // Reaction emojis for role selection - Discord limit: 20 for regular servers, 50 for boosted
 // Using conservative 20-emoji limit for maximum compatibility
 const REACTION_EMOJIS = [
@@ -322,7 +409,7 @@ async function executeSetup(guildId, guild) {
     console.log('🔍 DEBUG: Processing pronoun roles...');
     for (const pronounRole of STANDARD_PRONOUN_ROLES) {
         try {
-            const existingRole = guild.roles.cache.find(r => r.name === pronounRole);
+            const existingRole = findExistingPronounRole(guild, pronounRole);
             
             if (existingRole) {
                 // Role exists in Discord - check if it's already in CastBot
@@ -364,15 +451,18 @@ async function executeSetup(guildId, guild) {
                     }
                 }
             } else {
-                // Create new pronoun role
+                // Create new pronoun role with color
                 console.log(`🔨 DEBUG: Creating new pronoun role ${pronounRole}`);
+                const roleColor = PRONOUN_COLORS[pronounRole] || 0x99AAB5; // Default Discord gray
+                
                 const newRole = await guild.roles.create({
                     name: pronounRole,
+                    color: roleColor,
                     mentionable: true,
                     reason: 'CastBot pronoun role generation'
                 });
                 
-                console.log(`✅ DEBUG: Created pronoun role ${pronounRole} with ID ${newRole.id}`);
+                console.log(`✅ DEBUG: Created pronoun role ${pronounRole} with ID ${newRole.id} and color 0x${roleColor.toString(16).toUpperCase()}`);
                 results.pronouns.created.push({
                     name: pronounRole,
                     id: newRole.id
@@ -534,26 +624,54 @@ async function updateCastBotStorage(guildId, results) {
 function generateSetupResponse(results) {
     const sections = [];
     
-    // Summary section with counts only
+    // Pronoun Roles Section with individual role lists
     const pronounTotal = results.pronouns.created.length + results.pronouns.existingAdded.length + results.pronouns.alreadyInCastBot.length;
-    const timezoneTotal = results.timezones.created.length + results.timezones.existingAdded.length + results.timezones.alreadyInCastBot.length;
     
     if (pronounTotal > 0) {
         const pronounParts = [];
-        if (results.pronouns.created.length > 0) pronounParts.push(`${results.pronouns.created.length} created`);
-        if (results.pronouns.existingAdded.length > 0) pronounParts.push(`${results.pronouns.existingAdded.length} added`);
-        if (results.pronouns.alreadyInCastBot.length > 0) pronounParts.push(`${results.pronouns.alreadyInCastBot.length} already configured`);
+        if (results.pronouns.created.length > 0) pronounParts.push(`${results.pronouns.created.length} roles created in your server and added to CastBot`);
+        if (results.pronouns.existingAdded.length > 0) pronounParts.push(`${results.pronouns.existingAdded.length} existing roles added to CastBot`);
+        if (results.pronouns.alreadyInCastBot.length > 0) pronounParts.push(`${results.pronouns.alreadyInCastBot.length} roles were already configured in CastBot`);
         
-        sections.push(`**🔀 Pronoun Roles:** ${pronounTotal} total (${pronounParts.join(', ')})`);
+        let pronounSection = `**🔀 Pronoun Roles:** ${pronounTotal} total (${pronounParts.join(', ')})`;
+        
+        // Add individual role lists
+        if (results.pronouns.created.length > 0) {
+            pronounSection += `\n**Created roles:** ${results.pronouns.created.map(r => `<@&${r.id}>`).join(', ')}`;
+        }
+        if (results.pronouns.existingAdded.length > 0) {
+            pronounSection += `\n**Existing roles added:** ${results.pronouns.existingAdded.map(r => `<@&${r.id}>`).join(', ')}`;
+        }
+        if (results.pronouns.alreadyInCastBot.length > 0) {
+            pronounSection += `\n**Already configured:** ${results.pronouns.alreadyInCastBot.map(r => `<@&${r.id}>`).join(', ')}`;
+        }
+        
+        sections.push(pronounSection);
     }
+    
+    // Timezone Roles Section with individual role lists
+    const timezoneTotal = results.timezones.created.length + results.timezones.existingAdded.length + results.timezones.alreadyInCastBot.length;
     
     if (timezoneTotal > 0) {
         const timezoneParts = [];
-        if (results.timezones.created.length > 0) timezoneParts.push(`${results.timezones.created.length} created`);
-        if (results.timezones.existingAdded.length > 0) timezoneParts.push(`${results.timezones.existingAdded.length} added`);
-        if (results.timezones.alreadyInCastBot.length > 0) timezoneParts.push(`${results.timezones.alreadyInCastBot.length} already configured`);
+        if (results.timezones.created.length > 0) timezoneParts.push(`${results.timezones.created.length} roles created in your server and added to CastBot`);
+        if (results.timezones.existingAdded.length > 0) timezoneParts.push(`${results.timezones.existingAdded.length} existing roles added to CastBot`);
+        if (results.timezones.alreadyInCastBot.length > 0) timezoneParts.push(`${results.timezones.alreadyInCastBot.length} roles were already configured in CastBot`);
         
-        sections.push(`**🌍 Timezone Roles:** ${timezoneTotal} total (${timezoneParts.join(', ')})`);
+        let timezoneSection = `**🌍 Timezone Roles:** ${timezoneTotal} total (${timezoneParts.join(', ')})`;
+        
+        // Add individual role lists
+        if (results.timezones.created.length > 0) {
+            timezoneSection += `\n**Created roles:** ${results.timezones.created.map(r => `<@&${r.id}>`).join(', ')}`;
+        }
+        if (results.timezones.existingAdded.length > 0) {
+            timezoneSection += `\n**Existing roles added:** ${results.timezones.existingAdded.map(r => `<@&${r.id}>`).join(', ')}`;
+        }
+        if (results.timezones.alreadyInCastBot.length > 0) {
+            timezoneSection += `\n**Already configured:** ${results.timezones.alreadyInCastBot.map(r => `<@&${r.id}>`).join(', ')}`;
+        }
+        
+        sections.push(timezoneSection);
     }
     
     // Critical hierarchy warnings - shown prominently
@@ -732,11 +850,29 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
             };
         }
 
-        // Convert to role objects (names will be fetched from Discord)
-        const roleObjects = pronounRoleIds.map(roleId => ({
-            id: roleId,
-            name: `Role ${roleId}` // Placeholder - actual names from Discord cache
-        })).sort((a, b) => a.name.localeCompare(b.name));
+        // Get Discord client to fetch role names
+        const guild = client?.guilds?.cache?.get(guildData.guildId);
+        
+        // Convert to role objects with actual names and determine appropriate emojis
+        const roleObjects = pronounRoleIds.map(roleId => {
+            const discordRole = guild?.roles?.cache?.get(roleId);
+            const roleName = discordRole?.name || `Role ${roleId}`;
+            
+            // Find matching standard pronoun for heart emoji
+            let emoji = null;
+            for (const [standardName, heartEmoji] of Object.entries(PRONOUN_HEART_EMOJIS)) {
+                if (findExistingPronounRole(guild, standardName)?.id === roleId) {
+                    emoji = heartEmoji;
+                    break;
+                }
+            }
+            
+            return {
+                id: roleId,
+                name: roleName,
+                emoji: emoji // Will be null if no heart emoji matches
+            };
+        }).sort((a, b) => a.name.localeCompare(b.name));
 
         // Check Discord reaction limit
         if (roleObjects.length > REACTION_EMOJIS.length) {
@@ -749,11 +885,33 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
             };
         }
 
+        // Generate reaction emojis and description
+        const reactionList = [];
+        const usedEmojis = [];
+        let numberEmojiIndex = 0;
+        
+        for (let i = 0; i < roleObjects.length; i++) {
+            const role = roleObjects[i];
+            let reactionEmoji;
+            
+            if (role.emoji && !usedEmojis.includes(role.emoji)) {
+                // Use heart emoji if available and not already used
+                reactionEmoji = role.emoji;
+                usedEmojis.push(role.emoji);
+            } else {
+                // Fall back to numbered emoji
+                reactionEmoji = REACTION_EMOJIS[numberEmojiIndex];
+                numberEmojiIndex++;
+            }
+            
+            reactionList.push(`${reactionEmoji} - ${role.name}`);
+            roleObjects[i].reactionEmoji = reactionEmoji; // Store for later use
+        }
+
         // Create embed with pronoun list
         const embed = new EmbedBuilder()
             .setTitle('💜 Pronoun Role Selection')
-            .setDescription('React with the emoji corresponding to your pronouns:\n\n' + 
-                roleObjects.map((role, i) => `${REACTION_EMOJIS[i]} - ${role.name}`).join('\n'))
+            .setDescription('React with the emoji corresponding to your pronouns:\n\n' + reactionList.join('\n'))
             .setColor('#7ED321')
             .setFooter({ text: 'You can select multiple pronoun roles' });
 
@@ -766,11 +924,49 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
             }
         };
 
-        // Add reactions asynchronously (similar to timezone function)
+        // Add reactions asynchronously using determined emojis
         setTimeout(async () => {
-            // Implementation similar to timezone reactions
-            console.log('🔍 DEBUG: Adding reactions to pronoun message');
-            // ... (reaction setup code)
+            try {
+                console.log('🔍 DEBUG: Adding reactions to pronoun message');
+                
+                // Get message ID from the response
+                const message = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
+                    headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+                }).then(r => r.json()).then(messages => messages[0]);
+
+                if (!message) {
+                    console.error('❌ DEBUG: Could not retrieve posted message for reactions');
+                    return;
+                }
+
+                // Add reactions with rate limiting using the determined emojis
+                for (let i = 0; i < roleObjects.length; i++) {
+                    try {
+                        const emoji = roleObjects[i].reactionEmoji;
+                        await fetch(
+                            `https://discord.com/api/v10/channels/${channelId}/messages/${message.id}/reactions/${encodeURIComponent(emoji)}/@me`,
+                            {
+                                method: 'PUT',
+                                headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+                            }
+                        );
+                        await new Promise(resolve => setTimeout(resolve, 100)); // Rate limiting
+                    } catch (error) {
+                        console.error(`❌ DEBUG: Failed to add reaction ${roleObjects[i].reactionEmoji}:`, error);
+                    }
+                }
+
+                // Store role mappings for reaction handler
+                if (!client.roleReactions) client.roleReactions = new Map();
+                const roleMapping = Object.fromEntries(roleObjects.map(role => [role.reactionEmoji, role.id]));
+                roleMapping.isPronoun = true; // Mark as pronoun for handler
+                client.roleReactions.set(message.id, roleMapping);
+                
+                console.log('✅ DEBUG: Pronoun reaction message setup complete with heart emojis');
+                
+            } catch (error) {
+                console.error('❌ DEBUG: Error setting up pronoun reactions:', error);
+            }
         }, 500);
 
         return response;
