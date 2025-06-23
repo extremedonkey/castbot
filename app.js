@@ -5065,9 +5065,10 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_manage_shops') {
-      // MVP2: Shop management interface (placeholder for now)
+      // MVP2: Shop management interface with full functionality
       try {
         const member = req.body.member;
+        const guildId = req.body.guild_id;
         
         // Check admin permissions
         if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
@@ -5082,12 +5083,102 @@ Your server is now ready for Tycoons gameplay!`;
         
         console.log(`🏪 DEBUG: Opening shop management interface`);
         
-        // For MVP2, show a simple placeholder interface
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const shops = safariData[guildId]?.shops || {};
+        const items = safariData[guildId]?.items || {};
+        
+        // Create shop management buttons
+        const managementButtons = [
+          new ButtonBuilder()
+            .setCustomId('safari_shop_create')
+            .setLabel('Create New Shop')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🏪'),
+          new ButtonBuilder()
+            .setCustomId('safari_shop_list')
+            .setLabel('View All Shops')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('📋'),
+          new ButtonBuilder()
+            .setCustomId('safari_shop_manage_existing')
+            .setLabel('Edit Existing Shop')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('✏️')
+        ];
+        
+        const managementRow = new ActionRowBuilder().addComponents(managementButtons);
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('prod_safari_menu')
+          .setLabel('⬅ Back to Safari')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        // Create shop summary
+        const shopCount = Object.keys(shops).length;
+        const itemCount = Object.keys(items).length;
+        let totalSales = 0;
+        
+        Object.values(shops).forEach(shop => {
+          totalSales += shop.metadata?.totalSales || 0;
+        });
+        
+        // Show overview of existing shops
+        let shopsOverview = '';
+        if (shopCount === 0) {
+          shopsOverview = '*No shops created yet.*';
+        } else {
+          const shopList = Object.values(shops).slice(0, 5); // Show first 5
+          shopsOverview = shopList.map(shop => {
+            const itemsInShop = shop.items?.length || 0;
+            const sales = shop.metadata?.totalSales || 0;
+            return `**${shop.emoji || '🏪'} ${shop.name}**\n└ ${itemsInShop} items • ${sales} sales`;
+          }).join('\n\n');
+          
+          if (shopCount > 5) {
+            shopsOverview += `\n\n*...and ${shopCount - 5} more shops*`;
+          }
+        }
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 🏪 Shop Management\n\nCreate and manage shops for your Safari adventures.`
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Total Shops:** ${shopCount}\n> **Available Items:** ${itemCount}\n> **Total Sales:** ${totalSales}`
+          },
+          {
+            type: 10, // Text Display component
+            content: `**📋 Current Shops:**\n${shopsOverview}`
+          },
+          {
+            type: 14 // Separator
+          },
+          managementRow.toJSON(), // Shop management buttons
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0x2ecc71, // Green accent color for shop theme
+          components: containerComponents
+        };
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `## 🏪 Shop Management\n\n**Coming Soon!** Shop creation and management interface.\n\n**Planned Features:**\n• Create multiple shops per server\n• Add items to shops with custom prices\n• Set shopkeeper text and themes\n• Role-based shop access\n\nFor now, shops can be created via the button system with \`shop_display\` actions.`,
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
           }
         });
         
@@ -5102,9 +5193,10 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_manage_items') {
-      // MVP2: Item management interface (placeholder for now)
+      // MVP2: Item management interface with full functionality
       try {
         const member = req.body.member;
+        const guildId = req.body.guild_id;
         
         // Check admin permissions
         if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
@@ -5119,12 +5211,104 @@ Your server is now ready for Tycoons gameplay!`;
         
         console.log(`📦 DEBUG: Opening item management interface`);
         
-        // For MVP2, show a simple placeholder interface  
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        const shops = safariData[guildId]?.shops || {};
+        
+        // Create item management buttons
+        const managementButtons = [
+          new ButtonBuilder()
+            .setCustomId('safari_item_create')
+            .setLabel('Create New Item')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('📦'),
+          new ButtonBuilder()
+            .setCustomId('safari_item_list')
+            .setLabel('View All Items')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('📋'),
+          new ButtonBuilder()
+            .setCustomId('safari_item_manage_existing')
+            .setLabel('Edit Existing Item')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('✏️')
+        ];
+        
+        const managementRow = new ActionRowBuilder().addComponents(managementButtons);
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('prod_safari_menu')
+          .setLabel('⬅ Back to Safari')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        // Create item summary
+        const itemCount = Object.keys(items).length;
+        const shopCount = Object.keys(shops).length;
+        let totalSold = 0;
+        
+        Object.values(items).forEach(item => {
+          totalSold += item.metadata?.totalSold || 0;
+        });
+        
+        // Show overview of existing items
+        let itemsOverview = '';
+        if (itemCount === 0) {
+          itemsOverview = '*No items created yet.*';
+        } else {
+          const itemList = Object.values(items).slice(0, 5); // Show first 5
+          itemsOverview = itemList.map(item => {
+            const shopsUsingItem = Object.values(shops).filter(shop => 
+              shop.items?.some(shopItem => shopItem.itemId === item.id)
+            ).length;
+            const sold = item.metadata?.totalSold || 0;
+            return `**${item.emoji || '📦'} ${item.name}**\n└ In ${shopsUsingItem} shops • ${sold} sold • ${item.basePrice} coins`;
+          }).join('\n\n');
+          
+          if (itemCount > 5) {
+            itemsOverview += `\n\n*...and ${itemCount - 5} more items*`;
+          }
+        }
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 📦 Item Management\n\nCreate and manage reusable items for your Safari shops.`
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Total Items:** ${itemCount}\n> **Used in Shops:** ${shopCount}\n> **Total Sold:** ${totalSold}`
+          },
+          {
+            type: 10, // Text Display component
+            content: `**📋 Current Items:**\n${itemsOverview}`
+          },
+          {
+            type: 14 // Separator
+          },
+          managementRow.toJSON(), // Item management buttons
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0x9b59b6, // Purple accent color for item theme
+          components: containerComponents
+        };
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `## 📦 Item Management\n\n**Coming Soon!** Item creation and management interface.\n\n**Planned Features:**\n• Create reusable items with emojis\n• Set base prices and descriptions\n• Item categories and max quantities\n• Cross-shop item usage\n\nFor now, items are created via the conditional action system.`,
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
           }
         });
         
@@ -5134,6 +5318,371 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error loading item management.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_shop_create') {
+      // MVP2: Create new shop interface
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to create shops.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🏪 DEBUG: Create new shop clicked`);
+        
+        // Create shop creation modal
+        const modal = new ModalBuilder()
+          .setCustomId('safari_shop_modal')
+          .setTitle('Create New Shop');
+        
+        const shopNameInput = new TextInputBuilder()
+          .setCustomId('shop_name')
+          .setLabel('Shop Name')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(50)
+          .setPlaceholder('e.g. Adventure Supplies');
+        
+        const shopEmojiInput = new TextInputBuilder()
+          .setCustomId('shop_emoji')
+          .setLabel('Shop Emoji')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(10)
+          .setPlaceholder('🏪');
+        
+        const shopDescriptionInput = new TextInputBuilder()
+          .setCustomId('shop_description')
+          .setLabel('Shop Description')
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(false)
+          .setMaxLength(500)
+          .setPlaceholder('A description of your shop...');
+        
+        const shopkeeperTextInput = new TextInputBuilder()
+          .setCustomId('shopkeeper_text')
+          .setLabel('Shopkeeper Greeting')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(200)
+          .setPlaceholder('Welcome to my shop!');
+        
+        const row1 = new ActionRowBuilder().addComponents(shopNameInput);
+        const row2 = new ActionRowBuilder().addComponents(shopEmojiInput);
+        const row3 = new ActionRowBuilder().addComponents(shopDescriptionInput);
+        const row4 = new ActionRowBuilder().addComponents(shopkeeperTextInput);
+        
+        modal.addComponents(row1, row2, row3, row4);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_shop_create:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating shop interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_item_create') {
+      // MVP2: Create new item interface
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to create items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`📦 DEBUG: Create new item clicked`);
+        
+        // Create item creation modal
+        const modal = new ModalBuilder()
+          .setCustomId('safari_item_modal')
+          .setTitle('Create New Item');
+        
+        const itemNameInput = new TextInputBuilder()
+          .setCustomId('item_name')
+          .setLabel('Item Name')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(50)
+          .setPlaceholder('e.g. Magic Sword');
+        
+        const itemEmojiInput = new TextInputBuilder()
+          .setCustomId('item_emoji')
+          .setLabel('Item Emoji')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(10)
+          .setPlaceholder('⚔️');
+        
+        const itemDescriptionInput = new TextInputBuilder()
+          .setCustomId('item_description')
+          .setLabel('Item Description')
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(false)
+          .setMaxLength(500)
+          .setPlaceholder('A powerful weapon...');
+        
+        const itemPriceInput = new TextInputBuilder()
+          .setCustomId('item_price')
+          .setLabel('Base Price (coins)')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(10)
+          .setPlaceholder('100');
+        
+        const itemCategoryInput = new TextInputBuilder()
+          .setCustomId('item_category')
+          .setLabel('Category')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(30)
+          .setPlaceholder('weapons');
+        
+        const row1 = new ActionRowBuilder().addComponents(itemNameInput);
+        const row2 = new ActionRowBuilder().addComponents(itemEmojiInput);
+        const row3 = new ActionRowBuilder().addComponents(itemDescriptionInput);
+        const row4 = new ActionRowBuilder().addComponents(itemPriceInput);
+        const row5 = new ActionRowBuilder().addComponents(itemCategoryInput);
+        
+        modal.addComponents(row1, row2, row3, row4, row5);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_item_create:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating item interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_shop_list') {
+      // MVP2: View all shops list interface
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to view shops.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🏪 DEBUG: View all shops clicked for guild ${guildId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const shops = safariData[guildId]?.shops || {};
+        const items = safariData[guildId]?.items || {};
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('safari_manage_shops')
+          .setLabel('⬅ Back to Shop Management')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        let content = '## 🏪 All Shops\n\n';
+        
+        if (Object.keys(shops).length === 0) {
+          content += '*No shops created yet.*\n\nCreate your first shop using the **Create New Shop** button in the Shop Management interface.';
+        } else {
+          const shopList = Object.entries(shops)
+            .sort(([, a], [, b]) => (b.metadata?.createdAt || 0) - (a.metadata?.createdAt || 0)); // Sort by creation date
+          
+          content += `**Total Shops:** ${shopList.length}\n\n`;
+          
+          shopList.forEach(([shopId, shop], index) => {
+            const itemsInShop = shop.items?.length || 0;
+            const totalSales = shop.metadata?.totalSales || 0;
+            const createdDate = shop.metadata?.createdAt ? new Date(shop.metadata.createdAt).toLocaleDateString() : 'Unknown';
+            
+            content += `**${index + 1}. ${shop.emoji || '🏪'} ${shop.name}**\n`;
+            if (shop.description) {
+              content += `└ *${shop.description}*\n`;
+            }
+            content += `└ **Shop ID:** \`${shopId}\`\n`;
+            content += `└ **Items:** ${itemsInShop} | **Sales:** ${totalSales} | **Created:** ${createdDate}\n\n`;
+          });
+        }
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: content
+          },
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0x3498db, // Blue accent color
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_shop_list:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading shops list.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_item_list') {
+      // MVP2: View all items list interface
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to view items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`📦 DEBUG: View all items clicked for guild ${guildId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        const shops = safariData[guildId]?.shops || {};
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('safari_manage_items')
+          .setLabel('⬅ Back to Item Management')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        let content = '## 📦 All Items\n\n';
+        
+        if (Object.keys(items).length === 0) {
+          content += '*No items created yet.*\n\nCreate your first item using the **Create New Item** button in the Item Management interface.';
+        } else {
+          // Group items by category
+          const itemsByCategory = {};
+          Object.entries(items).forEach(([itemId, item]) => {
+            const category = item.category || 'General';
+            if (!itemsByCategory[category]) {
+              itemsByCategory[category] = [];
+            }
+            itemsByCategory[category].push([itemId, item]);
+          });
+          
+          const totalItems = Object.keys(items).length;
+          const totalCategories = Object.keys(itemsByCategory).length;
+          
+          content += `**Total Items:** ${totalItems} | **Categories:** ${totalCategories}\n\n`;
+          
+          // Display items by category
+          Object.entries(itemsByCategory).forEach(([category, categoryItems]) => {
+            content += `### ${category}\n`;
+            
+            categoryItems
+              .sort(([, a], [, b]) => (b.metadata?.createdAt || 0) - (a.metadata?.createdAt || 0))
+              .forEach(([itemId, item]) => {
+                const createdDate = item.metadata?.createdAt ? new Date(item.metadata.createdAt).toLocaleDateString() : 'Unknown';
+                const totalSales = item.metadata?.totalSales || 0;
+                
+                content += `**${item.emoji || '📦'} ${item.name}**\n`;
+                if (item.description) {
+                  content += `└ *${item.description}*\n`;
+                }
+                content += `└ **Item ID:** \`${itemId}\` | **Base Price:** ${item.basePrice} coins\n`;
+                content += `└ **Sales:** ${totalSales} | **Created:** ${createdDate}\n\n`;
+              });
+          });
+        }
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: content
+          },
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0x9b59b6, // Purple accent color
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_item_list:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading items list.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -9393,6 +9942,150 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error processing purchase. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_shop_modal') {
+      // Handle Safari shop creation modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to create shops.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Extract form data
+        const shopName = components[0].components[0].value?.trim();
+        const shopEmoji = components[1].components[0].value?.trim() || null;
+        const shopDescription = components[2].components[0].value?.trim() || null;
+        const shopkeeperText = components[3].components[0].value?.trim() || null;
+        
+        // Validate required fields
+        if (!shopName) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Shop name is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🏪 DEBUG: Creating shop "${shopName}" for guild ${guildId}`);
+        
+        // Import Safari manager functions
+        const { createShop } = await import('./safariManager.js');
+        
+        const result = await createShop(guildId, {
+          name: shopName,
+          emoji: shopEmoji,
+          description: shopDescription,
+          shopkeeperText: shopkeeperText,
+          createdBy: member.user.id
+        });
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Shop Created Successfully!**\n\n**${shopEmoji ? shopEmoji + ' ' : ''}${shopName}**\n${shopDescription ? shopDescription : ''}\n\nShop ID: \`${result.shopId}\`\n\nYou can now add items to this shop and assign it to buttons.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error creating shop:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating shop. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_item_modal') {
+      // Handle Safari item creation modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to create items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Extract form data
+        const itemName = components[0].components[0].value?.trim();
+        const itemEmoji = components[1].components[0].value?.trim() || null;
+        const itemDescription = components[2].components[0].value?.trim() || null;
+        const priceStr = components[3].components[0].value?.trim();
+        const category = components[4].components[0].value?.trim() || 'General';
+        
+        // Validate required fields
+        if (!itemName) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Item name is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Validate price
+        const price = parseInt(priceStr, 10);
+        if (isNaN(price) || price < 0 || price > 999999) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Price must be a number between 0 and 999,999.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🎒 DEBUG: Creating item "${itemName}" for guild ${guildId}`);
+        
+        // Import Safari manager functions
+        const { createItem } = await import('./safariManager.js');
+        
+        const result = await createItem(guildId, {
+          name: itemName,
+          emoji: itemEmoji,
+          description: itemDescription,
+          basePrice: price,
+          category: category,
+          createdBy: member.user.id
+        });
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Item Created Successfully!**\n\n**${itemEmoji ? itemEmoji + ' ' : ''}${itemName}**\n${itemDescription ? itemDescription : ''}\n\n**Base Price:** ${price} coins\n**Category:** ${category}\nItem ID: \`${result.itemId}\`\n\nYou can now add this item to any shop with custom pricing.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error creating item:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating item. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

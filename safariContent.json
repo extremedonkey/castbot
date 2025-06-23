@@ -305,6 +305,22 @@
             "Meowth"
           ]
         }
+      },
+      "buy_cat_302775": {
+        "id": "buy_cat_302775",
+        "label": "Buy Cat",
+        "emoji": "🐈",
+        "style": "Primary",
+        "actions": [],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750608302775,
+          "lastModified": 1750608302775,
+          "usageCount": 0,
+          "tags": [
+            "Meow"
+          ]
+        }
       }
     },
     "safaris": {},
