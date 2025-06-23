@@ -1148,9 +1148,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     console.log(`Menu access: Admin=${isAdmin}, User=${member?.user?.username || 'unknown'}`);
     
     if (isAdmin) {
-      // Admin user - show production menu (public message)
+      // Admin user - show production menu (ephemeral)
       await res.send({
-        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
       });
     } else {
       // Regular user - show player menu (ephemeral)
@@ -1193,9 +1196,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const userId = req.body.member?.user?.id;
       const menuResponse = await createProductionMenuInterface(guild, playerData, guildId, userId);
       
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: menuResponse
+      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+      await DiscordRequest(endpoint, {
+        method: 'PATCH',
+        body: menuResponse
       });
       
     } else {
