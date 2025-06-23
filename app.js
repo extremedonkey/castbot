@@ -7288,92 +7288,23 @@ Your server is now ready for Tycoons gameplay!`;
         }
       }
     } else if (custom_id === 'prod_pronoun_react') {
-      // Execute same logic as player_set_pronouns command (available to all users)
+      // Use the enhanced pronoun reaction function with heart emojis
       try {
         const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-
-        // Get pronoun roles from storage
-        const pronounRoleIDs = await getGuildPronouns(guildId);
-        if (!pronounRoleIDs?.length) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'No pronoun roles found. Ask an admin to add some using /pronouns_add first!',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Get role objects and sort alphabetically
-        const roles = await Promise.all(
-          pronounRoleIDs.map(id => guild.roles.fetch(id))
-        );
-        const sortedRoles = roles
-          .filter(role => role) // Remove any null roles
-          .sort((a, b) => a.name.localeCompare(b.name));
-
-        if (sortedRoles.length > REACTION_EMOJIS.length) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `Too many pronoun roles (maximum ${REACTION_EMOJIS.length} supported due to Discord limits)`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Create embed
-        const embed = new EmbedBuilder()
-          .setTitle('Pronoun Role Selection')
-          .setDescription('React with the emoji corresponding to your pronouns:\n\n' + 
-            sortedRoles.map((role, i) => `${REACTION_EMOJIS[i]} - ${role.name}`).join('\n'))
-          .setColor('#7ED321');
-
-        // Send initial response
-        await res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-        });
-
-        // Send the embed as a follow-up and get the message directly
-        const followUpResponse = await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
-          method: 'POST',
-          body: {
-            embeds: [embed]
-          }
-        });
-
-        if (!followUpResponse.id) {
-          console.error('Failed to get message ID from follow-up response');
-          return;
-        }
-
-        const messageId = followUpResponse.id;
-
-        // Add reactions with proper error handling
-        for (let i = 0; i < sortedRoles.length; i++) {
-          try {
-            await fetch(
-              `https://discord.com/api/v10/channels/${req.body.channel_id}/messages/${messageId}/reactions/${encodeURIComponent(REACTION_EMOJIS[i])}/@me`,
-              {
-                method: 'PUT',
-                headers: {
-                  Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
-                },
-              }
-            );
-            // Small delay to avoid rate limits
-            await new Promise(resolve => setTimeout(resolve, 100));
-          } catch (error) {
-            console.error(`Failed to add reaction ${REACTION_EMOJIS[i]}:`, error);
-          }
-        }
-
-        // Store role-emoji mappings in memory for reaction handler
-        if (!client.roleReactions) client.roleReactions = new Map();
-        client.roleReactions.set(messageId, 
-          Object.fromEntries(sortedRoles.map((role, i) => [REACTION_EMOJIS[i], role.id]))
-        );
+        const channelId = req.body.channel_id;
+        const token = req.body.token;
+        
+        // Load guild data for the enhanced function
+        const playerData = await loadPlayerData();
+        const guildData = { 
+          ...playerData[guildId], 
+          guildId // Add guildId for the function
+        };
+        
+        // Call the enhanced function that includes heart emojis
+        const response = await createPronounReactionMessage(guildData, channelId, token, client);
+        
+        return res.send(response);
 
       } catch (error) {
         console.error('Error in prod_pronoun_react:', error);
