@@ -1121,7 +1121,7 @@ async function buyItem(guildId, shopId, itemId, userId) {
  * @param {number} toIndex - Target index for action
  * @returns {boolean} Success status
  */
-export async function reorderButtonAction(guildId, buttonId, fromIndex, toIndex) {
+async function reorderButtonAction(guildId, buttonId, fromIndex, toIndex) {
     try {
         const safariData = await loadSafariContent();
         const button = safariData[guildId]?.buttons?.[buttonId];
@@ -1172,7 +1172,7 @@ export async function reorderButtonAction(guildId, buttonId, fromIndex, toIndex)
  * @param {Object} newAction - New action data
  * @returns {boolean} Success status
  */
-export async function updateButtonAction(guildId, buttonId, actionIndex, newAction) {
+async function updateButtonAction(guildId, buttonId, actionIndex, newAction) {
     try {
         const safariData = await loadSafariContent();
         const button = safariData[guildId]?.buttons?.[buttonId];
@@ -1212,7 +1212,7 @@ export async function updateButtonAction(guildId, buttonId, actionIndex, newActi
  * @param {number} actionIndex - Index of action to delete
  * @returns {boolean} Success status
  */
-export async function deleteButtonAction(guildId, buttonId, actionIndex) {
+async function deleteButtonAction(guildId, buttonId, actionIndex) {
     try {
         const safariData = await loadSafariContent();
         const button = safariData[guildId]?.buttons?.[buttonId];
@@ -1255,7 +1255,7 @@ export async function deleteButtonAction(guildId, buttonId, actionIndex) {
  * @param {Object} properties - New properties
  * @returns {boolean} Success status
  */
-export async function updateButtonProperties(guildId, buttonId, properties) {
+async function updateButtonProperties(guildId, buttonId, properties) {
     try {
         const safariData = await loadSafariContent();
         const button = safariData[guildId]?.buttons?.[buttonId];
@@ -1294,7 +1294,7 @@ export async function updateButtonProperties(guildId, buttonId, properties) {
  * @param {string} buttonId - Button ID
  * @returns {boolean} Success status
  */
-export async function deleteButton(guildId, buttonId) {
+async function deleteButton(guildId, buttonId) {
     try {
         const safariData = await loadSafariContent();
         
