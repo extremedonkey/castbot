@@ -916,3 +916,75 @@ import { PermissionFlagsBits } from 'discord.js';
 - ✅ Consistent permission checks
 - ✅ Reduced boilerplate code
 - ✅ Prevention of common mistakes
+
+### **🚨 CRITICAL: DYNAMIC HANDLER PATTERN EXCLUSIONS** ⚠️
+
+**When implementing dynamic pattern handlers (like Safari buttons), you MUST maintain proper exclusion patterns to prevent interference with specific button handlers.**
+
+#### **Dynamic Handler Example:**
+```javascript
+// Dynamic Safari button handler - handles user-generated buttons
+if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
+    !custom_id.startsWith('safari_add_action_') && 
+    !custom_id.startsWith('safari_finish_button_') &&
+    !custom_id.startsWith('safari_currency_') &&
+    !custom_id.startsWith('safari_button_') &&          // ✅ CRITICAL EXCLUSION
+    custom_id !== 'safari_post_select_button') {
+    // Dynamic button execution logic
+}
+```
+
+#### **MANDATORY STEPS when adding new button patterns:**
+
+1. **Identify Dynamic Handlers**: Find any existing dynamic handlers that use `startsWith()` patterns
+2. **Add Exclusion Pattern**: Add `!custom_id.startsWith('your_new_pattern_')` to prevent interference
+3. **Update BUTTON_HANDLER_REGISTRY.md**: Document the new pattern and its exclusion requirements
+4. **Test Thoroughly**: Verify both dynamic and specific handlers work correctly
+
+#### **Common Dynamic Handler Interference Issues:**
+
+**❌ WRONG - Missing Exclusion:**
+```javascript
+// This will intercept safari_button_manage_existing before it reaches its specific handler
+if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4) {
+    // Dynamic handler logic - WILL BREAK specific safari_button_ handlers
+}
+```
+
+**✅ CORRECT - Proper Exclusion:**
+```javascript
+// This properly excludes safari_button_ patterns from dynamic handling
+if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
+    !custom_id.startsWith('safari_button_')) {
+    // Dynamic handler logic - specific safari_button_ handlers work correctly
+}
+```
+
+#### **Pattern Maintenance Checklist:**
+
+When adding ANY new button pattern that shares a prefix with existing dynamic handlers:
+- [ ] Identify all dynamic handlers that might interfere
+- [ ] Add exclusion patterns to prevent interference  
+- [ ] Test that both dynamic and specific handlers work
+- [ ] Update BUTTON_HANDLER_REGISTRY.md with exclusion notes
+- [ ] Document the pattern relationship in comments
+
+#### **Safari System Specific Patterns:**
+
+**Dynamic Safari Buttons**: `safari_{guildId}_{buttonId}_{timestamp}`
+- **Purpose**: User-generated interactive buttons posted to channels
+- **Exclusions Required**: All other `safari_` prefixed management functions
+
+**Management Button Patterns**: `safari_button_*`, `safari_add_action_*`, etc.
+- **Purpose**: Admin interface for button management
+- **Requirements**: Must be excluded from dynamic handler to function
+
+#### **Pattern Debugging:**
+
+If a button shows "❌ Button not found" instead of expected functionality:
+1. Check if a dynamic handler is intercepting the custom_id
+2. Verify exclusion patterns in the dynamic handler
+3. Add the missing exclusion pattern
+4. Test both dynamic and specific functionality
+
+**⚠️ FAILURE TO MAINTAIN EXCLUSION PATTERNS WILL RESULT IN BROKEN BUTTON HANDLERS**
