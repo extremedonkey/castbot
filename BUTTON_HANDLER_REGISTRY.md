@@ -28,18 +28,34 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 ### **Safari System Buttons**
 | Custom ID | Label | Location | Handler Function | Status |
 |-----------|-------|----------|------------------|--------|
-| `prod_safari_menu` | 🦁 Safari | app.js:~4145 | Direct handler | ✅ Active |
-| `safari_create_button` | 📝 Create Custom Button | app.js:~4947 | Direct handler | ✅ Active |
-| `safari_post_button` | 📤 Post Custom Button | app.js:~5019 | Direct handler | ✅ Active |
-| `safari_manage_currency` | 💰 Manage Currency | app.js:~5106 | Direct handler | ✅ Active |
-| `safari_view_buttons` | 📊 View All Buttons | app.js:~5231 | Direct handler | ✅ Active |
-| `safari_add_action_*` | Add Action buttons | app.js:~5511 | Pattern handler | ✅ Active |
-| `safari_finish_button_*` | Finish & Save | app.js:~5640 | Pattern handler | ✅ Active |
-| `safari_currency_*` | Currency actions | app.js:~5284+ | Pattern handlers | ✅ Active |
-| `safari_my_status` | 💎 My Status | app.js:~5025 | Direct handler | ✅ Active |
-| `safari_manage_shops` | 🏪 Manage Shops | app.js:~5056 | Direct handler | ✅ Active |
-| `safari_manage_items` | 📦 Manage Items | app.js:~5093 | Direct handler | ✅ Active |
+| `prod_safari_menu` | 🦁 Safari | app.js:~3814 | Direct handler | ✅ Active |
+| `safari_create_button` | 📝 Create Custom Button | app.js:~4699 | Direct handler | ✅ Active |
+| `safari_post_button` | 📤 Post Custom Button | app.js:~4771 | Direct handler | ✅ Active |
+| `safari_manage_currency` | 💰 Manage Currency | app.js:~4858 | Direct handler | ✅ Active |
+| `safari_view_buttons` | 📊 View All Buttons | app.js:~4983 | Direct handler | ✅ Active |
+| `safari_my_status` | 💎 My Status | app.js:~5036 | Direct handler | ✅ Active |
+| `safari_manage_shops` | 🏪 Manage Shops | app.js:~5067 | Direct handler | ✅ Active |
+| `safari_manage_items` | 📦 Manage Items | app.js:~5195 | Direct handler | ✅ Active |
+| `safari_shop_create` | ➕ Create New Shop | app.js:~5325 | Direct handler | ✅ Active |
+| `safari_item_create` | ➕ Create New Item | app.js:~5402 | Direct handler | ✅ Active |
+| `safari_shop_list` | 📋 View All Shops | app.js:~5488 | Direct handler | ✅ Active |
+| `safari_item_list` | 📋 View All Items | app.js:~5599 | Direct handler | ✅ Active |
+| `safari_currency_view_all` | 👥 View All Currency | app.js:~5710 | Direct handler | ✅ Active |
+| `safari_currency_set_player` | 💰 Set Player Currency | app.js:~5760 | Direct handler | ✅ Active |
+| `safari_currency_reset_all` | 🗑️ Reset All Currency | app.js:~5832 | Direct handler | ✅ Active |
+| `safari_add_action_*` | Add Action buttons | app.js:~5927 | Pattern handler | ✅ Active |
+| `safari_finish_button_*` | Finish & Save | app.js:~6117 | Pattern handler | ✅ Active |
+| `safari_currency_*` | Currency actions | app.js:~7963+ | Pattern handlers | ✅ Active |
 | `safari_{guildId}_{buttonId}_{timestamp}` | Dynamic Safari buttons | app.js:~2661 | Dynamic handler | ✅ Active |
+
+### **Safari System Modal Handlers**
+| Custom ID | Modal Title | Location | Handler Function | Status |
+|-----------|-------------|----------|------------------|--------|
+| `safari_button_modal` | Create Custom Button | app.js:~9070 | Modal handler | ✅ Active |
+| `safari_action_modal_*` | Add Action Modals | app.js:~9229 | Pattern handler | ✅ Active |
+| `safari_currency_modal_*` | Set Currency Modal | app.js:~9631 | Pattern handler | ✅ Active |
+| `safari_shop_modal` | Create New Shop | app.js:~9747 | Modal handler | ✅ Active |
+| `safari_item_modal` | Create New Item | app.js:~9812 | Modal handler | ✅ Active |
 
 ### **Castlist Navigation Buttons**
 | Custom ID | Label | Location | Handler Function | Status |
