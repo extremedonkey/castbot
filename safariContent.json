@@ -410,6 +410,23 @@
           "lastModified": 1750669387129,
           "totalSales": 0
         }
+      },
+      "1234_704444": {
+        "id": "1234_704444",
+        "name": "1234",
+        "description": "sdadsa",
+        "emoji": "🏪",
+        "items": [],
+        "settings": {
+          "shopkeeperText": "22das",
+          "accentColor": 3066993,
+          "requiresRole": null
+        },
+        "metadata": {
+          "createdAt": 1750671704444,
+          "lastModified": 1750671704444,
+          "totalSales": 0
+        }
       }
     },
     "items": {

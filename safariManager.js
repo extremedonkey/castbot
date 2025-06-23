@@ -1107,6 +1107,235 @@ async function buyItem(guildId, shopId, itemId, userId) {
     }
 }
 
+/**
+ * ====================================================================
+ * EDIT FRAMEWORK FUNCTIONS - Phase 1A: Action Management
+ * ====================================================================
+ */
+
+/**
+ * Reorder button actions by moving one action to a new position
+ * @param {string} guildId - Discord guild ID
+ * @param {string} buttonId - Button ID
+ * @param {number} fromIndex - Current index of action
+ * @param {number} toIndex - Target index for action
+ * @returns {boolean} Success status
+ */
+export async function reorderButtonAction(guildId, buttonId, fromIndex, toIndex) {
+    try {
+        const safariData = await loadSafariContent();
+        const button = safariData[guildId]?.buttons?.[buttonId];
+        
+        if (!button || !button.actions) {
+            console.error(`Button ${buttonId} not found or has no actions`);
+            return false;
+        }
+        
+        const actions = [...button.actions];
+        
+        // Validate indices
+        if (fromIndex < 0 || fromIndex >= actions.length || 
+            toIndex < 0 || toIndex >= actions.length) {
+            console.error(`Invalid indices: from=${fromIndex}, to=${toIndex}, length=${actions.length}`);
+            return false;
+        }
+        
+        // Move action
+        const [movedAction] = actions.splice(fromIndex, 1);
+        actions.splice(toIndex, 0, movedAction);
+        
+        // Update order numbers
+        actions.forEach((action, index) => {
+            action.order = index + 1;
+        });
+        
+        // Update button
+        button.actions = actions;
+        button.metadata.lastModified = Date.now();
+        
+        await saveSafariContent(safariData);
+        console.log(`🔄 DEBUG: Reordered action from ${fromIndex} to ${toIndex} for button ${buttonId}`);
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error reordering button action:', error);
+        return false;
+    }
+}
+
+/**
+ * Update a specific action in a button
+ * @param {string} guildId - Discord guild ID
+ * @param {string} buttonId - Button ID
+ * @param {number} actionIndex - Index of action to update
+ * @param {Object} newAction - New action data
+ * @returns {boolean} Success status
+ */
+export async function updateButtonAction(guildId, buttonId, actionIndex, newAction) {
+    try {
+        const safariData = await loadSafariContent();
+        const button = safariData[guildId]?.buttons?.[buttonId];
+        
+        if (!button || !button.actions) {
+            console.error(`Button ${buttonId} not found or has no actions`);
+            return false;
+        }
+        
+        if (actionIndex < 0 || actionIndex >= button.actions.length) {
+            console.error(`Invalid action index: ${actionIndex}`);
+            return false;
+        }
+        
+        // Preserve order
+        newAction.order = button.actions[actionIndex].order;
+        
+        // Update action
+        button.actions[actionIndex] = newAction;
+        button.metadata.lastModified = Date.now();
+        
+        await saveSafariContent(safariData);
+        console.log(`✏️ DEBUG: Updated action ${actionIndex} for button ${buttonId}`);
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error updating button action:', error);
+        return false;
+    }
+}
+
+/**
+ * Delete a specific action from a button
+ * @param {string} guildId - Discord guild ID
+ * @param {string} buttonId - Button ID
+ * @param {number} actionIndex - Index of action to delete
+ * @returns {boolean} Success status
+ */
+export async function deleteButtonAction(guildId, buttonId, actionIndex) {
+    try {
+        const safariData = await loadSafariContent();
+        const button = safariData[guildId]?.buttons?.[buttonId];
+        
+        if (!button || !button.actions) {
+            console.error(`Button ${buttonId} not found or has no actions`);
+            return false;
+        }
+        
+        if (actionIndex < 0 || actionIndex >= button.actions.length) {
+            console.error(`Invalid action index: ${actionIndex}`);
+            return false;
+        }
+        
+        // Remove action
+        button.actions.splice(actionIndex, 1);
+        
+        // Update order numbers for remaining actions
+        button.actions.forEach((action, index) => {
+            action.order = index + 1;
+        });
+        
+        button.metadata.lastModified = Date.now();
+        
+        await saveSafariContent(safariData);
+        console.log(`🗑️ DEBUG: Deleted action ${actionIndex} from button ${buttonId}`);
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error deleting button action:', error);
+        return false;
+    }
+}
+
+/**
+ * Update button properties (label, emoji, style, tags)
+ * @param {string} guildId - Discord guild ID
+ * @param {string} buttonId - Button ID
+ * @param {Object} properties - New properties
+ * @returns {boolean} Success status
+ */
+export async function updateButtonProperties(guildId, buttonId, properties) {
+    try {
+        const safariData = await loadSafariContent();
+        const button = safariData[guildId]?.buttons?.[buttonId];
+        
+        if (!button) {
+            console.error(`Button ${buttonId} not found`);
+            return false;
+        }
+        
+        // Update properties
+        if (properties.label !== undefined) button.label = properties.label;
+        if (properties.emoji !== undefined) button.emoji = properties.emoji;
+        if (properties.style !== undefined) button.style = properties.style;
+        if (properties.tags !== undefined) {
+            button.metadata.tags = Array.isArray(properties.tags) ? 
+                properties.tags : 
+                properties.tags.split(',').map(t => t.trim()).filter(t => t);
+        }
+        
+        button.metadata.lastModified = Date.now();
+        
+        await saveSafariContent(safariData);
+        console.log(`🔧 DEBUG: Updated properties for button ${buttonId}`);
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error updating button properties:', error);
+        return false;
+    }
+}
+
+/**
+ * Delete a button completely
+ * @param {string} guildId - Discord guild ID
+ * @param {string} buttonId - Button ID
+ * @returns {boolean} Success status
+ */
+export async function deleteButton(guildId, buttonId) {
+    try {
+        const safariData = await loadSafariContent();
+        
+        if (!safariData[guildId]?.buttons?.[buttonId]) {
+            console.error(`Button ${buttonId} not found`);
+            return false;
+        }
+        
+        // Remove button
+        delete safariData[guildId].buttons[buttonId];
+        
+        await saveSafariContent(safariData);
+        console.log(`🗑️ DEBUG: Deleted button ${buttonId} completely`);
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error deleting button:', error);
+        return false;
+    }
+}
+
+/**
+ * Validate action limits and constraints
+ * @param {Array} actions - Array of actions
+ * @returns {Object} Validation result with errors
+ */
+export function validateActionLimit(actions) {
+    const { SAFARI_LIMITS } = require('./config/safariLimits.js');
+    const errors = [];
+    
+    if (actions.length > SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON) {
+        errors.push(`Maximum ${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON} actions allowed per button`);
+    }
+    
+    return {
+        valid: errors.length === 0,
+        errors
+    };
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -1131,5 +1360,12 @@ export {
     executeShopDisplay,
     executeRandomOutcome,
     ACTION_TYPES,
-    CONDITION_TYPES
+    CONDITION_TYPES,
+    // Edit Framework exports
+    reorderButtonAction,
+    updateButtonAction,
+    deleteButtonAction,
+    updateButtonProperties,
+    deleteButton,
+    validateActionLimit
 };

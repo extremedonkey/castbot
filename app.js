@@ -6097,10 +6097,11 @@ Your server is now ready for Tycoons gameplay!`;
         
         console.log(`✏️ DEBUG: Selected button ${selectedButtonId} for editing`);
         
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const button = safariData[guildId]?.buttons?.[selectedButtonId];
+        // Import Safari manager functions and universal edit framework
+        const { getCustomButton } = await import('./safariManager.js');
+        const { EditInterfaceBuilder, EDIT_TYPES } = await import('./editFramework.js');
+        
+        const button = await getCustomButton(guildId, selectedButtonId);
         
         if (!button) {
           return res.send({
@@ -6112,73 +6113,27 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Create edit functionality buttons
-        const editButtons = [
-          new ButtonBuilder()
-            .setCustomId(`safari_button_edit_properties_${selectedButtonId}`)
-            .setLabel('Edit Properties')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('📝'),
-          new ButtonBuilder()
-            .setCustomId(`safari_button_edit_actions_${selectedButtonId}`)
-            .setLabel('Manage Actions')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('⚙️'),
-          new ButtonBuilder()
-            .setCustomId(`safari_button_delete_${selectedButtonId}`)
-            .setLabel('Delete Button')
-            .setStyle(ButtonStyle.Danger)
-            .setEmoji('🗑️')
-        ];
+        console.log('🎛️ DEBUG: Creating edit interface for button:', selectedButtonId);
         
-        const editRow = new ActionRowBuilder().addComponents(editButtons);
+        // Create universal edit interface for buttons
+        const editBuilder = new EditInterfaceBuilder(EDIT_TYPES.BUTTON);
+        const editInterface = editBuilder.createEditInterface(button, selectedButtonId);
         
-        // Create back button
-        const backButton = new ButtonBuilder()
-          .setCustomId('safari_button_manage_existing')
-          .setLabel('⬅ Back to Button List')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        
-        // Format button information
-        const actionsList = button.actions?.length > 0 
-          ? button.actions.map((action, index) => `${index + 1}. **${action.type}**`).join('\n')
-          : '*No actions configured*';
-        
-        const tagsText = button.metadata?.tags?.length > 0 
-          ? button.metadata.tags.join(', ')
-          : '*No tags*';
-        
-        // Create response with Components V2
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## ✏️ Edit Button: ${button.emoji || '🔘'} ${button.label}\n\n**Button ID:** \`${selectedButtonId}\`\n**Style:** ${button.style}\n**Created:** ${new Date(button.metadata?.createdAt || 0).toLocaleDateString()}\n**Usage:** ${button.metadata?.usageCount || 0} interactions\n**Tags:** ${tagsText}`
-          },
-          {
-            type: 10, // Text Display component
-            content: `**Actions (${button.actions?.length || 0}):**\n${actionsList}`
-          },
-          editRow.toJSON(), // Edit functionality buttons
-          {
-            type: 14 // Separator
-          },
-          backRow.toJSON() // Back button
-        ];
-        
-        const container = {
-          type: 17, // Container component
-          accent_color: 0x3498db, // Blue accent color
-          components: containerComponents
-        };
+        // Add back button
+        editInterface.components[0].components.push({
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: 'safari_button_manage_existing',
+            label: '⬅ Back to Button List',
+            style: 2,
+            emoji: { name: '🔙' }
+          }]
+        });
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [container]
-          }
+          data: editInterface
         });
         
       } catch (error) {
@@ -6191,18 +6146,221 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id.startsWith('safari_button_edit_properties_')) {
-      // Button property editing placeholder (Coming Soon)
+    // ===================================================================
+    // EDIT FRAMEWORK HANDLERS - Phase 1A: Action Management
+    // ===================================================================
+    } else if (custom_id.startsWith('safari_action_move_up_')) {
+      // Handle moving action up
       try {
-        const buttonId = custom_id.replace('safari_button_edit_properties_', '');
-        console.log(`📝 DEBUG: Edit properties clicked for button ${buttonId}`);
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
         
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to reorder actions.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse custom_id: safari_action_move_up_buttonId_actionIndex
+        const parts = custom_id.split('_');
+        const buttonId = parts.slice(4, -1).join('_');
+        const actionIndex = parseInt(parts[parts.length - 1]);
+        
+        console.log(`⬆️ DEBUG: Moving action ${actionIndex} up for button ${buttonId}`);
+        
+        if (actionIndex <= 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action is already at the top.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Import action management functions
+        const { reorderButtonAction } = await import('./safariManager.js');
+        const success = await reorderButtonAction(guildId, buttonId, actionIndex, actionIndex - 1);
+        
+        if (!success) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Failed to reorder action.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Refresh the edit interface
+        const { getCustomButton } = await import('./safariManager.js');
+        const { EditInterfaceBuilder, EDIT_TYPES } = await import('./editFramework.js');
+        
+        const button = await getCustomButton(guildId, buttonId);
+        const editBuilder = new EditInterfaceBuilder(EDIT_TYPES.BUTTON);
+        const editInterface = editBuilder.createEditInterface(button, buttonId);
+        
+        // Add back button
+        editInterface.components[0].components.push({
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: 'safari_button_manage_existing',
+            label: '⬅ Back to Button List',
+            style: 2,
+            emoji: { name: '🔙' }
+          }]
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: editInterface
+        });
+        
+      } catch (error) {
+        console.error('Error moving action up:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '🚧 **Edit Properties - Coming Soon!**\n\nButton property editing functionality will be available in a future update.\n\nFor now, you can create a new button with your desired properties.',
+            content: '❌ Error reordering action.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
+        });
+      }
+    } else if (custom_id.startsWith('safari_action_move_down_')) {
+      // Handle moving action down
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to reorder actions.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse custom_id: safari_action_move_down_buttonId_actionIndex
+        const parts = custom_id.split('_');
+        const buttonId = parts.slice(4, -1).join('_');
+        const actionIndex = parseInt(parts[parts.length - 1]);
+        
+        console.log(`⬇️ DEBUG: Moving action ${actionIndex} down for button ${buttonId}`);
+        
+        // Get button to check if it's the last action
+        const { getCustomButton } = await import('./safariManager.js');
+        const button = await getCustomButton(guildId, buttonId);
+        
+        if (actionIndex >= button.actions.length - 1) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action is already at the bottom.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Import action management functions
+        const { reorderButtonAction } = await import('./safariManager.js');
+        const success = await reorderButtonAction(guildId, buttonId, actionIndex, actionIndex + 1);
+        
+        if (!success) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Failed to reorder action.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Refresh the edit interface
+        const { EditInterfaceBuilder, EDIT_TYPES } = await import('./editFramework.js');
+        
+        const updatedButton = await getCustomButton(guildId, buttonId);
+        const editBuilder = new EditInterfaceBuilder(EDIT_TYPES.BUTTON);
+        const editInterface = editBuilder.createEditInterface(updatedButton, buttonId);
+        
+        // Add back button
+        editInterface.components[0].components.push({
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: 'safari_button_manage_existing',
+            label: '⬅ Back to Button List',
+            style: 2,
+            emoji: { name: '🔙' }
+          }]
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: editInterface
+        });
+        
+      } catch (error) {
+        console.error('Error moving action down:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error reordering action.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_button_edit_properties_')) {
+      // Button property editing using universal framework
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to edit properties.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const buttonId = custom_id.replace('safari_button_edit_properties_', '');
+        console.log(`📝 DEBUG: Edit properties clicked for button ${buttonId}`);
+        
+        // Import functions
+        const { getCustomButton } = await import('./safariManager.js');
+        const { PropertiesEditor, EDIT_TYPES } = await import('./editFramework.js');
+        
+        const button = await getCustomButton(guildId, buttonId);
+        
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Button not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create properties edit modal
+        const propertiesEditor = new PropertiesEditor(EDIT_TYPES.BUTTON);
+        const modal = propertiesEditor.createPropertiesModal(button, buttonId);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
         });
         
       } catch (error) {

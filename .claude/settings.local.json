@@ -159,7 +159,8 @@
       "Bash(true)",
       "Bash(timeout:*)",
       "Bash(scp:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "WebFetch(domain:ibb.co)"
     ],
     "deny": []
   }
