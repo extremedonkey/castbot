@@ -2454,6 +2454,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_item_') &&
         custom_id !== 'safari_post_select_button' && 
         !custom_id.startsWith('safari_post_channel_')) {
+      console.log(`🔍 DEBUG: Dynamic Safari handler processing custom_id: ${custom_id}`);
       try {
         const parts = custom_id.split('_');
         const guildId = parts[1];
@@ -5326,6 +5327,7 @@ Your server is now ready for Tycoons gameplay!`;
       }
     } else if (custom_id === 'safari_shop_create') {
       // MVP2: Create new shop interface
+      console.log('🏪 DEBUG: safari_shop_create handler called');
       try {
         const member = req.body.member;
         
@@ -5489,6 +5491,7 @@ Your server is now ready for Tycoons gameplay!`;
       }
     } else if (custom_id === 'safari_shop_list') {
       // MVP2: View all shops list interface
+      console.log('📋 DEBUG: safari_shop_list handler called');
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
