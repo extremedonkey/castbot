@@ -8105,7 +8105,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         };
         
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
             flags: (1 << 15), // IS_COMPONENTS_V2 flag
             components: [container]

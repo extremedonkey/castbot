@@ -356,6 +356,22 @@
             "tt"
           ]
         }
+      },
+      "easdsa_441063": {
+        "id": "easdsa_441063",
+        "label": "easdsa",
+        "emoji": null,
+        "style": "Primary",
+        "actions": [],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750669441063,
+          "lastModified": 1750669441063,
+          "usageCount": 0,
+          "tags": [
+            "asdasd"
+          ]
+        }
       }
     },
     "safaris": {},
@@ -375,6 +391,23 @@
         "metadata": {
           "createdAt": 1750668606108,
           "lastModified": 1750668606108,
+          "totalSales": 0
+        }
+      },
+      "the_general_store_387129": {
+        "id": "the_general_store_387129",
+        "name": "The General Store",
+        "description": "The best goods in town",
+        "emoji": "🫡",
+        "items": [],
+        "settings": {
+          "shopkeeperText": "Wot u want",
+          "accentColor": 3066993,
+          "requiresRole": null
+        },
+        "metadata": {
+          "createdAt": 1750669387129,
+          "lastModified": 1750669387129,
           "totalSales": 0
         }
       }
