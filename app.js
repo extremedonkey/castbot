@@ -291,7 +291,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   };
   
   return {
-    flags: (1 << 15), // IS_COMPONENTS_V2 flag
+    flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 flag + EPHEMERAL flag
     components: [prodMenuContainer]
   };
 }
@@ -1193,10 +1193,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const userId = req.body.member?.user?.id;
       const menuResponse = await createProductionMenuInterface(guild, playerData, guildId, userId);
       
-      const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-      await DiscordRequest(endpoint, {
-        method: 'PATCH',
-        body: menuResponse
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: menuResponse
       });
       
     } else {
@@ -3286,10 +3285,6 @@ To fix this:
         
         if (isAdmin) {
           // Admin user - redirect to production menu interface (same as /prod_menu command)
-          await res.send({
-            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-          });
-          
           const guild = await client.guilds.fetch(guildId);
           const playerData = await loadPlayerData();
           
@@ -3297,10 +3292,9 @@ To fix this:
           const userId = member?.user?.id;
           const menuResponse = await createProductionMenuInterface(guild, playerData, guildId, userId);
           
-          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-          await DiscordRequest(endpoint, {
-            method: 'PATCH',
-            body: menuResponse
+          await res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: menuResponse
           });
         } else {
           // Regular user - use new player management UI
