@@ -1236,7 +1236,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         method: 'PATCH',
         body: {
           content: '❌ Error loading menu. Please try again.',
-          components: []
+          components: [],
+          flags: InteractionResponseFlags.EPHEMERAL
         }
       });
     } catch (updateError) {

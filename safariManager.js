@@ -1322,8 +1322,8 @@ export async function deleteButton(guildId, buttonId) {
  * @param {Array} actions - Array of actions
  * @returns {Object} Validation result with errors
  */
-export function validateActionLimit(actions) {
-    const { SAFARI_LIMITS } = require('./config/safariLimits.js');
+async function validateActionLimit(actions) {
+    const { SAFARI_LIMITS } = await import('./config/safariLimits.js');
     const errors = [];
     
     if (actions.length > SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON) {
