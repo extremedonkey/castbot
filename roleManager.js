@@ -493,8 +493,13 @@ async function updateCastBotStorage(guildId, results) {
     if (newPronounIds.length > 0) {
         const currentPronounIds = playerData[guildId].pronounRoleIDs || [];
         const updatedPronounIds = [...new Set([...currentPronounIds, ...newPronounIds])];
+        
+        console.log(`💾 DEBUG: Adding ${newPronounIds.length} pronoun roles to storage:`, newPronounIds);
+        console.log(`💾 DEBUG: Current pronoun IDs:`, currentPronounIds);
+        console.log(`💾 DEBUG: Updated pronoun IDs:`, updatedPronounIds);
+        
         await updateGuildPronouns(guildId, updatedPronounIds);
-        console.log(`💾 DEBUG: Updated ${newPronounIds.length} pronoun roles in storage`);
+        console.log(`💾 DEBUG: Successfully updated ${newPronounIds.length} pronoun roles in storage`);
     }
 
     // Update timezone roles - add new and existing roles with metadata
