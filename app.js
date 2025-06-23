@@ -5692,6 +5692,196 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'safari_shop_manage_existing') {
+      // MVP2: Edit existing shop interface
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to edit shops.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`✏️ DEBUG: Edit existing shop clicked for guild ${guildId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const shops = safariData[guildId]?.shops || {};
+        
+        if (Object.keys(shops).length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **No shops to edit**\n\nCreate your first shop before you can edit existing ones.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create shop selection dropdown
+        const shopOptions = Object.entries(shops).slice(0, 25).map(([shopId, shop]) => ({
+          label: `${shop.emoji || '🏪'} ${shop.name}`.slice(0, 100),
+          value: shopId,
+          description: `${shop.description || 'No description'}`.slice(0, 100)
+        }));
+        
+        const shopSelect = new StringSelectMenuBuilder()
+          .setCustomId('safari_shop_edit_select')
+          .setPlaceholder('Choose a shop to edit...')
+          .setMinValues(1)
+          .setMaxValues(1)
+          .addOptions(shopOptions);
+        
+        const selectRow = new ActionRowBuilder().addComponents(shopSelect);
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('safari_manage_shops')
+          .setLabel('⬅ Back to Shop Management')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## ✏️ Edit Existing Shop\n\nSelect a shop to edit from the dropdown below:`
+          },
+          selectRow.toJSON(), // Shop selection dropdown
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0xf39c12, // Orange accent color for editing
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_shop_manage_existing:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading shop editor.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_item_manage_existing') {
+      // MVP2: Edit existing item interface
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to edit items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`✏️ DEBUG: Edit existing item clicked for guild ${guildId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        
+        if (Object.keys(items).length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **No items to edit**\n\nCreate your first item before you can edit existing ones.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create item selection dropdown
+        const itemOptions = Object.entries(items).slice(0, 25).map(([itemId, item]) => ({
+          label: `${item.emoji || '📦'} ${item.name}`.slice(0, 100),
+          value: itemId,
+          description: `${item.category || 'General'} - ${item.basePrice} coins`.slice(0, 100)
+        }));
+        
+        const itemSelect = new StringSelectMenuBuilder()
+          .setCustomId('safari_item_edit_select')
+          .setPlaceholder('Choose an item to edit...')
+          .setMinValues(1)
+          .setMaxValues(1)
+          .addOptions(itemOptions);
+        
+        const selectRow = new ActionRowBuilder().addComponents(itemSelect);
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('safari_manage_items')
+          .setLabel('⬅ Back to Item Management')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## ✏️ Edit Existing Item\n\nSelect an item to edit from the dropdown below:`
+          },
+          selectRow.toJSON(), // Item selection dropdown
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0xe67e22, // Orange accent color for editing
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_item_manage_existing:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading item editor.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'safari_currency_view_all') {
       // Handle View All Currency Balances
       try {
@@ -8056,6 +8246,82 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error selecting user for currency.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_shop_edit_select') {
+      // Handle shop selection for editing
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const selectedShopId = data.values[0];
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to edit shops.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`✏️ DEBUG: Selected shop ${selectedShopId} for editing`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `🚧 **Shop Editing Coming Soon**\n\nShop editing functionality is under development. For now, you can:\n\n• Create new shops\n• View all shops\n• Delete and recreate shops as needed\n\nSelected shop: \`${selectedShopId}\``,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling shop edit selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error selecting shop for editing.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_item_edit_select') {
+      // Handle item selection for editing
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const selectedItemId = data.values[0];
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to edit items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`✏️ DEBUG: Selected item ${selectedItemId} for editing`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `🚧 **Item Editing Coming Soon**\n\nItem editing functionality is under development. For now, you can:\n\n• Create new items\n• View all items\n• Delete and recreate items as needed\n\nSelected item: \`${selectedItemId}\``,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling item edit selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error selecting item for editing.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
