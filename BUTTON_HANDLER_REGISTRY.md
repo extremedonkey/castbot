@@ -34,6 +34,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_manage_currency` | 💰 Manage Currency | app.js:~4858 | Direct handler | ✅ Active |
 | `safari_view_buttons` | 📊 View All Buttons | app.js:~4983 | Direct handler | ✅ Active |
 | `safari_my_status` | 💎 My Status | app.js:~5036 | Direct handler | ✅ Active |
+| `safari_manage_safari_buttons` | 🎛️ Manage Safari Buttons | app.js:~3893 | Direct handler | ✅ Active |
 | `safari_manage_shops` | 🏪 Manage Shops | app.js:~5067 | Direct handler | ✅ Active |
 | `safari_manage_items` | 📦 Manage Items | app.js:~5195 | Direct handler | ✅ Active |
 | `safari_shop_create` | ➕ Create New Shop | app.js:~5325 | Direct handler | ✅ Active |
@@ -43,6 +44,11 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_currency_view_all` | 👥 View All Currency | app.js:~5710 | Direct handler | ✅ Active |
 | `safari_currency_set_player` | 💰 Set Player Currency | app.js:~5760 | Direct handler | ✅ Active |
 | `safari_currency_reset_all` | 🗑️ Reset All Currency | app.js:~5832 | Direct handler | ✅ Active |
+| `safari_button_manage_existing` | ✏️ Edit Existing Button | app.js:~5983 | Direct handler | ✅ Active |
+| `safari_button_edit_select` | Button Selection Dropdown | app.js:~6078 | Select handler | ✅ Active |
+| `safari_button_edit_properties_*` | Edit Properties | app.js:~6193 | Pattern handler | 🚧 Coming Soon |
+| `safari_button_edit_actions_*` | Manage Actions | app.js:~6217 | Pattern handler | 🚧 Coming Soon |
+| `safari_button_delete_*` | Delete Button | app.js:~6241 | Pattern handler | 🚧 Coming Soon |
 | `safari_add_action_*` | Add Action buttons | app.js:~5927 | Pattern handler | ✅ Active |
 | `safari_finish_button_*` | Finish & Save | app.js:~6117 | Pattern handler | ✅ Active |
 | `safari_currency_*` | Currency actions | app.js:~7963+ | Pattern handlers | ✅ Active |

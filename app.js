@@ -379,34 +379,24 @@ async function createSafariMenu() {
   // Create safari management buttons - Row 1: Core Functions
   const safariButtonsRow1 = [
     new ButtonBuilder()
-      .setCustomId('safari_create_button')
-      .setLabel('Create Custom Button')
+      .setCustomId('safari_manage_safari_buttons')
+      .setLabel('Manage Safari Buttons')
       .setStyle(ButtonStyle.Primary)
-      .setEmoji('📝'),
-    new ButtonBuilder()
-      .setCustomId('safari_post_button')
-      .setLabel('Post Custom Button')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📤'),
-    new ButtonBuilder()
-      .setCustomId('safari_view_buttons')
-      .setLabel('View All Buttons')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📊'),
+      .setEmoji('🎛️'),
     new ButtonBuilder()
       .setCustomId('safari_my_status')
       .setLabel('My Status')
       .setStyle(ButtonStyle.Success)
-      .setEmoji('💎')
-  ];
-  
-  // Row 2: Admin & Management Functions
-  const safariButtonsRow2 = [
+      .setEmoji('💎'),
     new ButtonBuilder()
       .setCustomId('safari_manage_currency')
       .setLabel('Manage Currency')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💰'),
+      .setEmoji('💰')
+  ];
+  
+  // Row 2: Admin & Management Functions
+  const safariButtonsRow2 = [
     new ButtonBuilder()
       .setCustomId('safari_manage_shops')
       .setLabel('Manage Shops')
@@ -3900,6 +3890,114 @@ To fix this:
           }
         });
       }
+    } else if (custom_id === 'safari_manage_safari_buttons') {
+      // Handle Safari Button Management submenu
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to manage Safari buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🎛️ DEBUG: Opening Safari button management interface`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const buttons = Object.values(safariData[guildId]?.buttons || {});
+        
+        // Create button management buttons
+        const managementButtons = [
+          new ButtonBuilder()
+            .setCustomId('safari_create_button')
+            .setLabel('Create Custom Button')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('📝'),
+          new ButtonBuilder()
+            .setCustomId('safari_view_buttons')
+            .setLabel('View All Buttons')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('📊'),
+          new ButtonBuilder()
+            .setCustomId('safari_button_manage_existing')
+            .setLabel('Edit Existing Button')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('✏️')
+        ];
+        
+        const managementRow = new ActionRowBuilder().addComponents(managementButtons);
+        
+        // Create posting button row
+        const postingButtons = [
+          new ButtonBuilder()
+            .setCustomId('safari_post_button')
+            .setLabel('Post Custom Button')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('📤')
+        ];
+        
+        const postingRow = new ActionRowBuilder().addComponents(postingButtons);
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('prod_safari_menu')
+          .setLabel('⬅ Back to Safari')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        // Create button summary
+        const buttonCount = buttons.length;
+        const totalUsage = buttons.reduce((sum, btn) => sum + (btn.metadata?.usageCount || 0), 0);
+        const buttonsWithActions = buttons.filter(btn => btn.actions && btn.actions.length > 0).length;
+        
+        // Build container components
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 🎛️ Manage Safari Buttons\n\nCreate, edit, and manage your interactive custom buttons.\n\n**📊 Statistics:**\n• **Total Buttons:** ${buttonCount}\n• **With Actions:** ${buttonsWithActions}\n• **Total Usage:** ${totalUsage} interactions`
+          },
+          managementRow.toJSON(), // Management buttons
+          postingRow.toJSON(), // Posting buttons
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back navigation
+        ];
+        
+        // Create Components V2 Container
+        const container = {
+          type: 17, // Container component
+          accent_color: 0x3498db, // Blue accent color
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling safari_manage_safari_buttons:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading Safari button management interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'prod_menu_back') {
       // Handle Back to Main Menu - restore production menu interface
       try {
@@ -5878,6 +5976,288 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error loading item editor.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_button_manage_existing') {
+      // Edit existing button interface following shop/item pattern
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to edit buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`✏️ DEBUG: Edit existing button clicked for guild ${guildId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const buttons = safariData[guildId]?.buttons || {};
+        
+        if (Object.keys(buttons).length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **No buttons to edit**\n\nCreate your first custom button before you can edit existing ones.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create button selection dropdown
+        const buttonOptions = Object.entries(buttons).slice(0, 25).map(([buttonId, button]) => ({
+          label: `${button.emoji || '🔘'} ${button.label}`.slice(0, 100),
+          value: buttonId,
+          description: `${button.actions?.length || 0} action${(button.actions?.length || 0) !== 1 ? 's' : ''} | Used ${button.metadata?.usageCount || 0} times`.slice(0, 100)
+        }));
+        
+        const buttonSelect = new StringSelectMenuBuilder()
+          .setCustomId('safari_button_edit_select')
+          .setPlaceholder('Choose a button to edit...')
+          .setMinValues(1)
+          .setMaxValues(1)
+          .addOptions(buttonOptions);
+        
+        const selectRow = new ActionRowBuilder().addComponents(buttonSelect);
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('safari_manage_safari_buttons')
+          .setLabel('⬅ Back to Button Management')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## ✏️ Edit Existing Button\n\nSelect a button to edit from the dropdown below:`
+          },
+          selectRow.toJSON(), // Button selection dropdown
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0xf39c12, // Orange accent color for editing
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_button_manage_existing:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading button editor.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_button_edit_select') {
+      // Handle button selection for editing
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const data = req.body.data;
+        const selectedButtonId = data.values[0];
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to edit buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`✏️ DEBUG: Selected button ${selectedButtonId} for editing`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const button = safariData[guildId]?.buttons?.[selectedButtonId];
+        
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Button not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create edit functionality buttons
+        const editButtons = [
+          new ButtonBuilder()
+            .setCustomId(`safari_button_edit_properties_${selectedButtonId}`)
+            .setLabel('Edit Properties')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('📝'),
+          new ButtonBuilder()
+            .setCustomId(`safari_button_edit_actions_${selectedButtonId}`)
+            .setLabel('Manage Actions')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('⚙️'),
+          new ButtonBuilder()
+            .setCustomId(`safari_button_delete_${selectedButtonId}`)
+            .setLabel('Delete Button')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🗑️')
+        ];
+        
+        const editRow = new ActionRowBuilder().addComponents(editButtons);
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('safari_button_manage_existing')
+          .setLabel('⬅ Back to Button List')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        // Format button information
+        const actionsList = button.actions?.length > 0 
+          ? button.actions.map((action, index) => `${index + 1}. **${action.type}**`).join('\n')
+          : '*No actions configured*';
+        
+        const tagsText = button.metadata?.tags?.length > 0 
+          ? button.metadata.tags.join(', ')
+          : '*No tags*';
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## ✏️ Edit Button: ${button.emoji || '🔘'} ${button.label}\n\n**Button ID:** \`${selectedButtonId}\`\n**Style:** ${button.style}\n**Created:** ${new Date(button.metadata?.createdAt || 0).toLocaleDateString()}\n**Usage:** ${button.metadata?.usageCount || 0} interactions\n**Tags:** ${tagsText}`
+          },
+          {
+            type: 10, // Text Display component
+            content: `**Actions (${button.actions?.length || 0}):**\n${actionsList}`
+          },
+          editRow.toJSON(), // Edit functionality buttons
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0x3498db, // Blue accent color
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_button_edit_select:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading button details.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_button_edit_properties_')) {
+      // Button property editing placeholder (Coming Soon)
+      try {
+        const buttonId = custom_id.replace('safari_button_edit_properties_', '');
+        console.log(`📝 DEBUG: Edit properties clicked for button ${buttonId}`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '🚧 **Edit Properties - Coming Soon!**\n\nButton property editing functionality will be available in a future update.\n\nFor now, you can create a new button with your desired properties.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_button_edit_properties:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading property editor.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_button_edit_actions_')) {
+      // Button action management placeholder (Coming Soon)
+      try {
+        const buttonId = custom_id.replace('safari_button_edit_actions_', '');
+        console.log(`⚙️ DEBUG: Manage actions clicked for button ${buttonId}`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '🚧 **Manage Actions - Coming Soon!**\n\nAdvanced action management will be available in a future update.\n\nFor now, you can create a new button and configure actions during creation.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_button_edit_actions:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading action manager.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_button_delete_')) {
+      // Button deletion placeholder (Coming Soon)
+      try {
+        const buttonId = custom_id.replace('safari_button_delete_', '');
+        console.log(`🗑️ DEBUG: Delete button clicked for button ${buttonId}`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '🚧 **Delete Button - Coming Soon!**\n\nButton deletion functionality will be available in a future update.\n\n⚠️ **Note:** Currently, buttons persist until manually removed from the system.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_button_delete:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading delete interface.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
