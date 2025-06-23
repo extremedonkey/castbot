@@ -8,15 +8,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.
 
-## LATEST DEVELOPMENT: SAFARI DYNAMIC CONTENT SYSTEM ✅ MVP1 COMPLETE
+## LATEST DEVELOPMENT: SAFARI DYNAMIC CONTENT SYSTEM ✅ MVP1.5 COMPLETE
 
-**Major Feature Addition: Safari Dynamic Content Management System MVP1**
+**Major Feature Addition: Safari Dynamic Content Management System MVP1.5**
 - **🦁 Safari Submenu**: Complete dynamic content management interface in Production Menu
+- **🎛️ Manage Safari Buttons**: Reorganized submenu with button management capabilities following shop/item patterns
+- **✏️ Edit Existing Button**: Button selection dropdown with comprehensive edit functions (Properties, Actions, Delete)
 - **📝 Create Custom Button**: Modal-driven button creation with action configuration (display_text, update_currency, follow_up_button)
 - **📤 Post Custom Button**: Channel selection workflow for posting interactive buttons to any text channel
 - **💰 Manage Currency**: Complete currency management with view all balances, set player currency, and reset all functionality
 - **📊 View All Buttons**: Comprehensive listing of created buttons with usage statistics and metadata
 - **🚀 Dynamic Execution**: Real-time button interaction handling with action chaining and currency updates
+- **🔧 Conditional Actions**: Advanced conditional logic system with currency_gte conditions and success/failure actions
 
 **Technical Implementation:**
 - **New Module**: `safariManager.js` with complete button lifecycle management and action execution engine
@@ -26,7 +29,7 @@ CastBot has undergone a major optimization initiative that has been fully comple
 - **Permission Model**: Admin-only creation (ManageRoles permission) with public interaction capability
 - **Currency System**: Full CRUD operations on player currency with audit trails and usage tracking
 
-**MVP1 Features Completed:**
+**MVP1.5 Features Completed:**
 - ✅ **Button Creation Flow**: Modal → Action Selection → Action Configuration → Data Persistence
 - ✅ **Post to Channel**: Button Selection → Channel Selection → Discord Posting with proper custom IDs
 - ✅ **Currency Management**: Overview Dashboard → View All → Set Individual → Reset All with confirmation
@@ -35,6 +38,10 @@ CastBot has undergone a major optimization initiative that has been fully comple
 - ✅ **Components V2 Integration**: Modern Discord UI with Container components and IS_COMPONENTS_V2 flag
 - ✅ **Error Handling**: Comprehensive error handling with user-friendly messages and debug logging
 - ✅ **Data Validation**: Input validation for currency amounts, button labels, and emoji codes
+- ✅ **Menu Reorganization**: "Manage Safari Buttons" submenu following established shop/item management patterns
+- ✅ **Edit Existing Button**: Button selection dropdown with placeholder functions for Properties, Actions, Delete
+- ✅ **Dynamic Handler Fix**: Pattern exclusion system preventing interference between dynamic and management handlers
+- ✅ **Conditional Actions**: Success/failure action types with currency threshold conditions
 
 **Safari System Integration:**
 - **Production Menu**: Safari submenu accessible via 🦁 Safari button in Production Menu
@@ -50,14 +57,22 @@ CastBot has undergone a major optimization initiative that has been fully comple
 - **Channel Integration**: Seamless posting to any text/announcement channel with permission checking
 - **UI Excellence**: Modern Discord Components V2 interface with proper container components and styling
 
-**MVP1 Status:** ✅ PRODUCTION READY
+**MVP1.5 Status:** ✅ PRODUCTION READY
 - All core functionality implemented and tested
 - Complete admin interface with intuitive workflows
 - Player interaction system fully functional
 - Currency management system operational
+- Button management interface following established patterns
+- Dynamic handler pattern exclusions implemented
+- Conditional action system with basic currency logic
 - Ready for community deployment and feedback
 
-**Next Phase:** MVP2 - Conditional Logic, Shop System, Random Outcomes, and Advanced Action Types
+**Latest Issue Resolution:** ✅ COMPLETE
+- **Post Custom Button Fix**: Changed select menu response from CHANNEL_MESSAGE_WITH_SOURCE to UPDATE_MESSAGE
+- **Edit Button Handler Fix**: Added `!custom_id.startsWith('safari_button_')` exclusion to dynamic Safari handler
+- **Documentation Enhancement**: Added comprehensive dynamic handler pattern exclusion guidelines to CLAUDE.md
+
+**Next Phase:** MVP2 - Advanced Conditional Logic, Shop System Integration, Random Outcomes, and Enhanced Action Types
 
 ## PREVIOUS DEVELOPMENT: SERVER USAGE ANALYTICS VISUALIZATION ✅ PHASE 1 COMPLETE
 

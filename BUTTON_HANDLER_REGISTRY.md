@@ -2,7 +2,7 @@
 
 This file maintains a comprehensive list of all button handlers, their custom_ids, labels, and locations in the codebase. This prevents the recurring issue of undefined function references and missing handlers.
 
-## 🎯 **Current Active Buttons** (Updated: 2025-06-19)
+## 🎯 **Current Active Buttons** (Updated: 2025-06-23)
 
 ### **Main Production Menu Buttons**
 | Custom ID | Label | Location | Handler Function | Status |
@@ -53,6 +53,21 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_finish_button_*` | Finish & Save | app.js:~6117 | Pattern handler | ✅ Active |
 | `safari_currency_*` | Currency actions | app.js:~7963+ | Pattern handlers | ✅ Active |
 | `safari_{guildId}_{buttonId}_{timestamp}` | Dynamic Safari buttons | app.js:~2661 | Dynamic handler | ✅ Active |
+
+### **🚨 Critical Pattern Exclusions** ⚠️
+| Dynamic Handler | Required Exclusions | Status | Notes |
+|-----------------|-------------------|--------|-------|
+| `safari_` dynamic handler | `!custom_id.startsWith('safari_button_')` | ✅ Fixed | **CRITICAL**: Must exclude all `safari_button_` patterns to prevent interference |
+| | `!custom_id.startsWith('safari_add_action_')` | ✅ Active | Required for action management handlers |
+| | `!custom_id.startsWith('safari_currency_')` | ✅ Active | Required for currency management handlers |
+| | `custom_id !== 'safari_post_select_button'` | ✅ Active | Required for post button select menu |
+
+### **Recent Critical Fixes (2025-06-23)**
+| Issue | Fix Applied | Impact | Status |
+|-------|-------------|--------|--------|
+| Post Custom Button "Interaction Failed" | Changed response from `CHANNEL_MESSAGE_WITH_SOURCE` to `UPDATE_MESSAGE` | Fixed select menu functionality | ✅ Resolved |
+| Edit Existing Button "❌ Button not found" | Added `!custom_id.startsWith('safari_button_')` to dynamic handler exclusions | Fixed button management access | ✅ Resolved |
+| Documentation Gap | Added comprehensive dynamic handler pattern exclusion guidelines to CLAUDE.md | Prevents future pattern matching issues | ✅ Complete |
 
 ### **Safari System Modal Handlers**
 | Custom ID | Modal Title | Location | Handler Function | Status |
