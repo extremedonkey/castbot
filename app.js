@@ -2442,6 +2442,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_my_') &&
         !custom_id.startsWith('safari_shop_') &&
         !custom_id.startsWith('safari_item_') &&
+        !custom_id.startsWith('safari_button_') &&
         custom_id !== 'safari_post_select_button' && 
         !custom_id.startsWith('safari_post_channel_')) {
       console.log(`🔍 DEBUG: Dynamic Safari handler processing custom_id: ${custom_id}`);
