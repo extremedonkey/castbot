@@ -6373,6 +6373,201 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_action_edit_')) {
+      // Handle editing individual actions
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to edit actions.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse custom_id: safari_action_edit_buttonId_actionIndex
+        const parts = custom_id.split('_');
+        const buttonId = parts.slice(3, -1).join('_');
+        const actionIndex = parseInt(parts[parts.length - 1]);
+        
+        console.log(`✏️ DEBUG: Editing action ${actionIndex} for button ${buttonId}`);
+        
+        // Get current action data
+        const { getCustomButton } = await import('./safariManager.js');
+        const button = await getCustomButton(guildId, buttonId);
+        
+        if (!button || !button.actions || actionIndex >= button.actions.length) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const action = button.actions[actionIndex];
+        
+        // Create edit modal based on action type (reuse existing modal system)
+        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+        
+        const modal = new ModalBuilder()
+          .setCustomId(`safari_edit_action_modal_${buttonId}_${actionIndex}_${action.type}`)
+          .setTitle(`Edit ${action.type.replace('_', ' ')} Action`);
+        
+        const components = [];
+        
+        // Create fields based on action type
+        if (action.type === 'display_text') {
+          const titleInput = new TextInputBuilder()
+            .setCustomId('action_title')
+            .setLabel('Title (optional)')
+            .setStyle(TextInputStyle.Short)
+            .setMaxLength(100)
+            .setRequired(false)
+            .setValue(action.config.title || '');
+          
+          const contentInput = new TextInputBuilder()
+            .setCustomId('action_content')
+            .setLabel('Content')
+            .setStyle(TextInputStyle.Paragraph)
+            .setMaxLength(2000)
+            .setRequired(true)
+            .setValue(action.config.content || '');
+          
+          components.push(
+            new ActionRowBuilder().addComponents(titleInput),
+            new ActionRowBuilder().addComponents(contentInput)
+          );
+          
+        } else if (action.type === 'update_currency') {
+          const amountInput = new TextInputBuilder()
+            .setCustomId('currency_amount')
+            .setLabel('Currency Amount')
+            .setStyle(TextInputStyle.Short)
+            .setMaxLength(10)
+            .setRequired(true)
+            .setValue(String(action.config.amount || 0));
+          
+          const messageInput = new TextInputBuilder()
+            .setCustomId('currency_message')
+            .setLabel('Message (optional)')
+            .setStyle(TextInputStyle.Short)
+            .setMaxLength(200)
+            .setRequired(false)
+            .setValue(action.config.message || '');
+          
+          components.push(
+            new ActionRowBuilder().addComponents(amountInput),
+            new ActionRowBuilder().addComponents(messageInput)
+          );
+          
+        } else {
+          // For other action types, show a simple edit interface
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `🚧 **Edit ${action.type} Action**\n\nEditing for this action type is not yet implemented. Please delete and recreate the action.`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        modal.addComponents(components);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error editing action:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading action editor.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_action_delete_')) {
+      // Handle deleting individual actions
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to delete actions.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse custom_id: safari_action_delete_buttonId_actionIndex
+        const parts = custom_id.split('_');
+        const buttonId = parts.slice(3, -1).join('_');
+        const actionIndex = parseInt(parts[parts.length - 1]);
+        
+        console.log(`🗑️ DEBUG: Deleting action ${actionIndex} for button ${buttonId}`);
+        
+        // Delete the action
+        const { deleteButtonAction } = await import('./safariManager.js');
+        const success = await deleteButtonAction(guildId, buttonId, actionIndex);
+        
+        if (!success) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Failed to delete action.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Refresh the edit interface
+        const { getCustomButton } = await import('./safariManager.js');
+        const { EditInterfaceBuilder, EDIT_TYPES } = await import('./editFramework.js');
+        
+        const button = await getCustomButton(guildId, buttonId);
+        const editBuilder = new EditInterfaceBuilder(EDIT_TYPES.BUTTON);
+        const editInterface = editBuilder.createEditInterface(button, buttonId);
+        
+        // Add back button
+        editInterface.components[0].components.push({
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: 'safari_button_manage_existing',
+            label: '⬅ Back to Button List',
+            style: 2,
+            emoji: { name: '🔙' }
+          }]
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: editInterface
+        });
+        
+      } catch (error) {
+        console.error('Error deleting action:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error deleting action.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('safari_button_edit_actions_')) {
       // Button action management placeholder (Coming Soon)
       try {
@@ -11011,6 +11206,212 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error creating item. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_properties_modal_')) {
+      // Handle properties edit modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to edit properties.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const buttonId = custom_id.replace('safari_properties_modal_', '');
+        console.log(`🔧 DEBUG: Processing properties update for button ${buttonId}`);
+        
+        // Extract field values
+        const label = components[0].components[0].value?.trim();
+        const emoji = components[1].components[0].value?.trim() || '';
+        const style = components[2]?.components[0]?.value?.trim() || 'Primary';
+        const tagsString = components[3]?.components[0]?.value?.trim() || '';
+        
+        if (!label) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Button label is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse tags
+        const tags = tagsString ? tagsString.split(',').map(t => t.trim()).filter(t => t) : [];
+        
+        // Update button properties
+        const { updateButtonProperties } = await import('./safariManager.js');
+        const success = await updateButtonProperties(guildId, buttonId, {
+          label,
+          emoji,
+          style,
+          tags
+        });
+        
+        if (!success) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Failed to update button properties.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Return to edit interface
+        const { getCustomButton } = await import('./safariManager.js');
+        const { EditInterfaceBuilder, EDIT_TYPES } = await import('./editFramework.js');
+        
+        const button = await getCustomButton(guildId, buttonId);
+        const editBuilder = new EditInterfaceBuilder(EDIT_TYPES.BUTTON);
+        const editInterface = editBuilder.createEditInterface(button, buttonId);
+        
+        // Add back button
+        editInterface.components[0].components.push({
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: 'safari_button_manage_existing',
+            label: '⬅ Back to Button List',
+            style: 2,
+            emoji: { name: '🔙' }
+          }]
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: editInterface
+        });
+        
+      } catch (error) {
+        console.error('Error updating button properties:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating button properties.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_edit_action_modal_')) {
+      // Handle action edit modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to edit actions.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse custom_id: safari_edit_action_modal_buttonId_actionIndex_actionType
+        const parts = custom_id.replace('safari_edit_action_modal_', '').split('_');
+        const actionType = parts[parts.length - 1];
+        const actionIndex = parseInt(parts[parts.length - 2]);
+        const buttonId = parts.slice(0, -2).join('_');
+        
+        console.log(`🔧 DEBUG: Processing ${actionType} action edit for button ${buttonId}, action ${actionIndex}`);
+        
+        let actionConfig = {};
+        
+        if (actionType === 'display_text') {
+          const title = components[0].components[0].value?.trim() || null;
+          const content = components[1].components[0].value?.trim();
+          
+          if (!content) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Content is required for text display actions.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          actionConfig = { title, content };
+          
+        } else if (actionType === 'update_currency') {
+          const amountStr = components[0].components[0].value?.trim();
+          const message = components[1].components[0].value?.trim() || '';
+          
+          const amount = parseInt(amountStr);
+          if (isNaN(amount)) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Currency amount must be a valid number.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          actionConfig = { amount, message };
+        }
+        
+        // Update the action
+        const { updateButtonAction } = await import('./safariManager.js');
+        const success = await updateButtonAction(guildId, buttonId, actionIndex, {
+          type: actionType,
+          config: actionConfig
+        });
+        
+        if (!success) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Failed to update action.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Return to edit interface
+        const { getCustomButton } = await import('./safariManager.js');
+        const { EditInterfaceBuilder, EDIT_TYPES } = await import('./editFramework.js');
+        
+        const button = await getCustomButton(guildId, buttonId);
+        const editBuilder = new EditInterfaceBuilder(EDIT_TYPES.BUTTON);
+        const editInterface = editBuilder.createEditInterface(button, buttonId);
+        
+        // Add back button
+        editInterface.components[0].components.push({
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: 'safari_button_manage_existing',
+            label: '⬅ Back to Button List',
+            style: 2,
+            emoji: { name: '🔙' }
+          }]
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: editInterface
+        });
+        
+      } catch (error) {
+        console.error('Error updating action:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating action.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
