@@ -321,12 +321,79 @@
             "Meow"
           ]
         }
+      },
+      "conditional_item_tes_865843": {
+        "id": "conditional_item_tes_865843",
+        "label": "Conditional Item Test",
+        "emoji": null,
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "conditional",
+            "order": 1,
+            "config": {
+              "conditionType": "currency_gte",
+              "conditionValue": "53",
+              "successAction": "display_text",
+              "failureAction": "display_text"
+            }
+          },
+          {
+            "type": "display_text",
+            "order": 2,
+            "config": {
+              "title": "You don't have enough Moolah!",
+              "content": "GIT MORE MONEY!"
+            }
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750668865843,
+          "lastModified": 1750668865843,
+          "usageCount": 0,
+          "tags": [
+            "tt"
+          ]
+        }
       }
     },
     "safaris": {},
     "applications": {},
-    "shops": {},
-    "items": {}
+    "shops": {
+      "tycoons_store_606108": {
+        "id": "tycoons_store_606108",
+        "name": "Tycoons Store",
+        "description": "Good to see ya!",
+        "emoji": "🏪",
+        "items": [],
+        "settings": {
+          "shopkeeperText": "Ahoy!",
+          "accentColor": 3066993,
+          "requiresRole": null
+        },
+        "metadata": {
+          "createdAt": 1750668606108,
+          "lastModified": 1750668606108,
+          "totalSales": 0
+        }
+      }
+    },
+    "items": {
+      "potato_farm_714277": {
+        "id": "potato_farm_714277",
+        "name": "Potato Farm",
+        "description": "Eat it, tasty!",
+        "emoji": "🥔",
+        "category": "Farm",
+        "basePrice": 50,
+        "maxQuantity": -1,
+        "metadata": {
+          "createdAt": 1750668714277,
+          "totalSold": 0
+        }
+      }
+    }
   },
   "1385042963310055515": {
     "buttons": {

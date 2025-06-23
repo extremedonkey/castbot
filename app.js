@@ -10116,7 +10116,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Shop Created Successfully!**\n\n**${shopEmoji ? shopEmoji + ' ' : ''}${shopName}**\n${shopDescription ? shopDescription : ''}\n\nShop ID: \`${result.shopId}\`\n\nYou can now add items to this shop and assign it to buttons.`,
+            content: `✅ **Shop Created Successfully!**\n\n**${shopEmoji ? shopEmoji + ' ' : ''}${shopName}**\n${shopDescription ? shopDescription : ''}\n\nShop ID: \`${result}\`\n\nYou can now add items to this shop and assign it to buttons.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -10195,7 +10195,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Item Created Successfully!**\n\n**${itemEmoji ? itemEmoji + ' ' : ''}${itemName}**\n${itemDescription ? itemDescription : ''}\n\n**Base Price:** ${price} coins\n**Category:** ${category}\nItem ID: \`${result.itemId}\`\n\nYou can now add this item to any shop with custom pricing.`,
+            content: `✅ **Item Created Successfully!**\n\n**${itemEmoji ? itemEmoji + ' ' : ''}${itemName}**\n${itemDescription ? itemDescription : ''}\n\n**Base Price:** ${price} coins\n**Category:** ${category}\nItem ID: \`${result}\`\n\nYou can now add this item to any shop with custom pricing.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
