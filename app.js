@@ -6097,6 +6097,55 @@ Your server is now ready for Tycoons gameplay!`;
             type: InteractionResponseType.MODAL,
             data: modal.toJSON()
           });
+          
+        } else if (actionType === 'conditional') {
+          const modal = new ModalBuilder()
+            .setCustomId(`safari_action_modal_${buttonId}_conditional`)
+            .setTitle('Add Conditional Action');
+
+          const conditionTypeInput = new TextInputBuilder()
+            .setCustomId('condition_type')
+            .setLabel('Condition Type')
+            .setPlaceholder('currency_gte, currency_lte, has_item, not_has_item')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(20);
+
+          const conditionValueInput = new TextInputBuilder()
+            .setCustomId('condition_value')
+            .setLabel('Condition Value')
+            .setPlaceholder('e.g., "100" for currency, "item_id" for items')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(50);
+
+          const successActionInput = new TextInputBuilder()
+            .setCustomId('success_action')
+            .setLabel('Success Action Type')
+            .setPlaceholder('display_text, update_currency, follow_up_button')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(20);
+
+          const failureActionInput = new TextInputBuilder()
+            .setCustomId('failure_action')
+            .setLabel('Failure Action Type (optional)')
+            .setPlaceholder('display_text, update_currency, follow_up_button')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(20);
+
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(conditionTypeInput),
+            new ActionRowBuilder().addComponents(conditionValueInput),
+            new ActionRowBuilder().addComponents(successActionInput),
+            new ActionRowBuilder().addComponents(failureActionInput)
+          );
+          
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          });
         }
         
       } catch (error) {
@@ -9389,6 +9438,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                     label: 'Add Follow-up Button',
                     style: 1,
                     emoji: { name: '🔗' }
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: `safari_add_action_${buttonId}_conditional`,
+                    label: 'Add Conditional Action',
+                    style: 1,
+                    emoji: { name: '🔀' }
                   }
                 ]
               },
@@ -9461,6 +9517,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         } else if (custom_id.endsWith('_follow_up')) {
           actionType = 'follow_up_button';
           buttonId = custom_id.replace('safari_action_modal_', '').replace('_follow_up', '');
+        } else if (custom_id.endsWith('_conditional')) {
+          actionType = 'conditional';
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_conditional', '');
         } else {
           // Fallback to old method for any unknown action types
           const parts = custom_id.split('_');
@@ -9588,6 +9647,62 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             buttonId: buttonId,
             delay: delay,
             replaceMessage: replaceMessage
+          };
+        } else if (actionType === 'conditional') {
+          const conditionType = components[0].components[0].value?.trim();
+          const conditionValue = components[1].components[0].value?.trim();
+          const successAction = components[2].components[0].value?.trim();
+          const failureAction = components[3].components[0].value?.trim() || null;
+          
+          if (!conditionType || !conditionValue || !successAction) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Condition type, value, and success action are required for conditional actions.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          // Validate condition type
+          const validConditionTypes = ['currency_gte', 'currency_lte', 'has_item', 'not_has_item', 'button_used', 'cooldown_expired'];
+          if (!validConditionTypes.includes(conditionType)) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ Invalid condition type. Valid types: ${validConditionTypes.join(', ')}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          // Validate action types
+          const validActionTypes = ['display_text', 'update_currency', 'follow_up_button'];
+          if (!validActionTypes.includes(successAction)) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ Invalid success action type. Valid types: ${validActionTypes.join(', ')}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          if (failureAction && !validActionTypes.includes(failureAction)) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ Invalid failure action type. Valid types: ${validActionTypes.join(', ')}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          actionConfig = {
+            conditionType: conditionType,
+            conditionValue: conditionValue,
+            successAction: successAction,
+            failureAction: failureAction
           };
         }
         
