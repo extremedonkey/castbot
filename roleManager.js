@@ -21,13 +21,13 @@ import {
  * - Foundation for future role management features
  */
 
-// Standard pronoun roles that CastBot can create/manage
+// Standard pronoun roles that CastBot can create/manage (updated order)
 const STANDARD_PRONOUN_ROLES = [
-    'He/Him',
     'She/Her',
+    'He/Him', 
     'They/Them',
-    'They/He',
     'She/They',
+    'They/He',
     'Ask',
     'Any',
     'All Pronouns'
@@ -53,7 +53,7 @@ const PRONOUN_HEART_EMOJIS = {
     'They/He': '💚',
     'She/They': '🩵',
     'Ask': '💛',
-    'Any': '🤍',
+    'Any': '🤎',
     'All Pronouns': '🤍'
 };
 
