@@ -6053,122 +6053,95 @@ Your server is now ready for Tycoons gameplay!`;
         const currentItemIds = new Set(currentItems.map(item => item.itemId || item));
         const availableItems = Object.entries(allItems).filter(([itemId]) => !currentItemIds.has(itemId));
         
-        // Build interface components
+        // Build simplified interface to avoid Discord component limits and timeout
+        let currentItemsList = '';
+        currentItems.forEach((shopItem, index) => {
+          const itemId = shopItem.itemId || shopItem;
+          const item = allItems[itemId];
+          if (item) {
+            const price = shopItem.price || item.basePrice || 0;
+            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - 💰 ${price} coins\n`;
+          }
+        });
+        
+        let availableItemsList = '';
+        availableItems.slice(0, 15).forEach(([itemId, item], index) => {
+          availableItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - 💰 ${item.basePrice || 0} coins\n`;
+        });
+        
+        if (availableItems.length > 15) {
+          availableItemsList += `\n*...and ${availableItems.length - 15} more items*`;
+        }
+        
+        // Create action buttons (limit to 10 total for safety)
+        const actionButtons = [];
+        
+        // Remove buttons for current items (first 5)
+        currentItems.slice(0, 5).forEach((shopItem, index) => {
+          const itemId = shopItem.itemId || shopItem;
+          const item = allItems[itemId];
+          if (item) {
+            actionButtons.push({
+              type: 2, // Button
+              custom_id: `safari_shop_remove_item_${selectedShopId}_${itemId}`,
+              label: `Remove ${item.name}`.slice(0, 80),
+              style: 4,
+              emoji: { name: '🗑️' }
+            });
+          }
+        });
+        
+        // Add buttons for available items (fill remaining slots)
+        const remainingSlots = Math.min(5, 10 - actionButtons.length);
+        availableItems.slice(0, remainingSlots).forEach(([itemId, item]) => {
+          actionButtons.push({
+            type: 2, // Button
+            custom_id: `safari_shop_add_item_${selectedShopId}_${itemId}`,
+            label: `Add ${item.name}`.slice(0, 80),
+            style: 3,
+            emoji: { name: '➕' }
+          });
+        });
+        
+        // Split buttons into rows (max 5 per row)
+        const buttonRows = [];
+        for (let i = 0; i < actionButtons.length; i += 5) {
+          const rowButtons = actionButtons.slice(i, i + 5);
+          if (rowButtons.length > 0) {
+            buttonRows.push({
+              type: 1, // Action Row
+              components: rowButtons
+            });
+          }
+        }
+        
         const containerComponents = [
           {
             type: 10, // Text Display
             content: `## 📦 ${shop.emoji || '🏪'} ${shop.name} - Items Management\n\n**Shop Items:** ${currentItems.length} • **Available to Add:** ${availableItems.length}`
+          },
+          {
+            type: 10, // Text Display
+            content: `### 🛍️ Current Items in Shop\n${currentItemsList || '*No items in this shop yet.*'}`
+          },
+          {
+            type: 10, // Text Display
+            content: `### ➕ Available Items to Add\n${availableItemsList || '*All items are already in this shop.*'}`
+          },
+          ...buttonRows,
+          {
+            type: 14 // Separator
+          },
+          {
+            type: 1, // Action Row
+            components: [{
+              type: 2, // Button
+              custom_id: 'safari_shop_manage_items',
+              label: '⬅ Back to Shop Selection',
+              style: 2
+            }]
           }
         ];
-        
-        // Current Items Section
-        if (currentItems.length > 0) {
-          containerComponents.push({
-            type: 10, // Text Display
-            content: `### 🛍️ Current Items in Shop`
-          });
-          
-          currentItems.forEach((shopItem, index) => {
-            const itemId = shopItem.itemId || shopItem;
-            const item = allItems[itemId];
-            if (item) {
-              const price = shopItem.price || item.basePrice || 0;
-              containerComponents.push({
-                type: 9, // Section
-                components: [
-                  {
-                    type: 10, // Text Display
-                    content: `**${item.emoji || '📦'} ${item.name}**\n💰 ${price} coins`
-                  }
-                ]
-              });
-              
-              // Add remove button for this item
-              containerComponents.push({
-                type: 1, // Action Row
-                components: [{
-                  type: 2, // Button
-                  custom_id: `safari_shop_remove_item_${selectedShopId}_${itemId}`,
-                  label: 'Remove',
-                  style: 4,
-                  emoji: { name: '🗑️' }
-                }]
-              });
-            }
-          });
-        } else {
-          containerComponents.push({
-            type: 10, // Text Display
-            content: `### 🛍️ Current Items in Shop\n*No items in this shop yet.*`
-          });
-        }
-        
-        // Available Items Section
-        if (availableItems.length > 0) {
-          containerComponents.push({
-            type: 14 // Separator
-          });
-          
-          containerComponents.push({
-            type: 10, // Text Display
-            content: `### ➕ Available Items to Add`
-          });
-          
-          availableItems.slice(0, 10).forEach(([itemId, item]) => { // Limit to 10 to avoid Discord limits
-            containerComponents.push({
-              type: 9, // Section
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: `**${item.emoji || '📦'} ${item.name}**\n${item.description || 'No description'}\n💰 ${item.basePrice || 0} coins`
-                }
-              ]
-            });
-            
-            // Add button for this item
-            containerComponents.push({
-              type: 1, // Action Row
-              components: [{
-                type: 2, // Button
-                custom_id: `safari_shop_add_item_${selectedShopId}_${itemId}`,
-                label: 'Add to Shop',
-                style: 3,
-                emoji: { name: '➕' }
-              }]
-            });
-          });
-          
-          if (availableItems.length > 10) {
-            containerComponents.push({
-              type: 10, // Text Display
-              content: `*...and ${availableItems.length - 10} more items available*`
-            });
-          }
-        } else {
-          containerComponents.push({
-            type: 14 // Separator
-          });
-          
-          containerComponents.push({
-            type: 10, // Text Display
-            content: `### ➕ Available Items to Add\n*All available items are already in this shop.*`
-          });
-        }
-        
-        // Back button
-        containerComponents.push({
-          type: 14 // Separator
-        });
-        
-        containerComponents.push({
-          type: 1, // Action Row
-          components: [{
-            type: 2, // Button
-            custom_id: 'safari_shop_manage_items',
-            label: '⬅ Back to Shop Selection',
-            style: 2
-          }]
-        });
         
         const container = {
           type: 17, // Container
@@ -6212,9 +6185,12 @@ Your server is now ready for Tycoons gameplay!`;
         }
         
         // Parse custom_id: safari_shop_add_item_${shopId}_${itemId}
-        const parts = custom_id.split('_');
-        const shopId = parts[4];
-        const itemId = parts[5];
+        // More robust parsing since shopId can contain underscores
+        const prefix = 'safari_shop_add_item_';
+        const afterPrefix = custom_id.substring(prefix.length);
+        const lastUnderscoreIndex = afterPrefix.lastIndexOf('_');
+        const shopId = afterPrefix.substring(0, lastUnderscoreIndex);
+        const itemId = afterPrefix.substring(lastUnderscoreIndex + 1);
         
         console.log(`➕ DEBUG: Adding item ${itemId} to shop ${shopId}`);
         
@@ -6303,9 +6279,12 @@ Your server is now ready for Tycoons gameplay!`;
         }
         
         // Parse custom_id: safari_shop_remove_item_${shopId}_${itemId}
-        const parts = custom_id.split('_');
-        const shopId = parts[4];
-        const itemId = parts[5];
+        // More robust parsing since shopId can contain underscores
+        const prefix = 'safari_shop_remove_item_';
+        const afterPrefix = custom_id.substring(prefix.length);
+        const lastUnderscoreIndex = afterPrefix.lastIndexOf('_');
+        const shopId = afterPrefix.substring(0, lastUnderscoreIndex);
+        const itemId = afterPrefix.substring(lastUnderscoreIndex + 1);
         
         console.log(`🗑️ DEBUG: Removing item ${itemId} from shop ${shopId}`);
         

@@ -37,6 +37,10 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_manage_safari_buttons` | 🎛️ Manage Safari Buttons | app.js:~3893 | Direct handler | ✅ Active |
 | `safari_manage_shops` | 🏪 Manage Shops | app.js:~5067 | Direct handler | ✅ Active |
 | `safari_manage_items` | 📦 Manage Items | app.js:~5195 | Direct handler | ✅ Active |
+| `safari_shop_manage_items` | 📦 Manage Shop Items | app.js:~5904 | Direct handler | ✅ Active |
+| `safari_shop_items_select` | Shop Selection for Items | app.js:~6009 | Select handler | ✅ Active |
+| `safari_shop_add_item_*` | ➕ Add Item to Shop | app.js:~6197 | Pattern handler | ✅ Active |
+| `safari_shop_remove_item_*` | 🗑️ Remove Item from Shop | app.js:~6288 | Pattern handler | ✅ Active |
 | `safari_shop_create` | ➕ Create New Shop | app.js:~5325 | Direct handler | ✅ Active |
 | `safari_item_create` | ➕ Create New Item | app.js:~5402 | Direct handler | ✅ Active |
 | `safari_shop_list` | 📋 View All Shops | app.js:~5488 | Direct handler | ✅ Active |
