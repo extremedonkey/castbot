@@ -8943,9 +8943,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         };
         
         return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 flag + ephemeral
             components: [container]
           }
         });

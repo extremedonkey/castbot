@@ -393,7 +393,42 @@
         "label": "Claude Test button",
         "emoji": "🤖",
         "style": "Primary",
-        "actions": [],
+        "actions": [
+          {
+            "type": "display_text",
+            "order": 1,
+            "config": {
+              "title": "Claude's wild text display test!",
+              "content": "Hi Claude, do you like this test?",
+              "accentColor": 16777215
+            }
+          },
+          {
+            "type": "update_currency",
+            "order": 2,
+            "config": {
+              "amount": 11,
+              "message": "Money for claude!"
+            }
+          },
+          {
+            "type": "update_currency",
+            "order": 3,
+            "config": {
+              "amount": 22,
+              "message": "More money for Claude!"
+            }
+          },
+          {
+            "type": "follow_up_button",
+            "order": 4,
+            "config": {
+              "buttonId": "go_to_the_well_677278",
+              "delay": 0,
+              "replaceMessage": false
+            }
+          }
+        ],
         "metadata": {
           "createdBy": "391415444084490240",
           "createdAt": 1750757098719,
