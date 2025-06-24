@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import 'dotenv/config';
-import { loadEnvironmentConfig, updateLiveLoggingStatus, saveEnvironmentConfig } from './storage.js';
+import { loadEnvironmentConfig, updateLiveLoggingStatus, saveEnvironmentConfig, getLoggingChannelId } from './storage.js';
 
 /**
  * Toggle Live Discord Logging System
@@ -24,11 +24,17 @@ async function main() {
     
     if (!command) {
       // Show current status
+      const currentChannelId = await getLoggingChannelId();
+      const isProduction = process.env.PRODUCTION === 'TRUE';
+      
       console.log('\n📊 LIVE DISCORD LOGGING STATUS');
       console.log('═'.repeat(50));
       console.log(`Status: ${loggingConfig.enabled ? '🟢 ENABLED' : '🔴 DISABLED'}`);
+      console.log(`Environment: ${isProduction ? '🚀 PRODUCTION' : '🛠️ DEVELOPMENT'}`);
       console.log(`Target Guild: ${loggingConfig.targetGuildId}`);
-      console.log(`Target Channel: ${loggingConfig.targetChannelId}`);
+      console.log(`Active Channel: ${currentChannelId}`);
+      console.log(`  → Production: ${loggingConfig.productionChannelId || 'Not configured'} (#🪵logs)`);
+      console.log(`  → Development: ${loggingConfig.developmentChannelId || 'Not configured'} (#🪵logs-dev)`);
       console.log(`Excluded Users: ${loggingConfig.excludedUserIds.length} user(s)`);
       if (loggingConfig.excludedUserIds.length > 0) {
         console.log(`  → ${loggingConfig.excludedUserIds.join(', ')}`);
@@ -44,8 +50,12 @@ async function main() {
     if (command === 'enable') {
       console.log('🟢 Enabling live Discord logging...');
       const updatedConfig = await updateLiveLoggingStatus(true);
+      const currentChannelId = await getLoggingChannelId();
+      const isProduction = process.env.PRODUCTION === 'TRUE';
+      
       console.log('✅ Live Discord logging ENABLED');
-      console.log(`📤 Logs will now flow to channel ${updatedConfig.targetChannelId}`);
+      console.log(`📤 Logs will now flow to channel ${currentChannelId}`);
+      console.log(`🌍 Environment: ${isProduction ? 'PRODUCTION (#🪵logs)' : 'DEVELOPMENT (#🪵logs-dev)'}`);
       console.log(`🚫 Excluded users: ${updatedConfig.excludedUserIds.length}`);
     } else if (command === 'disable') {
       console.log('🔴 Disabling live Discord logging...');

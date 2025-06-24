@@ -287,6 +287,8 @@ let targetChannel = null;
  */
 function setDiscordClient(client) {
   discordClient = client;
+  // Clear cached channel when client changes (for environment switches)
+  targetChannel = null;
 }
 
 /**
@@ -365,8 +367,11 @@ async function postToDiscordLogs(logEntry, userId, action, details, components) 
     // Get target channel if not cached
     if (!targetChannel) {
       try {
+        const { getLoggingChannelId } = await import('./storage.js');
+        const targetChannelId = await getLoggingChannelId();
+        
         const targetGuild = await discordClient.guilds.fetch(loggingConfig.targetGuildId);
-        targetChannel = await targetGuild.channels.fetch(loggingConfig.targetChannelId);
+        targetChannel = await targetGuild.channels.fetch(targetChannelId);
         
         if (!targetChannel) {
           console.error('Discord Logging: Target channel not found');

@@ -262,12 +262,16 @@ export async function getTimezoneOffset(guildId, roleId) {
 // Environment configuration functions
 export async function loadEnvironmentConfig() {
   const data = await loadPlayerData();
+  const isProduction = process.env.PRODUCTION === 'TRUE';
+  
   if (!data.environmentConfig) {
     data.environmentConfig = {
       liveDiscordLogging: {
         enabled: false,
         targetGuildId: "1331657596087566398",
-        targetChannelId: "1385059476243218552",
+        // Environment-specific channel IDs
+        productionChannelId: "1385059476243218552",  // #🪵logs (original production channel)
+        developmentChannelId: "1386998800215969904", // #🪵logs-dev (new dev channel)
         excludedUserIds: ["391415444084490240"],
         rateLimitQueue: [],
         lastMessageTime: 0
@@ -275,6 +279,16 @@ export async function loadEnvironmentConfig() {
     };
     await savePlayerData(data);
   }
+  
+  // Add new channel IDs to existing config if they don't exist
+  if (!data.environmentConfig.liveDiscordLogging.productionChannelId) {
+    data.environmentConfig.liveDiscordLogging.productionChannelId = "1385059476243218552";
+    data.environmentConfig.liveDiscordLogging.developmentChannelId = "1386998800215969904";
+    // Remove old single channel ID
+    delete data.environmentConfig.liveDiscordLogging.targetChannelId;
+    await savePlayerData(data);
+  }
+  
   return data.environmentConfig;
 }
 
@@ -282,6 +296,16 @@ export async function saveEnvironmentConfig(config) {
   const data = await loadPlayerData();
   data.environmentConfig = config;
   await savePlayerData(data);
+}
+
+// Get the appropriate channel ID based on current environment
+export async function getLoggingChannelId() {
+  const config = await loadEnvironmentConfig();
+  const isProduction = process.env.PRODUCTION === 'TRUE';
+  
+  return isProduction 
+    ? config.liveDiscordLogging.productionChannelId 
+    : config.liveDiscordLogging.developmentChannelId;
 }
 
 export async function updateLiveLoggingStatus(enabled) {
