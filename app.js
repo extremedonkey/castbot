@@ -2467,8 +2467,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         // Get player's currency for display
         const playerData = await loadPlayerData();
+        console.log(`🔍 DEBUG: Player data loaded for guild ${guildId}, user ${userId}`);
         const player = getPlayer(guildId, userId, playerData);
+        console.log(`🔍 DEBUG: Player object:`, player ? 'Found' : 'Not found');
+        console.log(`🔍 DEBUG: Player safari data:`, player?.safari || 'No safari data');
         const playerCurrency = player?.safari?.currency || 0;
+        console.log(`🔍 DEBUG: Player currency: ${playerCurrency}`);
         
         // Build shop display with Container -> Section pattern
         const containerComponents = [];
@@ -2622,8 +2626,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         // Get player data and check currency
         const playerData = await loadPlayerData();
+        console.log(`🔍 DEBUG: Purchase - Player data loaded for guild ${guildId}, user ${userId}`);
         const player = getPlayer(guildId, userId, playerData);
+        console.log(`🔍 DEBUG: Purchase - Player object:`, player ? 'Found' : 'Not found');
+        console.log(`🔍 DEBUG: Purchase - Player safari data:`, player?.safari || 'No safari data');
         const currentCurrency = player?.safari?.currency || 0;
+        console.log(`🔍 DEBUG: Purchase - Player currency: ${currentCurrency}`);
         
         if (currentCurrency < price) {
           return res.send({
