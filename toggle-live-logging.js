@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import 'dotenv/config';
-import { loadEnvironmentConfig, updateLiveLoggingStatus, saveEnvironmentConfig, getLoggingChannelId } from './storage.js';
+import { loadEnvironmentConfig, updateLiveLoggingStatus, saveEnvironmentConfig, getLoggingChannelId, getLoggingTimezoneOffset } from './storage.js';
 
 /**
  * Toggle Live Discord Logging System
@@ -25,6 +25,7 @@ async function main() {
     if (!command) {
       // Show current status
       const currentChannelId = await getLoggingChannelId();
+      const currentTimezoneOffset = await getLoggingTimezoneOffset();
       const isProduction = process.env.PRODUCTION === 'TRUE';
       
       console.log('\n📊 LIVE DISCORD LOGGING STATUS');
@@ -33,8 +34,9 @@ async function main() {
       console.log(`Environment: ${isProduction ? '🚀 PRODUCTION' : '🛠️ DEVELOPMENT'}`);
       console.log(`Target Guild: ${loggingConfig.targetGuildId}`);
       console.log(`Active Channel: ${currentChannelId}`);
-      console.log(`  → Production: ${loggingConfig.productionChannelId || 'Not configured'} (#🪵logs)`);
-      console.log(`  → Development: ${loggingConfig.developmentChannelId || 'Not configured'} (#🪵logs-dev)`);
+      console.log(`  → Production: ${loggingConfig.productionChannelId || 'Not configured'} (#🪵logs, UTC+${loggingConfig.productionTimezoneOffset || 8})`);
+      console.log(`  → Development: ${loggingConfig.developmentChannelId || 'Not configured'} (#🪵logs-dev, UTC+${loggingConfig.developmentTimezoneOffset || 0})`);
+      console.log(`Active Timezone Offset: UTC+${currentTimezoneOffset} (${currentTimezoneOffset === 0 ? 'local time' : currentTimezoneOffset + ' hours ahead of UTC'})`);
       console.log(`Excluded Users: ${loggingConfig.excludedUserIds.length} user(s)`);
       if (loggingConfig.excludedUserIds.length > 0) {
         console.log(`  → ${loggingConfig.excludedUserIds.join(', ')}`);

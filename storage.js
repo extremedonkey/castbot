@@ -272,6 +272,9 @@ export async function loadEnvironmentConfig() {
         // Environment-specific channel IDs
         productionChannelId: "1385059476243218552",  // #🪵logs (original production channel)
         developmentChannelId: "1386998800215969904", // #🪵logs-dev (new dev channel)
+        // Environment-specific timezone offsets (hours to add to UTC)
+        productionTimezoneOffset: 8,   // AWS server is UTC, add 8 hours for GMT+8
+        developmentTimezoneOffset: 0,  // Local dev is already GMT+8, no offset needed
         excludedUserIds: ["391415444084490240"],
         rateLimitQueue: [],
         lastMessageTime: 0
@@ -280,12 +283,24 @@ export async function loadEnvironmentConfig() {
     await savePlayerData(data);
   }
   
-  // Add new channel IDs to existing config if they don't exist
+  // Add new channel IDs and timezone offsets to existing config if they don't exist
+  let configUpdated = false;
+  
   if (!data.environmentConfig.liveDiscordLogging.productionChannelId) {
     data.environmentConfig.liveDiscordLogging.productionChannelId = "1385059476243218552";
     data.environmentConfig.liveDiscordLogging.developmentChannelId = "1386998800215969904";
     // Remove old single channel ID
     delete data.environmentConfig.liveDiscordLogging.targetChannelId;
+    configUpdated = true;
+  }
+  
+  if (data.environmentConfig.liveDiscordLogging.productionTimezoneOffset === undefined) {
+    data.environmentConfig.liveDiscordLogging.productionTimezoneOffset = 8;   // AWS server UTC + 8 hours
+    data.environmentConfig.liveDiscordLogging.developmentTimezoneOffset = 0;  // Local dev already GMT+8
+    configUpdated = true;
+  }
+  
+  if (configUpdated) {
     await savePlayerData(data);
   }
   
@@ -306,6 +321,16 @@ export async function getLoggingChannelId() {
   return isProduction 
     ? config.liveDiscordLogging.productionChannelId 
     : config.liveDiscordLogging.developmentChannelId;
+}
+
+// Get the appropriate timezone offset based on current environment
+export async function getLoggingTimezoneOffset() {
+  const config = await loadEnvironmentConfig();
+  const isProduction = process.env.PRODUCTION === 'TRUE';
+  
+  return isProduction 
+    ? config.liveDiscordLogging.productionTimezoneOffset 
+    : config.liveDiscordLogging.developmentTimezoneOffset;
 }
 
 export async function updateLiveLoggingStatus(enabled) {

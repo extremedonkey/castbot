@@ -184,23 +184,27 @@ function getButtonLabel(customId, components) {
  */
 async function logInteraction(userId, guildId, action, details, username, guildName, components = null, channelName = null, displayName = null) {
   try {
-    // Convert to AWST (UTC+8) for display
-    const utcDate = new Date();
-    const awstDate = new Date(utcDate.getTime() + (8 * 60 * 60 * 1000)); // Add 8 hours in milliseconds
+    // Get environment-specific timezone offset
+    const { getLoggingTimezoneOffset } = await import('./storage.js');
+    const timezoneOffset = await getLoggingTimezoneOffset();
     
-    // Format as Australian-style timestamp manually: [12:34PM] Thu 19 Jun 25
-    const hours = awstDate.getHours();
-    const minutes = awstDate.getMinutes().toString().padStart(2, '0');
+    // Apply environment-specific timezone offset
+    const utcDate = new Date();
+    const localDate = new Date(utcDate.getTime() + (timezoneOffset * 60 * 60 * 1000));
+    
+    // Format as timestamp: [12:34PM] Thu 19 Jun 25
+    const hours = localDate.getHours();
+    const minutes = localDate.getMinutes().toString().padStart(2, '0');
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const displayHours = hours % 12 || 12;
     const timeStr = `${displayHours}:${minutes}${ampm}`;
     
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const dayName = days[awstDate.getDay()];
-    const day = awstDate.getDate();
-    const month = months[awstDate.getMonth()];
-    const year = awstDate.getFullYear().toString().slice(-2);
+    const dayName = days[localDate.getDay()];
+    const day = localDate.getDate();
+    const month = months[localDate.getMonth()];
+    const year = localDate.getFullYear().toString().slice(-2);
     const dateStr = `${dayName} ${day} ${month} ${year}`;
     
     const timestamp = `[${timeStr}] ${dateStr}`;
