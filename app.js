@@ -2468,7 +2468,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Get player's currency for display
         const playerData = await loadPlayerData();
         console.log(`🔍 DEBUG: Player data loaded for guild ${guildId}, user ${userId}`);
-        const player = getPlayer(guildId, userId, playerData);
+        // Access player data directly from the loaded structure
+        const player = playerData[guildId]?.players?.[userId];
         console.log(`🔍 DEBUG: Player object:`, player ? 'Found' : 'Not found');
         console.log(`🔍 DEBUG: Player safari data:`, player?.safari || 'No safari data');
         const playerCurrency = player?.safari?.currency || 0;
@@ -2627,7 +2628,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Get player data and check currency
         const playerData = await loadPlayerData();
         console.log(`🔍 DEBUG: Purchase - Player data loaded for guild ${guildId}, user ${userId}`);
-        const player = getPlayer(guildId, userId, playerData);
+        // Access player data directly from the loaded structure
+        const player = playerData[guildId]?.players?.[userId];
         console.log(`🔍 DEBUG: Purchase - Player object:`, player ? 'Found' : 'Not found');
         console.log(`🔍 DEBUG: Purchase - Player safari data:`, player?.safari || 'No safari data');
         const currentCurrency = player?.safari?.currency || 0;
