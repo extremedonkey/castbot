@@ -19,7 +19,7 @@ const SAFARI_CONTENT_FILE = path.join(__dirname, 'safariContent.json');
 /**
  * Safari Manager Module for CastBot - MVP2
  * Handles dynamic content creation, button management, action execution,
- * shop systems, inventory management, and conditional actions
+ * store systems, inventory management, and conditional actions
  */
 
 // Button style mapping
@@ -36,7 +36,7 @@ const ACTION_TYPES = {
     UPDATE_CURRENCY: 'update_currency', 
     FOLLOW_UP_BUTTON: 'follow_up_button',
     CONDITIONAL: 'conditional',          // NEW: MVP2
-    SHOP_DISPLAY: 'shop_display',        // NEW: MVP2
+    STORE_DISPLAY: 'store_display',        // NEW: MVP2
     BUY_ITEM: 'buy_item',               // NEW: MVP2
     RANDOM_OUTCOME: 'random_outcome'     // NEW: MVP2
 };
@@ -265,7 +265,7 @@ async function updateCurrency(guildId, userId, amount) {
                 inventory: {},          // NEW: MVP2 - Item inventory
                 cooldowns: {},          // NEW: MVP2 - Button cooldowns  
                 buttonUses: {},         // NEW: MVP2 - Usage tracking
-                shopHistory: []         // NEW: MVP2 - Purchase history
+                storeHistory: []         // NEW: MVP2 - Purchase history
             };
         }
         
@@ -451,8 +451,8 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
                     if (result) responses.push(result);
                     break;
                     
-                case ACTION_TYPES.SHOP_DISPLAY:
-                    result = await executeShopDisplay(action.config, guildId, userId, interaction);
+                case ACTION_TYPES.STORE_DISPLAY:
+                    result = await executeStoreDisplay(action.config, guildId, userId, interaction);
                     responses.push(result);
                     break;
                     
@@ -538,15 +538,15 @@ async function postButtonToChannel(guildId, buttonId, channelId, client) {
 }
 
 /**
- * MVP2: Shop Management Functions
+ * MVP2: Store Management Functions
  */
 
 /**
- * Create a new shop
+ * Create a new store
  */
-async function createShop(guildId, shopData, userId) {
+async function createStore(guildId, storeData, userId) {
     try {
-        console.log(`🏪 DEBUG: Creating shop for guild ${guildId} by user ${userId}`);
+        console.log(`🏪 DEBUG: Creating store for guild ${guildId} by user ${userId}`);
         
         const safariData = await loadSafariContent();
         
@@ -554,18 +554,18 @@ async function createShop(guildId, shopData, userId) {
             safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {} };
         }
         
-        const shopId = generateButtonId(shopData.name); // Reuse ID generation
+        const storeId = generateButtonId(storeData.name); // Reuse ID generation
         
-        const shop = {
-            id: shopId,
-            name: shopData.name,
-            description: shopData.description || '',
-            emoji: shopData.emoji || '🏪',
-            items: shopData.items || [], // Array of {itemId, price}
+        const store = {
+            id: storeId,
+            name: storeData.name,
+            description: storeData.description || '',
+            emoji: storeData.emoji || '🏪',
+            items: storeData.items || [], // Array of {itemId, price}
             settings: {
-                shopkeeperText: shopData.shopkeeperText || 'Welcome to my shop!',
-                accentColor: shopData.accentColor || 0x2ecc71,
-                requiresRole: shopData.requiresRole || null
+                shopkeeperText: storeData.shopkeeperText || 'Welcome to my store!',
+                accentColor: storeData.accentColor || 0x2ecc71,
+                requiresRole: storeData.requiresRole || null
             },
             metadata: {
                 createdBy: userId,
@@ -575,13 +575,13 @@ async function createShop(guildId, shopData, userId) {
             }
         };
         
-        safariData[guildId].stores[shopId] = shop;
+        safariData[guildId].stores[storeId] = store;
         await saveSafariContent(safariData);
         
-        console.log(`✅ DEBUG: Shop '${shopId}' created successfully`);
-        return shopId;
+        console.log(`✅ DEBUG: Store '${storeId}' created successfully`);
+        return storeId;
     } catch (error) {
-        console.error('Error creating shop:', error);
+        console.error('Error creating store:', error);
         throw error;
     }
 }
@@ -653,7 +653,7 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1) {
         if (!playerData[guildId].players[userId].safari) {
             playerData[guildId].players[userId].safari = {
                 currency: 0, history: [], lastInteraction: Date.now(),
-                achievements: [], inventory: {}, cooldowns: {}, buttonUses: {}, shopHistory: []
+                achievements: [], inventory: {}, cooldowns: {}, buttonUses: {}, storeHistory: []
             };
         }
         
@@ -753,42 +753,42 @@ async function getCurrencyAndInventoryDisplay(guildId, userId) {
 }
 
 /**
- * Create shop display with 40-component limit handling
+ * Create store display with 40-component limit handling
  */
-async function createShopDisplay(guildId, shopId, userId) {
+async function createStoreDisplay(guildId, storeId, userId) {
     try {
-        console.log(`🏪 DEBUG: Creating shop display for ${shopId}`);
+        console.log(`🏪 DEBUG: Creating store display for ${storeId}`);
         
         const safariData = await loadSafariContent();
-        const shop = safariData[guildId]?.stores?.[shopId];
+        const store = safariData[guildId]?.stores?.[storeId];
         const items = safariData[guildId]?.items || {};
         
-        if (!shop) {
+        if (!store) {
             return {
-                content: '❌ Shop not found.',
+                content: '❌ Store not found.',
                 flags: InteractionResponseFlags.EPHEMERAL
             };
         }
         
         // Check if user has required role (if any)
-        if (shop.settings.requiresRole) {
+        if (store.settings.requiresRole) {
             // This would need to be checked in the caller with Discord member data
-            console.log(`🔍 DEBUG: Shop ${shopId} requires role ${shop.settings.requiresRole}`);
+            console.log(`🔍 DEBUG: Store ${storeId} requires role ${store.settings.requiresRole}`);
         }
         
         const components = [];
         
-        // Shopkeeper header text
+        // Storekeeper header text
         components.push({
             type: 10, // Text Display
-            content: `# ${shop.emoji} ${shop.name}\n\n*${shop.settings.shopkeeperText}*`
+            content: `# ${store.emoji} ${store.name}\n\n*${store.settings.shopkeeperText}*`
         });
         
-        // Shop description if provided
-        if (shop.description) {
+        // Store description if provided
+        if (store.description) {
             components.push({
                 type: 10, // Text Display  
-                content: shop.description
+                content: store.description
             });
         }
         
@@ -798,18 +798,18 @@ async function createShopDisplay(guildId, shopId, userId) {
         // Calculate component limit for items
         // Container = 1, Header text = 1, Description = 1 (if exists), Separator = 1
         // Each item section = 3 components (1 section + 1 text display + 1 button)
-        const usedComponents = 3 + (shop.description ? 1 : 0); // Container + header + separator + desc?
+        const usedComponents = 3 + (store.description ? 1 : 0); // Container + header + separator + desc?
         const maxItemSections = Math.floor((40 - usedComponents) / 3); // Each item = 3 components
         
-        // Get shop items with their prices
-        const shopItems = shop.items || [];
-        const displayItems = shopItems.slice(0, maxItemSections); // Limit to fit
+        // Get store items with their prices
+        const storeItems = store.items || [];
+        const displayItems = storeItems.slice(0, maxItemSections); // Limit to fit
         
-        console.log(`🔢 DEBUG: Displaying ${displayItems.length}/${shopItems.length} items (max: ${maxItemSections})`);
+        console.log(`🔢 DEBUG: Displaying ${displayItems.length}/${storeItems.length} items (max: ${maxItemSections})`);
         
         // Add item sections
-        for (const shopItem of displayItems) {
-            const item = items[shopItem.itemId];
+        for (const storeItem of displayItems) {
+            const item = items[storeItem.itemId];
             if (!item) continue;
             
             // Item section
@@ -818,17 +818,17 @@ async function createShopDisplay(guildId, shopId, userId) {
                 components: [
                     {
                         type: 10, // Text Display
-                        content: `## ${item.emoji} ${item.name}\n${item.description || 'No description'}\n\n**Price:** ${shopItem.price || item.basePrice} coins`
+                        content: `## ${item.emoji} ${item.name}\n${item.description || 'No description'}\n\n**Price:** ${storeItem.price || item.basePrice} coins`
                     }
                 ]
             };
             
             // Add buy button if user can afford it
             const userCurrency = await getCurrency(guildId, userId);
-            const price = shopItem.price || item.basePrice;
+            const price = storeItem.price || item.basePrice;
             
             const buyButton = new ButtonBuilder()
-                .setCustomId(`safari_buy_${guildId}_${shopId}_${item.id}_${Date.now()}`)
+                .setCustomId(`safari_buy_${guildId}_${storeId}_${item.id}_${Date.now()}`)
                 .setLabel(`Buy (${price} coins)`)
                 .setStyle(userCurrency >= price ? ButtonStyle.Success : ButtonStyle.Secondary)
                 .setDisabled(userCurrency < price);
@@ -848,16 +848,16 @@ async function createShopDisplay(guildId, shopId, userId) {
         }
         
         // Add warning if not all items could be displayed
-        if (shopItems.length > displayItems.length) {
+        if (storeItems.length > displayItems.length) {
             components.push({
                 type: 10,
-                content: `⚠️ **Note:** This shop has ${shopItems.length} items, but only ${displayItems.length} can be displayed due to Discord limits.`
+                content: `⚠️ **Note:** This store has ${storeItems.length} items, but only ${displayItems.length} can be displayed due to Discord limits.`
             });
         }
         
         const container = {
             type: 17, // Container
-            accent_color: shop.settings.accentColor,
+            accent_color: store.settings.accentColor,
             components: components
         };
         
@@ -867,9 +867,9 @@ async function createShopDisplay(guildId, shopId, userId) {
         };
         
     } catch (error) {
-        console.error('Error creating shop display:', error);
+        console.error('Error creating store display:', error);
         return {
-            content: '❌ Error loading shop. Please try again.',
+            content: '❌ Error loading store. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
         };
     }
@@ -936,16 +936,16 @@ async function executeConditionalAction(config, guildId, userId, interaction) {
 }
 
 /**
- * Execute shop display action - MVP2
+ * Execute store display action - MVP2
  */
-async function executeShopDisplay(config, guildId, userId, interaction) {
+async function executeStoreDisplay(config, guildId, userId, interaction) {
     try {
-        console.log(`🏪 DEBUG: Executing shop display for ${config.shopId}`);
-        return await createShopDisplay(guildId, config.shopId, userId);
+        console.log(`🏪 DEBUG: Executing store display for ${config.storeId}`);
+        return await createStoreDisplay(guildId, config.storeId, userId);
     } catch (error) {
-        console.error('Error executing shop display:', error);
+        console.error('Error executing store display:', error);
         return {
-            content: '❌ Error loading shop.',
+            content: '❌ Error loading store.',
             flags: InteractionResponseFlags.EPHEMERAL
         };
     }
@@ -1024,31 +1024,31 @@ async function executeRandomOutcome(config, guildId, userId, interaction) {
 /**
  * Handle item purchase
  */
-async function buyItem(guildId, shopId, itemId, userId) {
+async function buyItem(guildId, storeId, itemId, userId) {
     try {
-        console.log(`💳 DEBUG: User ${userId} buying ${itemId} from shop ${shopId}`);
+        console.log(`💳 DEBUG: User ${userId} buying ${itemId} from store ${storeId}`);
         
         const safariData = await loadSafariContent();
-        const shop = safariData[guildId]?.stores?.[shopId];
+        const store = safariData[guildId]?.stores?.[storeId];
         const item = safariData[guildId]?.items?.[itemId];
         
-        if (!shop || !item) {
+        if (!store || !item) {
             return {
-                content: '❌ Shop or item not found.',
+                content: '❌ Store or item not found.',
                 flags: InteractionResponseFlags.EPHEMERAL
             };
         }
         
-        // Find item in shop to get price
-        const shopItem = shop.items.find(si => si.itemId === itemId);
-        if (!shopItem) {
+        // Find item in store to get price
+        const storeItem = store.items.find(si => si.itemId === itemId);
+        if (!storeItem) {
             return {
-                content: '❌ Item not available in this shop.',
+                content: '❌ Item not available in this store.',
                 flags: InteractionResponseFlags.EPHEMERAL
             };
         }
         
-        const price = shopItem.price || item.basePrice;
+        const price = storeItem.price || item.basePrice;
         const userCurrency = await getCurrency(guildId, userId);
         
         // Check if user can afford it
@@ -1074,9 +1074,9 @@ async function buyItem(guildId, shopId, itemId, userId) {
         await updateCurrency(guildId, userId, -price);
         await addItemToInventory(guildId, userId, itemId, 1);
         
-        // Update shop sales stats
-        if (safariData[guildId]?.stores?.[shopId]) {
-            safariData[guildId].stores[shopId].metadata.totalSales++;
+        // Update store sales stats
+        if (safariData[guildId]?.stores?.[storeId]) {
+            safariData[guildId].stores[storeId].metadata.totalSales++;
         }
         if (safariData[guildId]?.items?.[itemId]) {
             safariData[guildId].items[itemId].metadata.totalSold++;
@@ -1086,9 +1086,9 @@ async function buyItem(guildId, shopId, itemId, userId) {
         // Add to purchase history
         const playerData = await loadPlayerData();
         if (playerData[guildId]?.players?.[userId]?.safari) {
-            playerData[guildId].players[userId].safari.shopHistory.push({
+            playerData[guildId].players[userId].safari.storeHistory.push({
                 itemId,
-                shopId,
+                storeId,
                 price,
                 timestamp: Date.now()
             });
@@ -1352,16 +1352,16 @@ export {
     loadSafariContent,
     saveSafariContent,
     // MVP2 exports
-    createShop,
+    createStore,
     createItem,
     getPlayerInventory,
     addItemToInventory,
     checkCondition,
     getCurrencyAndInventoryDisplay,
-    createShopDisplay,
+    createStoreDisplay,
     buyItem,
     executeConditionalAction,
-    executeShopDisplay,
+    executeStoreDisplay,
     executeRandomOutcome,
     ACTION_TYPES,
     CONDITION_TYPES,

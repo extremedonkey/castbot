@@ -51,7 +51,7 @@ Production Menu → {
 ```
 🦁 Safari → {
   🎛️ Manage Safari Buttons    ← **Button Management Hub**
-  🏪 Manage Shops
+  🏪 Manage Stores
   📦 Manage Items  
   📤 Post Custom Button
   💰 Manage Currency

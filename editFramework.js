@@ -1,5 +1,5 @@
 // Universal Edit Framework for Safari Content Management
-// Modular, reusable edit system for Buttons, Shops, Items, and future content types
+// Modular, reusable edit system for Buttons, Stores, Items, and future content types
 
 import { SAFARI_LIMITS, EDIT_TYPES, BUTTON_STYLES } from './config/safariLimits.js';
 
@@ -26,10 +26,10 @@ export const EDIT_CONFIGS = {
     operations: ['reorder', 'edit', 'delete', 'add', 'test']
   },
   
-  [EDIT_TYPES.SHOP]: {
-    displayName: 'Shop',
+  [EDIT_TYPES.STORE]: {
+    displayName: 'Store',
     properties: {
-      name: { type: 'text', maxLength: SAFARI_LIMITS.MAX_SHOP_NAME_LENGTH, required: true, label: 'Shop Name' },
+      name: { type: 'text', maxLength: SAFARI_LIMITS.MAX_STORE_NAME_LENGTH, required: true, label: 'Store Name' },
       emoji: { type: 'text', maxLength: 10, required: false, label: 'Emoji', placeholder: '🏪' },
       shopkeeperText: { type: 'textarea', maxLength: SAFARI_LIMITS.MAX_SHOPKEEPER_TEXT_LENGTH, required: false, label: 'Shopkeeper Text' },
       accentColor: { type: 'color', required: false, label: 'Accent Color' },
@@ -37,8 +37,8 @@ export const EDIT_CONFIGS = {
     },
     content: {
       type: 'items',
-      label: 'Shop Items',
-      maxItems: SAFARI_LIMITS.MAX_ITEMS_PER_SHOP,
+      label: 'Store Items',
+      maxItems: SAFARI_LIMITS.MAX_ITEMS_PER_STORE,
       itemLabel: 'item',
       itemLabelPlural: 'items'
     },
@@ -266,8 +266,8 @@ export class EditInterfaceBuilder {
     switch (this.contentType) {
       case EDIT_TYPES.BUTTON:
         return this.getActionSummary(item);
-      case EDIT_TYPES.SHOP:
-        return this.getShopItemSummary(item);
+      case EDIT_TYPES.STORE:
+        return this.getStoreItemSummary(item);
       case EDIT_TYPES.ITEM:
         return this.getItemEffectSummary(item);
       default:
@@ -310,10 +310,10 @@ export class EditInterfaceBuilder {
   }
 
   /**
-   * Get shop item summary
+   * Get store item summary
    */
-  getShopItemSummary(shopItem) {
-    return `🛍️ ${shopItem.itemId || 'Unknown Item'} - ${shopItem.price || 0} coins`;
+  getStoreItemSummary(storeItem) {
+    return `🛍️ ${storeItem.itemId || 'Unknown Item'} - ${storeItem.price || 0} coins`;
   }
 
   /**

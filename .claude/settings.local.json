@@ -160,7 +160,8 @@
       "Bash(timeout:*)",
       "Bash(scp:*)",
       "Bash(python3:*)",
-      "WebFetch(domain:ibb.co)"
+      "WebFetch(domain:ibb.co)",
+      "Bash(git checkout:*)"
     ],
     "deny": []
   }

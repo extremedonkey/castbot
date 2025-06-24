@@ -2433,20 +2433,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       );
     }
     
-    // Handle store browse buttons (format: safari_store_browse_guildId_shopId)
+    // Handle store browse buttons (format: safari_store_browse_guildId_storeId)
     if (custom_id.startsWith('safari_store_browse_')) {
       try {
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         
-        // Parse shopId from custom_id: safari_store_browse_guildId_shopId
+        // Parse storeId from custom_id: safari_store_browse_guildId_storeId
         const parts = custom_id.split('_');
         if (parts.length < 5) {
-          throw new Error('Invalid shop browse custom_id format');
+          throw new Error('Invalid store browse custom_id format');
         }
-        const shopId = parts.slice(4).join('_'); // Rejoin in case shopId has underscores
+        const storeId = parts.slice(4).join('_'); // Rejoin in case storeId has underscores
         
-        console.log(`🏪 DEBUG: User ${userId} browsing store ${shopId} in guild ${guildId}`);
+        console.log(`🏪 DEBUG: User ${userId} browsing store ${storeId} in guild ${guildId}`);
         
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
@@ -2488,19 +2488,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         containerComponents.push({ type: 14 }); // Separator
         
-        // Create Section component for each item in shop
-        const shopItems = store.items || [];
-        if (shopItems.length === 0) {
+        // Create Section component for each item in store
+        const storeItems = store.items || [];
+        if (storeItems.length === 0) {
           containerComponents.push({
             type: 10, // Text Display
             content: `*This store doesn't have any items for sale yet.*`
           });
         } else {
-          for (let i = 0; i < shopItems.length; i++) {
-            const shopItem = shopItems[i];
-            const itemId = shopItem.itemId || shopItem;
+          for (let i = 0; i < storeItems.length; i++) {
+            const storeItem = storeItems[i];
+            const itemId = storeItem.itemId || storeItem;
             const item = allItems[itemId];
-            const price = shopItem.price || item?.basePrice || 0;
+            const price = storeItem.price || item?.basePrice || 0;
             
             if (item) {
               // Create Section component as specified
@@ -2522,7 +2522,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 ],
                 accessory: {
                   type: 2, // Button accessory (appears on far right)
-                  custom_id: `safari_store_buy_${guildId}_${shopId}_${itemId}`,
+                  custom_id: `safari_store_buy_${guildId}_${storeId}_${itemId}`,
                   label: `Buy ${item.name}`.slice(0, 80),
                   style: 1,
                   emoji: { name: item.emoji || '🛒' }
@@ -2532,7 +2532,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               containerComponents.push(itemSection);
               
               // Add separator between items (but not after the last item)
-              if (i < shopItems.length - 1) {
+              if (i < storeItems.length - 1) {
                 containerComponents.push({ type: 14 }); // Separator
               }
             }
@@ -2648,7 +2648,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         // Initialize safari data if needed
         if (!player.safari) {
-          player.safari = { currency: 0, inventory: {}, history: [], buttonUses: {}, shopHistory: [] };
+          player.safari = { currency: 0, inventory: {}, history: [], buttonUses: {}, storeHistory: [] };
         }
         if (!player.safari.inventory) {
           player.safari.inventory = {};
@@ -5447,7 +5447,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_manage_stores') {
-      // MVP2: Shop management interface with full functionality
+      // MVP2: Store management interface with full functionality
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -5463,7 +5463,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        console.log(`🏪 DEBUG: Opening shop management interface`);
+        console.log(`🏪 DEBUG: Opening store management interface`);
         
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
@@ -5489,12 +5489,12 @@ Your server is now ready for Tycoons gameplay!`;
         const managementButtonsRow2 = [
           new ButtonBuilder()
             .setCustomId('safari_store_manage_existing')
-            .setLabel('Edit Existing Shop')
+            .setLabel('Edit Existing Store')
             .setStyle(ButtonStyle.Secondary)
             .setEmoji('✏️'),
           new ButtonBuilder()
             .setCustomId('safari_store_manage_items')
-            .setLabel('Manage Shop')
+            .setLabel('Manage Store')
             .setStyle(ButtonStyle.Success)
             .setEmoji('📦')
         ];
@@ -5510,8 +5510,8 @@ Your server is now ready for Tycoons gameplay!`;
         
         const backRow = new ActionRowBuilder().addComponents(backButton);
         
-        // Create shop summary
-        const shopCount = Object.keys(stores).length;
+        // Create store summary
+        const storeCount = Object.keys(stores).length;
         const itemCount = Object.keys(items).length;
         let totalSales = 0;
         
@@ -5521,7 +5521,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Show overview of existing stores
         let storesOverview = '';
-        if (shopCount === 0) {
+        if (storeCount === 0) {
           storesOverview = '*No stores created yet.*';
         } else {
           const storeList = Object.values(stores).slice(0, 5); // Show first 5
@@ -5531,8 +5531,8 @@ Your server is now ready for Tycoons gameplay!`;
             return `**${store.emoji || '🏪'} ${store.name}**\n└ ${itemsInStore} items • ${sales} sales`;
           }).join('\n\n');
           
-          if (shopCount > 5) {
-            storesOverview += `\n\n*...and ${shopCount - 5} more stores*`;
+          if (storeCount > 5) {
+            storesOverview += `\n\n*...and ${storeCount - 5} more stores*`;
           }
         }
         
@@ -5544,7 +5544,7 @@ Your server is now ready for Tycoons gameplay!`;
           },
           {
             type: 10, // Text Display component
-            content: `> **Total Stores:** ${shopCount}\n> **Available Items:** ${itemCount}\n> **Total Sales:** ${totalSales}`
+            content: `> **Total Stores:** ${storeCount}\n> **Available Items:** ${itemCount}\n> **Total Sales:** ${totalSales}`
           },
           {
             type: 10, // Text Display component
@@ -5563,7 +5563,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         const container = {
           type: 17, // Container component
-          accent_color: 0x2ecc71, // Green accent color for shop theme
+          accent_color: 0x2ecc71, // Green accent color for store theme
           components: containerComponents
         };
         
@@ -5641,7 +5641,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Create item summary
         const itemCount = Object.keys(items).length;
-        const shopCount = Object.keys(stores).length;
+        const storeCount = Object.keys(stores).length;
         let totalSold = 0;
         
         Object.values(items).forEach(item => {
@@ -5655,11 +5655,11 @@ Your server is now ready for Tycoons gameplay!`;
         } else {
           const itemList = Object.values(items).slice(0, 5); // Show first 5
           itemsOverview = itemList.map(item => {
-            const shopsUsingItem = Object.values(shops).filter(shop => 
-              store.items?.some(shopItem => shopItem.itemId === item.id)
+            const storesUsingItem = Object.values(stores).filter(store => 
+              store.items?.some(storeItem => storeItem.itemId === item.id)
             ).length;
             const sold = item.metadata?.totalSold || 0;
-            return `**${item.emoji || '📦'} ${item.name}**\n└ In ${shopsUsingItem} shops • ${sold} sold • ${item.basePrice} coins`;
+            return `**${item.emoji || '📦'} ${item.name}**\n└ In ${storesUsingItem} stores • ${sold} sold • ${item.basePrice} coins`;
           }).join('\n\n');
           
           if (itemCount > 5) {
@@ -5671,11 +5671,11 @@ Your server is now ready for Tycoons gameplay!`;
         const containerComponents = [
           {
             type: 10, // Text Display component
-            content: `## 📦 Item Management\n\nCreate and manage reusable items for your Safari shops.`
+            content: `## 📦 Item Management\n\nCreate and manage reusable items for your Safari stores.`
           },
           {
             type: 10, // Text Display component
-            content: `> **Total Items:** ${itemCount}\n> **Used in Shops:** ${shopCount}\n> **Total Sold:** ${totalSold}`
+            content: `> **Total Items:** ${itemCount}\n> **Used in Stores:** ${storeCount}\n> **Total Sold:** ${totalSold}`
           },
           {
             type: 10, // Text Display component
@@ -5788,7 +5788,7 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error creating shop interface.',
+            content: '❌ Error creating store interface.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -5891,7 +5891,7 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ You need Manage Roles permission to view shops.',
+              content: '❌ You need Manage Roles permission to view stores.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -5916,24 +5916,24 @@ Your server is now ready for Tycoons gameplay!`;
         let content = '## 🏪 All Stores\n\n';
         
         if (Object.keys(stores).length === 0) {
-          content += '*No stores created yet.*\n\nCreate your first shop using the **Create New Store** button in the Shop Management interface.';
+          content += '*No stores created yet.*\n\nCreate your first store using the **Create New Store** button in the Store Management interface.';
         } else {
-          const shopList = Object.entries(stores)
+          const storeList = Object.entries(stores)
             .sort(([, a], [, b]) => (b.metadata?.createdAt || 0) - (a.metadata?.createdAt || 0)); // Sort by creation date
           
-          content += `**Total Stores:** ${shopList.length}\n\n`;
+          content += `**Total Stores:** ${storeList.length}\n\n`;
           
-          shopList.forEach(([shopId, shop], index) => {
-            const itemsInShop = shop.items?.length || 0;
-            const totalSales = shop.metadata?.totalSales || 0;
-            const createdDate = shop.metadata?.createdAt ? new Date(shop.metadata.createdAt).toLocaleDateString() : 'Unknown';
+          storeList.forEach(([storeId, store], index) => {
+            const itemsInStore = store.items?.length || 0;
+            const totalSales = store.metadata?.totalSales || 0;
+            const createdDate = store.metadata?.createdAt ? new Date(store.metadata.createdAt).toLocaleDateString() : 'Unknown';
             
-            content += `**${index + 1}. ${shop.emoji || '🏪'} ${shop.name}**\n`;
-            if (shop.description) {
-              content += `└ *${shop.description}*\n`;
+            content += `**${index + 1}. ${store.emoji || '🏪'} ${store.name}**\n`;
+            if (store.description) {
+              content += `└ *${store.description}*\n`;
             }
-            content += `└ **Store ID:** \`${shopId}\`\n`;
-            content += `└ **Items:** ${itemsInShop} | **Sales:** ${totalSales} | **Created:** ${createdDate}\n\n`;
+            content += `└ **Store ID:** \`${storeId}\`\n`;
+            content += `└ **Items:** ${itemsInStore} | **Sales:** ${totalSales} | **Created:** ${createdDate}\n\n`;
           });
         }
         
@@ -6110,7 +6110,7 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ **No stores to edit**\n\nCreate your first shop before you can edit existing ones.',
+              content: '❌ **No stores to edit**\n\nCreate your first store before you can edit existing ones.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -6144,9 +6144,9 @@ Your server is now ready for Tycoons gameplay!`;
         const containerComponents = [
           {
             type: 10, // Text Display component
-            content: `## ✏️ Edit Existing Store\n\nSelect a shop to edit from the dropdown below:`
+            content: `## ✏️ Edit Existing Store\n\nSelect a store to edit from the dropdown below:`
           },
-          selectRow.toJSON(), // Shop selection dropdown
+          selectRow.toJSON(), // Store selection dropdown
           {
             type: 14 // Separator
           },
@@ -6178,7 +6178,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_store_manage_items') {
-      // MVP2 Sprint 1: Manage shop items (add/remove items from shops)
+      // MVP2 Sprint 1: Manage store items (add/remove items from stores)
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -6194,7 +6194,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        console.log(`📦 DEBUG: Opening shop items management interface`);
+        console.log(`📦 DEBUG: Opening store items management interface`);
         
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
@@ -6205,30 +6205,30 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ **No stores to manage**\n\nCreate your first shop using **🏪 Create New Store** before managing shop items.',
+              content: '❌ **No stores to manage**\n\nCreate your first store using **🏪 Create New Store** before managing store items.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        // Create shop selection dropdown
-        const shopOptions = Object.entries(stores).slice(0, 25).map(([shopId, shop]) => {
+        // Create store selection dropdown
+        const storeOptions = Object.entries(stores).slice(0, 25).map(([storeId, store]) => {
           const itemCount = store.items?.length || 0;
           return {
             label: `${store.emoji || '🏪'} ${store.name}`.slice(0, 100),
-            value: shopId,
+            value: storeId,
             description: `${itemCount} item${itemCount !== 1 ? 's' : ''} currently in stock`.slice(0, 100)
           };
         });
         
-        const shopSelect = new StringSelectMenuBuilder()
+        const storeSelect = new StringSelectMenuBuilder()
           .setCustomId('safari_store_items_select')
           .setPlaceholder('Choose a store to manage items...')
           .setMinValues(1)
           .setMaxValues(1)
-          .addOptions(shopOptions);
+          .addOptions(storeOptions);
         
-        const selectRow = new ActionRowBuilder().addComponents(shopSelect);
+        const selectRow = new ActionRowBuilder().addComponents(storeSelect);
         
         // Create back button
         const backButton = new ButtonBuilder()
@@ -6251,7 +6251,7 @@ Your server is now ready for Tycoons gameplay!`;
           {
             type: 14 // Separator
           },
-          selectRow.toJSON(), // Shop selection dropdown
+          selectRow.toJSON(), // Store selection dropdown
           {
             type: 14 // Separator
           },
@@ -6283,12 +6283,12 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_store_items_select') {
-      // Handle shop selection for items management
+      // Handle store selection for items management
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
         const data = req.body.data;
-        const selectedShopId = data.values[0];
+        const selectedStoreId = data.values[0];
         
         // Check admin permissions
         if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
@@ -6301,12 +6301,12 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        console.log(`📦 DEBUG: Managing items for shop ${selectedShopId}`);
+        console.log(`📦 DEBUG: Managing items for store ${selectedStoreId}`);
         
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
-        const store = safariData[guildId]?.stores?.[selectedShopId];
+        const store = safariData[guildId]?.stores?.[selectedStoreId];
         const allItems = safariData[guildId]?.items || {};
         
         if (!store) {
@@ -6324,15 +6324,15 @@ Your server is now ready for Tycoons gameplay!`;
           store.items = [];
         }
         
-        // Get items currently in shop and available items
+        // Get items currently in store and available items
         const currentItems = store.items || [];
         const currentItemIds = new Set(currentItems.map(item => item.itemId || item));
         const availableItems = Object.entries(allItems).filter(([itemId]) => !currentItemIds.has(itemId));
         
         // Build simplified interface to avoid Discord component limits and timeout
         let currentItemsList = '';
-        currentItems.forEach((shopItem, index) => {
-          const itemId = shopItem.itemId || shopItem;
+        currentItems.forEach((storeItem, index) => {
+          const itemId = storeItem.itemId || storeItem;
           const item = allItems[itemId];
           if (item) {
             const price = storeItem.price || item.basePrice || 0;
@@ -6353,13 +6353,13 @@ Your server is now ready for Tycoons gameplay!`;
         const actionButtons = [];
         
         // Remove buttons for current items (show all current items)
-        currentItems.forEach((shopItem, index) => {
-          const itemId = shopItem.itemId || shopItem;
+        currentItems.forEach((storeItem, index) => {
+          const itemId = storeItem.itemId || storeItem;
           const item = allItems[itemId];
           if (item) {
             actionButtons.push({
               type: 2, // Button
-              custom_id: `safari_store_remove_item_${selectedShopId}::${itemId}`,
+              custom_id: `safari_store_remove_item_${selectedStoreId}::${itemId}`,
               label: `Remove ${item.name}`.slice(0, 80),
               style: 4,
               emoji: { name: '🗑️' }
@@ -6374,7 +6374,7 @@ Your server is now ready for Tycoons gameplay!`;
         availableItems.slice(0, remainingSlots).forEach(([itemId, item]) => {
           actionButtons.push({
             type: 2, // Button
-            custom_id: `safari_store_add_item_${selectedShopId}::${itemId}`,
+            custom_id: `safari_store_add_item_${selectedStoreId}::${itemId}`,
             label: `Add ${item.name}`.slice(0, 80),
             style: 3,
             emoji: { name: '➕' }
@@ -6400,11 +6400,11 @@ Your server is now ready for Tycoons gameplay!`;
           },
           {
             type: 10, // Text Display
-            content: `### 🛍️ Current Items in Shop\n${currentItemsList || '*No items in this shop yet.*'}`
+            content: `### 🛍️ Current Items in Store\n${currentItemsList || '*No items in this store yet.*'}`
           },
           {
             type: 10, // Text Display
-            content: `### ➕ Available Items to Add\n${availableItemsList || '*All items are already in this shop.*'}`
+            content: `### ➕ Available Items to Add\n${availableItemsList || '*All items are already in this store.*'}`
           },
           ...buttonRows,
           {
@@ -6416,13 +6416,13 @@ Your server is now ready for Tycoons gameplay!`;
               {
                 type: 2, // Button
                 custom_id: 'safari_store_manage_items',
-                label: '⬅ Back to Shop Selection',
+                label: '⬅ Back to Store Selection',
                 style: 2
               },
               {
                 type: 2, // Button
-                custom_id: `safari_store_open_${selectedShopId}`,
-                label: 'Open Shop',
+                custom_id: `safari_store_open_${selectedStoreId}`,
+                label: 'Open Store',
                 style: 1,
                 emoji: { name: '🏪' }
               }
@@ -6455,7 +6455,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id.startsWith('safari_store_add_item_')) {
-      // Add item to shop
+      // Add item to store
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -6471,7 +6471,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Parse custom_id: safari_store_add_item_${shopId}::${itemId}
+        // Parse custom_id: safari_store_add_item_${storeId}::${itemId}
         // Using :: delimiter to handle IDs with underscores
         const prefix = 'safari_store_add_item_';
         const afterPrefix = custom_id.substring(prefix.length);
@@ -6479,10 +6479,10 @@ Your server is now ready for Tycoons gameplay!`;
         if (delimiterIndex === -1) {
           throw new Error('Invalid custom_id format');
         }
-        const shopId = afterPrefix.substring(0, delimiterIndex);
+        const storeId = afterPrefix.substring(0, delimiterIndex);
         const itemId = afterPrefix.substring(delimiterIndex + 2);
         
-        console.log(`➕ DEBUG: Adding item ${itemId} to shop ${shopId}`);
+        console.log(`➕ DEBUG: Adding item ${itemId} to store ${storeId}`);
         
         // Import Safari manager functions
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
@@ -6506,22 +6506,22 @@ Your server is now ready for Tycoons gameplay!`;
           store.items = [];
         }
         
-        // Check if item already in shop
-        const existingItem = store.items.find(shopItem => 
-          (shopItem.itemId || shopItem) === itemId
+        // Check if item already in store
+        const existingItem = store.items.find(storeItem => 
+          (storeItem.itemId || storeItem) === itemId
         );
         
         if (existingItem) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Item is already in this shop.',
+              content: '❌ Item is already in this store.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        // Add item to shop (using base price initially)
+        // Add item to store (using base price initially)
         store.items.push({
           itemId: itemId,
           price: item.basePrice || 0,
@@ -6531,7 +6531,7 @@ Your server is now ready for Tycoons gameplay!`;
         // Save updated data
         await saveSafariContent(safariData);
         
-        console.log(`✅ DEBUG: Successfully added ${itemId} to shop ${shopId}`);
+        console.log(`✅ DEBUG: Successfully added ${itemId} to store ${storeId}`);
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -6542,17 +6542,17 @@ Your server is now ready for Tycoons gameplay!`;
         });
         
       } catch (error) {
-        console.error('Error adding item to shop:', error);
+        console.error('Error adding item to store:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error adding item to shop.',
+            content: '❌ Error adding item to store.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
       }
     } else if (custom_id.startsWith('safari_store_remove_item_')) {
-      // Remove item from shop
+      // Remove item from store
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -6568,7 +6568,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Parse custom_id: safari_store_remove_item_${shopId}::${itemId}
+        // Parse custom_id: safari_store_remove_item_${storeId}::${itemId}
         // Using :: delimiter to handle IDs with underscores
         const prefix = 'safari_store_remove_item_';
         const afterPrefix = custom_id.substring(prefix.length);
@@ -6576,10 +6576,10 @@ Your server is now ready for Tycoons gameplay!`;
         if (delimiterIndex === -1) {
           throw new Error('Invalid custom_id format');
         }
-        const shopId = afterPrefix.substring(0, delimiterIndex);
+        const storeId = afterPrefix.substring(0, delimiterIndex);
         const itemId = afterPrefix.substring(delimiterIndex + 2);
         
-        console.log(`🗑️ DEBUG: Removing item ${itemId} from shop ${shopId}`);
+        console.log(`🗑️ DEBUG: Removing item ${itemId} from store ${storeId}`);
         
         // Import Safari manager functions
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
@@ -6598,17 +6598,17 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Remove item from shop
+        // Remove item from store
         const originalLength = store.items?.length || 0;
-        store.items = (store.items || []).filter(shopItem => 
-          (shopItem.itemId || shopItem) !== itemId
+        store.items = (store.items || []).filter(storeItem => 
+          (storeItem.itemId || storeItem) !== itemId
         );
         
         if (store.items.length === originalLength) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Item was not found in this shop.',
+              content: '❌ Item was not found in this store.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -6617,7 +6617,7 @@ Your server is now ready for Tycoons gameplay!`;
         // Save updated data
         await saveSafariContent(safariData);
         
-        console.log(`✅ DEBUG: Successfully removed ${itemId} from shop ${shopId}`);
+        console.log(`✅ DEBUG: Successfully removed ${itemId} from store ${storeId}`);
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -6628,17 +6628,17 @@ Your server is now ready for Tycoons gameplay!`;
         });
         
       } catch (error) {
-        console.error('Error removing item from shop:', error);
+        console.error('Error removing item from store:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error removing item from shop.',
+            content: '❌ Error removing item from store.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
       }
     } else if (custom_id.startsWith('safari_store_open_')) {
-      // Open Shop - post shop button to channel
+      // Open Store - post store button to channel
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -6648,15 +6648,15 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ You need Manage Roles permission to post shop buttons.',
+              content: '❌ You need Manage Roles permission to post store buttons.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        // Parse shopId from custom_id
-        const shopId = custom_id.replace('safari_store_open_', '');
-        console.log(`🏪 DEBUG: Opening shop posting interface for shop ${shopId}`);
+        // Parse storeId from custom_id
+        const storeId = custom_id.replace('safari_store_open_', '');
+        console.log(`🏪 DEBUG: Opening store posting interface for store ${storeId}`);
         
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
@@ -6677,11 +6677,11 @@ Your server is now ready for Tycoons gameplay!`;
         const containerComponents = [
           {
             type: 10, // Text Display
-            content: `## 🏪 Open Shop\n\n**${store.emoji || '🏪'} ${store.name}**`
+            content: `## 🏪 Open Store\n\n**${store.emoji || '🏪'} ${store.name}**`
           },
           {
             type: 10, // Text Display
-            content: `Select the channel to post your shop button to - be sure to write up any context in the channel before posting the button.`
+            content: `Select the channel to post your store button to - be sure to write up any context in the channel before posting the button.`
           },
           {
             type: 14 // Separator
@@ -6690,8 +6690,8 @@ Your server is now ready for Tycoons gameplay!`;
             type: 1, // Action Row
             components: [{
               type: 8, // Channel Select
-              custom_id: `safari_store_post_channel_${shopId}`,
-              placeholder: 'Select channel to post shop button...',
+              custom_id: `safari_store_post_channel_${storeId}`,
+              placeholder: 'Select channel to post store button...',
               channel_types: [0, 5] // Text and Announcement channels
             }]
           },
@@ -6728,13 +6728,13 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error opening shop posting interface.',
+            content: '❌ Error opening store posting interface.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
       }
     } else if (custom_id.startsWith('safari_store_post_channel_')) {
-      // Handle channel selection for posting shop button
+      // Handle channel selection for posting store button
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -6746,15 +6746,15 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ You need Manage Roles permission to post shop buttons.',
+              content: '❌ You need Manage Roles permission to post store buttons.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        // Parse shopId from custom_id
-        const shopId = custom_id.replace('safari_store_post_channel_', '');
-        console.log(`📤 DEBUG: Posting shop ${shopId} button to channel ${selectedChannelId}`);
+        // Parse storeId from custom_id
+        const storeId = custom_id.replace('safari_store_post_channel_', '');
+        console.log(`📤 DEBUG: Posting store ${storeId} button to channel ${selectedChannelId}`);
         
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
@@ -6772,11 +6772,11 @@ Your server is now ready for Tycoons gameplay!`;
         }
         
         // Create store button to post to channel
-        const shopButton = {
+        const storeButton = {
           type: 1, // Action Row
           components: [{
             type: 2, // Button
-            custom_id: `safari_store_browse_${guildId}_${shopId}`,
+            custom_id: `safari_store_browse_${guildId}_${storeId}`,
             label: `Browse ${store.name}`,
             style: 1,
             emoji: store.emoji ? { name: store.emoji } : { name: '🏪' }
@@ -6788,7 +6788,7 @@ Your server is now ready for Tycoons gameplay!`;
           const channel = client?.channels?.cache?.get(selectedChannelId);
           if (channel) {
             await channel.send({
-              components: [shopButton]
+              components: [storeButton]
             });
             
             return res.send({
@@ -6800,7 +6800,7 @@ Your server is now ready for Tycoons gameplay!`;
                   accent_color: 0x00ff00, // Green
                   components: [{
                     type: 10, // Text Display
-                    content: `## ✅ Shop Button Posted!\n\n**${store.emoji || '🏪'} ${store.name}** has been posted to <#${selectedChannelId}>.`
+                    content: `## ✅ Store Button Posted!\n\n**${store.emoji || '🏪'} ${store.name}** has been posted to <#${selectedChannelId}>.`
                   }, {
                     type: 14 // Separator
                   }, {
@@ -6819,7 +6819,7 @@ Your server is now ready for Tycoons gameplay!`;
             throw new Error('Channel not found');
           }
         } catch (postError) {
-          console.error('Error posting shop button to channel:', postError);
+          console.error('Error posting store button to channel:', postError);
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -6834,7 +6834,7 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error posting shop button.',
+            content: '❌ Error posting store button.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -6935,7 +6935,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_button_manage_existing') {
-      // Edit existing button interface following shop/item pattern
+      // Edit existing button interface following store/item pattern
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -10038,11 +10038,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
     } else if (custom_id === 'safari_store_edit_select') {
-      // Handle shop selection for editing
+      // Handle store selection for editing
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
-        const selectedShopId = data.values[0];
+        const selectedStoreId = data.values[0];
         
         // Check admin permissions
         if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
@@ -10055,22 +10055,22 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        console.log(`✏️ DEBUG: Selected shop ${selectedShopId} for editing`);
+        console.log(`✏️ DEBUG: Selected store ${selectedStoreId} for editing`);
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `🚧 **Store Editing Coming Soon**\n\nStore editing functionality is under development. For now, you can:\n\n• Create new stores\n• View all stores\n• Delete and recreate stores as needed\n\nSelected store: \`${selectedShopId}\``,
+            content: `🚧 **Store Editing Coming Soon**\n\nStore editing functionality is under development. For now, you can:\n\n• Create new stores\n• View all stores\n• Delete and recreate stores as needed\n\nSelected store: \`${selectedStoreId}\``,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         
       } catch (error) {
-        console.error('Error handling shop edit selection:', error);
+        console.error('Error handling store edit selection:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error selecting shop for editing.',
+            content: '❌ Error selecting store for editing.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -12071,19 +12071,19 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
     } else if (custom_id.startsWith('safari_buy_')) {
-      // MVP2: Handle item purchases (format: safari_buy_guildId_shopId_itemId_timestamp)
+      // MVP2: Handle item purchases (format: safari_buy_guildId_storeId_itemId_timestamp)
       try {
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         
-        // Parse custom ID to extract shop and item info
+        // Parse custom ID to extract store and item info
         const parts = custom_id.split('_');
         if (parts.length < 5) {
           throw new Error('Invalid buy button custom ID format');
         }
         
         const extractedGuildId = parts[2];
-        const shopId = parts[3];
+        const storeId = parts[3];
         const itemId = parts[4];
         
         // Verify guild ID matches
@@ -12097,12 +12097,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        console.log(`💳 DEBUG: Processing purchase: ${itemId} from shop ${shopId} by user ${userId}`);
+        console.log(`💳 DEBUG: Processing purchase: ${itemId} from store ${storeId} by user ${userId}`);
         
         // Import Safari manager functions
         const { buyItem } = await import('./safariManager.js');
         
-        const result = await buyItem(guildId, shopId, itemId, userId);
+        const result = await buyItem(guildId, storeId, itemId, userId);
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -12156,9 +12156,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         console.log(`🏪 DEBUG: Creating store "${storeName}" for guild ${guildId}`);
         
         // Import Safari manager functions
-        const { createShop } = await import('./safariManager.js');
+        const { createStore } = await import('./safariManager.js');
         
-        const result = await createShop(guildId, {
+        const result = await createStore(guildId, {
           name: storeName,
           emoji: storeEmoji,
           description: storeDescription,
@@ -12179,7 +12179,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error creating shop. Please try again.',
+            content: '❌ Error creating store. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -12248,7 +12248,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Item Created Successfully!**\n\n**${itemEmoji ? itemEmoji + ' ' : ''}${itemName}**\n${itemDescription ? itemDescription : ''}\n\n**Base Price:** ${price} coins\n**Category:** ${category}\nItem ID: \`${result}\`\n\nYou can now add this item to any shop with custom pricing.`,
+            content: `✅ **Item Created Successfully!**\n\n**${itemEmoji ? itemEmoji + ' ' : ''}${itemName}**\n${itemDescription ? itemDescription : ''}\n\n**Base Price:** ${price} coins\n**Category:** ${category}\nItem ID: \`${result}\`\n\nYou can now add this item to any store with custom pricing.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

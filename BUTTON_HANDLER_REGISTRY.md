@@ -37,7 +37,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_manage_safari_buttons` | 🎛️ Manage Safari Buttons | app.js:~3893 | Direct handler | ✅ Active |
 | `safari_manage_stores` | 🏪 Manage Stores | app.js:~5067 | Direct handler | ✅ Active |
 | `safari_manage_items` | 📦 Manage Items | app.js:~5195 | Direct handler | ✅ Active |
-| `safari_store_manage_items` | 📦 Manage Shop Items | app.js:~5904 | Direct handler | ✅ Active |
+| `safari_store_manage_items` | 📦 Manage Store Items | app.js:~5904 | Direct handler | ✅ Active |
 | `safari_store_items_select` | Store Selection for Items | app.js:~6009 | Select handler | ✅ Active |
 | `safari_store_add_item_*` | ➕ Add Item to Store | app.js:~6197 | Pattern handler (::delimiter) | ✅ Active |
 | `safari_store_remove_item_*` | 🗑️ Remove Item from Store | app.js:~6288 | Pattern handler (::delimiter) | ✅ Active |
@@ -78,7 +78,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 ### **Recent Critical Fixes (2025-06-24)**
 | Issue | Fix Applied | Impact | Status |
 |-------|-------------|--------|--------|
-| Shop Item Add/Remove Parsing Error | Changed delimiter from `_` to `::` in custom_ids | Fixed shop/item ID parsing when IDs contain underscores | ✅ Fixed |
+| Store Item Add/Remove Parsing Error | Changed delimiter from `_` to `::` in custom_ids | Fixed store/item ID parsing when IDs contain underscores | ✅ Fixed |
 | Post Custom Button "Interaction Failed" | Changed response from `CHANNEL_MESSAGE_WITH_SOURCE` to `UPDATE_MESSAGE` | Fixed select menu functionality | ✅ Resolved |
 | Edit Existing Button "❌ Button not found" | Added `!custom_id.startsWith('safari_button_')` to dynamic handler exclusions | Fixed button management access | ✅ Resolved |
 | Documentation Gap | Added comprehensive dynamic handler pattern exclusion guidelines to CLAUDE.md | Prevents future pattern matching issues | ✅ Complete |
@@ -91,7 +91,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_action_modal_*` | Add Action Modals | app.js:~9229 | Pattern handler | ✅ Active |
 | `safari_edit_action_modal_*` | Edit Individual Action Modal | app.js:~9000+ | Pattern handler | ✅ Active |
 | `safari_currency_modal_*` | Set Currency Modal | app.js:~9631 | Pattern handler | ✅ Active |
-| `safari_shop_modal` | Create New Store | app.js:~9747 | Modal handler | ✅ Active |
+| `safari_store_modal` | Create New Store | app.js:~9747 | Modal handler | ✅ Active |
 | `safari_item_modal` | Create New Item | app.js:~9812 | Modal handler | ✅ Active |
 
 ### **Castlist Navigation Buttons**

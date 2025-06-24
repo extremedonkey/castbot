@@ -13,10 +13,10 @@ export const SAFARI_LIMITS = {
   MAX_CURRENCY_CHANGE: 999999,
   MIN_CURRENCY_CHANGE: -999999,
   
-  // Shop limits
-  MAX_SHOPS_PER_GUILD: 50,
-  MAX_ITEMS_PER_SHOP: 25,
-  MAX_SHOP_NAME_LENGTH: 100,
+  // Store limits
+  MAX_STORES_PER_GUILD: 50,
+  MAX_ITEMS_PER_STORE: 25,
+  MAX_STORE_NAME_LENGTH: 100,
   MAX_SHOPKEEPER_TEXT_LENGTH: 500,
   
   // Item limits
@@ -33,7 +33,7 @@ export const SAFARI_LIMITS = {
 
 export const EDIT_TYPES = {
   BUTTON: 'button',
-  SHOP: 'shop', 
+  STORE: 'store', 
   ITEM: 'item'
 };
 
