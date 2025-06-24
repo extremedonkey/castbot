@@ -6718,6 +6718,78 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_confirm_delete_button_')) {
+      // Handle button delete confirmation
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to delete buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const buttonId = custom_id.replace('safari_confirm_delete_button_', '');
+        console.log(`🗑️ DEBUG: Confirming delete for button ${buttonId} by user ${userId}`);
+        
+        // Import functions
+        const { deleteCustomButton, getCustomButton } = await import('./safariManager.js');
+        
+        // Get button name for confirmation message
+        const button = await getCustomButton(guildId, buttonId);
+        const buttonName = button?.label || 'Unknown Button';
+        
+        // Delete the button
+        const success = await deleteCustomButton(guildId, buttonId);
+        
+        if (!success) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Failed to delete button.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`✅ SUCCESS: Button ${buttonName} (${buttonId}) deleted successfully`);
+        
+        // Return to button management interface
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: `✅ Button **${buttonName}** has been deleted successfully.`,
+            components: [{
+              type: 1, // Action Row
+              components: [{
+                type: 2, // Button
+                custom_id: 'safari_button_manage_existing',
+                label: '⬅ Back to Button Management',
+                style: 2,
+                emoji: { name: '🔙' }
+              }]
+            }],
+            flags: (1 << 15) // IS_COMPONENTS_V2
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_confirm_delete_button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error deleting button.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'safari_currency_view_all') {
       // Handle View All Currency Balances
       try {
