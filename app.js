@@ -2447,11 +2447,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_shop_') &&
         !custom_id.startsWith('safari_item_') &&
         !custom_id.startsWith('safari_button_') &&
-        !custom_id.startsWith('safari_edit_') &&
-        !custom_id.startsWith('safari_add_action_') &&
-        !custom_id.startsWith('safari_finish_button_') &&
-        !custom_id.startsWith('safari_test_') &&
-        !custom_id.startsWith('safari_delete_') &&
+        !custom_id.startsWith('safari_edit_properties_') &&
+        !custom_id.startsWith('safari_test_button_') &&
+        !custom_id.startsWith('safari_delete_button_') &&
+        !custom_id.startsWith('safari_confirm_delete_button_') &&
         !custom_id.startsWith('safari_action_') &&
         custom_id !== 'safari_post_select_button' && 
         !custom_id.startsWith('safari_post_channel_')) {

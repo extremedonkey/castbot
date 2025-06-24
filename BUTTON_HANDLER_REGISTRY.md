@@ -46,9 +46,14 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_currency_reset_all` | 🗑️ Reset All Currency | app.js:~5832 | Direct handler | ✅ Active |
 | `safari_button_manage_existing` | ✏️ Edit Existing Button | app.js:~5983 | Direct handler | ✅ Active |
 | `safari_button_edit_select` | Button Selection Dropdown | app.js:~6078 | Select handler | ✅ Active |
-| `safari_button_edit_properties_*` | Edit Properties | app.js:~6193 | Pattern handler | 🚧 Coming Soon |
-| `safari_button_edit_actions_*` | Manage Actions | app.js:~6217 | Pattern handler | 🚧 Coming Soon |
-| `safari_button_delete_*` | Delete Button | app.js:~6241 | Pattern handler | 🚧 Coming Soon |
+| `safari_edit_properties_*` | Edit Properties | app.js:~6329 | Pattern handler | ✅ Active |
+| `safari_test_button_*` | Test Button | app.js:~6603 | Pattern handler | ✅ Active |
+| `safari_action_edit_*` | Edit Individual Actions | app.js:~6384 | Pattern handler | ✅ Active |
+| `safari_action_move_up_*` | Move Action Up | app.js:~6195 | Pattern handler | ✅ Active |
+| `safari_action_move_down_*` | Move Action Down | app.js:~6258 | Pattern handler | ✅ Active |
+| `safari_action_delete_*` | Delete Individual Action | app.js:~5000+ | Pattern handler | ✅ Active |
+| `safari_delete_button_*` | Delete Button | app.js:~6666 | Pattern handler | ✅ Active |
+| `safari_confirm_delete_button_*` | Delete Confirmation | app.js:~6721 | Pattern handler | ✅ Active |
 | `safari_add_action_*` | Add Action buttons | app.js:~5927 | Pattern handler | ✅ Active |
 | `safari_finish_button_*` | Finish & Save | app.js:~6117 | Pattern handler | ✅ Active |
 | `safari_currency_*` | Currency actions | app.js:~7963+ | Pattern handlers | ✅ Active |
@@ -73,7 +78,9 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | Custom ID | Modal Title | Location | Handler Function | Status |
 |-----------|-------------|----------|------------------|--------|
 | `safari_button_modal` | Create Custom Button | app.js:~9070 | Modal handler | ✅ Active |
+| `safari_properties_modal_*` | Edit Properties Modal | app.js:~9000+ | Pattern handler | ✅ Active |
 | `safari_action_modal_*` | Add Action Modals | app.js:~9229 | Pattern handler | ✅ Active |
+| `safari_edit_action_modal_*` | Edit Individual Action Modal | app.js:~9000+ | Pattern handler | ✅ Active |
 | `safari_currency_modal_*` | Set Currency Modal | app.js:~9631 | Pattern handler | ✅ Active |
 | `safari_shop_modal` | Create New Shop | app.js:~9747 | Modal handler | ✅ Active |
 | `safari_item_modal` | Create New Item | app.js:~9812 | Modal handler | ✅ Active |
