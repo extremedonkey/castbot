@@ -6363,7 +6363,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Create properties edit modal
         const propertiesEditor = new PropertiesEditor(EDIT_TYPES.BUTTON);
-        const modal = propertiesEditor.createPropertiesModal(button, buttonId);
+        const modal = await propertiesEditor.createPropertiesModal(button, buttonId);
         
         return res.send({
           type: InteractionResponseType.MODAL,
@@ -6421,7 +6421,7 @@ Your server is now ready for Tycoons gameplay!`;
         const action = button.actions[actionIndex];
         
         // Create edit modal based on action type (reuse existing modal system)
-        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
         
         const modal = new ModalBuilder()
           .setCustomId(`safari_edit_action_modal_${buttonId}_${actionIndex}_${action.type}`)

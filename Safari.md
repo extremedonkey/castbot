@@ -205,7 +205,7 @@ Both features leverage the same technical infrastructure:
 - ✅ Enhanced currency and inventory management
 - ✅ Player status display ("My Status" button)
 - 🔄 Button cooldowns/limits (foundation implemented)
-- ⚠️ Edit Existing Button (broken)
+- ⚠️ Edit Existing Button (broken) - Edit Properties, 
 - 📋 Import/export safari templates (planned)
 - ❌ Analytics dashboard (deferred)
 

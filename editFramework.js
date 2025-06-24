@@ -348,8 +348,8 @@ export class PropertiesEditor {
   /**
    * Create properties edit modal
    */
-  createPropertiesModal(itemData, itemId) {
-    const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+  async createPropertiesModal(itemData, itemId) {
+    const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
     
     const modal = new ModalBuilder()
       .setCustomId(`safari_properties_modal_${itemId}`)
