@@ -558,10 +558,22 @@
         "emoji": "🥚",
         "description": "Dinosaur equipment and upgrades for the Tycoons Challenge",
         "items": [
-          {"itemId": "nurturer_361363", "price": 30},
-          {"itemId": "territory_forager_404120", "price": 30},
-          {"itemId": "nest_guardian_461600", "price": 25},
-          {"itemId": "raider_499497", "price": 15}
+          {
+            "itemId": "nurturer_361363",
+            "price": 30
+          },
+          {
+            "itemId": "territory_forager_404120",
+            "price": 30
+          },
+          {
+            "itemId": "nest_guardian_461600",
+            "price": 25
+          },
+          {
+            "itemId": "raider_499497",
+            "price": 15
+          }
         ],
         "settings": {
           "shopkeeperText": "Welcome to The Hatchery! Gear up for the dinosaur survival challenge.",
@@ -571,6 +583,23 @@
         "metadata": {
           "createdAt": 1750783000000,
           "totalSales": 5
+        }
+      },
+      "do_you_see_me_tomato_171643": {
+        "id": "do_you_see_me_tomato_171643",
+        "name": "DO YOU SEE ME TOMATO LORD??",
+        "description": "🍅🍅🍅🍅🍅",
+        "emoji": "🍅",
+        "items": [],
+        "settings": {
+          "shopkeeperText": "Tomato Lord is best AI",
+          "accentColor": 3066993,
+          "requiresRole": null
+        },
+        "metadata": {
+          "createdAt": 1750790171643,
+          "lastModified": 1750790171643,
+          "totalSales": 0
         }
       }
     },

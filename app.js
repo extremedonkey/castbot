@@ -5880,7 +5880,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_store_list') {
-      // MVP2: View all shops list interface
+      // MVP2: View all stores list interface
       console.log('📋 DEBUG: safari_store_list handler called');
       try {
         const member = req.body.member;
@@ -5897,7 +5897,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        console.log(`🏪 DEBUG: View all shops clicked for guild ${guildId}`);
+        console.log(`🏪 DEBUG: View all stores clicked for guild ${guildId}`);
         
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
@@ -5924,13 +5924,13 @@ Your server is now ready for Tycoons gameplay!`;
           content += `**Total Stores:** ${shopList.length}\n\n`;
           
           shopList.forEach(([shopId, shop], index) => {
-            const itemsInShop = store.items?.length || 0;
-            const totalSales = store.metadata?.totalSales || 0;
-            const createdDate = store.metadata?.createdAt ? new Date(store.metadata.createdAt).toLocaleDateString() : 'Unknown';
+            const itemsInShop = shop.items?.length || 0;
+            const totalSales = shop.metadata?.totalSales || 0;
+            const createdDate = shop.metadata?.createdAt ? new Date(shop.metadata.createdAt).toLocaleDateString() : 'Unknown';
             
-            content += `**${index + 1}. ${store.emoji || '🏪'} ${store.name}**\n`;
-            if (store.description) {
-              content += `└ *${store.description}*\n`;
+            content += `**${index + 1}. ${shop.emoji || '🏪'} ${shop.name}**\n`;
+            if (shop.description) {
+              content += `└ *${shop.description}*\n`;
             }
             content += `└ **Store ID:** \`${shopId}\`\n`;
             content += `└ **Items:** ${itemsInShop} | **Sales:** ${totalSales} | **Created:** ${createdDate}\n\n`;
@@ -6083,7 +6083,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_store_manage_existing') {
-      // MVP2: Edit existing shop interface
+      // MVP2: Edit existing store interface
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -6093,13 +6093,13 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ You need Manage Roles permission to edit shops.',
+              content: '❌ You need Manage Roles permission to edit stores.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        console.log(`✏️ DEBUG: Edit existing shop clicked for guild ${guildId}`);
+        console.log(`✏️ DEBUG: Edit existing store clicked for guild ${guildId}`);
         
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
@@ -6116,21 +6116,21 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Create shop selection dropdown
-        const shopOptions = Object.entries(stores).slice(0, 25).map(([shopId, shop]) => ({
+        // Create store selection dropdown
+        const storeOptions = Object.entries(stores).slice(0, 25).map(([storeId, store]) => ({
           label: `${store.emoji || '🏪'} ${store.name}`.slice(0, 100),
-          value: shopId,
+          value: storeId,
           description: `${store.description || 'No description'}`.slice(0, 100)
         }));
         
-        const shopSelect = new StringSelectMenuBuilder()
+        const storeSelect = new StringSelectMenuBuilder()
           .setCustomId('safari_store_edit_select')
           .setPlaceholder('Choose a store to edit...')
           .setMinValues(1)
           .setMaxValues(1)
-          .addOptions(shopOptions);
+          .addOptions(storeOptions);
         
-        const selectRow = new ActionRowBuilder().addComponents(shopSelect);
+        const selectRow = new ActionRowBuilder().addComponents(storeSelect);
         
         // Create back button
         const backButton = new ButtonBuilder()
@@ -10049,7 +10049,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ You need Manage Roles permission to edit shops.',
+              content: '❌ You need Manage Roles permission to edit stores.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -10060,7 +10060,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `🚧 **Shop Editing Coming Soon**\n\nShop editing functionality is under development. For now, you can:\n\n• Create new shops\n• View all shops\n• Delete and recreate shops as needed\n\nSelected shop: \`${selectedShopId}\``,
+            content: `🚧 **Store Editing Coming Soon**\n\nStore editing functionality is under development. For now, you can:\n\n• Create new stores\n• View all stores\n• Delete and recreate stores as needed\n\nSelected store: \`${selectedShopId}\``,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
