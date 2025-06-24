@@ -6001,8 +6001,13 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
+        console.log(`✏️ DEBUG: Safari manager imported successfully`);
+        
         const safariData = await loadSafariContent();
+        console.log(`✏️ DEBUG: Safari data loaded:`, Object.keys(safariData));
+        
         const buttons = safariData[guildId]?.buttons || {};
+        console.log(`✏️ DEBUG: Found ${Object.keys(buttons).length} buttons for guild ${guildId}`);
         
         if (Object.keys(buttons).length === 0) {
           return res.send({
@@ -6015,11 +6020,15 @@ Your server is now ready for Tycoons gameplay!`;
         }
         
         // Create button selection dropdown
+        console.log(`✏️ DEBUG: Creating button options from ${Object.keys(buttons).length} buttons`);
+        
         const buttonOptions = Object.entries(buttons).slice(0, 25).map(([buttonId, button]) => ({
           label: `${button.emoji || '🔘'} ${button.label}`.slice(0, 100),
           value: buttonId,
           description: `${button.actions?.length || 0} action${(button.actions?.length || 0) !== 1 ? 's' : ''} | Used ${button.metadata?.usageCount || 0} times`.slice(0, 100)
         }));
+        
+        console.log(`✏️ DEBUG: Button options created:`, buttonOptions.length);
         
         const buttonSelect = new StringSelectMenuBuilder()
           .setCustomId('safari_button_edit_select')
@@ -6027,8 +6036,11 @@ Your server is now ready for Tycoons gameplay!`;
           .setMinValues(1)
           .setMaxValues(1)
           .addOptions(buttonOptions);
+          
+        console.log(`✏️ DEBUG: StringSelectMenuBuilder created successfully`);
         
         const selectRow = new ActionRowBuilder().addComponents(buttonSelect);
+        console.log(`✏️ DEBUG: Select row created successfully`);
         
         // Create back button
         const backButton = new ButtonBuilder()
@@ -6037,8 +6049,11 @@ Your server is now ready for Tycoons gameplay!`;
           .setStyle(ButtonStyle.Secondary);
         
         const backRow = new ActionRowBuilder().addComponents(backButton);
+        console.log(`✏️ DEBUG: Back row created successfully`);
         
         // Create response with Components V2
+        console.log(`✏️ DEBUG: Creating container components`);
+        
         const containerComponents = [
           {
             type: 10, // Text Display component
@@ -6051,11 +6066,15 @@ Your server is now ready for Tycoons gameplay!`;
           backRow.toJSON() // Back button
         ];
         
+        console.log(`✏️ DEBUG: Container components created, length:`, containerComponents.length);
+        
         const container = {
           type: 17, // Container component
           accent_color: 0xf39c12, // Orange accent color for editing
           components: containerComponents
         };
+        
+        console.log(`✏️ DEBUG: Container object created, sending response`);
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
