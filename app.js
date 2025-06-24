@@ -2452,7 +2452,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const { loadSafariContent } = await import('./safariManager.js');
         const { getPlayer, loadPlayerData } = await import('./storage.js');
         const safariData = await loadSafariContent();
-        const store = safariData[guildId]?.stores?.[shopId];
+        const store = safariData[guildId]?.stores?.[storeId];
         const allItems = safariData[guildId]?.items || {};
         
         if (!store) {
@@ -2565,57 +2565,57 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     }
     
-    // Handle store purchase buttons (format: safari_store_buy_guildId_shopId_itemId)
+    // Handle store purchase buttons (format: safari_store_buy_guildId_storeId_itemId)
     if (custom_id.startsWith('safari_store_buy_')) {
       try {
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         
-        // Parse shopId and itemId from custom_id: safari_store_buy_guildId_shopId_itemId
+        // Parse storeId and itemId from custom_id: safari_store_buy_guildId_storeId_itemId
         const parts = custom_id.split('_');
         if (parts.length < 6) {
-          throw new Error('Invalid shop buy custom_id format');
+          throw new Error('Invalid store buy custom_id format');
         }
         
-        // Find the delimiter between shopId and itemId by checking which combination exists
+        // Find the delimiter between storeId and itemId by checking which combination exists
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const { getPlayer, updatePlayer, savePlayerData, loadPlayerData } = await import('./storage.js');
         const safariData = await loadSafariContent();
         
-        let shopId, itemId;
+        let storeId, itemId;
         for (let i = 4; i < parts.length - 1; i++) {
-          const potentialShopId = parts.slice(4, i + 1).join('_');
+          const potentialStoreId = parts.slice(4, i + 1).join('_');
           const potentialItemId = parts.slice(i + 1).join('_');
           
-          if (safariData[guildId]?.stores?.[potentialShopId] && safariData[guildId]?.items?.[potentialItemId]) {
-            shopId = potentialShopId;
+          if (safariData[guildId]?.stores?.[potentialStoreId] && safariData[guildId]?.items?.[potentialItemId]) {
+            storeId = potentialStoreId;
             itemId = potentialItemId;
             break;
           }
         }
         
-        if (!shopId || !itemId) {
-          throw new Error('Could not parse shopId and itemId from custom_id');
+        if (!storeId || !itemId) {
+          throw new Error('Could not parse storeId and itemId from custom_id');
         }
         
-        console.log(`🛒 DEBUG: User ${userId} attempting to buy item ${itemId} from shop ${shopId}`);
+        console.log(`🛒 DEBUG: User ${userId} attempting to buy item ${itemId} from store ${storeId}`);
         
-        const store = safariData[guildId]?.stores?.[shopId];
+        const store = safariData[guildId]?.stores?.[storeId];
         const item = safariData[guildId]?.items?.[itemId];
         
         if (!store || !item) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Shop or item not found.',
+              content: '❌ Store or item not found.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        // Check if item is actually in the shop
-        const shopItem = store.items?.find(si => (si.itemId || si) === itemId);
-        if (!shopItem) {
+        // Check if item is actually in the store
+        const storeItem = store.items?.find(si => (si.itemId || si) === itemId);
+        if (!storeItem) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -2625,7 +2625,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
         
-        const price = shopItem.price || item.basePrice || 0;
+        const price = storeItem.price || item.basePrice || 0;
         
         // Get player data and check currency
         const playerData = await loadPlayerData();
@@ -2653,8 +2653,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         if (!player.safari.inventory) {
           player.safari.inventory = {};
         }
-        if (!player.safari.shopHistory) {
-          player.safari.shopHistory = [];
+        if (!player.safari.storeHistory) {
+          player.safari.storeHistory = [];
         }
         
         // Update currency
@@ -2663,15 +2663,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Add item to inventory
         player.safari.inventory[itemId] = (player.safari.inventory[itemId] || 0) + 1;
         
-        // Record purchase in shop history
-        player.safari.shopHistory.push({
+        // Record purchase in store history
+        player.safari.storeHistory.push({
           itemId: itemId,
-          shopId: shopId,
+          storeId: storeId,
           price: price,
           timestamp: Date.now()
         });
         
-        // Update shop sales count
+        // Update store sales count
         if (!store.metadata) {
           store.metadata = { totalSales: 0 };
         }
@@ -5515,24 +5515,24 @@ Your server is now ready for Tycoons gameplay!`;
         const itemCount = Object.keys(items).length;
         let totalSales = 0;
         
-        Object.values(shops).forEach(shop => {
+        Object.values(stores).forEach(store => {
           totalSales += store.metadata?.totalSales || 0;
         });
         
-        // Show overview of existing shops
-        let shopsOverview = '';
+        // Show overview of existing stores
+        let storesOverview = '';
         if (shopCount === 0) {
-          shopsOverview = '*No stores created yet.*';
+          storesOverview = '*No stores created yet.*';
         } else {
-          const shopList = Object.values(shops).slice(0, 5); // Show first 5
-          shopsOverview = shopList.map(shop => {
-            const itemsInShop = store.items?.length || 0;
+          const storeList = Object.values(stores).slice(0, 5); // Show first 5
+          storesOverview = storeList.map(store => {
+            const itemsInStore = store.items?.length || 0;
             const sales = store.metadata?.totalSales || 0;
-            return `**${store.emoji || '🏪'} ${store.name}**\n└ ${itemsInShop} items • ${sales} sales`;
+            return `**${store.emoji || '🏪'} ${store.name}**\n└ ${itemsInStore} items • ${sales} sales`;
           }).join('\n\n');
           
           if (shopCount > 5) {
-            shopsOverview += `\n\n*...and ${shopCount - 5} more shops*`;
+            storesOverview += `\n\n*...and ${shopCount - 5} more stores*`;
           }
         }
         
@@ -5548,13 +5548,13 @@ Your server is now ready for Tycoons gameplay!`;
           },
           {
             type: 10, // Text Display component
-            content: `**📋 Current Shops:**\n${shopsOverview}`
+            content: `**📋 Current Stores:**\n${storesOverview}`
           },
           {
             type: 14 // Separator
           },
-          managementRow1.toJSON(), // Shop management buttons row 1
-          managementRow2.toJSON(), // Shop management buttons row 2
+          managementRow1.toJSON(), // Store management buttons row 1
+          managementRow2.toJSON(), // Store management buttons row 2
           {
             type: 14 // Separator
           },
@@ -6335,7 +6335,7 @@ Your server is now ready for Tycoons gameplay!`;
           const itemId = shopItem.itemId || shopItem;
           const item = allItems[itemId];
           if (item) {
-            const price = shopItem.price || item.basePrice || 0;
+            const price = storeItem.price || item.basePrice || 0;
             currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - 💰 ${price} coins\n`;
           }
         });
@@ -6488,14 +6488,14 @@ Your server is now ready for Tycoons gameplay!`;
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
         
-        const store = safariData[guildId]?.stores?.[shopId];
+        const store = safariData[guildId]?.stores?.[storeId];
         const item = safariData[guildId]?.items?.[itemId];
         
         if (!store || !item) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Shop or item not found.',
+              content: '❌ Store or item not found.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -6585,14 +6585,14 @@ Your server is now ready for Tycoons gameplay!`;
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
         
-        const store = safariData[guildId]?.stores?.[shopId];
+        const store = safariData[guildId]?.stores?.[storeId];
         const item = safariData[guildId]?.items?.[itemId];
         
         if (!store || !item) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Shop or item not found.',
+              content: '❌ Store or item not found.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -6661,7 +6661,7 @@ Your server is now ready for Tycoons gameplay!`;
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
-        const store = safariData[guildId]?.stores?.[shopId];
+        const store = safariData[guildId]?.stores?.[storeId];
         
         if (!store) {
           return res.send({
@@ -6759,7 +6759,7 @@ Your server is now ready for Tycoons gameplay!`;
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
-        const store = safariData[guildId]?.stores?.[shopId];
+        const store = safariData[guildId]?.stores?.[storeId];
         
         if (!store) {
           return res.send({
