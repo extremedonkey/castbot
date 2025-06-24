@@ -660,7 +660,7 @@
         "metadata": {
           "createdAt": 1750783637531,
           "lastModified": 1750783637531,
-          "totalSales": 0
+          "totalSales": 5
         }
       }
     },
@@ -701,7 +701,7 @@
         "maxQuantity": -1,
         "metadata": {
           "createdAt": 1750783361363,
-          "totalSold": 0
+          "totalSold": 1
         }
       },
       "territory_forager_404120": {
@@ -714,7 +714,7 @@
         "maxQuantity": -1,
         "metadata": {
           "createdAt": 1750783404121,
-          "totalSold": 0
+          "totalSold": 1
         }
       },
       "nest_guardian_461600": {
@@ -727,7 +727,7 @@
         "maxQuantity": -1,
         "metadata": {
           "createdAt": 1750783461600,
-          "totalSold": 0
+          "totalSold": 2
         }
       },
       "raider_499497": {
@@ -740,7 +740,7 @@
         "maxQuantity": -1,
         "metadata": {
           "createdAt": 1750783499497,
-          "totalSold": 0
+          "totalSold": 1
         }
       }
     }

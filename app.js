@@ -2467,13 +2467,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         // Get player's currency for display
         const playerData = await loadPlayerData();
-        console.log(`🔍 DEBUG: Player data loaded for guild ${guildId}, user ${userId}`);
         // Access player data directly from the loaded structure
         const player = playerData[guildId]?.players?.[userId];
-        console.log(`🔍 DEBUG: Player object:`, player ? 'Found' : 'Not found');
-        console.log(`🔍 DEBUG: Player safari data:`, player?.safari || 'No safari data');
         const playerCurrency = player?.safari?.currency || 0;
-        console.log(`🔍 DEBUG: Player currency: ${playerCurrency}`);
         
         // Build shop display with Container -> Section pattern
         const containerComponents = [];
@@ -2520,7 +2516,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                   },
                   {
                     type: 10, // Text Display - Item cost in quote format
-                    content: `> 🪙${price}`
+                    content: `> 🪙 ${price}`
                   }
                 ],
                 accessory: {
@@ -2627,19 +2623,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         // Get player data and check currency
         const playerData = await loadPlayerData();
-        console.log(`🔍 DEBUG: Purchase - Player data loaded for guild ${guildId}, user ${userId}`);
         // Access player data directly from the loaded structure
         const player = playerData[guildId]?.players?.[userId];
-        console.log(`🔍 DEBUG: Purchase - Player object:`, player ? 'Found' : 'Not found');
-        console.log(`🔍 DEBUG: Purchase - Player safari data:`, player?.safari || 'No safari data');
         const currentCurrency = player?.safari?.currency || 0;
-        console.log(`🔍 DEBUG: Purchase - Player currency: ${currentCurrency}`);
         
         if (currentCurrency < price) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: `❌ **Insufficient funds!**\n\nYou need 🪙${price} coins but only have 🪙${currentCurrency} coins.\n\nYou need 🪙${price - currentCurrency} more coins.`,
+              content: `❌ **Insufficient funds!**\n\nYou need 🪙 ${price} coins but only have 🪙 ${currentCurrency} coins.\n\nYou need 🪙 ${price - currentCurrency} more coins.`,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -2694,7 +2686,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${player.safari.inventory[itemId]}`,
+            content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙 ${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${player.safari.inventory[itemId]}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -6424,7 +6416,7 @@ Your server is now ready for Tycoons gameplay!`;
               {
                 type: 2, // Button
                 custom_id: `safari_shop_open_${selectedShopId}`,
-                label: '🏪 Open Shop',
+                label: 'Open Shop',
                 style: 1,
                 emoji: { name: '🏪' }
               }
@@ -6779,7 +6771,7 @@ Your server is now ready for Tycoons gameplay!`;
           components: [{
             type: 2, // Button
             custom_id: `safari_shop_browse_${guildId}_${shopId}`,
-            label: `${shop.emoji || '🏪'} ${shop.name}`,
+            label: `Browse ${shop.name}`,
             style: 1,
             emoji: shop.emoji ? { name: shop.emoji } : { name: '🏪' }
           }]

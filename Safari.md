@@ -206,8 +206,8 @@ Both features leverage the same technical infrastructure:
 - ✅ Admin Create Shop: Create shops (name, emoji, description, greeting)
 - ✅ **Shop Items**: Add/remove items from shops (PRIORITY 1)
 - ⌛ Player View Balance: Expose "My Status" to normal users
-- ✅ Shop Display: Container with Section components for each item
-- ✅ Resolve Purchase: Currency validation and inventory updates
+- ✅ **Shop Display: Container with Section components for each item** ✨ COMPLETE
+- ✅ **Resolve Purchase: Currency validation and inventory updates** ✨ COMPLETE
 - ❌ Player View Items: Inventory display with quantities
 
 #### **Sprint 2: Challenge Game Logic**
