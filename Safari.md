@@ -13,6 +13,8 @@
 
 ## Overview
 
+**💀 TERMINOLOGY NOTE:** Due to American English localization requirements, anywhere this documentation says "Shop" it should be read as "Store" for user-facing interfaces. Technical database keys remain as "shops" for compatibility.
+
 The Safari system is CastBot's dynamic content management framework that enables Discord server administrators to create interactive, button-driven experiences for their players. This system powers two major features:
 
 ### 🦁 Safari Builder
@@ -198,15 +200,15 @@ Both features leverage the same technical infrastructure:
 
 ### MVP2 - Tycoons Challenge System (Target: 1 Week - June 2025)
 
-**Mission**: Complete functional shop/inventory system for 24-hour dinosaur-themed Tycoons challenge with 13 players over 3 rounds.
+**Mission**: Complete functional store/inventory system for 24-hour dinosaur-themed Tycoons challenge with 13 players over 3 rounds.
 
 #### **Sprint 1: Core Shop & Inventory System**
 - ✅ Admin Set Balance: Create/update player currency balance
 - ✅ Admin Create Item: Define items (name, emoji, description, price, category)
-- ✅ Admin Create Shop: Create shops (name, emoji, description, greeting)
-- ✅ **Shop Items**: Add/remove items from shops (PRIORITY 1)
+- ✅ Admin Create Store: Create shops (name, emoji, description, greeting)
+- ✅ **Store Items**: Add/remove items from shops (PRIORITY 1)
 - ⌛ Player View Balance: Expose "My Status" to normal users
-- ✅ **Shop Display: Container with Section components for each item** ✨ COMPLETE
+- ✅ **Store Display: Container with Section components for each item** ✨ COMPLETE
 - ✅ **Resolve Purchase: Currency validation and inventory updates** ✨ COMPLETE
 - ❌ Player View Items: Inventory display with quantities
 
@@ -600,7 +602,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
 
 ### 🏪 Enhanced Shop System
 **Architecture:**
-- **Multi-Shop Support**: Multiple shops per server with unique configurations
+- **Multi-Shop Support**: Multiple stores per server with unique configurations
 - **Reusable Items**: Items defined once, used across multiple shops with shop-specific pricing
 - **Smart Component Handling**: Automatic 40-component limit management with item truncation warnings
 - **Role-Based Access**: Shop access can be restricted by Discord roles
@@ -729,10 +731,10 @@ Only refer to the following instructions if trying to clarify a requirement. Oth
 I would like you to help me design / architect a new capability for CastBot, that will help enable two upcoming features. Originally I was considering these two features separately, but upon reflection I realise they involve the usage of the same types of user interface, data storage and interactions between UI and backend. Please include in Claude.MD instructions to refer to a new Safari.md file any time a prompt mentions Safari, Idol Hunt, Questions, or anything below that seems relevant. Create Safari.md based off of my prompt below and keep it up to date with the requirement, solution options (to meet the requirements), solution architecture (chosen high level solution option), releases (MVP1, MVP2, MVP3, MVPN.. - self contained releases), detailed design (functional design / interactions of the UI, data per each release, starting with MVP1), test cases and deployment steps.
 
 Firstly, I'll describe the two features to give you some context:
-1. Safari Builder: As CastBot is used in discord-based virtual versions of Reality Games (Online Reality Games - ORGs) - and particularly using the rules and format of the TV show Survivor, there is an opportunity to extend functionality to help hosts create what is often known as "Safaris" or "Idol Hunts", which are typically done manually with spreadsheets, limited bot-scripting languages and basic discord functionality. I would like to provide ORG game hosts (otherwise referred to admins / production) the ability to create and manage safaris through CastBot, saving them effort and creating an interactive player experience. In order to achieve this, it requires the ability to allow the /hosts/ to use the CastBot interface to create buttons which they can use CastBot to execute specific actions such as display text prepared by the hosts, generate Components with buttons that can act as shops, navigate to different areas of a virtual map, etc. This would also involve creating a currency system which in its MVP form can just be tracking currency against a user's entry in playerData.json. I also envisage some standard functionality like player currency management, custom item creation, assigning items to players, being able to buy items from shops etc. A key (nonMVP?) feature I would love is the ability for the user to upload an image (user created map for the safari) that is stored in the bot, and the bot automatically divides the map into coordinates.
+1. Safari Builder: As CastBot is used in discord-based virtual versions of Reality Games (Online Reality Games - ORGs) - and particularly using the rules and format of the TV show Survivor, there is an opportunity to extend functionality to help hosts create what is often known as "Safaris" or "Idol Hunts", which are typically done manually with spreadsheets, limited bot-scripting languages and basic discord functionality. I would like to provide ORG game hosts (otherwise referred to admins / production) the ability to create and manage safaris through CastBot, saving them effort and creating an interactive player experience. In order to achieve this, it requires the ability to allow the /hosts/ to use the CastBot interface to create buttons which they can use CastBot to execute specific actions such as display text prepared by the hosts, generate Components with buttons that can act as shops, navigate to different areas of a virtual map, etc. This would also involve creating a currency system which in its MVP form can just be tracking currency against a user's entry in playerData.json. I also envisage some standard functionality like player currency management, custom item creation, assigning items to players, being able to buy items from stores etc. A key (nonMVP?) feature I would love is the ability for the user to upload an image (user created map for the safari) that is stored in the bot, and the bot automatically divides the map into coordinates.
 2. Season Application Builder: This feature will involve extending the current 'Season Application' feature to allow hosts to create and edit an 'application process', which has its own per-application rules / behaviors defined, explanatory text, and allows hosts to create / update / edit questions that applicants will be presented for that season. As per current, hosts can then use Castbot to post an Season Application button (perhaps extended to a component which looks nicer) to a specified channel, and then any user with access to that channel can click the button to open a new channel. Once they open the channel, the questions defined by the hosts will be presented to any user applying. The bot must be able to capture and store their responses on a per-question basis - most likely by parsing messages between different questions (messages) the bot posts, and the player must be able to use the bot to easily move between questions and update their answers as needed. The data for the player's responses will then be used for a variety of future features, such as extending the existing Cast Ranking functionality to be richer.
 
-So.. what is the common link between these two very different sounding features? Well, in essence they're both allowing end users to dynamically create and manage **content** from within the bot - user-defined Discord Components v2 such as text display, buttons, thumbnails, gallery, possibly even specific roles. For the Season Application feature they can leverage this to build dynamic application processes driven out of discord channels, defining questions as text and saving per season. For Safari Builder, they can define guided journeys that players can go on, helping them make turn-based moves, make in-game purchases from host-defined shops, with host defined-currencies on a per-season basis.
+So.. what is the common link between these two very different sounding features? Well, in essence they're both allowing end users to dynamically create and manage **content** from within the bot - user-defined Discord Components v2 such as text display, buttons, thumbnails, gallery, possibly even specific roles. For the Season Application feature they can leverage this to build dynamic application processes driven out of discord channels, defining questions as text and saving per season. For Safari Builder, they can define guided journeys that players can go on, helping them make turn-based moves, make in-game purchases from host-defined stores, with host defined-currencies on a per-season basis.
 
 What are some of our design principles?
 * Highly re-usable, well-documented functionality that you in particular are able to easily understand and continue to build upon. There is a good chance I'll use this core functionality to build something new.
