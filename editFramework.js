@@ -489,4 +489,6 @@ export const validateContent = (contentType, data) => {
   return errors;
 };
 
+// Export all necessary components
+export { EDIT_TYPES };
 export default EditInterfaceBuilder;
