@@ -2496,7 +2496,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             content: `*This shop doesn't have any items for sale yet.*`
           });
         } else {
-          for (const shopItem of shopItems) {
+          for (let i = 0; i < shopItems.length; i++) {
+            const shopItem = shopItems[i];
             const itemId = shopItem.itemId || shopItem;
             const item = allItems[itemId];
             const price = shopItem.price || item?.basePrice || 0;
@@ -2529,6 +2530,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               };
               
               containerComponents.push(itemSection);
+              
+              // Add separator between items (but not after the last item)
+              if (i < shopItems.length - 1) {
+                containerComponents.push({ type: 14 }); // Separator
+              }
             }
           }
         }
