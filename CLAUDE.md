@@ -666,6 +666,14 @@ Testing automated git push in dev-restart.sh workflow.
 
 ## 🚨 CRITICAL: Discord Button/Component Implementation Standards
 
+### **📋 MANDATORY REFERENCE: [BUTTON_HANDLER_ANALYSIS.md](BUTTON_HANDLER_ANALYSIS.md)**
+
+**⚠️ Before implementing ANY button or modifying existing button handlers, you MUST consult [BUTTON_HANDLER_ANALYSIS.md](BUTTON_HANDLER_ANALYSIS.md) for:**
+- **Menu Hierarchy Documentation** (4+ level deep navigation structure)
+- **Root Cause Analysis & Mitigations** for recurring button issues
+- **Diagnostic Procedures** to avoid misdiagnosis of working handlers
+- **Complete Implementation Guidelines** and architectural standards
+
 ### **MANDATORY CHECKLIST FOR ALL BUTTON HANDLERS** ✅
 
 **⚠️ FAILURE TO FOLLOW THESE INSTRUCTIONS WILL RESULT IN BROKEN IMPLEMENTATIONS**
