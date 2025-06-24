@@ -64,8 +64,8 @@ async function ensureSafariContentFile() {
                     "buttons": {},
                     "safaris": {},
                     "applications": {},
-                    "shops": {},      // NEW: MVP2 - Multiple shops per server
-                    "items": {}       // NEW: MVP2 - Reusable items across shops
+                    "stores": {},      // NEW: MVP2 - Multiple stores per server
+                    "items": {}       // NEW: MVP2 - Reusable items across stores
                 }
             };
             await fs.writeFile(SAFARI_CONTENT_FILE, JSON.stringify(initialData, null, 2));
@@ -78,8 +78,8 @@ async function ensureSafariContentFile() {
         
         for (const guildId in data) {
             if (guildId !== '/* Guild ID */' && data[guildId]) {
-                if (!data[guildId].shops) {
-                    data[guildId].shops = {};
+                if (!data[guildId].stores) {
+                    data[guildId].stores = {};
                     updated = true;
                 }
                 if (!data[guildId].items) {
@@ -157,7 +157,7 @@ async function createCustomButton(guildId, buttonData, userId) {
                 buttons: {},
                 safaris: {},
                 applications: {},
-                shops: {},      // NEW: MVP2
+                stores: {},      // NEW: MVP2
                 items: {}       // NEW: MVP2
             };
         }
@@ -551,7 +551,7 @@ async function createShop(guildId, shopData, userId) {
         const safariData = await loadSafariContent();
         
         if (!safariData[guildId]) {
-            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, shops: {}, items: {} };
+            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {} };
         }
         
         const shopId = generateButtonId(shopData.name); // Reuse ID generation
@@ -575,7 +575,7 @@ async function createShop(guildId, shopData, userId) {
             }
         };
         
-        safariData[guildId].shops[shopId] = shop;
+        safariData[guildId].stores[shopId] = shop;
         await saveSafariContent(safariData);
         
         console.log(`✅ DEBUG: Shop '${shopId}' created successfully`);
@@ -596,7 +596,7 @@ async function createItem(guildId, itemData, userId) {
         const safariData = await loadSafariContent();
         
         if (!safariData[guildId]) {
-            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, shops: {}, items: {} };
+            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {} };
         }
         
         const itemId = generateButtonId(itemData.name);
@@ -760,7 +760,7 @@ async function createShopDisplay(guildId, shopId, userId) {
         console.log(`🏪 DEBUG: Creating shop display for ${shopId}`);
         
         const safariData = await loadSafariContent();
-        const shop = safariData[guildId]?.shops?.[shopId];
+        const shop = safariData[guildId]?.stores?.[shopId];
         const items = safariData[guildId]?.items || {};
         
         if (!shop) {
@@ -1029,7 +1029,7 @@ async function buyItem(guildId, shopId, itemId, userId) {
         console.log(`💳 DEBUG: User ${userId} buying ${itemId} from shop ${shopId}`);
         
         const safariData = await loadSafariContent();
-        const shop = safariData[guildId]?.shops?.[shopId];
+        const shop = safariData[guildId]?.stores?.[shopId];
         const item = safariData[guildId]?.items?.[itemId];
         
         if (!shop || !item) {
@@ -1075,8 +1075,8 @@ async function buyItem(guildId, shopId, itemId, userId) {
         await addItemToInventory(guildId, userId, itemId, 1);
         
         // Update shop sales stats
-        if (safariData[guildId]?.shops?.[shopId]) {
-            safariData[guildId].shops[shopId].metadata.totalSales++;
+        if (safariData[guildId]?.stores?.[shopId]) {
+            safariData[guildId].stores[shopId].metadata.totalSales++;
         }
         if (safariData[guildId]?.items?.[itemId]) {
             safariData[guildId].items[itemId].metadata.totalSold++;

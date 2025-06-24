@@ -551,7 +551,29 @@
     },
     "safaris": {},
     "applications": {},
-    "stores": {},
+    "stores": {
+      "the_hatchery_637531": {
+        "id": "the_hatchery_637531",
+        "name": "The Hatchery",
+        "emoji": "🥚",
+        "description": "Dinosaur equipment and upgrades for the Tycoons Challenge",
+        "items": [
+          {"itemId": "nurturer_361363", "price": 30},
+          {"itemId": "territory_forager_404120", "price": 30},
+          {"itemId": "nest_guardian_461600", "price": 25},
+          {"itemId": "raider_499497", "price": 15}
+        ],
+        "settings": {
+          "shopkeeperText": "Welcome to The Hatchery! Gear up for the dinosaur survival challenge.",
+          "accentColor": 7506394,
+          "requiresRole": null
+        },
+        "metadata": {
+          "createdAt": 1750783000000,
+          "totalSales": 5
+        }
+      }
+    },
     "items": {
       "potato_farm_714277": {
         "id": "potato_farm_714277",
@@ -631,8 +653,7 @@
           "totalSold": 1
         }
       }
-    },
-    "shops": {}
+    }
   },
   "1385042963310055515": {
     "buttons": {

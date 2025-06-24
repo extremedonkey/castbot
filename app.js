@@ -5716,7 +5716,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_store_create') {
-      // MVP2: Create new shop interface
+      // MVP2: Create new store interface
       console.log('🏪 DEBUG: safari_store_create handler called');
       try {
         const member = req.body.member;
@@ -5726,37 +5726,37 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ You need Manage Roles permission to create shops.',
+              content: '❌ You need Manage Roles permission to create stores.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        console.log(`🏪 DEBUG: Create new shop clicked`);
+        console.log(`🏪 DEBUG: Create new store clicked`);
         
-        // Create shop creation modal
+        // Create store creation modal
         const modal = new ModalBuilder()
           .setCustomId('safari_store_modal')
           .setTitle('Create New Store');
         
-        const shopNameInput = new TextInputBuilder()
-          .setCustomId('shop_name')
+        const storeNameInput = new TextInputBuilder()
+          .setCustomId('store_name')
           .setLabel('Store Name')
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(50)
           .setPlaceholder('e.g. Adventure Supplies');
         
-        const shopEmojiInput = new TextInputBuilder()
-          .setCustomId('shop_emoji')
+        const storeEmojiInput = new TextInputBuilder()
+          .setCustomId('store_emoji')
           .setLabel('Store Emoji')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setMaxLength(10)
           .setPlaceholder('🏪');
         
-        const shopDescriptionInput = new TextInputBuilder()
-          .setCustomId('shop_description')
+        const storeDescriptionInput = new TextInputBuilder()
+          .setCustomId('store_description')
           .setLabel('Store Description')
           .setStyle(TextInputStyle.Paragraph)
           .setRequired(false)
@@ -5765,15 +5765,15 @@ Your server is now ready for Tycoons gameplay!`;
         
         const shopkeeperTextInput = new TextInputBuilder()
           .setCustomId('shopkeeper_text')
-          .setLabel('Shopkeeper Greeting')
+          .setLabel('Storekeeper Greeting')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setMaxLength(200)
           .setPlaceholder('Welcome to my store!');
         
-        const row1 = new ActionRowBuilder().addComponents(shopNameInput);
-        const row2 = new ActionRowBuilder().addComponents(shopEmojiInput);
-        const row3 = new ActionRowBuilder().addComponents(shopDescriptionInput);
+        const row1 = new ActionRowBuilder().addComponents(storeNameInput);
+        const row2 = new ActionRowBuilder().addComponents(storeEmojiInput);
+        const row3 = new ActionRowBuilder().addComponents(storeDescriptionInput);
         const row4 = new ActionRowBuilder().addComponents(shopkeeperTextInput);
         
         modal.addComponents(row1, row2, row3, row4);
@@ -12120,7 +12120,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
     } else if (custom_id === 'safari_store_modal') {
-      // Handle Safari shop creation modal submission
+      // Handle Safari store creation modal submission
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -12130,38 +12130,38 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ You need Manage Roles permission to create shops.',
+              content: '❌ You need Manage Roles permission to create stores.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
         // Extract form data
-        const shopName = components[0].components[0].value?.trim();
-        const shopEmoji = components[1].components[0].value?.trim() || null;
-        const shopDescription = components[2].components[0].value?.trim() || null;
+        const storeName = components[0].components[0].value?.trim();
+        const storeEmoji = components[1].components[0].value?.trim() || null;
+        const storeDescription = components[2].components[0].value?.trim() || null;
         const shopkeeperText = components[3].components[0].value?.trim() || null;
         
         // Validate required fields
-        if (!shopName) {
+        if (!storeName) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Shop name is required.',
+              content: '❌ Store name is required.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        console.log(`🏪 DEBUG: Creating shop "${shopName}" for guild ${guildId}`);
+        console.log(`🏪 DEBUG: Creating store "${storeName}" for guild ${guildId}`);
         
         // Import Safari manager functions
         const { createShop } = await import('./safariManager.js');
         
         const result = await createShop(guildId, {
-          name: shopName,
-          emoji: shopEmoji,
-          description: shopDescription,
+          name: storeName,
+          emoji: storeEmoji,
+          description: storeDescription,
           shopkeeperText: shopkeeperText,
           createdBy: member.user.id
         });
@@ -12169,13 +12169,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Store Created Successfully!**\n\n**${shopEmoji ? shopEmoji + ' ' : ''}${shopName}**\n${shopDescription ? shopDescription : ''}\n\nShop ID: \`${result}\`\n\nYou can now add items to this shop and assign it to buttons.`,
+            content: `✅ **Store Created Successfully!**\n\n**${storeEmoji ? storeEmoji + ' ' : ''}${storeName}**\n${storeDescription ? storeDescription : ''}\n\nStore ID: \`${result}\`\n\nYou can now add items to this store and assign it to buttons.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         
       } catch (error) {
-        console.error('Error creating shop:', error);
+        console.error('Error creating store:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {

@@ -44,10 +44,10 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_store_open_*` | 🏪 Open Store (Post to Channel) | app.js:~6364 | Pattern handler | ✅ Active |
 | `safari_store_post_channel_*` | Channel Selection for Store Posting | app.js:~6460 | Select handler | ✅ Active |
 | `safari_store_browse_*` | 🏪 Browse Store (Player Interface) | app.js:~2437 | Pattern handler | ✅ Active |
-| `safari_shop_buy_*` | 🛒 Purchase Item from Store | app.js:~2562 | Pattern handler | ✅ Active |
-| `safari_shop_create` | ➕ Create New Store | app.js:~5325 | Direct handler | ✅ Active |
+| `safari_store_buy_*` | 🛒 Purchase Item from Store | app.js:~2562 | Pattern handler | ✅ Active |
+| `safari_store_create` | ➕ Create New Store | app.js:~5325 | Direct handler | ✅ Active |
 | `safari_item_create` | ➕ Create New Item | app.js:~5402 | Direct handler | ✅ Active |
-| `safari_shop_list` | 📋 View All Stores | app.js:~5488 | Direct handler | ✅ Active |
+| `safari_store_list` | 📋 View All Stores | app.js:~5488 | Direct handler | ✅ Active |
 | `safari_item_list` | 📋 View All Items | app.js:~5599 | Direct handler | ✅ Active |
 | `safari_currency_view_all` | 👥 View All Currency | app.js:~5710 | Direct handler | ✅ Active |
 | `safari_currency_set_player` | 💰 Set Player Currency | app.js:~5760 | Direct handler | ✅ Active |
