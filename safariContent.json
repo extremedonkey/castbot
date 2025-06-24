@@ -630,7 +630,28 @@
         "name": "The Hatchery",
         "description": "The place to go to nurture your young!",
         "emoji": "🥚",
-        "items": [],
+        "items": [
+          {
+            "itemId": "nurturer_361363",
+            "price": 30,
+            "addedAt": 1750784009294
+          },
+          {
+            "itemId": "territory_forager_404120",
+            "price": 30,
+            "addedAt": 1750784015384
+          },
+          {
+            "itemId": "nest_guardian_461600",
+            "price": 25,
+            "addedAt": 1750784018505
+          },
+          {
+            "itemId": "raider_499497",
+            "price": 15,
+            "addedAt": 1750784021549
+          }
+        ],
         "settings": {
           "shopkeeperText": "Take care friend, it's a dangerous world out there.",
           "accentColor": 3066993,

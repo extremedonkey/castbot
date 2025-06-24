@@ -2433,6 +2433,274 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       );
     }
     
+    // Handle shop browse buttons (format: safari_shop_browse_guildId_shopId)
+    if (custom_id.startsWith('safari_shop_browse_')) {
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        // Parse shopId from custom_id: safari_shop_browse_guildId_shopId
+        const parts = custom_id.split('_');
+        if (parts.length < 5) {
+          throw new Error('Invalid shop browse custom_id format');
+        }
+        const shopId = parts.slice(4).join('_'); // Rejoin in case shopId has underscores
+        
+        console.log(`🏪 DEBUG: User ${userId} browsing shop ${shopId} in guild ${guildId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const { getPlayer, loadPlayerData } = await import('./storage.js');
+        const safariData = await loadSafariContent();
+        const shop = safariData[guildId]?.shops?.[shopId];
+        const allItems = safariData[guildId]?.items || {};
+        
+        if (!shop) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Shop not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Get player's currency for display
+        const playerData = await loadPlayerData();
+        const player = getPlayer(guildId, userId, playerData);
+        const playerCurrency = player?.safari?.currency || 0;
+        
+        // Build shop display with Container -> Section pattern
+        const containerComponents = [];
+        
+        // Header section with shop info and player currency
+        containerComponents.push({
+          type: 10, // Text Display
+          content: `## ${shop.emoji || '🏪'} ${shop.name}\n\n${shop.description || ''}\n\n**${shop.settings?.shopkeeperText || 'Welcome to the shop!'}**`
+        });
+        
+        // Player currency display
+        containerComponents.push({
+          type: 10, // Text Display
+          content: `> 🪙 **Your Balance:** ${playerCurrency} coins`
+        });
+        
+        containerComponents.push({ type: 14 }); // Separator
+        
+        // Create Section component for each item in shop
+        const shopItems = shop.items || [];
+        if (shopItems.length === 0) {
+          containerComponents.push({
+            type: 10, // Text Display
+            content: `*This shop doesn't have any items for sale yet.*`
+          });
+        } else {
+          for (const shopItem of shopItems) {
+            const itemId = shopItem.itemId || shopItem;
+            const item = allItems[itemId];
+            const price = shopItem.price || item?.basePrice || 0;
+            
+            if (item) {
+              // Create Section component as specified
+              const itemSection = {
+                type: 9, // Section component
+                components: [
+                  {
+                    type: 10, // Text Display - Item name as header
+                    content: `## ${item.emoji || '📦'} ${item.name}`
+                  },
+                  {
+                    type: 10, // Text Display - Item description
+                    content: item.description || 'No description available.'
+                  },
+                  {
+                    type: 10, // Text Display - Item cost in quote format
+                    content: `> 🪙${price}`
+                  }
+                ],
+                accessory: {
+                  type: 2, // Button accessory (appears on far right)
+                  custom_id: `safari_shop_buy_${guildId}_${shopId}_${itemId}`,
+                  label: `Buy ${item.name}`.slice(0, 80),
+                  style: 1,
+                  emoji: { name: item.emoji || '🛒' }
+                }
+              };
+              
+              containerComponents.push(itemSection);
+            }
+          }
+        }
+        
+        const container = {
+          type: 17, // Container
+          accent_color: shop.settings?.accentColor || 0x3498db,
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + Ephemeral
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_shop_browse handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading shop display.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    }
+    
+    // Handle shop purchase buttons (format: safari_shop_buy_guildId_shopId_itemId)
+    if (custom_id.startsWith('safari_shop_buy_')) {
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        // Parse shopId and itemId from custom_id: safari_shop_buy_guildId_shopId_itemId
+        const parts = custom_id.split('_');
+        if (parts.length < 6) {
+          throw new Error('Invalid shop buy custom_id format');
+        }
+        
+        // Find the delimiter between shopId and itemId by checking which combination exists
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const { getPlayer, updatePlayer, savePlayerData, loadPlayerData } = await import('./storage.js');
+        const safariData = await loadSafariContent();
+        
+        let shopId, itemId;
+        for (let i = 4; i < parts.length - 1; i++) {
+          const potentialShopId = parts.slice(4, i + 1).join('_');
+          const potentialItemId = parts.slice(i + 1).join('_');
+          
+          if (safariData[guildId]?.shops?.[potentialShopId] && safariData[guildId]?.items?.[potentialItemId]) {
+            shopId = potentialShopId;
+            itemId = potentialItemId;
+            break;
+          }
+        }
+        
+        if (!shopId || !itemId) {
+          throw new Error('Could not parse shopId and itemId from custom_id');
+        }
+        
+        console.log(`🛒 DEBUG: User ${userId} attempting to buy item ${itemId} from shop ${shopId}`);
+        
+        const shop = safariData[guildId]?.shops?.[shopId];
+        const item = safariData[guildId]?.items?.[itemId];
+        
+        if (!shop || !item) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Shop or item not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Check if item is actually in the shop
+        const shopItem = shop.items?.find(si => (si.itemId || si) === itemId);
+        if (!shopItem) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Item is not available in this shop.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const price = shopItem.price || item.basePrice || 0;
+        
+        // Get player data and check currency
+        const playerData = await loadPlayerData();
+        const player = getPlayer(guildId, userId, playerData);
+        const currentCurrency = player?.safari?.currency || 0;
+        
+        if (currentCurrency < price) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ **Insufficient funds!**\n\nYou need 🪙${price} coins but only have 🪙${currentCurrency} coins.\n\nYou need 🪙${price - currentCurrency} more coins.`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Process purchase: deduct currency and add item to inventory
+        const newCurrency = currentCurrency - price;
+        
+        // Initialize safari data if needed
+        if (!player.safari) {
+          player.safari = { currency: 0, inventory: {}, history: [], buttonUses: {}, shopHistory: [] };
+        }
+        if (!player.safari.inventory) {
+          player.safari.inventory = {};
+        }
+        if (!player.safari.shopHistory) {
+          player.safari.shopHistory = [];
+        }
+        
+        // Update currency
+        player.safari.currency = newCurrency;
+        
+        // Add item to inventory
+        player.safari.inventory[itemId] = (player.safari.inventory[itemId] || 0) + 1;
+        
+        // Record purchase in shop history
+        player.safari.shopHistory.push({
+          itemId: itemId,
+          shopId: shopId,
+          price: price,
+          timestamp: Date.now()
+        });
+        
+        // Update shop sales count
+        if (!shop.metadata) {
+          shop.metadata = { totalSales: 0 };
+        }
+        shop.metadata.totalSales = (shop.metadata.totalSales || 0) + 1;
+        
+        // Update item sales count
+        if (!item.metadata) {
+          item.metadata = { totalSold: 0 };
+        }
+        item.metadata.totalSold = (item.metadata.totalSold || 0) + 1;
+        
+        // Save all changes
+        await savePlayerData(playerData);
+        await saveSafariContent(safariData);
+        
+        console.log(`✅ DEBUG: Purchase successful - ${userId} bought ${itemId} for ${price} coins`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${player.safari.inventory[itemId]}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_shop_buy handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error processing purchase. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    }
+    
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
     if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
         !custom_id.startsWith('safari_add_action_') && 
@@ -5218,7 +5486,7 @@ Your server is now ready for Tycoons gameplay!`;
             .setEmoji('✏️'),
           new ButtonBuilder()
             .setCustomId('safari_shop_manage_items')
-            .setLabel('Manage Shop Items')
+            .setLabel('Manage Shop')
             .setStyle(ButtonStyle.Success)
             .setEmoji('📦')
         ];
@@ -5966,7 +6234,7 @@ Your server is now ready for Tycoons gameplay!`;
         const containerComponents = [
           {
             type: 10, // Text Display component
-            content: `## 📦 Manage Shop Items\n\nSelect a shop to add or remove items:`
+            content: `## 🏪 Manage Shop\n\nSelect Shop:`
           },
           {
             type: 10, // Text Display component
@@ -6120,7 +6388,7 @@ Your server is now ready for Tycoons gameplay!`;
         const containerComponents = [
           {
             type: 10, // Text Display
-            content: `## 📦 ${shop.emoji || '🏪'} ${shop.name} - Items Management\n\n**Shop Items:** ${currentItems.length} • **Available to Add:** ${availableItems.length}`
+            content: `## 🏪 ${shop.emoji || '🏪'} ${shop.name} - Shop Management\n\n**Shop Items:** ${currentItems.length} • **Available to Add:** ${availableItems.length}`
           },
           {
             type: 10, // Text Display
@@ -6136,12 +6404,21 @@ Your server is now ready for Tycoons gameplay!`;
           },
           {
             type: 1, // Action Row
-            components: [{
-              type: 2, // Button
-              custom_id: 'safari_shop_manage_items',
-              label: '⬅ Back to Shop Selection',
-              style: 2
-            }]
+            components: [
+              {
+                type: 2, // Button
+                custom_id: 'safari_shop_manage_items',
+                label: '⬅ Back to Shop Selection',
+                style: 2
+              },
+              {
+                type: 2, // Button
+                custom_id: `safari_shop_open_${selectedShopId}`,
+                label: '🏪 Open Shop',
+                style: 1,
+                emoji: { name: '🏪' }
+              }
+            ]
           }
         ];
         
@@ -6348,6 +6625,208 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error removing item from shop.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_shop_open_')) {
+      // Open Shop - post shop button to channel
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to post shop buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse shopId from custom_id
+        const shopId = custom_id.replace('safari_shop_open_', '');
+        console.log(`🏪 DEBUG: Opening shop posting interface for shop ${shopId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const shop = safariData[guildId]?.shops?.[shopId];
+        
+        if (!shop) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Shop not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create channel posting interface
+        const containerComponents = [
+          {
+            type: 10, // Text Display
+            content: `## 🏪 Open Shop\n\n**${shop.emoji || '🏪'} ${shop.name}**`
+          },
+          {
+            type: 10, // Text Display
+            content: `Select the channel to post your shop button to - be sure to write up any context in the channel before posting the button.`
+          },
+          {
+            type: 14 // Separator
+          },
+          {
+            type: 1, // Action Row
+            components: [{
+              type: 8, // Channel Select
+              custom_id: `safari_shop_post_channel_${shopId}`,
+              placeholder: 'Select channel to post shop button...',
+              channel_types: [0, 5] // Text and Announcement channels
+            }]
+          },
+          {
+            type: 14 // Separator
+          },
+          {
+            type: 1, // Action Row
+            components: [{
+              type: 2, // Button
+              custom_id: `safari_shop_items_select`,
+              label: '⬅ Back to Shop Management',
+              style: 2
+            }]
+          }
+        ];
+        
+        const container = {
+          type: 17, // Container
+          accent_color: shop.settings?.accentColor || 0x3498db,
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_shop_open handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error opening shop posting interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_shop_post_channel_')) {
+      // Handle channel selection for posting shop button
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const data = req.body.data;
+        const selectedChannelId = data.values[0];
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to post shop buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse shopId from custom_id
+        const shopId = custom_id.replace('safari_shop_post_channel_', '');
+        console.log(`📤 DEBUG: Posting shop ${shopId} button to channel ${selectedChannelId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const shop = safariData[guildId]?.shops?.[shopId];
+        
+        if (!shop) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Shop not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create shop button to post to channel
+        const shopButton = {
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: `safari_shop_browse_${guildId}_${shopId}`,
+            label: `${shop.emoji || '🏪'} ${shop.name}`,
+            style: 1,
+            emoji: shop.emoji ? { name: shop.emoji } : { name: '🏪' }
+          }]
+        };
+        
+        // Post button to selected channel using Discord.js client
+        try {
+          const channel = client?.channels?.cache?.get(selectedChannelId);
+          if (channel) {
+            await channel.send({
+              components: [shopButton]
+            });
+            
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [{
+                  type: 17, // Container
+                  accent_color: 0x00ff00, // Green
+                  components: [{
+                    type: 10, // Text Display
+                    content: `## ✅ Shop Button Posted!\n\n**${shop.emoji || '🏪'} ${shop.name}** has been posted to <#${selectedChannelId}>.`
+                  }, {
+                    type: 14 // Separator
+                  }, {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 2, // Button
+                      custom_id: 'safari_shop_manage_items',
+                      label: '⬅ Back to Shop Management',
+                      style: 2
+                    }]
+                  }]
+                }]
+              }
+            });
+          } else {
+            throw new Error('Channel not found');
+          }
+        } catch (postError) {
+          console.error('Error posting shop button to channel:', postError);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error posting button to channel. Make sure the bot has permission to send messages in that channel.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error in safari_shop_post_channel handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error posting shop button.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

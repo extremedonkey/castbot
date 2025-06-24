@@ -41,6 +41,10 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_shop_items_select` | Shop Selection for Items | app.js:~6009 | Select handler | ✅ Active |
 | `safari_shop_add_item_*` | ➕ Add Item to Shop | app.js:~6197 | Pattern handler (::delimiter) | ✅ Active |
 | `safari_shop_remove_item_*` | 🗑️ Remove Item from Shop | app.js:~6288 | Pattern handler (::delimiter) | ✅ Active |
+| `safari_shop_open_*` | 🏪 Open Shop (Post to Channel) | app.js:~6364 | Pattern handler | ✅ Active |
+| `safari_shop_post_channel_*` | Channel Selection for Shop Posting | app.js:~6460 | Select handler | ✅ Active |
+| `safari_shop_browse_*` | 🏪 Browse Shop (Player Interface) | app.js:~2437 | Pattern handler | ✅ Active |
+| `safari_shop_buy_*` | 🛒 Purchase Item from Shop | app.js:~2562 | Pattern handler | ✅ Active |
 | `safari_shop_create` | ➕ Create New Shop | app.js:~5325 | Direct handler | ✅ Active |
 | `safari_item_create` | ➕ Create New Item | app.js:~5402 | Direct handler | ✅ Active |
 | `safari_shop_list` | 📋 View All Shops | app.js:~5488 | Direct handler | ✅ Active |
