@@ -551,119 +551,7 @@
     },
     "safaris": {},
     "applications": {},
-    "shops": {
-      "tycoons_store_606108": {
-        "id": "tycoons_store_606108",
-        "name": "Tycoons Store",
-        "description": "Good to see ya!",
-        "emoji": "🏪",
-        "items": [
-          {
-            "itemId": "potato_farm_714277",
-            "price": 50,
-            "addedAt": 1750783292480
-          },
-          {
-            "itemId": "llama_farm_999520",
-            "price": 30,
-            "addedAt": 1750783294341
-          }
-        ],
-        "settings": {
-          "shopkeeperText": "Ahoy!",
-          "accentColor": 3066993,
-          "requiresRole": null
-        },
-        "metadata": {
-          "createdAt": 1750668606108,
-          "lastModified": 1750668606108,
-          "totalSales": 0
-        }
-      },
-      "the_general_store_387129": {
-        "id": "the_general_store_387129",
-        "name": "The General Store",
-        "description": "The best goods in town",
-        "emoji": "🫡",
-        "items": [
-          {
-            "itemId": "potato_farm_714277",
-            "price": 50,
-            "addedAt": 1750783185921
-          },
-          {
-            "itemId": "llama_farm_999520",
-            "price": 30,
-            "addedAt": 1750783191151
-          }
-        ],
-        "settings": {
-          "shopkeeperText": "Wot u want",
-          "accentColor": 3066993,
-          "requiresRole": null
-        },
-        "metadata": {
-          "createdAt": 1750669387129,
-          "lastModified": 1750669387129,
-          "totalSales": 0
-        }
-      },
-      "1234_704444": {
-        "id": "1234_704444",
-        "name": "1234",
-        "description": "sdadsa",
-        "emoji": "🏪",
-        "items": [],
-        "settings": {
-          "shopkeeperText": "22das",
-          "accentColor": 3066993,
-          "requiresRole": null
-        },
-        "metadata": {
-          "createdAt": 1750671704444,
-          "lastModified": 1750671704444,
-          "totalSales": 0
-        }
-      },
-      "the_hatchery_637531": {
-        "id": "the_hatchery_637531",
-        "name": "The Hatchery",
-        "description": "The place to go to nurture your young!",
-        "emoji": "🥚",
-        "items": [
-          {
-            "itemId": "nurturer_361363",
-            "price": 30,
-            "addedAt": 1750784009294
-          },
-          {
-            "itemId": "territory_forager_404120",
-            "price": 30,
-            "addedAt": 1750784015384
-          },
-          {
-            "itemId": "nest_guardian_461600",
-            "price": 25,
-            "addedAt": 1750784018505
-          },
-          {
-            "itemId": "raider_499497",
-            "price": 15,
-            "addedAt": 1750784021549
-          }
-        ],
-        "settings": {
-          "shopkeeperText": "Take care friend, it's a dangerous world out there.",
-          "accentColor": 3066993,
-          "requiresRole": null
-        },
-        "metadata": {
-          "createdAt": 1750783637531,
-          "lastModified": 1750783637531,
-          "totalSales": 5
-        }
-      }
-    },
+    "stores": {},
     "items": {
       "potato_farm_714277": {
         "id": "potato_farm_714277",
@@ -743,7 +631,8 @@
           "totalSold": 1
         }
       }
-    }
+    },
+    "shops": {}
   },
   "1385042963310055515": {
     "buttons": {
@@ -799,7 +688,8 @@
     },
     "safaris": {},
     "applications": {},
-    "shops": {},
-    "items": {}
+    "stores": {},
+    "items": {},
+    "shops": {}
   }
 }

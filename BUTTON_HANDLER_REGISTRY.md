@@ -35,15 +35,15 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_view_buttons` | 📊 View All Buttons | app.js:~4983 | Direct handler | ✅ Active |
 | `safari_my_status` | 💎 My Status | app.js:~5036 | Direct handler | ✅ Active |
 | `safari_manage_safari_buttons` | 🎛️ Manage Safari Buttons | app.js:~3893 | Direct handler | ✅ Active |
-| `safari_manage_shops` | 🏪 Manage Stores | app.js:~5067 | Direct handler | ✅ Active |
+| `safari_manage_stores` | 🏪 Manage Stores | app.js:~5067 | Direct handler | ✅ Active |
 | `safari_manage_items` | 📦 Manage Items | app.js:~5195 | Direct handler | ✅ Active |
-| `safari_shop_manage_items` | 📦 Manage Shop Items | app.js:~5904 | Direct handler | ✅ Active |
-| `safari_shop_items_select` | Store Selection for Items | app.js:~6009 | Select handler | ✅ Active |
-| `safari_shop_add_item_*` | ➕ Add Item to Store | app.js:~6197 | Pattern handler (::delimiter) | ✅ Active |
-| `safari_shop_remove_item_*` | 🗑️ Remove Item from Store | app.js:~6288 | Pattern handler (::delimiter) | ✅ Active |
-| `safari_shop_open_*` | 🏪 Open Store (Post to Channel) | app.js:~6364 | Pattern handler | ✅ Active |
-| `safari_shop_post_channel_*` | Channel Selection for Store Posting | app.js:~6460 | Select handler | ✅ Active |
-| `safari_shop_browse_*` | 🏪 Browse Store (Player Interface) | app.js:~2437 | Pattern handler | ✅ Active |
+| `safari_store_manage_items` | 📦 Manage Shop Items | app.js:~5904 | Direct handler | ✅ Active |
+| `safari_store_items_select` | Store Selection for Items | app.js:~6009 | Select handler | ✅ Active |
+| `safari_store_add_item_*` | ➕ Add Item to Store | app.js:~6197 | Pattern handler (::delimiter) | ✅ Active |
+| `safari_store_remove_item_*` | 🗑️ Remove Item from Store | app.js:~6288 | Pattern handler (::delimiter) | ✅ Active |
+| `safari_store_open_*` | 🏪 Open Store (Post to Channel) | app.js:~6364 | Pattern handler | ✅ Active |
+| `safari_store_post_channel_*` | Channel Selection for Store Posting | app.js:~6460 | Select handler | ✅ Active |
+| `safari_store_browse_*` | 🏪 Browse Store (Player Interface) | app.js:~2437 | Pattern handler | ✅ Active |
 | `safari_shop_buy_*` | 🛒 Purchase Item from Store | app.js:~2562 | Pattern handler | ✅ Active |
 | `safari_shop_create` | ➕ Create New Store | app.js:~5325 | Direct handler | ✅ Active |
 | `safari_item_create` | ➕ Create New Item | app.js:~5402 | Direct handler | ✅ Active |
