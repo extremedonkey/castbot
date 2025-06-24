@@ -6073,11 +6073,11 @@ Your server is now ready for Tycoons gameplay!`;
           availableItemsList += `\n*...and ${availableItems.length - 15} more items*`;
         }
         
-        // Create action buttons (limit to 10 total for safety)
+        // Create action buttons (Discord limit: ~25-30 buttons max due to 40 component limit)
         const actionButtons = [];
         
-        // Remove buttons for current items (first 5)
-        currentItems.slice(0, 5).forEach((shopItem, index) => {
+        // Remove buttons for current items (show all current items)
+        currentItems.forEach((shopItem, index) => {
           const itemId = shopItem.itemId || shopItem;
           const item = allItems[itemId];
           if (item) {
@@ -6091,8 +6091,10 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
         
-        // Add buttons for available items (fill remaining slots)
-        const remainingSlots = Math.min(5, 10 - actionButtons.length);
+        // Add buttons for available items (show more available items)
+        // Conservative limit: 20 total buttons to stay well under 40 component limit
+        const maxTotalButtons = 20;
+        const remainingSlots = Math.max(0, maxTotalButtons - actionButtons.length);
         availableItems.slice(0, remainingSlots).forEach(([itemId, item]) => {
           actionButtons.push({
             type: 2, // Button

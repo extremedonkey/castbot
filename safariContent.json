@@ -557,7 +557,18 @@
         "name": "Tycoons Store",
         "description": "Good to see ya!",
         "emoji": "🏪",
-        "items": [],
+        "items": [
+          {
+            "itemId": "potato_farm_714277",
+            "price": 50,
+            "addedAt": 1750783292480
+          },
+          {
+            "itemId": "llama_farm_999520",
+            "price": 30,
+            "addedAt": 1750783294341
+          }
+        ],
         "settings": {
           "shopkeeperText": "Ahoy!",
           "accentColor": 3066993,
@@ -574,7 +585,18 @@
         "name": "The General Store",
         "description": "The best goods in town",
         "emoji": "🫡",
-        "items": [],
+        "items": [
+          {
+            "itemId": "potato_farm_714277",
+            "price": 50,
+            "addedAt": 1750783185921
+          },
+          {
+            "itemId": "llama_farm_999520",
+            "price": 30,
+            "addedAt": 1750783191151
+          }
+        ],
         "settings": {
           "shopkeeperText": "Wot u want",
           "accentColor": 3066993,
@@ -600,6 +622,23 @@
         "metadata": {
           "createdAt": 1750671704444,
           "lastModified": 1750671704444,
+          "totalSales": 0
+        }
+      },
+      "the_hatchery_637531": {
+        "id": "the_hatchery_637531",
+        "name": "The Hatchery",
+        "description": "The place to go to nurture your young!",
+        "emoji": "🥚",
+        "items": [],
+        "settings": {
+          "shopkeeperText": "Take care friend, it's a dangerous world out there.",
+          "accentColor": 3066993,
+          "requiresRole": null
+        },
+        "metadata": {
+          "createdAt": 1750783637531,
+          "lastModified": 1750783637531,
           "totalSales": 0
         }
       }
@@ -628,6 +667,58 @@
         "maxQuantity": -1,
         "metadata": {
           "createdAt": 1750777999520,
+          "totalSold": 0
+        }
+      },
+      "nurturer_361363": {
+        "id": "nurturer_361363",
+        "name": "Nurturer",
+        "description": "Nurture your young. Safe, consistent growth — thrives in hardship.",
+        "emoji": "🐣",
+        "category": "resources",
+        "basePrice": 30,
+        "maxQuantity": -1,
+        "metadata": {
+          "createdAt": 1750783361363,
+          "totalSold": 0
+        }
+      },
+      "territory_forager_404120": {
+        "id": "territory_forager_404120",
+        "name": "Territory Forager",
+        "description": "Hunt, gather, expand. Big rewards — but wiped out if meteors fall.",
+        "emoji": "🦖",
+        "category": "General",
+        "basePrice": 30,
+        "maxQuantity": -1,
+        "metadata": {
+          "createdAt": 1750783404121,
+          "totalSold": 0
+        }
+      },
+      "nest_guardian_461600": {
+        "id": "nest_guardian_461600",
+        "name": "Nest Guardian",
+        "description": "Assign hatchlings to protect your nest. Lasting defense.",
+        "emoji": "🦕",
+        "category": "General",
+        "basePrice": 25,
+        "maxQuantity": -1,
+        "metadata": {
+          "createdAt": 1750783461600,
+          "totalSold": 0
+        }
+      },
+      "raider_499497": {
+        "id": "raider_499497",
+        "name": "Raider",
+        "description": "Deploy a raptor squad to ruin a rival’s clutch. One-time attack.",
+        "emoji": "🦎",
+        "category": "General",
+        "basePrice": 15,
+        "maxQuantity": -1,
+        "metadata": {
+          "createdAt": 1750783499497,
           "totalSold": 0
         }
       }
