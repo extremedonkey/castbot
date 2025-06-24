@@ -2447,6 +2447,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_shop_') &&
         !custom_id.startsWith('safari_item_') &&
         !custom_id.startsWith('safari_button_') &&
+        !custom_id.startsWith('safari_edit_') &&
+        !custom_id.startsWith('safari_add_action_') &&
+        !custom_id.startsWith('safari_finish_button_') &&
+        !custom_id.startsWith('safari_test_') &&
+        !custom_id.startsWith('safari_delete_') &&
+        !custom_id.startsWith('safari_action_') &&
         custom_id !== 'safari_post_select_button' && 
         !custom_id.startsWith('safari_post_channel_')) {
       console.log(`🔍 DEBUG: Dynamic Safari handler processing custom_id: ${custom_id}`);
@@ -6057,6 +6063,7 @@ Your server is now ready for Tycoons gameplay!`;
           components: containerComponents
         };
         
+        const userId = req.body.member?.user?.id || req.body.user?.id;
         console.log(`✅ SUCCESS: safari_button_manage_existing completed for user ${userId}`);
         
         return res.send({
@@ -6319,7 +6326,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id.startsWith('safari_button_edit_properties_')) {
+    } else if (custom_id.startsWith('safari_edit_properties_')) {
       // Button property editing using universal framework
       try {
         const member = req.body.member;
@@ -6336,7 +6343,7 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        const buttonId = custom_id.replace('safari_button_edit_properties_', '');
+        const buttonId = custom_id.replace('safari_edit_properties_', '');
         console.log(`📝 DEBUG: Edit properties clicked for button ${buttonId}`);
         
         // Import functions
@@ -6593,18 +6600,112 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id.startsWith('safari_button_delete_')) {
-      // Button deletion placeholder (Coming Soon)
+    } else if (custom_id.startsWith('safari_test_button_')) {
+      // Button test functionality using universal framework
       try {
-        const buttonId = custom_id.replace('safari_button_delete_', '');
-        console.log(`🗑️ DEBUG: Delete button clicked for button ${buttonId}`);
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to test buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const buttonId = custom_id.replace('safari_test_button_', '');
+        console.log(`🧪 DEBUG: Test button clicked for button ${buttonId}`);
+        
+        // Import functions 
+        const { getCustomButton, executeButtonActions } = await import('./safariManager.js');
+        
+        const button = await getCustomButton(guildId, buttonId);
+        
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Button not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Execute button actions as a test
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const result = await executeButtonActions(guildId, buttonId, userId, req.body);
+        
+        // Add test indicator to the result
+        const testResult = {
+          ...result,
+          content: `🧪 **TEST MODE**\n\n${result.content || ''}\n\n*This was a test execution. No permanent changes were made.*`
+        };
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '🚧 **Delete Button - Coming Soon!**\n\nButton deletion functionality will be available in a future update.\n\n⚠️ **Note:** Currently, buttons persist until manually removed from the system.',
+            ...testResult,
             flags: InteractionResponseFlags.EPHEMERAL
           }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_test_button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error testing button.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_delete_button_')) {
+      // Button deletion using universal framework
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to delete buttons.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const buttonId = custom_id.replace('safari_delete_button_', '');
+        console.log(`🗑️ DEBUG: Delete button clicked for button ${buttonId}`);
+        
+        // Import functions
+        const { getCustomButton } = await import('./safariManager.js');
+        const { DeleteConfirmation, EDIT_TYPES } = await import('./editFramework.js');
+        
+        const button = await getCustomButton(guildId, buttonId);
+        
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Button not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create delete confirmation interface
+        const deleteConfirmation = new DeleteConfirmation(EDIT_TYPES.BUTTON);
+        const confirmationInterface = deleteConfirmation.createDeleteConfirmation(button, buttonId);
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: confirmationInterface
         });
         
       } catch (error) {
