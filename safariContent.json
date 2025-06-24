@@ -372,6 +372,38 @@
             "asdasd"
           ]
         }
+      },
+      "visit_the_well_636883": {
+        "id": "visit_the_well_636883",
+        "label": "Visit the well",
+        "emoji": "💧",
+        "style": "Primary",
+        "actions": [],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750693636883,
+          "lastModified": 1750693636883,
+          "usageCount": 0,
+          "tags": [
+            "Take a stroll to the well"
+          ]
+        }
+      },
+      "go_to_the_well_677278": {
+        "id": "go_to_the_well_677278",
+        "label": "Go to the well",
+        "emoji": "💧",
+        "style": "Primary",
+        "actions": [],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750693677278,
+          "lastModified": 1750693677278,
+          "usageCount": 0,
+          "tags": [
+            "See what's happening at the well - you can hear some music!"
+          ]
+        }
       }
     },
     "safaris": {},

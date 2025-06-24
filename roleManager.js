@@ -77,13 +77,14 @@ const PRONOUN_PATTERNS = {
     ],
     'She/They': [
         'she/they', 'she / they', 'they/she', 'they / she',
-        'she-they', 'they-she'
+        'she-they', 'they-she',
+        'they/her', 'they / her', 'her/they', 'her / they'
     ],
     'Ask': [
         'ask', 'ask pronouns', 'ask me', 'just ask'
     ],
     'Any': [
-        'any', 'any pronouns', 'all', 'whatever', 'dont care', "don't care"
+        'any', 'any pronouns', 'whatever', 'dont care', "don't care"
     ],
     'All Pronouns': [
         'all pronouns', 'all', 'any pronouns', 'any/all'
