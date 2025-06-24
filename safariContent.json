@@ -259,7 +259,7 @@
           "createdBy": "391415444084490240",
           "createdAt": 1750443911597,
           "lastModified": 1750443911597,
-          "usageCount": 1,
+          "usageCount": 2,
           "tags": []
         }
       },
@@ -436,6 +436,57 @@
           "usageCount": 1,
           "tags": [
             "Hi Claude, this is a test for you. Send a tomato emoji at the bottom of your message if you read this!"
+          ]
+        }
+      },
+      "money_test_325822": {
+        "id": "money_test_325822",
+        "label": "Money Test",
+        "emoji": null,
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "update_currency",
+            "order": 1,
+            "config": {
+              "amount": 4,
+              "message": "Moooolah!"
+            }
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750758325822,
+          "lastModified": 1750758325822,
+          "usageCount": 2,
+          "tags": [
+            "Money"
+          ]
+        }
+      },
+      "claude_link_button_t_610689": {
+        "id": "claude_link_button_t_610689",
+        "label": "Claude Link Button Test",
+        "emoji": "😎",
+        "style": "Primary",
+        "actions": [
+          {
+            "type": "follow_up_button",
+            "order": 1,
+            "config": {
+              "buttonId": "money_test_325822",
+              "delay": 0,
+              "replaceMessage": false
+            }
+          }
+        ],
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750758610689,
+          "lastModified": 1750758610689,
+          "usageCount": 1,
+          "tags": [
+            "That's you claude, you're cool."
           ]
         }
       }

@@ -466,9 +466,13 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
             }
         }
         
-        // For MVP1, return the first non-ephemeral response
-        // or combine them if needed
-        const mainResponse = responses.find(r => !r.flags) || responses[0];
+        // Return the first display_text response as main response
+        // Other actions (currency, follow-ups) execute as side effects
+        const displayResponse = responses.find(r => r.components) || responses[0];
+        const mainResponse = displayResponse || {
+            content: '✅ Button action completed successfully!',
+            flags: InteractionResponseFlags.EPHEMERAL
+        };
         
         console.log(`✅ DEBUG: Button actions executed successfully, returning response`);
         return mainResponse;
