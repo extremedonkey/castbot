@@ -6083,7 +6083,7 @@ Your server is now ready for Tycoons gameplay!`;
           if (item) {
             actionButtons.push({
               type: 2, // Button
-              custom_id: `safari_shop_remove_item_${selectedShopId}_${itemId}`,
+              custom_id: `safari_shop_remove_item_${selectedShopId}::${itemId}`,
               label: `Remove ${item.name}`.slice(0, 80),
               style: 4,
               emoji: { name: '🗑️' }
@@ -6096,7 +6096,7 @@ Your server is now ready for Tycoons gameplay!`;
         availableItems.slice(0, remainingSlots).forEach(([itemId, item]) => {
           actionButtons.push({
             type: 2, // Button
-            custom_id: `safari_shop_add_item_${selectedShopId}_${itemId}`,
+            custom_id: `safari_shop_add_item_${selectedShopId}::${itemId}`,
             label: `Add ${item.name}`.slice(0, 80),
             style: 3,
             emoji: { name: '➕' }
@@ -6184,13 +6184,16 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Parse custom_id: safari_shop_add_item_${shopId}_${itemId}
-        // More robust parsing since shopId can contain underscores
+        // Parse custom_id: safari_shop_add_item_${shopId}::${itemId}
+        // Using :: delimiter to handle IDs with underscores
         const prefix = 'safari_shop_add_item_';
         const afterPrefix = custom_id.substring(prefix.length);
-        const lastUnderscoreIndex = afterPrefix.lastIndexOf('_');
-        const shopId = afterPrefix.substring(0, lastUnderscoreIndex);
-        const itemId = afterPrefix.substring(lastUnderscoreIndex + 1);
+        const delimiterIndex = afterPrefix.indexOf('::');
+        if (delimiterIndex === -1) {
+          throw new Error('Invalid custom_id format');
+        }
+        const shopId = afterPrefix.substring(0, delimiterIndex);
+        const itemId = afterPrefix.substring(delimiterIndex + 2);
         
         console.log(`➕ DEBUG: Adding item ${itemId} to shop ${shopId}`);
         
@@ -6278,13 +6281,16 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Parse custom_id: safari_shop_remove_item_${shopId}_${itemId}
-        // More robust parsing since shopId can contain underscores
+        // Parse custom_id: safari_shop_remove_item_${shopId}::${itemId}
+        // Using :: delimiter to handle IDs with underscores
         const prefix = 'safari_shop_remove_item_';
         const afterPrefix = custom_id.substring(prefix.length);
-        const lastUnderscoreIndex = afterPrefix.lastIndexOf('_');
-        const shopId = afterPrefix.substring(0, lastUnderscoreIndex);
-        const itemId = afterPrefix.substring(lastUnderscoreIndex + 1);
+        const delimiterIndex = afterPrefix.indexOf('::');
+        if (delimiterIndex === -1) {
+          throw new Error('Invalid custom_id format');
+        }
+        const shopId = afterPrefix.substring(0, delimiterIndex);
+        const itemId = afterPrefix.substring(delimiterIndex + 2);
         
         console.log(`🗑️ DEBUG: Removing item ${itemId} from shop ${shopId}`);
         
