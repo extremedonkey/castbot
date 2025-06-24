@@ -3306,7 +3306,7 @@ To fix this:
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: menuResponse
           });
-        } else {
+        } else { // Player Menu code
           // Regular user - use new player management UI
           const playerData = await loadPlayerData();
           const userId = member.user.id;
@@ -5195,8 +5195,8 @@ Your server is now ready for Tycoons gameplay!`;
         const shops = safariData[guildId]?.shops || {};
         const items = safariData[guildId]?.items || {};
         
-        // Create shop management buttons
-        const managementButtons = [
+        // Create shop management buttons (Row 1: Core Functions)
+        const managementButtonsRow1 = [
           new ButtonBuilder()
             .setCustomId('safari_shop_create')
             .setLabel('Create New Shop')
@@ -5206,15 +5206,25 @@ Your server is now ready for Tycoons gameplay!`;
             .setCustomId('safari_shop_list')
             .setLabel('View All Shops')
             .setStyle(ButtonStyle.Secondary)
-            .setEmoji('📋'),
+            .setEmoji('📋')
+        ];
+        
+        // Row 2: Management Functions
+        const managementButtonsRow2 = [
           new ButtonBuilder()
             .setCustomId('safari_shop_manage_existing')
             .setLabel('Edit Existing Shop')
             .setStyle(ButtonStyle.Secondary)
-            .setEmoji('✏️')
+            .setEmoji('✏️'),
+          new ButtonBuilder()
+            .setCustomId('safari_shop_manage_items')
+            .setLabel('Manage Shop Items')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('📦')
         ];
         
-        const managementRow = new ActionRowBuilder().addComponents(managementButtons);
+        const managementRow1 = new ActionRowBuilder().addComponents(managementButtonsRow1);
+        const managementRow2 = new ActionRowBuilder().addComponents(managementButtonsRow2);
         
         // Create back button
         const backButton = new ButtonBuilder()
@@ -5267,7 +5277,8 @@ Your server is now ready for Tycoons gameplay!`;
           {
             type: 14 // Separator
           },
-          managementRow.toJSON(), // Shop management buttons
+          managementRow1.toJSON(), // Shop management buttons row 1
+          managementRow2.toJSON(), // Shop management buttons row 2
           {
             type: 14 // Separator
           },
@@ -5886,6 +5897,470 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error loading shop editor.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_shop_manage_items') {
+      // MVP2 Sprint 1: Manage shop items (add/remove items from shops)
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to manage shop items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`📦 DEBUG: Opening shop items management interface`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const shops = safariData[guildId]?.shops || {};
+        
+        if (Object.keys(shops).length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **No shops to manage**\n\nCreate your first shop using **🏪 Create New Shop** before managing shop items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create shop selection dropdown
+        const shopOptions = Object.entries(shops).slice(0, 25).map(([shopId, shop]) => {
+          const itemCount = shop.items?.length || 0;
+          return {
+            label: `${shop.emoji || '🏪'} ${shop.name}`.slice(0, 100),
+            value: shopId,
+            description: `${itemCount} item${itemCount !== 1 ? 's' : ''} currently in stock`.slice(0, 100)
+          };
+        });
+        
+        const shopSelect = new StringSelectMenuBuilder()
+          .setCustomId('safari_shop_items_select')
+          .setPlaceholder('Choose a shop to manage items...')
+          .setMinValues(1)
+          .setMaxValues(1)
+          .addOptions(shopOptions);
+        
+        const selectRow = new ActionRowBuilder().addComponents(shopSelect);
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('safari_manage_shops')
+          .setLabel('⬅ Back to Shop Management')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 📦 Manage Shop Items\n\nSelect a shop to add or remove items:`
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Available Shops:** ${Object.keys(shops).length}`
+          },
+          {
+            type: 14 // Separator
+          },
+          selectRow.toJSON(), // Shop selection dropdown
+          {
+            type: 14 // Separator
+          },
+          backRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0x3498db, // Blue accent color for items theme
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 flag + ephemeral
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_shop_manage_items:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading shop items management.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_shop_items_select') {
+      // Handle shop selection for items management
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const data = req.body.data;
+        const selectedShopId = data.values[0];
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to manage shop items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`📦 DEBUG: Managing items for shop ${selectedShopId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const shop = safariData[guildId]?.shops?.[selectedShopId];
+        const allItems = safariData[guildId]?.items || {};
+        
+        if (!shop) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Shop not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Initialize shop.items if it doesn't exist
+        if (!shop.items) {
+          shop.items = [];
+        }
+        
+        // Get items currently in shop and available items
+        const currentItems = shop.items || [];
+        const currentItemIds = new Set(currentItems.map(item => item.itemId || item));
+        const availableItems = Object.entries(allItems).filter(([itemId]) => !currentItemIds.has(itemId));
+        
+        // Build interface components
+        const containerComponents = [
+          {
+            type: 10, // Text Display
+            content: `## 📦 ${shop.emoji || '🏪'} ${shop.name} - Items Management\n\n**Shop Items:** ${currentItems.length} • **Available to Add:** ${availableItems.length}`
+          }
+        ];
+        
+        // Current Items Section
+        if (currentItems.length > 0) {
+          containerComponents.push({
+            type: 10, // Text Display
+            content: `### 🛍️ Current Items in Shop`
+          });
+          
+          currentItems.forEach((shopItem, index) => {
+            const itemId = shopItem.itemId || shopItem;
+            const item = allItems[itemId];
+            if (item) {
+              const price = shopItem.price || item.basePrice || 0;
+              containerComponents.push({
+                type: 9, // Section
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `**${item.emoji || '📦'} ${item.name}**\n💰 ${price} coins`
+                  }
+                ]
+              });
+              
+              // Add remove button for this item
+              containerComponents.push({
+                type: 1, // Action Row
+                components: [{
+                  type: 2, // Button
+                  custom_id: `safari_shop_remove_item_${selectedShopId}_${itemId}`,
+                  label: 'Remove',
+                  style: 4,
+                  emoji: { name: '🗑️' }
+                }]
+              });
+            }
+          });
+        } else {
+          containerComponents.push({
+            type: 10, // Text Display
+            content: `### 🛍️ Current Items in Shop\n*No items in this shop yet.*`
+          });
+        }
+        
+        // Available Items Section
+        if (availableItems.length > 0) {
+          containerComponents.push({
+            type: 14 // Separator
+          });
+          
+          containerComponents.push({
+            type: 10, // Text Display
+            content: `### ➕ Available Items to Add`
+          });
+          
+          availableItems.slice(0, 10).forEach(([itemId, item]) => { // Limit to 10 to avoid Discord limits
+            containerComponents.push({
+              type: 9, // Section
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `**${item.emoji || '📦'} ${item.name}**\n${item.description || 'No description'}\n💰 ${item.basePrice || 0} coins`
+                }
+              ]
+            });
+            
+            // Add button for this item
+            containerComponents.push({
+              type: 1, // Action Row
+              components: [{
+                type: 2, // Button
+                custom_id: `safari_shop_add_item_${selectedShopId}_${itemId}`,
+                label: 'Add to Shop',
+                style: 3,
+                emoji: { name: '➕' }
+              }]
+            });
+          });
+          
+          if (availableItems.length > 10) {
+            containerComponents.push({
+              type: 10, // Text Display
+              content: `*...and ${availableItems.length - 10} more items available*`
+            });
+          }
+        } else {
+          containerComponents.push({
+            type: 14 // Separator
+          });
+          
+          containerComponents.push({
+            type: 10, // Text Display
+            content: `### ➕ Available Items to Add\n*All available items are already in this shop.*`
+          });
+        }
+        
+        // Back button
+        containerComponents.push({
+          type: 14 // Separator
+        });
+        
+        containerComponents.push({
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: 'safari_shop_manage_items',
+            label: '⬅ Back to Shop Selection',
+            style: 2
+          }]
+        });
+        
+        const container = {
+          type: 17, // Container
+          accent_color: 0x3498db, // Blue
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_shop_items_select:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading shop items.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_shop_add_item_')) {
+      // Add item to shop
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to manage shop items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse custom_id: safari_shop_add_item_${shopId}_${itemId}
+        const parts = custom_id.split('_');
+        const shopId = parts[4];
+        const itemId = parts[5];
+        
+        console.log(`➕ DEBUG: Adding item ${itemId} to shop ${shopId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        
+        const shop = safariData[guildId]?.shops?.[shopId];
+        const item = safariData[guildId]?.items?.[itemId];
+        
+        if (!shop || !item) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Shop or item not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Initialize shop.items if needed
+        if (!shop.items) {
+          shop.items = [];
+        }
+        
+        // Check if item already in shop
+        const existingItem = shop.items.find(shopItem => 
+          (shopItem.itemId || shopItem) === itemId
+        );
+        
+        if (existingItem) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Item is already in this shop.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Add item to shop (using base price initially)
+        shop.items.push({
+          itemId: itemId,
+          price: item.basePrice || 0,
+          addedAt: Date.now()
+        });
+        
+        // Save updated data
+        await saveSafariContent(safariData);
+        
+        console.log(`✅ DEBUG: Successfully added ${itemId} to shop ${shopId}`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Item Added!**\n\n**${item.emoji || '📦'} ${item.name}** has been added to **${shop.emoji || '🏪'} ${shop.name}** for **💰 ${item.basePrice || 0} coins**.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error adding item to shop:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error adding item to shop.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_shop_remove_item_')) {
+      // Remove item from shop
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to manage shop items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse custom_id: safari_shop_remove_item_${shopId}_${itemId}
+        const parts = custom_id.split('_');
+        const shopId = parts[4];
+        const itemId = parts[5];
+        
+        console.log(`🗑️ DEBUG: Removing item ${itemId} from shop ${shopId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        
+        const shop = safariData[guildId]?.shops?.[shopId];
+        const item = safariData[guildId]?.items?.[itemId];
+        
+        if (!shop || !item) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Shop or item not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Remove item from shop
+        const originalLength = shop.items?.length || 0;
+        shop.items = (shop.items || []).filter(shopItem => 
+          (shopItem.itemId || shopItem) !== itemId
+        );
+        
+        if (shop.items.length === originalLength) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Item was not found in this shop.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Save updated data
+        await saveSafariContent(safariData);
+        
+        console.log(`✅ DEBUG: Successfully removed ${itemId} from shop ${shopId}`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Item Removed!**\n\n**${item.emoji || '📦'} ${item.name}** has been removed from **${shop.emoji || '🏪'} ${shop.name}**.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error removing item from shop:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error removing item from shop.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

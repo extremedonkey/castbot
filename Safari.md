@@ -196,34 +196,105 @@ Both features leverage the same technical infrastructure:
 4. - ✅Add button handler to app.js
 5. - ✅Test with simple safari scenario
 
-### MVP2 - Enhanced Actions ✅ COMPLETE (January 2025)
-**Features:**
-- ✅ Conditional actions (if currency >= X, has item Y, etc.)
-- ✅ Multi-shop system with reusable items
-- ✅ Shop display with 40-component limit handling
-- ✅ Random outcomes with weighted probabilities
-- ✅ Enhanced currency and inventory management
-- ✅ Player status display ("My Status" button)
-- 🔄 Button cooldowns/limits (foundation implemented)
-- ⚠️ Edit Existing Button (broken) - various
-- 📋 Import/export safari templates (planned)
-- ❌ Analytics dashboard (deferred)
+### MVP2 - Tycoons Challenge System (Target: 1 Week - June 2025)
 
-### MVP3 - Application Builder (Future: Week 2)
-**Features:**
-- Question management interface
-- Response collection system
-- Application status tracking
-- Export responses to CSV
-- Integration with cast ranking
+**Mission**: Complete functional shop/inventory system for 24-hour dinosaur-themed Tycoons challenge with 13 players over 3 rounds.
 
-### MVP4 - Advanced Features (Future: Month 1)
+#### **Sprint 1: Core Shop & Inventory System**
+- ✅ Admin Set Balance: Create/update player currency balance
+- ✅ Admin Create Item: Define items (name, emoji, description, price, category)
+- ✅ Admin Create Shop: Create shops (name, emoji, description, greeting)
+- ❌ **Shop Items**: Add/remove items from shops (PRIORITY 1)
+- ⌛ Player View Balance: Expose "My Status" to normal users
+- ❌ Shop Display: Container with Section components for each item
+- ❌ Resolve Purchase: Currency validation and inventory updates
+- ❌ Player View Items: Inventory display with quantities
+
+#### **Sprint 2: Challenge Game Logic**
+- ❌ Round Results: Calculate earnings/losses for all players
+- ❌ Result Types: Define round outcomes (Clear Skies vs Meteor Strike)
+- ❌ Item Yield Earnings: Item earning attributes for different conditions
+- ❌ Item Attack/Defense Values: Combat calculations for rounds
+- ❌ Consumable Items: Temporary items consumed during round results
+
+#### **Nice to Have (Challenge Dependent)**
+- ❓ Custom Safari Labels: Guild-specific currency/item naming
+- ❓ Item/Shop Editing: Update existing definitions
+- ❓ Timed Rounds: Auto-calculation (so host can sleep)
+
+### MVP3 - Advanced Builder System (Post-Tycoons)
+
+#### **Core Architectural Foundation**
+Based on comprehensive analysis, MVP3 will implement the sophisticated builder system envisioned in mockups:
+
+#### **1. Data Structure Redesign**
+**Current**: Linear actions per button
+**Target**: Conditional trigger components with success/failure action paths
+
+```json
+{
+  "componentId": {
+    "triggerType": "button", // future: "string_select", "modal", "role_select" 
+    "triggerConfig": {...},
+    "conditions": [
+      {"id": "cond1", "type": "currency_gte", "value": 100, "operator": "AND"}
+    ],
+    "conditionLogic": "ALL", // or "ANY" for OR clauses
+    "successActions": [...],
+    "failureActions": [...]
+  }
+}
+```
+
+#### **2. Reusable Dynamic UI Framework**
+Based on viral_menu pattern (app.js line 3309), create `DynamicComponentBuilder`:
+- Condition Type Selection → Dynamic Condition Value Components
+- Action Type Selection → Dynamic Action Configuration
+- Trigger Type Selection → Dynamic Trigger Configuration
+
+#### **3. Execution Engine Redesign**
+```javascript
+async function executeComponent(componentId, userId, interaction) {
+  // 1. Evaluate all conditions with AND/OR logic
+  // 2. Select success/failure action set
+  // 3. Execute actions sequentially (separate messages)
+}
+```
+
+#### **4. Extended Action Types**
+**Current**: display_text, update_currency, follow_up_button
+**Extended**: assign_role, remove_role, grant_channel_permission, revoke_channel_permission, assign_item, remove_item, send_dm, create_temporary_channel
+
+#### **5. Advanced Condition Types**
+**Current**: currency_gte/lte, has_item, not_has_item, button_used, cooldown_expired
+**Extended**: has_role, in_channel, modal_text_matches, time_of_day, day_of_week
+
+#### **6. Multiple Trigger Components**
+**Current**: Buttons only
+**Extended**: String selects, Role selects, Modal text inputs, Channel selects
+
+#### **Features:**
+- **Advanced Button Builder**: Sophisticated condition/action interface (see mockup)
+- **Multiple Trigger Types**: String selects, modals, role/channel selects
+- **Dynamic Condition Builder**: Viral_menu-style dynamic UI updates
+- **Success/Failure Action Paths**: Conditional execution flows
+- **Import/Export Templates**: Reusable safari configurations
+- **Edit Existing Buttons**: Complete edit framework restoration
+
+### MVP4 - Complex Logic & Multiple Safaris
 **Features:**
-- Visual map editor (upload image, auto-grid)
-- Complex condition builder
-- Multiplayer interactions
-- Leaderboards and achievements
-- Scheduled events/time-based actions
+- **Complex OR/AND Logic**: Mixed condition operators
+- **Multiple Safaris per Guild**: Separate themed adventures
+- **Advanced Condition Chaining**: Multi-level conditional trees
+- **Visual Map Editor**: Image upload with auto-grid coordinate system
+
+### MVP5 - Enterprise Features (Future: Month 1)
+**Features:**
+- **Multiple Safaris per Guild**: Separate themed adventures per server
+- **Multiplayer Interactions**: Cross-player actions and trading
+- **Leaderboards and Achievements**: Competitive progression systems
+- **Scheduled Events**: Time-based automatic actions
+- **Analytics Dashboard**: Usage statistics and player behavior
 
 ## UI/UX Design
 
