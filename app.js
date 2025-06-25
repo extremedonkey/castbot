@@ -12605,26 +12605,25 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        // Extract modal input values
-        const termsInput = components[0]?.components[0]?.value || 'Currency';
-        const termsPluralInput = components[1]?.components[0]?.value || termsInput + 's';
+        // Extract modal input values  
+        const components = req.body.data.components;
+        const currencyName = components[0]?.components[0]?.value || 'coins';
+        const inventoryName = components[1]?.components[0]?.value || 'Nest';
         
-        console.log(`🔍 DEBUG: Customizing Safari terms for guild ${guildId}: ${termsInput} / ${termsPluralInput}`);
+        console.log(`⚙️ DEBUG: Customizing Safari terms for guild ${guildId}: Currency="${currencyName}", Inventory="${inventoryName}"`);
         
         // Import Safari manager functions
-        const { saveSafariData, loadSafariData } = await import('./safariManager.js');
+        const { updateCustomTerms } = await import('./safariManager.js');
         
-        // Load current Safari data
-        const safariData = await loadSafariData(guildId);
+        // Update the custom terms
+        const success = await updateCustomTerms(guildId, {
+          currencyName: currencyName,
+          inventoryName: inventoryName
+        });
         
-        // Update the terms
-        safariData.currencyTerms = {
-          singular: termsInput,
-          plural: termsPluralInput
-        };
-        
-        // Save the updated data
-        await saveSafariData(guildId, safariData);
+        if (!success) {
+          throw new Error('Failed to update custom terms');
+        }
         
         console.log(`✅ DEBUG: Safari terms updated successfully for guild ${guildId}`);
         
@@ -12632,7 +12631,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ Safari terms updated successfully!\n\n**Singular:** ${termsInput}\n**Plural:** ${termsPluralInput}\n\nThese terms will now be used throughout the Safari system.`,
+            content: `✅ Safari terms updated successfully!\n\n**Currency Name:** ${currencyName}\n**Inventory Name:** ${inventoryName}\n\nThese terms will now be used throughout the Safari system.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
