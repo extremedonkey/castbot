@@ -641,8 +641,19 @@ function extractCastlistData(playerData, guildId) {
  * @param {boolean} includeAddButton - Whether to include the "+" button for adding castlists
  * @returns {Array} Array of ActionRow JSON objects
  */
-function createCastlistRows(allCastlists, castlistTribes, includeAddButton = true) {
+function createCastlistRows(allCastlists, castlistTribes, includeAddButton = true, hasStores = false) {
     const castlistButtons = [];
+    
+    // Add "My Nest" button if guild has stores (appears before castlist button)
+    if (hasStores) {
+        castlistButtons.push(
+            new ButtonBuilder()
+                .setCustomId('safari_player_inventory')
+                .setLabel('My Nest')
+                .setStyle(ButtonStyle.Success) // Green button
+                .setEmoji('🥚')
+        );
+    }
     
     // Add default castlist button
     castlistButtons.push(

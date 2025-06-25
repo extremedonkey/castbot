@@ -90,6 +90,10 @@ import {
   generateHierarchyWarning,
   testRoleHierarchy
 } from './roleManager.js';
+import { 
+  hasStoresInGuild, 
+  createPlayerInventoryDisplay 
+} from './safariManager.js';
 import fs from 'fs';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
@@ -145,8 +149,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Extract castlist data using reusable function
   const { allCastlists, castlistTribes } = extractCastlistData(playerData, guildId);
 
+  // Check if guild has Safari stores for conditional My Nest button
+  const hasStores = await hasStoresInGuild(guildId);
+  
   // Create castlist rows with pagination support (include admin + button)
-  const castlistRows = createCastlistRows(allCastlists, castlistTribes, true);
+  const castlistRows = createCastlistRows(allCastlists, castlistTribes, true, hasStores);
   
   // Debug logging for castlist pagination
   console.log(`Created ${castlistRows.length} castlist row(s) for ${allCastlists.size} castlist(s)`);
@@ -5442,6 +5449,31 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error loading your status.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_player_inventory') {
+      // Handle "My Nest" player inventory display
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        console.log(`🥚 DEBUG: User ${userId} viewing inventory in guild ${guildId}`);
+        
+        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, userId);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: inventoryDisplay
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_player_inventory:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading your nest. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

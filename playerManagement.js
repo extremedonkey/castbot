@@ -14,6 +14,7 @@ import {
 } from 'discord-interactions';
 import { createPlayerCard, extractCastlistData, createCastlistRows } from './castlistV2.js';
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
+import { hasStoresInGuild } from './safariManager.js';
 
 /**
  * Player management modes
@@ -187,6 +188,9 @@ export async function createPlayerManagementUI(options) {
     client = null // Discord client for fetching data
   } = options;
 
+  // Check if this guild has stores
+  const hasStores = await hasStoresInGuild(guildId);
+
   // Create container
   const container = {
     type: 17, // Container
@@ -347,7 +351,7 @@ export async function createPlayerManagementUI(options) {
     
     if (allCastlists && allCastlists.size > 0) {
       // Player mode: don't include the "+" button (includeAddButton = false)
-      castlistRows = createCastlistRows(allCastlists, castlistTribes, false);
+      castlistRows = createCastlistRows(allCastlists, castlistTribes, false, hasStores);
     } else {
       // Fallback: single default castlist button if no castlist data found
       castlistRows = [{

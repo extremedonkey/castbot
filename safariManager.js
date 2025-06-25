@@ -1340,6 +1340,216 @@ async function validateActionLimit(actions) {
     };
 }
 
+/**
+ * Convert emoji to Twemoji CDN URL
+ * @param {string} emoji - The emoji character
+ * @returns {string} Twemoji CDN URL
+ */
+function getEmojiTwemojiUrl(emoji) {
+    if (!emoji || emoji.trim() === '') return null;
+    
+    try {
+        // Convert emoji to Unicode codepoint
+        const codepoint = [...emoji].map(char => 
+            char.codePointAt(0).toString(16)
+        ).join('-');
+        
+        return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/${codepoint}.png`;
+    } catch (error) {
+        console.error('Error converting emoji to Twemoji URL:', error);
+        return null;
+    }
+}
+
+/**
+ * Check if guild has any stores
+ * @param {string} guildId - Discord guild ID
+ * @returns {boolean} True if guild has stores
+ */
+async function hasStoresInGuild(guildId) {
+    try {
+        const safariData = await loadSafariContent();
+        const stores = safariData[guildId]?.stores || {};
+        return Object.keys(stores).length > 0;
+    } catch (error) {
+        console.error('Error checking guild stores:', error);
+        return false;
+    }
+}
+
+/**
+ * Get store browse buttons ordered by item count
+ * @param {string} guildId - Discord guild ID
+ * @returns {Array} Array of store browse buttons
+ */
+async function getStoreBrowseButtons(guildId) {
+    try {
+        const safariData = await loadSafariContent();
+        const stores = safariData[guildId]?.stores || {};
+        
+        // Convert stores to array and sort by item count (descending)
+        const storeArray = Object.values(stores).map(store => ({
+            ...store,
+            itemCount: (store.items || []).length
+        })).sort((a, b) => b.itemCount - a.itemCount);
+        
+        // Create buttons (max 5)
+        const buttons = [];
+        const maxButtons = 5;
+        
+        for (let i = 0; i < Math.min(storeArray.length, maxButtons); i++) {
+            const store = storeArray[i];
+            const emoji = store.emoji || '🏪';
+            
+            const button = {
+                type: 2, // Button
+                custom_id: `safari_store_browse_${guildId}_${store.id}`,
+                label: `Browse ${store.name}`.slice(0, 80),
+                style: 1, // Primary (blue)
+                emoji: { name: emoji }
+            };
+            
+            buttons.push(button);
+        }
+        
+        return buttons;
+    } catch (error) {
+        console.error('Error getting store browse buttons:', error);
+        return [];
+    }
+}
+
+/**
+ * Create player inventory display with Container > Section pattern
+ * @param {string} guildId - Discord guild ID
+ * @param {string} userId - Discord user ID
+ * @returns {Object} Discord Components V2 response
+ */
+async function createPlayerInventoryDisplay(guildId, userId) {
+    try {
+        console.log(`🥚 DEBUG: Creating player inventory display for user ${userId} in guild ${guildId}`);
+        
+        const safariData = await loadSafariContent();
+        const playerData = await loadPlayerData();
+        
+        // Get player safari data
+        const player = playerData[guildId]?.players?.[userId];
+        const safariPlayer = player?.safari || {};
+        const playerCurrency = safariPlayer.currency || 0;
+        const playerInventory = safariPlayer.inventory || {};
+        
+        // Get items data for display
+        const items = safariData[guildId]?.items || {};
+        
+        console.log(`💰 DEBUG: Player ${userId} has ${playerCurrency} currency and ${Object.keys(playerInventory).length} item types`);
+        
+        const components = [];
+        
+        // Header with currency balance
+        components.push({
+            type: 10, // Text Display
+            content: `# 🥚 My Nest\n\n💰 **Your Balance:** ${playerCurrency} coins`
+        });
+        
+        // Add separator
+        components.push({ type: 14 }); // Separator
+        
+        // Count total items and component usage
+        const inventoryItems = Object.entries(playerInventory).filter(([itemId, quantity]) => quantity > 0);
+        let componentsUsed = 4; // Container + header + separator + footer action row
+        
+        if (inventoryItems.length === 0) {
+            // No items message
+            components.push({
+                type: 10, // Text Display
+                content: `*Your nest is empty. Visit a store to purchase items!*`
+            });
+        } else {
+            // Add item sections (each uses 1 component for Section)
+            for (const [itemId, quantity] of inventoryItems) {
+                const item = items[itemId];
+                if (!item || quantity <= 0) continue;
+                
+                // Check component limit (reserve space for store buttons)
+                if (componentsUsed >= 35) { // Leave room for store buttons
+                    components.push({
+                        type: 10, // Text Display
+                        content: `⚠️ **Note:** You have more items, but only some can be displayed due to Discord limits.`
+                    });
+                    break;
+                }
+                
+                // Create emoji repetition string
+                const emoji = item.emoji || '📦';
+                const emojiRepeat = emoji.repeat(Math.min(quantity, 10)); // Cap at 10 for readability
+                const emojiLine = emojiRepeat ? `# ${emojiRepeat}` : '';
+                
+                // Item section with thumbnail
+                const itemSection = {
+                    type: 9, // Section component
+                    components: [
+                        {
+                            type: 10, // Text Display
+                            content: `### ${item.name}\n> \`Quantity: ${quantity}\`\n${emojiLine}`
+                        }
+                    ]
+                };
+                
+                // Add Twemoji thumbnail if emoji exists
+                const twemojiUrl = getEmojiTwemojiUrl(emoji);
+                if (twemojiUrl) {
+                    itemSection.accessory = {
+                        type: 11, // Thumbnail
+                        url: twemojiUrl
+                    };
+                }
+                
+                components.push(itemSection);
+                componentsUsed++;
+                
+                console.log(`📦 DEBUG: Added item ${item.name} (qty: ${quantity}) to display`);
+            }
+        }
+        
+        // Add separator before store buttons
+        components.push({ type: 14 }); // Separator
+        
+        // Create container
+        const container = {
+            type: 17, // Container
+            accent_color: 0x57f287, // Green accent for "My Nest"
+            components: components
+        };
+        
+        // Get store browse buttons
+        const storeBrowseButtons = await getStoreBrowseButtons(guildId);
+        
+        const responseComponents = [container];
+        
+        // Add store browse buttons if any exist
+        if (storeBrowseButtons.length > 0) {
+            responseComponents.push({
+                type: 1, // Action Row
+                components: storeBrowseButtons
+            });
+        }
+        
+        console.log(`✅ DEBUG: Created inventory display with ${components.length} components and ${storeBrowseButtons.length} store buttons`);
+        
+        return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + Ephemeral
+            components: responseComponents
+        };
+        
+    } catch (error) {
+        console.error('Error creating player inventory display:', error);
+        return {
+            content: '❌ Error loading your nest. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+        };
+    }
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -1371,5 +1581,10 @@ export {
     deleteButtonAction,
     updateButtonProperties,
     deleteButton,
-    validateActionLimit
+    validateActionLimit,
+    // Player Inventory exports
+    createPlayerInventoryDisplay,
+    hasStoresInGuild,
+    getStoreBrowseButtons,
+    getEmojiTwemojiUrl
 };

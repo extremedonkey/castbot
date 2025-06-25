@@ -582,7 +582,7 @@
         },
         "metadata": {
           "createdAt": 1750783000000,
-          "totalSales": 5
+          "totalSales": 9
         }
       },
       "do_you_see_me_tomato_171643": {
@@ -640,7 +640,7 @@
         "maxQuantity": -1,
         "metadata": {
           "createdAt": 1750783361363,
-          "totalSold": 1
+          "totalSold": 2
         }
       },
       "territory_forager_404120": {
@@ -653,7 +653,7 @@
         "maxQuantity": -1,
         "metadata": {
           "createdAt": 1750783404121,
-          "totalSold": 1
+          "totalSold": 2
         }
       },
       "nest_guardian_461600": {
@@ -666,7 +666,7 @@
         "maxQuantity": -1,
         "metadata": {
           "createdAt": 1750783461600,
-          "totalSold": 2
+          "totalSold": 3
         }
       },
       "raider_499497": {
@@ -679,7 +679,7 @@
         "maxQuantity": -1,
         "metadata": {
           "createdAt": 1750783499497,
-          "totalSold": 1
+          "totalSold": 2
         }
       }
     }
