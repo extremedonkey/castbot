@@ -615,6 +615,15 @@ async function ensureServerData(guild) {
     };
     await savePlayerData(playerData);
     console.log(`🎉 NEW SERVER INSTALLED: ${guild.name} (${guild.id}) - Owner: ${ownerInfo?.tag || guild.ownerId}`);
+    
+    // Post new server install announcement to Discord analytics channel
+    try {
+      const { logNewServerInstall } = await import('./analyticsLogger.js');
+      await logNewServerInstall(guild, ownerInfo);
+    } catch (error) {
+      console.error('Error posting server install announcement:', error);
+      // Don't break server initialization if announcement fails
+    }
   } else {
     // Update existing server metadata
     playerData[guild.id] = {

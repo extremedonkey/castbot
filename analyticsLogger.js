@@ -452,4 +452,122 @@ async function processQueuedMessages(loggingConfig) {
   }
 }
 
-export { logInteraction, getLogFilePath, setDiscordClient };
+/**
+ * Post new server installation announcement to Discord analytics channel
+ * @param {Object} guild - Discord.js Guild object
+ * @param {Object} ownerInfo - Owner information from ensureServerData
+ */
+async function logNewServerInstall(guild, ownerInfo = null) {
+  try {
+    // Skip if Discord client not available
+    if (!discordClient) {
+      return;
+    }
+
+    // Load environment config
+    const { loadEnvironmentConfig } = await import('./storage.js');
+    const envConfig = await loadEnvironmentConfig();
+    
+    const loggingConfig = envConfig.liveDiscordLogging;
+    
+    // Check if logging is enabled
+    if (!loggingConfig.enabled) {
+      return;
+    }
+
+    // Get environment-specific timezone offset
+    const { getLoggingTimezoneOffset } = await import('./storage.js');
+    const timezoneOffset = await getLoggingTimezoneOffset();
+    
+    // Apply environment-specific timezone offset
+    const utcDate = new Date();
+    const localDate = new Date(utcDate.getTime() + (timezoneOffset * 60 * 60 * 1000));
+    
+    // Format timestamp: [12:34PM] Thu 19 Jun 25
+    const hours = localDate.getHours();
+    const minutes = localDate.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    const timeStr = `${displayHours}:${minutes}${ampm}`;
+    
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dayName = days[localDate.getDay()];
+    const day = localDate.getDate();
+    const month = months[localDate.getMonth()];
+    const year = localDate.getFullYear().toString().slice(-2);
+    const dateStr = `${dayName} ${day} ${month} ${year}`;
+    
+    const timestamp = `[${timeStr}] ${dateStr}`;
+    
+    // Format owner information
+    let ownerDisplay = 'Unknown Owner';
+    if (ownerInfo) {
+      // Format: !j (@jfranc) (703448702320246815)
+      const globalName = ownerInfo.globalName || ownerInfo.username;
+      ownerDisplay = `${globalName} (@${ownerInfo.username}) (${guild.ownerId})`;
+    } else {
+      ownerDisplay = `Unknown (@unknown) (${guild.ownerId})`;
+    }
+
+    // Create the announcement message in the same format as regular logs
+    const announcementMessage = `# ${timestamp} | 🎉🥳 **New Server Install**: \`${guild.name}\` (${guild.id}) | Owner: ${ownerDisplay}`;
+
+    // Get target channel if not cached
+    if (!targetChannel) {
+      try {
+        const { getLoggingChannelId } = await import('./storage.js');
+        const targetChannelId = await getLoggingChannelId();
+        
+        const targetGuild = await discordClient.guilds.fetch(loggingConfig.targetGuildId);
+        targetChannel = await targetGuild.channels.fetch(targetChannelId);
+        
+        if (!targetChannel) {
+          console.error('Discord Logging: Target channel not found for server install announcement');
+          return;
+        }
+      } catch (error) {
+        console.error('Discord Logging: Error fetching target channel for server install:', error);
+        return;
+      }
+    }
+
+    // Rate limiting check (simple implementation)
+    const now = Date.now();
+    if (now - loggingConfig.lastMessageTime < 1200) { // 1.2 seconds between messages
+      // Add to queue for later processing
+      loggingConfig.rateLimitQueue.push({
+        message: announcementMessage,
+        timestamp: now
+      });
+      
+      // Limit queue size
+      if (loggingConfig.rateLimitQueue.length > 50) {
+        loggingConfig.rateLimitQueue.shift(); // Remove oldest
+      }
+      
+      return;
+    }
+    
+    // Update last message time
+    loggingConfig.lastMessageTime = now;
+    
+    // Send announcement to Discord
+    await targetChannel.send(announcementMessage);
+    
+    // Process any queued messages
+    if (loggingConfig.rateLimitQueue.length > 0) {
+      setTimeout(async () => {
+        await processQueuedMessages(loggingConfig);
+      }, 1200);
+    }
+    
+    console.log(`📢 Server install announcement posted to Discord: ${guild.name} (${guild.id})`);
+    
+  } catch (error) {
+    console.error('Discord Server Install Announcement Error (non-critical):', error);
+    // Don't throw - this should never break the main bot functionality
+  }
+}
+
+export { logInteraction, getLogFilePath, setDiscordClient, logNewServerInstall };
