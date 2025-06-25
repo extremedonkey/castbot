@@ -200,7 +200,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     new ButtonBuilder()
       .setCustomId('prod_safari_menu')
       .setLabel('Safari')
-      .setStyle(ButtonStyle.Primary)
+      .setStyle(ButtonStyle.Success)
       .setEmoji('🦁')
   ];
   
@@ -210,7 +210,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       new ButtonBuilder()
         .setCustomId('reece_stuff_menu')
         .setLabel('Reece Stuff')
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Danger)
         .setEmoji('😌')
     );
   }
