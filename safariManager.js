@@ -1484,39 +1484,13 @@ async function createPlayerInventoryDisplay(guildId, userId) {
                 const emojiRepeat = emoji.repeat(Math.min(quantity, 10)); // Cap at 10 for readability
                 const emojiLine = emojiRepeat ? `# ${emojiRepeat}` : '';
                 
-                // Try Section component with Twemoji first, fallback to Text Display
-                try {
-                    // Item section with thumbnail
-                    const itemSection = {
-                        type: 9, // Section component
-                        components: [
-                            {
-                                type: 10, // Text Display
-                                content: `### ${item.name}\n> \`Quantity: ${quantity}\`\n${emojiLine}`
-                            }
-                        ]
-                    };
-                    
-                    // Add Twemoji thumbnail if emoji exists
-                    const twemojiUrl = getEmojiTwemojiUrl(emoji);
-                    if (twemojiUrl) {
-                        itemSection.accessory = {
-                            type: 11, // Thumbnail
-                            url: twemojiUrl
-                        };
-                        console.log(`🖼️ DEBUG: Added thumbnail for ${item.name}: ${twemojiUrl}`);
-                    }
-                    
-                    components.push(itemSection);
-                    console.log(`📦 DEBUG: Added Section component for ${item.name}`);
-                } catch (error) {
-                    console.error(`❌ ERROR: Section component failed for ${item.name}, using Text Display fallback:`, error);
-                    // Fallback to simple Text Display
-                    components.push({
-                        type: 10, // Text Display
-                        content: `### ${emoji} ${item.name}\n> \`Quantity: ${quantity}\`\n${emojiLine}`
-                    });
-                }
+                // TEMPORARY: Use simple Text Display instead of Section components
+                // This is to diagnose if Section components are causing Discord to reject the message
+                components.push({
+                    type: 10, // Text Display
+                    content: `### ${emoji} ${item.name}\n> \`Quantity: ${quantity}\`\n${emojiLine}`
+                });
+                console.log(`📦 DEBUG: Added Text Display for ${item.name} (qty: ${quantity})`);
                 
                 componentsUsed++;
                 
