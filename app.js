@@ -382,7 +382,7 @@ async function createReeceStuffMenu() {
 async function createSafariMenu(guildId, userId, member) {
   // Get the inventory name for this guild
   let inventoryName = 'Nest'; // Default
-  let inventoryEmoji = '🪺'; // Default emoji for Nest
+  let inventoryEmoji = '🥚'; // Default emoji
   
   try {
     const { loadSafariContent } = await import('./safariManager.js');
