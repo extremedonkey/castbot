@@ -65,7 +65,11 @@ async function ensureSafariContentFile() {
                     "safaris": {},
                     "applications": {},
                     "stores": {},      // NEW: MVP2 - Multiple stores per server
-                    "items": {}       // NEW: MVP2 - Reusable items across stores
+                    "items": {},       // NEW: MVP2 - Reusable items across stores
+                    "safariConfig": {  // NEW: Custom terminology per guild
+                        "currencyName": "coins",
+                        "inventoryName": "Nest"
+                    }
                 }
             };
             await fs.writeFile(SAFARI_CONTENT_FILE, JSON.stringify(initialData, null, 2));
@@ -84,6 +88,13 @@ async function ensureSafariContentFile() {
                 }
                 if (!data[guildId].items) {
                     data[guildId].items = {};
+                    updated = true;
+                }
+                if (!data[guildId].safariConfig) {
+                    data[guildId].safariConfig = {
+                        currencyName: 'coins',
+                        inventoryName: 'Nest'
+                    };
                     updated = true;
                 }
             }
@@ -1444,23 +1455,26 @@ async function createPlayerInventoryDisplay(guildId, userId) {
         // Get server name for personalized header
         const serverName = playerData[guildId]?.serverName || 'Server';
         
+        // Get custom terms for this guild
+        const customTerms = await getCustomTerms(guildId);
+        
         console.log(`💰 DEBUG: Player ${userId} has ${playerCurrency} currency and ${Object.keys(playerInventory).length} item types`);
         
         const components = [];
         
-        // Header with personalized server name
+        // Header with personalized server name and custom inventory name
         components.push({
             type: 10, // Text Display
-            content: `# 🥚 ${serverName}'s Nest`
+            content: `# 🥚 ${serverName}'s ${customTerms.inventoryName}`
         });
         
         // Add separator before balance
         components.push({ type: 14 }); // Separator
         
-        // Balance section
+        // Balance section with custom currency name
         components.push({
             type: 10, // Text Display
-            content: `## 💰 Your Balance\n> \`${playerCurrency} coins\``
+            content: `## 💰 Your Balance\n> \`${playerCurrency} ${customTerms.currencyName}\``
         });
         
         // Count total items and component usage
@@ -1471,10 +1485,10 @@ async function createPlayerInventoryDisplay(guildId, userId) {
             // Add separator before empty message
             components.push({ type: 14 }); // Separator
             
-            // No items message
+            // No items message with custom terminology
             components.push({
                 type: 10, // Text Display
-                content: `*Your nest is empty. Visit a store to purchase items!*`
+                content: `*Your ${customTerms.inventoryName.toLowerCase()} is empty. Visit a store to purchase items!*`
             });
         } else {
             // Add items with separators between them
@@ -1562,6 +1576,91 @@ async function createPlayerInventoryDisplay(guildId, userId) {
     }
 }
 
+/**
+ * Get custom terminology for a guild
+ * @param {string} guildId - Discord guild ID
+ * @returns {Object} Custom terms with fallbacks
+ */
+async function getCustomTerms(guildId) {
+    try {
+        const safariData = await loadSafariContent();
+        const config = safariData[guildId]?.safariConfig || {};
+        
+        return {
+            currencyName: config.currencyName || 'coins',
+            inventoryName: config.inventoryName || 'Nest'
+        };
+    } catch (error) {
+        console.error('Error getting custom terms:', error);
+        return {
+            currencyName: 'coins',
+            inventoryName: 'Nest'
+        };
+    }
+}
+
+/**
+ * Update custom terminology for a guild
+ * @param {string} guildId - Discord guild ID  
+ * @param {Object} terms - Object with currencyName and/or inventoryName
+ * @returns {boolean} Success status
+ */
+async function updateCustomTerms(guildId, terms) {
+    try {
+        const safariData = await loadSafariContent();
+        
+        // Ensure guild data exists
+        if (!safariData[guildId]) {
+            safariData[guildId] = {
+                buttons: {},
+                safaris: {},
+                applications: {},
+                stores: {},
+                items: {},
+                safariConfig: {}
+            };
+        }
+        
+        // Ensure safariConfig exists
+        if (!safariData[guildId].safariConfig) {
+            safariData[guildId].safariConfig = {
+                currencyName: 'coins',
+                inventoryName: 'Nest'
+            };
+        }
+        
+        // Update terms
+        if (terms.currencyName !== undefined) {
+            safariData[guildId].safariConfig.currencyName = terms.currencyName || 'coins';
+        }
+        if (terms.inventoryName !== undefined) {
+            safariData[guildId].safariConfig.inventoryName = terms.inventoryName || 'Nest';
+        }
+        
+        // Save updated data
+        await saveSafariContent(safariData);
+        
+        console.log(`✅ Updated custom terms for guild ${guildId}:`, terms);
+        return true;
+        
+    } catch (error) {
+        console.error('Error updating custom terms:', error);
+        return false;
+    }
+}
+
+/**
+ * Reset custom terminology to defaults for a guild
+ * @param {string} guildId - Discord guild ID
+ * @returns {boolean} Success status
+ */
+async function resetCustomTerms(guildId) {
+    return await updateCustomTerms(guildId, {
+        currencyName: 'coins',
+        inventoryName: 'Nest'
+    });
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -1598,5 +1697,9 @@ export {
     createPlayerInventoryDisplay,
     hasStoresInGuild,
     getStoreBrowseButtons,
-    getEmojiTwemojiUrl
+    getEmojiTwemojiUrl,
+    // Custom Terms exports
+    getCustomTerms,
+    updateCustomTerms,
+    resetCustomTerms
 };

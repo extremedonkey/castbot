@@ -94,6 +94,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_currency_modal_*` | Set Currency Modal | app.js:~9631 | Pattern handler | ✅ Active |
 | `safari_store_modal` | Create New Store | app.js:~9747 | Modal handler | ✅ Active |
 | `safari_item_modal` | Create New Item | app.js:~9812 | Modal handler | ✅ Active |
+| `safari_customize_terms_modal` | Customize Currency Terms | app.js:~12591 | Modal handler | ✅ Active |
 
 ### **Castlist Navigation Buttons**
 | Custom ID | Label | Location | Handler Function | Status |

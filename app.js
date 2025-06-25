@@ -413,7 +413,12 @@ async function createSafariMenu() {
       .setCustomId('safari_manage_items')
       .setLabel('Manage Items')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📦')
+      .setEmoji('📦'),
+    new ButtonBuilder()
+      .setCustomId('safari_customize_terms')
+      .setLabel('Customize Terms')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⚙️')
   ];
   
   const safariRow1 = new ActionRowBuilder().addComponents(safariButtonsRow1);
@@ -5489,6 +5494,71 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error loading your nest. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_customize_terms') {
+      // Handle "⚙️ Customize Terms" button
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to customize terms.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`⚙️ DEBUG: User ${member.user.id} opening customize terms modal for guild ${guildId}`);
+        
+        // Get current custom terms
+        const { getCustomTerms } = await import('./safariManager.js');
+        const currentTerms = await getCustomTerms(guildId);
+        
+        // Create modal with current values pre-filled
+        const modal = new ModalBuilder()
+          .setCustomId('safari_customize_terms_modal')
+          .setTitle('⚙️ Customize Safari Terms')
+          .addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('currency_name')
+                .setLabel('Currency Name')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('coins')
+                .setValue(currentTerms.currencyName)
+                .setMaxLength(30)
+                .setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('inventory_name')
+                .setLabel('Inventory Name')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Nest')
+                .setValue(currentTerms.inventoryName)
+                .setMaxLength(30)
+                .setRequired(true)
+            )
+          );
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_customize_terms:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error opening customize terms modal. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -12514,6 +12584,65 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating action.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_customize_terms_modal') {
+      // Handle Safari terms customization modal
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to customize Safari terms.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Extract modal input values
+        const termsInput = components[0]?.components[0]?.value || 'Currency';
+        const termsPluralInput = components[1]?.components[0]?.value || termsInput + 's';
+        
+        console.log(`🔍 DEBUG: Customizing Safari terms for guild ${guildId}: ${termsInput} / ${termsPluralInput}`);
+        
+        // Import Safari manager functions
+        const { saveSafariData, loadSafariData } = await import('./safariManager.js');
+        
+        // Load current Safari data
+        const safariData = await loadSafariData(guildId);
+        
+        // Update the terms
+        safariData.currencyTerms = {
+          singular: termsInput,
+          plural: termsPluralInput
+        };
+        
+        // Save the updated data
+        await saveSafariData(guildId, safariData);
+        
+        console.log(`✅ DEBUG: Safari terms updated successfully for guild ${guildId}`);
+        
+        // Return success message
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ Safari terms updated successfully!\n\n**Singular:** ${termsInput}\n**Plural:** ${termsPluralInput}\n\nThese terms will now be used throughout the Safari system.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error updating Safari terms:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating Safari terms. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
