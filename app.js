@@ -91,7 +91,6 @@ import {
   testRoleHierarchy
 } from './roleManager.js';
 import { 
-  hasStoresInGuild, 
   createPlayerInventoryDisplay 
 } from './safariManager.js';
 import fs from 'fs';
@@ -149,11 +148,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Extract castlist data using reusable function
   const { allCastlists, castlistTribes } = extractCastlistData(playerData, guildId);
 
-  // Check if guild has Safari stores for conditional My Nest button
-  const hasStores = await hasStoresInGuild(guildId);
-  
   // Create castlist rows with pagination support (include admin + button)
-  const castlistRows = createCastlistRows(allCastlists, castlistTribes, true, hasStores);
+  const castlistRows = createCastlistRows(allCastlists, castlistTribes, true, false);
   
   // Debug logging for castlist pagination
   console.log(`Created ${castlistRows.length} castlist row(s) for ${allCastlists.size} castlist(s)`);
@@ -174,20 +170,20 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🪛'),
     new ButtonBuilder()
-      .setCustomId('prod_manage_pronouns_timezones')
-      .setLabel('Manage Pronouns/Timezones')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💜'),
-    new ButtonBuilder()
       .setCustomId('prod_manage_tribes')
       .setLabel('Manage Tribes')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔥')
+      .setEmoji('🔥'),
+    new ButtonBuilder()
+      .setCustomId('prod_manage_pronouns_timezones')
+      .setLabel('Manage Pronouns/Timezones')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💜')
   ];
   
-  // Add Manage Players button conditionally (3rd position)
+  // Add Manage Players button conditionally (4th position)
   if (hasRoles) {
-    adminButtons.splice(2, 0, 
+    adminButtons.push(
       new ButtonBuilder()
         .setCustomId('admin_manage_player')
         .setLabel('Manage Players')
@@ -211,29 +207,33 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('prod_safari_menu')
       .setLabel('Safari')
       .setStyle(ButtonStyle.Primary)
-      .setEmoji('🦁'),
+      .setEmoji('📌'),
     new ButtonBuilder()
       .setCustomId('prod_player_menu')
-      .setLabel('My Profile')
+      .setLabel('🪪 Player Profile')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('👤'),
-    new ButtonBuilder()
-      .setLabel('Need Help?')
-      .setStyle(ButtonStyle.Link)
-      .setEmoji('❓')
-      .setURL('https://discord.gg/H7MpJEjkwT')
+      .setEmoji('👤')
   ];
   
-  // Add special buttons only for specific user (Reece) - goes at the end
+  // Add special buttons only for specific user (Reece) - insert before Need Help
   if (userId === '391415444084490240') {
     adminActionButtons.push(
       new ButtonBuilder()
         .setCustomId('reece_stuff_menu')
         .setLabel('Reece Stuff')
-        .setStyle(ButtonStyle.Danger)
+        .setStyle(ButtonStyle.Secondary)
         .setEmoji('😌')
     );
   }
+  
+  // Add Need Help button at the end
+  adminActionButtons.push(
+    new ButtonBuilder()
+      .setLabel('Need Help?')
+      .setStyle(ButtonStyle.Link)
+      .setEmoji('❓')
+      .setURL('https://discord.gg/H7MpJEjkwT')
+  );
   
   const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
   
@@ -2470,7 +2470,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log(`🏪 DEBUG: User ${userId} browsing store ${storeId} in guild ${guildId}`);
         
         // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
+        const { loadSafariContent, getCustomTerms } = await import('./safariManager.js');
         const { getPlayer, loadPlayerData } = await import('./storage.js');
         const safariData = await loadSafariContent();
         const store = safariData[guildId]?.stores?.[storeId];
@@ -2486,7 +2486,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
         
-        // Get player's currency for display
+        // Get custom terms and player's currency for display
+        const customTerms = await getCustomTerms(guildId);
         const playerData = await loadPlayerData();
         // Access player data directly from the loaded structure
         const player = playerData[guildId]?.players?.[userId];
@@ -2504,7 +2505,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Player currency display
         containerComponents.push({
           type: 10, // Text Display
-          content: `> 🪙 **Your Balance:** ${playerCurrency} coins`
+          content: `> ${customTerms.currencyEmoji} **Your Balance:** ${playerCurrency} ${customTerms.currencyName}`
         });
         
         containerComponents.push({ type: 14 }); // Separator
@@ -2538,7 +2539,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                   },
                   {
                     type: 10, // Text Display - Item cost in quote format
-                    content: `> 🪙 ${price}`
+                    content: `> ${customTerms.currencyEmoji} ${price}`
                   }
                 ],
                 accessory: {
