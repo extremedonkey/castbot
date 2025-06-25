@@ -162,7 +162,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   const hasTimezones = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
   const hasRoles = hasPronouns || hasTimezones;
   
-  // Create admin control buttons (moved Need Help to bottom row)
+  // Create admin control buttons (reorganized)
   const adminButtons = [
     new ButtonBuilder()
       .setCustomId('prod_setup')
@@ -176,12 +176,14 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setEmoji('🧑‍🤝‍🧑'),
     new ButtonBuilder()
       .setCustomId('prod_manage_tribes')
-      .setLabel('🔥 Tribes')
-      .setStyle(ButtonStyle.Secondary),
+      .setLabel('Tribes')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🔥'),
     new ButtonBuilder()
       .setCustomId('prod_manage_pronouns_timezones')
-      .setLabel('💜 Pronouns & Timezones')
+      .setLabel('Pronouns & Timezones')
       .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💜')
   ];
   
   // Live Analytics button moved to Reece Stuff submenu
@@ -213,21 +215,22 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
   
-  // Add Player Profile button
-  adminActionButtons.push(
-    new ButtonBuilder()
-      .setCustomId('prod_player_menu')
-      .setLabel('🪪 Player Profile')
-      .setStyle(ButtonStyle.Secondary)
-  );
-  
-  // Add Need Help button at the end
+  // Add Need Help button before Player Profile
   adminActionButtons.push(
     new ButtonBuilder()
       .setLabel('Need Help?')
       .setStyle(ButtonStyle.Link)
       .setEmoji('❓')
       .setURL('https://discord.gg/H7MpJEjkwT')
+  );
+  
+  // Add Player Profile button at the end
+  adminActionButtons.push(
+    new ButtonBuilder()
+      .setCustomId('prod_player_menu')
+      .setLabel('Player Profile')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🪪')
   );
   
   const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
