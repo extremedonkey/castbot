@@ -4075,6 +4075,7 @@ To fix this:
 
         const channelId = req.body.channel_id;
         const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
         const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
         
         console.log('🦁 DEBUG: Creating Safari submenu');
