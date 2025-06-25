@@ -68,7 +68,8 @@ async function ensureSafariContentFile() {
                     "items": {},       // NEW: MVP2 - Reusable items across stores
                     "safariConfig": {  // NEW: Custom terminology per guild
                         "currencyName": "coins",
-                        "inventoryName": "Nest"
+                        "inventoryName": "Nest",
+                        "currencyEmoji": "🪙"
                     }
                 }
             };
@@ -93,8 +94,14 @@ async function ensureSafariContentFile() {
                 if (!data[guildId].safariConfig) {
                     data[guildId].safariConfig = {
                         currencyName: 'coins',
-                        inventoryName: 'Nest'
+                        inventoryName: 'Nest',
+                        currencyEmoji: '🪙'
                     };
+                    updated = true;
+                }
+                // Ensure existing safariConfig has currencyEmoji field
+                if (data[guildId].safariConfig && !data[guildId].safariConfig.currencyEmoji) {
+                    data[guildId].safariConfig.currencyEmoji = '🪙';
                     updated = true;
                 }
             }

@@ -210,7 +210,7 @@ Both features leverage the same technical infrastructure:
 - ⌛ Player View Balance: Expose "My Status" to normal users
 - ✅ **Store Display: Container with Section components for each item** ✨ COMPLETE
 - ✅ **Resolve Purchase: Currency validation and inventory updates** ✨ COMPLETE
-- ❌ Player View Items: Inventory display with quantities
+- ✅ Player View Items: Inventory display with quantities
 
 #### **Sprint 2: Challenge Game Logic**
 - ❌ Round Results: Calculate earnings/losses for all players

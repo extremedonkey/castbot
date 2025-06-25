@@ -685,7 +685,8 @@
     },
     "safariConfig": {
       "currencyName": "beaks",
-      "inventoryName": "💼 Briefcase"
+      "inventoryName": "💼 Briefcase",
+      "currencyEmoji": "🪙"
     }
   },
   "1385042963310055515": {
@@ -746,7 +747,8 @@
     "items": {},
     "safariConfig": {
       "currencyName": "coins",
-      "inventoryName": "Nest"
+      "inventoryName": "Nest",
+      "currencyEmoji": "🪙"
     }
   }
 }
