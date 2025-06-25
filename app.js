@@ -711,10 +711,18 @@ app.get("/interactions", (req, res) => {
 });
 
 /**
- * Interactions endpoint URL where Discord will send HTTP requests
- * Parse request body and verifies incoming requests using discord-interactions package!
+ * Parse request body as JSON for all routes except /interactions
+ * The /interactions endpoint needs raw buffer access for discord-interactions package
  */
-app.use(express.json());
+app.use((req, res, next) => {
+  if (req.path === '/interactions') {
+    // Skip JSON parsing for interactions endpoint
+    next();
+  } else {
+    // Apply JSON parsing for other routes
+    express.json()(req, res, next);
+  }
+});
 
 // Update handleSetTribe function to properly handle role options
 async function handleSetTribe(guildId, roleIdOrOption, options) {
