@@ -619,7 +619,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
         "emoji": "🏪",
         "items": [{"itemId": "magic_sword", "price": 200}],
         "settings": {
-          "shopkeeperText": "Welcome traveler!",
+          "storeownerText": "Welcome traveler!",
           "accentColor": 2874814,
           "requiresRole": null
         }

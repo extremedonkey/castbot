@@ -31,7 +31,7 @@ export const EDIT_CONFIGS = {
     properties: {
       name: { type: 'text', maxLength: SAFARI_LIMITS.MAX_STORE_NAME_LENGTH, required: true, label: 'Store Name' },
       emoji: { type: 'text', maxLength: 10, required: false, label: 'Emoji', placeholder: '🏪' },
-      shopkeeperText: { type: 'textarea', maxLength: SAFARI_LIMITS.MAX_SHOPKEEPER_TEXT_LENGTH, required: false, label: 'Shopkeeper Text' },
+      storeownerText: { type: 'textarea', maxLength: SAFARI_LIMITS.MAX_STOREOWNER_TEXT_LENGTH, required: false, label: 'Store Owner Text' },
       accentColor: { type: 'color', required: false, label: 'Accent Color' },
       tags: { type: 'tags', maxTags: SAFARI_LIMITS.MAX_TAGS_PER_ITEM, label: 'Tags (comma separated)' }
     },

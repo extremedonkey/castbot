@@ -2477,7 +2477,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Header section with store info and player currency
         containerComponents.push({
           type: 10, // Text Display
-          content: `## ${store.emoji || '🏪'} ${store.name}\n\n${store.description || ''}\n\n**${store.settings?.shopkeeperText || 'Welcome to the store!'}**`
+          content: `## ${store.emoji || '🏪'} ${store.name}\n\n${store.description || ''}\n\n**${store.settings?.storeownerText || 'Welcome to the store!'}**`
         });
         
         // Player currency display
@@ -5763,9 +5763,9 @@ Your server is now ready for Tycoons gameplay!`;
           .setMaxLength(500)
           .setPlaceholder('A description of your store...');
         
-        const shopkeeperTextInput = new TextInputBuilder()
-          .setCustomId('shopkeeper_text')
-          .setLabel('Storekeeper Greeting')
+        const storeownerTextInput = new TextInputBuilder()
+          .setCustomId('storeowner_text')
+          .setLabel('Store Owner Greeting')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
           .setMaxLength(200)
@@ -5774,7 +5774,7 @@ Your server is now ready for Tycoons gameplay!`;
         const row1 = new ActionRowBuilder().addComponents(storeNameInput);
         const row2 = new ActionRowBuilder().addComponents(storeEmojiInput);
         const row3 = new ActionRowBuilder().addComponents(storeDescriptionInput);
-        const row4 = new ActionRowBuilder().addComponents(shopkeeperTextInput);
+        const row4 = new ActionRowBuilder().addComponents(storeownerTextInput);
         
         modal.addComponents(row1, row2, row3, row4);
         
@@ -5902,8 +5902,10 @@ Your server is now ready for Tycoons gameplay!`;
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
+        console.log(`🔍 DEBUG: Safari data for guild ${guildId}:`, JSON.stringify(safariData[guildId], null, 2));
         const stores = safariData[guildId]?.stores || {};
         const items = safariData[guildId]?.items || {};
+        console.log(`🔍 DEBUG: Found ${Object.keys(stores).length} stores:`, Object.keys(stores));
         
         // Create back button
         const backButton = new ButtonBuilder()
@@ -12140,7 +12142,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const storeName = components[0].components[0].value?.trim();
         const storeEmoji = components[1].components[0].value?.trim() || null;
         const storeDescription = components[2].components[0].value?.trim() || null;
-        const shopkeeperText = components[3].components[0].value?.trim() || null;
+        const storeownerText = components[3].components[0].value?.trim() || null;
         
         // Validate required fields
         if (!storeName) {
@@ -12162,7 +12164,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           name: storeName,
           emoji: storeEmoji,
           description: storeDescription,
-          shopkeeperText: shopkeeperText,
+          storeownerText: storeownerText,
           createdBy: member.user.id
         });
         

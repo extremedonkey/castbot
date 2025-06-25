@@ -576,7 +576,7 @@
           }
         ],
         "settings": {
-          "shopkeeperText": "Welcome to The Hatchery! Gear up for the dinosaur survival challenge.",
+          "storeownerText": "Welcome to The Hatchery! Gear up for the dinosaur survival challenge.",
           "accentColor": 7506394,
           "requiresRole": null
         },
@@ -592,7 +592,7 @@
         "emoji": "🍅",
         "items": [],
         "settings": {
-          "shopkeeperText": "Tomato Lord is best AI",
+          "storeownerText": "Tomato Lord is best AI",
           "accentColor": 3066993,
           "requiresRole": null
         },

@@ -563,7 +563,7 @@ async function createStore(guildId, storeData, userId) {
             emoji: storeData.emoji || '🏪',
             items: storeData.items || [], // Array of {itemId, price}
             settings: {
-                shopkeeperText: storeData.shopkeeperText || 'Welcome to my store!',
+                storeownerText: storeData.storeownerText || 'Welcome to my store!',
                 accentColor: storeData.accentColor || 0x2ecc71,
                 requiresRole: storeData.requiresRole || null
             },
@@ -778,10 +778,10 @@ async function createStoreDisplay(guildId, storeId, userId) {
         
         const components = [];
         
-        // Storekeeper header text
+        // Store owner header text
         components.push({
             type: 10, // Text Display
-            content: `# ${store.emoji} ${store.name}\n\n*${store.settings.shopkeeperText}*`
+            content: `# ${store.emoji} ${store.name}\n\n*${store.settings.storeownerText}*`
         });
         
         // Store description if provided
