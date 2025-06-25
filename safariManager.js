@@ -1484,27 +1484,40 @@ async function createPlayerInventoryDisplay(guildId, userId) {
                 const emojiRepeat = emoji.repeat(Math.min(quantity, 10)); // Cap at 10 for readability
                 const emojiLine = emojiRepeat ? `# ${emojiRepeat}` : '';
                 
-                // Item section with thumbnail
-                const itemSection = {
-                    type: 9, // Section component
-                    components: [
-                        {
-                            type: 10, // Text Display
-                            content: `### ${item.name}\n> \`Quantity: ${quantity}\`\n${emojiLine}`
-                        }
-                    ]
-                };
-                
-                // Add Twemoji thumbnail if emoji exists
-                const twemojiUrl = getEmojiTwemojiUrl(emoji);
-                if (twemojiUrl) {
-                    itemSection.accessory = {
-                        type: 11, // Thumbnail
-                        url: twemojiUrl
+                // Try Section component with Twemoji first, fallback to Text Display
+                try {
+                    // Item section with thumbnail
+                    const itemSection = {
+                        type: 9, // Section component
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: `### ${item.name}\n> \`Quantity: ${quantity}\`\n${emojiLine}`
+                            }
+                        ]
                     };
+                    
+                    // Add Twemoji thumbnail if emoji exists
+                    const twemojiUrl = getEmojiTwemojiUrl(emoji);
+                    if (twemojiUrl) {
+                        itemSection.accessory = {
+                            type: 11, // Thumbnail
+                            url: twemojiUrl
+                        };
+                        console.log(`🖼️ DEBUG: Added thumbnail for ${item.name}: ${twemojiUrl}`);
+                    }
+                    
+                    components.push(itemSection);
+                    console.log(`📦 DEBUG: Added Section component for ${item.name}`);
+                } catch (error) {
+                    console.error(`❌ ERROR: Section component failed for ${item.name}, using Text Display fallback:`, error);
+                    // Fallback to simple Text Display
+                    components.push({
+                        type: 10, // Text Display
+                        content: `### ${emoji} ${item.name}\n> \`Quantity: ${quantity}\`\n${emojiLine}`
+                    });
                 }
                 
-                components.push(itemSection);
                 componentsUsed++;
                 
                 console.log(`📦 DEBUG: Added item ${item.name} (qty: ${quantity}) to display`);
@@ -1535,11 +1548,17 @@ async function createPlayerInventoryDisplay(guildId, userId) {
         }
         
         console.log(`✅ DEBUG: Created inventory display with ${components.length} components and ${storeBrowseButtons.length} store buttons`);
+        console.log(`📤 DEBUG: Sending response with ${responseComponents.length} response components`);
         
-        return {
+        const response = {
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + Ephemeral
             components: responseComponents
         };
+        
+        // Debug: Log the response structure
+        console.log(`📋 DEBUG: Response structure:`, JSON.stringify(response, null, 2).substring(0, 500) + '...');
+        
+        return response;
         
     } catch (error) {
         console.error('Error creating player inventory display:', error);

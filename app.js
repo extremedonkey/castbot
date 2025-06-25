@@ -5472,10 +5472,16 @@ Your server is now ready for Tycoons gameplay!`;
         
         const inventoryDisplay = await createPlayerInventoryDisplay(guildId, userId);
         
-        return res.send({
+        console.log(`📤 DEBUG: About to send inventory response for user ${userId}`);
+        
+        const response = {
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: inventoryDisplay
-        });
+        };
+        
+        console.log(`📋 DEBUG: Final response type: ${response.type}, data keys: ${Object.keys(inventoryDisplay)}`);
+        
+        return res.send(response);
         
       } catch (error) {
         console.error('Error in safari_player_inventory:', error);
