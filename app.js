@@ -166,31 +166,23 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   const adminButtons = [
     new ButtonBuilder()
       .setCustomId('prod_setup')
-      .setLabel('Setup')
+      .setLabel('Initial Setup')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🪛'),
     new ButtonBuilder()
-      .setCustomId('prod_manage_tribes')
-      .setLabel('Manage Tribes')
+      .setCustomId('admin_manage_player')
+      .setLabel('Players')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔥'),
+      .setEmoji('🧑‍🤝‍🧑'),
+    new ButtonBuilder()
+      .setCustomId('prod_manage_tribes')
+      .setLabel('🔥 Tribes')
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('prod_manage_pronouns_timezones')
-      .setLabel('Manage Pronouns/Timezones')
+      .setLabel('💜 Pronouns & Timezones')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💜')
   ];
-  
-  // Add Manage Players button conditionally (4th position)
-  if (hasRoles) {
-    adminButtons.push(
-      new ButtonBuilder()
-        .setCustomId('admin_manage_player')
-        .setLabel('Manage Players')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('🧑‍🤝‍🧑')
-    );
-  }
   
   // Live Analytics button moved to Reece Stuff submenu
   
@@ -207,12 +199,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('prod_safari_menu')
       .setLabel('Safari')
       .setStyle(ButtonStyle.Primary)
-      .setEmoji('📌'),
-    new ButtonBuilder()
-      .setCustomId('prod_player_menu')
-      .setLabel('🪪 Player Profile')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('👤')
+      .setEmoji('🦁')
   ];
   
   // Add special buttons only for specific user (Reece) - insert before Need Help
@@ -225,6 +212,14 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
         .setEmoji('😌')
     );
   }
+  
+  // Add Player Profile button
+  adminActionButtons.push(
+    new ButtonBuilder()
+      .setCustomId('prod_player_menu')
+      .setLabel('🪪 Player Profile')
+      .setStyle(ButtonStyle.Secondary)
+  );
   
   // Add Need Help button at the end
   adminActionButtons.push(
@@ -272,7 +267,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     {
       type: 10, // Text Display component
-      content: `> **\`✏️ Manage Castlists\`**`
+      content: `> **\`✏️ Manage\`**`
     },
     adminRow.toJSON(), // Admin management buttons
     {
@@ -8350,15 +8345,6 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'prod_add_castlist') {
-      // Placeholder for future castlist creation functionality
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: 'ℹ️ Castlist creation feature coming soon!',
-          flags: InteractionResponseFlags.EPHEMERAL
-        }
-      });
     } else if (custom_id === 'prod_timezone_react') {
       // Execute same logic as player_set_timezone command (available to all users)
       try {

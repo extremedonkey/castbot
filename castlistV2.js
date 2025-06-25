@@ -673,15 +673,7 @@ function createCastlistRows(allCastlists, castlistTribes, includeAddButton = tru
         );
     }
     
-    // Add plus button to the end (only if requested)
-    if (includeAddButton) {
-        castlistButtons.push(
-            new ButtonBuilder()
-                .setCustomId('prod_add_castlist')
-                .setLabel('+')
-                .setStyle(ButtonStyle.Secondary)
-        );
-    }
+    // Plus button removed - no longer needed
     
     // Split buttons into rows of max 5 buttons each
     const rows = [];

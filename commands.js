@@ -228,7 +228,7 @@ const ROLE_GENERATOR_COMMAND = {
 // Unified menu command that shows player menu for regular users, admin menu for admins
 const MENU_COMMAND = {
 	name: maybePrependDev('menu'),
-	description: 'View the CastBot menu, to access all features.',
+	description: 'View the CastBot menu to access all features.',
 	type: 1
 };
 
