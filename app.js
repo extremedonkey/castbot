@@ -204,7 +204,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setEmoji('🦁')
   ];
   
-  // Add special buttons only for specific user (Reece) - insert before Need Help
+  // Add special buttons only for specific user (Reece)
   if (userId === '391415444084490240') {
     adminActionButtons.push(
       new ButtonBuilder()
@@ -215,22 +215,21 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
   
-  // Add Need Help button before Player Profile
+  // Add Player Profile button after Reece Stuff
+  adminActionButtons.push(
+    new ButtonBuilder()
+      .setCustomId('prod_player_menu')
+      .setLabel('🪪 Player Profile')
+      .setStyle(ButtonStyle.Secondary)
+  );
+  
+  // Add Need Help button at the end
   adminActionButtons.push(
     new ButtonBuilder()
       .setLabel('Need Help?')
       .setStyle(ButtonStyle.Link)
       .setEmoji('❓')
       .setURL('https://discord.gg/H7MpJEjkwT')
-  );
-  
-  // Add Player Profile button at the end
-  adminActionButtons.push(
-    new ButtonBuilder()
-      .setCustomId('prod_player_menu')
-      .setLabel('Player Profile')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🪪')
   );
   
   const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
