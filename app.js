@@ -5545,6 +5545,16 @@ Your server is now ready for Tycoons gameplay!`;
                 .setValue(currentTerms.inventoryName)
                 .setMaxLength(30)
                 .setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('currency_emoji')
+                .setLabel('Currency Emoji')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('🪙')
+                .setValue(currentTerms.currencyEmoji || '🪙')
+                .setMaxLength(10)
+                .setRequired(true)
             )
           );
         
@@ -12609,8 +12619,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const components = req.body.data.components;
         const currencyName = components[0]?.components[0]?.value || 'coins';
         const inventoryName = components[1]?.components[0]?.value || 'Nest';
+        const currencyEmoji = components[2]?.components[0]?.value || '🪙';
         
-        console.log(`⚙️ DEBUG: Customizing Safari terms for guild ${guildId}: Currency="${currencyName}", Inventory="${inventoryName}"`);
+        console.log(`⚙️ DEBUG: Customizing Safari terms for guild ${guildId}: Currency="${currencyName}", Inventory="${inventoryName}", Emoji="${currencyEmoji}"`);
         
         // Import Safari manager functions
         const { updateCustomTerms } = await import('./safariManager.js');
@@ -12618,7 +12629,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Update the custom terms
         const success = await updateCustomTerms(guildId, {
           currencyName: currencyName,
-          inventoryName: inventoryName
+          inventoryName: inventoryName,
+          currencyEmoji: currencyEmoji
         });
         
         if (!success) {
@@ -12631,7 +12643,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ Safari terms updated successfully!\n\n**Currency Name:** ${currencyName}\n**Inventory Name:** ${inventoryName}\n\nThese terms will now be used throughout the Safari system.`,
+            content: `✅ Safari terms updated successfully!\n\n**Currency:** ${currencyEmoji} ${currencyName}\n**Inventory Name:** ${inventoryName}\n\nThese terms will now be used throughout the Safari system.`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

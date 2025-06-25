@@ -288,7 +288,7 @@ async function updateCurrency(guildId, userId, amount) {
         
         await savePlayerData(playerData);
         
-        console.log(`💰 DEBUG: Currency updated for user ${userId}: ${currentCurrency} → ${newCurrency} (${amount >= 0 ? '+' : ''}${amount})`);
+        console.log(`🪙 DEBUG: Currency updated for user ${userId}: ${currentCurrency} → ${newCurrency} (${amount >= 0 ? '+' : ''}${amount})`);
         return newCurrency;
     } catch (error) {
         console.error('Error updating currency:', error);
@@ -339,16 +339,19 @@ async function executeDisplayText(config, interaction) {
  * Execute currency update action
  */
 async function executeUpdateCurrency(config, userId, guildId, interaction) {
-    console.log(`💰 DEBUG: Executing currency update: ${config.amount} for user ${userId}`);
+    // Get custom terms for this guild
+    const customTerms = await getCustomTerms(guildId);
+    
+    console.log(`${customTerms.currencyEmoji} DEBUG: Executing currency update: ${config.amount} for user ${userId}`);
     
     const newBalance = await updateCurrency(guildId, userId, config.amount);
     
     let message = config.message || `Currency updated!`;
     
-    // Add balance info
+    // Add balance info with custom currency terms
     const sign = config.amount >= 0 ? '+' : '';
-    message += `\n\n💰 **${sign}${config.amount} coins**`;
-    message += `\nYour balance: **${newBalance} coins**`;
+    message += `\n\n${customTerms.currencyEmoji} **${sign}${config.amount} ${customTerms.currencyName}**`;
+    message += `\nYour balance: **${newBalance} ${customTerms.currencyName}**`;
     
     return {
         content: message,
@@ -734,13 +737,16 @@ async function checkCondition(guildId, userId, condition) {
  */
 async function getCurrencyAndInventoryDisplay(guildId, userId) {
     try {
+        // Get custom terms for this guild
+        const customTerms = await getCustomTerms(guildId);
+        
         const currency = await getCurrency(guildId, userId);
         const inventory = await getPlayerInventory(guildId, userId);
         const safariData = await loadSafariContent();
         const items = safariData[guildId]?.items || {};
         
-        let display = `## 💰 Your Safari Status\n\n`;
-        display += `**Currency:** ${currency} coins\n\n`;
+        let display = `## ${customTerms.currencyEmoji} Your Safari Status\n\n`;
+        display += `**Currency:** ${currency} ${customTerms.currencyName}\n\n`;
         
         const inventoryEntries = Object.entries(inventory).filter(([itemId, qty]) => qty > 0);
         
@@ -769,6 +775,9 @@ async function getCurrencyAndInventoryDisplay(guildId, userId) {
 async function createStoreDisplay(guildId, storeId, userId) {
     try {
         console.log(`🏪 DEBUG: Creating store display for ${storeId}`);
+        
+        // Get custom terms for this guild
+        const customTerms = await getCustomTerms(guildId);
         
         const safariData = await loadSafariContent();
         const store = safariData[guildId]?.stores?.[storeId];
@@ -829,7 +838,7 @@ async function createStoreDisplay(guildId, storeId, userId) {
                 components: [
                     {
                         type: 10, // Text Display
-                        content: `## ${item.emoji} ${item.name}\n${item.description || 'No description'}\n\n**Price:** ${storeItem.price || item.basePrice} coins`
+                        content: `## ${item.emoji} ${item.name}\n${item.description || 'No description'}\n\n**Price:** ${storeItem.price || item.basePrice} ${customTerms.currencyName}`
                     }
                 ]
             };
@@ -840,7 +849,7 @@ async function createStoreDisplay(guildId, storeId, userId) {
             
             const buyButton = new ButtonBuilder()
                 .setCustomId(`safari_buy_${guildId}_${storeId}_${item.id}_${Date.now()}`)
-                .setLabel(`Buy (${price} coins)`)
+                .setLabel(`Buy (${price} ${customTerms.currencyName})`)
                 .setStyle(userCurrency >= price ? ButtonStyle.Success : ButtonStyle.Secondary)
                 .setDisabled(userCurrency < price);
             
@@ -1039,6 +1048,9 @@ async function buyItem(guildId, storeId, itemId, userId) {
     try {
         console.log(`💳 DEBUG: User ${userId} buying ${itemId} from store ${storeId}`);
         
+        // Get custom terms for this guild
+        const customTerms = await getCustomTerms(guildId);
+        
         const safariData = await loadSafariContent();
         const store = safariData[guildId]?.stores?.[storeId];
         const item = safariData[guildId]?.items?.[itemId];
@@ -1065,7 +1077,7 @@ async function buyItem(guildId, storeId, itemId, userId) {
         // Check if user can afford it
         if (userCurrency < price) {
             return {
-                content: `❌ You need ${price} coins but only have ${userCurrency} coins.`,
+                content: `❌ You need ${price} ${customTerms.currencyName} but only have ${userCurrency} ${customTerms.currencyName}.`,
                 flags: InteractionResponseFlags.EPHEMERAL
             };
         }
@@ -1109,7 +1121,7 @@ async function buyItem(guildId, storeId, itemId, userId) {
         const newBalance = await getCurrency(guildId, userId);
         
         return {
-            content: `✅ **Purchase Successful!**\n\nYou bought ${item.emoji} **${item.name}** for ${price} coins.\n\n💰 New balance: **${newBalance} coins**`,
+            content: `✅ **Purchase Successful!**\n\nYou bought ${item.emoji} **${item.name}** for ${price} ${customTerms.currencyName}.\n\n${customTerms.currencyEmoji} New balance: **${newBalance} ${customTerms.currencyName}**`,
             flags: InteractionResponseFlags.EPHEMERAL
         };
         
@@ -1438,7 +1450,7 @@ async function getStoreBrowseButtons(guildId) {
  */
 async function createPlayerInventoryDisplay(guildId, userId) {
     try {
-        console.log(`🥚 DEBUG: Creating player inventory display for user ${userId} in guild ${guildId}`);
+        console.log(`📦 DEBUG: Creating player inventory display for user ${userId} in guild ${guildId}`);
         
         const safariData = await loadSafariContent();
         const playerData = await loadPlayerData();
@@ -1458,14 +1470,14 @@ async function createPlayerInventoryDisplay(guildId, userId) {
         // Get custom terms for this guild
         const customTerms = await getCustomTerms(guildId);
         
-        console.log(`💰 DEBUG: Player ${userId} has ${playerCurrency} currency and ${Object.keys(playerInventory).length} item types`);
+        console.log(`${customTerms.currencyEmoji} DEBUG: Player ${userId} has ${playerCurrency} ${customTerms.currencyName} and ${Object.keys(playerInventory).length} item types`);
         
         const components = [];
         
         // Header with personalized server name and custom inventory name
         components.push({
             type: 10, // Text Display
-            content: `# 🥚 ${serverName}'s ${customTerms.inventoryName}`
+            content: `# ${serverName}'s ${customTerms.inventoryName}`
         });
         
         // Add separator before balance
@@ -1474,7 +1486,7 @@ async function createPlayerInventoryDisplay(guildId, userId) {
         // Balance section with custom currency name
         components.push({
             type: 10, // Text Display
-            content: `## 💰 Your Balance\n> \`${playerCurrency} ${customTerms.currencyName}\``
+            content: `## ${customTerms.currencyEmoji} Your Balance\n> \`${playerCurrency} ${customTerms.currencyName}\``
         });
         
         // Count total items and component usage
@@ -1588,13 +1600,15 @@ async function getCustomTerms(guildId) {
         
         return {
             currencyName: config.currencyName || 'coins',
-            inventoryName: config.inventoryName || 'Nest'
+            inventoryName: config.inventoryName || 'Nest',
+            currencyEmoji: config.currencyEmoji || '🪙'
         };
     } catch (error) {
         console.error('Error getting custom terms:', error);
         return {
             currencyName: 'coins',
-            inventoryName: 'Nest'
+            inventoryName: 'Nest',
+            currencyEmoji: '🪙'
         };
     }
 }
@@ -1625,7 +1639,8 @@ async function updateCustomTerms(guildId, terms) {
         if (!safariData[guildId].safariConfig) {
             safariData[guildId].safariConfig = {
                 currencyName: 'coins',
-                inventoryName: 'Nest'
+                inventoryName: 'Nest',
+                currencyEmoji: '🪙'
             };
         }
         
@@ -1635,6 +1650,9 @@ async function updateCustomTerms(guildId, terms) {
         }
         if (terms.inventoryName !== undefined) {
             safariData[guildId].safariConfig.inventoryName = terms.inventoryName || 'Nest';
+        }
+        if (terms.currencyEmoji !== undefined) {
+            safariData[guildId].safariConfig.currencyEmoji = terms.currencyEmoji || '🪙';
         }
         
         // Save updated data
@@ -1657,7 +1675,8 @@ async function updateCustomTerms(guildId, terms) {
 async function resetCustomTerms(guildId) {
     return await updateCustomTerms(guildId, {
         currencyName: 'coins',
-        inventoryName: 'Nest'
+        inventoryName: 'Nest',
+        currencyEmoji: '🪙'
     });
 }
 

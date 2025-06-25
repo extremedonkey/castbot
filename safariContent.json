@@ -682,6 +682,10 @@
           "totalSold": 2
         }
       }
+    },
+    "safariConfig": {
+      "currencyName": "beaks",
+      "inventoryName": "💼 Briefcase"
     }
   },
   "1385042963310055515": {
@@ -739,6 +743,10 @@
     "safaris": {},
     "applications": {},
     "stores": {},
-    "items": {}
+    "items": {},
+    "safariConfig": {
+      "currencyName": "coins",
+      "inventoryName": "Nest"
+    }
   }
 }
