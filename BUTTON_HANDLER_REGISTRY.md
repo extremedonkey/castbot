@@ -35,6 +35,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_view_buttons` | 📊 View All Buttons | app.js:~4983 | Direct handler | ✅ Active |
 | `safari_my_status` | 💎 My Status | app.js:~5036 | Direct handler | ✅ Active |
 | `safari_player_inventory` | 🥚 My Nest | app.js:~5456 | Direct handler | ✅ Active |
+| `safari_customize_terms` | ⚙️ Customize Terms | app.js:~5501 | Direct handler | ✅ Active |
 | `safari_manage_safari_buttons` | 🎛️ Manage Safari Buttons | app.js:~3893 | Direct handler | ✅ Active |
 | `safari_manage_stores` | 🏪 Manage Stores | app.js:~5067 | Direct handler | ✅ Active |
 | `safari_manage_items` | 📦 Manage Items | app.js:~5195 | Direct handler | ✅ Active |
@@ -56,6 +57,11 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_button_manage_existing` | ✏️ Edit Existing Button | app.js:~5983 | Direct handler | ✅ Active |
 | `safari_button_edit_select` | Button Selection Dropdown | app.js:~6078 | Select handler | ✅ Active |
 | `safari_edit_properties_*` | Edit Properties | app.js:~6329 | Pattern handler | ✅ Active |
+
+### **Modal Submission Handlers**
+| Custom ID | Purpose | Location | Handler Type | Status |
+|-----------|---------|----------|--------------|--------|
+| `safari_customize_terms_modal` | Custom Terms Modal | app.js:~12591 | Modal handler | ✅ Active |
 | `safari_test_button_*` | Test Button | app.js:~6603 | Pattern handler | ✅ Active |
 | `safari_action_edit_*` | Edit Individual Actions | app.js:~6384 | Pattern handler | ✅ Active |
 | `safari_action_move_up_*` | Move Action Up | app.js:~6195 | Pattern handler | ✅ Active |
