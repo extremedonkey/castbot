@@ -1441,32 +1441,45 @@ async function createPlayerInventoryDisplay(guildId, userId) {
         // Get items data for display
         const items = safariData[guildId]?.items || {};
         
+        // Get server name for personalized header
+        const serverName = playerData[guildId]?.serverName || 'Server';
+        
         console.log(`💰 DEBUG: Player ${userId} has ${playerCurrency} currency and ${Object.keys(playerInventory).length} item types`);
         
         const components = [];
         
-        // Header with currency balance
+        // Header with personalized server name
         components.push({
             type: 10, // Text Display
-            content: `# 🥚 My Nest\n\n💰 **Your Balance:** ${playerCurrency} coins`
+            content: `# 🥚 ${serverName}'s Nest`
         });
         
-        // Add separator
+        // Add separator before balance
         components.push({ type: 14 }); // Separator
+        
+        // Balance section
+        components.push({
+            type: 10, // Text Display
+            content: `## 💰 Your Balance\n> \`${playerCurrency} coins\``
+        });
         
         // Count total items and component usage
         const inventoryItems = Object.entries(playerInventory).filter(([itemId, quantity]) => quantity > 0);
         let componentsUsed = 4; // Container + header + separator + footer action row
         
         if (inventoryItems.length === 0) {
+            // Add separator before empty message
+            components.push({ type: 14 }); // Separator
+            
             // No items message
             components.push({
                 type: 10, // Text Display
                 content: `*Your nest is empty. Visit a store to purchase items!*`
             });
         } else {
-            // Add item sections (each uses 1 component for Section)
-            for (const [itemId, quantity] of inventoryItems) {
+            // Add items with separators between them
+            for (let i = 0; i < inventoryItems.length; i++) {
+                const [itemId, quantity] = inventoryItems[i];
                 const item = items[itemId];
                 if (!item || quantity <= 0) continue;
                 
@@ -1479,27 +1492,33 @@ async function createPlayerInventoryDisplay(guildId, userId) {
                     break;
                 }
                 
+                // Add separator before each item (but not before the first one)
+                if (i === 0) {
+                    components.push({ type: 14 }); // Separator before first item
+                }
+                
                 // Create emoji repetition string
                 const emoji = item.emoji || '📦';
                 const emojiRepeat = emoji.repeat(Math.min(quantity, 10)); // Cap at 10 for readability
                 const emojiLine = emojiRepeat ? `# ${emojiRepeat}` : '';
                 
-                // TEMPORARY: Use simple Text Display instead of Section components
-                // This is to diagnose if Section components are causing Discord to reject the message
+                // Add item display
                 components.push({
                     type: 10, // Text Display
                     content: `### ${emoji} ${item.name}\n> \`Quantity: ${quantity}\`\n${emojiLine}`
                 });
                 console.log(`📦 DEBUG: Added Text Display for ${item.name} (qty: ${quantity})`);
                 
+                // Add separator after each item (but not after the last one)
+                if (i < inventoryItems.length - 1) {
+                    components.push({ type: 14 }); // Separator after item (not last)
+                }
+                
                 componentsUsed++;
                 
                 console.log(`📦 DEBUG: Added item ${item.name} (qty: ${quantity}) to display`);
             }
         }
-        
-        // Add separator before store buttons
-        components.push({ type: 14 }); // Separator
         
         // Create container
         const container = {
