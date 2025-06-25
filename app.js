@@ -385,6 +385,7 @@ async function createSafariMenu(guildId, userId, member) {
   let inventoryEmoji = '🪺'; // Default emoji for Nest
   
   try {
+    const { loadSafariContent } = await import('./safariManager.js');
     const safariContent = await loadSafariContent();
     const guildConfig = safariContent[guildId]?.safariConfig;
     if (guildConfig?.inventoryName) {
