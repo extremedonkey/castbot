@@ -542,7 +542,7 @@ NOTE: all of the below has been replaced with /menu.
 - `timezones_remove` - Remove timezone roles from server
 - `react_timezones` - Create reaction-based timezone selection
 - `react_pronouns` - Create reaction-based pronoun selection
-- `set_players_age` - Bulk age assignment for multiple players
+- ~~`set_players_age` - Bulk age assignment for multiple players~~ **REMOVED** - Use `/menu` → Manage Players instead
 - `apply_button` - Create application buttons for prospective player recruitment~~
 
 ### Player Commands (No special permissions)

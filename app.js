@@ -1401,86 +1401,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     }
     return;
-} else if (name === 'set_players_age') {  // Changed from setageall
-      try {
-        console.log('Processing setageall command');
-        const guildId = req.body.guild_id;
-        const updates = [];
-        
-        console.log('Command options:', data.options);
-        
-        // Process each player-age pair
-        for (let i = 1; i <= 12; i++) {
-          const playerOption = data.options?.find(opt => opt.name === `player${i}`);
-          const ageOption = data.options?.find(opt => opt.name === `player${i}_age`); // Changed from player1age to player1_age
-          
-          if (playerOption && ageOption) {
-            console.log(`Found player${i} data:`, {
-              player: playerOption,
-              age: ageOption
-            });
-            
-            updates.push({
-              playerId: playerOption.value,
-              age: ageOption.value
-            });
-          }
-        }
-        
-        if (updates.length === 0) {
-          console.log('No valid player-age pairs found in options');
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'No valid player-age pairs provided',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Load and ensure guild data exists
-        const playerData = await loadPlayerData();
-        if (!playerData[guildId]) {
-          playerData[guildId] = { players: {} };
-        }
-        
-        // Process updates
-        const results = [];
-        for (const update of updates) {
-          if (!playerData[guildId].players) {
-            playerData[guildId].players = {};
-          }
-          if (!playerData[guildId].players[update.playerId]) {
-            playerData[guildId].players[update.playerId] = {};
-          }
-          
-          playerData[guildId].players[update.playerId].age = update.age;
-          results.push(`<@${update.playerId}> age set to ${update.age}`);
-        }
-        
-        // Save changes
-        await savePlayerData(playerData);
-        
-        console.log('Updates processed:', results);
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `Ages updated:\n${results.join('\n')}`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (err) {
-        console.error('Error processing setageall command:', err);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Failed to update ages.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+// REMOVED: set_players_age command - functionality moved to /menu system
     } else if (name === 'pronouns_add') {     // Changed from addpronouns
       try {
         console.log('Processing pronouns_add command');
@@ -3672,7 +3593,7 @@ To fix this:
             },
             {
               name: '3️⃣ Set Player Ages',
-              value: 'Use `/set_players_age` to bulk set ages for up to 12 players at a time (run the command twice to set up to 24 players). Or you can have players set their own age using `/player_set_age`.'
+              value: 'Use `/menu` → Manage Players to set player ages individually through the admin interface, or have players set their own age using `/menu` → Age.'
             },
             {
               name: '4️⃣ Add Tribes to Castlist',

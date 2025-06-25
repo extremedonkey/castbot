@@ -492,7 +492,7 @@ npm run verify-commands   # Check current status
 
 - `/menu`: Display interactive menu - shows Player Menu for regular users, Production Menu for admins
 - `/castlist`: Display the dynamic castlist using modern Components V2 with player cards and thumbnails
-- `/set_players_age`: Set ages for multiple players at once (admin only)
+- ~~`/set_players_age`: Set ages for multiple players at once (admin only)~~ **REMOVED** - Use `/menu` → Manage Players instead
 
 ### Live Analytics System
 

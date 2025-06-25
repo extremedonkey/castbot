@@ -404,7 +404,7 @@ This is a living requirements backlog for CastBot features and improvements, ord
 |---------|-------|--------|-------------|
 | `castlist` | ~100 | ✅ **KEEP** | Active slash command that displays dynamic castlist using Components V2 |
 | `menu` | ~100 | ✅ **KEEP** | Active unified menu - shows player menu for users, admin menu for admins |
-| `set_players_age` | ~80 | ✅ **KEEP** | Active admin command to bulk set ages for up to 12 players |
+| ~~`set_players_age`~~ | ~80 | ❌ **REMOVED** | Bulk age setting moved to `/menu` → Manage Players |
 
 **❌ REMOVABLE COMMAND HANDLERS (16 total - ~1,285 lines of code):**
 
@@ -445,7 +445,7 @@ This is a living requirements backlog for CastBot features and improvements, ord
 2. **Handler Removal:**
    - Remove all 16 command handlers from app.js (~1,285 lines total)
    - Remove `CLEAR_TRIBEALL_COMMAND` definition from commands.js
-   - Keep the 3 active command handlers: `castlist`, `menu`, `set_players_age`
+   - Keep the 2 active command handlers: `castlist`, `menu`
 
 3. **Safety Measures:**
    - Create backup branch before cleanup

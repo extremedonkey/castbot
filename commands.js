@@ -28,7 +28,7 @@ function maybePrependDev(baseName) {
 
 const CASTLIST_COMMAND = {
 	name: maybePrependDev('castlist'),
-	description: 'Display the dynamic castlist with modern Components V2 layout',
+	description: 'Display your CastBot castlist(s).',
 	type: 1,
 	options: [
 		{
@@ -111,40 +111,6 @@ const CLEAR_TRIBE_COMMAND = {
 	default_member_permissions: ADMIN_ANY
 };
 
-const SET_PLAYERS_AGE_COMMAND = {
-	name: maybePrependDev('set_players_age'),
-	description: 'Set ages for up to 12 players at a time',
-	options: [
-		{
-			type: 6, // USER type
-			name: 'player1',
-			description: 'Discord user for player 1',
-			required: true,
-		},
-		{
-			type: 3, // STRING type
-			name: 'player1_age',
-			description: 'Age for player 1',
-			required: true,
-		},
-		// Repeat for up to 12 players
-		...Array.from({ length: 11 }, (_, i) => [
-			{
-				type: 6,
-				name: `player${i + 2}`,
-				description: `Discord user for player ${i + 2}`,
-				required: false,
-			},
-			{
-				type: 3,
-				name: `player${i + 2}_age`,
-				description: `Age for player ${i + 2}`,
-				required: false,
-			},
-		]).flat(),
-	],
-	default_member_permissions: ADMIN_ANY
-};
 
 const PRONOUNS_ADD_COMMAND = {
 	name: maybePrependDev('pronouns_add'),
@@ -262,7 +228,7 @@ const ROLE_GENERATOR_COMMAND = {
 // Unified menu command that shows player menu for regular users, admin menu for admins
 const MENU_COMMAND = {
 	name: maybePrependDev('menu'),
-	description: 'Display interactive menu - shows admin controls if you have admin permissions',
+	description: 'View the CastBot menu, to access all features.',
 	type: 1
 };
 
@@ -283,7 +249,7 @@ const ALL_COMMANDS = [
 	// Player commands REMOVED: player_set_age, player_set_pronouns, player_set_timezone
 	CASTLIST_COMMAND, // Now points to castlist2 functionality
 	MENU_COMMAND, // Unified menu with admin detection (replaces PROD_MENU_COMMAND)
-	SET_PLAYERS_AGE_COMMAND,
+	// REMOVED: SET_PLAYERS_AGE_COMMAND - functionality available through /menu system
 	// DISABLED: SET_TRIBE_COMMAND, - moved to /prod_menu (was add_tribe)
 	// DISABLED: CLEAR_TRIBE_COMMAND, - moved to /prod_menu
 	// DISABLED: ROLE_GENERATOR_COMMAND, - moved to /prod_menu
