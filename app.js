@@ -264,7 +264,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     {
       type: 10, // Text Display component
-      content: `> **\`View Castlists\`**`
+      content: `> **\`📍 Post Castlists\`**`
     },
     ...castlistRows, // Multiple castlist rows with pagination
     {
@@ -272,7 +272,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     {
       type: 10, // Text Display component
-      content: `> **\`Configure Castlists\`**`
+      content: `> **\`✏️ Manage Castlists\`**`
     },
     adminRow.toJSON(), // Admin management buttons
     {
@@ -280,7 +280,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     {
       type: 10, // Text Display component
-      content: `> **\`Misc\`**`
+      content: `> **\`💎 Advanced Features\`**`
     },
     adminActionRow.toJSON() // New administrative action buttons
   ];
