@@ -379,7 +379,31 @@ async function createReeceStuffMenu() {
 /**
  * Create Safari submenu interface for dynamic content management
  */
-async function createSafariMenu() {
+async function createSafariMenu(guildId, userId, member) {
+  // Get the inventory name for this guild
+  let inventoryName = 'Nest'; // Default
+  let inventoryEmoji = '🪺'; // Default emoji for Nest
+  
+  try {
+    const safariContent = await loadSafariContent();
+    const guildConfig = safariContent[guildId]?.safariConfig;
+    if (guildConfig?.inventoryName) {
+      inventoryName = guildConfig.inventoryName;
+      // Extract emoji if present in the inventory name
+      const emojiMatch = inventoryName.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])/u);
+      if (emojiMatch) {
+        inventoryEmoji = emojiMatch[0];
+        inventoryName = inventoryName.replace(emojiMatch[0], '').trim();
+      }
+    }
+  } catch (error) {
+    console.error('Error loading inventory name:', error);
+  }
+  
+  // Determine button label based on permissions
+  const isAdmin = member?.permissions && (BigInt(member.permissions) & PermissionFlagsBits.ManageRoles);
+  const inventoryLabel = isAdmin ? `My ${inventoryName}` : 'My Nest';
+  
   // Create safari management buttons - Row 1: Core Functions
   const safariButtonsRow1 = [
     new ButtonBuilder()
@@ -388,10 +412,10 @@ async function createSafariMenu() {
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🎛️'),
     new ButtonBuilder()
-      .setCustomId('safari_my_status')
-      .setLabel('My Status')
+      .setCustomId('safari_my_inventory')
+      .setLabel(inventoryLabel)
       .setStyle(ButtonStyle.Success)
-      .setEmoji('💎'),
+      .setEmoji(inventoryEmoji),
     new ButtonBuilder()
       .setCustomId('safari_manage_currency')
       .setLabel('Manage Currency')
@@ -4056,7 +4080,7 @@ To fix this:
         console.log('🦁 DEBUG: Creating Safari submenu');
         
         // Create Safari submenu
-        const safariMenuData = await createSafariMenu();
+        const safariMenuData = await createSafariMenu(guildId, userId, member);
         
         const responseType = shouldUpdateMessage ? 
           InteractionResponseType.UPDATE_MESSAGE : 
@@ -5363,13 +5387,13 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'safari_my_status') {
-      // MVP2: Show user's currency and inventory status
+    } else if (custom_id === 'safari_my_inventory') {
+      // Show user's currency and inventory status
       try {
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         
-        console.log(`💎 DEBUG: User ${userId} checking Safari status`);
+        console.log(`🪺 DEBUG: User ${userId} checking inventory`);
         
         // Import Safari manager functions
         const { getCurrencyAndInventoryDisplay } = await import('./safariManager.js');
@@ -5385,7 +5409,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
         
       } catch (error) {
-        console.error('Error in safari_my_status:', error);
+        console.error('Error in safari_my_inventory:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {

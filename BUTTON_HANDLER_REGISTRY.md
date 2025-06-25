@@ -33,7 +33,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_post_button` | 📤 Post Custom Button | app.js:~4771 | Direct handler | ✅ Active |
 | `safari_manage_currency` | 💰 Manage Currency | app.js:~4858 | Direct handler | ✅ Active |
 | `safari_view_buttons` | 📊 View All Buttons | app.js:~4983 | Direct handler | ✅ Active |
-| `safari_my_status` | 💎 My Status | app.js:~5036 | Direct handler | ✅ Active |
+| `safari_my_inventory` | 🪺 My [Inventory] | app.js:~5390 | Direct handler | ✅ Active |
 | `safari_player_inventory` | 🥚 My Nest | app.js:~5456 | Direct handler | ✅ Active |
 | `safari_customize_terms` | ⚙️ Customize Terms | app.js:~5501 | Direct handler | ✅ Active |
 | `safari_manage_safari_buttons` | 🎛️ Manage Safari Buttons | app.js:~3893 | Direct handler | ✅ Active |
