@@ -400,9 +400,8 @@ async function createSafariMenu(guildId, userId, member) {
     console.error('Error loading inventory name:', error);
   }
   
-  // Determine button label based on permissions
-  const isAdmin = member?.permissions && (BigInt(member.permissions) & PermissionFlagsBits.ManageRoles);
-  const inventoryLabel = isAdmin ? `My ${inventoryName}` : 'My Nest';
+  // Use custom inventory name for everyone
+  const inventoryLabel = `My ${inventoryName}`;
   
   // Create safari management buttons - Row 1: Core Functions
   const safariButtonsRow1 = [
@@ -412,7 +411,7 @@ async function createSafariMenu(guildId, userId, member) {
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🎛️'),
     new ButtonBuilder()
-      .setCustomId('safari_my_inventory')
+      .setCustomId('safari_player_inventory')
       .setLabel(inventoryLabel)
       .setStyle(ButtonStyle.Success)
       .setEmoji(inventoryEmoji),
@@ -5388,46 +5387,16 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'safari_my_inventory') {
-      // Show user's currency and inventory status
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        
-        console.log(`🪺 DEBUG: User ${userId} checking inventory`);
-        
-        // Import Safari manager functions
-        const { getCurrencyAndInventoryDisplay } = await import('./safariManager.js');
-        
-        const statusDisplay = await getCurrencyAndInventoryDisplay(guildId, userId);
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: statusDisplay,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_my_inventory:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading your status.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
     } else if (custom_id === 'safari_player_inventory') {
       // Handle "My Nest" player inventory display
       try {
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
+        const member = req.body.member;
         
         console.log(`🥚 DEBUG: User ${userId} viewing inventory in guild ${guildId}`);
         
-        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, userId);
+        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, userId, member);
         
         console.log(`📤 DEBUG: About to send inventory response for user ${userId}`);
         

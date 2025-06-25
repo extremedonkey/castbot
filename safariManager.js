@@ -1455,7 +1455,7 @@ async function getStoreBrowseButtons(guildId) {
  * @param {string} userId - Discord user ID
  * @returns {Object} Discord Components V2 response
  */
-async function createPlayerInventoryDisplay(guildId, userId) {
+async function createPlayerInventoryDisplay(guildId, userId, member = null) {
     try {
         console.log(`📦 DEBUG: Creating player inventory display for user ${userId} in guild ${guildId}`);
         
@@ -1471,8 +1471,8 @@ async function createPlayerInventoryDisplay(guildId, userId) {
         // Get items data for display
         const items = safariData[guildId]?.items || {};
         
-        // Get server name for personalized header
-        const serverName = playerData[guildId]?.serverName || 'Server';
+        // Get player display name for personalized header
+        const playerDisplayName = member?.nick || member?.user?.global_name || member?.user?.username || 'Player';
         
         // Get custom terms for this guild
         const customTerms = await getCustomTerms(guildId);
@@ -1481,10 +1481,10 @@ async function createPlayerInventoryDisplay(guildId, userId) {
         
         const components = [];
         
-        // Header with personalized server name and custom inventory name
+        // Header with personalized player name and custom inventory name
         components.push({
             type: 10, // Text Display
-            content: `# ${serverName}'s ${customTerms.inventoryName}`
+            content: `# ${playerDisplayName}'s ${customTerms.inventoryName}`
         });
         
         // Add separator before balance
