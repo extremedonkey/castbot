@@ -686,7 +686,7 @@ function generateSetupResponse(results) {
             '',
             allWarnings.map(role => `   • <@&${role.id}> (${role.name})`).join('\n'),
             '',
-            `💡 **How to fix:** Drag the 'CastBot' role up to the top - it's faster.`
+            `💡 **How to fix:** Drag the 'CastBot' role up to the top of your Role list from your Discord Settings > ⚙️ Server Settings > Roles.`
         ].join('\n');
         
         sections.push(warningText);

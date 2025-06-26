@@ -1005,7 +1005,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             flags: 1 << 15,
             components: [
               { type: 10, content: '# No Tribes Found' },
-              { type: 10, content: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.' }
+              { type: 10, content: 'No tribes have been added to the default Castlist yet. Please have Production add tribes via the /prod_menu > 🔥 Tribes Button > 🛠️ Add Tribe.' }
             ]
           }
         });
@@ -1107,7 +1107,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           flags: 1 << 15,
           components: [
             { type: 10, content: '# No Tribes Found' },
-            { type: 10, content: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.' }
+            { type: 10, content: 'No tribes have been added to the default Castlist yet. Please have Production add tribes via the /prod_menu > 🔥 Tribes Button > 🛠️ Add Tribe.' }
           ]
         }
       });
@@ -2756,7 +2756,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             data: {
               embeds: [{
                 title: 'CastBot: Dynamic Castlist',
-                description: 'No tribes have been added to the default Castlist yet. Please have production add tribes via the \'/prod_menu\' command!',
+                description: 'No tribes have been added to the default Castlist yet. Please have Production add tribes via the /prod_menu > 🔥 Tribes Button > 🛠️ Add Tribe.',
                 color: 0x7ED321
               }],
               flags: InteractionResponseFlags.EPHEMERAL
@@ -3337,7 +3337,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             data: {
               embeds: [{
                 title: 'CastBot: Dynamic Castlist',
-                description: 'No tribes have been added yet. Please have production run the `/add_tribe` command and select the Tribe role for them to show up in this list.',
+                description: 'No tribes have been added to the default Castlist yet. Please have Production add tribes via the /prod_menu > 🔥 Tribes Button > 🛠️ Add Tribe.',
                 color: 0x7ED321
               }],
               flags: InteractionResponseFlags.EPHEMERAL

@@ -129,6 +129,20 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - **Long-term:** Provides scalable foundation for advanced role management features
 - **User Experience:** Clear feedback and reliable role assignment workflows
 
+### Refactor Duplicate "No Tribes" Messages
+**Description:** Consolidate duplicated "no tribes" messages that appear in multiple places in the codebase
+**Current Issue:** The "no tribes have been added" message appears in at least 4 different locations with different text
+**Locations:**
+- app.js line ~1008 (castlist2 command - components v2)
+- app.js line ~1110 (castlist2 button handler - components v2)
+- app.js line ~2759 (castlist command - legacy embed)
+- app.js line ~3340 (castlist button handler - legacy embed)
+**Acceptance Criteria:**
+- Create a centralized constant or function for the "no tribes" message
+- Update all locations to use the same message text
+- Ensure message format works for both components v2 and legacy embeds
+- Message should guide users to: `/prod_menu` > 🔥 Tribes Button > 🛠️ Add Tribe
+
 ### Safari Dynamic Content System - Phase 2 (MVP2)
 **Description:** Advanced Safari dynamic content management with conditional logic, shop systems, and enhanced action types
 **Current Status:** Phase 1 (MVP1) Complete ✅ - Basic button creation, currency management, and action execution operational
