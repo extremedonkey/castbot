@@ -442,14 +442,9 @@ async function createSafariMenu(guildId, userId, member) {
       .setEmoji('📦'),
     new ButtonBuilder()
       .setCustomId('safari_customize_terms')
-      .setLabel('Customize Terms')
+      .setLabel('Customize Safari')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️'),
-    new ButtonBuilder()
-      .setCustomId('safari_event_settings')
-      .setLabel('Event Settings')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🎲')
+      .setEmoji('⚙️')
   ];
   
   const safariRow1 = new ActionRowBuilder().addComponents(safariButtonsRow1);
@@ -5400,101 +5395,6 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'safari_event_settings') {
-      // Handle Event Settings modal for Round 3 and event details
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to configure event settings.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        console.log(`🎲 DEBUG: User ${member.user.id} opening event settings modal for guild ${guildId}`);
-        
-        // Get current custom terms
-        const { getCustomTerms } = await import('./safariManager.js');
-        const currentTerms = await getCustomTerms(guildId);
-        
-        // Create Event Settings modal
-        const modal = new ModalBuilder()
-          .setCustomId('safari_event_settings_modal')
-          .setTitle('🎲 Configure Game Events')
-          .addComponents(
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('round3_good_probability')
-                .setLabel('Round 3 Good Event Probability')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Please enter a value between 0 and 100.')
-                .setValue(currentTerms.round3GoodProbability?.toString() || '25')
-                .setMaxLength(3)
-                .setRequired(false)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('good_event_name')
-                .setLabel('Good Event Name')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Clear Skies')
-                .setValue(currentTerms.goodEventName || 'Clear Skies')
-                .setMaxLength(50)
-                .setRequired(false)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('bad_event_name')
-                .setLabel('Bad Event Name')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Meteor Strike')
-                .setValue(currentTerms.badEventName || 'Meteor Strike')
-                .setMaxLength(50)
-                .setRequired(false)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('good_event_emoji')
-                .setLabel('Good Event Emoji')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('☀️')
-                .setValue(currentTerms.goodEventEmoji || '☀️')
-                .setMaxLength(10)
-                .setRequired(false)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('bad_event_emoji')
-                .setLabel('Bad Event Emoji')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('☄️')
-                .setValue(currentTerms.badEventEmoji || '☄️')
-                .setMaxLength(10)
-                .setRequired(false)
-            )
-          );
-        
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_event_settings:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error opening event settings modal. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
     } else if (custom_id === 'safari_view_buttons') {
       // Handle View All Buttons - MVP1 implementation
       try {
@@ -5603,19 +5503,49 @@ Your server is now ready for Tycoons gameplay!`;
         const { getCustomTerms } = await import('./safariManager.js');
         const currentTerms = await getCustomTerms(guildId);
         
-        // Create modal with current values pre-filled - Extended for Challenge Game Logic
+        // Create comprehensive Safari customization modal
         const modal = new ModalBuilder()
           .setCustomId('safari_customize_terms_modal')
-          .setTitle('⚙️ Customize Safari Terms & Game Settings')
+          .setTitle('⚙️ Customize Safari Settings')
           .addComponents(
             new ActionRowBuilder().addComponents(
               new TextInputBuilder()
-                .setCustomId('currency_name')
-                .setLabel('Currency Name')
+                .setCustomId('game_settings')
+                .setLabel('Game Settings (R1,R2,R3 probabilities)')
                 .setStyle(TextInputStyle.Short)
-                .setPlaceholder('coins')
-                .setValue(currentTerms.currencyName)
-                .setMaxLength(30)
+                .setPlaceholder('75,50,25 (Round 1,2,3 good event %)')
+                .setValue(`${currentTerms.round1GoodProbability || 75},${currentTerms.round2GoodProbability || 50},${currentTerms.round3GoodProbability || 25}`)
+                .setMaxLength(20)
+                .setRequired(false)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('event_names')
+                .setLabel('Event Names (Good,Bad)')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Clear Skies,Meteor Strike')
+                .setValue(`${currentTerms.goodEventName || 'Clear Skies'},${currentTerms.badEventName || 'Meteor Strike'}`)
+                .setMaxLength(100)
+                .setRequired(false)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('event_emojis')
+                .setLabel('Event Emojis (Good,Bad)')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('☀️,☄️')
+                .setValue(`${currentTerms.goodEventEmoji || '☀️'},${currentTerms.badEventEmoji || '☄️'}`)
+                .setMaxLength(20)
+                .setRequired(false)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('currency_settings')
+                .setLabel('Currency (Name,Emoji)')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('beaks,🥚')
+                .setValue(`${currentTerms.currencyName},${currentTerms.currencyEmoji || '🪙'}`)
+                .setMaxLength(50)
                 .setRequired(true)
             ),
             new ActionRowBuilder().addComponents(
@@ -5627,36 +5557,6 @@ Your server is now ready for Tycoons gameplay!`;
                 .setValue(currentTerms.inventoryName)
                 .setMaxLength(30)
                 .setRequired(true)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('currency_emoji')
-                .setLabel('Currency Emoji')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('🪙')
-                .setValue(currentTerms.currencyEmoji || '🪙')
-                .setMaxLength(10)
-                .setRequired(true)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('round1_good_probability')
-                .setLabel('Round 1 Good Event Probability')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Please enter a value between 0 and 100.')
-                .setValue(currentTerms.round1GoodProbability?.toString() || '75')
-                .setMaxLength(3)
-                .setRequired(false)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('round2_good_probability')
-                .setLabel('Round 2 Good Event Probability')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Please enter a value between 0 and 100.')
-                .setValue(currentTerms.round2GoodProbability?.toString() || '50')
-                .setMaxLength(3)
-                .setRequired(false)
             )
           );
         
@@ -12762,30 +12662,67 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        // Extract modal input values  
+        // Extract modal input values from comprehensive Safari settings
         const components = req.body.data.components;
-        const currencyName = components[0]?.components[0]?.value || 'coins';
-        const inventoryName = components[1]?.components[0]?.value || 'Nest';
-        const currencyEmoji = components[2]?.components[0]?.value || '🪙';
-        const round1Probability = components[3]?.components[0]?.value || '';
-        const round2Probability = components[4]?.components[0]?.value || '';
+        const gameSettings = components[0]?.components[0]?.value || '75,50,25';
+        const eventNames = components[1]?.components[0]?.value || 'Clear Skies,Meteor Strike';
+        const eventEmojis = components[2]?.components[0]?.value || '☀️,☄️';
+        const currencySettings = components[3]?.components[0]?.value || 'coins,🪙';
+        const inventoryName = components[4]?.components[0]?.value || 'Nest';
         
-        // Validate round probabilities
-        const validateProbability = (value, roundName) => {
-          if (!value || value.trim() === '') return null; // Allow blank
-          const num = parseInt(value.trim(), 10);
-          if (isNaN(num) || num < 0 || num > 100) {
-            throw new Error(`${roundName} probability must be between 0 and 100.`);
+        // Parse comma-separated values
+        const parseCommaSeparated = (value, expectedCount, fieldName) => {
+          if (!value || value.trim() === '') return new Array(expectedCount).fill(null);
+          const parts = value.split(',').map(p => p.trim());
+          if (parts.length !== expectedCount) {
+            throw new Error(`${fieldName} must have exactly ${expectedCount} comma-separated values.`);
           }
-          return num;
+          return parts;
         };
         
-        let round1Good = null;
-        let round2Good = null;
+        let round1Good = null, round2Good = null, round3Good = null;
+        let goodEventName = 'Clear Skies', badEventName = 'Meteor Strike';
+        let goodEventEmoji = '☀️', badEventEmoji = '☄️';
+        let currencyName = 'coins', currencyEmoji = '🪙';
         
         try {
-          round1Good = validateProbability(round1Probability, 'Round 1');
-          round2Good = validateProbability(round2Probability, 'Round 2');
+          // Parse game settings (probabilities)
+          if (gameSettings && gameSettings.trim() !== '') {
+            const probabilities = parseCommaSeparated(gameSettings, 3, 'Game Settings');
+            for (let i = 0; i < 3; i++) {
+              if (probabilities[i] && probabilities[i] !== '') {
+                const num = parseInt(probabilities[i], 10);
+                if (isNaN(num) || num < 0 || num > 100) {
+                  throw new Error(`Round ${i + 1} probability must be between 0 and 100.`);
+                }
+                if (i === 0) round1Good = num;
+                if (i === 1) round2Good = num;
+                if (i === 2) round3Good = num;
+              }
+            }
+          }
+          
+          // Parse event names
+          if (eventNames && eventNames.trim() !== '') {
+            const names = parseCommaSeparated(eventNames, 2, 'Event Names');
+            goodEventName = names[0] || 'Clear Skies';
+            badEventName = names[1] || 'Meteor Strike';
+          }
+          
+          // Parse event emojis
+          if (eventEmojis && eventEmojis.trim() !== '') {
+            const emojis = parseCommaSeparated(eventEmojis, 2, 'Event Emojis');
+            goodEventEmoji = emojis[0] || '☀️';
+            badEventEmoji = emojis[1] || '☄️';
+          }
+          
+          // Parse currency settings
+          if (currencySettings && currencySettings.trim() !== '') {
+            const currency = parseCommaSeparated(currencySettings, 2, 'Currency Settings');
+            currencyName = currency[0] || 'coins';
+            currencyEmoji = currency[1] || '🪙';
+          }
+          
         } catch (validationError) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -12796,21 +12733,26 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        console.log(`⚙️ DEBUG: Customizing Safari terms for guild ${guildId}: Currency="${currencyName}", Inventory="${inventoryName}", Emoji="${currencyEmoji}", Round1="${round1Good}", Round2="${round2Good}"`);
+        console.log(`⚙️ DEBUG: Customizing Safari settings for guild ${guildId}: Currency="${currencyName}:${currencyEmoji}", Events="${goodEventName}:${badEventName}", Rounds="${round1Good},${round2Good},${round3Good}"`);
         
         // Import Safari manager functions
         const { updateCustomTerms } = await import('./safariManager.js');
         
-        // Update the custom terms with new game settings
+        // Update all Safari settings
         const updateData = {
           currencyName: currencyName,
           inventoryName: inventoryName,
-          currencyEmoji: currencyEmoji
+          currencyEmoji: currencyEmoji,
+          goodEventName: goodEventName,
+          badEventName: badEventName,
+          goodEventEmoji: goodEventEmoji,
+          badEventEmoji: badEventEmoji
         };
         
         // Add round probabilities if provided
         if (round1Good !== null) updateData.round1GoodProbability = round1Good;
         if (round2Good !== null) updateData.round2GoodProbability = round2Good;
+        if (round3Good !== null) updateData.round3GoodProbability = round3Good;
         
         const success = await updateCustomTerms(guildId, updateData);
         
@@ -12818,19 +12760,21 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           throw new Error('Failed to update custom terms');
         }
         
-        console.log(`✅ DEBUG: Safari terms updated successfully for guild ${guildId}`);
+        console.log(`✅ DEBUG: Safari settings updated successfully for guild ${guildId}`);
         
-        // Build success message with game settings
-        let successMessage = `✅ Safari terms updated successfully!\n\n**Currency:** ${currencyEmoji} ${currencyName}\n**Inventory Name:** ${inventoryName}`;
+        // Build comprehensive success message
+        let successMessage = `✅ **Safari Settings Updated!**\n\n**Currency:** ${currencyEmoji} ${currencyName}\n**Inventory:** ${inventoryName}`;
         
-        if (round1Good !== null || round2Good !== null) {
-          successMessage += `\n\n**Game Settings:**`;
-          if (round1Good !== null) successMessage += `\n• Round 1 Good Event: ${round1Good}%`;
-          if (round2Good !== null) successMessage += `\n• Round 2 Good Event: ${round2Good}%`;
-          successMessage += `\n\n💡 Use "Event Settings" to configure Round 3 and event details.`;
+        successMessage += `\n\n**Events:**\n• Good: ${goodEventEmoji} ${goodEventName}\n• Bad: ${badEventEmoji} ${badEventName}`;
+        
+        if (round1Good !== null || round2Good !== null || round3Good !== null) {
+          successMessage += `\n\n**Round Probabilities:**`;
+          if (round1Good !== null) successMessage += `\n• Round 1: ${round1Good}% good`;
+          if (round2Good !== null) successMessage += `\n• Round 2: ${round2Good}% good`;
+          if (round3Good !== null) successMessage += `\n• Round 3: ${round3Good}% good`;
         }
         
-        successMessage += `\n\nThese settings will now be used throughout the Safari system.`;
+        successMessage += `\n\n🎮 All settings configured for Challenge Game Logic!`;
         
         // Return success message
         return res.send({
@@ -12847,99 +12791,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating Safari terms. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id === 'safari_event_settings_modal') {
-      // Handle Event Settings modal submission
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to configure event settings.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Extract modal input values  
-        const components = req.body.data.components;
-        const round3Probability = components[0]?.components[0]?.value || '';
-        const goodEventName = components[1]?.components[0]?.value || 'Clear Skies';
-        const badEventName = components[2]?.components[0]?.value || 'Meteor Strike';
-        const goodEventEmoji = components[3]?.components[0]?.value || '☀️';
-        const badEventEmoji = components[4]?.components[0]?.value || '☄️';
-        
-        // Validate round 3 probability
-        let round3Good = null;
-        if (round3Probability && round3Probability.trim() !== '') {
-          const num = parseInt(round3Probability.trim(), 10);
-          if (isNaN(num) || num < 0 || num > 100) {
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: {
-                content: '❌ Round 3 probability must be between 0 and 100.',
-                flags: InteractionResponseFlags.EPHEMERAL
-              }
-            });
-          }
-          round3Good = num;
-        }
-        
-        console.log(`🎲 DEBUG: Updating event settings for guild ${guildId}: Round3="${round3Good}", Good="${goodEventName}", Bad="${badEventName}"`);
-        
-        // Import Safari manager functions
-        const { updateCustomTerms } = await import('./safariManager.js');
-        
-        // Update the event settings
-        const updateData = {
-          goodEventName: goodEventName,
-          badEventName: badEventName,
-          goodEventEmoji: goodEventEmoji,
-          badEventEmoji: badEventEmoji
-        };
-        
-        // Add round 3 probability if provided
-        if (round3Good !== null) updateData.round3GoodProbability = round3Good;
-        
-        const success = await updateCustomTerms(guildId, updateData);
-        
-        if (!success) {
-          throw new Error('Failed to update event settings');
-        }
-        
-        console.log(`✅ DEBUG: Event settings updated successfully for guild ${guildId}`);
-        
-        // Build success message
-        let successMessage = `✅ Event settings updated successfully!\n\n**Good Event:** ${goodEventEmoji} ${goodEventName}\n**Bad Event:** ${badEventEmoji} ${badEventName}`;
-        
-        if (round3Good !== null) {
-          successMessage += `\n\n**Round 3 Good Event Probability:** ${round3Good}%`;
-        }
-        
-        successMessage += `\n\nThese settings will be used in Round Results calculations.`;
-        
-        // Return success message
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: successMessage,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error updating event settings:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error updating event settings. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

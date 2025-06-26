@@ -686,7 +686,12 @@
     "safariConfig": {
       "currencyName": "beaks",
       "inventoryName": "Inventory",
-      "currencyEmoji": "🥚"
+      "currencyEmoji": "🥚",
+      "round3GoodProbability": 11,
+      "goodEventName": "Clear Skiez",
+      "badEventName": "Meteor Strikz",
+      "goodEventEmoji": "😵‍💫",
+      "badEventEmoji": "⚔️"
     }
   },
   "1385042963310055515": {
