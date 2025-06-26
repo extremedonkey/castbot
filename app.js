@@ -4222,7 +4222,7 @@ To fix this:
         const containerComponents = [
           {
             type: 10, // Text Display component
-            content: `## 🎛️ Manage Safari Buttons\n\nCreate, edit, and manage your interactive custom buttons.\n\n**📊 Statistics:**\n• **Total Buttons:** ${buttonCount}\n• **With Actions:** ${buttonsWithActions}\n• **Total Usage:** ${totalUsage} interactions`
+            content: `## 📌 Manage Safari Buttons\n\nCreate, edit, and manage your interactive custom buttons.\n\n**📊 Statistics:**\n• **Total Buttons:** ${buttonCount}\n• **With Actions:** ${buttonsWithActions}\n• **Total Usage:** ${totalUsage} interactions`
           },
           managementRow.toJSON(), // Management buttons
           postingRow.toJSON(), // Posting buttons
@@ -5617,15 +5617,15 @@ Your server is now ready for Tycoons gameplay!`;
         // Row 2: Management Functions
         const managementButtonsRow2 = [
           new ButtonBuilder()
-            .setCustomId('safari_store_manage_existing')
-            .setLabel('Edit Existing Store')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('✏️'),
-          new ButtonBuilder()
             .setCustomId('safari_store_manage_items')
             .setLabel('Edit Store')
             .setStyle(ButtonStyle.Success)
-            .setEmoji('📦')
+            .setEmoji('📦'),
+          new ButtonBuilder()
+            .setCustomId('safari_store_manage_existing')
+            .setLabel('Edit Existing Store')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('✏️')
         ];
         
         const managementRow1 = new ActionRowBuilder().addComponents(managementButtonsRow1);
