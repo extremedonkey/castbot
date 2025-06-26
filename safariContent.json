@@ -573,6 +573,11 @@
           {
             "itemId": "raider_499497",
             "price": 15
+          },
+          {
+            "itemId": "little_test_511369",
+            "price": 35,
+            "addedAt": 1750922715491
           }
         ],
         "settings": {
@@ -582,7 +587,7 @@
         },
         "metadata": {
           "createdAt": 1750783000000,
-          "totalSales": 9
+          "totalSales": 10
         }
       },
       "do_you_see_me_tomato_171643": {
@@ -681,6 +686,27 @@
           "createdAt": 1750783499497,
           "totalSold": 2
         }
+      },
+      "little_test_511369": {
+        "id": "little_test_511369",
+        "name": "Little Test",
+        "description": "Game item for Challenge system",
+        "emoji": "📦",
+        "category": "General",
+        "basePrice": 35,
+        "maxQuantity": -1,
+        "goodOutcomeValue": 23,
+        "badOutcomeValue": 45,
+        "attackValue": null,
+        "defenseValue": null,
+        "consumable": "No",
+        "goodYieldEmoji": "☀️",
+        "badYieldEmoji": "☄️",
+        "metadata": {
+          "createdBy": "391415444084490240",
+          "createdAt": 1750922511369,
+          "totalSold": 1
+        }
       }
     },
     "safariConfig": {
@@ -691,8 +717,44 @@
       "goodEventName": "Clear Skiez",
       "badEventName": "Meteor Strikz",
       "goodEventEmoji": "😵‍💫",
-      "badEventEmoji": "⚔️"
-    }
+      "badEventEmoji": "⚔️",
+      "round1GoodProbability": 66,
+      "round2GoodProbability": 33,
+      "currentRound": 3,
+      "lastRoundTimestamp": 1750922568476
+    },
+    "roundHistory": [
+      {
+        "round": 1,
+        "eventType": "bad",
+        "eventName": "Meteor Strikz",
+        "timestamp": 1750922136498,
+        "playerCount": 1,
+        "playerResults": [
+          {
+            "userId": "391415444084490240",
+            "playerName": "Player 0240",
+            "netChange": 0,
+            "details": ""
+          }
+        ]
+      },
+      {
+        "round": 2,
+        "eventType": "good",
+        "eventName": "Clear Skiez",
+        "timestamp": 1750922568469,
+        "playerCount": 1,
+        "playerResults": [
+          {
+            "userId": "391415444084490240",
+            "playerName": "Player 0240",
+            "netChange": 0,
+            "details": ""
+          }
+        ]
+      }
+    ]
   },
   "1385042963310055515": {
     "buttons": {

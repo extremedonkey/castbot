@@ -567,23 +567,36 @@ The button handler dependency analysis reveals that 40+ button handlers are comp
 7. **Template System**: Pre-built server templates for common ORG formats (Survivor, Big Brother, etc.)
 8. **Mobile App**: Companion mobile app for players to manage their profiles and view castlists
 
+#### **Nice to Have (Challenge Dependent)**
+
+9. **Enhanced Safari Customize Interface**: Replace single modal with Container-based UI
+   - **Current Issue**: 5-field modal limit forces comma-separated values (e.g., "75,50,25" for probabilities)
+   - **Proposed Solution**: Components V2 Container with individual buttons:
+     - "Set Round Probabilities" → Modal for R1,R2,R3 percentages
+     - "Configure Events" → Modal for event names and emojis  
+     - "Currency Settings" → Modal for currency name and emoji
+     - "General Settings" → Modal for inventory name and other options
+   - **Benefits**: More intuitive UX, better validation per field type, cleaner interface
+   - **Implementation**: Each button opens focused modal, Container updates with current values after submission
+   - **Priority**: Nice to have - current comma-separated approach works functionally
+
 ### Advanced Features
-9. **Game Integration**: Direct integration with popular ORG platforms (Tengaged, etc.) for automatic data sync
-10. **Live Game Features**: Real-time voting systems, challenge tracking, and elimination ceremonies
-11. **Statistics & Analytics**: Player performance tracking across multiple seasons/games
-12. **Social Features**: Player networking, season alumni connections, host networking
+10. **Game Integration**: Direct integration with popular ORG platforms (Tengaged, etc.) for automatic data sync
+11. **Live Game Features**: Real-time voting systems, challenge tracking, and elimination ceremonies
+12. **Statistics & Analytics**: Player performance tracking across multiple seasons/games
+13. **Social Features**: Player networking, season alumni connections, host networking
 
 ### Technical Improvements
-13. **TypeScript Migration**: Convert codebase to TypeScript for better type safety and developer experience
-14. **Testing Suite**: Comprehensive unit and integration tests with CI/CD pipeline
-15. **Monitoring & Alerting**: Production monitoring with automated alerting for issues
-16. **Docker Containerization**: Containerize application for easier deployment and scaling
+14. **TypeScript Migration**: Convert codebase to TypeScript for better type safety and developer experience
+15. **Testing Suite**: Comprehensive unit and integration tests with CI/CD pipeline
+16. **Monitoring & Alerting**: Production monitoring with automated alerting for issues
+17. **Docker Containerization**: Containerize application for easier deployment and scaling
 
 ### Business & Growth
-17. **Premium Features**: Subscription tier with advanced features (custom themes, priority support, advanced analytics)
-18. **Partner Program**: Integration partnerships with ORG hosting platforms and communities
-19. **API Ecosystem**: Public API for third-party integrations and community-built tools
-20. **Multi-Language Support**: Internationalization for global ORG community expansion
+18. **Premium Features**: Subscription tier with advanced features (custom themes, priority support, advanced analytics)
+19. **Partner Program**: Integration partnerships with ORG hosting platforms and communities
+20. **API Ecosystem**: Public API for third-party integrations and community-built tools
+21. **Multi-Language Support**: Internationalization for global ORG community expansion
 
 ---
 

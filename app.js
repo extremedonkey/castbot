@@ -410,7 +410,7 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_manage_safari_buttons')
       .setLabel('Manage Safari Buttons')
       .setStyle(ButtonStyle.Primary)
-      .setEmoji('🎛️'),
+      .setEmoji('📌'),
     new ButtonBuilder()
       .setCustomId('safari_player_inventory')
       .setLabel(inventoryLabel)
@@ -5623,7 +5623,7 @@ Your server is now ready for Tycoons gameplay!`;
             .setEmoji('✏️'),
           new ButtonBuilder()
             .setCustomId('safari_store_manage_items')
-            .setLabel('Manage Store')
+            .setLabel('Edit Store')
             .setStyle(ButtonStyle.Success)
             .setEmoji('📦')
         ];
