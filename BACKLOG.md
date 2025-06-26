@@ -569,16 +569,26 @@ The button handler dependency analysis reveals that 40+ button handlers are comp
 
 #### **Nice to Have (Challenge Dependent)**
 
-9. **Enhanced Safari Customize Interface**: Replace single modal with Container-based UI
+9. **Reusable Create/Update Interface Framework**: Universal MVC-pattern interface system
+   - **Scope**: Create reusable framework for all CRUD operations (stores, items, safari settings, future features)
+   - **Architecture**: MVC pattern or dedicated management class
+   - **UI Pattern**: Container → Nested Buttons and Listviews → Smart Modal System
+   - **Modal Intelligence**: 
+     - Text Input modals for free-form data entry
+     - String Select menus for <25 selectable options (auto-detection)
+     - Real-time Container updates after modal submission
+   - **Target Implementations**:
+     - Store Create/Edit interface
+     - Item Create/Edit interface  
+     - Enhanced Safari Customize interface (replace comma-separated fields)
+     - Future features requiring complex data entry
+   - **Benefits**: Consistent UX across all admin interfaces, maintainable code, scalable for future features
+   - **Priority**: Nice to have - would significantly improve admin UX and code maintainability
+
+10. **Legacy Safari Customize Enhancement**: Replace single modal with Container-based UI
    - **Current Issue**: 5-field modal limit forces comma-separated values (e.g., "75,50,25" for probabilities)
-   - **Proposed Solution**: Components V2 Container with individual buttons:
-     - "Set Round Probabilities" → Modal for R1,R2,R3 percentages
-     - "Configure Events" → Modal for event names and emojis  
-     - "Currency Settings" → Modal for currency name and emoji
-     - "General Settings" → Modal for inventory name and other options
-   - **Benefits**: More intuitive UX, better validation per field type, cleaner interface
-   - **Implementation**: Each button opens focused modal, Container updates with current values after submission
-   - **Priority**: Nice to have - current comma-separated approach works functionally
+   - **Implementation**: Use the Reusable Create/Update Interface Framework (item #9 above)
+   - **Priority**: Superseded by framework approach above
 
 ### Advanced Features
 10. **Game Integration**: Direct integration with popular ORG platforms (Tengaged, etc.) for automatic data sync

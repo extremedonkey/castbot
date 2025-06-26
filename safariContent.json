@@ -720,8 +720,8 @@
       "badEventEmoji": "⚔️",
       "round1GoodProbability": 66,
       "round2GoodProbability": 33,
-      "currentRound": 3,
-      "lastRoundTimestamp": 1750922568476
+      "currentRound": 4,
+      "lastRoundTimestamp": 1750923482982
     },
     "roundHistory": [
       {
@@ -751,6 +751,21 @@
             "playerName": "Player 0240",
             "netChange": 0,
             "details": ""
+          }
+        ]
+      },
+      {
+        "round": 3,
+        "eventType": "bad",
+        "eventName": "Meteor Strikz",
+        "timestamp": 1750923482968,
+        "playerCount": 1,
+        "playerResults": [
+          {
+            "userId": "391415444084490240",
+            "playerName": "Player 0240",
+            "netChange": 45,
+            "details": "Little Test x1: 45"
           }
         ]
       }

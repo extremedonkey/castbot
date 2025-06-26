@@ -8735,9 +8735,10 @@ Your server is now ready for Tycoons gameplay!`;
           .setMinValues(0)
           .setMaxValues(25);
         
-        // Set default values if any exist
+        // Set default values if any exist (limited to Discord's 25 role maximum)
         if (existingTimezoneRoles.length > 0) {
-          roleSelect.setDefaultRoles(existingTimezoneRoles);
+          const limitedRoles = existingTimezoneRoles.slice(0, 25);
+          roleSelect.setDefaultRoles(limitedRoles);
         }
 
         const row = new ActionRowBuilder()
@@ -8776,9 +8777,10 @@ Your server is now ready for Tycoons gameplay!`;
           .setMinValues(0)
           .setMaxValues(25);
         
-        // Set default values if any exist
+        // Set default values if any exist (limited to Discord's 25 role maximum)
         if (pronounRoleIDs && pronounRoleIDs.length > 0) {
-          roleSelect.setDefaultRoles(pronounRoleIDs);
+          const limitedRoles = pronounRoleIDs.slice(0, 25);
+          roleSelect.setDefaultRoles(limitedRoles);
         }
 
         const row = new ActionRowBuilder()
@@ -9286,7 +9288,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           .setMaxValues(25);
 
         if (currentVanityRoles.length > 0) {
-          roleSelect.setDefaultRoles(currentVanityRoles);
+          const limitedRoles = currentVanityRoles.slice(0, 25);
+          roleSelect.setDefaultRoles(limitedRoles);
         }
 
         const selectRow = new ActionRowBuilder().addComponents(roleSelect);
