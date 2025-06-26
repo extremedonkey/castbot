@@ -420,7 +420,12 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_manage_currency')
       .setLabel('Manage Currency')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💰')
+      .setEmoji('💰'),
+    new ButtonBuilder()
+      .setCustomId('safari_round_results')
+      .setLabel('Round Results')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏅')
   ];
   
   // Row 2: Admin & Management Functions
@@ -439,7 +444,12 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_customize_terms')
       .setLabel('Customize Terms')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️')
+      .setEmoji('⚙️'),
+    new ButtonBuilder()
+      .setCustomId('safari_event_settings')
+      .setLabel('Event Settings')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🎲')
   ];
   
   const safariRow1 = new ActionRowBuilder().addComponents(safariButtonsRow1);
@@ -5335,6 +5345,156 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'safari_round_results') {
+      // Handle Round Results - Challenge Game Logic Core Engine
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const channelId = req.body.channel_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to process round results.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🏅 DEBUG: Processing round results for guild ${guildId} in channel ${channelId}`);
+        
+        // Import Safari manager functions
+        const { processRoundResults } = await import('./safariManager.js');
+        
+        // Process round results and get the result message
+        const result = await processRoundResults(guildId, channelId, client);
+        
+        if (result.error) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ ${result.error}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Send result to the channel where button was clicked
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: result.message,
+            flags: 0 // Public message to channel
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_round_results:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error processing round results. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_event_settings') {
+      // Handle Event Settings modal for Round 3 and event details
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to configure event settings.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🎲 DEBUG: User ${member.user.id} opening event settings modal for guild ${guildId}`);
+        
+        // Get current custom terms
+        const { getCustomTerms } = await import('./safariManager.js');
+        const currentTerms = await getCustomTerms(guildId);
+        
+        // Create Event Settings modal
+        const modal = new ModalBuilder()
+          .setCustomId('safari_event_settings_modal')
+          .setTitle('🎲 Configure Game Events')
+          .addComponents(
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('round3_good_probability')
+                .setLabel('Round 3 Good Event Probability')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Please enter a value between 0 and 100.')
+                .setValue(currentTerms.round3GoodProbability?.toString() || '25')
+                .setMaxLength(3)
+                .setRequired(false)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('good_event_name')
+                .setLabel('Good Event Name')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Clear Skies')
+                .setValue(currentTerms.goodEventName || 'Clear Skies')
+                .setMaxLength(50)
+                .setRequired(false)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('bad_event_name')
+                .setLabel('Bad Event Name')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Meteor Strike')
+                .setValue(currentTerms.badEventName || 'Meteor Strike')
+                .setMaxLength(50)
+                .setRequired(false)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('good_event_emoji')
+                .setLabel('Good Event Emoji')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('☀️')
+                .setValue(currentTerms.goodEventEmoji || '☀️')
+                .setMaxLength(10)
+                .setRequired(false)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('bad_event_emoji')
+                .setLabel('Bad Event Emoji')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('☄️')
+                .setValue(currentTerms.badEventEmoji || '☄️')
+                .setMaxLength(10)
+                .setRequired(false)
+            )
+          );
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_event_settings:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error opening event settings modal. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'safari_view_buttons') {
       // Handle View All Buttons - MVP1 implementation
       try {
@@ -5443,10 +5603,10 @@ Your server is now ready for Tycoons gameplay!`;
         const { getCustomTerms } = await import('./safariManager.js');
         const currentTerms = await getCustomTerms(guildId);
         
-        // Create modal with current values pre-filled
+        // Create modal with current values pre-filled - Extended for Challenge Game Logic
         const modal = new ModalBuilder()
           .setCustomId('safari_customize_terms_modal')
-          .setTitle('⚙️ Customize Safari Terms')
+          .setTitle('⚙️ Customize Safari Terms & Game Settings')
           .addComponents(
             new ActionRowBuilder().addComponents(
               new TextInputBuilder()
@@ -5477,6 +5637,26 @@ Your server is now ready for Tycoons gameplay!`;
                 .setValue(currentTerms.currencyEmoji || '🪙')
                 .setMaxLength(10)
                 .setRequired(true)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('round1_good_probability')
+                .setLabel('Round 1 Good Event Probability')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Please enter a value between 0 and 100.')
+                .setValue(currentTerms.round1GoodProbability?.toString() || '75')
+                .setMaxLength(3)
+                .setRequired(false)
+            ),
+            new ActionRowBuilder().addComponents(
+              new TextInputBuilder()
+                .setCustomId('round2_good_probability')
+                .setLabel('Round 2 Good Event Probability')
+                .setStyle(TextInputStyle.Short)
+                .setPlaceholder('Please enter a value between 0 and 100.')
+                .setValue(currentTerms.round2GoodProbability?.toString() || '50')
+                .setMaxLength(3)
+                .setRequired(false)
             )
           );
         
@@ -5860,10 +6040,10 @@ Your server is now ready for Tycoons gameplay!`;
         
         console.log(`📦 DEBUG: Create new item clicked`);
         
-        // Create item creation modal
+        // Create enhanced item creation modal for Challenge Game Logic
         const modal = new ModalBuilder()
           .setCustomId('safari_item_modal')
-          .setTitle('Create New Item');
+          .setTitle('📦 Create New Game Item');
         
         const itemNameInput = new TextInputBuilder()
           .setCustomId('item_name')
@@ -5871,45 +6051,45 @@ Your server is now ready for Tycoons gameplay!`;
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(50)
-          .setPlaceholder('e.g. Magic Sword');
-        
-        const itemEmojiInput = new TextInputBuilder()
-          .setCustomId('item_emoji')
-          .setLabel('Item Emoji')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(false)
-          .setMaxLength(10)
-          .setPlaceholder('⚔️');
-        
-        const itemDescriptionInput = new TextInputBuilder()
-          .setCustomId('item_description')
-          .setLabel('Item Description')
-          .setStyle(TextInputStyle.Paragraph)
-          .setRequired(false)
-          .setMaxLength(500)
-          .setPlaceholder('A powerful weapon...');
+          .setPlaceholder('e.g. Territory Forager');
         
         const itemPriceInput = new TextInputBuilder()
           .setCustomId('item_price')
-          .setLabel('Base Price (coins)')
+          .setLabel('Base Price')
           .setStyle(TextInputStyle.Short)
           .setRequired(true)
           .setMaxLength(10)
-          .setPlaceholder('100');
+          .setPlaceholder('30');
         
-        const itemCategoryInput = new TextInputBuilder()
-          .setCustomId('item_category')
-          .setLabel('Category')
+        const goodOutcomeInput = new TextInputBuilder()
+          .setCustomId('good_outcome_value')
+          .setLabel('Good Outcome Yield')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
-          .setMaxLength(30)
-          .setPlaceholder('weapons');
+          .setMaxLength(10)
+          .setPlaceholder('Enter yield for good events (0 or blank for none)');
+        
+        const badOutcomeInput = new TextInputBuilder()
+          .setCustomId('bad_outcome_value')
+          .setLabel('Bad Outcome Yield')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(10)
+          .setPlaceholder('Enter yield for bad events (0 or blank for none)');
+        
+        const attackValueInput = new TextInputBuilder()
+          .setCustomId('attack_value')
+          .setLabel('Attack Power')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(10)
+          .setPlaceholder('Attack power (leave blank if no attack)');
         
         const row1 = new ActionRowBuilder().addComponents(itemNameInput);
-        const row2 = new ActionRowBuilder().addComponents(itemEmojiInput);
-        const row3 = new ActionRowBuilder().addComponents(itemDescriptionInput);
-        const row4 = new ActionRowBuilder().addComponents(itemPriceInput);
-        const row5 = new ActionRowBuilder().addComponents(itemCategoryInput);
+        const row2 = new ActionRowBuilder().addComponents(itemPriceInput);
+        const row3 = new ActionRowBuilder().addComponents(goodOutcomeInput);
+        const row4 = new ActionRowBuilder().addComponents(badOutcomeInput);
+        const row5 = new ActionRowBuilder().addComponents(attackValueInput);
         
         modal.addComponents(row1, row2, row3, row4, row5);
         
@@ -12243,12 +12423,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        // Extract form data
+        // Extract form data - Updated for Challenge Game Logic
+        const components = req.body.data.components;
         const itemName = components[0].components[0].value?.trim();
-        const itemEmoji = components[1].components[0].value?.trim() || null;
-        const itemDescription = components[2].components[0].value?.trim() || null;
-        const priceStr = components[3].components[0].value?.trim();
-        const category = components[4].components[0].value?.trim() || 'General';
+        const priceStr = components[1].components[0].value?.trim();
+        const goodOutcomeStr = components[2].components[0].value?.trim() || '';
+        const badOutcomeStr = components[3].components[0].value?.trim() || '';
+        const attackValueStr = components[4].components[0].value?.trim() || '';
         
         // Validate required fields
         if (!itemName) {
@@ -12273,24 +12454,77 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        console.log(`🎒 DEBUG: Creating item "${itemName}" for guild ${guildId}`);
+        // Validate and parse game values
+        const validateGameValue = (value, fieldName) => {
+          if (!value || value.trim() === '') return null; // Allow blank
+          const num = parseInt(value.trim(), 10);
+          if (isNaN(num) || num < 0 || num > 999999) {
+            throw new Error(`${fieldName} must be a number between 0 and 999,999.`);
+          }
+          return num;
+        };
+        
+        let goodOutcomeValue = null;
+        let badOutcomeValue = null;
+        let attackValue = null;
+        
+        try {
+          goodOutcomeValue = validateGameValue(goodOutcomeStr, 'Good Outcome Yield');
+          badOutcomeValue = validateGameValue(badOutcomeStr, 'Bad Outcome Yield');
+          attackValue = validateGameValue(attackValueStr, 'Attack Power');
+        } catch (validationError) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ Validation Error: ${validationError.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🎒 DEBUG: Creating item "${itemName}" for guild ${guildId} with game values: good=${goodOutcomeValue}, bad=${badOutcomeValue}, attack=${attackValue}`);
         
         // Import Safari manager functions
         const { createItem } = await import('./safariManager.js');
         
+        // Create item with enhanced game data
         const result = await createItem(guildId, {
           name: itemName,
-          emoji: itemEmoji,
-          description: itemDescription,
+          emoji: '📦', // Default emoji, can be customized later
+          description: `Game item for Challenge system`, // Default description
           basePrice: price,
-          category: category,
+          category: 'General', // Default category
+          // Challenge Game Logic fields
+          goodOutcomeValue: goodOutcomeValue,
+          badOutcomeValue: badOutcomeValue,
+          attackValue: attackValue,
+          defenseValue: null, // Will be added in advanced settings
+          consumable: 'No', // Default to No
+          goodYieldEmoji: '☀️', // Default emoji
+          badYieldEmoji: '☄️', // Default emoji
           createdBy: member.user.id
         });
+        
+        // Build success message showing game mechanics
+        let successMessage = `✅ **Game Item Created Successfully!**\n\n**📦 ${itemName}**\n\n**Base Price:** ${price} coins`;
+        
+        if (goodOutcomeValue !== null || badOutcomeValue !== null) {
+          successMessage += `\n\n**Yield Values:**`;
+          if (goodOutcomeValue !== null) successMessage += `\n☀️ Good Event: ${goodOutcomeValue} coins`;
+          if (badOutcomeValue !== null) successMessage += `\n☄️ Bad Event: ${badOutcomeValue} coins`;
+        }
+        
+        if (attackValue !== null) {
+          successMessage += `\n\n**Combat:**`;
+          successMessage += `\n⚔️ Attack: ${attackValue}`;
+        }
+        
+        successMessage += `\n\nItem ID: \`${result}\`\n\n💡 Use "Manage Items" to add defense values, consumable status, and customize emojis.\n\nYou can now add this item to stores and use it in the Challenge Game!`;
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Item Created Successfully!**\n\n**${itemEmoji ? itemEmoji + ' ' : ''}${itemName}**\n${itemDescription ? itemDescription : ''}\n\n**Base Price:** ${price} coins\n**Category:** ${category}\nItem ID: \`${result}\`\n\nYou can now add this item to any store with custom pricing.`,
+            content: successMessage,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -12533,18 +12767,52 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const currencyName = components[0]?.components[0]?.value || 'coins';
         const inventoryName = components[1]?.components[0]?.value || 'Nest';
         const currencyEmoji = components[2]?.components[0]?.value || '🪙';
+        const round1Probability = components[3]?.components[0]?.value || '';
+        const round2Probability = components[4]?.components[0]?.value || '';
         
-        console.log(`⚙️ DEBUG: Customizing Safari terms for guild ${guildId}: Currency="${currencyName}", Inventory="${inventoryName}", Emoji="${currencyEmoji}"`);
+        // Validate round probabilities
+        const validateProbability = (value, roundName) => {
+          if (!value || value.trim() === '') return null; // Allow blank
+          const num = parseInt(value.trim(), 10);
+          if (isNaN(num) || num < 0 || num > 100) {
+            throw new Error(`${roundName} probability must be between 0 and 100.`);
+          }
+          return num;
+        };
+        
+        let round1Good = null;
+        let round2Good = null;
+        
+        try {
+          round1Good = validateProbability(round1Probability, 'Round 1');
+          round2Good = validateProbability(round2Probability, 'Round 2');
+        } catch (validationError) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ Validation Error: ${validationError.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`⚙️ DEBUG: Customizing Safari terms for guild ${guildId}: Currency="${currencyName}", Inventory="${inventoryName}", Emoji="${currencyEmoji}", Round1="${round1Good}", Round2="${round2Good}"`);
         
         // Import Safari manager functions
         const { updateCustomTerms } = await import('./safariManager.js');
         
-        // Update the custom terms
-        const success = await updateCustomTerms(guildId, {
+        // Update the custom terms with new game settings
+        const updateData = {
           currencyName: currencyName,
           inventoryName: inventoryName,
           currencyEmoji: currencyEmoji
-        });
+        };
+        
+        // Add round probabilities if provided
+        if (round1Good !== null) updateData.round1GoodProbability = round1Good;
+        if (round2Good !== null) updateData.round2GoodProbability = round2Good;
+        
+        const success = await updateCustomTerms(guildId, updateData);
         
         if (!success) {
           throw new Error('Failed to update custom terms');
@@ -12552,11 +12820,23 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log(`✅ DEBUG: Safari terms updated successfully for guild ${guildId}`);
         
+        // Build success message with game settings
+        let successMessage = `✅ Safari terms updated successfully!\n\n**Currency:** ${currencyEmoji} ${currencyName}\n**Inventory Name:** ${inventoryName}`;
+        
+        if (round1Good !== null || round2Good !== null) {
+          successMessage += `\n\n**Game Settings:**`;
+          if (round1Good !== null) successMessage += `\n• Round 1 Good Event: ${round1Good}%`;
+          if (round2Good !== null) successMessage += `\n• Round 2 Good Event: ${round2Good}%`;
+          successMessage += `\n\n💡 Use "Event Settings" to configure Round 3 and event details.`;
+        }
+        
+        successMessage += `\n\nThese settings will now be used throughout the Safari system.`;
+        
         // Return success message
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ Safari terms updated successfully!\n\n**Currency:** ${currencyEmoji} ${currencyName}\n**Inventory Name:** ${inventoryName}\n\nThese terms will now be used throughout the Safari system.`,
+            content: successMessage,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -12567,6 +12847,99 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating Safari terms. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_event_settings_modal') {
+      // Handle Event Settings modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to configure event settings.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Extract modal input values  
+        const components = req.body.data.components;
+        const round3Probability = components[0]?.components[0]?.value || '';
+        const goodEventName = components[1]?.components[0]?.value || 'Clear Skies';
+        const badEventName = components[2]?.components[0]?.value || 'Meteor Strike';
+        const goodEventEmoji = components[3]?.components[0]?.value || '☀️';
+        const badEventEmoji = components[4]?.components[0]?.value || '☄️';
+        
+        // Validate round 3 probability
+        let round3Good = null;
+        if (round3Probability && round3Probability.trim() !== '') {
+          const num = parseInt(round3Probability.trim(), 10);
+          if (isNaN(num) || num < 0 || num > 100) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Round 3 probability must be between 0 and 100.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          round3Good = num;
+        }
+        
+        console.log(`🎲 DEBUG: Updating event settings for guild ${guildId}: Round3="${round3Good}", Good="${goodEventName}", Bad="${badEventName}"`);
+        
+        // Import Safari manager functions
+        const { updateCustomTerms } = await import('./safariManager.js');
+        
+        // Update the event settings
+        const updateData = {
+          goodEventName: goodEventName,
+          badEventName: badEventName,
+          goodEventEmoji: goodEventEmoji,
+          badEventEmoji: badEventEmoji
+        };
+        
+        // Add round 3 probability if provided
+        if (round3Good !== null) updateData.round3GoodProbability = round3Good;
+        
+        const success = await updateCustomTerms(guildId, updateData);
+        
+        if (!success) {
+          throw new Error('Failed to update event settings');
+        }
+        
+        console.log(`✅ DEBUG: Event settings updated successfully for guild ${guildId}`);
+        
+        // Build success message
+        let successMessage = `✅ Event settings updated successfully!\n\n**Good Event:** ${goodEventEmoji} ${goodEventName}\n**Bad Event:** ${badEventEmoji} ${badEventName}`;
+        
+        if (round3Good !== null) {
+          successMessage += `\n\n**Round 3 Good Event Probability:** ${round3Good}%`;
+        }
+        
+        successMessage += `\n\nThese settings will be used in Round Results calculations.`;
+        
+        // Return success message
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: successMessage,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error updating event settings:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating event settings. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

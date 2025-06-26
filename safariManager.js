@@ -630,8 +630,18 @@ async function createItem(guildId, itemData, userId) {
             category: itemData.category || 'misc',
             basePrice: itemData.basePrice || 100,
             maxQuantity: itemData.maxQuantity || -1, // -1 = unlimited
+            
+            // Challenge Game Logic fields
+            goodOutcomeValue: itemData.goodOutcomeValue || null,
+            badOutcomeValue: itemData.badOutcomeValue || null,
+            attackValue: itemData.attackValue || null,
+            defenseValue: itemData.defenseValue || null,
+            consumable: itemData.consumable || 'No', // 'Yes' or 'No'
+            goodYieldEmoji: itemData.goodYieldEmoji || '☀️',
+            badYieldEmoji: itemData.badYieldEmoji || '☄️',
+            
             metadata: {
-                createdBy: userId,
+                createdBy: userId || itemData.createdBy,
                 createdAt: Date.now(),
                 totalSold: 0
             }
@@ -1606,16 +1616,52 @@ async function getCustomTerms(guildId) {
         const config = safariData[guildId]?.safariConfig || {};
         
         return {
+            // Basic terms
             currencyName: config.currencyName || 'coins',
             inventoryName: config.inventoryName || 'Nest',
-            currencyEmoji: config.currencyEmoji || '🪙'
+            currencyEmoji: config.currencyEmoji || '🪙',
+            
+            // Game settings - Challenge Game Logic
+            round1GoodProbability: config.round1GoodProbability || null,
+            round2GoodProbability: config.round2GoodProbability || null,
+            round3GoodProbability: config.round3GoodProbability || null,
+            
+            // Event details
+            goodEventName: config.goodEventName || 'Clear Skies',
+            badEventName: config.badEventName || 'Meteor Strike',
+            goodEventMessage: config.goodEventMessage || 'The skies are clear! All creatures thrive!',
+            badEventMessage: config.badEventMessage || 'Meteors rain down! Only the protected survive!',
+            goodEventEmoji: config.goodEventEmoji || '☀️',
+            badEventEmoji: config.badEventEmoji || '☄️',
+            
+            // Game state
+            currentRound: config.currentRound || 1,
+            lastRoundTimestamp: config.lastRoundTimestamp || null
         };
     } catch (error) {
         console.error('Error getting custom terms:', error);
         return {
+            // Basic terms fallbacks
             currencyName: 'coins',
             inventoryName: 'Nest',
-            currencyEmoji: '🪙'
+            currencyEmoji: '🪙',
+            
+            // Game settings fallbacks
+            round1GoodProbability: null,
+            round2GoodProbability: null,
+            round3GoodProbability: null,
+            
+            // Event details fallbacks
+            goodEventName: 'Clear Skies',
+            badEventName: 'Meteor Strike',
+            goodEventMessage: 'The skies are clear! All creatures thrive!',
+            badEventMessage: 'Meteors rain down! Only the protected survive!',
+            goodEventEmoji: '☀️',
+            badEventEmoji: '☄️',
+            
+            // Game state fallbacks
+            currentRound: 1,
+            lastRoundTimestamp: null
         };
     }
 }
@@ -1651,7 +1697,7 @@ async function updateCustomTerms(guildId, terms) {
             };
         }
         
-        // Update terms
+        // Update basic terms
         if (terms.currencyName !== undefined) {
             safariData[guildId].safariConfig.currencyName = terms.currencyName || 'coins';
         }
@@ -1660,6 +1706,45 @@ async function updateCustomTerms(guildId, terms) {
         }
         if (terms.currencyEmoji !== undefined) {
             safariData[guildId].safariConfig.currencyEmoji = terms.currencyEmoji || '🪙';
+        }
+        
+        // Update game settings - Challenge Game Logic
+        if (terms.round1GoodProbability !== undefined) {
+            safariData[guildId].safariConfig.round1GoodProbability = terms.round1GoodProbability;
+        }
+        if (terms.round2GoodProbability !== undefined) {
+            safariData[guildId].safariConfig.round2GoodProbability = terms.round2GoodProbability;
+        }
+        if (terms.round3GoodProbability !== undefined) {
+            safariData[guildId].safariConfig.round3GoodProbability = terms.round3GoodProbability;
+        }
+        
+        // Update event details
+        if (terms.goodEventName !== undefined) {
+            safariData[guildId].safariConfig.goodEventName = terms.goodEventName || 'Clear Skies';
+        }
+        if (terms.badEventName !== undefined) {
+            safariData[guildId].safariConfig.badEventName = terms.badEventName || 'Meteor Strike';
+        }
+        if (terms.goodEventMessage !== undefined) {
+            safariData[guildId].safariConfig.goodEventMessage = terms.goodEventMessage || 'The skies are clear! All creatures thrive!';
+        }
+        if (terms.badEventMessage !== undefined) {
+            safariData[guildId].safariConfig.badEventMessage = terms.badEventMessage || 'Meteors rain down! Only the protected survive!';
+        }
+        if (terms.goodEventEmoji !== undefined) {
+            safariData[guildId].safariConfig.goodEventEmoji = terms.goodEventEmoji || '☀️';
+        }
+        if (terms.badEventEmoji !== undefined) {
+            safariData[guildId].safariConfig.badEventEmoji = terms.badEventEmoji || '☄️';
+        }
+        
+        // Update game state
+        if (terms.currentRound !== undefined) {
+            safariData[guildId].safariConfig.currentRound = terms.currentRound || 1;
+        }
+        if (terms.lastRoundTimestamp !== undefined) {
+            safariData[guildId].safariConfig.lastRoundTimestamp = terms.lastRoundTimestamp;
         }
         
         // Save updated data
@@ -1685,6 +1770,271 @@ async function resetCustomTerms(guildId) {
         inventoryName: 'Nest',
         currencyEmoji: '🪙'
     });
+}
+
+/**
+ * Process Round Results - Challenge Game Logic Core Engine
+ * Handles event determination, player earnings/losses, and round progression
+ */
+async function processRoundResults(guildId, channelId, client) {
+    try {
+        console.log(`🏅 DEBUG: Starting round results processing for guild ${guildId}`);
+        
+        // Get current game state and custom terms
+        const customTerms = await getCustomTerms(guildId);
+        const currentRound = customTerms.currentRound || 1;
+        
+        console.log(`🎲 DEBUG: Current round: ${currentRound}`);
+        
+        // Check for reset condition (after round 3)
+        if (currentRound > 3) {
+            return await handleGameReset(guildId, customTerms);
+        }
+        
+        // Get round-specific good event probability
+        let goodEventProbability = 50; // Default fallback
+        switch (currentRound) {
+            case 1:
+                goodEventProbability = customTerms.round1GoodProbability || 75;
+                break;
+            case 2:
+                goodEventProbability = customTerms.round2GoodProbability || 50;
+                break;
+            case 3:
+                goodEventProbability = customTerms.round3GoodProbability || 25;
+                break;
+        }
+        
+        const badEventProbability = 100 - goodEventProbability;
+        
+        console.log(`📊 DEBUG: Round ${currentRound} probabilities - Good: ${goodEventProbability}%, Bad: ${badEventProbability}%`);
+        
+        // Determine event type (random roll)
+        const randomRoll = Math.random() * 100;
+        const isGoodEvent = randomRoll < goodEventProbability;
+        const eventType = isGoodEvent ? 'good' : 'bad';
+        const eventName = isGoodEvent ? customTerms.goodEventName : customTerms.badEventName;
+        const eventEmoji = isGoodEvent ? customTerms.goodEventEmoji : customTerms.badEventEmoji;
+        const eventMessage = isGoodEvent ? customTerms.goodEventMessage : customTerms.badEventMessage;
+        
+        console.log(`🎯 DEBUG: Event roll: ${randomRoll.toFixed(1)}% - ${eventType.toUpperCase()} event: ${eventName}`);
+        
+        // Get eligible players
+        const eligiblePlayers = await getEligiblePlayers(guildId);
+        console.log(`👥 DEBUG: Found ${eligiblePlayers.length} eligible players`);
+        
+        if (eligiblePlayers.length === 0) {
+            return {
+                message: `${eventEmoji} **Round ${currentRound} - ${eventName}**\n\n${eventMessage}\n\n*No eligible players found. Players need currency ≥ 1 or items in inventory to participate.*`
+            };
+        }
+        
+        // Process each eligible player
+        const playerResults = [];
+        for (const player of eligiblePlayers) {
+            const result = await processPlayerRound(guildId, player.userId, eventType, customTerms);
+            if (result) {
+                playerResults.push(result);
+            }
+        }
+        
+        // Store round results for history
+        await storeRoundResult(guildId, {
+            round: currentRound,
+            eventType: eventType,
+            eventName: eventName,
+            timestamp: Date.now(),
+            playerCount: eligiblePlayers.length,
+            playerResults: playerResults
+        });
+        
+        // Advance to next round
+        await updateCustomTerms(guildId, {
+            currentRound: currentRound + 1,
+            lastRoundTimestamp: Date.now()
+        });
+        
+        // Build result message
+        let resultMessage = `${eventEmoji} **Round ${currentRound} Results - ${eventName}**\n\n${eventMessage}\n\n`;
+        
+        if (playerResults.length > 0) {
+            resultMessage += `**Player Results:**\n`;
+            for (const result of playerResults.slice(0, 10)) { // Limit to first 10 players for message length
+                const sign = result.netChange >= 0 ? '+' : '';
+                resultMessage += `• ${result.playerName}: ${sign}${result.netChange} ${customTerms.currencyName}`;
+                if (result.details) resultMessage += ` (${result.details})`;
+                resultMessage += `\n`;
+            }
+            
+            if (playerResults.length > 10) {
+                resultMessage += `*... and ${playerResults.length - 10} more players*\n`;
+            }
+        }
+        
+        resultMessage += `\n**Next:** Round ${currentRound + 1}${currentRound === 2 ? ' (Final Round)' : ''}`;
+        
+        return { message: resultMessage };
+        
+    } catch (error) {
+        console.error('Error processing round results:', error);
+        return { error: 'Failed to process round results. Please try again.' };
+    }
+}
+
+/**
+ * Handle game reset after round 3
+ */
+async function handleGameReset(guildId, customTerms) {
+    try {
+        console.log(`🔄 DEBUG: Game reset requested for guild ${guildId}`);
+        
+        // This should show a confirmation but for now we'll return the warning
+        return {
+            message: `⚠️ **Game Complete!**\n\nAll 3 rounds have been completed. The next Round Results click will reset the game:\n\n• Clear all player inventories\n• Reset all currency to 0\n• Start fresh at Round 1\n\n*Click Round Results again to confirm reset.*`
+        };
+        
+    } catch (error) {
+        console.error('Error handling game reset:', error);
+        return { error: 'Failed to handle game reset.' };
+    }
+}
+
+/**
+ * Get eligible players (currency >= 1 OR has inventory items)
+ */
+async function getEligiblePlayers(guildId) {
+    try {
+        const playerData = await loadPlayerData();
+        const players = playerData[guildId]?.players || {};
+        const eligiblePlayers = [];
+        
+        for (const [userId, data] of Object.entries(players)) {
+            const currency = data.safari?.currency || 0;
+            const inventory = data.safari?.inventory || {};
+            const hasInventory = Object.values(inventory).some(qty => qty > 0);
+            
+            if (currency >= 1 || hasInventory) {
+                eligiblePlayers.push({
+                    userId: userId,
+                    currency: currency,
+                    inventory: inventory,
+                    playerName: data.globalName || data.displayName || data.username || `Player ${userId.slice(-4)}`
+                });
+            }
+        }
+        
+        return eligiblePlayers;
+        
+    } catch (error) {
+        console.error('Error getting eligible players:', error);
+        return [];
+    }
+}
+
+/**
+ * Process a single player's round results
+ */
+async function processPlayerRound(guildId, userId, eventType, customTerms) {
+    try {
+        const playerInventory = await getPlayerInventory(guildId, userId);
+        const playerCurrency = await getCurrency(guildId, userId);
+        
+        // Get all items for this guild
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        
+        let totalYield = 0;
+        let yieldDetails = [];
+        let consumedItems = [];
+        
+        // Calculate yield from inventory
+        for (const [itemId, quantity] of Object.entries(playerInventory)) {
+            if (quantity <= 0) continue;
+            
+            const item = items[itemId];
+            if (!item) continue;
+            
+            const yieldValue = eventType === 'good' ? item.goodOutcomeValue : item.badOutcomeValue;
+            if (yieldValue !== null && yieldValue !== undefined) {
+                const itemYield = yieldValue * quantity;
+                totalYield += itemYield;
+                yieldDetails.push(`${item.name} x${quantity}: ${itemYield}`);
+            }
+            
+            // Check if item is consumable
+            if (item.consumable === 'Yes') {
+                consumedItems.push({ itemId, quantity });
+            }
+        }
+        
+        // TODO: Calculate attack damage (for future implementation)
+        // const attackDamage = await calculateAttackDamage(guildId, userId);
+        const attackDamage = 0; // Placeholder
+        
+        // Calculate net change
+        const netChange = totalYield - attackDamage;
+        
+        // Update player currency
+        if (netChange !== 0) {
+            await updateCurrency(guildId, userId, netChange);
+        }
+        
+        // Consume items if needed
+        for (const { itemId, quantity } of consumedItems) {
+            // Remove consumed items from inventory
+            const playerData = await loadPlayerData();
+            if (playerData[guildId]?.players?.[userId]?.safari?.inventory) {
+                delete playerData[guildId].players[userId].safari.inventory[itemId];
+                await savePlayerData(playerData);
+            }
+        }
+        
+        // Build details string
+        let details = '';
+        if (yieldDetails.length > 0) {
+            details = yieldDetails.join(', ');
+        }
+        if (consumedItems.length > 0) {
+            if (details) details += '; ';
+            details += `Consumed: ${consumedItems.map(c => items[c.itemId]?.name || c.itemId).join(', ')}`;
+        }
+        
+        return {
+            userId: userId,
+            playerName: playerInventory.playerName || `Player ${userId.slice(-4)}`,
+            netChange: netChange,
+            details: details
+        };
+        
+    } catch (error) {
+        console.error(`Error processing player ${userId} round:`, error);
+        return null;
+    }
+}
+
+/**
+ * Store round result in history
+ */
+async function storeRoundResult(guildId, roundResult) {
+    try {
+        const safariData = await loadSafariContent();
+        
+        if (!safariData[guildId]) {
+            safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {} };
+        }
+        
+        if (!safariData[guildId].roundHistory) {
+            safariData[guildId].roundHistory = [];
+        }
+        
+        safariData[guildId].roundHistory.push(roundResult);
+        await saveSafariContent(safariData);
+        
+        console.log(`📝 DEBUG: Stored round ${roundResult.round} result for guild ${guildId}`);
+        
+    } catch (error) {
+        console.error('Error storing round result:', error);
+    }
 }
 
 export {
@@ -1727,5 +2077,7 @@ export {
     // Custom Terms exports
     getCustomTerms,
     updateCustomTerms,
-    resetCustomTerms
+    resetCustomTerms,
+    // Challenge Game Logic exports
+    processRoundResults
 };
