@@ -152,7 +152,7 @@ const STANDARD_TIMEZONE_ROLES = [
     { name: 'CEST (UTC+2)', offset: 2, dstObserved: true, standardName: 'CET (UTC+1)' },
     
     // Asia-Pacific zones
-    { name: 'SGT (UTC+8)', offset: 8, dstObserved: false },
+    { name: 'GMT+8 (UTC+8)', offset: 8, dstObserved: false },
     { name: 'AEST (UTC+10)', offset: 10, dstObserved: false },
     { name: 'AEDT (UTC+11)', offset: 11, dstObserved: true, standardName: 'AEST (UTC+10)' },
     { name: 'NZST (UTC+12)', offset: 12, dstObserved: true, standardName: 'NZST (UTC+12)' }
