@@ -2481,22 +2481,54 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             
             if (item) {
               // Create Section component as specified
+              const itemComponents = [
+                {
+                  type: 10, // Text Display - Item name as header
+                  content: `## ${item.emoji || '📦'} ${item.name}`
+                },
+                {
+                  type: 10, // Text Display - Item description
+                  content: item.description || 'No description available.'
+                }
+              ];
+              
+              // Add yield display if item has game logic fields
+              if ((item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) || 
+                  (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined)) {
+                
+                const yieldLines = [];
+                
+                // Good event yield
+                if (item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) {
+                  const goodEmoji = item.goodYieldEmoji || customTerms.goodEventEmoji || '☀️';
+                  const goodEventName = customTerms.goodEventName || 'Good Event';
+                  yieldLines.push(`${goodEmoji} ${goodEventName}: ${item.goodOutcomeValue} ${customTerms.currencyName}`);
+                }
+                
+                // Bad event yield  
+                if (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined) {
+                  const badEmoji = item.badYieldEmoji || customTerms.badEventEmoji || '☄️';
+                  const badEventName = customTerms.badEventName || 'Bad Event';
+                  yieldLines.push(`${badEmoji} ${badEventName}: ${item.badOutcomeValue} ${customTerms.currencyName}`);
+                }
+                
+                if (yieldLines.length > 0) {
+                  itemComponents.push({
+                    type: 10, // Text Display - Yield information
+                    content: `**Yields:**\n${yieldLines.join('\n')}`
+                  });
+                }
+              }
+              
+              // Add price component
+              itemComponents.push({
+                type: 10, // Text Display - Item cost in quote format
+                content: `> ${customTerms.currencyEmoji} ${price}`
+              });
+              
               const itemSection = {
                 type: 9, // Section component
-                components: [
-                  {
-                    type: 10, // Text Display - Item name as header
-                    content: `## ${item.emoji || '📦'} ${item.name}`
-                  },
-                  {
-                    type: 10, // Text Display - Item description
-                    content: item.description || 'No description available.'
-                  },
-                  {
-                    type: 10, // Text Display - Item cost in quote format
-                    content: `> ${customTerms.currencyEmoji} ${price}`
-                  }
-                ],
+                components: itemComponents,
                 accessory: {
                   type: 2, // Button accessory (appears on far right)
                   custom_id: `safari_store_buy_${guildId}_${storeId}_${itemId}`,

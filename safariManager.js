@@ -1832,7 +1832,7 @@ async function processRoundResults(guildId, channelId, client) {
         // Process each eligible player
         const playerResults = [];
         for (const player of eligiblePlayers) {
-            const result = await processPlayerRound(guildId, player.userId, eventType, customTerms);
+            const result = await processPlayerRound(guildId, player.userId, eventType, customTerms, player.playerName);
             if (result) {
                 playerResults.push(result);
             }
@@ -1934,7 +1934,7 @@ async function getEligiblePlayers(guildId) {
 /**
  * Process a single player's round results
  */
-async function processPlayerRound(guildId, userId, eventType, customTerms) {
+async function processPlayerRound(guildId, userId, eventType, customTerms, playerName = null) {
     try {
         const playerInventory = await getPlayerInventory(guildId, userId);
         const playerCurrency = await getCurrency(guildId, userId);
@@ -2001,7 +2001,7 @@ async function processPlayerRound(guildId, userId, eventType, customTerms) {
         
         return {
             userId: userId,
-            playerName: playerInventory.playerName || `Player ${userId.slice(-4)}`,
+            playerName: playerName || `Player ${userId.slice(-4)}`,
             netChange: netChange,
             details: details
         };
