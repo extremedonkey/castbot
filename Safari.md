@@ -220,7 +220,7 @@ Both features leverage the same technical infrastructure:
 - ❌ Consumable Items: Temporary items consumed during round results
 
 #### **Nice to Have (Challenge Dependent)**
-- ❓ Custom Safari Labels: Guild-specific currency/item naming
+- ⌛ Custom Safari Labels: Guild-specific currency/item naming
 - ❓ Item/Shop Editing: Update existing definitions
 - ❓ Timed Rounds: Auto-calculation (so host can sleep)
 
