@@ -3613,7 +3613,10 @@ To fix this:
           
           await res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: managementUI
+            data: {
+              ...managementUI,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
           });
         }
       } catch (error) {
@@ -8449,7 +8452,10 @@ Your server is now ready for Tycoons gameplay!`;
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: managementUI
+          data: {
+            ...managementUI,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
         });
         
       } catch (error) {
