@@ -1932,6 +1932,7 @@ async function processRoundResults(guildId, channelId, client) {
             }
         };
     }
+}
 
 /**
  * Handle game reset after round 3
