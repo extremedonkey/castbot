@@ -2632,7 +2632,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log(`🏪 DEBUG: User ${userId} browsing store ${storeId} in guild ${guildId}`);
         
         // Import Safari manager functions
-        const { loadSafariContent, getCustomTerms } = await import('./safariManager.js');
+        const { loadSafariContent, getCustomTerms, generateItemContent } = await import('./safariManager.js');
         const { getPlayer, loadPlayerData } = await import('./storage.js');
         const safariData = await loadSafariContent();
         const store = safariData[guildId]?.stores?.[storeId];
@@ -2680,49 +2680,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const price = storeItem.price || item?.basePrice || 0;
           
           if (item) {
-            // Single section with all item info combined
-            let itemContent = `## ${item.emoji || '📦'} ${item.name}\n\n${item.description || 'No description available.'}\n\n`;
-            
-            // Add yield info if available
-            if ((item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) || 
-                (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined)) {
-              
-              itemContent += '**Yield**\n';
-              
-              if (item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) {
-                const goodEmoji = item.goodYieldEmoji || customTerms.goodEventEmoji || '☀️';
-                const goodEventName = customTerms.goodEventName || 'Good Event';
-                itemContent += `${goodEmoji} ${goodEventName}: +${item.goodOutcomeValue} ${customTerms.currencyName}\n`;
-              }
-              
-              if (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined) {
-                const badEmoji = item.badYieldEmoji || customTerms.badEventEmoji || '☄️';
-                const badEventName = customTerms.badEventName || 'Bad Event';
-                itemContent += `${badEmoji} ${badEventName}: +${item.badOutcomeValue} ${customTerms.currencyName}\n`;
-              }
-              
-              itemContent += '\n';
-            }
-            
-            // Add combat info if item has attack or defense values
-            const hasAttack = (item.attackValue !== null && item.attackValue !== undefined);
-            const hasDefense = (item.defenseValue !== null && item.defenseValue !== undefined);
-            
-            if (hasAttack || hasDefense) {
-              itemContent += '**⚔️ Combat**\n';
-              
-              if (hasAttack) {
-                itemContent += `🗡️ Attack: ${item.attackValue}\n`;
-              }
-              
-              if (hasDefense) {
-                itemContent += `🛡️ Defense: ${item.defenseValue}\n`;
-              }
-              
-              itemContent += '\n';
-            }
-            
-            itemContent += `> ${customTerms.currencyEmoji} **Price:** ${price} ${customTerms.currencyName}`;
+            // Generate detailed item content using shared function
+            const itemContent = generateItemContent(item, customTerms, null, price);
             
             const itemSection = {
               type: 9, // Section component

@@ -22,6 +22,69 @@ const SAFARI_CONTENT_FILE = path.join(__dirname, 'safariContent.json');
  * store systems, inventory management, and conditional actions
  */
 
+/**
+ * Generate detailed item content for display (reusable between store and inventory)
+ * @param {Object} item - The item object with stats
+ * @param {Object} customTerms - Custom terminology for the guild
+ * @param {number} quantity - Quantity owned (for inventory display)
+ * @param {number} price - Price (for store display, optional)
+ * @returns {string} Formatted content string
+ */
+function generateItemContent(item, customTerms, quantity = null, price = null) {
+    let content = `## ${item.emoji || '📦'} ${item.name}\n\n${item.description || 'No description available.'}\n\n`;
+    
+    // Add yield info if available
+    if ((item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) || 
+        (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined)) {
+        
+        content += '**Yield**\n';
+        
+        if (item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) {
+            const goodEmoji = item.goodYieldEmoji || customTerms.goodEventEmoji || '☀️';
+            const goodEventName = customTerms.goodEventName || 'Good Event';
+            content += `${goodEmoji} ${goodEventName}: +${item.goodOutcomeValue} ${customTerms.currencyName}\n`;
+        }
+        
+        if (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined) {
+            const badEmoji = item.badYieldEmoji || customTerms.badEventEmoji || '☄️';
+            const badEventName = customTerms.badEventName || 'Bad Event';
+            content += `${badEmoji} ${badEventName}: +${item.badOutcomeValue} ${customTerms.currencyName}\n`;
+        }
+        
+        content += '\n';
+    }
+    
+    // Add combat info if item has attack or defense values
+    const hasAttack = (item.attackValue !== null && item.attackValue !== undefined);
+    const hasDefense = (item.defenseValue !== null && item.defenseValue !== undefined);
+    
+    if (hasAttack || hasDefense) {
+        content += '**⚔️ Combat**\n';
+        
+        if (hasAttack) {
+            content += `🗡️ Attack: ${item.attackValue}\n`;
+        }
+        
+        if (hasDefense) {
+            content += `🛡️ Defense: ${item.defenseValue}\n`;
+        }
+        
+        content += '\n';
+    }
+    
+    // Add quantity info for inventory display
+    if (quantity !== null) {
+        content += `> \`Quantity: ${quantity}\``;
+    }
+    
+    // Add price info for store display
+    if (price !== null) {
+        content += `> ${customTerms.currencyEmoji} **Price:** ${price} ${customTerms.currencyName}`;
+    }
+    
+    return content;
+}
+
 // Button style mapping
 const BUTTON_STYLES = {
     'Primary': ButtonStyle.Primary,
@@ -1540,15 +1603,13 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     components.push({ type: 14 }); // Separator before first item
                 }
                 
-                // Create emoji repetition string
-                const emoji = item.emoji || '📦';
-                const emojiRepeat = emoji.repeat(Math.min(quantity, 10)); // Cap at 10 for readability
-                const emojiLine = emojiRepeat ? `# ${emojiRepeat}` : '';
+                // Generate detailed item content using shared function
+                const itemContent = generateItemContent(item, customTerms, quantity);
                 
                 // Add item display
                 components.push({
                     type: 10, // Text Display
-                    content: `### ${emoji} ${item.name}\n> \`Quantity: ${quantity}\`\n${emojiLine}`
+                    content: itemContent
                 });
                 console.log(`📦 DEBUG: Added Text Display for ${item.name} (qty: ${quantity})`);
                 
@@ -2452,5 +2513,7 @@ export {
     processRoundResults,
     createRoundResultsOutput,
     createFinalRankings,
-    resetGameData
+    resetGameData,
+    // Shared Display Functions
+    generateItemContent
 };
