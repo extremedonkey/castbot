@@ -2141,15 +2141,23 @@ async function getEligiblePlayersFixed(guildId, client = null) {
             console.log(`🔍 DEBUG: Player ${userId}: currency=${currency}, inventory=${JSON.stringify(inventory)}, hasInventory=${hasInventory}`);
             
             if (currency >= 1 || hasInventory) {
-                // Get player name from Discord client if available
+                // Get player name from Discord client if available - use multiple fallback strategies
                 let playerName = `Player ${userId.slice(-4)}`;
                 try {
                     // Try to get fresh name from guild member
                     const guild = client?.guilds?.cache?.get(guildId);
-                    const member = await guild?.members?.fetch(userId);
-                    playerName = member?.displayName || member?.user?.globalName || member?.user?.username || playerName;
+                    if (guild) {
+                        const member = await guild?.members?.fetch(userId);
+                        if (member) {
+                            playerName = member.displayName || member.user?.globalName || member.user?.username || playerName;
+                        }
+                    }
                 } catch (e) {
-                    // Fallback to stored data
+                    console.log(`🔍 DEBUG: Discord client lookup failed for ${userId}, using fallback`);
+                }
+                
+                // Enhanced fallback to stored data if Discord lookup failed
+                if (playerName.startsWith('Player ')) {
                     playerName = data.globalName || data.displayName || data.username || playerName;
                 }
                 
@@ -3021,8 +3029,8 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
             components: [
                 {
                     type: 3, // String Select
-                    custom_id: `safari_attack_quantity_${itemId}_${targetId || 'none'}`,
-                    placeholder: selectedQuantity > 0 ? `Selected: ${selectedQuantity} attacks` : 'Select number of attacks',
+                    custom_id: `safari_attack_quantity|${itemId}|${targetId || 'none'}`,
+                    placeholder: selectedQuantity > 0 ? `Selected: ${selectedQuantity} attacks` : `Select number of ${item.name} attacks`,
                     options: attackOptions,
                     disabled: numAttacksAvailable === 0
                 }
