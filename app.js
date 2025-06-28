@@ -1145,7 +1145,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const requestedCastlist = data.options?.find(opt => opt.name === 'castlist')?.value;
 
       // Determine which castlist to show
-      const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
+      const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist, client);
       console.log(`Selected castlist: ${castlistToShow}`);
 
       // Load initial tribe data

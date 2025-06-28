@@ -164,9 +164,10 @@ export async function createMemberFields(members, guild, tribeData = null) {
  * @param {string} guildId - Discord guild ID
  * @param {string} userId - Discord user ID
  * @param {string} requestedCastlist - Explicitly requested castlist (optional)
+ * @param {Client} client - Discord.js client instance (optional)
  * @returns {string} Name of castlist to display
  */
-export async function determineCastlistToShow(guildId, userId, requestedCastlist = null) {
+export async function determineCastlistToShow(guildId, userId, requestedCastlist = null, client = null) {
   const data = await loadPlayerData();
   const tribes = data[guildId]?.tribes || {};
   
@@ -189,15 +190,25 @@ export async function determineCastlistToShow(guildId, userId, requestedCastlist
 
   // Find which castlists the user appears in
   const userCastlists = new Set();
+  
+  // If no client provided, fall back to default castlist
+  if (!client) {
+    return 'default';
+  }
+  
   for (const [tribeId, tribe] of Object.entries(tribes)) {
     if (!tribe?.castlist) continue;
     
-    // Import client dynamically to avoid circular dependency
-    const { client } = await import('../app.js');
-    const guild = await client.guilds.fetch(guildId);
-    const member = await guild.members.fetch(userId);
-    if (member.roles.cache.has(tribeId)) {
-      userCastlists.add(tribe.castlist);
+    try {
+      const guild = await client.guilds.fetch(guildId);
+      const member = await guild.members.fetch(userId);
+      if (member.roles.cache.has(tribeId)) {
+        userCastlists.add(tribe.castlist);
+      }
+    } catch (error) {
+      console.error(`Error checking user roles for castlist determination:`, error);
+      // Continue to next tribe instead of failing entirely
+      continue;
     }
   }
 
