@@ -2604,7 +2604,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log('🏪 DEBUG: Building store display components...');
         
         console.log('🏪 DEBUG: Sending store browse response...');
-        console.log('🏪 DEBUG: Container structure:', JSON.stringify(container, null, 2));
         
         // Create simplified Components V2 structure to avoid nesting issues
         const containerComponents = [];
