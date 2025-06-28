@@ -754,9 +754,12 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1) {
         const currentItem = playerData[guildId].players[userId].safari.inventory[itemId];
         let currentQuantity = 0;
         
+        console.log(`🔍 DEBUG: addItemToInventory - BEFORE: ${itemId} = `, currentItem);
+        
         // Handle both object and number inventory formats
         if (typeof currentItem === 'object' && currentItem !== null) {
             currentQuantity = currentItem.quantity || 0;
+            console.log(`🔍 DEBUG: Object format - current quantity: ${currentQuantity}, adding: ${quantity}`);
             // Update the existing object
             playerData[guildId].players[userId].safari.inventory[itemId] = {
                 ...currentItem,
@@ -765,16 +768,22 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1) {
         } else {
             // Simple number format or first purchase
             currentQuantity = currentItem || 0;
+            console.log(`🔍 DEBUG: Number format - current quantity: ${currentQuantity}, adding: ${quantity}`);
             playerData[guildId].players[userId].safari.inventory[itemId] = currentQuantity + quantity;
         }
         
+        console.log(`🔍 DEBUG: addItemToInventory - AFTER: ${itemId} = `, playerData[guildId].players[userId].safari.inventory[itemId]);
+        
         await savePlayerData(playerData);
+        console.log(`✅ DEBUG: PlayerData saved to disk`);
         
         console.log(`📦 DEBUG: Added ${quantity}x ${itemId} to user ${userId} inventory`);
         
         // Return the final quantity (handle both object and number formats)
         const finalItem = playerData[guildId].players[userId].safari.inventory[itemId];
-        return typeof finalItem === 'object' ? finalItem.quantity : finalItem;
+        const returnValue = typeof finalItem === 'object' ? finalItem.quantity : finalItem;
+        console.log(`🔍 DEBUG: Returning final quantity: ${returnValue}`);
+        return returnValue;
     } catch (error) {
         console.error('Error adding item to inventory:', error);
         throw error;
