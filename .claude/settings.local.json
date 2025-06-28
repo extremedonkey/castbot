@@ -161,7 +161,9 @@
       "Bash(scp:*)",
       "Bash(python3:*)",
       "WebFetch(domain:ibb.co)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(awk:*)",
+      "Bash(perl:*)"
     ],
     "deny": []
   }

@@ -306,9 +306,9 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     adminActionButtons.push(
       new ButtonBuilder()
         .setCustomId('reece_stuff_menu')
-        .setLabel('Reece Stuff')
+        .setLabel('Analytics')
         .setStyle(ButtonStyle.Danger)
-        .setEmoji('😌')
+        .setEmoji('🧮')
     );
   }
   
@@ -405,27 +405,27 @@ async function createReeceStuffMenu() {
   const analyticsButtonsRow1 = [
     new ButtonBuilder()
       .setCustomId('prod_analytics_dump')
-      .setLabel('Analytics')
+      .setLabel('Server List')
       .setStyle(ButtonStyle.Danger)
-      .setEmoji('📊'),
+      .setEmoji('🧵'),
     new ButtonBuilder()
       .setCustomId('prod_live_analytics')
-      .setLabel('Live Analytics')
+      .setLabel('Print Logs')
       .setStyle(ButtonStyle.Danger)
-      .setEmoji('🔴'),
+      .setEmoji('🪵'),
     new ButtonBuilder()
       .setCustomId('prod_server_usage_stats')
-      .setLabel('Server Usage Stats')
-      .setStyle(ButtonStyle.Primary)
+      .setLabel('Server Stats')
+      .setStyle(ButtonStyle.Danger)
       .setEmoji('📈')
   ];
 
   const analyticsButtonsRow2 = [
     new ButtonBuilder()
       .setCustomId('prod_toggle_live_analytics')
-      .setLabel('Toggle Live Analytics')
+      .setLabel('Toggle Channel Logs')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🪵'),
+      .setEmoji('🔛'),
     new ButtonBuilder()
       .setCustomId('test_role_hierarchy')
       .setLabel('Test Role Hierarchy')
@@ -450,7 +450,7 @@ async function createReeceStuffMenu() {
   const containerComponents = [
     {
       type: 10, // Text Display component
-      content: `## Reece Stuff`
+      content: `## CastBot Analytics`
     },
     analyticsRow1.toJSON(), // Analytics buttons row 1
     analyticsRow2.toJSON(), // Analytics buttons row 2
@@ -4288,7 +4288,10 @@ To fix this:
         
         return res.send({
           type: responseType,
-          data: safariMenuData
+          data: {
+            ...safariMenuData,
+            flags: (safariMenuData.flags || 0) | InteractionResponseFlags.EPHEMERAL
+          }
         });
         
       } catch (error) {
@@ -4330,7 +4333,10 @@ To fix this:
         
         return res.send({
           type: responseType,
-          data: reeceMenuData
+          data: {
+            ...reeceMenuData,
+            flags: (reeceMenuData.flags || 0) | InteractionResponseFlags.EPHEMERAL
+          }
         });
         
       } catch (error) {
