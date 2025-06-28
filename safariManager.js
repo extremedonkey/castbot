@@ -2939,14 +2939,19 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
         // Get eligible players for string select
         const eligibleTargets = await getEligiblePlayersFixed(guildId, attackerId);
         console.log(`🎯 DEBUG: Found ${eligibleTargets.length} eligible players for attack target selection`);
+        console.log(`🎯 DEBUG: eligibleTargets:`, eligibleTargets.map(p => ({ id: p.id, displayName: p.displayName, currency: p.currency })));
         
         // Create string select with eligible players only
-        const playerOptions = eligibleTargets.map(player => ({
-            label: player.displayName,
-            value: player.id,
-            description: `${player.currency} ${customTerms.currencyName}${player.hasInventory ? ' + items' : ''}`,
-            default: targetId === player.id
-        }));
+        const playerOptions = eligibleTargets.map(player => {
+            console.log(`🎯 DEBUG: Processing player option:`, { id: player.id, displayName: player.displayName, currency: player.currency });
+            return {
+                label: player.displayName || 'Unknown Player',
+                value: player.id,
+                description: `${player.currency || 0} ${customTerms.currencyName || 'currency'}${player.hasInventory ? ' + items' : ''}`,
+                default: targetId === player.id
+            };
+        });
+        console.log(`🎯 DEBUG: Created ${playerOptions.length} player options for string select`);
         
         // Use pipe separator to avoid underscore parsing issues
         const playerSelectRow = {
