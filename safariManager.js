@@ -1568,6 +1568,7 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
         const customTerms = await getCustomTerms(guildId);
         
         console.log(`${customTerms.currencyEmoji} DEBUG: Player ${userId} has ${playerCurrency} ${customTerms.currencyName} and ${Object.keys(playerInventory).length} item types`);
+        console.log(`🔍 DEBUG: Raw playerInventory:`, JSON.stringify(playerInventory, null, 2));
         
         const components = [];
         
@@ -1588,6 +1589,7 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
         
         // Count total items and component usage
         const inventoryItems = Object.entries(playerInventory).filter(([itemId, quantity]) => quantity > 0);
+        console.log(`🔍 DEBUG: Filtered inventoryItems:`, inventoryItems);
         let componentsUsed = 4; // Container + header + separator + footer action row
         
         if (inventoryItems.length === 0) {
