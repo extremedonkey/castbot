@@ -10283,9 +10283,21 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             mode: 'edit'
           });
           
-          // Add consumable select
+          // Add consumable select in the correct position (before the second separator)
           const consumableSelect = createConsumableSelect(entityId, entity.consumable);
-          uiResponse.components[0].components.push(consumableSelect);
+          const containerComponents = uiResponse.components[0].components;
+          
+          // Find the position of the second separator (before Done button)
+          let insertIndex = containerComponents.length - 2; // Before separator and Done button
+          for (let i = containerComponents.length - 1; i >= 0; i--) {
+            if (containerComponents[i].type === 14) { // Separator
+              insertIndex = i;
+              break;
+            }
+          }
+          
+          // Insert the consumable select before the separator
+          containerComponents.splice(insertIndex, 0, consumableSelect);
           
           return res.send({
             type: InteractionResponseType.UPDATE_MESSAGE,
