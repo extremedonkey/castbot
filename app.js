@@ -10155,14 +10155,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             }
           });
         } else {
-          // Regular entity selection
+          // Regular entity selection - go straight to edit mode
           const uiResponse = await createEntityManagementUI({
             entityType: entityType,
             guildId: guildId,
             selectedId: selectedValue,
             activeFieldGroup: null,
             searchTerm: '',
-            mode: 'view'
+            mode: 'edit'
           });
           
           return res.send({
@@ -10257,11 +10257,15 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id.startsWith('entity_field_group_')) {
       // Handle field group button click
       try {
-        const parts = custom_id.split('_');
-        const entityType = parts[3];
-        const entityId = parts[4];
-        const fieldGroup = parts.slice(5).join('_');
+        // Parse: entity_field_group_{entityType}_{entityId}_{fieldGroup}
+        const withoutPrefix = custom_id.replace('entity_field_group_', '');
+        const parts = withoutPrefix.split('_');
+        const entityType = parts[0];
+        const fieldGroup = parts[parts.length - 1]; // Last part is always fieldGroup
+        const entityId = parts.slice(1, -1).join('_'); // Everything between is entityId
         const guildId = req.body.guild_id;
+        
+        console.log('🔍 DEBUG: Field group click - Type:', entityType, 'ID:', entityId, 'Group:', fieldGroup);
         
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
         
