@@ -751,13 +751,30 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1) {
             };
         }
         
-        const currentQuantity = playerData[guildId].players[userId].safari.inventory[itemId] || 0;
-        playerData[guildId].players[userId].safari.inventory[itemId] = currentQuantity + quantity;
+        const currentItem = playerData[guildId].players[userId].safari.inventory[itemId];
+        let currentQuantity = 0;
+        
+        // Handle both object and number inventory formats
+        if (typeof currentItem === 'object' && currentItem !== null) {
+            currentQuantity = currentItem.quantity || 0;
+            // Update the existing object
+            playerData[guildId].players[userId].safari.inventory[itemId] = {
+                ...currentItem,
+                quantity: currentQuantity + quantity
+            };
+        } else {
+            // Simple number format or first purchase
+            currentQuantity = currentItem || 0;
+            playerData[guildId].players[userId].safari.inventory[itemId] = currentQuantity + quantity;
+        }
         
         await savePlayerData(playerData);
         
         console.log(`📦 DEBUG: Added ${quantity}x ${itemId} to user ${userId} inventory`);
-        return playerData[guildId].players[userId].safari.inventory[itemId];
+        
+        // Return the final quantity (handle both object and number formats)
+        const finalItem = playerData[guildId].players[userId].safari.inventory[itemId];
+        return typeof finalItem === 'object' ? finalItem.quantity : finalItem;
     } catch (error) {
         console.error('Error adding item to inventory:', error);
         throw error;
@@ -2524,8 +2541,47 @@ async function resetGameData(guildId) {
  * @param {string} userId - Discord user ID
  * @returns {Promise<boolean>} Success status
  */
+/**
+ * Fix corrupted inventory data (temporary cleanup function)
+ * @param {string} guildId - Guild ID
+ * @param {string} userId - User ID
+ * @returns {Promise<boolean>} Success status
+ */
+async function cleanupCorruptedInventoryData(guildId, userId) {
+    try {
+        const playerData = await loadPlayerData();
+        const inventory = playerData[guildId]?.players?.[userId]?.safari?.inventory;
+        
+        if (!inventory) return false;
+        
+        let cleaned = false;
+        for (const [itemId, itemData] of Object.entries(inventory)) {
+            // Check for corrupted string data like "[object Object]11"
+            if (typeof itemData === 'string' && itemData.includes('[object Object]')) {
+                console.log(`🧹 DEBUG: Cleaning corrupted data for ${itemId}: ${itemData}`);
+                // Reset to a reasonable quantity of 1
+                inventory[itemId] = 1;
+                cleaned = true;
+            }
+        }
+        
+        if (cleaned) {
+            await savePlayerData(playerData);
+            console.log(`✅ DEBUG: Cleaned corrupted inventory data for user ${userId}`);
+        }
+        
+        return cleaned;
+    } catch (error) {
+        console.error('Error cleaning corrupted inventory data:', error);
+        return false;
+    }
+}
+
 async function initializeAttackAvailability(guildId, userId) {
     try {
+        // Clean up any corrupted data first
+        await cleanupCorruptedInventoryData(guildId, userId);
+        
         const playerData = await loadPlayerData();
         const safariData = await loadSafariContent();
         
