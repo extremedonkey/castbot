@@ -414,7 +414,14 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       type: 10, // Text Display component
       content: `> **\`💎 Advanced Features\`**`
     },
-    adminActionRow.toJSON() // New administrative action buttons
+    adminActionRow.toJSON(), // New administrative action buttons
+    {
+      type: 14 // Separator before credit
+    },
+    {
+      type: 10, // Text Display component
+      content: `-# Made by Reece (@extremedonkey)`
+    }
   ];
   
   // Validate component limits before creating container
