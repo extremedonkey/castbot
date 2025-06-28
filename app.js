@@ -2711,11 +2711,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log('🏪 DEBUG: Sending store browse response...');
         console.log('🏪 DEBUG: Container structure:', JSON.stringify(container, null, 2));
         
+        // Try a simple response first to test if it's a Components V2 issue
         const response = {
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + Ephemeral
-            components: [container]
+            content: `🏪 **${store.name}** Store\n\n${store.description || 'No description'}\n\n💰 Your Balance: ${playerCurrency} ${customTerms.currencyName}\n\n*Store interface temporarily simplified for debugging.*`,
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         };
         
