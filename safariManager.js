@@ -1606,8 +1606,12 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
             // Add items with separators between them
             for (let i = 0; i < inventoryItems.length; i++) {
                 const [itemId, inventoryData] = inventoryItems[i];
+                console.log(`🔍 DEBUG: Processing inventory item ${itemId}, data:`, inventoryData);
                 const item = items[itemId];
-                if (!item) continue;
+                if (!item) {
+                    console.log(`❌ DEBUG: Item ${itemId} not found in items data - skipping`);
+                    continue;
+                }
                 
                 // Get quantity and attacks available
                 let quantity, numAttacksAvailable;
@@ -1619,7 +1623,10 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     numAttacksAvailable = inventoryData.numAttacksAvailable || 0;
                 }
                 
-                if (quantity <= 0) continue;
+                if (quantity <= 0) {
+                    console.log(`⚠️ DEBUG: Item ${itemId} has quantity ${quantity} - skipping`);
+                    continue;
+                }
                 
                 // Check component limit (reserve space for store buttons)
                 if (componentsUsed >= 35) { // Leave room for store buttons
