@@ -117,6 +117,14 @@ function filterEntities(entities, searchTerm) {
 function createEntitySelector(entities, selectedId, entityType, searchTerm) {
     const options = [];
     
+    // Add "Create new" option first
+    options.push({
+        label: '➕ Create New',
+        value: 'create_new',
+        emoji: { name: '✨' },
+        description: `Create a new ${EDIT_CONFIGS[entityType]?.displayName?.toLowerCase() || 'entity'}`
+    });
+    
     // Add search option if many entities
     if (Object.keys(entities).length > 10) {
         options.push({
@@ -139,18 +147,18 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
         });
     });
     
-    // Limit options to leave room for "Add new"
-    if (options.length > 24) {
-        options.length = 24;
+    // Limit options to leave room for "Create new" (which is already added)
+    if (options.length > 25) {
+        // Keep "Create new" and search, trim entities
+        const createNew = options[0];
+        const search = options.length > 10 && options[1].value === 'search_entities' ? options[1] : null;
+        const entities = options.slice(search ? 2 : 1);
+        
+        options.length = 0;
+        options.push(createNew);
+        if (search) options.push(search);
+        options.push(...entities.slice(0, 23 - options.length));
     }
-    
-    // Add "Create new" option
-    options.push({
-        label: '➕ Create New',
-        value: 'create_new',
-        emoji: { name: '✨' },
-        description: `Create a new ${EDIT_CONFIGS[entityType]?.displayName?.toLowerCase() || 'entity'}`
-    });
     
     return {
         type: 1, // ActionRow

@@ -10134,7 +10134,22 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             }
           });
         } else if (selectedValue === 'create_new') {
-          // Show creation modal based on entity type
+          // Show creation modal with Item Info format (name, emoji, description)
+          const { createFieldGroupModal } = await import('./fieldEditors.js');
+          
+          try {
+            const modal = createFieldGroupModal(entityType, 'new', 'info', {});
+            if (modal) {
+              // Update modal title and custom_id for creation
+              modal.data.title = `Create New ${entityType === 'safari_button' ? 'Button' : entityType.charAt(0).toUpperCase() + entityType.slice(1)}`;
+              modal.data.custom_id = `entity_create_modal_${entityType}_info`;
+              return res.send(modal);
+            }
+          } catch (modalError) {
+            console.error('Error creating field group modal:', modalError);
+          }
+          
+          // Fallback to simple modal if field group modal fails
           return res.send({
             type: InteractionResponseType.MODAL,
             data: {
@@ -13001,6 +13016,68 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating Safari terms. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('entity_create_modal_')) {
+      // Handle modal submission for entity creation
+      try {
+        // Parse: entity_create_modal_{entityType}_info
+        const withoutPrefix = custom_id.replace('entity_create_modal_', '');
+        const parts = withoutPrefix.split('_');
+        const entityType = parts[0];
+        const fieldGroup = parts[parts.length - 1]; // Should be 'info'
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        console.log(`📝 DEBUG: Entity creation modal submit - Type: ${entityType}, Group: ${fieldGroup}, User: ${userId}`);
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        // Parse submission data using field editors
+        const { parseModalSubmission, validateFields } = await import('./fieldEditors.js');
+        const fields = parseModalSubmission(data, fieldGroup);
+        const validation = validateFields(fields, entityType);
+        
+        if (!validation.valid) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ ${validation.errors.join(', ')}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create the entity using entity manager
+        const { createEntity } = await import('./entityManager.js');
+        const createdEntity = await createEntity(guildId, entityType, fields, userId);
+        
+        console.log(`✅ DEBUG: Entity '${createdEntity.id}' created successfully`);
+        
+        // Redirect to edit interface for the newly created entity
+        const { createEntityManagementUI } = await import('./entityManagementUI.js');
+        const uiResponse = await createEntityManagementUI({
+          entityType: entityType,
+          guildId: guildId,
+          selectedId: createdEntity.id,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'edit'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error in entity creation modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating entity. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

@@ -839,12 +839,55 @@ entity_confirm_delete_item_[id] → Execute deletion
 4. **Advanced Search**: Multi-field search with filters
 5. **Cross-entity Relations**: Visual relationship mapping
 
+### **Entity Creation Flow Implementation**
+
+#### **Create New Entity Workflow**
+1. **Dropdown Positioning**: "➕ Create New" appears as the first option in entity selector
+2. **Modal Selection**: Uses appropriate Info modal based on entity type:
+   - **Items**: Name, Emoji, Description (3 fields)
+   - **Stores**: Name, Emoji, Description (3 fields)  
+   - **Buttons**: Label, Emoji (Button Info modal)
+3. **Creation Process**: 
+   - Modal submission parsed via `parseModalSubmission()` from fieldEditors.js
+   - Validation performed via `validateFields()`
+   - Entity created via `createEntity()` from entityManager.js
+   - Automatic ID generation and metadata assignment
+4. **Post-Creation UX**: User immediately redirected to edit interface for newly created entity
+5. **Error Handling**: Comprehensive validation with user-friendly error messages
+
+#### **Technical Implementation**
+- **Handler Pattern**: `entity_create_modal_{entityType}_info`
+- **Modal Generation**: Reuses existing field group modals from fieldEditors.js
+- **Data Flow**: Modal → Field Parsing → Validation → Entity Creation → Edit Interface
+- **ID Generation**: Uses `generateEntityId()` for consistent naming patterns
+- **Permissions**: Requires ManageRoles permission for all creation operations
+
+#### **Code Integration Points**
+```javascript
+// 1. Entity Selector (entityManagementUI.js)
+// - "Create New" moved to first position
+// - Consistent across all entity types
+
+// 2. Selection Handler (app.js)
+// - entity_select_item → create_new value
+// - Dynamic modal generation via createFieldGroupModal()
+
+// 3. Creation Handler (app.js) 
+// - entity_create_modal_{entityType}_info
+// - Full creation flow with validation and redirect
+
+// 4. Entity Manager Integration
+// - createEntity() handles all data persistence
+// - Automatic metadata and defaults application
+```
+
 ### **Known Limitations**
 
 - Safari button actions require specialized UI (not included)
 - Store item management uses existing specialized interface
 - Search limited to single term (no advanced operators)
 - No undo functionality for deletions
+- Entity creation limited to Info fields (basic properties only)
 
 ---
 
