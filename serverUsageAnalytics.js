@@ -649,7 +649,6 @@ function formatServerUsageForDiscordV2(summary) {
   });
   
   return {
-    content: `📈 Server Usage Analytics - ${displayServers.length} servers analyzed`,
     components,
     flags: (1 << 15) // IS_COMPONENTS_V2 flag
   };
