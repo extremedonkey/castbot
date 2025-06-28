@@ -642,10 +642,14 @@ function formatServerUsageForDiscordV2(summary) {
     fullContent = fullContent.substring(0, 3800) + '\n\n... (content truncated)';
   }
   
-  // Create simple Components V2 structure with a single Text Display component
+  // Create Components V2 structure with Container and red accent bar
   components.push({
-    type: 10, // Text Display
-    content: fullContent
+    type: 17, // Container
+    accent_color: 0xFF0000, // Red accent bar
+    components: [{
+      type: 10, // Text Display
+      content: fullContent
+    }]
   });
   
   return {
