@@ -599,7 +599,7 @@ async function createSafariMenu(guildId, userId, member) {
   const containerComponents = [
     {
       type: 10, // Text Display component
-      content: `## 🦁 Safari - Dynamic Content Manager\n\nCreate interactive experiences with custom buttons, currency systems, stores, and chained actions.\n\n**NEW in MVP2:** Store systems, conditional actions, and inventory management!`
+      content: `## 🦁 Safari - Dynamic Content Manager\n\nCreate interactive experiences with custom buttons, currency systems, stores, and chained actions.`
     },
     safariRow1.toJSON(), // Core safari buttons
     safariRow2.toJSON(), // Admin management buttons
