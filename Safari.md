@@ -214,14 +214,14 @@ Both features leverage the same technical infrastructure:
 
 #### **Sprint 2: Challenge Game Logic**
 - ❌ Round Results: Calculate earnings/losses for all players
-- ❌ Result Types: Define round outcomes (Clear Skies vs Meteor Strike)
-- ❌ Item Yield Earnings: Item earning attributes for different conditions
-- ❌ Item Attack/Defense Values: Combat calculations for rounds
-- ❌ Consumable Items: Temporary items consumed during round results
+- ✅ Result Types: Define round outcomes (Clear Skies vs Meteor Strike)
+- ✅ Item Yield Earnings: Item earning attributes for different conditions
+- ✅ Item Attack/Defense Values: Combat calculations for rounds
+- ✅ Consumable Items: Temporary items consumed during round results
 
 #### **Nice to Have (Challenge Dependent)**
-- ⌛ Custom Safari Labels: Guild-specific currency/item naming
-- ❓ Item/Shop Editing: Update existing definitions
+- ✅ Custom Safari Labels: Guild-specific currency/item naming
+- ✅ Item/Shop Editing: Update existing definitions
 - ❓ Timed Rounds: Auto-calculation (so host can sleep)
 
 ### MVP3 - Advanced Builder System (Post-Tycoons)

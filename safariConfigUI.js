@@ -63,6 +63,20 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
                 },
                 {
                     type: 2, // Button
+                    custom_id: 'safari_export_data',
+                    label: 'Export',
+                    style: 2, // Secondary (grey)
+                    emoji: { name: '⚙️' }
+                },
+                {
+                    type: 2, // Button
+                    custom_id: 'safari_import_data', 
+                    label: 'Import',
+                    style: 2, // Secondary (grey)
+                    emoji: { name: '⚙️' }
+                },
+                {
+                    type: 2, // Button
                     custom_id: 'safari_config_reset_defaults',
                     label: 'Reset to Defaults',
                     style: 4, // Danger

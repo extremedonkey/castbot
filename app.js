@@ -5814,6 +5814,98 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'safari_export_data') {
+      // Handle Safari data export
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to export Safari data.')) return;
+        
+        console.log(`📤 DEBUG: Exporting Safari data for guild ${guildId}`);
+        
+        // Export Safari data
+        const { exportSafariData } = await import('./safariImportExport.js');
+        const exportJson = await exportSafariData(guildId);
+        
+        console.log(`📤 DEBUG: Export data length: ${exportJson.length} characters`);
+        
+        // Create export modal with data
+        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+        
+        const modal = new ModalBuilder()
+          .setCustomId('safari_export_modal')
+          .setTitle('Safari Data Export');
+        
+        const exportInput = new TextInputBuilder()
+          .setCustomId('export_data')
+          .setLabel('Copy this data to import elsewhere:')
+          .setStyle(TextInputStyle.Paragraph)
+          .setValue(exportJson)
+          .setMaxLength(4000)
+          .setRequired(false);
+        
+        modal.addComponents(new ActionRowBuilder().addComponents(exportInput));
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_export_data:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error exporting Safari data. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_import_data') {
+      // Handle Safari data import
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to import Safari data.')) return;
+        
+        console.log(`📥 DEBUG: Opening Safari import modal for guild ${guildId}`);
+        
+        // Create import modal
+        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+        
+        const modal = new ModalBuilder()
+          .setCustomId('safari_import_modal')
+          .setTitle('Safari Data Import');
+        
+        const importInput = new TextInputBuilder()
+          .setCustomId('import_data')
+          .setLabel('Paste exported Safari data:')
+          .setStyle(TextInputStyle.Paragraph)
+          .setPlaceholder('{"stores":{"store_123":{"name":"My Store",...}},"items":{...},"safariConfig":{...}}')
+          .setMaxLength(4000)
+          .setRequired(true);
+        
+        modal.addComponents(new ActionRowBuilder().addComponents(importInput));
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_import_data:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error opening import interface. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'safari_manage_stores') {
       // MVP2: Store management interface with full functionality
       try {
@@ -13182,6 +13274,74 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    } else if (custom_id === 'safari_export_modal') {
+      // Handle export modal submission (no processing needed, data pre-filled)
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: '✅ Export data has been displayed above. Copy the JSON content for importing elsewhere.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
+      
+    } else if (custom_id === 'safari_import_modal') {
+      // Handle import modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const member = req.body.member;
+        
+        // Security check - require ManageRoles permission
+        if (!member?.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to import Safari data.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🔍 DEBUG: Processing Safari import for guild ${guildId} by user ${userId}`);
+        
+        // Extract import data from modal
+        const importData = data.components[0]?.components[0]?.value;
+        if (!importData || importData.trim() === '') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please provide JSON data to import.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Import Safari data
+        const { importSafariData, formatImportSummary } = await import('./safariImportExport.js');
+        const summary = await importSafariData(guildId, importData.trim());
+        
+        console.log(`✅ DEBUG: Safari import completed for guild ${guildId}:`, summary);
+        
+        // Return success message with summary
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: formatImportSummary(summary),
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in Safari import modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Import failed: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
     } else {
       console.log(`⚠️ DEBUG: Unhandled MODAL_SUBMIT custom_id: ${custom_id}`);
     }
