@@ -1127,8 +1127,24 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         });
       }
 
-      // Send deferred response
-      res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+      // Check permissions BEFORE sending deferred response to determine response type
+      const member = req.body.member;
+      const channelId = req.body.channel_id;
+      const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
+      console.log(`Pre-deferred permission check: User ${member?.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
+      
+      // Send appropriate deferred response based on permissions
+      if (canSendMessages) {
+        // User can send messages - public deferred response
+        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+      } else {
+        // User cannot send messages - ephemeral deferred response
+        res.send({ 
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+          data: { flags: InteractionResponseFlags.EPHEMERAL }
+        });
+        console.log(`Sent ephemeral deferred response for user ${member?.user?.username}`);
+      }
 
       const guild = await client.guilds.fetch(guildId);
       const fullGuild = await client.guilds.fetch(guildId, { force: true });
@@ -2912,8 +2928,24 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
 
-        // Send deferred response
-        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+        // Check permissions BEFORE sending deferred response to determine response type
+        const member = req.body.member;
+        const channelId = req.body.channel_id;
+        const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
+        console.log(`Pre-deferred permission check: User ${member.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
+        
+        // Send appropriate deferred response based on permissions
+        if (canSendMessages) {
+          // User can send messages - public deferred response
+          res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+        } else {
+          // User cannot send messages - ephemeral deferred response
+          res.send({ 
+            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { flags: InteractionResponseFlags.EPHEMERAL }
+          });
+          console.log(`Sent ephemeral deferred response for user ${member.user?.username}`);
+        }
 
         const guild = await client.guilds.fetch(guildId);
         const fullGuild = await client.guilds.fetch(guildId, { force: true });
@@ -3493,8 +3525,24 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
 
-        // Send deferred response
-        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+        // Check permissions BEFORE sending deferred response to determine response type
+        const member = req.body.member;
+        const channelId = req.body.channel_id;
+        const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
+        console.log(`Pre-deferred permission check: User ${member?.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
+        
+        // Send appropriate deferred response based on permissions
+        if (canSendMessages) {
+          // User can send messages - public deferred response
+          res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+        } else {
+          // User cannot send messages - ephemeral deferred response
+          res.send({ 
+            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { flags: InteractionResponseFlags.EPHEMERAL }
+          });
+          console.log(`Sent ephemeral deferred response for user ${member?.user?.username}`);
+        }
 
         const guild = await client.guilds.fetch(guildId);
         console.log('Guild:', guild.name);
