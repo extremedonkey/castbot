@@ -4,7 +4,7 @@
  * Maintains compatibility with existing safariContent.json structure
  */
 
-import { loadSafariContent, saveSafariContent, generateItemId } from './safariManager.js';
+import { loadSafariContent, saveSafariContent, generateButtonId } from './safariManager.js';
 import { EDIT_CONFIGS } from './editFramework.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
 
@@ -258,11 +258,11 @@ function generateEntityId(entityType, entityData) {
     
     switch (entityType) {
         case 'item':
-            return generateItemId(name);
+            return generateButtonId(name);
         case 'store':
-            return generateItemId(name); // Reuse same ID generation
+            return generateButtonId(name); // Reuse same ID generation
         case 'safari_button':
-            return generateItemId(name);
+            return generateButtonId(name);
         default:
             return `${entityType}_${Date.now()}`;
     }

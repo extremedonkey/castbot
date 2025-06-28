@@ -2046,6 +2046,7 @@ export {
     getCurrency,
     updateCurrency,
     generateCustomId,
+    generateButtonId,
     loadSafariContent,
     saveSafariContent,
     // MVP2 exports
