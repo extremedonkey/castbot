@@ -5677,7 +5677,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_customize_terms') {
-      // Handle "⚙️ Customize Terms" button
+      // Handle "⚙️ Customize Terms" button - NEW Components V2 Interface
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -5685,72 +5685,19 @@ Your server is now ready for Tycoons gameplay!`;
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to customize terms.')) return;
         
-        console.log(`⚙️ DEBUG: User ${member.user.id} opening customize terms modal for guild ${guildId}`);
+        console.log(`⚙️ DEBUG: User ${member.user.id} opening Safari customization interface for guild ${guildId}`);
         
         // Get current custom terms
         const { getCustomTerms } = await import('./safariManager.js');
         const currentTerms = await getCustomTerms(guildId);
         
-        // Create comprehensive Safari customization modal
-        const modal = new ModalBuilder()
-          .setCustomId('safari_customize_terms_modal')
-          .setTitle('⚙️ Customize Safari Settings')
-          .addComponents(
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('game_settings')
-                .setLabel('Game Settings (R1,R2,R3 probabilities)')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('75,50,25 (Round 1,2,3 good event %)')
-                .setValue(`${currentTerms.round1GoodProbability || 75},${currentTerms.round2GoodProbability || 50},${currentTerms.round3GoodProbability || 25}`)
-                .setMaxLength(20)
-                .setRequired(false)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('event_names')
-                .setLabel('Event Names (Good,Bad)')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Clear Skies,Meteor Strike')
-                .setValue(`${currentTerms.goodEventName || 'Clear Skies'},${currentTerms.badEventName || 'Meteor Strike'}`)
-                .setMaxLength(100)
-                .setRequired(false)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('event_emojis')
-                .setLabel('Event Emojis (Good,Bad)')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('☀️,☄️')
-                .setValue(`${currentTerms.goodEventEmoji || '☀️'},${currentTerms.badEventEmoji || '☄️'}`)
-                .setMaxLength(20)
-                .setRequired(false)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('currency_settings')
-                .setLabel('Currency (Name,Emoji)')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('beaks,🥚')
-                .setValue(`${currentTerms.currencyName},${currentTerms.currencyEmoji || '🪙'}`)
-                .setMaxLength(50)
-                .setRequired(true)
-            ),
-            new ActionRowBuilder().addComponents(
-              new TextInputBuilder()
-                .setCustomId('inventory_name')
-                .setLabel('Inventory Name')
-                .setStyle(TextInputStyle.Short)
-                .setPlaceholder('Nest')
-                .setValue(currentTerms.inventoryName)
-                .setMaxLength(30)
-                .setRequired(true)
-            )
-          );
+        // Create new Components V2 Safari customization interface
+        const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
+        const interfaceData = await createSafariCustomizationUI(guildId, currentTerms);
         
         return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: interfaceData
         });
         
       } catch (error) {
@@ -5758,7 +5705,110 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error opening customize terms modal. Please try again.',
+            content: '❌ Error opening Safari customization interface. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_config_group_')) {
+      // Handle field group button clicks - Currency, Events, Rounds
+      try {
+        const guildId = req.body.guild_id;
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to customize Safari terms.')) return;
+        
+        // Extract group key from custom_id (safari_config_group_currency -> currency)
+        const groupKey = custom_id.replace('safari_config_group_', '');
+        
+        console.log(`⚙️ DEBUG: Opening field group modal for ${groupKey}`);
+        
+        // Get current custom terms
+        const { getCustomTerms } = await import('./safariManager.js');
+        const currentTerms = await getCustomTerms(guildId);
+        
+        // Create field group modal
+        const { createFieldGroupModal } = await import('./safariConfigUI.js');
+        const modal = await createFieldGroupModal(groupKey, currentTerms);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_config_group handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error opening customization modal. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_config_reset_defaults') {
+      // Handle reset to defaults button
+      try {
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to reset Safari settings.')) return;
+        
+        console.log(`⚙️ DEBUG: Showing reset confirmation interface`);
+        
+        // Create reset confirmation interface
+        const { createResetConfirmationUI } = await import('./safariConfigUI.js');
+        const confirmationData = createResetConfirmationUI();
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: confirmationData
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_config_reset_defaults:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error showing reset confirmation. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_config_confirm_reset') {
+      // Handle confirmed reset to defaults
+      try {
+        const guildId = req.body.guild_id;
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to reset Safari settings.')) return;
+        
+        console.log(`⚙️ DEBUG: Resetting Safari settings to defaults for guild ${guildId}`);
+        
+        // Reset to defaults using existing function
+        const { resetCustomTerms } = await import('./safariManager.js');
+        const success = await resetCustomTerms(guildId);
+        
+        if (!success) {
+          throw new Error('Failed to reset custom terms');
+        }
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '✅ **Safari Settings Reset!**\n\nAll customizations have been reset to default values:\n• Currency: 🪙 coins\n• Inventory: Nest\n• Events: ☀️ Clear Skies / ☄️ Meteor Strike\n• Round probabilities: 75%, 50%, 25%',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_config_confirm_reset:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error resetting Safari settings. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -12814,8 +12864,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    // LEGACY HANDLER - COMMENTED OUT: safari_customize_terms_modal
+    // This modal handler has been replaced by the new Components V2 field group interface
+    // Remove after confirming new system works properly
+    /*
     } else if (custom_id === 'safari_customize_terms_modal') {
-      // Handle Safari terms customization modal
+      // Handle Safari terms customization modal - LEGACY IMPLEMENTATION
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -12952,6 +13006,63 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating Safari terms. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    */
+    } else if (custom_id.startsWith('safari_config_modal_')) {
+      // Handle field group modal submissions - Currency, Events, Rounds
+      try {
+        const guildId = req.body.guild_id;
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to customize Safari terms.')) return;
+        
+        // Extract group key from custom_id (safari_config_modal_currency -> currency)
+        const groupKey = custom_id.replace('safari_config_modal_', '');
+        
+        console.log(`⚙️ DEBUG: Processing field group modal submission for ${groupKey}`);
+        
+        // Process modal submission
+        const { processFieldGroupSubmission } = await import('./safariConfigUI.js');
+        const updates = processFieldGroupSubmission(groupKey, req.body.data);
+        
+        // Update Safari settings using existing function
+        const { updateCustomTerms } = await import('./safariManager.js');
+        const success = await updateCustomTerms(guildId, updates);
+        
+        if (!success) {
+          throw new Error('Failed to update Safari settings');
+        }
+        
+        console.log(`✅ DEBUG: Safari ${groupKey} settings updated successfully for guild ${guildId}:`, updates);
+        
+        // Create success message based on group
+        let successMessage = `✅ **${getGroupDisplayName(groupKey)} Updated!**\n\n`;
+        
+        Object.entries(updates).forEach(([key, value]) => {
+          const fieldLabel = getFieldDisplayName(key);
+          successMessage += `• ${fieldLabel}: ${value}\n`;
+        });
+        
+        successMessage += `\n🎮 Settings saved successfully!`;
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: successMessage,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error updating Safari field group:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating Safari settings. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -13336,6 +13447,32 @@ client.on('messageReactionRemove', async (reaction, user) => {
 
 // Add this function to check if spacers should be omitted to fit within field limits
 // shouldOmitSpacers function moved to utils/castlistUtils.js (Phase 1A refactoring)
+
+// Helper functions for Safari config UI
+function getGroupDisplayName(groupKey) {
+  const names = {
+    currency: 'Currency & Inventory Settings',
+    events: 'Event Customization Settings', 
+    rounds: 'Round Probability Settings'
+  };
+  return names[groupKey] || 'Safari Settings';
+}
+
+function getFieldDisplayName(fieldKey) {
+  const labels = {
+    currencyName: 'Currency Name',
+    currencyEmoji: 'Currency Emoji', 
+    inventoryName: 'Inventory Name',
+    goodEventName: 'Good Event Name',
+    badEventName: 'Bad Event Name',
+    goodEventEmoji: 'Good Event Emoji',
+    badEventEmoji: 'Bad Event Emoji',
+    round1GoodProbability: 'Round 1 Probability',
+    round2GoodProbability: 'Round 2 Probability',
+    round3GoodProbability: 'Round 3 Probability'
+  };
+  return labels[fieldKey] || fieldKey;
+}
 
 // Add this helper function at the end of the file before the last closing bracket
 // handleSetupTycoons function moved to utils/roleUtils.js (Phase 1A refactoring)

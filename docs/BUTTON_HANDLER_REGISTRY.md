@@ -35,7 +35,10 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_view_buttons` | 📊 View All Buttons | app.js:~4983 | Direct handler | ✅ Active |
 | `safari_my_inventory` | 🪺 My [Inventory] | app.js:~5390 | Direct handler | ✅ Active |
 | `safari_player_inventory` | 🥚 My Nest | app.js:~5456 | Direct handler | ✅ Active |
-| `safari_customize_terms` | ⚙️ Customize Terms | app.js:~5501 | Direct handler | ✅ Active |
+| `safari_customize_terms` | ⚙️ Customize Terms | app.js:~5679 | Direct handler | ✅ Active (Components V2) |
+| `safari_config_group_*` | Field Group Buttons | app.js:~5713 | Pattern handler | ✅ Active |
+| `safari_config_reset_defaults` | 🔄 Reset to Defaults | app.js:~5750 | Direct handler | ✅ Active |
+| `safari_config_confirm_reset` | ⚠️ Confirm Reset | app.js:~5779 | Direct handler | ✅ Active |
 | `safari_manage_safari_buttons` | 🎛️ Manage Safari Buttons | app.js:~3893 | Direct handler | ✅ Active |
 | `safari_manage_stores` | 🏪 Manage Stores | app.js:~5067 | Direct handler | ✅ Active |
 | `safari_manage_items` | 📦 Manage Items | app.js:~5195 | Direct handler | ✅ Active |
@@ -100,7 +103,8 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_currency_modal_*` | Set Currency Modal | app.js:~9631 | Pattern handler | ✅ Active |
 | `safari_store_modal` | Create New Store | app.js:~9747 | Modal handler | ✅ Active |
 | `safari_item_modal` | Create New Item | app.js:~9812 | Modal handler | ✅ Active |
-| `safari_customize_terms_modal` | Customize Currency Terms | app.js:~12591 | Modal handler | ✅ Active |
+| `safari_customize_terms_modal` | Customize Currency Terms | app.js:~12867 | Modal handler | ❌ Deprecated (Components V2) |
+| `safari_config_modal_*` | Field Group Modals | app.js:~13014 | Pattern handler | ✅ Active |
 
 ### **Castlist Navigation Buttons**
 | Custom ID | Label | Location | Handler Function | Status |

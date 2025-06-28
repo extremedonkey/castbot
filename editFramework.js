@@ -62,6 +62,41 @@ export const EDIT_CONFIGS = {
       itemLabelPlural: 'effects'
     },
     operations: ['reorder', 'edit', 'delete', 'add']
+  },
+
+  [EDIT_TYPES.SAFARI_CONFIG]: {
+    displayName: 'Safari Customization',
+    fieldGroups: {
+      currency: {
+        label: '🪙 Currency & Inventory',
+        description: 'Customize currency name, emoji, and inventory name',
+        fields: {
+          currencyName: { type: 'text', maxLength: 30, required: true, label: 'Currency Name', placeholder: 'coins' },
+          currencyEmoji: { type: 'text', maxLength: 10, required: false, label: 'Currency Emoji', placeholder: '🪙' },
+          inventoryName: { type: 'text', maxLength: 30, required: true, label: 'Inventory Name', placeholder: 'Nest' }
+        }
+      },
+      events: {
+        label: '☄️ Event Customization',
+        description: 'Customize good and bad event names and emojis',
+        fields: {
+          goodEventName: { type: 'text', maxLength: 50, required: false, label: 'Good Event Name', placeholder: 'Clear Skies' },
+          badEventName: { type: 'text', maxLength: 50, required: false, label: 'Bad Event Name', placeholder: 'Meteor Strike' },
+          goodEventEmoji: { type: 'text', maxLength: 10, required: false, label: 'Good Event Emoji', placeholder: '☀️' },
+          badEventEmoji: { type: 'text', maxLength: 10, required: false, label: 'Bad Event Emoji', placeholder: '☄️' }
+        }
+      },
+      rounds: {
+        label: '🎲 Round Customization',
+        description: 'Set probability percentages for good events in each round',
+        fields: {
+          round1GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 1 Good %', placeholder: '75' },
+          round2GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 2 Good %', placeholder: '50' },
+          round3GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 3 Good %', placeholder: '25' }
+        }
+      }
+    },
+    operations: ['field-groups']
   }
 };
 

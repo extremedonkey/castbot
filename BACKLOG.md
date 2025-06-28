@@ -4,15 +4,19 @@ This is a living requirements backlog for CastBot features and improvements, ord
 
 ## IMMEDIATE Priority
 
-### Consider PM2 WSL Networking Investigation
-**Description:** Investigate why pm2 has networking binding issues in WSL while direct node works fine
-**Acceptance Criteria:**
-- Research pm2 WSL networking limitations
-- Determine if pm2 can be configured to work properly in WSL
-- If fixable, update development scripts to use pm2 for consistency with production
-- If not fixable, document the limitation and keep current node-based approach
 
 ## HIGH Priority
+
+### Remove Deprecated Safari Customize Terms Modal Handler
+**Description:** Remove commented-out legacy safari_customize_terms_modal handler after confirming new Components V2 field group interface works properly
+**Location:** app.js lines ~12867-13013 (legacy modal handler is commented out)
+**Context:** The legacy single-modal approach has been replaced by a Components V2 interface with grouped field editing (safari_config_modal_*)
+**Acceptance Criteria:**
+- Verify new field group modals work for Currency & Inventory, Events, and Rounds customization
+- Test reset to defaults functionality works properly
+- Confirm all existing Safari functionality continues working with new custom terms system
+- Remove commented code block and update BUTTON_HANDLER_REGISTRY.md
+**Priority:** High - cleanup after successful Components V2 interface upgrade
 
 ### Remove Commented Safari Interface Code
 **Description:** Remove commented out redundant Safari interface code that has been replaced by streamlined entity management system
@@ -529,6 +533,15 @@ Target Final:        2,000-3,000 lines (78-85% reduction)
 - **Short-term:** Eliminates code duplication in setup functionality
 - **Long-term:** Provides scalable foundation for advanced role management features
 - **User Experience:** Clear feedback and reliable role assignment workflows
+
+### Consider PM2 WSL Networking Investigation
+**Description:** Investigate why pm2 has networking binding issues in WSL while direct node works fine
+**Acceptance Criteria:**
+- Research pm2 WSL networking limitations
+- Determine if pm2 can be configured to work properly in WSL
+- If fixable, update development scripts to use pm2 for consistency with production
+- If not fixable, document the limitation and keep current node-based approach
+
 
 ### Refactor Duplicate "No Tribes" Messages
 **Description:** Consolidate duplicated "no tribes" messages that appear in multiple places in the codebase

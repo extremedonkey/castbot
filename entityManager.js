@@ -11,7 +11,7 @@ import { SAFARI_LIMITS } from './config/safariLimits.js';
 /**
  * Load entities of a specific type for a guild
  * @param {string} guildId - Discord guild ID
- * @param {string} entityType - Type of entity (item, store, safari_button)
+ * @param {string} entityType - Type of entity (item, store, safari_button, safari_config)
  * @returns {Object} Entities object
  */
 export async function loadEntities(guildId, entityType) {
@@ -25,6 +25,8 @@ export async function loadEntities(guildId, entityType) {
             return guildData.stores || {};
         case 'safari_button':
             return guildData.buttons || {};
+        case 'safari_config':
+            return guildData.safariConfig || {};
         default:
             return {};
     }
@@ -246,6 +248,7 @@ function getEntityPath(entityType) {
         case 'item': return 'items';
         case 'store': return 'stores';
         case 'safari_button': return 'buttons';
+        case 'safari_config': return 'safariConfig';
         default: throw new Error(`Unknown entity type: ${entityType}`);
     }
 }

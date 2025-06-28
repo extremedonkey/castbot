@@ -34,7 +34,8 @@ export const SAFARI_LIMITS = {
 export const EDIT_TYPES = {
   BUTTON: 'button',
   STORE: 'store', 
-  ITEM: 'item'
+  ITEM: 'item',
+  SAFARI_CONFIG: 'safari_config'
 };
 
 export const BUTTON_STYLES = [
