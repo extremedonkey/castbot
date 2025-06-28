@@ -3,12 +3,13 @@
 // Script to clean up safariContent.json on production server
 // Removes development guild data and keeps only production data
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 const SAFARI_CONTENT_PATH = '/opt/bitnami/projects/castbot/safariContent.json';
 const DEV_GUILD_IDS = [
     '1331657596087566398', // CastBot development server
+    '1385042963310055515', // Guild with dev-created buttons (Remire Village, Steal Belle's Money)
     // Add other dev guild IDs here if needed
 ];
 
@@ -78,16 +79,14 @@ async function cleanProductionSafariData() {
 }
 
 // Run if called directly
-if (require.main === module) {
-    cleanProductionSafariData()
-        .then(() => {
-            console.log('🎉 Cleanup completed successfully!');
-            process.exit(0);
-        })
-        .catch(error => {
-            console.error('💥 Cleanup failed:', error);
-            process.exit(1);
-        });
-}
+cleanProductionSafariData()
+    .then(() => {
+        console.log('🎉 Cleanup completed successfully!');
+        process.exit(0);
+    })
+    .catch(error => {
+        console.error('💥 Cleanup failed:', error);
+        process.exit(1);
+    });
 
-module.exports = { cleanProductionSafariData };
+export { cleanProductionSafariData };

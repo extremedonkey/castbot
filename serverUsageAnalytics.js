@@ -395,9 +395,9 @@ function formatServerUsageForDiscord(summary) {
       return digits.map(digit => `${digit}️⃣`).join('');
     }
     
-    // Limit to top 15 servers to prevent Discord embed size limits
-    const displayServers = rankedServers.slice(0, 15);
-    const hasMoreServers = rankedServers.length > 15;
+    // Limit to top 8 servers to prevent Discord embed size limits
+    const displayServers = rankedServers.slice(0, 8);
+    const hasMoreServers = rankedServers.length > 8;
     
     displayServers.forEach((server, index) => {
       const medal = getRankEmoji(index);
@@ -405,12 +405,11 @@ function formatServerUsageForDiscord(summary) {
         ? server.serverName.substring(0, 25) + '...'
         : server.serverName;
       
-      rankingText += `${medal} **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} interactions\n`;
-      rankingText += `   └ ${server.uniqueUserCount} CastBot users • ${server.slashCommands} commands • ${server.buttonClicks} button clicks\n\n`;
+      rankingText += `${medal} **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} (${server.uniqueUserCount} users, ${server.slashCommands}cmd/${server.buttonClicks}btn)\n`;
     });
     
     if (hasMoreServers) {
-      rankingText += `... and ${rankedServers.length - 15} more servers\n`;
+      rankingText += `... and ${rankedServers.length - 8} more servers\n`;
     }
   }
   
@@ -450,7 +449,7 @@ function formatServerUsageForDiscord(summary) {
       fields: [
         {
           name: '🏆 Server Rankings',
-          value: '-------------------------------------------\n' + (rankingText.substring(0, 1024) || 'No data available'),
+          value: rankingText.substring(0, 1020) || 'No data available',
           inline: false
         },
         {
@@ -497,10 +496,217 @@ function formatServerUsageAsText(summary) {
   return text;
 }
 
+/**
+ * Calculate optimal server limit for Components V2 based on Discord limits
+ * @param {Array} rankedServers - Array of server data
+ * @returns {Object} { displayServers, hasMore, estimatedLength }
+ */
+function calculateOptimalServerLimit(rankedServers) {
+  const COMPONENT_LIMIT = 30; // Maximum nested components
+  const CHAR_LIMIT = 4000; // Maximum total message length
+  const SAFETY_BUFFER = 500; // Character safety buffer for other content
+  
+  // Base components: 1 Container + 1 Header Section + 1 Summary Section + 1 Insights Section + 1 Footer
+  let componentCount = 5;
+  let totalLength = 0;
+  
+  // Calculate base content length (summary, insights, headers, etc.)
+  const baseContent = `📈 Server Usage Analytics\n📊 Summary Statistics\n💡 Key Insights\n🏆 Server Rankings\n🕒 Generated timestamp`;
+  totalLength += baseContent.length + SAFETY_BUFFER;
+  
+  // Calculate how many server sections we can fit
+  const maxServers = Math.min(rankedServers.length, COMPONENT_LIMIT - 5); // Reserve 5 for base components
+  
+  let displayServers = [];
+  
+  for (let i = 0; i < maxServers; i++) {
+    const server = rankedServers[i];
+    if (!server) break;
+    
+    // Estimate length of this server's content
+    const serverDisplay = server.serverName.length > 30 
+      ? server.serverName.substring(0, 30) + '...'
+      : server.serverName;
+    
+    const serverContent = `${serverDisplay}: ${server.totalInteractions.toLocaleString()} interactions\n${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n`;
+    
+    // Check if adding this server would exceed limits
+    if (totalLength + serverContent.length > CHAR_LIMIT - SAFETY_BUFFER) {
+      break;
+    }
+    
+    displayServers.push(server);
+    totalLength += serverContent.length;
+    componentCount++;
+  }
+  
+  return {
+    displayServers,
+    hasMore: rankedServers.length > displayServers.length,
+    estimatedLength: totalLength,
+    componentCount
+  };
+}
+
+/**
+ * Format server usage summary for Discord Components V2 display
+ * @param {Object} summary - Server usage summary from generateServerUsageSummary
+ * @returns {Object} Discord Components V2 response data
+ */
+function formatServerUsageForDiscordV2(summary) {
+  const { rankedServers, totalInteractions, totalUniqueUsers, activeServers, period, insights } = summary;
+  
+  // Calculate optimal server display limit
+  const { displayServers, hasMore, estimatedLength, componentCount } = calculateOptimalServerLimit(rankedServers);
+  
+  console.log(`📊 DEBUG: Components V2 Analytics - ${displayServers.length} servers, ${componentCount} components, ~${estimatedLength} chars`);
+  
+  // Helper function to generate rank emojis
+  function getRankEmoji(rank) {
+    const medals = ['🥇', '🥈', '🥉'];
+    if (rank < 3) return medals[rank];
+    
+    const rankNum = rank + 1;
+    if (rankNum < 10) return `${rankNum}️⃣`;
+    
+    // For numbers 10+, combine digit emojis
+    const digits = rankNum.toString().split('');
+    return digits.map(digit => `${digit}️⃣`).join('');
+  }
+  
+  // Build Components V2 structure
+  const components = [];
+  
+  // Main container
+  const container = {
+    type: 17, // Container
+    components: []
+  };
+  
+  // Header section
+  container.components.push({
+    type: 9, // Section
+    text: {
+      type: 10, // Text Display
+      content: `📈 **Server Usage Analytics**\n\nAnalyzing CastBot usage across Discord servers for insights and rankings.`
+    }
+  });
+  
+  // Summary statistics section
+  const summaryText = [
+    `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}`,
+    `👥 **Unique Users**: ${totalUniqueUsers}`,
+    `🏰 **Active Servers**: ${activeServers}`,
+    `⏱️ **Period**: Last ${period}`,
+    `📈 **Showing**: Top ${displayServers.length} of ${rankedServers.length} servers`
+  ].join('\n');
+  
+  container.components.push({
+    type: 9, // Section
+    text: {
+      type: 10, // Text Display
+      content: summaryText
+    }
+  });
+  
+  // Server rankings sections (one section per server for better readability)
+  if (displayServers.length > 0) {
+    displayServers.forEach((server, index) => {
+      const medal = getRankEmoji(index);
+      const serverDisplay = server.serverName.length > 30 
+        ? server.serverName.substring(0, 30) + '...'
+        : server.serverName;
+      
+      const serverContent = `${medal} **${serverDisplay}**\n${server.totalInteractions.toLocaleString()} interactions • ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons`;
+      
+      container.components.push({
+        type: 9, // Section
+        text: {
+          type: 10, // Text Display
+          content: serverContent
+        }
+      });
+    });
+    
+    // Add "more servers" indicator if needed
+    if (hasMore) {
+      container.components.push({
+        type: 9, // Section
+        text: {
+          type: 10, // Text Display
+          content: `📋 **And ${rankedServers.length - displayServers.length} more servers...**\n\nShowing top servers based on total interactions in the ${period} period.`
+        }
+      });
+    }
+  } else {
+    container.components.push({
+      type: 9, // Section
+      text: {
+        type: 10, // Text Display
+        content: '📭 **No server activity found**\n\nNo interactions recorded in the specified period.'
+      }
+    });
+  }
+  
+  // Insights section
+  let insightsText = '💡 **Key Insights**\n\n';
+  
+  if (insights.mostActive) {
+    insightsText += `🔥 **Most Active**: ${insights.mostActive.serverName} (${insights.mostActive.avgDailyActivity}/day avg)\n`;
+  }
+  
+  if (insights.powerUsers.length > 0) {
+    insightsText += `👥 **High User Engagement**: ${insights.powerUsers.length} servers with 10+ active users\n`;
+  }
+  
+  if (insights.highEngagement.length > 0) {
+    insightsText += `⚡ **High Activity**: ${insights.highEngagement.length} servers with 50+ daily interactions\n`;
+  }
+  
+  if (insights.mostActive || insights.powerUsers.length > 0 || insights.highEngagement.length > 0) {
+    // Add insights section
+    container.components.push({
+      type: 9, // Section
+      text: {
+        type: 10, // Text Display
+        content: insightsText
+      }
+    });
+  }
+  
+  // Footer section with generation timestamp
+  const footerText = `🕒 Generated at ${new Date(summary.generatedAt).toLocaleString('en-US', { 
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: 'short', 
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })} UTC`;
+  
+  container.components.push({
+    type: 9, // Section
+    text: {
+      type: 10, // Text Display
+      content: footerText
+    }
+  });
+  
+  components.push(container);
+  
+  return {
+    content: `📈 Server Usage Analytics - ${displayServers.length} servers analyzed`,
+    components,
+    flags: (1 << 15) // IS_COMPONENTS_V2 flag
+  };
+}
+
 export { 
   parseUserAnalyticsLog, 
   calculateServerStats, 
   generateServerUsageSummary,
   formatServerUsageForDiscord,
-  formatServerUsageAsText
+  formatServerUsageAsText,
+  formatServerUsageForDiscordV2,
+  calculateOptimalServerLimit
 };

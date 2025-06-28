@@ -163,7 +163,8 @@
       "WebFetch(domain:ibb.co)",
       "Bash(git checkout:*)",
       "Bash(awk:*)",
-      "Bash(perl:*)"
+      "Bash(perl:*)",
+      "Bash(ln:*)"
     ],
     "deny": []
   }
