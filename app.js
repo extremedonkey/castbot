@@ -2621,10 +2621,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Create simplified Components V2 structure to avoid nesting issues
         const containerComponents = [];
         
-        // Header section
+        // Header section - swapped description and storeownerText positions
         containerComponents.push({
           type: 10, // Text Display
-          content: `## ${store.emoji || '🏪'} ${store.name}\n\n${store.description || ''}\n\n**${store.settings?.storeownerText || 'Welcome to the store!'}**\n\n> ${customTerms.currencyEmoji} **Your Balance:** ${playerCurrency} ${customTerms.currencyName}`
+          content: `## ${store.emoji || '🏪'} ${store.name}\n\n**${store.settings?.storeownerText || 'Welcome to the store!'}**\n\n${store.description || ''}\n\n> ${customTerms.currencyEmoji} **Your Balance:** ${playerCurrency} ${customTerms.currencyName}`
         });
         
         containerComponents.push({ type: 14 }); // Separator
@@ -2645,18 +2645,36 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             if ((item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) || 
                 (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined)) {
               
-              itemContent += '**Yields:**\n';
+              itemContent += '**Yield**\n';
               
               if (item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) {
                 const goodEmoji = item.goodYieldEmoji || customTerms.goodEventEmoji || '☀️';
                 const goodEventName = customTerms.goodEventName || 'Good Event';
-                itemContent += `${goodEmoji} ${goodEventName}: ${item.goodOutcomeValue} ${customTerms.currencyName}\n`;
+                itemContent += `${goodEmoji} ${goodEventName}: +${item.goodOutcomeValue} ${customTerms.currencyName}\n`;
               }
               
               if (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined) {
                 const badEmoji = item.badYieldEmoji || customTerms.badEventEmoji || '☄️';
                 const badEventName = customTerms.badEventName || 'Bad Event';
-                itemContent += `${badEmoji} ${badEventName}: ${item.badOutcomeValue} ${customTerms.currencyName}\n`;
+                itemContent += `${badEmoji} ${badEventName}: +${item.badOutcomeValue} ${customTerms.currencyName}\n`;
+              }
+              
+              itemContent += '\n';
+            }
+            
+            // Add combat info if item has attack or defense values
+            const hasAttack = (item.attackValue !== null && item.attackValue !== undefined);
+            const hasDefense = (item.defenseValue !== null && item.defenseValue !== undefined);
+            
+            if (hasAttack || hasDefense) {
+              itemContent += '**⚔️ Combat**\n';
+              
+              if (hasAttack) {
+                itemContent += `🗡️ Attack: ${item.attackValue}\n`;
+              }
+              
+              if (hasDefense) {
+                itemContent += `🛡️ Defense: ${item.defenseValue}\n`;
               }
               
               itemContent += '\n';
