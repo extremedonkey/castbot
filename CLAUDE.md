@@ -102,7 +102,7 @@ CastBot has undergone a major optimization initiative that has been fully comple
 - ✅ Server ranking and statistics calculation engine
 - ✅ Discord embed formatting with rich insights
 - ✅ Debug logging for troubleshooting and monitoring
-- ✅ BUTTON_HANDLER_REGISTRY.md updated with new handler
+- ✅ docs/BUTTON_HANDLER_REGISTRY.md updated with new handler
 
 **Next Phase:** Phase 2 - Visual Charts and Enhanced Analytics Dashboard
 
@@ -255,7 +255,7 @@ Every new feature implementation MUST include the following before being conside
 Before running `./dev-restart.sh`, verify:
 - [ ] All debug logs added and tested
 - [ ] Error handling covers all failure scenarios  
-- [ ] BUTTON_HANDLER_REGISTRY.md updated
+- [ ] docs/BUTTON_HANDLER_REGISTRY.md updated
 - [ ] Manual testing completed successfully
 - [ ] No console errors in browser/Discord
 - [ ] Performance is acceptable (< 3 seconds)
@@ -666,9 +666,9 @@ Testing automated git push in dev-restart.sh workflow.
 
 ## 🚨 CRITICAL: Discord Button/Component Implementation Standards
 
-### **📋 MANDATORY REFERENCE: [BUTTON_HANDLER_ANALYSIS.md](BUTTON_HANDLER_ANALYSIS.md)**
+### **📋 MANDATORY REFERENCE: [docs/BUTTON_HANDLER_ANALYSIS.md](docs/BUTTON_HANDLER_ANALYSIS.md)**
 
-**⚠️ Before implementing ANY button or modifying existing button handlers, you MUST consult [BUTTON_HANDLER_ANALYSIS.md](BUTTON_HANDLER_ANALYSIS.md) for:**
+**⚠️ Before implementing ANY button or modifying existing button handlers, you MUST consult [docs/BUTTON_HANDLER_ANALYSIS.md](docs/BUTTON_HANDLER_ANALYSIS.md) for:**
 - **Menu Hierarchy Documentation** (4+ level deep navigation structure)
 - **Root Cause Analysis & Mitigations** for recurring button issues
 - **Diagnostic Procedures** to avoid misdiagnosis of working handlers
@@ -862,7 +862,7 @@ await res.send({
 
 ### **BUTTON HANDLER REGISTRY UPDATE** 📝
 
-**ALWAYS update BUTTON_HANDLER_REGISTRY.md when adding new handlers:**
+**ALWAYS update docs/BUTTON_HANDLER_REGISTRY.md when adding new handlers:**
 
 ```markdown
 | Custom ID | Label | Location | Handler Function | Status |
@@ -879,7 +879,7 @@ Before committing ANY button handler:
 - [ ] Entire handler wrapped in try-catch block
 - [ ] Error messages are user-friendly with ephemeral flag
 - [ ] Debug logging added for troubleshooting
-- [ ] BUTTON_HANDLER_REGISTRY.md updated
+- [ ] docs/BUTTON_HANDLER_REGISTRY.md updated
 - [ ] Response type appropriate for the interaction
 - [ ] No undefined variables or missing imports
 

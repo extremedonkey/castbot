@@ -586,10 +586,10 @@ function formatServerUsageForDiscordV2(summary) {
   // Header section
   container.components.push({
     type: 9, // Section
-    text: {
+    components: [{
       type: 10, // Text Display
       content: `📈 **Server Usage Analytics**\n\nAnalyzing CastBot usage across Discord servers for insights and rankings.`
-    }
+    }]
   });
   
   // Summary statistics section
@@ -603,10 +603,10 @@ function formatServerUsageForDiscordV2(summary) {
   
   container.components.push({
     type: 9, // Section
-    text: {
+    components: [{
       type: 10, // Text Display
       content: summaryText
-    }
+    }]
   });
   
   // Server rankings sections (one section per server for better readability)
@@ -621,10 +621,10 @@ function formatServerUsageForDiscordV2(summary) {
       
       container.components.push({
         type: 9, // Section
-        text: {
+        components: [{
           type: 10, // Text Display
           content: serverContent
-        }
+        }]
       });
     });
     
@@ -632,19 +632,19 @@ function formatServerUsageForDiscordV2(summary) {
     if (hasMore) {
       container.components.push({
         type: 9, // Section
-        text: {
+        components: [{
           type: 10, // Text Display
           content: `📋 **And ${rankedServers.length - displayServers.length} more servers...**\n\nShowing top servers based on total interactions in the ${period} period.`
-        }
+        }]
       });
     }
   } else {
     container.components.push({
       type: 9, // Section
-      text: {
+      components: [{
         type: 10, // Text Display
         content: '📭 **No server activity found**\n\nNo interactions recorded in the specified period.'
-      }
+      }]
     });
   }
   
@@ -667,10 +667,10 @@ function formatServerUsageForDiscordV2(summary) {
     // Add insights section
     container.components.push({
       type: 9, // Section
-      text: {
+      components: [{
         type: 10, // Text Display
         content: insightsText
-      }
+      }]
     });
   }
   
@@ -686,10 +686,10 @@ function formatServerUsageForDiscordV2(summary) {
   
   container.components.push({
     type: 9, // Section
-    text: {
+    components: [{
       type: 10, // Text Display
       content: footerText
-    }
+    }]
   });
   
   components.push(container);

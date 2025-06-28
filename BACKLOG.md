@@ -4,29 +4,6 @@ This is a living requirements backlog for CastBot features and improvements, ord
 
 ## IMMEDIATE Priority
 
-### Fix SSH Key Path for Automated Deployment
-**Description:** Fix SSH key path issue preventing automated remote deployment commands from working
-**Acceptance Criteria:**
-- `npm run status-remote` works without manual SSH
-- `npm run deploy-remote` works without manual SSH
-- `npm run logs-remote` works without manual SSH
-- SSH key path correctly configured in deployment scripts
-
-### Investigate Full Automated Production Deployment
-**Description:** Research and implement the complete automated `npm run deploy-remote` script for production deployments instead of manual SSH process
-**Acceptance Criteria:**
-- Single command deploys code and restarts production bot
-- Includes rollback capability if deployment fails
-- Maintains current safety checks and dry-run functionality
-
-### Setup GitHub Authentication for WSL Development Environment
-**Description:** Configure proper GitHub authentication for WSL environment to enable automated git push operations
-**Acceptance Criteria:**
-- Set up Personal Access Token authentication for GitHub in WSL
-- `./dev-restart.sh` can push changes without manual authentication prompts
-- Follow GitHub's recommended authentication methods (no username/password)
-- Test automated git operations work seamlessly
-
 ### Consider PM2 WSL Networking Investigation
 **Description:** Investigate why pm2 has networking binding issues in WSL while direct node works fine
 **Acceptance Criteria:**
@@ -34,27 +11,6 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - Determine if pm2 can be configured to work properly in WSL
 - If fixable, update development scripts to use pm2 for consistency with production
 - If not fixable, document the limitation and keep current node-based approach
-
-### Evaluate Development Script Consolidation
-**Description:** Consider merging multiple development scripts into a single unified script or tool
-**Current Scripts:** dev-start.sh, dev-restart.sh, dev-status.sh, dev-stop.sh
-**Acceptance Criteria:**
-- Analyze pros/cons of script consolidation vs. separate focused scripts
-- Consider user experience and simplicity
-- If consolidation beneficial, design unified interface (e.g., `./dev.sh start|restart|status|stop`)
-- Maintain backward compatibility during transition
-
-### BUG: Cannot Remove Castlist with Deleted Discord Role
-**Description:** When a Discord role is deleted from the server, any castlist containing that role becomes impossible to remove through the UI
-**Current Issue:** The "Clear Tribe" functionality likely fails when trying to reference a non-existent role, leaving the castlist in a broken state
-**User Impact:** Admins cannot clean up broken castlists after role deletion, requiring manual data manipulation
-**Acceptance Criteria:**
-- Add error handling to detect deleted/missing roles in castlists
-- Allow removal of castlists containing non-existent roles
-- Show clear error messages indicating the role no longer exists
-- Provide option to "Force Remove" broken castlists
-- Consider adding validation on startup to flag orphaned role references
-**Workaround:** Currently requires manual editing of playerData.json to remove the castlist entry
 
 ## HIGH Priority
 
@@ -188,6 +144,13 @@ import { handleServerUsageStats, handleAnalyticsDump, handleLiveLogging } from '
 **Target:** Reduce app.js by additional 3,000-4,000 lines through handler abstraction
 **Risk Level:** Medium (requires careful testing of handler behavior)
 **Implementation Time:** 1 week after Phase 1 completion
+
+**🔄 Review BUTTON_HANDLER_*.md Documentation**
+Before implementing button handler reform, review the documentation files in `docs/` for current implementation guidelines:
+- `docs/BUTTON_HANDLER_ANALYSIS.md` - Complete menu hierarchy and implementation standards
+- `docs/BUTTON_HANDLER_REGISTRY.md` - Current button handler registry
+- `docs/BUTTON_INTERACTION_ANALYSIS.md` - Interaction analysis and patterns
+Consider updating any outdated prompts or implementation guidelines based on current architecture.
 
 **🔄 Phase 2A: Button Handler Factory System (2,500-3,000 lines saved)**
 **Current Issue:** Button handlers (lines ~2,800-11,000) contain massive duplication
@@ -643,6 +606,18 @@ Target Final:        2,000-3,000 lines (78-85% reduction)
 - Timezone role assignment works reliably
 
 ## MEDIUM Priority
+
+### BUG: Cannot Remove Castlist with Deleted Discord Role
+**Description:** When a Discord role is deleted from the server, any castlist containing that role becomes impossible to remove through the UI
+**Current Issue:** The "Clear Tribe" functionality likely fails when trying to reference a non-existent role, leaving the castlist in a broken state
+**User Impact:** Admins cannot clean up broken castlists after role deletion, requiring manual data manipulation
+**Acceptance Criteria:**
+- Add error handling to detect deleted/missing roles in castlists
+- Allow removal of castlists containing non-existent roles
+- Show clear error messages indicating the role no longer exists
+- Provide option to "Force Remove" broken castlists
+- Consider adding validation on startup to flag orphaned role references
+**Workaround:** Currently requires manual editing of playerData.json to remove the castlist entry
 
 ### Emoji Handling Separation (DONE)
 **Description:** Remove emoji generation from /add_tribe command and create dedicated emoji management system
