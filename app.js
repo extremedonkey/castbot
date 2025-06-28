@@ -5877,7 +5877,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_manage_items') {
-      // MVP2: Item management interface with full functionality
+      // Streamlined: Go directly to Item Management section (entity management UI)
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -5885,107 +5885,21 @@ Your server is now ready for Tycoons gameplay!`;
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage items.')) return;
         
-        console.log(`📦 DEBUG: Opening item management interface`);
+        console.log(`📦 DEBUG: Item management UI opened for guild ${guildId}`);
         
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const items = safariData[guildId]?.items || {};
-        const stores = safariData[guildId]?.stores || {};
-        
-        // Create item management buttons
-        const managementButtons = [
-          new ButtonBuilder()
-            .setCustomId('safari_item_create')
-            .setLabel('Create New Item')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('📦'),
-          new ButtonBuilder()
-            .setCustomId('safari_item_list')
-            .setLabel('View All Items')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('📋'),
-          new ButtonBuilder()
-            .setCustomId('safari_item_manage_existing')
-            .setLabel('Edit Existing Item')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('✏️')
-        ];
-        
-        const managementRow = new ActionRowBuilder().addComponents(managementButtons);
-        
-        // Create back button
-        const backButton = new ButtonBuilder()
-          .setCustomId('prod_safari_menu')
-          .setLabel('⬅ Back to Safari')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        
-        // Create item summary
-        const itemCount = Object.keys(items).length;
-        const storeCount = Object.keys(stores).length;
-        let totalSold = 0;
-        
-        Object.values(items).forEach(item => {
-          totalSold += item.metadata?.totalSold || 0;
+        // Create entity management UI
+        const uiResponse = await createEntityManagementUI({
+          entityType: 'item',
+          guildId: guildId,
+          selectedId: null,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'edit'
         });
-        
-        // Show overview of existing items
-        let itemsOverview = '';
-        if (itemCount === 0) {
-          itemsOverview = '*No items created yet.*';
-        } else {
-          const itemList = Object.values(items).slice(0, 5); // Show first 5
-          itemsOverview = itemList.map(item => {
-            const storesUsingItem = Object.values(stores).filter(store => 
-              store.items?.some(storeItem => storeItem.itemId === item.id)
-            ).length;
-            const sold = item.metadata?.totalSold || 0;
-            return `**${item.emoji || '📦'} ${item.name}**\n└ In ${storesUsingItem} stores • ${sold} sold • ${item.basePrice} coins`;
-          }).join('\n\n');
-          
-          if (itemCount > 5) {
-            itemsOverview += `\n\n*...and ${itemCount - 5} more items*`;
-          }
-        }
-        
-        // Create response with Components V2
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## 📦 Item Management\n\nCreate and manage reusable items for your Safari stores.`
-          },
-          {
-            type: 10, // Text Display component
-            content: `> **Total Items:** ${itemCount}\n> **Used in Stores:** ${storeCount}\n> **Total Sold:** ${totalSold}`
-          },
-          {
-            type: 10, // Text Display component
-            content: `**📋 Current Items:**\n${itemsOverview}`
-          },
-          {
-            type: 14 // Separator
-          },
-          managementRow.toJSON(), // Item management buttons
-          {
-            type: 14 // Separator
-          },
-          backRow.toJSON() // Back button
-        ];
-        
-        const container = {
-          type: 17, // Container component
-          accent_color: 0x9b59b6, // Purple accent color for item theme
-          components: containerComponents
-        };
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [container]
-          }
+          data: uiResponse
         });
         
       } catch (error) {
@@ -6068,6 +5982,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    /* COMMENTED OUT - REDUNDANT INTERFACE
     } else if (custom_id === 'safari_item_create') {
       // MVP2: Create new item interface
       try {
@@ -6146,6 +6061,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    END COMMENTED OUT - REDUNDANT INTERFACE */
     } else if (custom_id === 'safari_store_list') {
       // MVP2: View all stores list interface
       console.log('📋 DEBUG: safari_store_list handler called');
@@ -6234,6 +6150,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    /* COMMENTED OUT - REDUNDANT INTERFACE
     } else if (custom_id === 'safari_item_list') {
       // MVP2: View all items list interface
       try {
@@ -6335,6 +6252,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    END COMMENTED OUT - REDUNDANT INTERFACE */
     } else if (custom_id === 'safari_store_manage_existing') {
       // MVP2: Edit existing store interface
       try {

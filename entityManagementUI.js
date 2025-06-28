@@ -262,17 +262,17 @@ function createEditModeUI(entityType, entityId, entity, activeFieldGroup) {
             components: [
                 {
                     type: 2, // Button
+                    style: 2, // Secondary
+                    label: '← Back to Safari',
+                    custom_id: 'prod_safari_menu',
+                    emoji: { name: '🦁' }
+                },
+                {
+                    type: 2, // Button
                     style: 4, // Danger
                     label: 'Delete',
                     custom_id: `entity_delete_mode_${entityType}_${entityId}`,
                     emoji: { name: '🗑️' }
-                },
-                {
-                    type: 2, // Button
-                    style: 2, // Secondary
-                    label: 'Done',
-                    custom_id: `safari_manage_${entityType}s`,
-                    emoji: { name: '✅' }
                 }
             ]
         }

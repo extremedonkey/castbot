@@ -14,6 +14,17 @@ This is a living requirements backlog for CastBot features and improvements, ord
 
 ## HIGH Priority
 
+### Remove Commented Safari Interface Code
+**Description:** Remove commented out redundant Safari interface code that has been replaced by streamlined entity management system
+**Location:** app.js lines ~5985-6064 (safari_item_create handler) and lines ~6153-6255 (safari_item_list handler)
+**Context:** These handlers were commented out when safari_manage_items was streamlined to go directly to the entity management UI
+**Acceptance Criteria:**
+- Remove all commented out code blocks marked with "COMMENTED OUT - REDUNDANT INTERFACE"
+- Verify entity management system (safari_item_manage_existing) continues working properly  
+- Test that safari_manage_items button goes directly to entity management without issues
+- Ensure no references to commented handlers remain in the codebase
+**Priority:** High - cleanup after successful interface streamlining implementation
+
 ### App.js Massive Code Reduction Initiative - Phase 1 (Quick Wins)
 **Description:** Extract helper functions, consolidate permission checks, and move analytics handlers to reduce app.js by ~2,000 lines with minimal risk
 **Current Size:** 14,000 lines - Target: Reduce by 70-85% through systematic refactoring
