@@ -5798,10 +5798,11 @@ Your server is now ready for Tycoons gameplay!`;
         const attackerId = req.body.member?.user?.id || req.body.user?.id;
         
         // Parse custom_id properly: safari_schedule_attack_itemId_targetId_quantity
+        // Handle itemIds with underscores (e.g., raider_499497)
         const parts = custom_id.split('_');
-        const itemId = parts[3]; // Extract itemId correctly
-        const targetId = parts[4] !== 'none' ? parts[4] : null;
-        const quantity = parseInt(parts[5]) || 0;
+        const itemId = parts[3] + '_' + parts[4]; // Reconstruct itemId (e.g., raider_499497)
+        const targetId = parts[5] !== 'none' ? parts[5] : null;
+        const quantity = parseInt(parts[6]) || 0;
         
         console.log(`⚔️ DEBUG: Scheduling attack - Attacker: ${attackerId}, Item: ${itemId}, Target: ${targetId}, Quantity: ${quantity}`);
         
