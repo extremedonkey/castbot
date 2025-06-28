@@ -502,49 +502,67 @@ function formatServerUsageAsText(summary) {
  * @returns {Object} { displayServers, hasMore, estimatedLength }
  */
 function calculateOptimalServerLimit(rankedServers) {
-  const COMPONENT_LIMIT = 30; // Maximum nested components
   const CHAR_LIMIT = 4000; // Maximum total message length
-  const SAFETY_BUFFER = 500; // Character safety buffer for other content
+  const SAFETY_BUFFER = 200; // Reduced safety buffer for simple structure
   
-  // Base components: 1 Container + 1 Header Section + 1 Summary Section + 1 Insights Section + 1 Footer
-  let componentCount = 5;
-  let totalLength = 0;
-  
-  // Calculate base content length (summary, insights, headers, etc.)
-  const baseContent = `📈 Server Usage Analytics\n📊 Summary Statistics\n💡 Key Insights\n🏆 Server Rankings\n🕒 Generated timestamp`;
-  totalLength += baseContent.length + SAFETY_BUFFER;
-  
-  // Calculate how many server sections we can fit
-  const maxServers = Math.min(rankedServers.length, COMPONENT_LIMIT - 5); // Reserve 5 for base components
+  // Since we're using a single Container with one Text Display component,
+  // we don't need to worry about component limits (only 2 components total)
+  // The only real limit is the 4000 character content limit
   
   let displayServers = [];
+  let totalLength = 0;
   
-  for (let i = 0; i < maxServers; i++) {
+  // Calculate base content length (everything except server rankings)
+  const baseContent = `📈 **Server Usage Analytics**
+
+📊 **Total Interactions**: 9,999
+👥 **Unique Users**: 999
+🏰 **Active Servers**: 99
+⏱️ **Period**: Last 42 days
+📈 **Showing**: Top 99 of 99 servers
+
+🏆 **Server Rankings**
+
+💡 **Key Insights**
+
+🔥 **Most Active**: Sample Server Name (999/day avg)
+👥 **High User Engagement**: 99 servers with 10+ active users
+⚡ **High Activity**: 99 servers with 50+ daily interactions
+
+🕒 Generated at Jun 28, 2025, 07:42 AM UTC`;
+  
+  totalLength = baseContent.length + SAFETY_BUFFER;
+  
+  // Add servers until we approach the character limit
+  for (let i = 0; i < rankedServers.length; i++) {
     const server = rankedServers[i];
     if (!server) break;
     
-    // Estimate length of this server's content
-    const serverDisplay = server.serverName.length > 30 
-      ? server.serverName.substring(0, 30) + '...'
+    // Calculate the exact format used in production
+    const serverDisplay = server.serverName.length > 25 
+      ? server.serverName.substring(0, 25) + '...'
       : server.serverName;
     
-    const serverContent = `${serverDisplay}: ${server.totalInteractions.toLocaleString()} interactions\n${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n`;
+    // Match the exact production format: emoji + name + stats + newlines
+    const serverContent = `🏆 **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} (${server.uniqueUserCount} users, ${server.slashCommands}cmd/${server.buttonClicks}btn)\n`;
     
-    // Check if adding this server would exceed limits
-    if (totalLength + serverContent.length > CHAR_LIMIT - SAFETY_BUFFER) {
+    // Check if adding this server would exceed the limit
+    if (totalLength + serverContent.length > CHAR_LIMIT) {
+      console.log(`📊 DEBUG: Server limit reached at ${i} servers, estimated ${totalLength + serverContent.length} chars would exceed ${CHAR_LIMIT}`);
       break;
     }
     
     displayServers.push(server);
     totalLength += serverContent.length;
-    componentCount++;
   }
+  
+  console.log(`📊 DEBUG: Selected ${displayServers.length} servers, estimated total: ${totalLength} chars`);
   
   return {
     displayServers,
     hasMore: rankedServers.length > displayServers.length,
     estimatedLength: totalLength,
-    componentCount
+    componentCount: 2 // Container + Text Display
   };
 }
 
