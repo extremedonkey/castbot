@@ -54,7 +54,7 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
     
     switch (fieldGroupId) {
         case 'info':
-            // Item Info: name & description
+            // Item Info: name, emoji & description
             components.push({
                 type: 1, // ActionRow
                 components: [{
@@ -66,6 +66,20 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
                     placeholder: 'Enter item name',
                     required: true,
                     max_length: SAFARI_LIMITS.MAX_ITEM_NAME_LENGTH
+                }]
+            });
+            
+            components.push({
+                type: 1, // ActionRow
+                components: [{
+                    type: 4, // Text Input
+                    custom_id: 'emoji',
+                    label: 'Item Emoji',
+                    style: 1, // Short
+                    value: currentValues.emoji || '',
+                    placeholder: 'Enter an emoji for the item',
+                    required: false,
+                    max_length: 10
                 }]
             });
             
@@ -184,7 +198,7 @@ function createStoreFieldModal(storeId, fieldGroupId, group, currentValues) {
     
     switch (fieldGroupId) {
         case 'info':
-            // Store Info: name & description
+            // Store Info: name, emoji & description
             components.push({
                 type: 1, // ActionRow
                 components: [{
@@ -196,6 +210,20 @@ function createStoreFieldModal(storeId, fieldGroupId, group, currentValues) {
                     placeholder: 'Enter store name',
                     required: true,
                     max_length: SAFARI_LIMITS.MAX_STORE_NAME_LENGTH
+                }]
+            });
+            
+            components.push({
+                type: 1, // ActionRow
+                components: [{
+                    type: 4, // Text Input
+                    custom_id: 'emoji',
+                    label: 'Store Emoji',
+                    style: 1, // Short
+                    value: currentValues.emoji || '',
+                    placeholder: 'Enter an emoji for the store',
+                    required: false,
+                    max_length: 10
                 }]
             });
             
