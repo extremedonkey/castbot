@@ -2322,7 +2322,7 @@ async function createFinalRankings(guildId, playerResults, eventType, eventName,
             const player = finalStandings[i];
             const trophy = i === 0 ? '🏆 ' : ''; // Trophy for winner
             const rank = i + 1;
-            rankingsDisplay += `${rank}. ${trophy}**${player.playerName}**: ${player.currency} ${customTerms.currencyEmoji || '🪙'}\\n`;
+            rankingsDisplay += `${rank}. ${trophy}**${player.playerName}**: ${player.currency} ${customTerms.currencyEmoji || '🪙'}\n`;
         }
         
         if (finalStandings.length > 15) {
@@ -2339,14 +2339,14 @@ async function createFinalRankings(guildId, playerResults, eventType, eventName,
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `# Final Round Results\\n\\n## ${eventEmoji} ${eventName}\\n\\n*Round 3 completed! Game reset available on next click.*`
+                            content: `# Final Round Results\n\n## ${eventEmoji} ${eventName}\n\n*Round 3 completed! Game reset available on next click.*`
                         },
                         {
                             type: 14 // Separator
                         },
                         {
                             type: 10, // Text Display
-                            content: `# 🏆 Final Rankings\\n\\n${rankingsDisplay}`
+                            content: `# 🏆 Final Rankings\n\n${rankingsDisplay}`
                         },
                         {
                             type: 1, // Action Row
