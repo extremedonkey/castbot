@@ -290,6 +290,7 @@ function calculateServerStats(logEntries, daysBack = 7) {
         buttonClicks: 0,
         uniqueUsers: new Set(),
         lastActivity: null,
+        lastActivityEntry: null,
         dailyActivity: {}
       };
     }
@@ -298,7 +299,13 @@ function calculateServerStats(logEntries, daysBack = 7) {
     
     // Update stats
     stats.totalInteractions++;
-    stats.lastActivity = Math.max(stats.lastActivity || 0, new Date(entry.timestamp).getTime());
+    const entryTime = new Date(entry.timestamp).getTime();
+    
+    // Track the most recent activity entry
+    if (!stats.lastActivity || entryTime > stats.lastActivity) {
+      stats.lastActivity = entryTime;
+      stats.lastActivityEntry = entry;
+    }
     
     if (entry.actionType === 'SLASH_COMMAND') {
       stats.slashCommands++;
@@ -543,8 +550,16 @@ function calculateOptimalServerLimit(rankedServers) {
       ? server.serverName.substring(0, 25) + '...'
       : server.serverName;
     
-    // Match the exact production format: emoji + name + stats + newlines
-    const serverContent = `🏆 **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} (${server.uniqueUserCount} users, ${server.slashCommands}cmd/${server.buttonClicks}btn)\n`;
+    // Match the exact production format: emoji + name + stats + last activity + newlines
+    let serverContent = `🏆 **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} interactions\n`;
+    serverContent += `   └ ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n`;
+    
+    // Add estimated space for last activity line
+    if (server.lastActivityEntry) {
+      serverContent += `   └ Last Activity: [12:34AM] Wed 01 Jan 25 | SampleUsername\n`;
+    }
+    
+    serverContent += `\n`;
     
     // Check if adding this server would exceed the limit
     if (totalLength + serverContent.length > CHAR_LIMIT) {
@@ -616,7 +631,20 @@ function formatServerUsageForDiscordV2(summary) {
         : server.serverName;
       
       fullContent += `${medal} **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} interactions\n`;
-      fullContent += `   └ ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n\n`;
+      fullContent += `   └ ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n`;
+      
+      // Add last activity if available
+      if (server.lastActivityEntry) {
+        const lastEntry = server.lastActivityEntry;
+        // Extract timestamp from the raw log line (keeps original format)
+        const timestampMatch = lastEntry.rawLine.match(/^(\[[^\]]+\])/);
+        const timestamp = timestampMatch ? timestampMatch[1] : '[Unknown]';
+        
+        // Format: └ Last Activity: [2:55AM] Sun 29 Jun 25 | Username
+        fullContent += `   └ Last Activity: ${timestamp} | ${lastEntry.user.displayName || lastEntry.user.username}\n`;
+      }
+      
+      fullContent += `\n`;
     });
     
     if (hasMore) {
