@@ -261,6 +261,48 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - Better accessibility and interaction patterns
 - Maintain existing functionality while improving UX
 
+### Enhanced Server Usage Analytics Integration with Full Dump
+**Description:** Combine prod_server_usage_stats with prod_analytics_dump for comprehensive server analytics dashboard
+**Current Requirements:** Enhance existing 6-week server rankings with detailed interaction breakdowns per server
+**Example Output Format:**
+```
+📈 Server Usage Analytics (Last 6 weeks)
+📊 2,847 total interactions across 12 servers
+👥 89 unique users active
+
+🏆 Server Rankings
+🥇 **EpochORG S7: Rumrunners**: 1,234 interactions
+   └ 23 CastBot users • 145 commands • 1,089 button clicks
+
+📊 **Detailed Breakdown for EpochORG S7:**
+• /castlist: 89 uses
+• /menu: 56 uses  
+• Show Default Castlist: 234 clicks
+• Production Menu: 123 clicks
+• Player Management: 89 clicks
+• Safari Buttons: 67 clicks
+• Analytics: 12 clicks
+[... continues for each server ...]
+```
+
+**Technical Design Options:**
+1. **Direct Integration Approach:** Extend existing serverUsageAnalytics.js to parse action details and generate breakdowns
+2. **Separate Module Approach:** Create detailedServerAnalytics.js that combines both analytics sources
+3. **Hybrid Display:** Keep current rankings, add optional "View Detailed Breakdown" buttons for expanded data per server
+
+**Implementation Considerations:**
+- Parse actionDetail field from user-analytics.log for interaction type classification
+- Create mapping system for button custom_ids to user-friendly names
+- Handle both slash commands (/castlist, /menu) and button interactions (custom_id parsing)
+- Maintain performance with large log files (6 weeks of data)
+- Consider pagination for servers with extensive interaction data
+
+**Benefits:**
+- Administrators can see exactly how users interact with CastBot per server
+- Identifies most/least popular features for development prioritization  
+- Provides granular usage patterns for server optimization
+- Enhanced troubleshooting capabilities for server-specific issues
+
 ### Enhanced Application Tracking System
 **Description:** Proper season-to-application tracking with support for multiple applications across multiple seasons
 **Acceptance Criteria:**

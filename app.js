@@ -425,7 +425,7 @@ async function createReeceStuffMenu() {
       .setCustomId('prod_toggle_live_analytics')
       .setLabel('Toggle Channel Logs')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔛'),
+      .setEmoji('🔃'),
     new ButtonBuilder()
       .setCustomId('test_role_hierarchy')
       .setLabel('Test Role Hierarchy')

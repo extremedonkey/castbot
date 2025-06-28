@@ -248,13 +248,18 @@ function calculateServerStats(logEntries, daysBack = 7) {
   console.log(`📈 DEBUG: Calculating stats for ${logEntries.length} log entries`);
   console.log(`📈 DEBUG: Cutoff date: ${cutoffDate.toISOString()}`);
   
-  // Filter entries within time period
+  // Filter entries within time period and exclude specific server
   const recentEntries = logEntries.filter(entry => {
     const entryDate = entry.timestamp;
     
     // Validate that entryDate is a valid Date object
     if (!entryDate || isNaN(entryDate.getTime())) {
       console.log(`📈 DEBUG: Skipping entry with invalid date: ${entry.rawLine.substring(0, 50)}...`);
+      return false;
+    }
+    
+    // Exclude specific server ID (CastBot server)
+    if (entry.server.id === '1331657596087566398') {
       return false;
     }
     
@@ -437,7 +442,7 @@ function formatServerUsageForDiscord(summary) {
       fields: [
         {
           name: '🏆 Server Rankings',
-          value: rankingText.substring(0, 1024) || 'No data available',
+          value: '\n' + (rankingText.substring(0, 1024) || 'No data available'),
           inline: false
         },
         {
