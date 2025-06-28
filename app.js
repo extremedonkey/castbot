@@ -2577,11 +2577,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log(`🏪 DEBUG: User ${userId} browsing store ${storeId} in guild ${guildId}`);
         
         // Import Safari manager functions
+        console.log('🏪 DEBUG: Importing Safari manager functions...');
         const { loadSafariContent, getCustomTerms } = await import('./safariManager.js');
         const { getPlayer, loadPlayerData } = await import('./storage.js');
+        console.log('🏪 DEBUG: Loading Safari content...');
         const safariData = await loadSafariContent();
+        console.log('🏪 DEBUG: Looking for store data...');
         const store = safariData[guildId]?.stores?.[storeId];
         const allItems = safariData[guildId]?.items || {};
+        console.log(`🏪 DEBUG: Store found: ${store ? 'Yes' : 'No'}, Items count: ${Object.keys(allItems).length}`);
         
         if (!store) {
           return res.send({
@@ -2594,13 +2598,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
         
         // Get custom terms and player's currency for display
+        console.log('🏪 DEBUG: Getting custom terms...');
         const customTerms = await getCustomTerms(guildId);
+        console.log('🏪 DEBUG: Loading player data...');
         const playerData = await loadPlayerData();
         // Access player data directly from the loaded structure
         const player = playerData[guildId]?.players?.[userId];
         const playerCurrency = player?.safari?.currency || 0;
+        console.log(`🏪 DEBUG: Player currency: ${playerCurrency}`);
         
         // Build store display with Container -> Section pattern
+        console.log('🏪 DEBUG: Building store display components...');
         const containerComponents = [];
         
         // Header section with store info and player currency
@@ -2700,12 +2708,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
         
+        console.log(`🏪 DEBUG: Creating container with ${containerComponents.length} components...`);
         const container = {
           type: 17, // Container
           accent_color: store.settings?.accentColor || 0x3498db,
           components: containerComponents
         };
         
+        console.log('🏪 DEBUG: Sending store browse response...');
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
@@ -5149,7 +5159,10 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Send follow-up response with results
         const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
-        await fetch(followUpUrl, {
+        console.log('🔗 DEBUG: Webhook URL:', followUpUrl);
+        console.log('📦 DEBUG: Payload size:', JSON.stringify(discordResponse).length, 'characters');
+        
+        const webhookResponse = await fetch(followUpUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -5157,17 +5170,43 @@ Your server is now ready for Tycoons gameplay!`;
           body: JSON.stringify(discordResponse)
         });
         
+        if (!webhookResponse.ok) {
+          const errorText = await webhookResponse.text();
+          console.error('❌ DEBUG: Webhook failed:', webhookResponse.status, webhookResponse.statusText);
+          console.error('❌ DEBUG: Error details:', errorText);
+          throw new Error(`Webhook failed: ${webhookResponse.status} ${webhookResponse.statusText}`);
+        }
+        
         console.log('✅ DEBUG: Follow-up response sent successfully');
         
       } catch (error) {
         console.error('Error running server usage stats:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error running server usage analytics. Check logs for details.',
-            flags: InteractionResponseFlags.EPHEMERAL
+        
+        // If we haven't sent the deferred response yet, send an error response
+        if (!res.headersSent) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error running server usage analytics. Check logs for details.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          // If we already sent a deferred response, send error via webhook
+          try {
+            const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
+            await fetch(followUpUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: '❌ Error processing server usage analytics. Please check logs.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              })
+            });
+          } catch (webhookError) {
+            console.error('❌ DEBUG: Failed to send error via webhook:', webhookError);
           }
-        });
+        }
       }
     } else if (custom_id === 'test_role_hierarchy') {
       // Test role hierarchy functionality - admin only
