@@ -3186,6 +3186,33 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
             };
         }
         
+        // Check player inventory and validate attack availability
+        const attackerInventory = playerData[guildId]?.players?.[attackerId]?.safari?.inventory;
+        if (!attackerInventory || !attackerInventory[itemId]) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: '❌ You do not have this item in your inventory.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
+        const inventoryItem = attackerInventory[itemId];
+        const numAttacksAvailable = inventoryItem.numAttacksAvailable || 0;
+        
+        console.log(`⚔️ DEBUG: Attack validation - Item: ${itemId}, Available: ${numAttacksAvailable}, Requested: ${quantity}`);
+        
+        if (numAttacksAvailable < quantity) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: `❌ Not enough attacks available. You have ${numAttacksAvailable} attacks available but requested ${quantity}.`,
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
         // Get attacker name
         let attackerName = `Player ${attackerId.slice(-4)}`;
         try {
@@ -3196,6 +3223,9 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
             // Use fallback
         }
         
+        // Get current round for attack scheduling
+        const currentRound = safariData[guildId]?.safariConfig?.currentRound || 1;
+        
         // Create attack record
         const attackRecord = {
             attackingPlayer: attackerId,
@@ -3205,7 +3235,9 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
             itemName: item.name,
             attacksPlanned: quantity,
             attackValue: item.attackValue || 0,
-            totalDamage: quantity * (item.attackValue || 0)
+            totalDamage: quantity * (item.attackValue || 0),
+            timestamp: Date.now(),
+            round: currentRound
         };
         
         // Add to queue
@@ -3220,8 +3252,14 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
             };
         }
         
-        // NOTE: Attack availability is NOT reduced here - it's only reduced during round results
-        // This allows players to see their items in inventory until attacks are actually executed
+        // Reduce attack availability in player inventory
+        console.log(`⚔️ DEBUG: Reducing attack availability - Before: ${inventoryItem.numAttacksAvailable}, Reducing: ${quantity}`);
+        inventoryItem.numAttacksAvailable -= quantity;
+        console.log(`⚔️ DEBUG: After reduction: ${inventoryItem.numAttacksAvailable}`);
+        
+        // Save updated player data
+        await savePlayerData(playerData);
+        console.log(`✅ DEBUG: Player data saved with reduced attack availability`);
         
         // Get updated interface showing the scheduled attack
         const response = await createOrUpdateAttackUI(guildId, attackerId, itemId, targetId, 0, client);
