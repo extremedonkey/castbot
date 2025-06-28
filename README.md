@@ -396,7 +396,49 @@ The following data is calculated in real-time and not stored:
 ```
 
 ## Security, Access and Data Management
-The bot interacts with Discord using roles to track player information. Discord roles serve dual purposes: permissions/access control and data storage for player metadata like timezones and pronouns. This approach leverages Discord's native interface for role assignment.
+
+### Permission System
+
+CastBot implements a comprehensive two-tier permission system that provides different interfaces based on user privileges:
+
+**🔐 Admin Users (Manage Roles Permission)**
+- Access to Production Menu with full admin controls
+- Tribe management (add/remove tribes, manage members)
+- Player management (set ages, pronouns, timezones for any player)
+- Store creation and item management (Safari system)
+- Currency management and analytics access
+- Server configuration and role management
+
+**👤 Regular Users (No Special Permissions)**
+- Access to Player Menu for self-service features
+- Can set their own age, pronouns, and timezone
+- View castlists and player inventories
+- Interact with custom buttons and store systems
+- Participate in Safari games and activities
+
+### Data Management Approach
+
+The bot uses a hybrid approach for data storage and management:
+
+**Discord Roles as Data Storage:**
+- Pronouns and timezone information stored as Discord roles
+- Tribe membership tracked through Discord role assignment
+- Vanity roles for additional player display customization
+- Leverages Discord's native interface for role management
+
+**JSON-Based Storage (`playerData.json`):**
+- Player ages and metadata not suitable for roles
+- Safari system data (currency, inventory, buttons)
+- Store and item configurations
+- Analytics configuration and environment settings
+
+**Security Features:**
+- Permission validation on all admin operations using Discord's permission bitfields
+- User ID restrictions for sensitive analytics features
+- Environment-specific configurations (development vs production)
+- Rate limiting and error handling to prevent abuse
+
+This approach provides a secure, scalable foundation that leverages Discord's built-in permission system while extending functionality through custom data management.
 
 ## Command Deployment and Management
 
