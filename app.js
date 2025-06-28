@@ -5731,17 +5731,17 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id.startsWith('safari_attack_target_')) {
+    } else if (custom_id.startsWith('safari_attack_target')) {
       // Handle target player selection
       try {
         const guildId = req.body.guild_id;
         const attackerId = req.body.member?.user?.id || req.body.user?.id;
         const targetId = req.body.data.values[0];
         
-        // Parse state from custom_id: safari_attack_target_itemId_quantity
-        const parts = custom_id.split('_');
-        const itemId = parts[3];
-        const previousQuantity = parseInt(parts[4]) || 0;
+        // Parse state from custom_id: safari_attack_target|itemId|quantity (pipe-separated to avoid underscore conflicts)
+        const parts = custom_id.split('|');
+        const itemId = parts[1];
+        const previousQuantity = parseInt(parts[2]) || 0;
         
         console.log(`⚔️ DEBUG: Attacker ${attackerId} selected target ${targetId} for item ${itemId}, previous quantity: ${previousQuantity}`);
         

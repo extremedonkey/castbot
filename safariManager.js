@@ -2936,20 +2936,37 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
             content: `## ⚔️ Attack Player with ${item.name}\n\nSelect a player to attack. They will be attacked when round results are announced.`
         });
         
-        // User select with state in custom_id
-        const userSelectRow = {
+        // Get eligible players for string select
+        const eligiblePlayers = await getEligiblePlayersFixed(guildId, attackerId);
+        console.log(`🎯 DEBUG: Found ${eligiblePlayers.length} eligible players for attack target selection`);
+        
+        // Create string select with eligible players only
+        const playerOptions = eligiblePlayers.map(player => ({
+            label: player.displayName,
+            value: player.id,
+            description: `${player.currency} ${customTerms.currencyName}${player.hasInventory ? ' + items' : ''}`,
+            default: targetId === player.id
+        }));
+        
+        // Use pipe separator to avoid underscore parsing issues
+        const playerSelectRow = {
             type: 1, // Action Row
             components: [
                 {
-                    type: 5, // User Select
-                    custom_id: `safari_attack_target_${itemId}_${selectedQuantity}`,
+                    type: 3, // String Select
+                    custom_id: `safari_attack_target|${itemId}|${selectedQuantity}`,
                     placeholder: targetId ? `Selected: ${targetName}` : 'Select a player to attack',
                     min_values: 1,
-                    max_values: 1
+                    max_values: 1,
+                    options: playerOptions.length > 0 ? playerOptions : [{
+                        label: 'No eligible players found',
+                        value: 'none',
+                        description: 'All players have 0 currency and no items'
+                    }]
                 }
             ]
         };
-        components.push(userSelectRow);
+        components.push(playerSelectRow);
         
         // Divider
         components.push({ type: 14 }); // Separator
