@@ -127,6 +127,103 @@ function hasAdminPermissions(member) {
   return (permissions & BigInt(adminPermissions)) !== 0n;
 }
 
+/**
+ * Check if user has a specific permission in a specific channel
+ * @param {Object} member - Discord member object from interaction  
+ * @param {string} channelId - Discord channel ID
+ * @param {bigint} permission - Discord permission flag (e.g., PermissionFlagsBits.SendMessages)
+ * @param {Object} client - Discord.js client instance
+ * @returns {Promise<boolean>} True if user has the permission in that channel
+ */
+async function hasChannelPermission(member, channelId, permission, client) {
+  try {
+    if (!member || !member.user || !channelId || !client) return false;
+    
+    // Fetch the channel and guild member to get accurate permissions
+    const channel = await client.channels.fetch(channelId);
+    if (!channel || !channel.guild) return false;
+    
+    const guildMember = await channel.guild.members.fetch(member.user.id);
+    if (!guildMember) return false;
+    
+    // Get computed permissions for this member in this specific channel
+    const memberPermissions = guildMember.permissionsIn(channel);
+    
+    return memberPermissions.has(permission);
+  } catch (error) {
+    console.error('Error checking channel permission:', error);
+    return false; // Fail-safe: deny permission if we can't check
+  }
+}
+
+/**
+ * Check if user can send messages in a specific channel
+ * @param {Object} member - Discord member object from interaction
+ * @param {string} channelId - Discord channel ID  
+ * @param {Object} client - Discord.js client instance
+ * @returns {Promise<boolean>} True if user can send messages in that channel
+ */
+async function canSendMessagesInChannel(member, channelId, client) {
+  return await hasChannelPermission(member, channelId, PermissionFlagsBits.SendMessages, client);
+}
+
+/**
+ * PERMISSION SYSTEM ARCHITECTURE DOCUMENTATION
+ * ============================================
+ * 
+ * This codebase implements a comprehensive, reusable permission checking system to prevent
+ * channel spam and ensure proper Discord permission enforcement.
+ * 
+ * ## Core Functions:
+ * 
+ * 1. **hasAdminPermissions(member)** - Guild-level admin permission check
+ *    - Checks: Manage Channels, Manage Guild, Manage Roles, Administrator
+ *    - Usage: Production features, admin-only functionality
+ * 
+ * 2. **hasChannelPermission(member, channelId, permission, client)** - Channel-specific permission check
+ *    - Uses Discord.js permissionsIn() for accurate channel-level permissions
+ *    - Handles channel overwrites, role-based permissions, etc.
+ *    - Reusable for any Discord permission flag
+ * 
+ * 3. **canSendMessagesInChannel(member, channelId, client)** - Specific helper for SEND_MESSAGES
+ *    - Built on hasChannelPermission() for consistency
+ *    - Primary function for anti-spam enforcement
+ * 
+ * ## Anti-Spam Implementation:
+ * 
+ * **Castlist Permission Logic:**
+ * - IF user has SEND_MESSAGES permission in channel → Public castlist display
+ * - ELSE user lacks SEND_MESSAGES permission → Ephemeral castlist (only visible to user)
+ * 
+ * **Handlers with Permission Checking:**
+ * - show_castlist2_* (main castlist display)
+ * - castlist2_nav_* (navigation between tribes/pages)
+ * - castlist2_tribe_prev_*, castlist2_tribe_next_* (legacy tribe navigation)
+ * - castlist2_prev_*, castlist2_next_* (legacy page navigation)
+ * 
+ * ## Implementation Pattern:
+ * 
+ * ```javascript
+ * // Check permissions and apply ephemeral flag if needed
+ * if (member && channelId) {
+ *   const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
+ *   if (!canSendMessages) {
+ *     responseData.flags = (responseData.flags || 0) | InteractionResponseFlags.EPHEMERAL;
+ *   }
+ * }
+ * ```
+ * 
+ * ## Error Handling:
+ * - Fail-safe: If permission check fails, deny permission (return false)
+ * - Prevents security bypasses due to API errors
+ * - Comprehensive error logging for troubleshooting
+ * 
+ * ## Future Extensibility:
+ * - hasChannelPermission() supports any Discord permission flag
+ * - Pattern easily adaptable to other features requiring channel permission checks
+ * - Consistent architecture across admin vs channel-specific permissions
+ */
+
 // createPlayerDisplaySection has been moved to playerManagement.js module
 
 /**
@@ -499,8 +596,10 @@ async function createSafariMenu(guildId, userId, member) {
  * @param {Array} tribes - Array of tribe data with members
  * @param {string} castlistName - Name of the castlist
  * @param {Object} navigationState - Current navigation state
+ * @param {Object} member - Discord member object for permission checking (optional)
+ * @param {string} channelId - Channel ID for permission checking (optional)
  */
-async function sendCastlist2Response(req, guild, tribes, castlistName, navigationState) {
+async function sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member = null, channelId = null) {
   const { currentTribeIndex, currentTribePage, scenario } = navigationState;
   const currentTribe = tribes[currentTribeIndex];
   
@@ -584,6 +683,18 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
   );
   
   console.log(`Sending castlist2 response: Tribe ${currentTribeIndex + 1}/${tribes.length}, Page ${currentTribePage + 1}/${pageInfo.totalPages}, Scenario: ${scenario}`);
+  
+  // Check permissions and apply ephemeral flag if user cannot send messages
+  if (member && channelId) {
+    const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
+    console.log(`Permission check: User ${member.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
+    
+    if (!canSendMessages) {
+      // Add ephemeral flag to response if user cannot send messages
+      responseData.flags = (responseData.flags || 0) | InteractionResponseFlags.EPHEMERAL;
+      console.log(`Applied ephemeral flag - castlist visible only to user ${member.user?.username}`);
+    }
+  }
   
   // Send response
   const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -1076,7 +1187,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Create navigation state for initial display (first tribe, first page)
       const navigationState = createNavigationState(orderedTribes, scenario, 0, 0);
       
-      await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState);
+      await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState, req.body.member, req.body.channel_id);
 
     } catch (error) {
       console.error('Error handling castlist command:', error);
@@ -1178,7 +1289,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     // Create navigation state for initial display (first tribe, first page)
     const navigationState = createNavigationState(orderedTribes, scenario, 0, 0);
     
-    await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState);
+    await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState, req.body.member, req.body.channel_id);
 
   } catch (error) {
     console.error('Error handling castlist2 command:', error);
@@ -2861,7 +2972,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Create navigation state for initial display (first tribe, first page)
         const navigationState = createNavigationState(orderedTribes, scenario, 0, 0);
         
-        await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState);
+        await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState, req.body.member, req.body.channel_id);
 
       } catch (error) {
         console.error('Error handling castlist2 button:', error);
@@ -11194,7 +11305,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const navigationState = createNavigationState(orderedTribes, scenario, newTribeIndex, newTribePage);
         
         // Send updated response
-        await sendCastlist2Response(req, guild, orderedTribes, castlistName, navigationState);
+        await sendCastlist2Response(req, guild, orderedTribes, castlistName, navigationState, req.body.member, req.body.channel_id);
         
         console.log(`Successfully navigated to tribe ${newTribeIndex + 1}, page ${newTribePage + 1}`);
 
@@ -11357,6 +11468,20 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           [], // No separate viral buttons needed
           client
         );
+
+        // Check permissions and apply ephemeral flag if user cannot send messages
+        const member = req.body.member;
+        const channelId = req.body.channel_id;
+        if (member && channelId) {
+          const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
+          console.log(`Permission check: User ${member.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
+          
+          if (!canSendMessages) {
+            // Add ephemeral flag to response if user cannot send messages
+            responseData.flags = (responseData.flags || 0) | InteractionResponseFlags.EPHEMERAL;
+            console.log(`Applied ephemeral flag - castlist visible only to user ${member.user?.username}`);
+          }
+        }
 
         // Update the message
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -11525,12 +11650,28 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           updatedComponents.push(navRow.toJSON());
         }
         
+        // Check permissions and apply ephemeral flag if user cannot send messages
+        const member = req.body.member;
+        const channelId = req.body.channel_id;
+        let responseFlags = 1 << 15; // IS_COMPONENTS_V2 flag
+        
+        if (member && channelId) {
+          const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
+          console.log(`Permission check: User ${member.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
+          
+          if (!canSendMessages) {
+            // Add ephemeral flag to response if user cannot send messages
+            responseFlags = responseFlags | InteractionResponseFlags.EPHEMERAL;
+            console.log(`Applied ephemeral flag - castlist visible only to user ${member.user?.username}`);
+          }
+        }
+
         // Update the message with Components V2 flag
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            flags: 1 << 15, // IS_COMPONENTS_V2 flag
+            flags: responseFlags,
             components: updatedComponents
           },
         });
