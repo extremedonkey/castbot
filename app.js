@@ -93,6 +93,19 @@ import {
 import { 
   createPlayerInventoryDisplay 
 } from './safariManager.js';
+import { createEntityManagementUI } from './entityManagementUI.js';
+import { 
+  loadEntity, 
+  updateEntityFields, 
+  deleteEntity,
+  searchEntities 
+} from './entityManager.js';
+import { 
+  createFieldGroupModal, 
+  parseModalSubmission, 
+  validateFields,
+  createConsumableSelect 
+} from './fieldEditors.js';
 // Helper function imports (Phase 1A refactoring)
 import {
   createEmojiForUser,
@@ -7024,7 +7037,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_item_manage_existing') {
-      // MVP2: Edit existing item interface
+      // MVP2 Sprint 3: New entity management system for items
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -7032,72 +7045,21 @@ Your server is now ready for Tycoons gameplay!`;
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit items.')) return;
         
-        console.log(`✏️ DEBUG: Edit existing item clicked for guild ${guildId}`);
+        console.log(`✏️ DEBUG: Item management UI opened for guild ${guildId}`);
         
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const items = safariData[guildId]?.items || {};
-        
-        if (Object.keys(items).length === 0) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ **No items to edit**\n\nCreate your first item before you can edit existing ones.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Create item selection dropdown
-        const itemOptions = Object.entries(items).slice(0, 25).map(([itemId, item]) => ({
-          label: `${item.emoji || '📦'} ${item.name}`.slice(0, 100),
-          value: itemId,
-          description: `${item.category || 'General'} - ${item.basePrice} coins`.slice(0, 100)
-        }));
-        
-        const itemSelect = new StringSelectMenuBuilder()
-          .setCustomId('safari_item_edit_select')
-          .setPlaceholder('Choose an item to edit...')
-          .setMinValues(1)
-          .setMaxValues(1)
-          .addOptions(itemOptions);
-        
-        const selectRow = new ActionRowBuilder().addComponents(itemSelect);
-        
-        // Create back button
-        const backButton = new ButtonBuilder()
-          .setCustomId('safari_manage_items')
-          .setLabel('⬅ Back to Item Management')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        
-        // Create response with Components V2
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## ✏️ Edit Existing Item\n\nSelect an item to edit from the dropdown below:`
-          },
-          selectRow.toJSON(), // Item selection dropdown
-          {
-            type: 14 // Separator
-          },
-          backRow.toJSON() // Back button
-        ];
-        
-        const container = {
-          type: 17, // Container component
-          accent_color: 0xe67e22, // Orange accent color for editing
-          components: containerComponents
-        };
+        // Create entity management UI
+        const uiResponse = await createEntityManagementUI({
+          entityType: 'item',
+          guildId: guildId,
+          selectedId: null,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'view'
+        });
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [container]
-          }
+          data: uiResponse
         });
         
       } catch (error) {
@@ -7105,7 +7067,7 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error loading item editor.',
+            content: '❌ Error loading item management.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -10097,7 +10059,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
     } else if (custom_id === 'safari_item_edit_select') {
-      // Handle item selection for editing
+      // Handle item selection for editing - redirect to new entity management UI
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -10108,12 +10070,19 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log(`✏️ DEBUG: Selected item ${selectedItemId} for editing`);
         
+        // Create entity management UI with selected item
+        const uiResponse = await createEntityManagementUI({
+          entityType: 'item',
+          guildId: guildId,
+          selectedId: selectedItemId,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'view'
+        });
+        
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `🚧 **Item Editing Coming Soon**\n\nItem editing functionality is under development. For now, you can:\n\n• Create new items\n• View all items\n• Delete and recreate items as needed\n\nSelected item: \`${selectedItemId}\``,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
         });
         
       } catch (error) {
@@ -10126,6 +10095,437 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    // ==================== ENTITY MANAGEMENT HANDLERS ====================
+    // New entity management system for Safari items, stores, and buttons
+    
+    } else if (custom_id.startsWith('entity_select_')) {
+      // Handle entity selection from dropdown
+      try {
+        const parts = custom_id.split('_');
+        const entityType = parts.slice(2).join('_'); // Handle entity types with underscores
+        const guildId = req.body.guild_id;
+        const selectedValue = data.values[0];
+        
+        // Check permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, `You need Manage Roles permission to manage ${entityType}s.`)) return;
+        
+        console.log(`📋 DEBUG: Entity select - Type: ${entityType}, Value: ${selectedValue}`);
+        
+        // Handle special actions
+        if (selectedValue === 'search_entities') {
+          // Show search modal
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: {
+              title: `Search ${entityType}s`,
+              custom_id: `entity_search_modal_${entityType}`,
+              components: [{
+                type: 1, // ActionRow
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'search_term',
+                  label: 'Search Term',
+                  style: 1, // Short
+                  placeholder: 'Enter name or description to search...',
+                  required: true,
+                  max_length: 50
+                }]
+              }]
+            }
+          });
+        } else if (selectedValue === 'create_new') {
+          // Show creation modal based on entity type
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: {
+              title: `Create New ${entityType === 'safari_button' ? 'Button' : entityType.charAt(0).toUpperCase() + entityType.slice(1)}`,
+              custom_id: `entity_create_modal_${entityType}`,
+              components: [{
+                type: 1, // ActionRow
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'name',
+                  label: entityType === 'safari_button' ? 'Button Label' : 'Name',
+                  style: 1, // Short
+                  placeholder: `Enter ${entityType === 'safari_button' ? 'button label' : 'name'}...`,
+                  required: true,
+                  max_length: entityType === 'safari_button' ? 80 : 100
+                }]
+              }]
+            }
+          });
+        } else {
+          // Regular entity selection
+          const uiResponse = await createEntityManagementUI({
+            entityType: entityType,
+            guildId: guildId,
+            selectedId: selectedValue,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'view'
+          });
+          
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: uiResponse
+          });
+        }
+      } catch (error) {
+        console.error('Error in entity_select handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error selecting entity.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('entity_edit_mode_')) {
+      // Switch to edit mode for an entity
+      try {
+        const parts = custom_id.split('_');
+        const entityType = parts[3];
+        const entityId = parts.slice(4).join('_');
+        const guildId = req.body.guild_id;
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        const uiResponse = await createEntityManagementUI({
+          entityType: entityType,
+          guildId: guildId,
+          selectedId: entityId,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'edit'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error switching to edit mode:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error entering edit mode.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('entity_view_mode_')) {
+      // Switch back to view mode for an entity
+      try {
+        const parts = custom_id.split('_');
+        const entityType = parts[3];
+        const entityId = parts.slice(4).join('_');
+        const guildId = req.body.guild_id;
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        const uiResponse = await createEntityManagementUI({
+          entityType: entityType,
+          guildId: guildId,
+          selectedId: entityId,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'view'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error switching to view mode:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error returning to view mode.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('entity_field_group_')) {
+      // Handle field group button click
+      try {
+        const parts = custom_id.split('_');
+        const entityType = parts[3];
+        const entityId = parts[4];
+        const fieldGroup = parts.slice(5).join('_');
+        const guildId = req.body.guild_id;
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        // For consumable property, show select menu instead of modal
+        if (fieldGroup === 'properties' && entityType === 'item') {
+          const entity = await loadEntity(guildId, entityType, entityId);
+          if (!entity) throw new Error('Entity not found');
+          
+          const uiResponse = await createEntityManagementUI({
+            entityType: entityType,
+            guildId: guildId,
+            selectedId: entityId,
+            activeFieldGroup: fieldGroup,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          
+          // Add consumable select
+          const consumableSelect = createConsumableSelect(entityId, entity.consumable);
+          uiResponse.components[0].components.push(consumableSelect);
+          
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: uiResponse
+          });
+        } else {
+          // Update UI to show field group as active
+          const uiResponse = await createEntityManagementUI({
+            entityType: entityType,
+            guildId: guildId,
+            selectedId: entityId,
+            activeFieldGroup: fieldGroup,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: uiResponse
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error handling field group selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error selecting field group.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('entity_edit_modal_')) {
+      // Show modal for editing fields
+      try {
+        const parts = custom_id.split('_');
+        const entityType = parts[3];
+        const entityId = parts[4];
+        const fieldGroup = parts.slice(5).join('_');
+        const guildId = req.body.guild_id;
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        // Load current entity values
+        const entity = await loadEntity(guildId, entityType, entityId);
+        if (!entity) throw new Error('Entity not found');
+        
+        // Create modal
+        const modal = createFieldGroupModal(entityType, entityId, fieldGroup, entity);
+        if (!modal) {
+          throw new Error('Invalid field group');
+        }
+        
+        return res.send(modal);
+        
+      } catch (error) {
+        console.error('Error showing edit modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error opening editor.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('entity_modal_submit_')) {
+      // Handle modal submission for field editing
+      try {
+        const parts = custom_id.split('_');
+        const entityType = parts[3];
+        const entityId = parts[4];
+        const fieldGroup = parts.slice(5).join('_');
+        const guildId = req.body.guild_id;
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        console.log(`📝 DEBUG: Modal submit - Type: ${entityType}, ID: ${entityId}, Group: ${fieldGroup}`);
+        
+        // Parse and validate submission
+        const fields = parseModalSubmission(data, fieldGroup);
+        const validation = validateFields(fields, entityType);
+        
+        if (!validation.valid) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ **Validation Error**\n\n${validation.errors.join('\n')}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update entity
+        await updateEntityFields(guildId, entityType, entityId, fields);
+        
+        // Refresh UI
+        const uiResponse = await createEntityManagementUI({
+          entityType: entityType,
+          guildId: guildId,
+          selectedId: entityId,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'edit'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error handling modal submission:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error saving changes: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('entity_consumable_select_')) {
+      // Handle consumable select for items
+      try {
+        const parts = custom_id.split('_');
+        const entityType = parts[3];
+        const entityId = parts.slice(4).join('_');
+        const guildId = req.body.guild_id;
+        const consumableValue = data.values[0];
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        // Update consumable field
+        await updateEntityFields(guildId, entityType, entityId, {
+          consumable: consumableValue
+        });
+        
+        // Refresh UI
+        const uiResponse = await createEntityManagementUI({
+          entityType: entityType,
+          guildId: guildId,
+          selectedId: entityId,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'edit'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error updating consumable:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating consumable property.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('entity_delete_mode_')) {
+      // Switch to delete confirmation mode
+      try {
+        const parts = custom_id.split('_');
+        const entityType = parts[3];
+        const entityId = parts.slice(4).join('_');
+        const guildId = req.body.guild_id;
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        const uiResponse = await createEntityManagementUI({
+          entityType: entityType,
+          guildId: guildId,
+          selectedId: entityId,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'delete_confirm'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error entering delete mode:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error preparing deletion.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('entity_confirm_delete_')) {
+      // Confirm and execute deletion
+      try {
+        const parts = custom_id.split('_');
+        const entityType = parts[3];
+        const entityId = parts.slice(4).join('_');
+        const guildId = req.body.guild_id;
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        console.log(`🗑️ DEBUG: Deleting ${entityType} ${entityId}`);
+        
+        // Delete entity
+        const success = await deleteEntity(guildId, entityType, entityId);
+        
+        if (!success) {
+          throw new Error('Failed to delete entity');
+        }
+        
+        // Go back to entity list
+        const uiResponse = await createEntityManagementUI({
+          entityType: entityType,
+          guildId: guildId,
+          selectedId: null,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'view'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error deleting entity:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error deleting entity.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    // ==================== END ENTITY MANAGEMENT HANDLERS ====================
+    
     } else if (custom_id === 'safari_currency_reset_confirm') {
       // Handle confirmation to reset all currency
       try {
