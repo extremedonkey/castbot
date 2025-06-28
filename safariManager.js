@@ -1596,8 +1596,15 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
             content: `## ${customTerms.currencyEmoji} Your Balance\n> \`${playerCurrency} ${customTerms.currencyName}\``
         });
         
-        // Count total items and component usage
-        const inventoryItems = Object.entries(playerInventory).filter(([itemId, quantity]) => quantity > 0);
+        // Count total items and component usage - handle both number and object formats
+        const inventoryItems = Object.entries(playerInventory).filter(([itemId, itemData]) => {
+            if (typeof itemData === 'number') {
+                return itemData > 0;
+            } else if (typeof itemData === 'object' && itemData !== null) {
+                return (itemData.quantity || 0) > 0;
+            }
+            return false;
+        });
         console.log(`🔍 DEBUG: Filtered inventoryItems:`, inventoryItems);
         let componentsUsed = 4; // Container + header + separator + footer action row
         
