@@ -3155,8 +3155,9 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         const customId = reqBody.data.custom_id;
         const parts = customId.split('_');
         // Format: safari_schedule_attack_itemId_targetId_quantity
-        const targetId = parts[4] !== 'none' ? parts[4] : null;
-        const quantity = parseInt(parts[5]) || 0;
+        // Handle itemIds with underscores (e.g., raider_499497)
+        const targetId = parts[5] !== 'none' ? parts[5] : null;
+        const quantity = parseInt(parts[6]) || 0;
         
         console.log(`⚔️ DEBUG: Parsed state - Target: ${targetId}, Quantity: ${quantity}`);
         
