@@ -1093,15 +1093,36 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Get display name (nickname or global_name)
       const displayName = member?.nick || user.global_name || user.username;
       
-      // Get channel name from Discord API if possible
+      // Get channel name from Discord.js client (more reliable than REST API)
       let channelName = null;
       if (channelId) {
         try {
-          // Try to get channel info from Discord API
-          const channelResponse = await DiscordRequest(`channels/${channelId}`, { method: 'GET' });
-          if (channelResponse.ok) {
-            const channelData = await channelResponse.json();
-            channelName = channelData.name;
+          // First try Discord.js client cache
+          const channel = client?.channels?.cache?.get(channelId);
+          if (channel?.name) {
+            channelName = channel.name;
+            console.log(`📍 DEBUG: Channel name from cache: #${channelName} (${channelId})`);
+          } else {
+            // Fallback to fetching via client
+            if (client) {
+              const fetchedChannel = await client.channels.fetch(channelId);
+              if (fetchedChannel?.name) {
+                channelName = fetchedChannel.name;
+                console.log(`📍 DEBUG: Channel name from fetch: #${channelName} (${channelId})`);
+              }
+            }
+          }
+          
+          // Last resort: Discord REST API
+          if (!channelName) {
+            const channelResponse = await DiscordRequest(`channels/${channelId}`, { method: 'GET' });
+            if (channelResponse.ok) {
+              const channelData = await channelResponse.json();
+              channelName = channelData.name;
+              console.log(`📍 DEBUG: Channel name from REST API: #${channelName} (${channelId})`);
+            } else {
+              console.log(`⚠️ DEBUG: REST API failed for channel ${channelId}, status:`, channelResponse.status);
+            }
           }
         } catch (error) {
           console.log('Could not fetch channel name for analytics:', error.message);
@@ -2546,15 +2567,36 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Get display name (nickname or global_name)
       const displayName = member?.nick || user.global_name || user.username;
       
-      // Get channel name from Discord API if possible
+      // Get channel name from Discord.js client (more reliable than REST API)
       let channelName = null;
       if (channelId) {
         try {
-          // Try to get channel info from Discord API
-          const channelResponse = await DiscordRequest(`channels/${channelId}`, { method: 'GET' });
-          if (channelResponse.ok) {
-            const channelData = await channelResponse.json();
-            channelName = channelData.name;
+          // First try Discord.js client cache
+          const channel = client?.channels?.cache?.get(channelId);
+          if (channel?.name) {
+            channelName = channel.name;
+            console.log(`📍 DEBUG: Channel name from cache: #${channelName} (${channelId})`);
+          } else {
+            // Fallback to fetching via client
+            if (client) {
+              const fetchedChannel = await client.channels.fetch(channelId);
+              if (fetchedChannel?.name) {
+                channelName = fetchedChannel.name;
+                console.log(`📍 DEBUG: Channel name from fetch: #${channelName} (${channelId})`);
+              }
+            }
+          }
+          
+          // Last resort: Discord REST API
+          if (!channelName) {
+            const channelResponse = await DiscordRequest(`channels/${channelId}`, { method: 'GET' });
+            if (channelResponse.ok) {
+              const channelData = await channelResponse.json();
+              channelName = channelData.name;
+              console.log(`📍 DEBUG: Channel name from REST API: #${channelName} (${channelId})`);
+            } else {
+              console.log(`⚠️ DEBUG: REST API failed for channel ${channelId}, status:`, channelResponse.status);
+            }
           }
         } catch (error) {
           console.log('Could not fetch channel name for analytics:', error.message);

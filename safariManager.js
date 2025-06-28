@@ -1780,19 +1780,36 @@ async function processRoundResults(guildId, channelId, client) {
     try {
         console.log(`🏅 DEBUG: Starting round results processing for guild ${guildId}`);
         
-        // Get current game state and custom terms
-        const customTerms = await getCustomTerms(guildId);
-        const currentRound = customTerms.currentRound || 1;
+        // Get current game state from safariContent.json
+        const safariData = await loadSafariContent();
+        if (!safariData[guildId]) {
+            safariData[guildId] = { safariConfig: {} };
+        }
+        if (!safariData[guildId].safariConfig) {
+            safariData[guildId].safariConfig = {};
+        }
+        
+        const safariConfig = safariData[guildId].safariConfig;
+        const currentRound = safariConfig.currentRound || 1;
         
         console.log(`🎲 DEBUG: Current round: ${currentRound}`);
         
-        // Check for reset condition (after round 3)
-        if (currentRound > 3) {
-            return await handleGameReset(guildId, customTerms);
+        // If currentRound == 4, show reset interface
+        if (currentRound === 4) {
+            return createResetInterface();
         }
         
+        // If no currentRound exists, set to 1
+        if (!safariConfig.currentRound) {
+            safariConfig.currentRound = 1;
+            await saveSafariContent(safariData);
+        }
+        
+        // Get custom terms for event names/probabilities
+        const customTerms = await getCustomTerms(guildId);
+        
         // Get round-specific good event probability
-        let goodEventProbability = 50; // Default fallback
+        let goodEventProbability = 75; // Default for round 1
         switch (currentRound) {
             case 1:
                 goodEventProbability = customTerms.round1GoodProbability || 75;
@@ -1805,29 +1822,117 @@ async function processRoundResults(guildId, channelId, client) {
                 break;
         }
         
-        const badEventProbability = 100 - goodEventProbability;
+        console.log(`📊 DEBUG: Round ${currentRound} probabilities - Good: ${goodEventProbability}%`);
         
-        console.log(`📊 DEBUG: Round ${currentRound} probabilities - Good: ${goodEventProbability}%, Bad: ${badEventProbability}%`);
-        
-        // Determine event type (random roll)
+        // Randomly determine if goodEvent or badEvent occurred
         const randomRoll = Math.random() * 100;
         const isGoodEvent = randomRoll < goodEventProbability;
         const eventType = isGoodEvent ? 'good' : 'bad';
-        const eventName = isGoodEvent ? customTerms.goodEventName : customTerms.badEventName;
-        const eventEmoji = isGoodEvent ? customTerms.goodEventEmoji : customTerms.badEventEmoji;
-        const eventMessage = isGoodEvent ? customTerms.goodEventMessage : customTerms.badEventMessage;
+        const eventName = isGoodEvent ? (customTerms.goodEventName || 'Clear Skies') : (customTerms.badEventName || 'Meteor Strike');
+        const eventEmoji = isGoodEvent ? (customTerms.goodEventEmoji || '☀️') : (customTerms.badEventEmoji || '☄️');
         
         console.log(`🎯 DEBUG: Event roll: ${randomRoll.toFixed(1)}% - ${eventType.toUpperCase()} event: ${eventName}`);
         
-        // Get eligible players
-        const eligiblePlayers = await getEligiblePlayers(guildId);
+        // Get eligible players (currency >= 1 OR any inventory items)
+        const eligiblePlayers = await getEligiblePlayersFixed(guildId);
         console.log(`👥 DEBUG: Found ${eligiblePlayers.length} eligible players`);
         
         if (eligiblePlayers.length === 0) {
             return {
-                message: `${eventEmoji} **Round ${currentRound} - ${eventName}**\n\n${eventMessage}\n\n*No eligible players found. Players need currency ≥ 1 or items in inventory to participate.*`
+                type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+                data: {
+                    content: `# Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n*No eligible players found. Players need currency ≥ 1 or items in inventory to participate.*`
+                }
             };
         }
+        
+        // Process each eligible player
+        const playerResults = [];
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        
+        for (const player of eligiblePlayers) {
+            console.log(`🔄 DEBUG: Processing player ${player.playerName} (${player.userId})`);
+            
+            let totalEarnings = 0;
+            let totalDefense = 0;
+            const itemDetails = [];
+            const defenseDetails = [];
+            
+            // Process each inventory item
+            for (const [itemId, quantity] of Object.entries(player.inventory)) {
+                if (quantity <= 0) continue;
+                
+                const item = items[itemId];
+                if (!item) {
+                    console.log(`⚠️ DEBUG: Item ${itemId} not found in items database`);
+                    continue;
+                }
+                
+                // Calculate earnings based on event type
+                const outcomeValue = eventType === 'good' ? 
+                    (item.goodOutcomeValue || 0) : 
+                    (item.badOutcomeValue || 0);
+                    
+                if (outcomeValue !== 0) {
+                    const itemEarnings = quantity * outcomeValue;
+                    totalEarnings += itemEarnings;
+                    itemDetails.push(`${item.name || item.label || itemId} x${quantity}: ${itemEarnings > 0 ? '+' : ''}${itemEarnings}`);
+                }
+                
+                // Calculate defense (placeholder for future attack system)
+                if (item.defenseValue) {
+                    const itemDefense = quantity * item.defenseValue;
+                    totalDefense += itemDefense;
+                    defenseDetails.push(`🛡️ ${item.name || item.label || itemId} x${quantity}: ${itemDefense} Defense`);
+                }
+            }
+            
+            // Update player currency
+            if (totalEarnings !== 0) {
+                await updateCurrency(guildId, player.userId, totalEarnings);
+                console.log(`💰 DEBUG: Updated ${player.playerName} currency by ${totalEarnings}`);
+            }
+            
+            // Store player result
+            playerResults.push({
+                playerName: player.playerName,
+                userId: player.userId,
+                earnings: totalEarnings,
+                defense: totalDefense,
+                itemDetails: itemDetails,
+                defenseDetails: defenseDetails,
+                newCurrency: player.currency + totalEarnings
+            });
+        }
+        
+        // Create round results output
+        const output = await createRoundResultsOutput(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms);
+        
+        // Advance to next round or complete game
+        if (currentRound < 3) {
+            // Advance to next round
+            safariConfig.currentRound = currentRound + 1;
+            await saveSafariContent(safariData);
+        } else {
+            // Round 3 completed - show final rankings and set to round 4 (reset state)
+            safariConfig.currentRound = 4;
+            await saveSafariContent(safariData);
+            return await createFinalRankings(guildId, playerResults, eventType, eventName, eventEmoji);
+        }
+        
+        return output;
+        
+    } catch (error) {
+        console.error('Error processing round results:', error);
+        return {
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+                content: '❌ An error occurred while processing round results. Please try again.',
+                flags: 64 // EPHEMERAL
+            }
+        };
+    }
         
         // Process each eligible player
         const playerResults = [];
@@ -1884,45 +1989,80 @@ async function processRoundResults(guildId, channelId, client) {
 /**
  * Handle game reset after round 3
  */
-async function handleGameReset(guildId, customTerms) {
-    try {
-        console.log(`🔄 DEBUG: Game reset requested for guild ${guildId}`);
-        
-        // This should show a confirmation but for now we'll return the warning
-        return {
-            message: `⚠️ **Game Complete!**\n\nAll 3 rounds have been completed. The next Round Results click will reset the game:\n\n• Clear all player inventories\n• Reset all currency to 0\n• Start fresh at Round 1\n\n*Click Round Results again to confirm reset.*`
-        };
-        
-    } catch (error) {
-        console.error('Error handling game reset:', error);
-        return { error: 'Failed to handle game reset.' };
-    }
+function createResetInterface() {
+    return {
+        type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+        data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [{
+                type: 17, // Container
+                accent_color: 0xed4245, // Red
+                components: [
+                    {
+                        type: 10, // Text Display
+                        content: `# Reset to round 1?\n\nAll player currency will be reset to 0, all player item purchases cleared, and all round data will be cleared`
+                    },
+                    {
+                        type: 1, // Action Row
+                        components: [{
+                            type: 2, // Button
+                            custom_id: 'safari_confirm_reset_game',
+                            label: 'Reset to Round 1',
+                            style: 4, // Danger
+                            emoji: { name: '⚠️' }
+                        }]
+                    }
+                ]
+            }]
+        }
+    };
 }
 
 /**
  * Get eligible players (currency >= 1 OR has inventory items)
  */
-async function getEligiblePlayers(guildId) {
+async function getEligiblePlayersFixed(guildId) {
     try {
+        console.log(`🔍 DEBUG: Getting eligible players for guild ${guildId}`);
         const playerData = await loadPlayerData();
         const players = playerData[guildId]?.players || {};
         const eligiblePlayers = [];
         
+        console.log(`🔍 DEBUG: Found ${Object.keys(players).length} total players in guild`);
+        
         for (const [userId, data] of Object.entries(players)) {
-            const currency = data.safari?.currency || 0;
-            const inventory = data.safari?.inventory || {};
-            const hasInventory = Object.values(inventory).some(qty => qty > 0);
+            const safari = data.safari || {};
+            const currency = safari.currency || 0;
+            const inventory = safari.inventory || {};
+            const hasInventory = Object.keys(inventory).length > 0 && Object.values(inventory).some(qty => qty > 0);
+            
+            console.log(`🔍 DEBUG: Player ${userId}: currency=${currency}, inventory=${JSON.stringify(inventory)}, hasInventory=${hasInventory}`);
             
             if (currency >= 1 || hasInventory) {
+                // Get player name from Discord client if available
+                let playerName = `Player ${userId.slice(-4)}`;
+                try {
+                    // Try to get fresh name from guild member
+                    const guild = client?.guilds?.cache?.get(guildId);
+                    const member = await guild?.members?.fetch(userId);
+                    playerName = member?.displayName || member?.user?.globalName || member?.user?.username || playerName;
+                } catch (e) {
+                    // Fallback to stored data
+                    playerName = data.globalName || data.displayName || data.username || playerName;
+                }
+                
                 eligiblePlayers.push({
                     userId: userId,
                     currency: currency,
                     inventory: inventory,
-                    playerName: data.globalName || data.displayName || data.username || `Player ${userId.slice(-4)}`
+                    playerName: playerName
                 });
+                
+                console.log(`✅ DEBUG: Added eligible player: ${playerName} (${userId})`);
             }
         }
         
+        console.log(`✅ DEBUG: Total eligible players: ${eligiblePlayers.length}`);
         return eligiblePlayers;
         
     } catch (error) {
