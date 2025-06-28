@@ -2939,16 +2939,16 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
         // Get eligible players for string select
         const eligibleTargets = await getEligiblePlayersFixed(guildId, attackerId);
         console.log(`🎯 DEBUG: Found ${eligibleTargets.length} eligible players for attack target selection`);
-        console.log(`🎯 DEBUG: eligibleTargets:`, eligibleTargets.map(p => ({ id: p.id, displayName: p.displayName, currency: p.currency })));
+        console.log(`🎯 DEBUG: eligibleTargets:`, eligibleTargets.map(p => ({ userId: p.userId, playerName: p.playerName, currency: p.currency })));
         
         // Create string select with eligible players only
         const playerOptions = eligibleTargets.map(player => {
-            console.log(`🎯 DEBUG: Processing player option:`, { id: player.id, displayName: player.displayName, currency: player.currency });
+            console.log(`🎯 DEBUG: Processing player option:`, { userId: player.userId, playerName: player.playerName, currency: player.currency });
             return {
-                label: player.displayName || 'Unknown Player',
-                value: player.id,
-                description: `${player.currency || 0} ${customTerms.currencyName || 'currency'}${player.hasInventory ? ' + items' : ''}`,
-                default: targetId === player.id
+                label: player.playerName || 'Unknown Player',
+                value: player.userId,
+                description: `${player.currency || 0} ${customTerms.currencyName || 'currency'}${player.inventory && Object.keys(player.inventory).length > 0 ? ' + items' : ''}`,
+                default: targetId === player.userId
             };
         });
         console.log(`🎯 DEBUG: Created ${playerOptions.length} player options for string select`);
