@@ -574,108 +574,61 @@ function formatServerUsageForDiscordV2(summary) {
     return digits.map(digit => `${digit}️⃣`).join('');
   }
   
-  // Build Components V2 structure
+  // Build a simpler Components V2 structure using only Text Display components in a flat layout
   const components = [];
   
-  // Main container
-  const container = {
-    type: 17, // Container
-    components: []
-  };
+  // Create a single text block with all the content
+  let fullContent = `📈 **Server Usage Analytics**\n\n`;
   
-  // Header section
-  container.components.push({
-    type: 9, // Section
-    components: [{
-      type: 10, // Text Display
-      content: `📈 **Server Usage Analytics**\n\nAnalyzing CastBot usage across Discord servers for insights and rankings.`
-    }]
-  });
+  // Summary statistics
+  fullContent += `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}\n`;
+  fullContent += `👥 **Unique Users**: ${totalUniqueUsers}\n`;
+  fullContent += `🏰 **Active Servers**: ${activeServers}\n`;
+  fullContent += `⏱️ **Period**: Last ${period}\n`;
+  fullContent += `📈 **Showing**: Top ${displayServers.length} of ${rankedServers.length} servers\n\n`;
   
-  // Summary statistics section
-  const summaryText = [
-    `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}`,
-    `👥 **Unique Users**: ${totalUniqueUsers}`,
-    `🏰 **Active Servers**: ${activeServers}`,
-    `⏱️ **Period**: Last ${period}`,
-    `📈 **Showing**: Top ${displayServers.length} of ${rankedServers.length} servers`
-  ].join('\n');
-  
-  container.components.push({
-    type: 9, // Section
-    components: [{
-      type: 10, // Text Display
-      content: summaryText
-    }]
-  });
-  
-  // Server rankings sections (one section per server for better readability)
+  // Server rankings
   if (displayServers.length > 0) {
+    fullContent += `🏆 **Server Rankings**\n\n`;
+    
     displayServers.forEach((server, index) => {
       const medal = getRankEmoji(index);
-      const serverDisplay = server.serverName.length > 30 
-        ? server.serverName.substring(0, 30) + '...'
+      const serverDisplay = server.serverName.length > 25 
+        ? server.serverName.substring(0, 25) + '...'
         : server.serverName;
       
-      const serverContent = `${medal} **${serverDisplay}**\n${server.totalInteractions.toLocaleString()} interactions • ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons`;
-      
-      container.components.push({
-        type: 9, // Section
-        components: [{
-          type: 10, // Text Display
-          content: serverContent
-        }]
-      });
+      fullContent += `${medal} **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} interactions\n`;
+      fullContent += `   └ ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n\n`;
     });
     
-    // Add "more servers" indicator if needed
     if (hasMore) {
-      container.components.push({
-        type: 9, // Section
-        components: [{
-          type: 10, // Text Display
-          content: `📋 **And ${rankedServers.length - displayServers.length} more servers...**\n\nShowing top servers based on total interactions in the ${period} period.`
-        }]
-      });
+      fullContent += `📋 And ${rankedServers.length - displayServers.length} more servers...\n\n`;
     }
   } else {
-    container.components.push({
-      type: 9, // Section
-      components: [{
-        type: 10, // Text Display
-        content: '📭 **No server activity found**\n\nNo interactions recorded in the specified period.'
-      }]
-    });
+    fullContent += `📭 **No server activity found**\n\nNo interactions recorded in the specified period.\n\n`;
   }
   
   // Insights section
-  let insightsText = '💡 **Key Insights**\n\n';
-  
-  if (insights.mostActive) {
-    insightsText += `🔥 **Most Active**: ${insights.mostActive.serverName} (${insights.mostActive.avgDailyActivity}/day avg)\n`;
-  }
-  
-  if (insights.powerUsers.length > 0) {
-    insightsText += `👥 **High User Engagement**: ${insights.powerUsers.length} servers with 10+ active users\n`;
-  }
-  
-  if (insights.highEngagement.length > 0) {
-    insightsText += `⚡ **High Activity**: ${insights.highEngagement.length} servers with 50+ daily interactions\n`;
-  }
-  
   if (insights.mostActive || insights.powerUsers.length > 0 || insights.highEngagement.length > 0) {
-    // Add insights section
-    container.components.push({
-      type: 9, // Section
-      components: [{
-        type: 10, // Text Display
-        content: insightsText
-      }]
-    });
+    fullContent += `💡 **Key Insights**\n\n`;
+    
+    if (insights.mostActive) {
+      fullContent += `🔥 **Most Active**: ${insights.mostActive.serverName} (${insights.mostActive.avgDailyActivity}/day avg)\n`;
+    }
+    
+    if (insights.powerUsers.length > 0) {
+      fullContent += `👥 **High User Engagement**: ${insights.powerUsers.length} servers with 10+ active users\n`;
+    }
+    
+    if (insights.highEngagement.length > 0) {
+      fullContent += `⚡ **High Activity**: ${insights.highEngagement.length} servers with 50+ daily interactions\n`;
+    }
+    
+    fullContent += `\n`;
   }
   
-  // Footer section with generation timestamp
-  const footerText = `🕒 Generated at ${new Date(summary.generatedAt).toLocaleString('en-US', { 
+  // Footer
+  fullContent += `🕒 Generated at ${new Date(summary.generatedAt).toLocaleString('en-US', { 
     timeZone: 'UTC',
     year: 'numeric',
     month: 'short', 
@@ -684,15 +637,16 @@ function formatServerUsageForDiscordV2(summary) {
     minute: '2-digit'
   })} UTC`;
   
-  container.components.push({
-    type: 9, // Section
-    components: [{
-      type: 10, // Text Display
-      content: footerText
-    }]
-  });
+  // Trim content to fit Discord's 4000 character limit
+  if (fullContent.length > 3800) {
+    fullContent = fullContent.substring(0, 3800) + '\n\n... (content truncated)';
+  }
   
-  components.push(container);
+  // Create simple Components V2 structure with a single Text Display component
+  components.push({
+    type: 10, // Text Display
+    content: fullContent
+  });
   
   return {
     content: `📈 Server Usage Analytics - ${displayServers.length} servers analyzed`,
