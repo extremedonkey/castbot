@@ -5130,13 +5130,10 @@ Your server is now ready for Tycoons gameplay!`;
         const summary = await generateServerUsageSummary(42);
         console.log('✅ DEBUG: Summary generated, formatting for Discord...');
         
-        // Format for Discord display - use Components V2 in development
-        const isDevelopment = process.env.PRODUCTION !== 'TRUE';
-        const discordResponse = isDevelopment 
-          ? formatServerUsageForDiscordV2(summary)
-          : formatServerUsageForDiscord(summary);
+        // Format for Discord display - use Components V2 everywhere now
+        const discordResponse = formatServerUsageForDiscordV2(summary);
         
-        console.log(`✅ DEBUG: Formatted for Discord using ${isDevelopment ? 'Components V2' : 'traditional embeds'}, sending follow-up...`);
+        console.log(`✅ DEBUG: Formatted for Discord using Components V2, sending follow-up...`);
         
         // Send follow-up response with results
         const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
