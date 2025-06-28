@@ -442,7 +442,7 @@ function formatServerUsageForDiscord(summary) {
       fields: [
         {
           name: '🏆 Server Rankings',
-          value: '\n' + (rankingText.substring(0, 1024) || 'No data available'),
+          value: '-------------------------------------------\n' + (rankingText.substring(0, 1024) || 'No data available'),
           inline: false
         },
         {
