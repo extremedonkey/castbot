@@ -2143,32 +2143,32 @@ async function createRoundResultsOutput(guildId, currentRound, eventType, eventN
         for (const result of displayResults) {
             const currencyEmoji = customTerms.currencyEmoji || '🪙';
             const sign = result.earnings >= 0 ? '+' : '';
-            playerSummary += `• **${result.playerName}**: ${sign}${result.earnings} ${currencyEmoji}\\n`;
+            playerSummary += `• **${result.playerName}**: ${sign}${result.earnings} ${currencyEmoji}\n`;
             
             // Add item details (max 2 lines per player)
             if (result.itemDetails.length > 0) {
-                playerSummary += `  └ ${result.itemDetails.slice(0, 2).join(', ')}\\n`;
+                playerSummary += `  └ ${result.itemDetails.slice(0, 2).join(', ')}\n`;
             }
             
             // Add defense details if any
             if (result.defenseDetails.length > 0) {
-                playerSummary += `  └ ${result.defenseDetails.slice(0, 1).join(', ')}\\n`;
+                playerSummary += `  └ ${result.defenseDetails.slice(0, 1).join(', ')}\n`;
             }
         }
         
         if (playerResults.length > 10) {
-            playerSummary += `*... and ${playerResults.length - 10} more players*\\n`;
+            playerSummary += `*... and ${playerResults.length - 10} more players*\n`;
         }
         
         // Build next round message
         let nextRoundMsg = '';
         if (currentRound < 3) {
-            nextRoundMsg = `\\n**Next:** Round ${currentRound + 1}`;
+            nextRoundMsg = `\n**Next:** Round ${currentRound + 1}`;
             if (currentRound === 2) {
                 nextRoundMsg += ' (Final Round)';
             }
         } else {
-            nextRoundMsg = '\\n**Game completed! Rankings will be shown next.**';
+            nextRoundMsg = '\n**Game completed! Rankings will be shown next.**';
         }
         
         return {
@@ -2181,14 +2181,14 @@ async function createRoundResultsOutput(guildId, currentRound, eventType, eventN
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `# Round ${currentRound} Results\\n\\n## ${eventEmoji} ${eventName}\\n\\n**${totalParticipants} players participated** | **Total earnings: ${totalEarnings >= 0 ? '+' : ''}${totalEarnings} ${customTerms.currencyEmoji || '🪙'}**`
+                            content: `# Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n**${totalParticipants} players participated** | **Total earnings: ${totalEarnings >= 0 ? '+' : ''}${totalEarnings} ${customTerms.currencyEmoji || '🪙'}**`
                         },
                         {
                             type: 14 // Separator
                         },
                         {
                             type: 10, // Text Display  
-                            content: `**Player Results:**\\n${playerSummary}${nextRoundMsg}`
+                            content: `**Player Results:**\n${playerSummary}${nextRoundMsg}`
                         },
                         {
                             type: 1, // Action Row
