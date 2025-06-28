@@ -10184,10 +10184,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id.startsWith('entity_edit_mode_')) {
       // Switch to edit mode for an entity
       try {
+        console.log('🔍 DEBUG: Processing entity_edit_mode_', custom_id);
         const parts = custom_id.split('_');
         const entityType = parts[3];
         const entityId = parts.slice(4).join('_');
         const guildId = req.body.guild_id;
+        console.log('🔍 DEBUG: Entity type:', entityType, 'ID:', entityId, 'Guild:', guildId);
         
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
         
@@ -10200,6 +10202,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           mode: 'edit'
         });
         
+        console.log('🔍 DEBUG: UI Response created successfully, sending update');
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: uiResponse
