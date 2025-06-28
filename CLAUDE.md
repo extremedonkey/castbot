@@ -8,7 +8,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.
 
-## LATEST DEVELOPMENT: SAFARI DYNAMIC CONTENT SYSTEM ✅ MVP1.5 COMPLETE
+## LATEST DEVELOPMENT: SAFARI ATTACK SYSTEM ✅ MVP3 COMPLETE
+
+**Major Feature Addition: Safari Queued Attack System MVP3**
+- **⚔️ Attack Planning Interface**: Complete tactical attack system with target selection and quantity management
+- **🎯 Multi-Target Distribution**: Players can split attacks from single item across multiple targets for strategic gameplay
+- **📊 Attack Availability Tracking**: Persistent `numAttacksAvailable` storage with real-time inventory updates
+- **🗂️ Attack Queue Management**: Round-based attack scheduling stored in `safariContent.json` with full state persistence
+- **🔄 Dynamic UI Updates**: Real-time attack calculations, damage totals, and planned attack displays
+- **🛡️ Eligible Target Filtering**: Only shows active players (currency ≥1 OR inventory items) excluding attacker
+- **📈 Scalable Architecture**: Built for future attack types (live, instant) while hard-coding current queued approach
+
+**Technical Implementation:**
+- **Attack Data Structure**: Enhanced inventory format with `quantity` and `numAttacksAvailable` properties in `playerData.json`
+- **Queue Storage**: `safariContent.json` → `attackQueue.round{X}` with structured attack records including damage calculations
+- **State Management**: Discord interaction state embedded in custom_ids to handle stateless UI updates
+- **UI Components**: Section components with blue "⚔️ Attack Player" buttons for attack items in inventory display
+- **Handler Integration**: Complete button handler system with proper dynamic handler exclusions
+
+**MVP3 Features Completed:**
+- ✅ **Inventory Attack UI**: Section components showing "⚔️ Attacks Available: X" and "🎯 Attacks Planned: Y"
+- ✅ **Attack Planning Flow**: User Select → Quantity Select → Damage Calculation → Schedule Attack
+- ✅ **Multi-Target Support**: Core functionality allowing strategic attack distribution across multiple players
+- ✅ **State Persistence**: Attack records maintain full context (attacker, defender, item, damage, round)
+- ✅ **Real-Time Updates**: Dynamic attack info display with live calculations and planned attack listings
+- ✅ **25-Attack UI Limit**: String select workaround for Discord's component limitations with proper messaging
+- ✅ **Attack Availability Management**: Automatic reduction of available attacks when scheduled
+- ✅ **Data Migration**: Automatic conversion of existing simple quantity to attack-enabled object format
+
+**Attack System Integration:**
+- **Player Experience**: Attack items display blue buttons in inventory with tactical planning interface
+- **Strategic Gameplay**: Multi-target distribution enables complex attack strategies for competitive play
+- **Round Integration**: Attack queue ready for round results processing with full damage calculations
+- **Future-Ready**: Architecture supports live attacks, instant attacks, and other attack types
+- **Performance Optimized**: Efficient state management and UI updates for responsive gameplay
+
+**MVP3 Status:** ✅ PRODUCTION READY
+- Complete attack planning and scheduling system operational
+- Multi-target attack distribution fully functional
+- Real-time UI updates and state management working
+- Attack queue persistence and round integration ready
+- Ready for Tycoons game deployment and competitive gameplay
+
+**Next Phase:** Round Results Attack Processing - Apply queued attacks during round results with damage calculation and item consumption
+
+## PREVIOUS DEVELOPMENT: SAFARI DYNAMIC CONTENT SYSTEM ✅ MVP1.5 COMPLETE
 
 **Major Feature Addition: Safari Dynamic Content Management System MVP1.5**
 - **🦁 Safari Submenu**: Complete dynamic content management interface in Production Menu

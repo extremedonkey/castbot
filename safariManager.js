@@ -1630,10 +1630,10 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     
                     // Add attack availability info
                     if (attacksPlanned > 0) {
-                        attackItemContent += `\n\n> ⚔️ **Attacks Available:** ${numAttacksAvailable}`;
+                        attackItemContent += `\n> \`Attacks Available: ${numAttacksAvailable}\``;
                         attackItemContent += `\n> 🎯 **Attacks Planned:** ${attacksPlanned}`;
                     } else {
-                        attackItemContent += `\n\n> ⚔️ **Attacks Available:** ${numAttacksAvailable}`;
+                        attackItemContent += `\n> \`Attacks Available: ${numAttacksAvailable}\``;
                     }
                     
                     // Create Section component with attack button
