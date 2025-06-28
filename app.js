@@ -5796,9 +5796,14 @@ Your server is now ready for Tycoons gameplay!`;
       try {
         const guildId = req.body.guild_id;
         const attackerId = req.body.member?.user?.id || req.body.user?.id;
-        const itemId = custom_id.replace('safari_schedule_attack_', '');
         
-        console.log(`⚔️ DEBUG: Scheduling attack for ${attackerId} with item ${itemId}`);
+        // Parse custom_id properly: safari_schedule_attack_itemId_targetId_quantity
+        const parts = custom_id.split('_');
+        const itemId = parts[3]; // Extract itemId correctly
+        const targetId = parts[4] !== 'none' ? parts[4] : null;
+        const quantity = parseInt(parts[5]) || 0;
+        
+        console.log(`⚔️ DEBUG: Scheduling attack - Attacker: ${attackerId}, Item: ${itemId}, Target: ${targetId}, Quantity: ${quantity}`);
         
         // Get attack details from message components
         // This will be implemented with proper state management
