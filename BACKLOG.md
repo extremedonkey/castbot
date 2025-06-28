@@ -44,6 +44,18 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - If consolidation beneficial, design unified interface (e.g., `./dev.sh start|restart|status|stop`)
 - Maintain backward compatibility during transition
 
+### BUG: Cannot Remove Castlist with Deleted Discord Role
+**Description:** When a Discord role is deleted from the server, any castlist containing that role becomes impossible to remove through the UI
+**Current Issue:** The "Clear Tribe" functionality likely fails when trying to reference a non-existent role, leaving the castlist in a broken state
+**User Impact:** Admins cannot clean up broken castlists after role deletion, requiring manual data manipulation
+**Acceptance Criteria:**
+- Add error handling to detect deleted/missing roles in castlists
+- Allow removal of castlists containing non-existent roles
+- Show clear error messages indicating the role no longer exists
+- Provide option to "Force Remove" broken castlists
+- Consider adding validation on startup to flag orphaned role references
+**Workaround:** Currently requires manual editing of playerData.json to remove the castlist entry
+
 ## HIGH Priority
 
 ### App.js Massive Code Reduction Initiative - Phase 1 (Quick Wins)

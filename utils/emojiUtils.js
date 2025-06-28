@@ -116,7 +116,7 @@ export async function createEmojiForUser(member, guild) {
                 throw new Error(`Failed to fetch avatar: ${response.status} ${response.statusText}`);
             }
             
-            const buffer = await response.buffer();
+            const buffer = await response.arrayBuffer();
             console.log(`Downloaded avatar: ${buffer.length} bytes, Content-Type: ${response.headers.get('content-type')}`);
 
             let processedBuffer = buffer;
