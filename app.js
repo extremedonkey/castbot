@@ -5162,8 +5162,15 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
 
-        console.log('✅ DEBUG: User authorized, importing server usage analytics...');
-        // Import and run server usage analytics
+        console.log('✅ DEBUG: User authorized, deferring response for background processing...');
+        
+        // Defer the response immediately to avoid 3-second timeout
+        res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+        });
+        
+        // Process analytics in the background
+        console.log('✅ DEBUG: Starting background analytics processing...');
         const { generateServerUsageSummary, formatServerUsageForDiscord } = await import('./serverUsageAnalytics.js');
         console.log('✅ DEBUG: Server usage analytics imported successfully');
         
@@ -5174,12 +5181,19 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Format for Discord display
         const discordResponse = formatServerUsageForDiscord(summary);
-        console.log('✅ DEBUG: Formatted for Discord, sending response...');
+        console.log('✅ DEBUG: Formatted for Discord, sending follow-up...');
         
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: discordResponse
+        // Send follow-up response with results
+        const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
+        await fetch(followUpUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(discordResponse)
         });
+        
+        console.log('✅ DEBUG: Follow-up response sent successfully');
         
       } catch (error) {
         console.error('Error running server usage stats:', error);
