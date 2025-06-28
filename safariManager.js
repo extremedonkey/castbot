@@ -16,6 +16,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SAFARI_CONTENT_FILE = path.join(__dirname, 'safariContent.json');
 
+// Player name cache to ensure consistency within the same request
+const playerNameCache = new Map();
+
+/**
+ * Clear the player name cache (call at the start of new operations)
+ */
+function clearPlayerNameCache() {
+    playerNameCache.clear();
+    console.log('🗑️ DEBUG: Cleared player name cache');
+}
+
 /**
  * Safari Manager Module for CastBot - MVP2
  * Handles dynamic content creation, button management, action execution,
@@ -2141,24 +2152,36 @@ async function getEligiblePlayersFixed(guildId, client = null) {
             console.log(`🔍 DEBUG: Player ${userId}: currency=${currency}, inventory=${JSON.stringify(inventory)}, hasInventory=${hasInventory}`);
             
             if (currency >= 1 || hasInventory) {
-                // Get player name from Discord client if available - use multiple fallback strategies
-                let playerName = `Player ${userId.slice(-4)}`;
-                try {
-                    // Try to get fresh name from guild member
-                    const guild = client?.guilds?.cache?.get(guildId);
-                    if (guild) {
-                        const member = await guild?.members?.fetch(userId);
-                        if (member) {
-                            playerName = member.displayName || member.user?.globalName || member.user?.username || playerName;
-                        }
-                    }
-                } catch (e) {
-                    console.log(`🔍 DEBUG: Discord client lookup failed for ${userId}, using fallback`);
-                }
+                // Check cache first for consistent player names within the same request
+                let playerName = playerNameCache.get(userId);
                 
-                // Enhanced fallback to stored data if Discord lookup failed
-                if (playerName.startsWith('Player ')) {
-                    playerName = data.globalName || data.displayName || data.username || playerName;
+                if (!playerName) {
+                    // Get player name from Discord client if available - use multiple fallback strategies
+                    playerName = `Player ${userId.slice(-4)}`;
+                    try {
+                        // Try to get fresh name from guild member
+                        const guild = client?.guilds?.cache?.get(guildId);
+                        if (guild) {
+                            const member = await guild?.members?.fetch(userId);
+                            if (member) {
+                                playerName = member.displayName || member.user?.globalName || member.user?.username || playerName;
+                                console.log(`🔍 DEBUG: Discord lookup successful for ${userId}: ${playerName}`);
+                            }
+                        }
+                    } catch (e) {
+                        console.log(`🔍 DEBUG: Discord client lookup failed for ${userId}, using fallback`);
+                    }
+                    
+                    // Enhanced fallback to stored data if Discord lookup failed
+                    if (playerName.startsWith('Player ')) {
+                        playerName = data.globalName || data.displayName || data.username || playerName;
+                    }
+                    
+                    // Cache the result for consistency
+                    playerNameCache.set(userId, playerName);
+                    console.log(`💾 DEBUG: Cached player name for ${userId}: ${playerName}`);
+                } else {
+                    console.log(`📋 DEBUG: Using cached name for ${userId}: ${playerName}`);
                 }
                 
                 eligiblePlayers.push({
@@ -2841,6 +2864,9 @@ async function clearAttackQueue(guildId, round = null) {
  */
 async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = null, selectedQuantity = 0, client) {
     try {
+        // Clear player name cache at start of new attack operation for fresh lookups
+        clearPlayerNameCache();
+        
         console.log(`⚔️ DEBUG: Creating/updating attack UI - Target: ${targetId}, Quantity: ${selectedQuantity}`);
         
         const safariData = await loadSafariContent();
