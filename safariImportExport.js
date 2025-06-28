@@ -3,7 +3,7 @@
  * Handles exporting Safari data to JSON and importing with smart merge logic
  */
 
-import { loadSafariContent, saveSafariContent } from './storage.js';
+import { loadSafariContent, saveSafariContent } from './safariManager.js';
 
 /**
  * Export Safari data for a guild in a compact JSON format
