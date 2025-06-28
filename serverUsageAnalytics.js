@@ -328,10 +328,10 @@ function calculateServerStats(logEntries, daysBack = 7) {
 
 /**
  * Generate server usage summary for Discord display
- * @param {number} daysBack - Number of days to analyze (default: 7)
+ * @param {number} daysBack - Number of days to analyze (default: 42)
  * @returns {Object} Analytics summary with rankings and insights
  */
-async function generateServerUsageSummary(daysBack = 7) {
+async function generateServerUsageSummary(daysBack = 42) {
   const logEntries = await parseUserAnalyticsLog();
   const serverStats = calculateServerStats(logEntries, daysBack);
   
@@ -348,8 +348,6 @@ async function generateServerUsageSummary(daysBack = 7) {
   const insights = {
     mostActive: rankedServers[0] || null,
     leastActive: rankedServers[rankedServers.length - 1] || null,
-    commandHeavy: rankedServers.filter(s => s.commandToButtonRatio < 0.5),
-    buttonHeavy: rankedServers.filter(s => s.commandToButtonRatio > 3),
     highEngagement: rankedServers.filter(s => s.avgDailyActivity > 50),
     powerUsers: rankedServers.filter(s => s.uniqueUserCount > 10)
   };
@@ -359,7 +357,7 @@ async function generateServerUsageSummary(daysBack = 7) {
     totalInteractions,
     totalUniqueUsers,
     activeServers,
-    rankedServers: rankedServers.slice(0, 15), // Top 15 servers
+    rankedServers: rankedServers, // All servers
     insights,
     generatedAt: new Date().toISOString()
   };
@@ -379,17 +377,27 @@ function formatServerUsageForDiscord(summary) {
   if (rankedServers.length === 0) {
     rankingText = 'No server activity found in the specified period.';
   } else {
-    // Medal emojis for top 3
-    const medals = ['🥇', '🥈', '🥉'];
+    // Helper function to generate rank emojis
+    function getRankEmoji(rank) {
+      const medals = ['🥇', '🥈', '🥉'];
+      if (rank < 3) return medals[rank];
+      
+      const rankNum = rank + 1;
+      if (rankNum < 10) return `${rankNum}️⃣`;
+      
+      // For numbers 10+, combine digit emojis
+      const digits = rankNum.toString().split('');
+      return digits.map(digit => `${digit}️⃣`).join('');
+    }
     
-    rankedServers.slice(0, 10).forEach((server, index) => {
-      const medal = index < 3 ? medals[index] : `${index + 1}️⃣`;
+    rankedServers.forEach((server, index) => {
+      const medal = getRankEmoji(index);
       const serverDisplay = server.serverName.length > 25 
         ? server.serverName.substring(0, 25) + '...'
         : server.serverName;
       
       rankingText += `${medal} **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} interactions\n`;
-      rankingText += `   └ ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n\n`;
+      rankingText += `   └ ${server.uniqueUserCount} CastBot users • ${server.slashCommands} commands • ${server.buttonClicks} button clicks\n\n`;
     });
   }
   
@@ -408,13 +416,6 @@ function formatServerUsageForDiscord(summary) {
     insightsText += `⚡ **High Activity**: ${insights.highEngagement.length} servers with 50+ daily interactions\n`;
   }
   
-  if (insights.commandHeavy.length > 0) {
-    insightsText += `⌨️ **Command-Heavy Servers**: ${insights.commandHeavy.length} servers prefer slash commands\n`;
-  }
-  
-  if (insights.buttonHeavy.length > 0) {
-    insightsText += `🔘 **Button-Heavy Servers**: ${insights.buttonHeavy.length} servers prefer button interactions\n`;
-  }
   
   if (!insightsText) {
     insightsText = 'No specific trends detected in this period.';

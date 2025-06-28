@@ -5149,9 +5149,9 @@ Your server is now ready for Tycoons gameplay!`;
         const { generateServerUsageSummary, formatServerUsageForDiscord } = await import('./serverUsageAnalytics.js');
         console.log('✅ DEBUG: Server usage analytics imported successfully');
         
-        // Generate 7-day usage summary
+        // Generate 6-week usage summary
         console.log('✅ DEBUG: Generating server usage summary...');
-        const summary = await generateServerUsageSummary(7);
+        const summary = await generateServerUsageSummary(42);
         console.log('✅ DEBUG: Summary generated, formatting for Discord...');
         
         // Format for Discord display
