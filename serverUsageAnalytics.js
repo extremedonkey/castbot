@@ -395,7 +395,11 @@ function formatServerUsageForDiscord(summary) {
       return digits.map(digit => `${digit}️⃣`).join('');
     }
     
-    rankedServers.forEach((server, index) => {
+    // Limit to top 15 servers to prevent Discord embed size limits
+    const displayServers = rankedServers.slice(0, 15);
+    const hasMoreServers = rankedServers.length > 15;
+    
+    displayServers.forEach((server, index) => {
       const medal = getRankEmoji(index);
       const serverDisplay = server.serverName.length > 25 
         ? server.serverName.substring(0, 25) + '...'
@@ -404,6 +408,10 @@ function formatServerUsageForDiscord(summary) {
       rankingText += `${medal} **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} interactions\n`;
       rankingText += `   └ ${server.uniqueUserCount} CastBot users • ${server.slashCommands} commands • ${server.buttonClicks} button clicks\n\n`;
     });
+    
+    if (hasMoreServers) {
+      rankingText += `... and ${rankedServers.length - 15} more servers\n`;
+    }
   }
   
   // Build insights text
