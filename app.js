@@ -2847,8 +2847,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Update currency
         player.safari.currency = newCurrency;
         
-        // Add item to inventory using proper function to avoid corruption
-        const finalQuantity = await addItemToInventory(guildId, userId, itemId, 1);
+        // Add item to inventory using proper function to avoid corruption (pass existing playerData to prevent race condition)
+        const finalQuantity = await addItemToInventory(guildId, userId, itemId, 1, playerData);
         
         // Record purchase in store history
         player.safari.storeHistory.push({

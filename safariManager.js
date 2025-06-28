@@ -747,10 +747,15 @@ async function getPlayerInventory(guildId, userId) {
 
 /**
  * Add item to player inventory
+ * @param {string} guildId - Guild ID
+ * @param {string} userId - User ID  
+ * @param {string} itemId - Item ID
+ * @param {number} quantity - Quantity to add (default: 1)
+ * @param {Object} existingPlayerData - Optional existing player data to avoid race conditions
  */
-async function addItemToInventory(guildId, userId, itemId, quantity = 1) {
+async function addItemToInventory(guildId, userId, itemId, quantity = 1, existingPlayerData = null) {
     try {
-        const playerData = await loadPlayerData();
+        const playerData = existingPlayerData || await loadPlayerData();
         const safariData = await loadSafariContent();
         
         // Initialize structures
@@ -814,8 +819,13 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1) {
         
         console.log(`🔍 DEBUG: addItemToInventory - AFTER: ${itemId} = `, playerData[guildId].players[userId].safari.inventory[itemId]);
         
-        await savePlayerData(playerData);
-        console.log(`✅ DEBUG: PlayerData saved to disk`);
+        // Only save if we're not using existing player data (to avoid race conditions)
+        if (!existingPlayerData) {
+            await savePlayerData(playerData);
+            console.log(`✅ DEBUG: PlayerData saved to disk`);
+        } else {
+            console.log(`🔄 DEBUG: Using existing playerData - caller will handle saving`);
+        }
         
         console.log(`📦 DEBUG: Added ${quantity}x ${itemId} to user ${userId} inventory`);
         
