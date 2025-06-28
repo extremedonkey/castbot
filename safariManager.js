@@ -1834,7 +1834,7 @@ async function processRoundResults(guildId, channelId, client) {
         console.log(`🎯 DEBUG: Event roll: ${randomRoll.toFixed(1)}% - ${eventType.toUpperCase()} event: ${eventName}`);
         
         // Get eligible players (currency >= 1 OR any inventory items)
-        const eligiblePlayers = await getEligiblePlayersFixed(guildId);
+        const eligiblePlayers = await getEligiblePlayersFixed(guildId, client);
         console.log(`👥 DEBUG: Found ${eligiblePlayers.length} eligible players`);
         
         if (eligiblePlayers.length === 0) {
@@ -1968,7 +1968,7 @@ function createResetInterface() {
 /**
  * Get eligible players (currency >= 1 OR has inventory items)
  */
-async function getEligiblePlayersFixed(guildId) {
+async function getEligiblePlayersFixed(guildId, client = null) {
     try {
         console.log(`🔍 DEBUG: Getting eligible players for guild ${guildId}`);
         const playerData = await loadPlayerData();
