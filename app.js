@@ -3615,7 +3615,7 @@ To fix this:
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
               ...managementUI,
-              flags: InteractionResponseFlags.EPHEMERAL
+              flags: (managementUI.flags || 0) | InteractionResponseFlags.EPHEMERAL
             }
           });
         }
@@ -8454,7 +8454,7 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             ...managementUI,
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (managementUI.flags || 0) | InteractionResponseFlags.EPHEMERAL
           }
         });
         
