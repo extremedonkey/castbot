@@ -2758,7 +2758,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
         
         // Find the delimiter between storeId and itemId by checking which combination exists
-        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const { loadSafariContent, saveSafariContent, addItemToInventory } = await import('./safariManager.js');
         const { getPlayer, updatePlayer, savePlayerData, loadPlayerData } = await import('./storage.js');
         const safariData = await loadSafariContent();
         
@@ -2840,8 +2840,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         // Update currency
         player.safari.currency = newCurrency;
         
-        // Add item to inventory
-        player.safari.inventory[itemId] = (player.safari.inventory[itemId] || 0) + 1;
+        // Add item to inventory using proper function to avoid corruption
+        const finalQuantity = await addItemToInventory(guildId, userId, itemId, 1);
         
         // Record purchase in store history
         player.safari.storeHistory.push({
@@ -2872,7 +2872,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙 ${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${typeof player.safari.inventory[itemId] === 'object' ? player.safari.inventory[itemId].quantity : player.safari.inventory[itemId]}`,
+            content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙 ${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${finalQuantity}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
