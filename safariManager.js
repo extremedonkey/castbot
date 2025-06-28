@@ -2377,16 +2377,16 @@ async function resetGameData(guildId) {
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `# ✅ Game Reset Complete\\n\\n**${playersReset} players** have been reset:\\n• All currency set to 0\\n• All inventories cleared\\n• Game returned to Round 1\\n\\nThe Safari challenge can now begin again!`
+                            content: `# Game Reset Complete\n\n**${playersReset} players** have been reset:\n• All currency set to 0\n• All inventories cleared\n• Game returned to Round 1\n\nThe Safari challenge can now begin again!`
                         },
                         {
                             type: 1, // Action Row
                             components: [{
                                 type: 2, // Button
-                                custom_id: 'safari_round_results',
-                                label: 'Start Round 1',
-                                style: 1, // Primary
-                                emoji: { name: '🎯' }
+                                custom_id: 'safari_manage_currency',
+                                label: 'Manage Currency',
+                                style: 2, // Secondary
+                                emoji: { name: '💰' }
                             }]
                         }
                     ]
