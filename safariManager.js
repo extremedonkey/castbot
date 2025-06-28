@@ -751,6 +751,7 @@ async function getPlayerInventory(guildId, userId) {
 async function addItemToInventory(guildId, userId, itemId, quantity = 1) {
     try {
         const playerData = await loadPlayerData();
+        const safariData = await loadSafariContent();
         
         // Initialize structures
         if (!playerData[guildId]) playerData[guildId] = { players: {} };
@@ -762,25 +763,53 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1) {
             };
         }
         
+        // Get item definition to check if it's an attack item
+        const itemDefinition = safariData[guildId]?.items?.[itemId];
+        const isAttackItem = itemDefinition && (itemDefinition.attackValue !== null && itemDefinition.attackValue !== undefined);
+        
         const currentItem = playerData[guildId].players[userId].safari.inventory[itemId];
         let currentQuantity = 0;
         
         console.log(`🔍 DEBUG: addItemToInventory - BEFORE: ${itemId} = `, currentItem);
+        console.log(`🔍 DEBUG: Item is attack item: ${isAttackItem}, attackValue: ${itemDefinition?.attackValue}`);
         
         // Handle both object and number inventory formats
         if (typeof currentItem === 'object' && currentItem !== null) {
             currentQuantity = currentItem.quantity || 0;
-            console.log(`🔍 DEBUG: Object format - current quantity: ${currentQuantity}, adding: ${quantity}`);
-            // Update the existing object
-            playerData[guildId].players[userId].safari.inventory[itemId] = {
-                ...currentItem,
-                quantity: currentQuantity + quantity
-            };
+            const currentAttacks = currentItem.numAttacksAvailable || 0;
+            console.log(`🔍 DEBUG: Object format - current quantity: ${currentQuantity}, current attacks: ${currentAttacks}, adding: ${quantity}`);
+            
+            // For attack items, update both quantity and numAttacksAvailable
+            if (isAttackItem) {
+                playerData[guildId].players[userId].safari.inventory[itemId] = {
+                    ...currentItem,
+                    quantity: currentQuantity + quantity,
+                    numAttacksAvailable: currentAttacks + quantity  // Each item adds 1 attack
+                };
+                console.log(`⚔️ DEBUG: Updated attack item - new quantity: ${currentQuantity + quantity}, new attacks: ${currentAttacks + quantity}`);
+            } else {
+                // Non-attack items - only update quantity
+                playerData[guildId].players[userId].safari.inventory[itemId] = {
+                    ...currentItem,
+                    quantity: currentQuantity + quantity
+                };
+            }
         } else {
             // Simple number format or first purchase
             currentQuantity = currentItem || 0;
-            console.log(`🔍 DEBUG: Number format - current quantity: ${currentQuantity}, adding: ${quantity}`);
-            playerData[guildId].players[userId].safari.inventory[itemId] = currentQuantity + quantity;
+            console.log(`🔍 DEBUG: Number/first format - current quantity: ${currentQuantity}, adding: ${quantity}`);
+            
+            if (isAttackItem) {
+                // Convert to object format for attack items
+                playerData[guildId].players[userId].safari.inventory[itemId] = {
+                    quantity: currentQuantity + quantity,
+                    numAttacksAvailable: quantity  // First purchase gets quantity attacks
+                };
+                console.log(`⚔️ DEBUG: Created new attack item - quantity: ${currentQuantity + quantity}, attacks: ${quantity}`);
+            } else {
+                // Keep number format for non-attack items
+                playerData[guildId].players[userId].safari.inventory[itemId] = currentQuantity + quantity;
+            }
         }
         
         console.log(`🔍 DEBUG: addItemToInventory - AFTER: ${itemId} = `, playerData[guildId].players[userId].safari.inventory[itemId]);
