@@ -2711,12 +2711,96 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log('🏪 DEBUG: Sending store browse response...');
         console.log('🏪 DEBUG: Container structure:', JSON.stringify(container, null, 2));
         
-        // Try a simple response first to test if it's a Components V2 issue
+        // Create simplified Components V2 structure to avoid nesting issues
+        const containerComponents = [];
+        
+        // Header section
+        containerComponents.push({
+          type: 10, // Text Display
+          content: `## ${store.emoji || '🏪'} ${store.name}\n\n${store.description || ''}\n\n**${store.settings?.storeownerText || 'Welcome to the store!'}**\n\n> ${customTerms.currencyEmoji} **Your Balance:** ${playerCurrency} ${customTerms.currencyName}`
+        });
+        
+        containerComponents.push({ type: 14 }); // Separator
+        
+        // Create one section per item - simplified structure
+        const storeItems = store.items || [];
+        for (let i = 0; i < Math.min(storeItems.length, 8); i++) { // Limit to 8 items to stay safe
+          const storeItem = storeItems[i];
+          const itemId = storeItem.itemId || storeItem;
+          const item = allItems[itemId];
+          const price = storeItem.price || item?.basePrice || 0;
+          
+          if (item) {
+            // Single section with all item info combined
+            let itemContent = `## ${item.emoji || '📦'} ${item.name}\n\n${item.description || 'No description available.'}\n\n`;
+            
+            // Add yield info if available
+            if ((item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) || 
+                (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined)) {
+              
+              itemContent += '**Yields:**\n';
+              
+              if (item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) {
+                const goodEmoji = item.goodYieldEmoji || customTerms.goodEventEmoji || '☀️';
+                const goodEventName = customTerms.goodEventName || 'Good Event';
+                itemContent += `${goodEmoji} ${goodEventName}: ${item.goodOutcomeValue} ${customTerms.currencyName}\n`;
+              }
+              
+              if (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined) {
+                const badEmoji = item.badYieldEmoji || customTerms.badEventEmoji || '☄️';
+                const badEventName = customTerms.badEventName || 'Bad Event';
+                itemContent += `${badEmoji} ${badEventName}: ${item.badOutcomeValue} ${customTerms.currencyName}\n`;
+              }
+              
+              itemContent += '\n';
+            }
+            
+            itemContent += `> ${customTerms.currencyEmoji} **Price:** ${price} ${customTerms.currencyName}`;
+            
+            const itemSection = {
+              type: 9, // Section component
+              components: [{
+                type: 10, // Text Display
+                content: itemContent
+              }],
+              accessory: {
+                type: 2, // Button accessory
+                custom_id: `safari_store_buy_${guildId}_${storeId}_${itemId}`,
+                label: `Buy ${item.name}`.slice(0, 80),
+                style: 1,
+                emoji: { name: item.emoji || '🛒' }
+              }
+            };
+            
+            containerComponents.push(itemSection);
+            
+            // Add separator between items (but not after the last item)
+            if (i < Math.min(storeItems.length, 8) - 1) {
+              containerComponents.push({ type: 14 }); // Separator
+            }
+          }
+        }
+        
+        if (storeItems.length > 8) {
+          containerComponents.push({
+            type: 10,
+            content: `*... and ${storeItems.length - 8} more items. Store pagination coming soon!*`
+          });
+        }
+        
+        const container = {
+          type: 17, // Container
+          accent_color: store.settings?.accentColor || 0x3498db,
+          components: containerComponents
+        };
+        
+        console.log(`🏪 DEBUG: Simplified container with ${containerComponents.length} components`);
+        
         const response = {
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `🏪 **${store.name}** Store\n\n${store.description || 'No description'}\n\n💰 Your Balance: ${playerCurrency} ${customTerms.currencyName}\n\n*Store interface temporarily simplified for debugging.*`,
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + Ephemeral
+            components: [container]
           }
         };
         
