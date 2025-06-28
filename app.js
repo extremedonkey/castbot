@@ -10351,62 +10351,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
       
-    } else if (custom_id.startsWith('entity_modal_submit_')) {
-      // Handle modal submission for field editing
-      try {
-        const parts = custom_id.split('_');
-        const entityType = parts[3];
-        const entityId = parts[4];
-        const fieldGroup = parts.slice(5).join('_');
-        const guildId = req.body.guild_id;
-        
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
-        
-        console.log(`📝 DEBUG: Modal submit - Type: ${entityType}, ID: ${entityId}, Group: ${fieldGroup}`);
-        
-        // Parse and validate submission
-        const fields = parseModalSubmission(data, fieldGroup);
-        const validation = validateFields(fields, entityType);
-        
-        if (!validation.valid) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `❌ **Validation Error**\n\n${validation.errors.join('\n')}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Update entity
-        await updateEntityFields(guildId, entityType, entityId, fields);
-        
-        // Refresh UI
-        const uiResponse = await createEntityManagementUI({
-          entityType: entityType,
-          guildId: guildId,
-          selectedId: entityId,
-          activeFieldGroup: null,
-          searchTerm: '',
-          mode: 'edit'
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: uiResponse
-        });
-        
-      } catch (error) {
-        console.error('Error handling modal submission:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `❌ Error saving changes: ${error.message}`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-      
     } else if (custom_id.startsWith('entity_consumable_select_')) {
       // Handle consumable select for items
       try {
@@ -13045,6 +12989,63 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating Safari terms. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('entity_modal_submit_')) {
+      // Handle modal submission for field editing
+      try {
+        // Parse: entity_modal_submit_{entityType}_{entityId}_{fieldGroup}
+        const withoutPrefix = custom_id.replace('entity_modal_submit_', '');
+        const parts = withoutPrefix.split('_');
+        const entityType = parts[0];
+        const fieldGroup = parts[parts.length - 1]; // Last part is always fieldGroup
+        const entityId = parts.slice(1, -1).join('_'); // Everything between is entityId
+        const guildId = req.body.guild_id;
+        
+        console.log(`📝 DEBUG: Modal submit - Type: ${entityType}, ID: ${entityId}, Group: ${fieldGroup}`);
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        // Parse and validate submission
+        const fields = parseModalSubmission(data, fieldGroup);
+        const validation = validateFields(fields, entityType);
+        
+        if (!validation.valid) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ **Validation Error**\n\n${validation.errors.join('\n')}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update entity
+        await updateEntityFields(guildId, entityType, entityId, fields);
+        
+        // Refresh UI
+        const uiResponse = await createEntityManagementUI({
+          entityType: entityType,
+          guildId: guildId,
+          selectedId: entityId,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'edit'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error handling modal submission:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error saving changes: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
