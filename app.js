@@ -2577,15 +2577,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log(`🏪 DEBUG: User ${userId} browsing store ${storeId} in guild ${guildId}`);
         
         // Import Safari manager functions
-        console.log('🏪 DEBUG: Importing Safari manager functions...');
         const { loadSafariContent, getCustomTerms } = await import('./safariManager.js');
         const { getPlayer, loadPlayerData } = await import('./storage.js');
-        console.log('🏪 DEBUG: Loading Safari content...');
         const safariData = await loadSafariContent();
-        console.log('🏪 DEBUG: Looking for store data...');
         const store = safariData[guildId]?.stores?.[storeId];
         const allItems = safariData[guildId]?.items || {};
-        console.log(`🏪 DEBUG: Store found: ${store ? 'Yes' : 'No'}, Items count: ${Object.keys(allItems).length}`);
         
         if (!store) {
           return res.send({
@@ -2598,14 +2594,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
         
         // Get custom terms and player's currency for display
-        console.log('🏪 DEBUG: Getting custom terms...');
         const customTerms = await getCustomTerms(guildId);
-        console.log('🏪 DEBUG: Loading player data...');
         const playerData = await loadPlayerData();
         // Access player data directly from the loaded structure
         const player = playerData[guildId]?.players?.[userId];
         const playerCurrency = player?.safari?.currency || 0;
-        console.log(`🏪 DEBUG: Player currency: ${playerCurrency}`);
         
         // Build store display with Container -> Section pattern
         console.log('🏪 DEBUG: Building store display components...');
@@ -2716,13 +2709,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         };
         
         console.log('🏪 DEBUG: Sending store browse response...');
-        return res.send({
+        console.log('🏪 DEBUG: Container structure:', JSON.stringify(container, null, 2));
+        
+        const response = {
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + Ephemeral
             components: [container]
           }
-        });
+        };
+        
+        console.log('🏪 DEBUG: Full response:', JSON.stringify(response, null, 2));
+        return res.send(response);
         
       } catch (error) {
         console.error('Error in safari_store_browse handler:', error);
