@@ -757,6 +757,14 @@ Sprint 3 introduces a unified entity management framework for Safari items, stor
   - **Properties**: Consumable status (via select menu)
 - **Validation**: Type checking, range limits, required fields
 
+#### **4. UX Design Principles**
+- **Direct Editing**: No separate "view mode" - selecting an entity goes straight to edit interface
+- **Immediate Actions**: Field group buttons execute actions directly (open modals/show components)
+- **No Redundant Steps**: Eliminate intermediate "Edit X" buttons that add unnecessary clicks
+- **Contextual Display**: Entity details remain visible while editing
+- **Intuitive Flow**: Reduce cognitive load by removing mode switching
+- **Consistent Behavior**: Apply same principles to stores and buttons
+
 ### **Implementation Details**
 
 #### **Entry Points**
@@ -796,11 +804,16 @@ entity_confirm_delete_item_[id] → Execute deletion
 
 1. **Initial Load**: Shows entity list with search option (10+ items)
 2. **Selection**: Choose entity or "Add new" from dropdown
-3. **View Mode**: Display entity details with Edit/Delete/Back buttons
-4. **Edit Mode**: Grouped field buttons for organized editing
-5. **Field Editing**: Modal popups for text/number fields
-6. **Validation**: Real-time feedback on invalid inputs
-7. **Auto-save**: Changes persist immediately
+3. **Direct Edit Mode**: Skip view mode - go directly to edit interface showing:
+   - Entity details at top
+   - Field group buttons for immediate editing
+   - Delete and Back options
+4. **Immediate Action**: Clicking field group buttons directly opens modals/components:
+   - **Text/Number Fields**: Opens modal immediately
+   - **Properties**: Shows select menu component directly
+   - No intermediate "Edit X" buttons
+5. **Validation**: Real-time feedback on invalid inputs
+6. **Auto-save**: Changes persist immediately
 
 ### **Technical Achievements**
 

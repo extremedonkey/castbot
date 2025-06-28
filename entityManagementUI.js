@@ -24,7 +24,7 @@ export async function createEntityManagementUI(options) {
         selectedId = null,
         activeFieldGroup = null,  // For grouped modal editing
         searchTerm = '',
-        mode = 'view'        // 'view', 'edit', 'delete_confirm'
+        mode = 'edit'        // Default to 'edit' mode - no separate view mode
     } = options;
     
     // Load entity data
@@ -231,49 +231,15 @@ function createEntityDisplay(entity, entityType, safariConfig) {
  */
 function createModeSpecificUI(mode, entityType, entityId, entity, activeFieldGroup) {
     switch (mode) {
-        case 'edit':
-            return createEditModeUI(entityType, entityId, entity, activeFieldGroup);
         case 'delete_confirm':
             return createDeleteConfirmUI(entityType, entityId, entity);
+        case 'edit':
         default:
-            return createViewModeUI(entityType, entityId, entity);
+            // Always default to edit mode - no separate view mode
+            return createEditModeUI(entityType, entityId, entity, activeFieldGroup);
     }
 }
 
-/**
- * Create view mode UI (default)
- */
-function createViewModeUI(entityType, entityId, entity) {
-    return [
-        { type: 14 }, // Separator
-        {
-            type: 1, // ActionRow
-            components: [
-                {
-                    type: 2, // Button
-                    style: 1, // Primary
-                    label: 'Edit',
-                    custom_id: `entity_edit_mode_${entityType}_${entityId}`,
-                    emoji: { name: '✏️' }
-                },
-                {
-                    type: 2, // Button
-                    style: 4, // Danger
-                    label: 'Delete',
-                    custom_id: `entity_delete_mode_${entityType}_${entityId}`,
-                    emoji: { name: '🗑️' }
-                },
-                {
-                    type: 2, // Button
-                    style: 2, // Secondary
-                    label: 'Back',
-                    custom_id: `safari_manage_${entityType}s`,
-                    emoji: { name: '↩️' }
-                }
-            ]
-        }
-    ];
-}
 
 /**
  * Create edit mode UI
@@ -285,13 +251,22 @@ function createEditModeUI(entityType, entityId, entity, activeFieldGroup) {
         { type: 14 }, // Separator
         {
             type: 1, // ActionRow
-            components: [{
-                type: 2, // Button
-                style: 2, // Secondary
-                label: 'Done',
-                custom_id: `safari_manage_${entityType}s`,
-                emoji: { name: '✅' }
-            }]
+            components: [
+                {
+                    type: 2, // Button
+                    style: 4, // Danger
+                    label: 'Delete',
+                    custom_id: `entity_delete_mode_${entityType}_${entityId}`,
+                    emoji: { name: '🗑️' }
+                },
+                {
+                    type: 2, // Button
+                    style: 2, // Secondary
+                    label: 'Done',
+                    custom_id: `safari_manage_${entityType}s`,
+                    emoji: { name: '✅' }
+                }
+            ]
         }
     ];
     

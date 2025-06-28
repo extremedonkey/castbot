@@ -7054,7 +7054,7 @@ Your server is now ready for Tycoons gameplay!`;
           selectedId: null,
           activeFieldGroup: null,
           searchTerm: '',
-          mode: 'view'
+          mode: 'edit'
         });
         
         return res.send({
@@ -10070,14 +10070,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log(`✏️ DEBUG: Selected item ${selectedItemId} for editing`);
         
-        // Create entity management UI with selected item
+        // Create entity management UI with selected item - go directly to edit mode
         const uiResponse = await createEntityManagementUI({
           entityType: 'item',
           guildId: guildId,
           selectedId: selectedItemId,
           activeFieldGroup: null,
           searchTerm: '',
-          mode: 'view'
+          mode: 'edit'
         });
         
         return res.send({
@@ -10235,7 +10235,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           selectedId: entityId,
           activeFieldGroup: null,
           searchTerm: '',
-          mode: 'view'
+          mode: 'edit'
         });
         
         return res.send({
@@ -10466,7 +10466,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           selectedId: null,
           activeFieldGroup: null,
           searchTerm: '',
-          mode: 'view'
+          mode: 'edit'
         });
         
         return res.send({
