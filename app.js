@@ -5122,7 +5122,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Process analytics in the background
         console.log('✅ DEBUG: Starting background analytics processing...');
-        const { generateServerUsageSummary, formatServerUsageForDiscord } = await import('./serverUsageAnalytics.js');
+        const { generateServerUsageSummary, formatServerUsageForDiscord, formatServerUsageForDiscordV2 } = await import('./serverUsageAnalytics.js');
         console.log('✅ DEBUG: Server usage analytics imported successfully');
         
         // Generate 6-week usage summary
@@ -5130,9 +5130,13 @@ Your server is now ready for Tycoons gameplay!`;
         const summary = await generateServerUsageSummary(42);
         console.log('✅ DEBUG: Summary generated, formatting for Discord...');
         
-        // Format for Discord display
-        const discordResponse = formatServerUsageForDiscord(summary);
-        console.log('✅ DEBUG: Formatted for Discord, sending follow-up...');
+        // Format for Discord display - use Components V2 in development
+        const isDevelopment = process.env.PRODUCTION !== 'TRUE';
+        const discordResponse = isDevelopment 
+          ? formatServerUsageForDiscordV2(summary)
+          : formatServerUsageForDiscord(summary);
+        
+        console.log(`✅ DEBUG: Formatted for Discord using ${isDevelopment ? 'Components V2' : 'traditional embeds'}, sending follow-up...`);
         
         // Send follow-up response with results
         const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
