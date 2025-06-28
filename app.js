@@ -10292,20 +10292,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             data: uiResponse
           });
         } else {
-          // Update UI to show field group as active
-          const uiResponse = await createEntityManagementUI({
-            entityType: entityType,
-            guildId: guildId,
-            selectedId: entityId,
-            activeFieldGroup: fieldGroup,
-            searchTerm: '',
-            mode: 'edit'
-          });
+          // Open modal directly for field group editing
+          const entity = await loadEntity(guildId, entityType, entityId);
+          if (!entity) throw new Error('Entity not found');
           
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: uiResponse
-          });
+          const modalResponse = createFieldGroupModal(entityType, entityId, fieldGroup, entity);
+          if (!modalResponse) throw new Error('No modal available for this field group');
+          
+          return res.send(modalResponse);
         }
         
       } catch (error) {
@@ -10320,13 +10314,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       }
       
     } else if (custom_id.startsWith('entity_edit_modal_')) {
-      // Show modal for editing fields
+      // Show modal for editing fields (legacy handler - should not be used)
       try {
-        const parts = custom_id.split('_');
-        const entityType = parts[3];
-        const entityId = parts[4];
-        const fieldGroup = parts.slice(5).join('_');
+        // Parse: entity_edit_modal_{entityType}_{entityId}_{fieldGroup}
+        const withoutPrefix = custom_id.replace('entity_edit_modal_', '');
+        const parts = withoutPrefix.split('_');
+        const entityType = parts[0];
+        const fieldGroup = parts[parts.length - 1]; // Last part is always fieldGroup
+        const entityId = parts.slice(1, -1).join('_'); // Everything between is entityId
         const guildId = req.body.guild_id;
+        
+        console.log('🔍 DEBUG: Modal handler - Type:', entityType, 'ID:', entityId, 'Group:', fieldGroup);
         
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
         

@@ -282,15 +282,18 @@ function createEditModeUI(entityType, entityId, entity, activeFieldGroup) {
     const components = [
         { type: 14 }, // Separator
         ...createFieldGroupButtons(entityType, entityId, activeFieldGroup),
+        { type: 14 }, // Separator
+        {
+            type: 1, // ActionRow
+            components: [{
+                type: 2, // Button
+                style: 2, // Secondary
+                label: 'Done',
+                custom_id: `safari_manage_${entityType}s`,
+                emoji: { name: '✅' }
+            }]
+        }
     ];
-    
-    // Add field editor if a group is active
-    if (activeFieldGroup) {
-        components.push(
-            { type: 14 }, // Separator
-            createFieldGroupEditor(entityType, entityId, entity, activeFieldGroup)
-        );
-    }
     
     return components;
 }
@@ -312,15 +315,6 @@ function createFieldGroupButtons(entityType, entityId, activeFieldGroup) {
             custom_id: `entity_field_group_${entityType}_${entityId}_${groupId}`,
             emoji: { name: group.emoji }
         });
-    });
-    
-    // Add back button
-    buttons.push({
-        type: 2, // Button
-        style: 2, // Secondary
-        label: 'Done',
-        custom_id: `entity_view_mode_${entityType}_${entityId}`,
-        emoji: { name: '✅' }
     });
     
     return createButtonRows(buttons);
