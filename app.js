@@ -111,6 +111,13 @@ import {
   checkRoleHierarchyPermission,
   handleSetupTycoons
 } from './utils/roleUtils.js';
+import {
+  requirePermission,
+  requireAdminPermission,
+  requireSpecificUser,
+  hasPermission,
+  PERMISSIONS
+} from './utils/permissionUtils.js';
 import fs from 'fs';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
@@ -3050,18 +3057,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log('🔍 DEBUG: Checking admin permissions...');
         const member = await guild.members.fetch(userId);
         console.log('🔍 DEBUG: Member permissions:', member.permissions.bitfield.toString());
-        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          console.log('🔍 DEBUG: User lacks admin permissions, sending error response');
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need admin permissions to rank applicants.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requireAdminPermission(req, res, 'You need admin permissions to rank applicants.')) return;
         console.log('🔍 DEBUG: Admin permissions verified');
 
         // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX
@@ -4280,15 +4276,7 @@ To fix this:
         const member = req.body.member;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to access Safari features.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to access Safari features.')) return;
 
         const channelId = req.body.channel_id;
         const guildId = req.body.guild_id;
@@ -4328,15 +4316,7 @@ To fix this:
         const userId = req.body.member.user.id;
         
         // Security check - only allow specific Discord ID
-        if (userId !== '391415444084490240') {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Access denied. This feature is restricted.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requireSpecificUser(req, res, '391415444084490240', 'Access denied. This feature is restricted.')) return;
 
         const channelId = req.body.channel_id;
         const guildId = req.body.guild_id;
@@ -4374,15 +4354,7 @@ To fix this:
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to manage Safari buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage Safari buttons.')) return;
         
         console.log(`🎛️ DEBUG: Opening Safari button management interface`);
         
@@ -5090,15 +5062,7 @@ Your server is now ready for Tycoons gameplay!`;
         const userId = req.body.member.user.id;
         
         // Security check - only allow specific Discord ID
-        if (userId !== '391415444084490240') {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Access denied. This feature is restricted.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requireSpecificUser(req, res, '391415444084490240', 'Access denied. This feature is restricted.')) return;
 
         console.log('🪵 DEBUG: Starting live analytics toggle for user:', userId);
         
@@ -5211,15 +5175,7 @@ Your server is now ready for Tycoons gameplay!`;
         const userId = req.body.member.user.id;
         
         // Security check - only allow specific Discord ID
-        if (userId !== '391415444084490240') {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Access denied. This feature is restricted.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requireSpecificUser(req, res, '391415444084490240', 'Access denied. This feature is restricted.')) return;
 
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
@@ -5295,15 +5251,7 @@ Your server is now ready for Tycoons gameplay!`;
         const member = req.body.member;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to create custom buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create custom buttons.')) return;
 
         console.log('📝 DEBUG: Create Custom Button clicked');
         
@@ -5366,15 +5314,7 @@ Your server is now ready for Tycoons gameplay!`;
         const member = req.body.member;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to post custom buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to post custom buttons.')) return;
 
         console.log('📤 DEBUG: Post Custom Button clicked');
         
@@ -5453,15 +5393,7 @@ Your server is now ready for Tycoons gameplay!`;
         const member = req.body.member;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to manage currency.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage currency.')) return;
 
         console.log('💰 DEBUG: Manage Currency clicked');
         
@@ -5580,15 +5512,7 @@ Your server is now ready for Tycoons gameplay!`;
         const channelId = req.body.channel_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to process round results.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to process round results.')) return;
         
         console.log(`🏅 DEBUG: Processing round results for guild ${guildId} in channel ${channelId}`);
         
@@ -5634,15 +5558,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to view custom buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to view custom buttons.')) return;
 
         console.log('📊 DEBUG: View All Buttons clicked');
         
@@ -5719,15 +5635,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to customize terms.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to customize terms.')) return;
         
         console.log(`⚙️ DEBUG: User ${member.user.id} opening customize terms modal for guild ${guildId}`);
         
@@ -5814,15 +5722,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to manage stores.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage stores.')) return;
         
         console.log(`🏪 DEBUG: Opening store management interface`);
         
@@ -5953,15 +5853,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to manage items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage items.')) return;
         
         console.log(`📦 DEBUG: Opening item management interface`);
         
@@ -6083,15 +5975,7 @@ Your server is now ready for Tycoons gameplay!`;
         const member = req.body.member;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to create stores.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create stores.')) return;
         
         console.log(`🏪 DEBUG: Create new store clicked`);
         
@@ -6160,15 +6044,7 @@ Your server is now ready for Tycoons gameplay!`;
         const member = req.body.member;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to create items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create items.')) return;
         
         console.log(`📦 DEBUG: Create new item clicked`);
         
@@ -6248,15 +6124,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to view stores.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to view stores.')) return;
         
         console.log(`🏪 DEBUG: View all stores clicked for guild ${guildId}`);
         
@@ -6343,15 +6211,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to view items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to view items.')) return;
         
         console.log(`📦 DEBUG: View all items clicked for guild ${guildId}`);
         
@@ -6452,15 +6312,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to edit stores.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit stores.')) return;
         
         console.log(`✏️ DEBUG: Edit existing store clicked for guild ${guildId}`);
         
@@ -6547,15 +6399,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to manage store items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage store items.')) return;
         
         console.log(`📦 DEBUG: Opening store items management interface`);
         
@@ -6654,15 +6498,7 @@ Your server is now ready for Tycoons gameplay!`;
         const selectedStoreId = data.values[0];
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to manage store items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage store items.')) return;
         
         console.log(`📦 DEBUG: Managing items for store ${selectedStoreId}`);
         
@@ -6824,15 +6660,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to manage store items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage store items.')) return;
         
         // Parse custom_id: safari_store_add_item_${storeId}::${itemId}
         // Using :: delimiter to handle IDs with underscores
@@ -6921,15 +6749,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to manage store items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage store items.')) return;
         
         // Parse custom_id: safari_store_remove_item_${storeId}::${itemId}
         // Using :: delimiter to handle IDs with underscores
@@ -7007,15 +6827,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to post store buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to post store buttons.')) return;
         
         // Parse storeId from custom_id
         const storeId = custom_id.replace('safari_store_open_', '');
@@ -7105,15 +6917,7 @@ Your server is now ready for Tycoons gameplay!`;
         const selectedChannelId = data.values[0];
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to post store buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to post store buttons.')) return;
         
         // Parse storeId from custom_id
         const storeId = custom_id.replace('safari_store_post_channel_', '');
@@ -7209,15 +7013,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to edit items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit items.')) return;
         
         console.log(`✏️ DEBUG: Edit existing item clicked for guild ${guildId}`);
         
@@ -7304,15 +7100,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to edit buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit buttons.')) return;
         
         console.log(`✏️ DEBUG: Edit existing button clicked for guild ${guildId}`);
         
@@ -7404,15 +7192,7 @@ Your server is now ready for Tycoons gameplay!`;
         const selectedButtonId = data.values[0];
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to edit buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit buttons.')) return;
         
         console.log(`✏️ DEBUG: Selected button ${selectedButtonId} for editing`);
         
@@ -7475,15 +7255,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to reorder actions.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to reorder actions.')) return;
         
         // Parse custom_id: safari_action_move_up_buttonId_actionIndex
         const parts = custom_id.split('_');
@@ -7558,15 +7330,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to reorder actions.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to reorder actions.')) return;
         
         // Parse custom_id: safari_action_move_down_buttonId_actionIndex
         const parts = custom_id.split('_');
@@ -7644,15 +7408,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to edit properties.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit properties.')) return;
         
         const buttonId = custom_id.replace('safari_edit_properties_', '');
         console.log(`📝 DEBUG: Edit properties clicked for button ${buttonId}`);
@@ -7699,15 +7455,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to edit actions.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit actions.')) return;
         
         // Parse custom_id: safari_action_edit_buttonId_actionIndex
         const parts = custom_id.split('_');
@@ -7821,15 +7569,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to delete actions.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to delete actions.')) return;
         
         // Parse custom_id: safari_action_delete_buttonId_actionIndex
         const parts = custom_id.split('_');
@@ -7918,15 +7658,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to test buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to test buttons.')) return;
         
         const buttonId = custom_id.replace('safari_test_button_', '');
         console.log(`🧪 DEBUG: Test button clicked for button ${buttonId}`);
@@ -7981,15 +7713,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to delete buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to delete buttons.')) return;
         
         const buttonId = custom_id.replace('safari_delete_button_', '');
         console.log(`🗑️ DEBUG: Delete button clicked for button ${buttonId}`);
@@ -8037,15 +7761,7 @@ Your server is now ready for Tycoons gameplay!`;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to delete buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to delete buttons.')) return;
         
         const buttonId = custom_id.replace('safari_confirm_delete_button_', '');
         console.log(`🗑️ DEBUG: Confirming delete for button ${buttonId} by user ${userId}`);
@@ -8108,15 +7824,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to view currency balances.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to view currency balances.')) return;
 
         console.log('👥 DEBUG: View All Currency Balances clicked');
         
@@ -8167,15 +7875,7 @@ Your server is now ready for Tycoons gameplay!`;
         const member = req.body.member;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to set player currency.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to set player currency.')) return;
 
         console.log('💰 DEBUG: Set Player Currency clicked');
         
@@ -8240,15 +7940,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to reset currency.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to reset currency.')) return;
 
         console.log('🗑️ DEBUG: Reset All Currency clicked');
         
@@ -8335,15 +8027,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to add actions.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to add actions.')) return;
 
         // Match against known action types that may contain underscores
         let actionType, buttonId;
@@ -8573,15 +8257,7 @@ Your server is now ready for Tycoons gameplay!`;
         const member = req.body.member;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to finish buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to finish buttons.')) return;
 
         const buttonId = custom_id.replace('safari_finish_button_', '');
         
@@ -10181,15 +9857,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const selectedButtonId = data.values[0];
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to post custom buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to post custom buttons.')) return;
         
         console.log(`📤 DEBUG: Selected button ${selectedButtonId} to post`);
         
@@ -10278,15 +9946,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const selectedChannelId = data.values[0];
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to post custom buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to post custom buttons.')) return;
         
         console.log(`📤 DEBUG: Posting button ${buttonId} to channel ${selectedChannelId}`);
         
@@ -10349,15 +10009,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const selectedUserId = data.values[0];
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to set player currency.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to set player currency.')) return;
         
         console.log(`💰 DEBUG: Selected user ${selectedUserId} for currency setting`);
         
@@ -10405,15 +10057,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const selectedStoreId = data.values[0];
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to edit stores.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit stores.')) return;
         
         console.log(`✏️ DEBUG: Selected store ${selectedStoreId} for editing`);
         
@@ -10443,15 +10087,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const selectedItemId = data.values[0];
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to edit items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit items.')) return;
         
         console.log(`✏️ DEBUG: Selected item ${selectedItemId} for editing`);
         
@@ -10480,15 +10116,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to reset currency.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to reset currency.')) return;
         
         console.log('🗑️ DEBUG: Currency reset confirmed');
         
@@ -11809,15 +11437,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const userId = member.user.id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to create custom buttons.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create custom buttons.')) return;
 
         console.log('📝 DEBUG: Safari button modal submitted');
         
@@ -11939,15 +11559,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to add actions.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to add actions.')) return;
 
         // Match against known action types that may contain underscores  
         let actionType, buttonId;
@@ -12401,15 +12013,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const userId = custom_id.replace('safari_currency_modal_', '');
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to set player currency.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to set player currency.')) return;
         
         // Get currency amount from modal
         const currencyAmount = components[0].components[0].value?.trim();
@@ -12516,15 +12120,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to create stores.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create stores.')) return;
         
         // Extract form data
         const storeName = components[0].components[0].value?.trim();
@@ -12581,15 +12177,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to create items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create items.')) return;
         
         // Extract form data - Updated for Challenge Game Logic
         const components = req.body.data.components;
@@ -12714,15 +12302,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to edit properties.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit properties.')) return;
         
         const buttonId = custom_id.replace('safari_properties_modal_', '');
         console.log(`🔧 DEBUG: Processing properties update for button ${buttonId}`);
@@ -12807,15 +12387,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to edit actions.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit actions.')) return;
         
         // Parse custom_id: safari_edit_action_modal_buttonId_actionIndex_actionType
         const parts = custom_id.replace('safari_edit_action_modal_', '').split('_');
@@ -12920,15 +12492,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const guildId = req.body.guild_id;
         
         // Check admin permissions
-        if (!member.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles permission to customize Safari terms.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to customize Safari terms.')) return;
         
         // Extract modal input values from comprehensive Safari settings
         const components = req.body.data.components;
