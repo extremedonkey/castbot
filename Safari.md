@@ -723,6 +723,118 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
 
 ---
 
+## MVP2 Sprint 3 - Entity Management Framework (July 2025)
+
+### **Overview**
+Sprint 3 introduces a unified entity management framework for Safari items, stores, and buttons. This replaces the previous placeholder "Coming Soon" functionality with a comprehensive CRUD interface following established CastBot UI patterns.
+
+### **Core Architecture**
+
+#### **1. Entity Management UI (`entityManagementUI.js`)**
+- **Purpose**: Provides consistent interface for managing all Safari entities
+- **Key Features**:
+  - Searchable entity selector with "Add new" option
+  - Dynamic field grouping for better UX
+  - View/Edit/Delete modes
+  - Real-time validation and updates
+  - Components V2 with container layout
+
+#### **2. Entity Manager (`entityManager.js`)**
+- **Purpose**: Handles all CRUD operations while maintaining safariContent.json compatibility
+- **Functions**:
+  - `loadEntities()` - Load entities by type
+  - `createEntity()` - Create with auto-generated IDs
+  - `updateEntityFields()` - Field-level updates with nested support
+  - `deleteEntity()` - Safe deletion with reference cleanup
+  - `searchEntities()` - Filter by name, description, or tags
+
+#### **3. Field Editors (`fieldEditors.js`)**
+- **Purpose**: Type-specific field editing with validation
+- **Grouped Modals**:
+  - **Item Info**: Name & Description
+  - **Financials**: Base Price, Good/Bad Outcome Values
+  - **Battle**: Attack & Defense Values
+  - **Properties**: Consumable status (via select menu)
+- **Validation**: Type checking, range limits, required fields
+
+### **Implementation Details**
+
+#### **Entry Points**
+- `safari_item_manage_existing` → Opens entity management UI
+- `safari_manage_items` → Main item management menu (unchanged)
+- Future: `safari_manage_stores`, `safari_manage_safari_buttons`
+
+#### **Button Handler Pattern**
+```javascript
+// Entity selection
+entity_select_item → Handle dropdown selection
+entity_select_item → search_entities → Show search modal
+entity_select_item → create_new → Show creation modal
+
+// Mode switching
+entity_edit_mode_item_[id] → Switch to edit mode
+entity_view_mode_item_[id] → Return to view mode
+entity_delete_mode_item_[id] → Show delete confirmation
+
+// Field editing
+entity_field_group_item_[id]_info → Activate field group
+entity_edit_modal_item_[id]_info → Show modal
+entity_modal_submit_item_[id]_info → Process submission
+
+// Special handlers
+entity_consumable_select_item_[id] → Update consumable
+entity_confirm_delete_item_[id] → Execute deletion
+```
+
+#### **Data Structure Compatibility**
+- Maintains existing safariContent.json format
+- No breaking changes to existing data
+- Automatic reference cleanup on deletion
+- Preserves metadata (createdAt, totalSold, etc.)
+
+### **User Experience Flow**
+
+1. **Initial Load**: Shows entity list with search option (10+ items)
+2. **Selection**: Choose entity or "Add new" from dropdown
+3. **View Mode**: Display entity details with Edit/Delete/Back buttons
+4. **Edit Mode**: Grouped field buttons for organized editing
+5. **Field Editing**: Modal popups for text/number fields
+6. **Validation**: Real-time feedback on invalid inputs
+7. **Auto-save**: Changes persist immediately
+
+### **Technical Achievements**
+
+- **Modular Design**: Reusable for stores and buttons
+- **Smart Search**: Searches name, description, and tags
+- **Grouped Fields**: Reduces cognitive load with logical grouping
+- **Reference Integrity**: Removes deleted items from stores
+- **Backward Compatible**: Works with existing Safari data
+
+### **Testing Considerations**
+
+1. **Critical Path**: Ensure `safari_store_browse_*` continues working
+2. **Data Integrity**: Verify safariContent.json updates correctly
+3. **Validation**: Test field limits and required fields
+4. **Search**: Verify filtering works with special characters
+5. **Deletion**: Confirm store references are cleaned up
+
+### **Next Steps**
+
+1. **Store Management**: Apply same framework to stores
+2. **Button Management**: Extend to Safari buttons (excluding action editing)
+3. **Bulk Operations**: Import/export functionality
+4. **Advanced Search**: Multi-field search with filters
+5. **Cross-entity Relations**: Visual relationship mapping
+
+### **Known Limitations**
+
+- Safari button actions require specialized UI (not included)
+- Store item management uses existing specialized interface
+- Search limited to single term (no advanced operators)
+- No undo functionality for deletions
+
+---
+
 This documentation serves as the complete guide for implementing and extending CastBot's Safari system. Always refer to this document when working with Safari, Idol Hunt, Questions, or dynamic content features.
 
 # ORIGINAL TEXT PROMPT
