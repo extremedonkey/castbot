@@ -232,32 +232,10 @@ const MENU_COMMAND = {
 	type: 1
 };
 
-// DISABLED: Production menu command - merged into unified /menu command
-// const PROD_MENU_COMMAND (functionality moved to /menu with admin detection)
-
-// DISABLED COMMANDS - Moved to /prod_menu interface
-// const PRONOUNS_ADD_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
-// const PRONOUNS_REMOVE_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
-// const TIMEZONES_ADD_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
-// const TIMEZONES_REMOVE_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
-// const ROLE_GENERATOR_COMMAND (moved to /prod_menu -> Manage Pronouns/Timezones)
-// const SET_TRIBE_COMMAND (moved to /prod_menu -> Manage Tribes -> Add Tribe)
-// const CLEAR_TRIBE_COMMAND (moved to /prod_menu -> Manage Tribes -> Clear Tribe)
-// const APPLY_BUTTON_COMMAND (moved to /prod_menu -> Season Applications)
 
 const ALL_COMMANDS = [
-	// Player commands REMOVED: player_set_age, player_set_pronouns, player_set_timezone
-	CASTLIST_COMMAND, // Now points to castlist2 functionality
-	MENU_COMMAND, // Unified menu with admin detection (replaces PROD_MENU_COMMAND)
-	// REMOVED: SET_PLAYERS_AGE_COMMAND - functionality available through /menu system
-	// DISABLED: SET_TRIBE_COMMAND, - moved to /prod_menu (was add_tribe)
-	// DISABLED: CLEAR_TRIBE_COMMAND, - moved to /prod_menu
-	// DISABLED: ROLE_GENERATOR_COMMAND, - moved to /prod_menu
-	// DISABLED: PRONOUNS_ADD_COMMAND, - moved to /prod_menu
-	// DISABLED: PRONOUNS_REMOVE_COMMAND, - moved to /prod_menu
-	// DISABLED: TIMEZONES_ADD_COMMAND, - moved to /prod_menu
-	// DISABLED: TIMEZONES_REMOVE_COMMAND, - moved to /prod_menu
-	// DISABLED: APPLY_BUTTON_COMMAND, - moved to /prod_menu
+	CASTLIST_COMMAND,
+	MENU_COMMAND
 ];
 
 console.log('Registering commands with:');
