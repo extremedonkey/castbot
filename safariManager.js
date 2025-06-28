@@ -3076,8 +3076,8 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
             };
         }
         
-        // Update attack availability
-        await updateAttackAvailability(guildId, attackerId, itemId, quantity);
+        // NOTE: Attack availability is NOT reduced here - it's only reduced during round results
+        // This allows players to see their items in inventory until attacks are actually executed
         
         // Get updated interface showing the scheduled attack
         const response = await createOrUpdateAttackUI(guildId, attackerId, itemId, targetId, 0, client);
@@ -3173,5 +3173,6 @@ export {
     clearAttackQueue,
     createAttackPlanningUI,
     updateAttackDisplay,
-    scheduleAttack
+    scheduleAttack,
+    createOrUpdateAttackUI
 };
