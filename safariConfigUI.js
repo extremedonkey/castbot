@@ -55,18 +55,18 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
             type: 1, // Action Row
             components: [
                 {
-                    type: 2, // Button
-                    custom_id: 'safari_config_reset_defaults',
-                    label: 'Reset to Defaults',
-                    style: 4, // Danger
-                    emoji: { name: '🔄' }
-                },
-                {
                     type: 2, // Button  
                     custom_id: 'prod_safari_menu',
                     label: '← Back to Safari',
                     style: 2, // Secondary
                     emoji: { name: '🦁' }
+                },
+                {
+                    type: 2, // Button
+                    custom_id: 'safari_config_reset_defaults',
+                    label: 'Reset to Defaults',
+                    style: 4, // Danger
+                    emoji: { name: '🔄' }
                 }
             ]
         }
@@ -232,17 +232,17 @@ export function createResetConfirmationUI() {
             components: [
                 {
                     type: 2, // Button
-                    custom_id: 'safari_config_confirm_reset',
-                    label: 'Yes, Reset All',
-                    style: 4, // Danger
-                    emoji: { name: '🔄' }
-                },
-                {
-                    type: 2, // Button
                     custom_id: 'safari_customize_terms',
                     label: 'Cancel',
                     style: 2, // Secondary
                     emoji: { name: '❌' }
+                },
+                {
+                    type: 2, // Button
+                    custom_id: 'safari_config_confirm_reset',
+                    label: 'Yes, Reset All',
+                    style: 4, // Danger
+                    emoji: { name: '🔄' }
                 }
             ]
         }

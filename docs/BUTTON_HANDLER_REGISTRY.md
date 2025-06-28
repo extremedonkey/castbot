@@ -83,6 +83,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_` dynamic handler | `!custom_id.startsWith('safari_button_')` | ✅ Fixed | **CRITICAL**: Must exclude all `safari_button_` patterns to prevent interference |
 | | `!custom_id.startsWith('safari_add_action_')` | ✅ Active | Required for action management handlers |
 | | `!custom_id.startsWith('safari_currency_')` | ✅ Active | Required for currency management handlers |
+| | `!custom_id.startsWith('safari_config_')` | ✅ Active | Required for Safari customization handlers |
 | | `custom_id !== 'safari_post_select_button'` | ✅ Active | Required for post button select menu |
 
 ### **Recent Critical Fixes (2025-06-24)**

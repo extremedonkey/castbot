@@ -2907,6 +2907,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_delete_button_') &&
         !custom_id.startsWith('safari_confirm_delete_button_') &&
         !custom_id.startsWith('safari_action_') &&
+        !custom_id.startsWith('safari_config_') &&
         custom_id !== 'safari_post_select_button' && 
         !custom_id.startsWith('safari_post_channel_')) {
       console.log(`🔍 DEBUG: Dynamic Safari handler processing custom_id: ${custom_id}`);
