@@ -250,8 +250,8 @@ async function logInteraction(userId, guildId, action, details, username, guildN
       }
     }
     
-    // Enhanced action display: include channel if available
-    const actionDisplay = channelName ? `#${channelName}` : action;
+    // Enhanced action display: include channel and action type
+    const actionDisplay = channelName ? `#${channelName} | ${action}` : action;
     
     // Create enhanced log entry format - remove [ANALYTICS] prefix for cleaner display
     const logEntry = `${timestamp} | ${userDisplay} in ${serverDisplay} | ${actionDisplay} | ${logDetails}\n`;
@@ -301,8 +301,30 @@ function setDiscordClient(client) {
  * @returns {string} Formatted line with Discord Markdown
  */
 function formatAnalyticsLine(line) {
-  // Parse format: [8:33AM] Thu 19 Jun 25 | User (username) in Server Name (1234567890) | ACTION_TYPE | details
-  const match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
+  // Parse format with optional channel:
+  // [8:33AM] Thu 19 Jun 25 | User (username) in Server Name (1234567890) | #channel | ACTION_TYPE | details
+  // [8:33AM] Thu 19 Jun 25 | User (username) in Server Name (1234567890) | ACTION_TYPE | details
+  
+  // First try the new format with channel
+  let match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+(#[\w\-⁠]+)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
+  
+  if (match) {
+    // New format with channel
+    const [, timestamp, user, serverName, serverId, channel, actionType, details] = match;
+    
+    // Format components with Markdown
+    const formattedUser = `**\`${user}\`**`;
+    const formattedServer = `__\`${serverName}\`__`;
+    const formattedChannel = `**${channel}**`;
+    
+    // Format the action details based on action type
+    let formattedDetails = formatActionDetails(actionType, details);
+    
+    return `${timestamp} | ${formattedUser} in ${formattedServer} (${serverId}) | ${formattedChannel} | ${actionType} | ${formattedDetails}`;
+  }
+  
+  // Fallback to old format without channel
+  match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
   
   if (!match) {
     return line; // Return original if parsing fails
@@ -315,26 +337,35 @@ function formatAnalyticsLine(line) {
   const formattedServer = `__\`${serverName}\`__`;
   
   // Format the action details based on action type
-  let formattedDetails;
+  let formattedDetails = formatActionDetails(actionType, details);
+  
+  return `${timestamp} | ${formattedUser} in ${formattedServer} (${serverId}) | ${actionType} | ${formattedDetails}`;
+}
+
+/**
+ * Format action details based on action type
+ * @param {string} actionType - The action type (SLASH_COMMAND, BUTTON_CLICK, etc.)
+ * @param {string} details - The action details
+ * @returns {string} Formatted details with appropriate markdown
+ */
+function formatActionDetails(actionType, details) {
   if (actionType === 'SLASH_COMMAND') {
     // Bold the entire command for slash commands (e.g., **/menu**)
-    formattedDetails = `**${details}**`;
+    return `**${details}**`;
   } else if (actionType === 'BUTTON_CLICK') {
     // For button clicks, bold just the button name (first part before parentheses)
     const buttonMatch = details.match(/^(.+?)\s+\((.+)\)$/);
     if (buttonMatch) {
       const [, buttonName, buttonId] = buttonMatch;
-      formattedDetails = `**${buttonName}** (${buttonId})`;
+      return `**${buttonName}** (${buttonId})`;
     } else {
       // Fallback if no parentheses found, bold the whole thing
-      formattedDetails = `**${details}**`;
+      return `**${details}**`;
     }
   } else {
     // For other action types, keep details as-is
-    formattedDetails = details;
+    return details;
   }
-  
-  return `${timestamp} | ${formattedUser} in ${formattedServer} (${serverId}) | ${actionType} | ${formattedDetails}`;
 }
 
 /**
