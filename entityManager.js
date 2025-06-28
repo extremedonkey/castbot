@@ -278,6 +278,7 @@ function applyEntityDefaults(entity, entityType) {
             if (entity.maxQuantity === undefined) entity.maxQuantity = -1;
             if (entity.category === undefined) entity.category = 'General';
             if (entity.consumable === undefined) entity.consumable = 'No';
+            if (entity.basePrice === undefined) entity.basePrice = 10; // Default price
             if (!entity.metadata.totalSold) entity.metadata.totalSold = 0;
             break;
             

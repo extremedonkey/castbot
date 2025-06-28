@@ -10238,17 +10238,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         } else {
           // Open modal directly for field group editing
-          console.log('🔍 DEBUG: Loading entity for modal - Guild:', guildId, 'Type:', entityType, 'ID:', entityId);
           const entity = await loadEntity(guildId, entityType, entityId);
-          console.log('🔍 DEBUG: Entity loaded:', entity ? 'Success' : 'Failed');
           if (!entity) throw new Error('Entity not found');
           
-          console.log('🔍 DEBUG: Creating modal for field group:', fieldGroup);
           const modalResponse = createFieldGroupModal(entityType, entityId, fieldGroup, entity);
-          console.log('🔍 DEBUG: Modal response created:', modalResponse ? 'Success' : 'Failed');
           if (!modalResponse) throw new Error('No modal available for this field group');
           
-          console.log('🔍 DEBUG: Sending modal response');
           return res.send(modalResponse);
         }
         
