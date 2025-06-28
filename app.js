@@ -5610,27 +5610,11 @@ Your server is now ready for Tycoons gameplay!`;
         // Import Safari manager functions
         const { processRoundResults } = await import('./safariManager.js');
         
-        // Process round results and get the result message
+        // Process round results and get the result response
         const result = await processRoundResults(guildId, channelId, client);
         
-        if (result.error) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `❌ ${result.error}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Send result to the channel where button was clicked
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: result.message,
-            flags: 0 // Public message to channel
-          }
-        });
+        // The new processRoundResults returns a complete Discord response object
+        return res.send(result);
         
       } catch (error) {
         console.error('Error in safari_round_results:', error);
@@ -5638,6 +5622,38 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error processing round results. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_confirm_reset_game') {
+      // Handle game reset confirmation
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to reset the game.')) return;
+        
+        console.log(`🔄 DEBUG: Confirming game reset for guild ${guildId}`);
+        
+        // Import Safari manager functions
+        const { resetGameData } = await import('./safariManager.js');
+        
+        // Reset game data and get the result response
+        const result = await resetGameData(guildId);
+        
+        // Log the action
+        await logInteraction(req.body, 'safari_confirm_reset_game', { guildId });
+        
+        return res.send(result);
+        
+      } catch (error) {
+        console.error('Error in safari_confirm_reset_game:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error resetting game data. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

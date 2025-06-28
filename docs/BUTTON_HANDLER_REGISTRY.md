@@ -39,6 +39,8 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_config_group_*` | Field Group Buttons | app.js:~5713 | Pattern handler | ✅ Active |
 | `safari_config_reset_defaults` | 🔄 Reset to Defaults | app.js:~5750 | Direct handler | ✅ Active |
 | `safari_config_confirm_reset` | ⚠️ Confirm Reset | app.js:~5779 | Direct handler | ✅ Active |
+| `safari_round_results` | 🏅 Round Results | app.js:~5598 | Direct handler | ✅ Active (Complete Rewrite) |
+| `safari_confirm_reset_game` | ⚠️ Reset to Round 1 | app.js:~5629 | Direct handler | ✅ Active |
 | `safari_export_data` | ⚙️ Export | app.js:~5817 | Direct handler | ✅ Active |
 | `safari_import_data` | ⚙️ Import | app.js:~5866 | Direct handler | ✅ Active |
 | `safari_manage_safari_buttons` | 🎛️ Manage Safari Buttons | app.js:~3893 | Direct handler | ✅ Active |

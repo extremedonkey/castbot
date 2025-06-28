@@ -1848,7 +1848,6 @@ async function processRoundResults(guildId, channelId, client) {
         
         // Process each eligible player
         const playerResults = [];
-        const safariData = await loadSafariContent();
         const items = safariData[guildId]?.items || {};
         
         for (const player of eligiblePlayers) {
@@ -1933,58 +1932,6 @@ async function processRoundResults(guildId, channelId, client) {
             }
         };
     }
-        
-        // Process each eligible player
-        const playerResults = [];
-        for (const player of eligiblePlayers) {
-            const result = await processPlayerRound(guildId, player.userId, eventType, customTerms, player.playerName);
-            if (result) {
-                playerResults.push(result);
-            }
-        }
-        
-        // Store round results for history
-        await storeRoundResult(guildId, {
-            round: currentRound,
-            eventType: eventType,
-            eventName: eventName,
-            timestamp: Date.now(),
-            playerCount: eligiblePlayers.length,
-            playerResults: playerResults
-        });
-        
-        // Advance to next round
-        await updateCustomTerms(guildId, {
-            currentRound: currentRound + 1,
-            lastRoundTimestamp: Date.now()
-        });
-        
-        // Build result message
-        let resultMessage = `${eventEmoji} **Round ${currentRound} Results - ${eventName}**\n\n${eventMessage}\n\n`;
-        
-        if (playerResults.length > 0) {
-            resultMessage += `**Player Results:**\n`;
-            for (const result of playerResults.slice(0, 10)) { // Limit to first 10 players for message length
-                const sign = result.netChange >= 0 ? '+' : '';
-                resultMessage += `• ${result.playerName}: ${sign}${result.netChange} ${customTerms.currencyName}`;
-                if (result.details) resultMessage += ` (${result.details})`;
-                resultMessage += `\n`;
-            }
-            
-            if (playerResults.length > 10) {
-                resultMessage += `*... and ${playerResults.length - 10} more players*\n`;
-            }
-        }
-        
-        resultMessage += `\n**Next:** Round ${currentRound + 1}${currentRound === 2 ? ' (Final Round)' : ''}`;
-        
-        return { message: resultMessage };
-        
-    } catch (error) {
-        console.error('Error processing round results:', error);
-        return { error: 'Failed to process round results. Please try again.' };
-    }
-}
 
 /**
  * Handle game reset after round 3
@@ -2177,6 +2124,287 @@ async function storeRoundResult(guildId, roundResult) {
     }
 }
 
+/**
+ * Create round results output with Components V2 formatting
+ */
+async function createRoundResultsOutput(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms) {
+    try {
+        const totalParticipants = playerResults.length;
+        const totalEarnings = playerResults.reduce((sum, p) => sum + p.earnings, 0);
+        
+        // Sort players by earnings (highest first)
+        const sortedResults = [...playerResults].sort((a, b) => b.earnings - a.earnings);
+        
+        // Build player summary (limit to 10 for summary format)
+        let playerSummary = '';
+        const displayResults = sortedResults.slice(0, 10);
+        
+        for (const result of displayResults) {
+            const currencyEmoji = customTerms.currencyEmoji || '🪙';
+            const sign = result.earnings >= 0 ? '+' : '';
+            playerSummary += `• **${result.playerName}**: ${sign}${result.earnings} ${currencyEmoji}\\n`;
+            
+            // Add item details (max 2 lines per player)
+            if (result.itemDetails.length > 0) {
+                playerSummary += `  └ ${result.itemDetails.slice(0, 2).join(', ')}\\n`;
+            }
+            
+            // Add defense details if any
+            if (result.defenseDetails.length > 0) {
+                playerSummary += `  └ ${result.defenseDetails.slice(0, 1).join(', ')}\\n`;
+            }
+        }
+        
+        if (playerResults.length > 10) {
+            playerSummary += `*... and ${playerResults.length - 10} more players*\\n`;
+        }
+        
+        // Build next round message
+        let nextRoundMsg = '';
+        if (currentRound < 3) {
+            nextRoundMsg = `\\n**Next:** Round ${currentRound + 1}`;
+            if (currentRound === 2) {
+                nextRoundMsg += ' (Final Round)';
+            }
+        } else {
+            nextRoundMsg = '\\n**Game completed! Rankings will be shown next.**';
+        }
+        
+        return {
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [{
+                    type: 17, // Container
+                    accent_color: eventType === 'good' ? 0x57f287 : 0xed4245, // Green for good, red for bad
+                    components: [
+                        {
+                            type: 10, // Text Display
+                            content: `# Round ${currentRound} Results\\n\\n## ${eventEmoji} ${eventName}\\n\\n**${totalParticipants} players participated** | **Total earnings: ${totalEarnings >= 0 ? '+' : ''}${totalEarnings} ${customTerms.currencyEmoji || '🪙'}**`
+                        },
+                        {
+                            type: 14 // Separator
+                        },
+                        {
+                            type: 10, // Text Display  
+                            content: `**Player Results:**\\n${playerSummary}${nextRoundMsg}`
+                        },
+                        {
+                            type: 1, // Action Row
+                            components: [{
+                                type: 2, // Button
+                                custom_id: 'safari_player_inventory',
+                                label: 'View My Inventory',
+                                style: 2, // Secondary
+                                emoji: { name: '🎒' }
+                            }]
+                        }
+                    ]
+                }]
+            }
+        };
+        
+    } catch (error) {
+        console.error('Error creating round results output:', error);
+        return {
+            type: 4,
+            data: {
+                content: '❌ Error displaying round results.',
+                flags: 64 // EPHEMERAL
+            }
+        };
+    }
+}
+
+/**
+ * Create final rankings after round 3
+ */
+async function createFinalRankings(guildId, playerResults, eventType, eventName, eventEmoji) {
+    try {
+        const customTerms = await getCustomTerms(guildId);
+        
+        // Get final currency standings
+        const playerData = await loadPlayerData();
+        const players = playerData[guildId]?.players || {};
+        
+        const finalStandings = [];
+        for (const [userId, data] of Object.entries(players)) {
+            const safari = data.safari || {};
+            const currency = safari.currency || 0;
+            if (currency > 0 || Object.keys(safari.inventory || {}).length > 0) {
+                let playerName = `Player ${userId.slice(-4)}`;
+                try {
+                    // Try to get name from results first, then fallback
+                    const resultPlayer = playerResults.find(p => p.userId === userId);
+                    if (resultPlayer) {
+                        playerName = resultPlayer.playerName;
+                    }
+                } catch (e) {
+                    playerName = data.globalName || data.displayName || data.username || playerName;
+                }
+                
+                finalStandings.push({
+                    userId,
+                    playerName,
+                    currency
+                });
+            }
+        }
+        
+        // Sort by currency (highest first)
+        finalStandings.sort((a, b) => b.currency - a.currency);
+        
+        // Build final rankings display
+        let rankingsDisplay = '';
+        for (let i = 0; i < Math.min(finalStandings.length, 15); i++) {
+            const player = finalStandings[i];
+            const trophy = i === 0 ? '🏆 ' : ''; // Trophy for winner
+            const rank = i + 1;
+            rankingsDisplay += `${rank}. ${trophy}**${player.playerName}**: ${player.currency} ${customTerms.currencyEmoji || '🪙'}\\n`;
+        }
+        
+        if (finalStandings.length > 15) {
+            rankingsDisplay += `*... and ${finalStandings.length - 15} more players*`;
+        }
+        
+        return {
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [{
+                    type: 17, // Container
+                    accent_color: 0xf1c40f, // Gold for final results
+                    components: [
+                        {
+                            type: 10, // Text Display
+                            content: `# Final Round Results\\n\\n## ${eventEmoji} ${eventName}\\n\\n*Round 3 completed! Game reset available on next click.*`
+                        },
+                        {
+                            type: 14 // Separator
+                        },
+                        {
+                            type: 10, // Text Display
+                            content: `# 🏆 Final Rankings\\n\\n${rankingsDisplay}`
+                        },
+                        {
+                            type: 1, // Action Row
+                            components: [
+                                {
+                                    type: 2, // Button
+                                    custom_id: 'safari_player_inventory',
+                                    label: 'View My Inventory',
+                                    style: 2, // Secondary
+                                    emoji: { name: '🎒' }
+                                },
+                                {
+                                    type: 2, // Button
+                                    custom_id: 'safari_round_results',
+                                    label: 'Click for Game Reset',
+                                    style: 4, // Danger
+                                    emoji: { name: '🔄' }
+                                }
+                            ]
+                        }
+                    ]
+                }]
+            }
+        };
+        
+    } catch (error) {
+        console.error('Error creating final rankings:', error);
+        return {
+            type: 4,
+            data: {
+                content: '❌ Error displaying final rankings.',
+                flags: 64 // EPHEMERAL
+            }
+        };
+    }
+}
+
+/**
+ * Reset game data - clear all player currency and inventories
+ */
+async function resetGameData(guildId) {
+    try {
+        console.log(`🔄 DEBUG: Resetting game data for guild ${guildId}`);
+        
+        // Reset safari config to round 1
+        const safariData = await loadSafariContent();
+        if (!safariData[guildId]) {
+            safariData[guildId] = {};
+        }
+        if (!safariData[guildId].safariConfig) {
+            safariData[guildId].safariConfig = {};
+        }
+        
+        safariData[guildId].safariConfig.currentRound = 1;
+        safariData[guildId].safariConfig.lastRoundTimestamp = Date.now();
+        
+        // Clear round history if it exists
+        if (safariData[guildId].roundHistory) {
+            safariData[guildId].roundHistory = [];
+        }
+        
+        await saveSafariContent(safariData);
+        
+        // Clear all player currency and inventories
+        const playerData = await loadPlayerData();
+        const players = playerData[guildId]?.players || {};
+        
+        let playersReset = 0;
+        for (const [userId, data] of Object.entries(players)) {
+            if (data.safari) {
+                data.safari.currency = 0;
+                data.safari.inventory = {};
+                data.safari.history = [];
+                playersReset++;
+            }
+        }
+        
+        await savePlayerData(playerData);
+        
+        console.log(`✅ DEBUG: Reset complete - ${playersReset} players reset to round 1`);
+        
+        return {
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [{
+                    type: 17, // Container
+                    accent_color: 0x2ecc71, // Green for success
+                    components: [
+                        {
+                            type: 10, // Text Display
+                            content: `# ✅ Game Reset Complete\\n\\n**${playersReset} players** have been reset:\\n• All currency set to 0\\n• All inventories cleared\\n• Game returned to Round 1\\n\\nThe Safari challenge can now begin again!`
+                        },
+                        {
+                            type: 1, // Action Row
+                            components: [{
+                                type: 2, // Button
+                                custom_id: 'safari_round_results',
+                                label: 'Start Round 1',
+                                style: 1, // Primary
+                                emoji: { name: '🎯' }
+                            }]
+                        }
+                    ]
+                }]
+            }
+        };
+        
+    } catch (error) {
+        console.error('Error resetting game data:', error);
+        return {
+            type: 4,
+            data: {
+                content: '❌ Error resetting game data. Please try again.',
+                flags: 64 // EPHEMERAL
+            }
+        };
+    }
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -2220,5 +2448,8 @@ export {
     updateCustomTerms,
     resetCustomTerms,
     // Challenge Game Logic exports
-    processRoundResults
+    processRoundResults,
+    createRoundResultsOutput,
+    createFinalRankings,
+    resetGameData
 };
