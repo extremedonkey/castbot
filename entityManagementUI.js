@@ -281,7 +281,7 @@ function createViewModeUI(entityType, entityId, entity) {
 function createEditModeUI(entityType, entityId, entity, activeFieldGroup) {
     const components = [
         { type: 14 }, // Separator
-        createFieldGroupButtons(entityType, entityId, activeFieldGroup),
+        ...createFieldGroupButtons(entityType, entityId, activeFieldGroup),
     ];
     
     // Add field editor if a group is active
