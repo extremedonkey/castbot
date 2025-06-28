@@ -2937,11 +2937,11 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
         });
         
         // Get eligible players for string select
-        const eligiblePlayers = await getEligiblePlayersFixed(guildId, attackerId);
-        console.log(`🎯 DEBUG: Found ${eligiblePlayers.length} eligible players for attack target selection`);
+        const eligibleTargets = await getEligiblePlayersFixed(guildId, attackerId);
+        console.log(`🎯 DEBUG: Found ${eligibleTargets.length} eligible players for attack target selection`);
         
         // Create string select with eligible players only
-        const playerOptions = eligiblePlayers.map(player => ({
+        const playerOptions = eligibleTargets.map(player => ({
             label: player.displayName,
             value: player.id,
             description: `${player.currency} ${customTerms.currencyName}${player.hasInventory ? ' + items' : ''}`,
