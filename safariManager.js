@@ -1583,11 +1583,26 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                 content: `*Your ${customTerms.inventoryName.toLowerCase()} is empty. Visit a store to purchase items!*`
             });
         } else {
+            // Initialize attack availability first
+            await initializeAttackAvailability(guildId, userId);
+            
             // Add items with separators between them
             for (let i = 0; i < inventoryItems.length; i++) {
-                const [itemId, quantity] = inventoryItems[i];
+                const [itemId, inventoryData] = inventoryItems[i];
                 const item = items[itemId];
-                if (!item || quantity <= 0) continue;
+                if (!item) continue;
+                
+                // Get quantity and attacks available
+                let quantity, numAttacksAvailable;
+                if (typeof inventoryData === 'number') {
+                    quantity = inventoryData;
+                    numAttacksAvailable = inventoryData;
+                } else {
+                    quantity = inventoryData.quantity || 0;
+                    numAttacksAvailable = inventoryData.numAttacksAvailable || 0;
+                }
+                
+                if (quantity <= 0) continue;
                 
                 // Check component limit (reserve space for store buttons)
                 if (componentsUsed >= 35) { // Leave room for store buttons
@@ -1603,15 +1618,51 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     components.push({ type: 14 }); // Separator before first item
                 }
                 
-                // Generate detailed item content using shared function
-                const itemContent = generateItemContent(item, customTerms, quantity);
+                // Check if item has attack value
+                const hasAttack = item.attackValue !== null && item.attackValue !== undefined;
                 
-                // Add item display
-                components.push({
-                    type: 10, // Text Display
-                    content: itemContent
-                });
-                console.log(`📦 DEBUG: Added Text Display for ${item.name} (qty: ${quantity})`);
+                if (hasAttack) {
+                    // Calculate attacks planned for this item
+                    const attacksPlanned = await calculateAttacksPlanned(guildId, userId, itemId);
+                    
+                    // Generate item content with attack info
+                    let attackItemContent = generateItemContent(item, customTerms, quantity);
+                    
+                    // Add attack availability info
+                    if (attacksPlanned > 0) {
+                        attackItemContent += `\n\n> ⚔️ **Attacks Available:** ${numAttacksAvailable}`;
+                        attackItemContent += `\n> 🎯 **Attacks Planned:** ${attacksPlanned}`;
+                    } else {
+                        attackItemContent += `\n\n> ⚔️ **Attacks Available:** ${numAttacksAvailable}`;
+                    }
+                    
+                    // Create Section component with attack button
+                    components.push({
+                        type: 9, // Section component
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: attackItemContent
+                            }
+                        ],
+                        accessory: {
+                            type: 2, // Button
+                            custom_id: `safari_attack_player_${itemId}`,
+                            label: '⚔️ Attack Player',
+                            style: 1 // Primary (blue)
+                        }
+                    });
+                    console.log(`⚔️ DEBUG: Added attack item ${item.name} with Section component`);
+                } else {
+                    // Non-attack item - use regular Text Display
+                    const itemContent = generateItemContent(item, customTerms, quantity);
+                    
+                    components.push({
+                        type: 10, // Text Display
+                        content: itemContent
+                    });
+                    console.log(`📦 DEBUG: Added Text Display for ${item.name} (qty: ${quantity})`);
+                }
                 
                 // Add separator after each item (but not after the last one)
                 if (i < inventoryItems.length - 1) {
@@ -2467,6 +2518,602 @@ async function resetGameData(guildId) {
     }
 }
 
+/**
+ * Initialize attack availability for items with attack values
+ * @param {string} guildId - Discord guild ID
+ * @param {string} userId - Discord user ID
+ * @returns {Promise<boolean>} Success status
+ */
+async function initializeAttackAvailability(guildId, userId) {
+    try {
+        const playerData = await loadPlayerData();
+        const safariData = await loadSafariContent();
+        
+        const inventory = playerData[guildId]?.players?.[userId]?.safari?.inventory || {};
+        const items = safariData[guildId]?.items || {};
+        
+        let updated = false;
+        
+        // Check each item in inventory
+        for (const [itemId, itemData] of Object.entries(inventory)) {
+            const item = items[itemId];
+            
+            // If item has attack value and no numAttacksAvailable set
+            if (item?.attackValue !== null && item?.attackValue !== undefined) {
+                if (typeof itemData === 'number') {
+                    // Convert simple quantity to object format
+                    inventory[itemId] = {
+                        quantity: itemData,
+                        numAttacksAvailable: itemData
+                    };
+                    updated = true;
+                    console.log(`🗡️ DEBUG: Initialized attacks for ${itemId}: ${itemData} available`);
+                } else if (!itemData.numAttacksAvailable) {
+                    // Add numAttacksAvailable if missing
+                    itemData.numAttacksAvailable = itemData.quantity || 0;
+                    updated = true;
+                    console.log(`🗡️ DEBUG: Set attacks available for ${itemId}: ${itemData.numAttacksAvailable}`);
+                }
+            }
+        }
+        
+        if (updated) {
+            await savePlayerData(playerData);
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error initializing attack availability:', error);
+        return false;
+    }
+}
+
+/**
+ * Get attack queue for a specific round
+ * @param {string} guildId - Discord guild ID
+ * @param {number} round - Round number
+ * @returns {Promise<Array>} Array of attack records
+ */
+async function getAttackQueue(guildId, round) {
+    try {
+        const safariData = await loadSafariContent();
+        const attackQueue = safariData[guildId]?.attackQueue || {};
+        return attackQueue[`round${round}`] || [];
+    } catch (error) {
+        console.error('Error getting attack queue:', error);
+        return [];
+    }
+}
+
+/**
+ * Add attack to queue
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} attackRecord - Attack record object
+ * @returns {Promise<boolean>} Success status
+ */
+async function addAttackToQueue(guildId, attackRecord) {
+    try {
+        const safariData = await loadSafariContent();
+        
+        // Ensure structure exists
+        if (!safariData[guildId]) safariData[guildId] = {};
+        if (!safariData[guildId].attackQueue) safariData[guildId].attackQueue = {};
+        
+        const round = safariData[guildId].safariConfig?.currentRound || 1;
+        const roundKey = `round${round}`;
+        
+        if (!safariData[guildId].attackQueue[roundKey]) {
+            safariData[guildId].attackQueue[roundKey] = [];
+        }
+        
+        // Add attack record
+        safariData[guildId].attackQueue[roundKey].push({
+            ...attackRecord,
+            timestamp: Date.now(),
+            round: round
+        });
+        
+        await saveSafariContent(safariData);
+        console.log(`⚔️ DEBUG: Added attack to queue for round ${round}:`, attackRecord);
+        
+        return true;
+    } catch (error) {
+        console.error('Error adding attack to queue:', error);
+        return false;
+    }
+}
+
+/**
+ * Get attacks planned by a player for a specific item
+ * @param {string} guildId - Discord guild ID
+ * @param {string} userId - Discord user ID
+ * @param {string} itemId - Item ID
+ * @returns {Promise<Array>} Array of planned attacks
+ */
+async function getPlannedAttacks(guildId, userId, itemId) {
+    try {
+        const safariData = await loadSafariContent();
+        const round = safariData[guildId]?.safariConfig?.currentRound || 1;
+        const attacks = await getAttackQueue(guildId, round);
+        
+        return attacks.filter(attack => 
+            attack.attackingPlayer === userId && 
+            attack.itemId === itemId
+        );
+    } catch (error) {
+        console.error('Error getting planned attacks:', error);
+        return [];
+    }
+}
+
+/**
+ * Calculate total attacks planned for an item
+ * @param {string} guildId - Discord guild ID
+ * @param {string} userId - Discord user ID
+ * @param {string} itemId - Item ID
+ * @returns {Promise<number>} Total attacks planned
+ */
+async function calculateAttacksPlanned(guildId, userId, itemId) {
+    try {
+        const plannedAttacks = await getPlannedAttacks(guildId, userId, itemId);
+        return plannedAttacks.reduce((total, attack) => total + (attack.attacksPlanned || 0), 0);
+    } catch (error) {
+        console.error('Error calculating attacks planned:', error);
+        return 0;
+    }
+}
+
+/**
+ * Update player's available attacks after scheduling
+ * @param {string} guildId - Discord guild ID
+ * @param {string} userId - Discord user ID
+ * @param {string} itemId - Item ID
+ * @param {number} attacksUsed - Number of attacks to reduce
+ * @returns {Promise<boolean>} Success status
+ */
+async function updateAttackAvailability(guildId, userId, itemId, attacksUsed) {
+    try {
+        const playerData = await loadPlayerData();
+        const inventory = playerData[guildId]?.players?.[userId]?.safari?.inventory;
+        
+        if (!inventory || !inventory[itemId]) {
+            console.error(`Item ${itemId} not found in player inventory`);
+            return false;
+        }
+        
+        const itemData = inventory[itemId];
+        
+        // Ensure object format
+        if (typeof itemData === 'number') {
+            inventory[itemId] = {
+                quantity: itemData,
+                numAttacksAvailable: itemData
+            };
+        }
+        
+        // Update available attacks
+        inventory[itemId].numAttacksAvailable = Math.max(0, (inventory[itemId].numAttacksAvailable || 0) - attacksUsed);
+        
+        await savePlayerData(playerData);
+        console.log(`⚔️ DEBUG: Updated attacks available for ${itemId}: ${inventory[itemId].numAttacksAvailable} remaining`);
+        
+        return true;
+    } catch (error) {
+        console.error('Error updating attack availability:', error);
+        return false;
+    }
+}
+
+/**
+ * Clear attack queue for a round or all rounds
+ * @param {string} guildId - Discord guild ID
+ * @param {number} round - Round number (optional, clears all if not specified)
+ * @returns {Promise<boolean>} Success status
+ */
+async function clearAttackQueue(guildId, round = null) {
+    try {
+        const safariData = await loadSafariContent();
+        
+        if (!safariData[guildId]?.attackQueue) return true;
+        
+        if (round !== null) {
+            // Clear specific round
+            delete safariData[guildId].attackQueue[`round${round}`];
+            console.log(`🗑️ DEBUG: Cleared attack queue for round ${round}`);
+        } else {
+            // Clear all rounds
+            safariData[guildId].attackQueue = {};
+            console.log(`🗑️ DEBUG: Cleared all attack queues`);
+        }
+        
+        await saveSafariContent(safariData);
+        return true;
+    } catch (error) {
+        console.error('Error clearing attack queue:', error);
+        return false;
+    }
+}
+
+/**
+ * Create or update attack planning interface with state
+ * @param {string} guildId - Discord guild ID
+ * @param {string} attackerId - Attacking player ID
+ * @param {string} itemId - Item ID
+ * @param {string} targetId - Selected target ID (optional)
+ * @param {number} selectedQuantity - Selected attack quantity (optional)
+ * @param {Object} client - Discord client
+ * @returns {Promise<Object>} Discord interaction response
+ */
+async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = null, selectedQuantity = 0, client) {
+    try {
+        console.log(`⚔️ DEBUG: Creating/updating attack UI - Target: ${targetId}, Quantity: ${selectedQuantity}`);
+        
+        const safariData = await loadSafariContent();
+        const playerData = await loadPlayerData();
+        const customTerms = await getCustomTerms(guildId);
+        
+        // Get item details
+        const item = safariData[guildId]?.items?.[itemId];
+        if (!item) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: '❌ Item not found.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
+        // Get attacker's inventory
+        const attackerInventory = playerData[guildId]?.players?.[attackerId]?.safari?.inventory;
+        const itemData = attackerInventory?.[itemId];
+        
+        if (!itemData) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: '❌ You do not own this item.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
+        // Get available attacks
+        let numAttacksAvailable;
+        if (typeof itemData === 'number') {
+            numAttacksAvailable = itemData;
+        } else {
+            numAttacksAvailable = itemData.numAttacksAvailable || 0;
+        }
+        
+        // Get eligible players (excluding attacker)
+        const eligiblePlayers = await getEligiblePlayersFixed(guildId, client);
+        const targetPlayers = eligiblePlayers.filter(p => p.userId !== attackerId);
+        
+        if (targetPlayers.length === 0) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: '❌ No eligible players to attack.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
+        // Get attacks planned
+        const attacksPlanned = await calculateAttacksPlanned(guildId, attackerId, itemId);
+        
+        // Get target name if targetId provided
+        let targetName = '*Select a player above*';
+        if (targetId) {
+            try {
+                const guild = client?.guilds?.cache?.get(guildId);
+                const targetMember = await guild?.members?.fetch(targetId);
+                targetName = targetMember?.displayName || targetMember?.user?.username || `Player ${targetId.slice(-4)}`;
+            } catch (e) {
+                // Fallback
+                const targetPlayer = playerData[guildId]?.players?.[targetId];
+                targetName = targetPlayer?.globalName || targetPlayer?.displayName || targetPlayer?.username || `Player ${targetId.slice(-4)}`;
+            }
+        }
+        
+        // Calculate damage
+        const totalDamage = selectedQuantity * (item.attackValue || 0);
+        
+        // Get planned attacks for display
+        const plannedAttacks = await getPlannedAttacks(guildId, attackerId, itemId);
+        let attacksPlannedText = '';
+        
+        if (plannedAttacks.length > 0) {
+            attacksPlannedText = '\n\n**Attacks Planned**\n';
+            for (const attack of plannedAttacks) {
+                // Get target name for each planned attack
+                let plannedTargetName = `Player ${attack.defendingPlayer.slice(-4)}`;
+                try {
+                    const guild = client?.guilds?.cache?.get(guildId);
+                    const plannedTarget = await guild?.members?.fetch(attack.defendingPlayer);
+                    plannedTargetName = plannedTarget?.displayName || plannedTarget?.user?.username || plannedTargetName;
+                } catch (e) {
+                    // Use fallback
+                }
+                
+                attacksPlannedText += `• **${attack.attackingPlayerName || 'You'}** will attack **${plannedTargetName}** with ${attack.attacksPlanned}x ${attack.itemName} (${attack.attackValue} dmg), totaling ${attack.totalDamage} damage during round ${attack.round}\n`;
+            }
+        }
+        
+        const components = [];
+        
+        // Header
+        components.push({
+            type: 10, // Text Display
+            content: `## ⚔️ Attack Player with ${item.name}\n\nSelect a player to attack. They will be attacked when round results are announced.`
+        });
+        
+        // User select with state in custom_id
+        const userSelectRow = {
+            type: 1, // Action Row
+            components: [
+                {
+                    type: 5, // User Select
+                    custom_id: `safari_attack_target_${itemId}_${selectedQuantity}`,
+                    placeholder: targetId ? `Selected: ${targetName}` : 'Select a player to attack',
+                    min_values: 1,
+                    max_values: 1
+                }
+            ]
+        };
+        components.push(userSelectRow);
+        
+        // Divider
+        components.push({ type: 14 }); // Separator
+        
+        // Attack info display
+        const infoContent = `**Target Player:** ${targetName}\n**Number of available attacks:** ${numAttacksAvailable}\n**Attacks planned this round:** ${attacksPlanned}\n**Damage per attack:** ${item.attackValue}\n**Total attack damage this round:** ${totalDamage}${attacksPlannedText}`;
+        
+        components.push({
+            type: 10, // Text Display
+            content: infoContent
+        });
+        
+        // Divider
+        components.push({ type: 14 }); // Separator
+        
+        // String select for attack quantity
+        const attackOptions = [];
+        
+        if (numAttacksAvailable === 0) {
+            // No attacks available
+            attackOptions.push({
+                label: 'No more attacks available',
+                value: '0',
+                description: 'You have used all available attacks',
+                default: true
+            });
+        } else {
+            // Create options up to available attacks (max 25)
+            const maxOptions = Math.min(numAttacksAvailable, 25);
+            for (let i = 1; i <= maxOptions; i++) {
+                const description = i === 25 && numAttacksAvailable > 25 
+                    ? 'Max 25 attacks per turn allowed' 
+                    : `Attack ${targetName !== '*Select a player above*' ? targetName : 'target'} with ${i} ${item.name}`;
+                    
+                attackOptions.push({
+                    label: `${i} Attack${i > 1 ? 's' : ''}`,
+                    value: i.toString(),
+                    description: description,
+                    emoji: { name: '⚔️' },
+                    default: i === selectedQuantity
+                });
+            }
+        }
+        
+        const attackSelectRow = {
+            type: 1, // Action Row
+            components: [
+                {
+                    type: 3, // String Select
+                    custom_id: `safari_attack_quantity_${itemId}_${targetId || 'none'}`,
+                    placeholder: selectedQuantity > 0 ? `Selected: ${selectedQuantity} attacks` : 'Select number of attacks',
+                    options: attackOptions,
+                    disabled: numAttacksAvailable === 0
+                }
+            ]
+        };
+        components.push(attackSelectRow);
+        
+        // Schedule Attack button with state
+        const buttonRow = {
+            type: 1, // Action Row
+            components: [
+                {
+                    type: 2, // Button
+                    custom_id: `safari_schedule_attack_${itemId}_${targetId || 'none'}_${selectedQuantity}`,
+                    label: '⚔️ Schedule Attack',
+                    style: 3, // Success (green)
+                    disabled: numAttacksAvailable === 0 || !targetId || selectedQuantity === 0
+                }
+            ]
+        };
+        components.push(buttonRow);
+        
+        // Divider
+        components.push({ type: 14 }); // Separator
+        
+        // Back button
+        const backRow = {
+            type: 1, // Action Row
+            components: [
+                {
+                    type: 2, // Button
+                    custom_id: 'safari_player_inventory',
+                    label: `← ${customTerms.inventoryName}`,
+                    style: 2 // Secondary (grey)
+                }
+            ]
+        };
+        components.push(backRow);
+        
+        // Create container
+        const container = {
+            type: 17, // Container
+            accent_color: 0xed4245, // Red accent for attack
+            components: components
+        };
+        
+        return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // Components V2 + Ephemeral
+                components: [container]
+            }
+        };
+        
+    } catch (error) {
+        console.error('Error creating/updating attack UI:', error);
+        return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+                content: '❌ Error creating attack interface.',
+                flags: InteractionResponseFlags.EPHEMERAL
+            }
+        };
+    }
+}
+
+/**
+ * Update attack display with selected target/quantity (simplified wrapper)
+ * @param {string} guildId - Discord guild ID
+ * @param {string} attackerId - Attacking player ID
+ * @param {string} itemId - Item ID
+ * @param {string} targetId - Target player ID (optional)
+ * @param {number} quantity - Attack quantity (optional)
+ * @param {Object} client - Discord client
+ * @returns {Promise<Object>} Discord interaction response
+ */
+async function updateAttackDisplay(guildId, attackerId, itemId, targetId, quantity, client) {
+    // Use the new unified function
+    return createOrUpdateAttackUI(guildId, attackerId, itemId, targetId, quantity, client);
+}
+
+/**
+ * Schedule an attack
+ * @param {string} guildId - Discord guild ID
+ * @param {string} attackerId - Attacking player ID
+ * @param {string} itemId - Item ID
+ * @param {Object} reqBody - Request body with interaction data
+ * @param {Object} client - Discord client
+ * @returns {Promise<Object>} Discord interaction response
+ */
+async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
+    try {
+        console.log(`⚔️ DEBUG: Processing attack schedule for ${attackerId} with ${itemId}`);
+        
+        // Parse state from custom_id
+        const customId = reqBody.data.custom_id;
+        const parts = customId.split('_');
+        // Format: safari_schedule_attack_itemId_targetId_quantity
+        const targetId = parts[4] !== 'none' ? parts[4] : null;
+        const quantity = parseInt(parts[5]) || 0;
+        
+        console.log(`⚔️ DEBUG: Parsed state - Target: ${targetId}, Quantity: ${quantity}`);
+        
+        if (!targetId || quantity === 0) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: '⚠️ Please select both a target and quantity before scheduling.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
+        const safariData = await loadSafariContent();
+        const playerData = await loadPlayerData();
+        
+        // Get item details
+        const item = safariData[guildId]?.items?.[itemId];
+        if (!item) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: '❌ Item not found.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
+        // Get attacker name
+        let attackerName = `Player ${attackerId.slice(-4)}`;
+        try {
+            const guild = client?.guilds?.cache?.get(guildId);
+            const attackerMember = await guild?.members?.fetch(attackerId);
+            attackerName = attackerMember?.displayName || attackerMember?.user?.username || attackerName;
+        } catch (e) {
+            // Use fallback
+        }
+        
+        // Create attack record
+        const attackRecord = {
+            attackingPlayer: attackerId,
+            attackingPlayerName: attackerName,
+            defendingPlayer: targetId,
+            itemId: itemId,
+            itemName: item.name,
+            attacksPlanned: quantity,
+            attackValue: item.attackValue || 0,
+            totalDamage: quantity * (item.attackValue || 0)
+        };
+        
+        // Add to queue
+        const success = await addAttackToQueue(guildId, attackRecord);
+        if (!success) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: '❌ Failed to schedule attack. Please try again.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
+        // Update attack availability
+        await updateAttackAvailability(guildId, attackerId, itemId, quantity);
+        
+        // Get updated interface showing the scheduled attack
+        const response = await createOrUpdateAttackUI(guildId, attackerId, itemId, targetId, 0, client);
+        
+        // Add success message
+        if (response.data && !response.data.content) {
+            response.data.content = `✅ Attack scheduled! ${quantity} ${item.name} will attack the selected player during round results.`;
+        }
+        
+        return response;
+        
+    } catch (error) {
+        console.error('Error scheduling attack:', error);
+        return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+                content: '❌ Error scheduling attack.',
+                flags: InteractionResponseFlags.EPHEMERAL
+            }
+        };
+    }
+}
+
+/**
+ * Create attack planning interface
+ * @param {string} guildId - Discord guild ID
+ * @param {string} attackerId - Attacking player ID
+ * @param {string} itemId - Item ID to attack with
+ * @param {Object} client - Discord client
+ * @returns {Promise<Object>} Discord interaction response
+ */
+async function createAttackPlanningUI(guildId, attackerId, itemId, client) {
+    // Use the unified function with no target/quantity selected
+    return createOrUpdateAttackUI(guildId, attackerId, itemId, null, 0, client);
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -2515,5 +3162,16 @@ export {
     createFinalRankings,
     resetGameData,
     // Shared Display Functions
-    generateItemContent
+    generateItemContent,
+    // Attack System exports
+    initializeAttackAvailability,
+    getAttackQueue,
+    addAttackToQueue,
+    getPlannedAttacks,
+    calculateAttacksPlanned,
+    updateAttackAvailability,
+    clearAttackQueue,
+    createAttackPlanningUI,
+    updateAttackDisplay,
+    scheduleAttack
 };

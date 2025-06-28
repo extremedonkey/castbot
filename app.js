@@ -2902,6 +2902,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_my_') &&
         !custom_id.startsWith('safari_store_') &&
         !custom_id.startsWith('safari_item_') &&
+        !custom_id.startsWith('safari_attack_') &&
+        !custom_id.startsWith('safari_schedule_') &&
         !custom_id.startsWith('safari_button_') &&
         !custom_id.startsWith('safari_edit_properties_') &&
         !custom_id.startsWith('safari_test_button_') &&
@@ -5691,6 +5693,119 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error loading your nest. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_attack_player_')) {
+      // Handle attack player button click
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const itemId = custom_id.replace('safari_attack_player_', '');
+        
+        console.log(`⚔️ DEBUG: User ${userId} wants to attack with item ${itemId}`);
+        
+        // Import attack system functions
+        const { createAttackPlanningUI } = await import('./safariManager.js');
+        
+        // Create attack planning UI
+        const response = await createAttackPlanningUI(guildId, userId, itemId, client);
+        
+        return res.send(response);
+        
+      } catch (error) {
+        console.error('Error in safari_attack_player handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading attack interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_attack_target_')) {
+      // Handle target player selection
+      try {
+        const guildId = req.body.guild_id;
+        const attackerId = req.body.member?.user?.id || req.body.user?.id;
+        const targetId = req.body.data.values[0];
+        
+        // Parse state from custom_id: safari_attack_target_itemId_quantity
+        const parts = custom_id.split('_');
+        const itemId = parts[3];
+        const previousQuantity = parseInt(parts[4]) || 0;
+        
+        console.log(`⚔️ DEBUG: Attacker ${attackerId} selected target ${targetId} for item ${itemId}, previous quantity: ${previousQuantity}`);
+        
+        // Update the UI with the selected target
+        const { createOrUpdateAttackUI } = await import('./safariManager.js');
+        const response = await createOrUpdateAttackUI(guildId, attackerId, itemId, targetId, previousQuantity, client);
+        
+        return res.send(response);
+        
+      } catch (error) {
+        console.error('Error in safari_attack_target handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error selecting target.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_attack_quantity_')) {
+      // Handle attack quantity selection
+      try {
+        const guildId = req.body.guild_id;
+        const attackerId = req.body.member?.user?.id || req.body.user?.id;
+        const quantity = parseInt(req.body.data.values[0]);
+        
+        // Parse state from custom_id: safari_attack_quantity_itemId_targetId
+        const parts = custom_id.split('_');
+        const itemId = parts[3];
+        const targetId = parts[4] !== 'none' ? parts[4] : null;
+        
+        console.log(`⚔️ DEBUG: Attacker ${attackerId} selected ${quantity} attacks with item ${itemId}, target: ${targetId}`);
+        
+        // Update the UI with the selected quantity
+        const { createOrUpdateAttackUI } = await import('./safariManager.js');
+        const response = await createOrUpdateAttackUI(guildId, attackerId, itemId, targetId, quantity, client);
+        
+        return res.send(response);
+        
+      } catch (error) {
+        console.error('Error in safari_attack_quantity handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error selecting attack quantity.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_schedule_attack_')) {
+      // Handle attack scheduling
+      try {
+        const guildId = req.body.guild_id;
+        const attackerId = req.body.member?.user?.id || req.body.user?.id;
+        const itemId = custom_id.replace('safari_schedule_attack_', '');
+        
+        console.log(`⚔️ DEBUG: Scheduling attack for ${attackerId} with item ${itemId}`);
+        
+        // Get attack details from message components
+        // This will be implemented with proper state management
+        const { scheduleAttack } = await import('./safariManager.js');
+        const response = await scheduleAttack(guildId, attackerId, itemId, req.body, client);
+        
+        return res.send(response);
+        
+      } catch (error) {
+        console.error('Error in safari_schedule_attack handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error scheduling attack.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
