@@ -176,17 +176,24 @@ function createCurrentSettingsDisplay(config) {
     const currencyName = config.currencyName || 'coins';
     const inventoryName = config.inventoryName || 'Nest';
     
-    let display = `**🪙 Currency & Inventory:**\n`;
-    display += `• Currency: ${currencyEmoji} ${currencyName}\n`;
-    display += `• Inventory: ${inventoryName}\n\n`;
+    let display = `**🪙 Currency & Inventory**\n`;
+    display += `• Currency Name: ${currencyName}\n`;
+    display += `• Currency Emoji: ${currencyEmoji}\n`;
+    display += `• Inventory Name: ${inventoryName}\n\n`;
     
-    if (config.goodEventName || config.badEventName) {
-        display += `**☄️ Events:**\n`;
+    if (config.goodEventName || config.badEventName || config.goodEventEmoji || config.badEventEmoji) {
+        display += `**☄️ Events**\n`;
         if (config.goodEventName) {
-            display += `• Good: ${config.goodEventEmoji || '☀️'} ${config.goodEventName}\n`;
+            display += `• Good Event Name: ${config.goodEventName}\n`;
+        }
+        if (config.goodEventEmoji) {
+            display += `• Good Event Emoji: ${config.goodEventEmoji}\n`;
         }
         if (config.badEventName) {
-            display += `• Bad: ${config.badEventEmoji || '☄️'} ${config.badEventName}\n`;
+            display += `• Bad Event Name: ${config.badEventName}\n`;
+        }
+        if (config.badEventEmoji) {
+            display += `• Bad Event Emoji: ${config.badEventEmoji}\n`;
         }
         display += `\n`;
     }
@@ -194,10 +201,22 @@ function createCurrentSettingsDisplay(config) {
     if (config.round1GoodProbability !== undefined || 
         config.round2GoodProbability !== undefined || 
         config.round3GoodProbability !== undefined) {
-        display += `**🎲 Round Probabilities:**\n`;
-        if (config.round1GoodProbability !== undefined) display += `• Round 1: ${config.round1GoodProbability}%\n`;
-        if (config.round2GoodProbability !== undefined) display += `• Round 2: ${config.round2GoodProbability}%\n`;
-        if (config.round3GoodProbability !== undefined) display += `• Round 3: ${config.round3GoodProbability}%\n`;
+        display += `**🎲 Round Probabilities**\n`;
+        if (config.round1GoodProbability !== undefined) {
+            const goodPercent = config.round1GoodProbability;
+            const badPercent = 100 - goodPercent;
+            display += `• Round 1: Good ${goodPercent}% | Bad ${badPercent}%\n`;
+        }
+        if (config.round2GoodProbability !== undefined) {
+            const goodPercent = config.round2GoodProbability;
+            const badPercent = 100 - goodPercent;
+            display += `• Round 2: Good ${goodPercent}% | Bad ${badPercent}%\n`;
+        }
+        if (config.round3GoodProbability !== undefined) {
+            const goodPercent = config.round3GoodProbability;
+            const badPercent = 100 - goodPercent;
+            display += `• Round 3: Good ${goodPercent}% | Bad ${badPercent}%\n`;
+        }
     }
 
     return display;

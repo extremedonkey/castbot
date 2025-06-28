@@ -13040,22 +13040,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log(`✅ DEBUG: Safari ${groupKey} settings updated successfully for guild ${guildId}:`, updates);
         
-        // Create success message based on group
-        let successMessage = `✅ **${getGroupDisplayName(groupKey)} Updated!**\n\n`;
+        // Get updated custom terms and return refreshed interface
+        const { getCustomTerms } = await import('./safariManager.js');
+        const updatedTerms = await getCustomTerms(guildId);
         
-        Object.entries(updates).forEach(([key, value]) => {
-          const fieldLabel = getFieldDisplayName(key);
-          successMessage += `• ${fieldLabel}: ${value}\n`;
-        });
-        
-        successMessage += `\n🎮 Settings saved successfully!`;
+        // Create updated Safari customization interface
+        const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
+        const interfaceData = await createSafariCustomizationUI(guildId, updatedTerms);
         
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: successMessage,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: interfaceData
         });
         
       } catch (error) {

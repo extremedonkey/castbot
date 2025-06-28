@@ -68,7 +68,7 @@ export const EDIT_CONFIGS = {
     displayName: 'Safari Customization',
     fieldGroups: {
       currency: {
-        label: '🪙 Currency & Inventory',
+        label: 'Currency & Inventory',
         description: 'Customize currency name, emoji, and inventory name',
         fields: {
           currencyName: { type: 'text', maxLength: 30, required: true, label: 'Currency Name', placeholder: 'coins' },
@@ -77,7 +77,7 @@ export const EDIT_CONFIGS = {
         }
       },
       events: {
-        label: '☄️ Event Customization',
+        label: 'Event Customization',
         description: 'Customize good and bad event names and emojis',
         fields: {
           goodEventName: { type: 'text', maxLength: 50, required: false, label: 'Good Event Name', placeholder: 'Clear Skies' },
@@ -87,7 +87,7 @@ export const EDIT_CONFIGS = {
         }
       },
       rounds: {
-        label: '🎲 Round Customization',
+        label: 'Round Customization',
         description: 'Set probability percentages for good events in each round',
         fields: {
           round1GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 1 Good %', placeholder: '75' },
