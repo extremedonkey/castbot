@@ -2556,11 +2556,14 @@ async function cleanupCorruptedInventoryData(guildId, userId) {
         
         let cleaned = false;
         for (const [itemId, itemData] of Object.entries(inventory)) {
-            // Check for corrupted string data like "[object Object]11"
-            if (typeof itemData === 'string' && itemData.includes('[object Object]')) {
+            // Check for corrupted string data like "[object Object]11" or other malformed data
+            if (typeof itemData === 'string' && (itemData.includes('[object Object]') || itemData.includes('11111'))) {
                 console.log(`🧹 DEBUG: Cleaning corrupted data for ${itemId}: ${itemData}`);
-                // Reset to a reasonable quantity of 1
-                inventory[itemId] = 1;
+                // Parse the numbers at the end to recover quantity if possible
+                const numberMatch = itemData.match(/(\d+)$/);
+                const recoveredQuantity = numberMatch ? parseInt(numberMatch[1]) : 1;
+                // Set to proper numeric value
+                playerData[guildId].players[userId].safari.inventory[itemId] = recoveredQuantity;
                 cleaned = true;
             }
         }
@@ -2597,18 +2600,21 @@ async function initializeAttackAvailability(guildId, userId) {
             // If item has attack value and no numAttacksAvailable set
             if (item?.attackValue !== null && item?.attackValue !== undefined) {
                 if (typeof itemData === 'number') {
-                    // Convert simple quantity to object format
-                    inventory[itemId] = {
+                    // Convert simple quantity to object format - CRITICAL: Use proper assignment
+                    playerData[guildId].players[userId].safari.inventory[itemId] = {
                         quantity: itemData,
                         numAttacksAvailable: itemData
                     };
                     updated = true;
                     console.log(`🗡️ DEBUG: Initialized attacks for ${itemId}: ${itemData} available`);
-                } else if (!itemData.numAttacksAvailable) {
-                    // Add numAttacksAvailable if missing
-                    itemData.numAttacksAvailable = itemData.quantity || 0;
+                } else if (typeof itemData === 'object' && itemData !== null && !itemData.numAttacksAvailable) {
+                    // Add numAttacksAvailable if missing - CRITICAL: Create new object to avoid reference issues
+                    playerData[guildId].players[userId].safari.inventory[itemId] = {
+                        ...itemData,
+                        numAttacksAvailable: itemData.quantity || 0
+                    };
                     updated = true;
-                    console.log(`🗡️ DEBUG: Set attacks available for ${itemId}: ${itemData.numAttacksAvailable}`);
+                    console.log(`🗡️ DEBUG: Set attacks available for ${itemId}: ${itemData.quantity || 0}`);
                 }
             }
         }
