@@ -4819,22 +4819,47 @@ function formatCombatResults(attacksReceived, items, customTerms) {
             attacksByAttacker[attackerName].push(attack);
         }
         
-        // Format each attacker's attacks
-        for (const [attackerName, attacks] of Object.entries(attacksByAttacker)) {
-            let attackerDamage = 0;
-            const attackDetails = [];
+        // 🚀 BLEEDING EDGE MVP: Use compact format for high attack volumes
+        const totalAttacks = attacksReceived.length;
+        const attackerCount = Object.keys(attacksByAttacker).length;
+        
+        if (totalAttacks > 20) {
+            // Ultra-compact format for chaos mode
+            content += `**${attackerCount} attackers launched ${totalAttacks} attacks:**\n\n`;
             
-            for (const attack of attacks) {
-                const item = items[attack.itemId];
-                const itemEmoji = item?.emoji || '⚔️';
-                const itemName = item?.name || 'Unknown Item';
+            // Group by damage amount for super compact display
+            const damageGroups = {};
+            for (const [attackerName, attacks] of Object.entries(attacksByAttacker)) {
+                const attackerDamage = attacks.reduce((sum, a) => sum + (a.totalDamage || 0), 0);
+                totalDamage += attackerDamage;
                 
-                attackerDamage += attack.totalDamage || 0;
-                attackDetails.push(`${attack.attacksPlanned}x ${itemEmoji} ${itemName}`);
+                if (!damageGroups[attackerDamage]) damageGroups[attackerDamage] = [];
+                damageGroups[attackerDamage].push(attackerName);
             }
             
-            content += `**${attackerName}:** ${attackDetails.join(', ')} → **${attackerDamage} damage**\n`;
-            totalDamage += attackerDamage;
+            // Show grouped damage
+            for (const [damage, attackers] of Object.entries(damageGroups).sort((a, b) => b[0] - a[0])) {
+                content += `**${damage} damage:** ${attackers.join(', ')}\n`;
+            }
+            
+        } else {
+            // Standard detailed format for lower attack volumes
+            for (const [attackerName, attacks] of Object.entries(attacksByAttacker)) {
+                let attackerDamage = 0;
+                const attackDetails = [];
+                
+                for (const attack of attacks) {
+                    const item = items[attack.itemId];
+                    const itemEmoji = item?.emoji || '⚔️';
+                    const itemName = item?.name || 'Unknown Item';
+                    
+                    attackerDamage += attack.totalDamage || 0;
+                    attackDetails.push(`${attack.attacksPlanned}x ${itemEmoji} ${itemName}`);
+                }
+                
+                content += `**${attackerName}:** ${attackDetails.join(', ')} → **${attackerDamage} damage**\n`;
+                totalDamage += attackerDamage;
+            }
         }
         
         content += `\n**Total Damage Taken:** ${totalDamage} ${customTerms.currencyEmoji || '🪙'}`;
