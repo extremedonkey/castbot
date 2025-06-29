@@ -1,0 +1,92 @@
+#!/usr/bin/env node
+
+/**
+ * Discord Restart Notification Script
+ * Sends a notification to the testing channel when the development server restarts
+ */
+
+import { Client, GatewayIntentBits } from 'discord.js';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
+// Configuration
+const GUILD_ID = '1331657596087566398';
+const CHANNEL_ID = '1337754151655833694'; // #🧪test channel
+const TIMEOUT_MS = 5000; // 5 second timeout
+
+/**
+ * Send restart notification to Discord
+ */
+async function sendRestartNotification() {
+    const client = new Client({ 
+        intents: [GatewayIntentBits.Guilds] 
+    });
+
+    try {
+        console.log('🔔 Sending restart notification to Discord...');
+        
+        // Login with timeout
+        const loginPromise = client.login(process.env.DISCORD_TOKEN);
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Login timeout')), TIMEOUT_MS)
+        );
+        
+        await Promise.race([loginPromise, timeoutPromise]);
+        console.log('✅ Discord client logged in successfully');
+
+        // Wait for client to be ready
+        await new Promise((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error('Ready timeout')), TIMEOUT_MS);
+            client.once('ready', () => {
+                clearTimeout(timer);
+                resolve();
+            });
+        });
+
+        // Get the channel
+        const channel = await client.channels.fetch(CHANNEL_ID);
+        if (!channel) {
+            throw new Error(`Channel ${CHANNEL_ID} not found`);
+        }
+
+        // Determine environment
+        const isProduction = process.env.PRODUCTION === 'TRUE';
+        const environment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
+        
+        // Create the notification message
+        const message = `> \`\`\`⚠️ Alert! \`\`\`
+# ${environment} SERVER RESTARTING NOW...
+
+> \`\`\`⚠️ Alert! \`\`\``;
+
+        // Send the message
+        await channel.send(message);
+        console.log(`✅ Restart notification sent to ${environment} channel`);
+
+    } catch (error) {
+        console.log(`❌ Failed to send Discord notification: ${error.message}`);
+        console.log('ℹ️  Restart will continue normally');
+    } finally {
+        // Clean disconnect
+        try {
+            if (client.isReady()) {
+                await client.destroy();
+            }
+        } catch (destroyError) {
+            // Ignore cleanup errors
+        }
+    }
+}
+
+// Run the notification
+sendRestartNotification().then(() => {
+    console.log('🔔 Notification script completed');
+    process.exit(0);
+}).catch((error) => {
+    console.log(`❌ Notification script failed: ${error.message}`);
+    process.exit(0); // Exit successfully to not block restart
+});

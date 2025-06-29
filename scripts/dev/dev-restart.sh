@@ -33,6 +33,11 @@ else
     echo "📝 No changes to commit"
 fi
 
+# Send Discord notification
+echo "🔔 Sending restart notification to Discord..."
+cd "$(dirname "$0")"
+timeout 10s node scripts/notify-restart.js || echo "ℹ️  Discord notification failed or timed out"
+
 # Restart the app
 echo "🔄 Restarting CastBot..."
 pkill -f "node app.js" 2>/dev/null || true
