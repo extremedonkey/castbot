@@ -2900,6 +2900,108 @@ async function createFinalRoundResults(guildId, currentRound, eventType, eventNa
 }
 
 /**
+ * Restock all eligible players with 100 currency
+ * @param {string} guildId - Discord guild ID
+ * @returns {Object} Discord interaction response
+ */
+async function restockPlayers(guildId) {
+    try {
+        console.log(`🪣 DEBUG: Starting player restock for guild ${guildId}`);
+        
+        // Get eligible players (same logic as round results)
+        const eligiblePlayers = await getEligiblePlayersFixed(guildId);
+        console.log(`👥 DEBUG: Found ${eligiblePlayers.length} eligible players for restock`);
+        
+        if (eligiblePlayers.length === 0) {
+            console.log(`⚠️ DEBUG: No eligible players found for restock`);
+            return {
+                type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+                data: {
+                    flags: (1 << 15) | 64, // IS_COMPONENTS_V2 + EPHEMERAL
+                    components: [{
+                        type: 17, // Container
+                        accent_color: 0xf39c12, // Orange for warning
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: `# 🪣 Player Restock\n\n**No eligible players found** to restock.\n\nPlayers need currency ≥1 or items in inventory to be eligible.`
+                            }
+                        ]
+                    }]
+                }
+            };
+        }
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        
+        // Restock all eligible players to 100 currency
+        let playersRestocked = 0;
+        const restockAmount = 100;
+        
+        for (const player of eligiblePlayers) {
+            const { userId, playerName } = player;
+            
+            // Ensure player safari data exists
+            if (!playerData[guildId]) {
+                playerData[guildId] = { players: {} };
+            }
+            if (!playerData[guildId].players) {
+                playerData[guildId].players = {};
+            }
+            if (!playerData[guildId].players[userId]) {
+                playerData[guildId].players[userId] = {};
+            }
+            if (!playerData[guildId].players[userId].safari) {
+                playerData[guildId].players[userId].safari = {};
+            }
+            
+            // Set currency to 100
+            const oldCurrency = playerData[guildId].players[userId].safari.currency || 0;
+            playerData[guildId].players[userId].safari.currency = restockAmount;
+            
+            playersRestocked++;
+            console.log(`🪣 DEBUG: Restocked ${playerName} (${userId}): ${oldCurrency} → ${restockAmount}`);
+        }
+        
+        // Save updated player data
+        await savePlayerData(playerData);
+        
+        console.log(`✅ DEBUG: Successfully restocked ${playersRestocked} players to ${restockAmount} currency`);
+        
+        // Get custom terms for display
+        const customTerms = await getCustomTerms(guildId);
+        
+        return {
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+                flags: (1 << 15) | 64, // IS_COMPONENTS_V2 + EPHEMERAL
+                components: [{
+                    type: 17, // Container
+                    accent_color: 0x27ae60, // Green for success
+                    components: [
+                        {
+                            type: 10, // Text Display
+                            content: `# 🪣 Players Restocked\n\n**${playersRestocked} eligible players** have been restocked to **${restockAmount} ${customTerms.currencyName}**.\n\n✅ All players are ready for the next round!`
+                        }
+                    ]
+                }]
+            }
+        };
+        
+    } catch (error) {
+        console.error('❌ Error restocking players:', error);
+        return {
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+                content: '❌ Error restocking players. Please try again.',
+                flags: 64 // EPHEMERAL
+            }
+        };
+    }
+}
+
+/**
  * Reset game data - clear all player currency and inventories
  */
 async function resetGameData(guildId) {
@@ -4694,6 +4796,7 @@ export {
     createFinalRankings,
     createFinalRoundResults,
     resetGameData,
+    restockPlayers,
     // Shared Display Functions
     generateItemContent,
     // Attack System exports

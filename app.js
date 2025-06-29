@@ -552,14 +552,18 @@ async function createSafariMenu(guildId, userId, member) {
   // Use custom inventory name for everyone
   const inventoryLabel = `My ${inventoryName}`;
   
-  // Create dynamic round results button label
+  // Create dynamic round results button labels
   let roundResultsLabel;
+  let roundResultsV2Label;
   if (currentRound >= 1 && currentRound <= 3) {
     roundResultsLabel = `Round ${currentRound} Results`;
+    roundResultsV2Label = `Round ${currentRound} Results V2`;
   } else if (currentRound === 4) {
     roundResultsLabel = 'Reset Game';
+    roundResultsV2Label = 'Round Results V2';
   } else {
     roundResultsLabel = 'Round Results'; // Fallback
+    roundResultsV2Label = 'Round Results V2'; // Fallback
   }
   
   // Create safari management buttons - Row 1: Core Functions
@@ -579,6 +583,11 @@ async function createSafariMenu(guildId, userId, member) {
       .setLabel('Manage Currency')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💰'),
+    new ButtonBuilder()
+      .setCustomId('safari_restock_players')
+      .setLabel('Restock Players')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🪣'),
     new ButtonBuilder()
       .setCustomId('safari_view_player_inventory')
       .setLabel('Player Inventory')
@@ -610,7 +619,7 @@ async function createSafariMenu(guildId, userId, member) {
       .setEmoji('⚙️'),
     new ButtonBuilder()
       .setCustomId('safari_round_results_v2')
-      .setLabel('Round Results V2')
+      .setLabel(roundResultsV2Label)
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🎨')
   ];
@@ -5682,6 +5691,38 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error resetting game data. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_restock_players') {
+      // Handle Restock Players - Set all eligible players currency to 100
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to restock players.')) return;
+        
+        console.log(`🪣 DEBUG: Restocking players for guild ${guildId}`);
+        
+        // Import Safari manager functions
+        const { restockPlayers } = await import('./safariManager.js');
+        
+        // Restock players and get the result response
+        const result = await restockPlayers(guildId);
+        
+        // Log the action
+        await logInteraction(req.body, 'safari_restock_players', { guildId });
+        
+        return res.send(result);
+        
+      } catch (error) {
+        console.error('Error in safari_restock_players:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error restocking players. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
