@@ -4192,7 +4192,7 @@ async function processAttackQueue(guildId, currentRound, playerData, items, clie
         console.log(`⚔️ DEBUG: Found ${attackQueue.length} attacks to process`);
         
         if (attackQueue.length === 0) {
-            return { attackResults: [], attackQueue: [] };
+            return { attackResults: [], attackQueue: [], attacksByDefender: {} };
         }
         
         // Group attacks by defending player (with validation)
@@ -4282,11 +4282,11 @@ async function processAttackQueue(guildId, currentRound, playerData, items, clie
             });
         }
         
-        return { attackResults, attackQueue };
+        return { attackResults, attackQueue, attacksByDefender };
         
     } catch (error) {
         console.error('Error processing attack queue:', error);
-        return { attackResults: [], attackQueue: [] };
+        return { attackResults: [], attackQueue: [], attacksByDefender: {} };
     }
 }
 
