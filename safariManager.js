@@ -4393,6 +4393,13 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
             throw new Error('No balance changes in round data');
         }
         
+        // Round 1 specific debugging
+        if (currentRound === 1) {
+            console.log(`🎯 DEBUG: ROUND 1 SPECIFIC - Eligible players: ${eligiblePlayers.length}`);
+            console.log(`🎯 DEBUG: ROUND 1 SPECIFIC - Balance changes keys: ${Object.keys(playerBalanceChanges).length}`);
+            console.log(`🎯 DEBUG: ROUND 1 SPECIFIC - Attacks by defender keys: ${Object.keys(attacksByDefender || {}).length}`);
+        }
+        
         console.log('🎨 DEBUG: Creating player result cards...');
         
         // Create player result cards
@@ -4423,6 +4430,9 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
         // Component limit safeguard - Discord has a 40 component limit per message
         const componentCount = allComponents.length;
         console.log(`🔢 DEBUG: Total components before buttons: ${componentCount}`);
+        console.log(`🔢 DEBUG: Component breakdown - Header: 1, Player cards: ${playerCards.length}, Total: ${componentCount}`);
+        console.log(`🔢 DEBUG: Eligible players count: ${eligiblePlayers.length}`);
+        console.log(`🔢 DEBUG: Current round: ${currentRound}`);
         
         // Check if we can add the inventory button (need to stay under 40 total components)
         const canAddButton = componentCount < 39; // Leave room for button container (1 more component)
