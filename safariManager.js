@@ -2945,6 +2945,7 @@ async function restockPlayers(guildId) {
         // Restock all safari players to 100 currency
         let playersRestocked = 0;
         const restockAmount = 100;
+        const playerDetails = [];
         
         for (const userId of safariPlayers) {
             // Ensure player safari data exists
@@ -2964,6 +2965,22 @@ async function restockPlayers(guildId) {
             // Set currency to 100
             const oldCurrency = playerData[guildId].players[userId].safari.currency || 0;
             playerData[guildId].players[userId].safari.currency = restockAmount;
+            
+            // Get player name for display (simplified version)
+            let playerName = `Player ${userId.slice(-4)}`;
+            try {
+                // Try to get actual username if client is available
+                if (global.client) {
+                    const user = await global.client.users.fetch(userId).catch(() => null);
+                    if (user) {
+                        playerName = user.displayName || user.username || playerName;
+                    }
+                }
+            } catch (error) {
+                // Use fallback name
+            }
+            
+            playerDetails.push(`• ${playerName}, ${restockAmount}`);
             
             playersRestocked++;
             console.log(`🪣 DEBUG: Restocked player ${userId}: ${oldCurrency} → ${restockAmount}`);
@@ -2987,7 +3004,7 @@ async function restockPlayers(guildId) {
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `# 🪣 Players Restocked\n\n**${playersRestocked} safari players** have been restocked to **${restockAmount} ${customTerms.currencyName}**.\n\n✅ All players are ready for the next round!`
+                            content: `# 🪣 Players Restocked\n\n**${playersRestocked} safari players** have been restocked to **${restockAmount} ${customTerms.currencyName}**:\n\n${playerDetails.join('\\n')}\n\n✅ All players are ready for the next round!`
                         }
                     ]
                 }]

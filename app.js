@@ -595,13 +595,8 @@ async function createSafariMenu(guildId, userId, member) {
       .setEmoji('🏅')
   ];
   
-  // Row 2: Admin & Management Functions (5 buttons max)
+  // Row 2: Admin & Management Functions (4 buttons max - removed dangerous Restock Players button)
   const safariButtonsRow2 = [
-    new ButtonBuilder()
-      .setCustomId('safari_restock_players')
-      .setLabel('Restock Players')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🪣'),
     new ButtonBuilder()
       .setCustomId('safari_manage_stores')
       .setLabel('Manage Stores')
