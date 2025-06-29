@@ -37,7 +37,7 @@ fi
 echo "🔔 Sending restart notification to Discord..."
 cd "$(dirname "$0")"
 # Run notification in background with timeout protection
-(timeout 12s node scripts/notify-restart.js 2>/dev/null || echo "ℹ️  Discord notification failed or timed out") &
+(timeout 12s node scripts/notify-restart.js 2>/dev/null) &
 NOTIFY_PID=$!
 
 # Wait briefly for notification, then continue
