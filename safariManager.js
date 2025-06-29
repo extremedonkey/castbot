@@ -11,6 +11,7 @@ import {
     InteractionResponseFlags
 } from 'discord-interactions';
 import { loadPlayerData, savePlayerData } from './storage.js';
+import { initializeGuildSafariData } from './safariInitialization.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -214,6 +215,40 @@ async function saveSafariContent(data) {
 }
 
 /**
+ * Ensure guild has proper Safari data structure initialized
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} safariData - Current Safari data object
+ * @returns {Promise<Object>} Updated Safari data object
+ */
+async function ensureGuildSafariData(guildId, safariData) {
+    try {
+        if (!safariData[guildId]) {
+            console.log(`🔄 DEBUG: Initializing Safari data structure for guild ${guildId}`);
+            await initializeGuildSafariData(guildId);
+            // Reload the data after initialization
+            return await loadSafariContent();
+        }
+        return safariData;
+    } catch (error) {
+        console.error(`❌ ERROR: Failed to ensure Safari data for guild ${guildId}:`, error);
+        // Fallback to manual initialization if automatic fails
+        safariData[guildId] = {
+            buttons: {},
+            safaris: {},
+            applications: {},
+            stores: {},
+            items: {},
+            safariConfig: {
+                currencyName: "coins",
+                inventoryName: "Inventory",
+                currencyEmoji: "🪙"
+            }
+        };
+        return safariData;
+    }
+}
+
+/**
  * Generate unique button ID
  */
 function generateButtonId(label) {
@@ -241,18 +276,10 @@ async function createCustomButton(guildId, buttonData, userId) {
     try {
         console.log(`🔍 DEBUG: Creating custom button for guild ${guildId} by user ${userId}`);
         
-        const safariData = await loadSafariContent();
+        let safariData = await loadSafariContent();
         
-        // Initialize guild data with MVP2 structure if needed
-        if (!safariData[guildId]) {
-            safariData[guildId] = {
-                buttons: {},
-                safaris: {},
-                applications: {},
-                stores: {},      // NEW: MVP2
-                items: {}       // NEW: MVP2
-            };
-        }
+        // Ensure guild has proper Safari data structure
+        safariData = await ensureGuildSafariData(guildId, safariData);
         
         // Generate unique button ID
         const buttonId = generateButtonId(buttonData.label);
