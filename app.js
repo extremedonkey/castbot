@@ -7180,6 +7180,173 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_store_delete_')) {
+      // Handle store delete button - show confirmation dialog
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to delete stores.')) return;
+        
+        // Parse storeId from custom_id
+        const storeId = custom_id.replace('safari_store_delete_', '');
+        console.log(`🗑️ DEBUG: Showing delete confirmation for store ${storeId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const store = safariData[guildId]?.stores?.[storeId];
+        
+        if (!store) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Store not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create delete confirmation interface
+        const containerComponents = [
+          {
+            type: 10, // Text Display
+            content: `## ⚠️ Delete Store Confirmation\n\n**${store.emoji || '🏪'} ${store.name}**`
+          },
+          {
+            type: 10, // Text Display
+            content: `⚠️ **WARNING**: This will permanently delete the store and all its data:\n\n• Store configuration and settings\n• All items stocked in the store\n• Store metadata and statistics\n\n**This action cannot be undone!**`
+          },
+          {
+            type: 14 // Separator
+          },
+          {
+            type: 1, // Action Row
+            components: [
+              {
+                type: 2, // Button
+                custom_id: `safari_store_items_select`,
+                label: '⬅ Cancel',
+                style: 2
+              },
+              {
+                type: 2, // Button
+                custom_id: `safari_confirm_delete_store_${storeId}`,
+                label: 'Delete Store',
+                style: 4, // Red/Destructive style
+                emoji: { name: '🗑️' }
+              }
+            ]
+          }
+        ];
+        
+        const container = {
+          type: 17, // Container
+          accent_color: 0xe74c3c, // Red accent for danger
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_store_delete handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading delete confirmation.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_confirm_delete_store_')) {
+      // Handle confirmed store deletion
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to delete stores.')) return;
+        
+        // Parse storeId from custom_id
+        const storeId = custom_id.replace('safari_confirm_delete_store_', '');
+        console.log(`🗑️ DEBUG: Confirming delete for store ${storeId} by user ${userId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        
+        if (!safariData[guildId]?.stores?.[storeId]) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Store not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const storeName = safariData[guildId].stores[storeId].name;
+        
+        // Delete the store - completely remove it from safariContent.json
+        delete safariData[guildId].stores[storeId];
+        
+        // Save updated data
+        await saveSafariContent(safariData);
+        
+        console.log(`🗑️ DEBUG: Deleted store ${storeId} (${storeName}) completely`);
+        
+        // Return to store management with success message
+        const containerComponents = [
+          {
+            type: 10, // Text Display
+            content: `## ✅ Store Deleted Successfully\n\n**${storeName}** has been permanently deleted from the system.`
+          },
+          {
+            type: 14 // Separator
+          },
+          {
+            type: 1, // Action Row
+            components: [{
+              type: 2, // Button
+              custom_id: 'safari_manage_stores',
+              label: '⬅ Back to Store Management',
+              style: 2
+            }]
+          }
+        ];
+        
+        const container = {
+          type: 17, // Container
+          accent_color: 0x27ae60, // Green accent for success
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error confirming store deletion:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error deleting store. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('safari_store_post_channel_')) {
       // Handle channel selection for posting store button
       try {

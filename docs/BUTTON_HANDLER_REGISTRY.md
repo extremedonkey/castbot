@@ -51,7 +51,9 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_store_add_item_*` | ➕ Add Item to Store | app.js:~6197 | Pattern handler (::delimiter) | ✅ Active |
 | `safari_store_remove_item_*` | 🗑️ Remove Item from Store | app.js:~6288 | Pattern handler (::delimiter) | ✅ Active |
 | `safari_store_open_*` | 🏪 Open Store (Post to Channel) | app.js:~6364 | Pattern handler | ✅ Active |
-| `safari_store_post_channel_*` | Channel Selection for Store Posting | app.js:~6460 | Select handler | ✅ Active |
+| `safari_store_delete_*` | 🗑️ Delete Store | app.js:~7183 | Pattern handler | ✅ Active |
+| `safari_confirm_delete_store_*` | ⚠️ Confirm Delete Store | app.js:~7268 | Pattern handler | ✅ Active |
+| `safari_store_post_channel_*` | Channel Selection for Store Posting | app.js:~7350 | Select handler | ✅ Active |
 | `safari_store_browse_*` | 🏪 Browse Store (Player Interface) | app.js:~2437 | Pattern handler | ✅ Active |
 | `safari_store_buy_*` | 🛒 Purchase Item from Store | app.js:~2562 | Pattern handler | ✅ Active |
 | `safari_store_create` | ➕ Create New Store | app.js:~5325 | Direct handler | ✅ Active |
