@@ -2120,8 +2120,22 @@ async function processRoundResults(guildId, channelId, client) {
             });
         }
         
-        // Create round results output
-        const output = await createRoundResultsOutput(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms);
+        // Process attack queue (after yield calculations, before round output)
+        console.log(`⚔️ DEBUG: Starting attack resolution for round ${currentRound}`);
+        const { attackResults, attackQueue } = await processAttackQueue(guildId, currentRound, playerData, items, client);
+        
+        // Consume attack items for completed attacks
+        const consumptionResults = await consumeAttackItems(attackQueue, playerData, guildId, items);
+        
+        // Save updated player data (after attack damage and item consumption)
+        await savePlayerData(playerData);
+        console.log(`✅ DEBUG: Player data saved after attack resolution`);
+        
+        // Clear processed attack queue
+        await clearProcessedAttackQueue(guildId, currentRound);
+        
+        // Create round results output (now includes attack results)
+        const output = await createRoundResultsOutput(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults, consumptionResults);
         
         // Advance to next round or complete game
         if (currentRound < 3) {
@@ -2363,7 +2377,7 @@ async function storeRoundResult(guildId, roundResult) {
 /**
  * Create round results output with Components V2 formatting
  */
-async function createRoundResultsOutput(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms) {
+async function createRoundResultsOutput(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults = [], consumptionResults = []) {
     try {
         const totalParticipants = playerResults.length;
         const totalEarnings = playerResults.reduce((sum, p) => sum + p.earnings, 0);
@@ -2395,6 +2409,65 @@ async function createRoundResultsOutput(guildId, currentRound, eventType, eventN
             playerSummary += `*... and ${playerResults.length - 10} more players*\n`;
         }
         
+        // Build attack results summary
+        let attackSummary = '';
+        if (attackResults && attackResults.length > 0) {
+            attackSummary = '\n\n**⚔️ Attack Results:**\n';
+            
+            // Group attacks by defender for cleaner display
+            const attacksByDefender = {};
+            for (const attack of attackResults) {
+                if (!attacksByDefender[attack.defenderName]) {
+                    attacksByDefender[attack.defenderName] = {
+                        totalDamage: 0,
+                        attackCount: 0,
+                        attacks: []
+                    };
+                }
+                attacksByDefender[attack.defenderName].totalDamage += attack.damageDealt;
+                attacksByDefender[attack.defenderName].attackCount += 1;
+                attacksByDefender[attack.defenderName].attacks.push(attack);
+            }
+            
+            // Display attack summary (limit to 5 defenders for brevity)
+            const defenderNames = Object.keys(attacksByDefender).slice(0, 5);
+            for (const defenderName of defenderNames) {
+                const defenderStats = attacksByDefender[defenderName];
+                attackSummary += `• **${defenderName}**: -${defenderStats.totalDamage} ${customTerms.currencyEmoji || '🪙'} (${defenderStats.attackCount} attacks)\n`;
+            }
+            
+            if (Object.keys(attacksByDefender).length > 5) {
+                attackSummary += `*... and ${Object.keys(attacksByDefender).length - 5} more defenders*\n`;
+            }
+        }
+        
+        // Build item consumption summary
+        let consumptionSummary = '';
+        if (consumptionResults && consumptionResults.length > 0) {
+            consumptionSummary = '\n\n**🔄 Items Consumed:**\n';
+            
+            // Group by player for cleaner display
+            const consumptionByPlayer = {};
+            for (const consumption of consumptionResults) {
+                if (!consumptionByPlayer[consumption.playerName]) {
+                    consumptionByPlayer[consumption.playerName] = [];
+                }
+                consumptionByPlayer[consumption.playerName].push(consumption);
+            }
+            
+            // Display consumption summary (limit to 5 players)
+            const playerNames = Object.keys(consumptionByPlayer).slice(0, 5);
+            for (const playerName of playerNames) {
+                const consumptions = consumptionByPlayer[playerName];
+                const itemList = consumptions.map(c => `${c.itemName} x${c.quantityConsumed}`).join(', ');
+                consumptionSummary += `• **${playerName}**: ${itemList}\n`;
+            }
+            
+            if (Object.keys(consumptionByPlayer).length > 5) {
+                consumptionSummary += `*... and ${Object.keys(consumptionByPlayer).length - 5} more players*\n`;
+            }
+        }
+        
         // Build next round message
         let nextRoundMsg = '';
         if (currentRound < 3) {
@@ -2423,7 +2496,7 @@ async function createRoundResultsOutput(guildId, currentRound, eventType, eventN
                         },
                         {
                             type: 10, // Text Display  
-                            content: `**Player Results:**\n${playerSummary}${nextRoundMsg}`
+                            content: `**Player Results:**\n${playerSummary}${attackSummary}${consumptionSummary}${nextRoundMsg}`
                         },
                         {
                             type: 1, // Action Row
@@ -3536,6 +3609,212 @@ async function migrateInventoryToObjectFormat(guildId = null) {
     }
 }
 
+/**
+ * Attack Resolution System
+ * Core functions for processing attacks during round results
+ */
+
+/**
+ * Calculate total defense value for a player's inventory
+ * @param {Object} playerInventory - Player's inventory object
+ * @param {Object} items - Item definitions from safariContent.json
+ * @returns {number} Total defense value
+ */
+function calculatePlayerDefense(playerInventory, items) {
+    let totalDefense = 0;
+    
+    for (const [itemId, itemData] of Object.entries(playerInventory)) {
+        const item = items[itemId];
+        if (!item?.defenseValue) continue;
+        
+        const quantity = getItemQuantity(itemData);
+        totalDefense += (item.defenseValue * quantity);
+    }
+    
+    return totalDefense;
+}
+
+/**
+ * Process attack queue for a specific round
+ * @param {string} guildId - Guild ID
+ * @param {number} currentRound - Round to process
+ * @param {Object} playerData - Player data object
+ * @param {Object} items - Item definitions
+ * @param {Object} client - Discord client for player names
+ * @returns {Promise<Object>} Attack results and queue data
+ */
+async function processAttackQueue(guildId, currentRound, playerData, items, client = null) {
+    console.log(`⚔️ DEBUG: Processing attack queue for round ${currentRound}`);
+    
+    try {
+        const safariData = await loadSafariContent();
+        const attackQueue = safariData[guildId]?.attackQueue?.[`round${currentRound}`] || [];
+        
+        console.log(`⚔️ DEBUG: Found ${attackQueue.length} attacks to process`);
+        
+        if (attackQueue.length === 0) {
+            return { attackResults: [], attackQueue: [] };
+        }
+        
+        // Group attacks by defending player
+        const attacksByDefender = {};
+        for (const attack of attackQueue) {
+            if (!attacksByDefender[attack.defendingPlayer]) {
+                attacksByDefender[attack.defendingPlayer] = [];
+            }
+            attacksByDefender[attack.defendingPlayer].push(attack);
+        }
+        
+        console.log(`⚔️ DEBUG: Attacks grouped by ${Object.keys(attacksByDefender).length} defenders`);
+        
+        // Process each defended player
+        const attackResults = [];
+        
+        for (const [defenderId, attacks] of Object.entries(attacksByDefender)) {
+            const defender = playerData[guildId]?.players?.[defenderId];
+            if (!defender?.safari) {
+                console.log(`⚠️ DEBUG: Defender ${defenderId} has no safari data, skipping`);
+                continue;
+            }
+            
+            // Calculate total attack damage
+            const totalAttackDamage = attacks.reduce((sum, attack) => sum + attack.totalDamage, 0);
+            
+            // Calculate defender's total defense
+            const totalDefense = calculatePlayerDefense(defender.safari.inventory || {}, items);
+            
+            // Calculate net damage (attack - defense, minimum 0)
+            const netDamage = Math.max(0, totalAttackDamage - totalDefense);
+            
+            // Store original currency before damage
+            const originalCurrency = defender.safari.currency || 0;
+            
+            // Apply damage to defender's currency (minimum 0)
+            defender.safari.currency = Math.max(0, originalCurrency - netDamage);
+            
+            console.log(`⚔️ DEBUG: ${defenderId} - ${totalAttackDamage} attack - ${totalDefense} defense = ${netDamage} net damage`);
+            console.log(`💰 DEBUG: ${defenderId} currency: ${originalCurrency} → ${defender.safari.currency}`);
+            
+            // Get defender name for display
+            let defenderName = `Player ${defenderId.slice(-4)}`;
+            try {
+                if (client) {
+                    const guild = client.guilds.cache.get(guildId);
+                    const defenderMember = await guild?.members?.fetch(defenderId);
+                    defenderName = defenderMember?.displayName || defenderMember?.user?.username || defenderName;
+                }
+            } catch (e) {
+                // Use fallback name
+            }
+            
+            attackResults.push({
+                defenderId,
+                defenderName,
+                totalAttackDamage,
+                totalDefense,
+                netDamage,
+                originalCurrency,
+                newCurrency: defender.safari.currency,
+                attackCount: attacks.length,
+                attackers: attacks.map(a => ({ 
+                    name: a.attackingPlayerName, 
+                    damage: a.totalDamage,
+                    itemName: a.itemName,
+                    quantity: a.attacksPlanned
+                }))
+            });
+        }
+        
+        return { attackResults, attackQueue };
+        
+    } catch (error) {
+        console.error('Error processing attack queue:', error);
+        return { attackResults: [], attackQueue: [] };
+    }
+}
+
+/**
+ * Consume attack items after attacks are resolved
+ * @param {Array} attackQueue - Array of attack records
+ * @param {Object} playerData - Player data object
+ * @param {string} guildId - Guild ID
+ * @param {Object} items - Item definitions
+ * @returns {Promise<Array>} Consumption results
+ */
+async function consumeAttackItems(attackQueue, playerData, guildId, items) {
+    console.log(`🗂️ DEBUG: Processing attack item consumption for ${attackQueue.length} attacks`);
+    
+    const consumptionResults = [];
+    
+    for (const attack of attackQueue) {
+        const attacker = playerData[guildId]?.players?.[attack.attackingPlayer];
+        if (!attacker?.safari?.inventory) {
+            console.log(`⚠️ DEBUG: Attacker ${attack.attackingPlayer} has no inventory, skipping consumption`);
+            continue;
+        }
+        
+        const item = items[attack.itemId];
+        if (item?.consumable !== "Yes") {
+            console.log(`ℹ️ DEBUG: Item ${attack.itemName} is not consumable, skipping`);
+            continue; // Only consume consumable items
+        }
+        
+        const attackerInventory = attacker.safari.inventory;
+        const inventoryItem = attackerInventory[attack.itemId];
+        
+        if (!inventoryItem) {
+            console.error(`⚠️ DEBUG: Attack item ${attack.itemId} not found in attacker ${attack.attackingPlayer} inventory`);
+            continue;
+        }
+        
+        const originalQuantity = getItemQuantity(inventoryItem);
+        const newQuantity = Math.max(0, originalQuantity - attack.attacksPlanned);
+        
+        // Update quantity using universal setter
+        setItemQuantity(
+            attackerInventory,
+            attack.itemId,
+            newQuantity,
+            getItemAttackAvailability(inventoryItem) // Preserve existing attack availability
+        );
+        
+        console.log(`🗂️ DEBUG: Consumed ${attack.attacksPlanned}x ${attack.itemName} from ${attack.attackingPlayerName} (${originalQuantity} → ${newQuantity})`);
+        
+        consumptionResults.push({
+            attackerId: attack.attackingPlayer,
+            attackerName: attack.attackingPlayerName,
+            itemName: attack.itemName,
+            consumed: attack.attacksPlanned,
+            originalQuantity,
+            newQuantity
+        });
+    }
+    
+    return consumptionResults;
+}
+
+/**
+ * Clear processed attack queue for a round
+ * @param {string} guildId - Guild ID
+ * @param {number} currentRound - Round to clear
+ * @returns {Promise<boolean>} Success status
+ */
+async function clearProcessedAttackQueue(guildId, currentRound) {
+    try {
+        const safariData = await loadSafariContent();
+        if (safariData[guildId]?.attackQueue?.[`round${currentRound}`]) {
+            console.log(`🗑️ DEBUG: Clearing attack queue for round ${currentRound}`);
+            delete safariData[guildId].attackQueue[`round${currentRound}`];
+            await saveSafariContent(safariData);
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error clearing attack queue:', error);
+        return false;
+    }
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -3602,5 +3881,10 @@ export {
     getItemQuantity,
     setItemQuantity,
     getItemAttackAvailability,
-    migrateInventoryToObjectFormat
+    migrateInventoryToObjectFormat,
+    // Attack Resolution Functions
+    calculatePlayerDefense,
+    processAttackQueue,
+    consumeAttackItems,
+    clearProcessedAttackQueue
 };
