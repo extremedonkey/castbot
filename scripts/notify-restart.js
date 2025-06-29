@@ -15,8 +15,8 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 // Configuration
 const GUILD_ID = '1331657596087566398';
-const CHANNEL_ID = '1337754151655833694'; // #🧪test channel
-const TIMEOUT_MS = 5000; // 5 second timeout
+const CHANNEL_ID = '1337754151655833694'; // #🧪test channel (from logs)
+const TIMEOUT_MS = 8000; // 8 second timeout
 
 /**
  * Send restart notification to Discord
