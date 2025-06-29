@@ -3389,17 +3389,17 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
                             },
                             {
                                 type: 14 // Separator
-                            }
-                        ]
-                    },
-                    {
-                        type: 1, // Action Row
-                        components: [
+                            },
                             {
-                                type: 2, // Button
-                                custom_id: 'safari_player_inventory',
-                                label: `← ${customTerms.inventoryName}`,
-                                style: 2 // Secondary (grey)
+                                type: 9, // Section component for button
+                                components: [
+                                    {
+                                        type: 2, // Button
+                                        custom_id: 'safari_player_inventory',
+                                        label: `← ${customTerms.inventoryName}`,
+                                        style: 1 // Primary (blue)
+                                    }
+                                ]
                             }
                         ]
                     }
