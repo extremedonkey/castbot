@@ -566,7 +566,7 @@ async function createSafariMenu(guildId, userId, member) {
     roundResultsV2Label = 'Round Results V2'; // Fallback
   }
   
-  // Create safari management buttons - Row 1: Core Functions
+  // Create safari management buttons - Row 1: Core Functions (5 buttons max)
   const safariButtonsRow1 = [
     new ButtonBuilder()
       .setCustomId('safari_manage_safari_buttons')
@@ -584,11 +584,6 @@ async function createSafariMenu(guildId, userId, member) {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💰'),
     new ButtonBuilder()
-      .setCustomId('safari_restock_players')
-      .setLabel('Restock Players')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🪣'),
-    new ButtonBuilder()
       .setCustomId('safari_view_player_inventory')
       .setLabel('Player Inventory')
       .setStyle(ButtonStyle.Secondary)
@@ -600,8 +595,13 @@ async function createSafariMenu(guildId, userId, member) {
       .setEmoji('🏅')
   ];
   
-  // Row 2: Admin & Management Functions
+  // Row 2: Admin & Management Functions (5 buttons max)
   const safariButtonsRow2 = [
+    new ButtonBuilder()
+      .setCustomId('safari_restock_players')
+      .setLabel('Restock Players')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🪣'),
     new ButtonBuilder()
       .setCustomId('safari_manage_stores')
       .setLabel('Manage Stores')
