@@ -10599,7 +10599,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         // Get current item quantity and check if it's an attack item
         const playerData = await loadPlayerData();
-        const inventory = playerData[guildId]?.players?.[selectedUserId]?.inventory || {};
+        const inventory = playerData[guildId]?.players?.[selectedUserId]?.safari?.inventory || {};
         const currentItem = inventory[itemId];
         
         let currentQuantity = '';
@@ -13191,11 +13191,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         if (!playerData[guildId].players[userId]) {
           playerData[guildId].players[userId] = {};
         }
-        if (!playerData[guildId].players[userId].inventory) {
-          playerData[guildId].players[userId].inventory = {};
+        if (!playerData[guildId].players[userId].safari) {
+          playerData[guildId].players[userId].safari = {};
+        }
+        if (!playerData[guildId].players[userId].safari.inventory) {
+          playerData[guildId].players[userId].safari.inventory = {};
         }
         
-        const inventory = playerData[guildId].players[userId].inventory;
+        const inventory = playerData[guildId].players[userId].safari.inventory;
         const currentItem = inventory[itemId];
         
         // Get previous values for change calculation
