@@ -381,7 +381,7 @@ export async function createPlayerManagementUI(options) {
           // Create inventory button with new dinosaur emoji
           const inventoryButton = new ButtonBuilder()
             .setCustomId('safari_player_inventory')
-            .setLabel(`${customTerms.currencyEmoji} ${customTerms.inventoryName}`)
+            .setLabel(customTerms.inventoryName) // Remove currency emoji since we're using dinosaur emoji
             .setStyle(ButtonStyle.Primary)
             .setEmoji('🦕'); // Dinosaur emoji
           
