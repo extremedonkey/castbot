@@ -8388,6 +8388,80 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_item_player_qty_')) {
+      // Handle Player Qty button click - show user select for item quantity management
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const itemId = custom_id.replace('safari_item_player_qty_', '');
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage player items.')) return;
+
+        console.log(`📦 DEBUG: Player Qty clicked for item ${itemId}`);
+        
+        // Load item data to get item name
+        const { loadEntity } = await import('./entityManager.js');
+        const item = await loadEntity('item', guildId, itemId);
+        const itemName = item?.name || 'Unknown Item';
+        
+        // Create user selection dropdown
+        const userSelect = new UserSelectMenuBuilder()
+          .setCustomId(`safari_item_qty_user_select_${guildId}_${itemId}`)
+          .setPlaceholder(`Choose a player to manage their ${itemName} balance...`)
+          .setMinValues(1)
+          .setMaxValues(1);
+        
+        const userSelectRow = new ActionRowBuilder().addComponents(userSelect);
+        
+        // Create cancel button (back to entity management)
+        const cancelButton = new ButtonBuilder()
+          .setCustomId(`entity_edit_mode_item_${itemId}`)
+          .setLabel('⬅ Back')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 📦 Manage Player Items\n\nSelect a player to manage how many **${itemName}** they have:`
+          },
+          userSelectRow.toJSON(), // User selection dropdown
+          {
+            type: 14 // Separator
+          },
+          cancelRow.toJSON() // Back button
+        ];
+        
+        // Get entity accent color or default to blue
+        const accentColor = item?.accentColor || 0x3498db;
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: accentColor,
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in player qty handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error managing player items.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('safari_add_action_')) {
       // Handle adding actions to safari buttons
       try {
@@ -10413,6 +10487,88 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error selecting user for currency.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_item_qty_user_select_')) {
+      // Handle user selection for item quantity management - show quantity input modal
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const selectedUserId = data.values[0];
+        
+        // Extract item ID from custom_id: safari_item_qty_user_select_${guildId}_${itemId}
+        const parts = custom_id.split('_');
+        const itemId = parts.slice(5).join('_'); // Everything after "safari_item_qty_user_select_guildId_"
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage player items.')) return;
+        
+        console.log(`📦 DEBUG: Selected user ${selectedUserId} for item ${itemId} quantity management`);
+        
+        // Load item data to get item name and attack info
+        const { loadEntity } = await import('./entityManager.js');
+        const item = await loadEntity('item', guildId, itemId);
+        const itemName = item?.name || 'Unknown Item';
+        
+        // Get current item quantity and check if it's an attack item
+        const playerData = await loadPlayerData();
+        const inventory = playerData[guildId]?.players?.[selectedUserId]?.inventory || {};
+        const currentItem = inventory[itemId];
+        
+        let currentQuantity = '';
+        let modalLabel = 'Qty';
+        
+        if (currentItem) {
+          // Item exists - show current quantity
+          currentQuantity = currentItem.quantity?.toString() || '0';
+          
+          // Check if it's an attack item (has numAttacksAvailable property)
+          if (currentItem.numAttacksAvailable !== undefined) {
+            modalLabel = `Qty (numAttacksAvailable = ${currentItem.numAttacksAvailable})`;
+          }
+        } else {
+          // Item doesn't exist - blank modal (never interacted with this item)
+          currentQuantity = '';
+        }
+        
+        // Get target user info for modal title
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(selectedUserId);
+        
+        // Create quantity input modal
+        const modal = new ModalBuilder()
+          .setCustomId(`safari_item_qty_modal_${guildId}_${itemId}_${selectedUserId}`)
+          .setTitle(`Set ${itemName} Quantity - ${targetMember.displayName}`);
+
+        const quantityInput = new TextInputBuilder()
+          .setCustomId('item_quantity')
+          .setLabel(modalLabel)
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(10)
+          .setPlaceholder('Enter quantity (0 or higher)');
+        
+        // Set value if item exists
+        if (currentQuantity !== '') {
+          quantityInput.setValue(currentQuantity);
+        }
+
+        const row = new ActionRowBuilder().addComponents(quantityInput);
+        modal.addComponents(row);
+
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error handling item quantity user selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error selecting user for item management.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -12813,6 +12969,142 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error setting player currency.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_item_qty_modal_')) {
+      // Handle Safari item quantity setting modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Extract IDs from custom_id: safari_item_qty_modal_${guildId}_${itemId}_${userId}
+        const parts = custom_id.replace('safari_item_qty_modal_', '').split('_');
+        const modalGuildId = parts[0];
+        const userId = parts[parts.length - 1];
+        const itemId = parts.slice(1, -1).join('_'); // Everything between guildId and userId
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage player items.')) return;
+        
+        // Get quantity amount from modal
+        const quantityValue = components[0].components[0].value?.trim();
+        
+        // Validate quantity input
+        const quantity = parseInt(quantityValue, 10);
+        if (isNaN(quantity) || quantity < 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **Invalid quantity**\n\nPlease enter a number 0 or higher.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`📦 DEBUG: Setting item ${itemId} quantity for user ${userId} to ${quantity}`);
+        
+        // Load item data to check if it's an attack item
+        const { loadEntity } = await import('./entityManager.js');
+        const item = await loadEntity('item', guildId, itemId);
+        const itemName = item?.name || 'Unknown Item';
+        const isAttackItem = item?.attackValue !== undefined && item?.attackValue > 0;
+        
+        // Get current player data
+        const playerData = await loadPlayerData();
+        
+        // Ensure player structure exists
+        if (!playerData[guildId]) {
+          playerData[guildId] = { players: {} };
+        }
+        if (!playerData[guildId].players) {
+          playerData[guildId].players = {};
+        }
+        if (!playerData[guildId].players[userId]) {
+          playerData[guildId].players[userId] = {};
+        }
+        if (!playerData[guildId].players[userId].inventory) {
+          playerData[guildId].players[userId].inventory = {};
+        }
+        
+        const inventory = playerData[guildId].players[userId].inventory;
+        const currentItem = inventory[itemId];
+        
+        // Get previous values for change calculation
+        const previousQuantity = currentItem?.quantity || 0;
+        const quantityChange = quantity - previousQuantity;
+        
+        // Update quantity
+        if (quantity === 0 && !currentItem) {
+          // Setting to 0 for non-existent item - create with 0
+          inventory[itemId] = { quantity: 0 };
+          if (isAttackItem) {
+            inventory[itemId].numAttacksAvailable = 0;
+          }
+        } else if (quantity === 0 && currentItem) {
+          // Setting existing item to 0 - keep structure but set to 0
+          inventory[itemId].quantity = 0;
+          if (isAttackItem) {
+            inventory[itemId].numAttacksAvailable = 0;
+          }
+        } else {
+          // Setting to non-zero value
+          if (!currentItem) {
+            // Create new item
+            inventory[itemId] = { quantity: quantity };
+            if (isAttackItem) {
+              inventory[itemId].numAttacksAvailable = quantity;
+            }
+          } else {
+            // Update existing item
+            inventory[itemId].quantity = quantity;
+            
+            // For attack items, adjust numAttacksAvailable proportionally
+            if (isAttackItem) {
+              const previousAttacks = currentItem.numAttacksAvailable || 0;
+              const newAttacks = Math.max(0, previousAttacks + quantityChange);
+              inventory[itemId].numAttacksAvailable = newAttacks;
+            }
+          }
+        }
+        
+        // Save player data
+        await savePlayerData(playerData);
+        
+        // Get user info for confirmation
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(userId);
+        
+        // Create confirmation message
+        let changeText = '';
+        if (quantityChange > 0) {
+          changeText = `**Change:** +${quantityChange}`;
+        } else if (quantityChange < 0) {
+          changeText = `**Change:** ${quantityChange}`;
+        } else {
+          changeText = '**Change:** No change';
+        }
+        
+        let attackInfo = '';
+        if (isAttackItem && inventory[itemId]) {
+          attackInfo = `\n**Attacks Available:** ${inventory[itemId].numAttacksAvailable}`;
+        }
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Item Quantity Updated!**\n\n**Player:** ${targetMember.displayName}\n**Item:** ${itemName}\n**Previous Quantity:** ${previousQuantity}\n**New Quantity:** ${quantity}\n${changeText}${attackInfo}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling item quantity modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error setting item quantity.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

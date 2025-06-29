@@ -63,6 +63,8 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_currency_view_all` | 👥 View All Currency | app.js:~5710 | Direct handler | ✅ Active |
 | `safari_currency_set_player` | 💰 Set Player Currency | app.js:~5760 | Direct handler | ✅ Active |
 | `safari_currency_reset_all` | 🗑️ Reset All Currency | app.js:~5832 | Direct handler | ✅ Active |
+| `safari_item_player_qty_*` | 📦 Player Qty (Item Management) | app.js:~8391 | Pattern handler | ✅ Active |
+| `safari_item_qty_user_select_*` | User Select for Item Quantity | app.js:~10494 | Pattern handler | ✅ Active |
 | `safari_button_manage_existing` | ✏️ Edit Existing Button | app.js:~5983 | Direct handler | ✅ Active |
 | `safari_button_edit_select` | Button Selection Dropdown | app.js:~6078 | Select handler | ✅ Active |
 | `safari_edit_properties_*` | Edit Properties | app.js:~6329 | Pattern handler | ✅ Active |
@@ -75,6 +77,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | Custom ID | Purpose | Location | Handler Type | Status |
 |-----------|---------|----------|--------------|--------|
 | `safari_customize_terms_modal` | Custom Terms Modal | app.js:~12591 | Modal handler | ✅ Active |
+| `safari_item_qty_modal_*` | Item Quantity Modal | app.js:~12976 | Modal handler | ✅ Active |
 | `safari_test_button_*` | Test Button | app.js:~6603 | Pattern handler | ✅ Active |
 | `safari_action_edit_*` | Edit Individual Actions | app.js:~6384 | Pattern handler | ✅ Active |
 | `safari_action_move_up_*` | Move Action Up | app.js:~6195 | Pattern handler | ✅ Active |

@@ -267,6 +267,14 @@ function createEditModeUI(entityType, entityId, entity, activeFieldGroup) {
                     custom_id: 'prod_safari_menu',
                     emoji: { name: '🦁' }
                 },
+                // Add Player Qty button only for items
+                ...(entityType === 'item' ? [{
+                    type: 2, // Button
+                    style: 2, // Secondary (grey)
+                    label: 'Player Qty',
+                    custom_id: `safari_item_player_qty_${entityId}`,
+                    emoji: { name: '📦' }
+                }] : []),
                 {
                     type: 2, // Button
                     style: 4, // Danger
