@@ -3352,18 +3352,64 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         await savePlayerData(freshPlayerData);
         console.log(`✅ DEBUG: Player data saved with reduced attack availability`);
         
-        // Create response object
+        // Get custom terms for inventory name
+        const customTerms = await getCustomTerms(guildId);
+        
+        // Get defender name for display
+        let defenderName = 'Unknown Player';
+        try {
+            const guild = client?.guilds?.cache?.get(guildId);
+            const defenderMember = await guild?.members?.fetch(targetId);
+            defenderName = defenderMember?.displayName || defenderMember?.user?.username || defenderName;
+        } catch (e) {
+            // Use fallback
+            defenderName = `Player ${targetId.slice(-4)}`;
+        }
+        
+        // Calculate total damage
+        const totalDamage = quantity * (item.attackValue || 0);
+        
+        // Create enhanced response with Container
         const response = {
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-                content: `✅ **Attack Scheduled!** ${quantity} ${item.name}${quantity > 1 ? 's' : ''} will attack the selected player when round results are announced.\n\nUse the "My Nest" button to view your updated inventory.`,
-                flags: InteractionResponseFlags.EPHEMERAL
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [
+                    {
+                        type: 17, // Container
+                        accent_color: 0xed4245, // Red accent for attack
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: `# Attack Scheduled`
+                            },
+                            {
+                                type: 10, // Text Display
+                                content: `${quantity} ${item.name}${quantity > 1 ? 's' : ''} will attack **${defenderName}** for **${totalDamage} damage** when the round results are announced.`
+                            },
+                            {
+                                type: 14 // Separator
+                            }
+                        ]
+                    },
+                    {
+                        type: 1, // Action Row
+                        components: [
+                            {
+                                type: 2, // Button
+                                custom_id: 'safari_player_inventory',
+                                label: `← ${customTerms.inventoryName}`,
+                                style: 2 // Secondary (grey)
+                            }
+                        ]
+                    }
+                ]
             }
         };
         
         console.log(`🚀 DEBUG: About to return response:`, JSON.stringify(response, null, 2));
         
-        // Return simple success message immediately
+        // Return enhanced response message
         return response;
         
     } catch (error) {
