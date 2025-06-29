@@ -8402,7 +8402,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Load item data to get item name
         const { loadEntity } = await import('./entityManager.js');
-        const item = await loadEntity('item', guildId, itemId);
+        const item = await loadEntity(guildId, 'item', itemId);
         console.log(`📦 DEBUG: loadEntity result for item ${itemId}:`, item);
         const itemName = item?.name || 'Unknown Item';
         
@@ -10511,7 +10511,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         // Load item data to get item name and attack info
         const { loadEntity } = await import('./entityManager.js');
-        const item = await loadEntity('item', guildId, itemId);
+        const item = await loadEntity(guildId, 'item', itemId);
         console.log(`📦 DEBUG: loadEntity result for item ${itemId}:`, item);
         const itemName = item?.name || 'Unknown Item';
         
@@ -13010,7 +13010,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         // Load item data to check if it's an attack item
         const { loadEntity } = await import('./entityManager.js');
-        const item = await loadEntity('item', guildId, itemId);
+        const item = await loadEntity(guildId, 'item', itemId);
         console.log(`📦 DEBUG: loadEntity result for item ${itemId}:`, item);
         const itemName = item?.name || 'Unknown Item';
         const isAttackItem = item?.attackValue !== undefined && item?.attackValue > 0;
