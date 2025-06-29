@@ -36,7 +36,17 @@ fi
 # Send Discord notification
 echo "🔔 Sending restart notification to Discord..."
 cd "$(dirname "$0")"
-timeout 12s node scripts/notify-restart.js || echo "ℹ️  Discord notification failed or timed out"
+# Run notification in background with timeout protection
+(timeout 12s node scripts/notify-restart.js 2>/dev/null || echo "ℹ️  Discord notification failed or timed out") &
+NOTIFY_PID=$!
+
+# Wait briefly for notification, then continue
+sleep 1
+if kill -0 $NOTIFY_PID 2>/dev/null; then
+    echo "📤 Notification sent in background"
+else
+    echo "✅ Notification completed"
+fi
 
 # Restart the app
 echo "🔄 Restarting CastBot..."

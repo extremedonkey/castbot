@@ -3659,9 +3659,27 @@ async function processAttackQueue(guildId, currentRound, playerData, items, clie
             return { attackResults: [], attackQueue: [] };
         }
         
-        // Group attacks by defending player
+        // Group attacks by defending player (with validation)
         const attacksByDefender = {};
         for (const attack of attackQueue) {
+            // Validate attack data to prevent processing corrupted attacks
+            if (!attack.defendingPlayer || !attack.attackingPlayer || !attack.itemId) {
+                console.log(`⚠️ DEBUG: Skipping invalid attack - missing required fields:`, attack);
+                continue;
+            }
+            
+            // Validate attacksPlanned is a reasonable number (not a user ID)
+            if (!attack.attacksPlanned || attack.attacksPlanned > 1000 || attack.attacksPlanned < 0) {
+                console.log(`⚠️ DEBUG: Skipping attack with invalid attacksPlanned: ${attack.attacksPlanned} (likely a user ID bug)`);
+                continue;
+            }
+            
+            // Validate totalDamage is a number
+            if (isNaN(attack.totalDamage) || attack.totalDamage === null || attack.totalDamage === undefined) {
+                console.log(`⚠️ DEBUG: Skipping attack with invalid totalDamage: ${attack.totalDamage}`);
+                continue;
+            }
+            
             if (!attacksByDefender[attack.defendingPlayer]) {
                 attacksByDefender[attack.defendingPlayer] = [];
             }
@@ -3715,7 +3733,7 @@ async function processAttackQueue(guildId, currentRound, playerData, items, clie
                 defenderName,
                 totalAttackDamage,
                 totalDefense,
-                netDamage,
+                damageDealt: netDamage, // Fix structure mismatch - display expects 'damageDealt'
                 originalCurrency,
                 newCurrency: defender.safari.currency,
                 attackCount: attacks.length,
@@ -3750,6 +3768,18 @@ async function consumeAttackItems(attackQueue, playerData, guildId, items) {
     const consumptionResults = [];
     
     for (const attack of attackQueue) {
+        // Validate attack data before processing consumption
+        if (!attack.attackingPlayer || !attack.itemId || !attack.attacksPlanned) {
+            console.log(`⚠️ DEBUG: Skipping consumption for invalid attack:`, attack);
+            continue;
+        }
+        
+        // Validate attacksPlanned is a reasonable number (not a user ID)
+        if (attack.attacksPlanned > 1000 || attack.attacksPlanned < 0) {
+            console.log(`⚠️ DEBUG: Skipping consumption with invalid attacksPlanned: ${attack.attacksPlanned} (likely a user ID bug)`);
+            continue;
+        }
+        
         const attacker = playerData[guildId]?.players?.[attack.attackingPlayer];
         if (!attacker?.safari?.inventory) {
             console.log(`⚠️ DEBUG: Attacker ${attack.attackingPlayer} has no inventory, skipping consumption`);
@@ -3785,9 +3815,9 @@ async function consumeAttackItems(attackQueue, playerData, guildId, items) {
         
         consumptionResults.push({
             attackerId: attack.attackingPlayer,
-            attackerName: attack.attackingPlayerName,
+            playerName: attack.attackingPlayerName, // Fix structure mismatch - display expects 'playerName' 
             itemName: attack.itemName,
-            consumed: attack.attacksPlanned,
+            quantityConsumed: attack.attacksPlanned, // Fix structure mismatch - display expects 'quantityConsumed'
             originalQuantity,
             newQuantity
         });
