@@ -3848,6 +3848,32 @@ async function clearProcessedAttackQueue(guildId, currentRound) {
     }
 }
 
+/**
+ * Clear ALL attack queue data (admin cleanup function)
+ * @param {string} guildId - The guild ID
+ */
+async function clearAllAttackQueues(guildId) {
+    try {
+        console.log(`🧹 DEBUG: Clearing ALL attack queues for guild ${guildId}`);
+        const safariData = await loadSafariContent();
+        
+        if (safariData[guildId]?.attackQueue) {
+            const queueCount = Object.keys(safariData[guildId].attackQueue).length;
+            console.log(`🧹 DEBUG: Found ${queueCount} attack queues to clear`);
+            
+            // Clear the entire attack queue object
+            safariData[guildId].attackQueue = {};
+        }
+        
+        await saveSafariContent(safariData);
+        console.log(`✅ All attack queues cleared successfully`);
+        return true;
+    } catch (error) {
+        console.error('Error clearing all attack queues:', error);
+        return false;
+    }
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -3919,5 +3945,6 @@ export {
     calculatePlayerDefense,
     processAttackQueue,
     consumeAttackItems,
-    clearProcessedAttackQueue
+    clearProcessedAttackQueue,
+    clearAllAttackQueues
 };
