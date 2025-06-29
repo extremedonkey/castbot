@@ -2122,6 +2122,9 @@ async function processRoundResults(guildId, channelId, client) {
         
         // Process attack queue (after yield calculations, before round output)
         console.log(`⚔️ DEBUG: Starting attack resolution for round ${currentRound}`);
+        
+        // Load player data for attack processing
+        const playerData = await loadPlayerData();
         const { attackResults, attackQueue } = await processAttackQueue(guildId, currentRound, playerData, items, client);
         
         // Consume attack items for completed attacks
