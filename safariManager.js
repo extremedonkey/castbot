@@ -2908,12 +2908,22 @@ async function restockPlayers(guildId) {
     try {
         console.log(`🪣 DEBUG: Starting player restock for guild ${guildId}`);
         
-        // Get eligible players (same logic as round results)
-        const eligiblePlayers = await getEligiblePlayersFixed(guildId);
-        console.log(`👥 DEBUG: Found ${eligiblePlayers.length} eligible players for restock`);
+        // Load player data
+        const playerData = await loadPlayerData();
+        const players = playerData[guildId]?.players || {};
         
-        if (eligiblePlayers.length === 0) {
-            console.log(`⚠️ DEBUG: No eligible players found for restock`);
+        // Find all players with safari objects (regardless of content)
+        const safariPlayers = [];
+        for (const [userId, data] of Object.entries(players)) {
+            if (data.safari !== undefined) {
+                safariPlayers.push(userId);
+            }
+        }
+        
+        console.log(`👥 DEBUG: Found ${safariPlayers.length} players with safari data for restock`);
+        
+        if (safariPlayers.length === 0) {
+            console.log(`⚠️ DEBUG: No players with safari data found for restock`);
             return {
                 type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
                 data: {
@@ -2924,7 +2934,7 @@ async function restockPlayers(guildId) {
                         components: [
                             {
                                 type: 10, // Text Display
-                                content: `# 🪣 Player Restock\n\n**No eligible players found** to restock.\n\nPlayers need currency ≥1 or items in inventory to be eligible.`
+                                content: `# 🪣 Player Restock\n\n**No players with safari data found** to restock.\n\nPlayers need to have participated in Safari games to be restocked.`
                             }
                         ]
                     }]
@@ -2932,16 +2942,11 @@ async function restockPlayers(guildId) {
             };
         }
         
-        // Load player data
-        const playerData = await loadPlayerData();
-        
-        // Restock all eligible players to 100 currency
+        // Restock all safari players to 100 currency
         let playersRestocked = 0;
         const restockAmount = 100;
         
-        for (const player of eligiblePlayers) {
-            const { userId, playerName } = player;
-            
+        for (const userId of safariPlayers) {
             // Ensure player safari data exists
             if (!playerData[guildId]) {
                 playerData[guildId] = { players: {} };
@@ -2961,7 +2966,7 @@ async function restockPlayers(guildId) {
             playerData[guildId].players[userId].safari.currency = restockAmount;
             
             playersRestocked++;
-            console.log(`🪣 DEBUG: Restocked ${playerName} (${userId}): ${oldCurrency} → ${restockAmount}`);
+            console.log(`🪣 DEBUG: Restocked player ${userId}: ${oldCurrency} → ${restockAmount}`);
         }
         
         // Save updated player data
@@ -2982,7 +2987,7 @@ async function restockPlayers(guildId) {
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `# 🪣 Players Restocked\n\n**${playersRestocked} eligible players** have been restocked to **${restockAmount} ${customTerms.currencyName}**.\n\n✅ All players are ready for the next round!`
+                            content: `# 🪣 Players Restocked\n\n**${playersRestocked} safari players** have been restocked to **${restockAmount} ${customTerms.currencyName}**.\n\n✅ All players are ready for the next round!`
                         }
                     ]
                 }]

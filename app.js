@@ -560,7 +560,7 @@ async function createSafariMenu(guildId, userId, member) {
     roundResultsV2Label = `Round ${currentRound} Results V2`;
   } else if (currentRound === 4) {
     roundResultsLabel = 'Reset Game';
-    roundResultsV2Label = 'Round Results V2';
+    roundResultsV2Label = 'Reset Game V2';
   } else {
     roundResultsLabel = 'Round Results'; // Fallback
     roundResultsV2Label = 'Round Results V2'; // Fallback
