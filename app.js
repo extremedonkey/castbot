@@ -8406,6 +8406,8 @@ Your server is now ready for Tycoons gameplay!`;
         console.log(`📦 DEBUG: loadEntity result for item ${itemId}:`, item);
         const itemName = item?.name || 'Unknown Item';
         
+        console.log(`📦 DEBUG: About to create user selection dropdown`);
+        
         // Create user selection dropdown
         const userSelect = new UserSelectMenuBuilder()
           .setCustomId(`safari_item_qty_user_select_${guildId}_${itemId}`)
@@ -8415,6 +8417,8 @@ Your server is now ready for Tycoons gameplay!`;
         
         const userSelectRow = new ActionRowBuilder().addComponents(userSelect);
         
+        console.log(`📦 DEBUG: User select created, about to create cancel button`);
+        
         // Create cancel button (back to entity management)
         const cancelButton = new ButtonBuilder()
           .setCustomId(`entity_edit_mode_item_${itemId}`)
@@ -8422,6 +8426,9 @@ Your server is now ready for Tycoons gameplay!`;
           .setStyle(ButtonStyle.Secondary);
         
         const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
+        
+        console.log(`📦 DEBUG: Cancel button created, about to build response`);
+        
         
         // Create response with Components V2
         const containerComponents = [
@@ -8445,6 +8452,8 @@ Your server is now ready for Tycoons gameplay!`;
           components: containerComponents
         };
         
+        console.log(`📦 DEBUG: About to send response`);
+        
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
@@ -8452,6 +8461,8 @@ Your server is now ready for Tycoons gameplay!`;
             components: [container]
           }
         });
+        
+        console.log(`📦 DEBUG: Response sent successfully`);
         
       } catch (error) {
         console.error('Error in player qty handler:', error);
