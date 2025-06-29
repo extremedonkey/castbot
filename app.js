@@ -522,9 +522,10 @@ async function createReeceStuffMenu() {
  * Create Safari submenu interface for dynamic content management
  */
 async function createSafariMenu(guildId, userId, member) {
-  // Get the inventory name for this guild
+  // Get the inventory name and current round for this guild
   let inventoryName = 'Nest'; // Default
   let inventoryEmoji = '🥚'; // Default emoji
+  let currentRound = 1; // Default round
   
   try {
     const { loadSafariContent } = await import('./safariManager.js');
@@ -539,12 +540,26 @@ async function createSafariMenu(guildId, userId, member) {
         inventoryName = inventoryName.replace(emojiMatch[0], '').trim();
       }
     }
+    // Get current round for dynamic button label
+    if (guildConfig?.currentRound) {
+      currentRound = guildConfig.currentRound;
+    }
   } catch (error) {
-    console.error('Error loading inventory name:', error);
+    console.error('Error loading safari config:', error);
   }
   
   // Use custom inventory name for everyone
   const inventoryLabel = `My ${inventoryName}`;
+  
+  // Create dynamic round results button label
+  let roundResultsLabel;
+  if (currentRound >= 1 && currentRound <= 3) {
+    roundResultsLabel = `Round ${currentRound} Results`;
+  } else if (currentRound === 4) {
+    roundResultsLabel = 'Reset Game';
+  } else {
+    roundResultsLabel = 'Round Results'; // Fallback
+  }
   
   // Create safari management buttons - Row 1: Core Functions
   const safariButtonsRow1 = [
@@ -565,7 +580,7 @@ async function createSafariMenu(guildId, userId, member) {
       .setEmoji('💰'),
     new ButtonBuilder()
       .setCustomId('safari_round_results')
-      .setLabel('Round Results')
+      .setLabel(roundResultsLabel)
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🏅')
   ];
