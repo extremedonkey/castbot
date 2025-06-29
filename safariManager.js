@@ -3066,13 +3066,22 @@ async function resetGameData(guildId) {
                         },
                         {
                             type: 1, // Action Row
-                            components: [{
-                                type: 2, // Button
-                                custom_id: 'safari_manage_currency',
-                                label: 'Manage Currency',
-                                style: 2, // Secondary
-                                emoji: { name: '💰' }
-                            }]
+                            components: [
+                                {
+                                    type: 2, // Button
+                                    custom_id: 'safari_manage_currency',
+                                    label: 'Manage Currency',
+                                    style: 2, // Secondary
+                                    emoji: { name: '💰' }
+                                },
+                                {
+                                    type: 2, // Button
+                                    custom_id: 'safari_restock_players',
+                                    label: 'Restock Players',
+                                    style: 2, // Secondary
+                                    emoji: { name: '🪣' }
+                                }
+                            ]
                         }
                     ]
                 }]
