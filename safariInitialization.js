@@ -179,7 +179,7 @@ async function validateSafariConfig(guildId, currentConfig, customConfig = {}) {
         
         // Ensure all required config fields exist
         for (const [key, defaultValue] of Object.entries(DEFAULT_SAFARI_CONFIG)) {
-            if (updatedConfig[key] === undefined || updatedConfig[key] === null) {
+            if (updatedConfig[key] === undefined) {
                 console.log(`📝 DEBUG: Adding missing config '${key}' for guild ${guildId}`);
                 updatedConfig[key] = defaultValue;
                 updated = true;
@@ -334,7 +334,7 @@ export async function checkSafariInitializationStatus(guildId) {
         // Check config completeness
         const requiredConfigFields = Object.keys(DEFAULT_SAFARI_CONFIG);
         const missingConfigFields = requiredConfigFields.filter(field => 
-            guildData.safariConfig[field] === undefined || guildData.safariConfig[field] === null
+            guildData.safariConfig[field] === undefined
         );
         
         if (missingConfigFields.length > 0) {
