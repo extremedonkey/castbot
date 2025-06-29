@@ -2916,6 +2916,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_test_button_') &&
         !custom_id.startsWith('safari_delete_button_') &&
         !custom_id.startsWith('safari_confirm_delete_button_') &&
+        !custom_id.startsWith('safari_confirm_delete_store_') &&
         !custom_id.startsWith('safari_action_') &&
         !custom_id.startsWith('safari_config_') &&
         custom_id !== 'safari_post_select_button' &&
@@ -6603,12 +6604,8 @@ Your server is now ready for Tycoons gameplay!`;
           description: `${store.description || 'No description'}`.slice(0, 100)
         }));
         
-        const storeSelect = new StringSelectMenuBuilder()
-          .setCustomId('safari_store_edit_select')
-          .setPlaceholder('Choose a store to edit...')
-          .setMinValues(1)
-          .setMaxValues(1)
-          .addOptions(storeOptions);
+        // Store editing functionality has been replaced by safari_store_manage_items
+        // This select menu is no longer used
         
         const selectRow = new ActionRowBuilder().addComponents(storeSelect);
         
@@ -10437,36 +10434,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id === 'safari_store_edit_select') {
-      // Handle store selection for editing
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        const selectedStoreId = data.values[0];
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit stores.')) return;
-        
-        console.log(`✏️ DEBUG: Selected store ${selectedStoreId} for editing`);
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `🚧 **Store Editing Coming Soon**\n\nStore editing functionality is under development. For now, you can:\n\n• Create new stores\n• View all stores\n• Delete and recreate stores as needed\n\nSelected store: \`${selectedStoreId}\``,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error handling store edit selection:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error selecting store for editing.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+    // safari_store_edit_select handler removed - functionality replaced by safari_store_manage_items
     } else if (custom_id === 'safari_item_edit_select') {
       // Handle item selection for editing - redirect to new entity management UI
       try {
