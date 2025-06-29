@@ -3497,5 +3497,6 @@ export {
     createAttackPlanningUI,
     updateAttackDisplay,
     scheduleAttack,
-    createOrUpdateAttackUI
+    createOrUpdateAttackUI,
+    getEligiblePlayersFixed
 };
