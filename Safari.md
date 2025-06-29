@@ -1149,6 +1149,312 @@ entity_confirm_delete_item_[id] → Execute deletion
 
 ---
 
+## MVP2 Sprint 4 - Attack/Defense Resolution System Implementation (January 2025)
+
+### **🎯 CRITICAL IMPLEMENTATION DEADLINE: 15 HOURS (Including Sleep)**
+
+**Context:** Completing attack/defense system for Tycoons game deployment in 14 hours with 12 players. No production users at risk - single test server (1331657596087566398) with planned export to production server (1365751181292474571).
+
+### **📋 Implementation Requirements Summary**
+
+Based on user feedback and system analysis:
+
+#### **1. Attack Resolution Logic**
+**When round results process:**
+1. **Yield Resolution First**: Player currency updated with item earnings
+2. **Attack Calculation**: `attackedPlayer new Balance = Existing Balance - ((Total Defense) - (Total Attacks))`
+3. **Damage Application**: Currency reduced by net damage (minimum 0)
+4. **Item Consumption**: Remove consumable attack items from attacker inventories
+
+#### **2. Attack History Decision: SKIP FOR NOW**
+- **Rationale**: Time constraint priority - attack history not critical for gameplay
+- **Future Enhancement**: Can be added post-deployment for analytics
+
+#### **3. Round Queue Processing: ALL ATTACKS CURRENT ROUND**
+- Process all attacks for current round simultaneously
+- No leftover attacks between rounds
+- Clear attack queue after processing
+
+#### **4. Edge Case Handling**
+- **Insufficient Items**: Log detailed error in round results, continue processing
+- **Negative Currency**: Always floor at 0, never allow negative
+- **Defense Items**: Permanent protection (not consumable)
+
+#### **5. Object Format Migration: MANDATORY**
+- Convert all inventory items from legacy number format to object format
+- Enables consistent attack availability tracking
+- Foundation for future item properties
+
+#### **6. Round Results Display Enhancement**
+- Show individual attack damage per attacker
+- Display total defense calculation breakdown  
+- Show before/after currency amounts
+- Handle 12-player scaling within 4000 character limit
+
+### **⚡ 3-Step Implementation Strategy**
+
+#### **Step 1: Object Format Migration (20 minutes)**
+**Risk Level:** 🟡 Low-Medium  
+**Dependencies:** None  
+**Rollback:** Full playerData.json backup
+
+**Tasks:**
+- Create universal inventory accessor functions
+- Update all code to handle object format consistently  
+- Create and run data migration script
+- Test inventory display and purchasing
+
+**Test Criteria:**
+- ✅ Inventory displays correctly with object format
+- ✅ Store purchases work without errors
+- ✅ Attack items maintain availability counters
+- ✅ Legacy players successfully migrated
+
+#### **Step 2: Attack Resolution Core (30 minutes)**
+**Risk Level:** 🟠 Medium  
+**Dependencies:** Step 1 complete  
+**Rollback:** Code rollback, data already migrated
+
+**Tasks:**
+- Implement defense calculation system
+- Create attack queue processing logic
+- Add attack item consumption for consumables
+- Integrate with existing `processRoundResults()`
+
+**Test Criteria:**
+- ✅ Defense properly calculated from inventory
+- ✅ Attack damage correctly applied to currency
+- ✅ Consumable items removed after attacks
+- ✅ Attack queue cleared after processing
+
+#### **Step 3: Enhanced Results Display (15 minutes)**
+**Risk Level:** 🟢 Low  
+**Dependencies:** Step 2 complete  
+**Rollback:** Simple text fallback
+
+**Tasks:**
+- Add attack breakdown to round results
+- Implement compact 12-player display format
+- Include before/after currency summary
+- Character limit optimization
+
+**Test Criteria:**
+- ✅ Attack results clearly displayed
+- ✅ 12-player scenario under 4000 characters
+- ✅ Individual attacker damage shown
+- ✅ Defense breakdown visible
+
+### **🏗️ Technical Implementation Details**
+
+#### **Object Format Data Structure**
+```json
+// Target format for ALL inventory items
+"inventory": {
+  "raider_499497": {
+    "quantity": 5,
+    "numAttacksAvailable": 2
+  },
+  "nurturer_361363": {
+    "quantity": 3, 
+    "numAttacksAvailable": 0  // Non-attack items
+  },
+  "nest_guardian_461600": {
+    "quantity": 2,
+    "numAttacksAvailable": 0  // Defense items
+  }
+}
+```
+
+#### **Attack Resolution Algorithm**
+```javascript
+// Phase 1: Calculate total defense
+function calculatePlayerDefense(playerInventory, items) {
+  let totalDefense = 0;
+  for (const [itemId, itemData] of Object.entries(playerInventory)) {
+    const item = items[itemId];
+    if (item?.defenseValue) {
+      totalDefense += (item.defenseValue * itemData.quantity);
+    }
+  }
+  return totalDefense;
+}
+
+// Phase 2: Process attack queue
+async function processAttackQueue(guildId, currentRound, playerData, items) {
+  const attackQueue = safariData[guildId]?.attackQueue?.[`round${currentRound}`] || [];
+  
+  // Group attacks by defender
+  const attacksByDefender = {};
+  for (const attack of attackQueue) {
+    if (!attacksByDefender[attack.defendingPlayer]) {
+      attacksByDefender[attack.defendingPlayer] = [];
+    }
+    attacksByDefender[attack.defendingPlayer].push(attack);
+  }
+  
+  // Process each defender
+  for (const [defenderId, attacks] of Object.entries(attacksByDefender)) {
+    const defender = playerData[guildId]?.players?.[defenderId];
+    const totalAttackDamage = attacks.reduce((sum, attack) => sum + attack.totalDamage, 0);
+    const totalDefense = calculatePlayerDefense(defender.safari.inventory || {}, items);
+    const netDamage = Math.max(0, totalAttackDamage - totalDefense);
+    
+    defender.safari.currency = Math.max(0, (defender.safari.currency || 0) - netDamage);
+  }
+  
+  return { attackResults, attackQueue };
+}
+
+// Phase 3: Consume attack items
+async function consumeAttackItems(attackQueue, playerData, guildId, items) {
+  for (const attack of attackQueue) {
+    const attacker = playerData[guildId]?.players?.[attack.attackingPlayer];
+    const item = items[attack.itemId];
+    
+    if (item?.consumable === "Yes") {
+      const inventoryItem = attacker.safari.inventory[attack.itemId];
+      inventoryItem.quantity = Math.max(0, inventoryItem.quantity - attack.attacksPlanned);
+    }
+  }
+}
+```
+
+#### **Round Results Display Format**
+```javascript
+// Compact format for 12 players
+if (attackResults.length > 0) {
+  content += '\n\n## ⚔️ Battle Results\n';
+  
+  for (const result of attackResults) {
+    content += `**${result.defenderName}:** `;
+    content += `${result.totalAttackDamage} dmg - ${result.totalDefense} def = ${result.netDamage} net | `;
+    content += `${result.originalCurrency} → ${result.newCurrency} ${customTerms.currencyName}\n`;
+  }
+}
+```
+
+### **🧪 Test Scenarios by Step**
+
+#### **Step 1 Testing: Object Format Migration**
+```bash
+# Test Case 1: Existing legacy inventory
+# Before: "nurturer_361363": 3
+# After: "nurturer_361363": {"quantity": 3, "numAttacksAvailable": 0}
+
+# Test Case 2: Mixed format inventory  
+# Should handle existing object + legacy items
+
+# Test Case 3: Store purchase
+# Should create proper object format for new items
+
+# Test Case 4: Inventory display
+# Should show quantities correctly
+```
+
+#### **Step 2 Testing: Attack Resolution**
+```bash
+# Test Case 1: Basic attack scenario
+# Belle: 4x Raider (100 dmg) vs Reece: 2x Nest Guardian (100 def)
+# Expected: 0 net damage, no currency loss
+
+# Test Case 2: Penetrating attack
+# Belle: 6x Raider (150 dmg) vs Reece: 2x Nest Guardian (100 def)  
+# Expected: 50 net damage, currency reduced by 50
+
+# Test Case 3: Item consumption
+# Raiders should be consumed after attacks
+# Non-consumable items should remain
+```
+
+#### **Step 3 Testing: Results Display**
+```bash
+# Test Case 1: Single attack
+# Should show attacker, damage, defense breakdown
+
+# Test Case 2: Multiple attackers on one defender
+# Should aggregate damage correctly
+
+# Test Case 3: 12-player scenario
+# Should stay under 4000 character limit
+```
+
+### **🚨 Critical Rollback Procedures**
+
+#### **If Step 1 Fails (Object Migration)**
+```bash
+# 1. Restore playerData.json from backup
+cp playerData.backup.TIMESTAMP.json playerData.json
+
+# 2. Rollback code changes
+git checkout HEAD~1 safariManager.js
+
+# 3. Restart service
+./dev-restart.sh "Rollback object format migration"
+```
+
+#### **If Step 2 Fails (Attack Resolution)**
+```bash
+# 1. Code rollback only (data migration preserved)
+git checkout HEAD~1 safariManager.js
+
+# 2. Restart service  
+./dev-restart.sh "Rollback attack resolution, keep object format"
+```
+
+#### **If Step 3 Fails (Display Enhancement)**
+```bash
+# 1. Revert to basic text display
+# 2. Attack system remains functional
+# 3. Polish display post-deployment
+```
+
+### **⏰ Implementation Timeline**
+
+**Total Estimated Time: 65 minutes**
+- Step 1: 20 minutes implementation + 5 minutes testing
+- Step 2: 30 minutes implementation + 10 minutes testing  
+- Step 3: 15 minutes implementation + 5 minutes testing
+
+**Buffer Time: 25 minutes for debugging and refinement**
+
+### **🎯 Success Criteria**
+
+**Minimum Viable Product (Must Have):**
+- ✅ All inventory items use object format
+- ✅ Attack queue processes correctly
+- ✅ Defense calculations work properly
+- ✅ Consumable items consumed after attacks
+- ✅ Currency properly updated (never negative)
+- ✅ Round results include attack breakdown
+
+**Nice to Have (If Time Permits):**
+- Enhanced visual formatting for results
+- Detailed attack breakdown per player
+- Performance optimizations
+
+### **📝 Context Preservation Note**
+
+**🔍 IMPORTANT FOR FUTURE CLAUDE INSTANCES:**
+
+If this conversation gets compacted and you're picking up implementation:
+
+1. **Read this entire MVP2 Sprint 4 section** for complete context
+2. **Current Status**: Check which steps are complete by testing the system
+3. **Test Server**: 1331657596087566398 (live data, no production users)
+4. **Export Destination**: Server 1365751181292474571 for production
+5. **Timeline**: CRITICAL - Tycoons game in ~14 hours with 12 players
+6. **Risk Tolerance**: Medium (no production users, but time-critical deployment)
+
+**Key Files to Review:**
+- `safariManager.js` - Core Safari functionality and attack system
+- `playerData.json` - Player inventory data structure  
+- `safariContent.json` - Attack queue and item definitions
+- `Safari.md` - This documentation (you're reading it now!)
+
+**Testing Protocol:** Follow the 3-step implementation with rollback procedures if any step fails.
+
+---
+
 This documentation serves as the complete guide for implementing and extending CastBot's Safari system. Always refer to this document when working with Safari, Idol Hunt, Questions, or dynamic content features.
 
 # ORIGINAL TEXT PROMPT

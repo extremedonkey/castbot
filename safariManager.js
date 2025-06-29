@@ -778,44 +778,25 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1, existin
         console.log(`🔍 DEBUG: addItemToInventory - BEFORE: ${itemId} = `, currentItem);
         console.log(`🔍 DEBUG: Item is attack item: ${isAttackItem}, attackValue: ${itemDefinition?.attackValue}`);
         
-        // Handle both object and number inventory formats
-        if (typeof currentItem === 'object' && currentItem !== null) {
-            currentQuantity = currentItem.quantity || 0;
-            const currentAttacks = currentItem.numAttacksAvailable || 0;
-            console.log(`🔍 DEBUG: Object format - current quantity: ${currentQuantity}, current attacks: ${currentAttacks}, adding: ${quantity}`);
-            
-            // For attack items, update both quantity and numAttacksAvailable
-            if (isAttackItem) {
-                playerData[guildId].players[userId].safari.inventory[itemId] = {
-                    ...currentItem,
-                    quantity: currentQuantity + quantity,
-                    numAttacksAvailable: currentAttacks + quantity  // Each item adds 1 attack
-                };
-                console.log(`⚔️ DEBUG: Updated attack item - new quantity: ${currentQuantity + quantity}, new attacks: ${currentAttacks + quantity}`);
-            } else {
-                // Non-attack items - only update quantity
-                playerData[guildId].players[userId].safari.inventory[itemId] = {
-                    ...currentItem,
-                    quantity: currentQuantity + quantity
-                };
-            }
-        } else {
-            // Simple number format or first purchase
-            currentQuantity = currentItem || 0;
-            console.log(`🔍 DEBUG: Number/first format - current quantity: ${currentQuantity}, adding: ${quantity}`);
-            
-            if (isAttackItem) {
-                // Convert to object format for attack items
-                playerData[guildId].players[userId].safari.inventory[itemId] = {
-                    quantity: currentQuantity + quantity,
-                    numAttacksAvailable: quantity  // First purchase gets quantity attacks
-                };
-                console.log(`⚔️ DEBUG: Created new attack item - quantity: ${currentQuantity + quantity}, attacks: ${quantity}`);
-            } else {
-                // Keep number format for non-attack items
-                playerData[guildId].players[userId].safari.inventory[itemId] = currentQuantity + quantity;
-            }
-        }
+        // Get current quantity using universal accessor
+        currentQuantity = getItemQuantity(currentItem);
+        const currentAttacks = getItemAttackAvailability(currentItem);
+        
+        console.log(`🔍 DEBUG: Current - quantity: ${currentQuantity}, attacks: ${currentAttacks}, adding: ${quantity}`);
+        
+        // Calculate new values
+        const newQuantity = currentQuantity + quantity;
+        const newAttacks = isAttackItem ? (currentAttacks + quantity) : 0; // Attack items add attack availability
+        
+        // Always set in object format using universal setter
+        setItemQuantity(
+            playerData[guildId].players[userId].safari.inventory,
+            itemId,
+            newQuantity,
+            newAttacks
+        );
+        
+        console.log(`⚔️ DEBUG: Updated to object format - quantity: ${newQuantity}, attacks: ${newAttacks}`);
         
         console.log(`🔍 DEBUG: addItemToInventory - AFTER: ${itemId} = `, playerData[guildId].players[userId].safari.inventory[itemId]);
         
@@ -829,9 +810,9 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1, existin
         
         console.log(`📦 DEBUG: Added ${quantity}x ${itemId} to user ${userId} inventory`);
         
-        // Return the final quantity (handle both object and number formats)
+        // Return the final quantity using universal accessor
         const finalItem = playerData[guildId].players[userId].safari.inventory[itemId];
-        const returnValue = typeof finalItem === 'object' ? finalItem.quantity : finalItem;
+        const returnValue = getItemQuantity(finalItem);
         console.log(`🔍 DEBUG: Returning final quantity: ${returnValue}`);
         return returnValue;
     } catch (error) {
@@ -2091,7 +2072,9 @@ async function processRoundResults(guildId, channelId, client) {
             const defenseDetails = [];
             
             // Process each inventory item
-            for (const [itemId, quantity] of Object.entries(player.inventory)) {
+            for (const [itemId, inventoryItem] of Object.entries(player.inventory)) {
+                // Use universal accessor to get quantity
+                const quantity = getItemQuantity(inventoryItem);
                 if (quantity <= 0) continue;
                 
                 const item = items[itemId];
@@ -3437,6 +3420,122 @@ async function createAttackPlanningUI(guildId, attackerId, itemId, client) {
     return createOrUpdateAttackUI(guildId, attackerId, itemId, null, 0, client);
 }
 
+/**
+ * Universal Inventory Object Format Functions
+ * Handles both legacy number format and new object format consistently
+ */
+
+/**
+ * Get item quantity from inventory item (handles both formats)
+ * @param {number|Object} inventoryItem - Can be number (legacy) or {quantity, numAttacksAvailable} (object)
+ * @returns {number} Quantity of items
+ */
+function getItemQuantity(inventoryItem) {
+    if (typeof inventoryItem === 'object' && inventoryItem !== null) {
+        return inventoryItem.quantity || 0;
+    }
+    return inventoryItem || 0;
+}
+
+/**
+ * Set item quantity in inventory (always creates object format)
+ * @param {Object} inventory - Player's inventory object
+ * @param {string} itemId - Item ID to set
+ * @param {number} quantity - Quantity to set
+ * @param {number} numAttacksAvailable - Attack availability (0 for non-attack items)
+ */
+function setItemQuantity(inventory, itemId, quantity, numAttacksAvailable = 0) {
+    inventory[itemId] = {
+        quantity: Math.max(0, quantity),
+        numAttacksAvailable: Math.max(0, numAttacksAvailable)
+    };
+}
+
+/**
+ * Get attack availability from inventory item (handles both formats)
+ * @param {number|Object} inventoryItem - Can be number (legacy) or {quantity, numAttacksAvailable} (object)
+ * @returns {number} Number of attacks available
+ */
+function getItemAttackAvailability(inventoryItem) {
+    if (typeof inventoryItem === 'object' && inventoryItem !== null) {
+        return inventoryItem.numAttacksAvailable || 0;
+    }
+    return 0; // Legacy format has no attack tracking
+}
+
+/**
+ * Migrate all player inventories to object format
+ * @param {string} guildId - Guild to migrate (optional, migrates all if not provided)
+ * @returns {Object} Migration results
+ */
+async function migrateInventoryToObjectFormat(guildId = null) {
+    console.log('🔄 Starting inventory migration to object format...');
+    
+    try {
+        // Create backup
+        const playerData = await loadPlayerData();
+        const backupFile = `playerData.backup.${Date.now()}.json`;
+        await fs.writeFile(backupFile, JSON.stringify(playerData, null, 2));
+        console.log(`📦 Backup created: ${backupFile}`);
+        
+        let migratedItems = 0;
+        let migratedPlayers = 0;
+        const guildsToProcess = guildId ? [guildId] : Object.keys(playerData);
+        
+        for (const currentGuildId of guildsToProcess) {
+            if (currentGuildId === 'environmentConfig' || !playerData[currentGuildId]?.players) continue;
+            
+            console.log(`🔍 Processing guild: ${currentGuildId}`);
+            
+            for (const [userId, userData] of Object.entries(playerData[currentGuildId].players)) {
+                if (!userData.safari?.inventory) continue;
+                
+                const inventory = userData.safari.inventory;
+                let playerMigrated = false;
+                
+                for (const [itemId, itemData] of Object.entries(inventory)) {
+                    if (typeof itemData === 'number') {
+                        // Migrate legacy number format to object format
+                        inventory[itemId] = {
+                            quantity: itemData,
+                            numAttacksAvailable: 0 // Will be updated for attack items
+                        };
+                        migratedItems++;
+                        playerMigrated = true;
+                        
+                        console.log(`✅ Migrated ${itemId}: ${itemData} → {quantity: ${itemData}, numAttacksAvailable: 0}`);
+                    }
+                }
+                
+                if (playerMigrated) {
+                    migratedPlayers++;
+                }
+            }
+        }
+        
+        // Save migrated data
+        await savePlayerData(playerData);
+        
+        console.log(`🎉 Migration complete!`);
+        console.log(`📊 Results: ${migratedItems} items migrated across ${migratedPlayers} players`);
+        
+        return {
+            success: true,
+            backupFile,
+            migratedItems,
+            migratedPlayers,
+            guildsProcessed: guildsToProcess.length
+        };
+        
+    } catch (error) {
+        console.error('❌ Migration failed:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -3498,5 +3597,10 @@ export {
     updateAttackDisplay,
     scheduleAttack,
     createOrUpdateAttackUI,
-    getEligiblePlayersFixed
+    getEligiblePlayersFixed,
+    // Universal Object Format Functions
+    getItemQuantity,
+    setItemQuantity,
+    getItemAttackAvailability,
+    migrateInventoryToObjectFormat
 };
