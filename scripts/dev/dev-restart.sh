@@ -36,16 +36,11 @@ fi
 # Send Discord notification
 echo "🔔 Sending restart notification to Discord..."
 cd "$(dirname "$0")"
-# Run notification in background with timeout protection
-(timeout 12s node scripts/notify-restart.js 2>/dev/null) &
-NOTIFY_PID=$!
-
-# Wait briefly for notification, then continue
-sleep 1
-if kill -0 $NOTIFY_PID 2>/dev/null; then
-    echo "📤 Notification sent in background"
+# Run notification with proper error handling
+if timeout 12s node scripts/notify-restart.js; then
+    echo "✅ Restart notification sent successfully"
 else
-    echo "✅ Notification completed"
+    echo "⚠️  Restart notification failed (continuing anyway)"
 fi
 
 # Restart the app
