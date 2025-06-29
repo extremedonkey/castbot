@@ -1736,9 +1736,9 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     let attackItemContent = generateItemContent(item, customTerms, quantity);
                     
                     // Add attack availability info
-                    attackItemContent += `\n> ⚔️ **Attacks Available:** ${numAttacksAvailable}`;
+                    attackItemContent += `\n> ⚔️ Attacks Available: ${numAttacksAvailable}`;
                     if (attacksPlanned > 0) {
-                        attackItemContent += `\n> 🎯 **Attacks Planned:** ${attacksPlanned}`;
+                        attackItemContent += `\n> 🎯 Attacks Planned: ${attacksPlanned}`;
                     }
                     
                     // Create Section component with attack button
@@ -3331,7 +3331,7 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         return {
             type: InteractionResponseType.UPDATE_MESSAGE,
             data: {
-                content: `✅ **Attack Scheduled!** ${quantity} ${item.name}${quantity > 1 ? 's' : ''} will attack the selected player when round results are announced.\n\nUse the "My ${safariData[guildId]?.safariConfig?.inventoryName || 'Nest'}" button to view your updated inventory.`,
+                content: `✅ **Attack Scheduled!** ${quantity} ${item.name}${quantity > 1 ? 's' : ''} will attack the selected player when round results are announced.\n\nUse the "My Nest" button to view your updated inventory.`,
                 components: [],
                 flags: InteractionResponseFlags.EPHEMERAL
             }
