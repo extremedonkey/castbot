@@ -4665,9 +4665,9 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
     try {
         const { isGoodEvent, eventName, eventEmoji } = roundData;
         
-        // Combine all content into a single Text Display to stay within 40 component limit
-        let content = `# ${getPlayerEmoji(player.playerName)} ${player.playerName}\n\n`;
-        content += `**Starting Balance:** ${balanceChange.starting} ${customTerms.currencyEmoji}\n\n`;
+        // Combine all content into a single Text Display - ULTRA COMPACT FORMAT
+        let content = `# ${getPlayerEmoji(player.playerName)} ${player.playerName}\n`;
+        content += `Start: ${balanceChange.starting}${customTerms.currencyEmoji}\n\n`;
         
         // Income section
         const incomeBreakdown = formatIncomeBreakdown(
@@ -4680,22 +4680,20 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
         );
         content += incomeBreakdown + '\n\n';
         
-        // Combat section  
+        // Combat section - pass player inventory for defense calculation
         const combatResults = formatCombatResults(
             attacksReceived, 
             items, 
-            customTerms
+            customTerms,
+            player.inventory || {}
         );
         content += combatResults + '\n\n';
         
-        // Final balance (emphasized)
-        const change = balanceChange.change;
-        const changeText = change > 0 ? `(+${change})` : change < 0 ? `(${change})` : '(±0)';
-        const changeEmoji = change > 0 ? '📈' : change < 0 ? '📉' : '➡️';
-        
-        content += `## ${changeEmoji} Final Balance: ${balanceChange.ending} ${customTerms.currencyEmoji} ${changeText}`;
+        // Final balance - ULTRA COMPACT: no emoji, no parentheses display
+        content += `Final: ${balanceChange.ending}${customTerms.currencyEmoji}`;
         
         // Create container with accent color based on change - SINGLE COMPONENT
+        const change = balanceChange.change;
         const accentColor = change > 0 ? 0x27ae60 : change < 0 ? 0xe74c3c : 0x95a5a6; // Green/Red/Gray
         
         return {
@@ -4724,7 +4722,7 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
 }
 
 /**
- * Format income breakdown by item type
+ * Format income breakdown by item type - REVISED ULTRA-COMPACT FORMAT
  * @param {Object} player - Player data
  * @param {Object} items - Item definitions
  * @param {boolean} isGoodEvent - Whether the event was good
@@ -4735,13 +4733,13 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
  */
 function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji, customTerms) {
     try {
-        let content = `## 📈 INCOME THIS ROUND\n\n**${eventEmoji} ${eventName} Event**\n\n`;
+        let content = `## 📈 INCOME\n${eventEmoji} ${eventName}\n\n`;
         
         const inventory = player.inventory || {};
         const inventoryItems = Object.entries(inventory);
         
         if (inventoryItems.length === 0) {
-            content += '*No income items owned*\n\n**Total Income:** 0 ' + (customTerms.currencyEmoji || '🪙');
+            content += `Total: 0${customTerms.currencyEmoji}`;
             return content;
         }
         
@@ -4763,7 +4761,6 @@ function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji
                 
                 incomeItems.push({
                     emoji: item.emoji || '📦',
-                    name: item.name,
                     quantity: quantity,
                     unitValue: incomeValue,
                     totalValue: itemIncome
@@ -4772,103 +4769,104 @@ function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji
         }
         
         if (incomeItems.length === 0) {
-            content += '*No income items for this event type*\n\n';
+            content += `Total: 0${customTerms.currencyEmoji}`;
         } else {
-            // Format each income item
+            // Format each income item - ULTRA COMPACT: emoji quantity×value: total
             for (const item of incomeItems) {
-                content += `${item.emoji} **${item.quantity}x ${item.name}:** ${item.totalValue} ${customTerms.currencyEmoji} (${item.quantity} × ${item.unitValue})\n`;
+                content += `${item.emoji} ${item.quantity}x${item.unitValue}: ${item.totalValue}${customTerms.currencyEmoji}\n`;
             }
-            content += '\n';
+            content += `\nTotal: ${totalIncome}${customTerms.currencyEmoji}`;
         }
-        
-        content += `**Total Income:** ${totalIncome} ${customTerms.currencyEmoji || '🪙'}`;
         
         return content;
         
     } catch (error) {
         console.error('Error formatting income breakdown:', error);
-        return '## 📈 INCOME THIS ROUND\n\n❌ Error calculating income';
+        return '## 📈 INCOME\n❌ Error';
     }
 }
 
 /**
- * Format combat results for attacks received
+ * Format combat results for attacks received - REVISED ULTRA-COMPACT FORMAT
  * @param {Array} attacksReceived - Attacks this player received
  * @param {Object} items - Item definitions
  * @param {Object} customTerms - Custom terminology
+ * @param {Object} playerInventory - Player's inventory for defense calculation
  * @returns {string} Formatted combat results
  */
-function formatCombatResults(attacksReceived, items, customTerms) {
+function formatCombatResults(attacksReceived, items, customTerms, playerInventory = {}) {
     try {
-        let content = '## ⚔️ COMBAT RESULTS\n\n';
+        let content = '## ⚔️ COMBAT\n';
         
         if (attacksReceived.length === 0) {
-            content += '*No attacks received this round*\n\n**Combat Damage:** 0 ' + (customTerms.currencyEmoji || '🪙');
+            content += `Combat Damage: 0${customTerms.currencyEmoji}`;
             return content;
         }
         
-        let totalDamage = 0;
+        // Calculate total attack damage and group by item type
+        let totalAttackDamage = 0;
+        const attackItems = {};
         
-        // Group attacks by attacker
-        const attacksByAttacker = {};
         for (const attack of attacksReceived) {
-            const attackerName = attack.attackingPlayerName || 'Unknown Player';
-            if (!attacksByAttacker[attackerName]) {
-                attacksByAttacker[attackerName] = [];
+            const item = items[attack.itemId];
+            if (!item) continue;
+            
+            const itemKey = item.emoji || '⚔️';
+            if (!attackItems[itemKey]) {
+                attackItems[itemKey] = { quantity: 0, unitDamage: item.attackValue || 0, totalDamage: 0 };
             }
-            attacksByAttacker[attackerName].push(attack);
+            
+            attackItems[itemKey].quantity += attack.attacksPlanned || 1;
+            attackItems[itemKey].totalDamage += attack.totalDamage || 0;
+            totalAttackDamage += attack.totalDamage || 0;
         }
         
-        // 🚀 BLEEDING EDGE MVP: Use compact format for high attack volumes
-        const totalAttacks = attacksReceived.length;
-        const attackerCount = Object.keys(attacksByAttacker).length;
+        // Calculate total defense from player's inventory
+        let totalDefense = 0;
+        const defenseItems = {};
         
-        if (totalAttacks > 20) {
-            // Ultra-compact format for chaos mode
-            content += `**${attackerCount} attackers launched ${totalAttacks} attacks:**\n\n`;
+        for (const [itemId, itemData] of Object.entries(playerInventory)) {
+            const item = items[itemId];
+            if (!item || !item.defenseValue) continue;
             
-            // Group by damage amount for super compact display
-            const damageGroups = {};
-            for (const [attackerName, attacks] of Object.entries(attacksByAttacker)) {
-                const attackerDamage = attacks.reduce((sum, a) => sum + (a.totalDamage || 0), 0);
-                totalDamage += attackerDamage;
-                
-                if (!damageGroups[attackerDamage]) damageGroups[attackerDamage] = [];
-                damageGroups[attackerDamage].push(attackerName);
-            }
+            const quantity = typeof itemData === 'object' ? itemData.quantity : itemData;
+            const itemDefense = quantity * item.defenseValue;
+            totalDefense += itemDefense;
             
-            // Show grouped damage
-            for (const [damage, attackers] of Object.entries(damageGroups).sort((a, b) => b[0] - a[0])) {
-                content += `**${damage} damage:** ${attackers.join(', ')}\n`;
+            const itemKey = item.emoji || '🛡️';
+            if (!defenseItems[itemKey]) {
+                defenseItems[itemKey] = { quantity: 0, unitDefense: item.defenseValue, totalDefense: 0 };
             }
-            
-        } else {
-            // Standard detailed format for lower attack volumes
-            for (const [attackerName, attacks] of Object.entries(attacksByAttacker)) {
-                let attackerDamage = 0;
-                const attackDetails = [];
-                
-                for (const attack of attacks) {
-                    const item = items[attack.itemId];
-                    const itemEmoji = item?.emoji || '⚔️';
-                    const itemName = item?.name || 'Unknown Item';
-                    
-                    attackerDamage += attack.totalDamage || 0;
-                    attackDetails.push(`${attack.attacksPlanned}x ${itemEmoji} ${itemName}`);
-                }
-                
-                content += `**${attackerName}:** ${attackDetails.join(', ')} → **${attackerDamage} damage**\n`;
-                totalDamage += attackerDamage;
-            }
+            defenseItems[itemKey].quantity += quantity;
+            defenseItems[itemKey].totalDefense += itemDefense;
         }
         
-        content += `\n**Total Damage Taken:** ${totalDamage} ${customTerms.currencyEmoji || '🪙'}`;
+        // Format attack summary - ULTRA COMPACT: emoji🗡️ quantity×damage (total)
+        const attackSummary = Object.entries(attackItems)
+            .map(([emoji, data]) => `${emoji}🗡️ ${data.quantity}x${data.unitDamage} (${data.totalDamage})`)
+            .join(' ');
+        
+        // Format defense summary - ULTRA COMPACT: emoji🛡️ quantity×defense (total)
+        const defenseSummary = Object.entries(defenseItems)
+            .map(([emoji, data]) => `${emoji}🛡️ ${data.quantity}x${data.unitDefense} (${data.totalDefense})`)
+            .join(' ');
+        
+        // Combine attack and defense if both exist
+        if (attackSummary && defenseSummary) {
+            content += `${attackSummary} - ${defenseSummary}\n`;
+        } else if (attackSummary) {
+            content += `${attackSummary}\n`;
+        }
+        
+        // Calculate net damage (attack - defense, but net result for display)
+        const netDamage = totalAttackDamage - totalDefense;
+        content += `Combat Damage: ${netDamage > 0 ? '-' : ''}${Math.abs(netDamage)}${customTerms.currencyEmoji}`;
         
         return content;
         
     } catch (error) {
         console.error('Error formatting combat results:', error);
-        return '## ⚔️ COMBAT RESULTS\n\n❌ Error calculating combat';
+        return '## ⚔️ COMBAT\n❌ Error';
     }
 }
 
