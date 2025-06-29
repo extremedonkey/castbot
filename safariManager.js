@@ -3049,6 +3049,65 @@ async function restockPlayers(guildId, client) {
             console.log(`🪣 DEBUG: Restocked player ${userId}: ${oldCurrency} → ${restockAmount}`);
         }
         
+        // 🚀 BLEEDING EDGE HACKY MVP: Auto-schedule random attacks for Round 1 testing
+        const safariData = await loadSafariContent();
+        if (!safariData[guildId]) safariData[guildId] = {};
+        if (!safariData[guildId].safariConfig) safariData[guildId].safariConfig = {};
+        
+        const currentRound = safariData[guildId].safariConfig.currentRound || 1;
+        console.log(`🎯 DEBUG: HACKY MVP - Current round: ${currentRound}`);
+        
+        if (currentRound === 1) {
+            console.log(`🎯 DEBUG: HACKY MVP - Auto-scheduling random attacks for Round 1!`);
+            
+            // Get all player IDs for random targeting
+            const allPlayerIds = Object.keys(playerData[guildId].players);
+            let totalAttacksScheduled = 0;
+            
+            // Initialize attack queue for round 1
+            if (!safariData[guildId].attackQueue) safariData[guildId].attackQueue = {};
+            if (!safariData[guildId].attackQueue.round1) safariData[guildId].attackQueue.round1 = [];
+            
+            for (const userId of safariPlayers) {
+                const raiders = playerData[guildId].players[userId].safari.inventory['raider_499497'];
+                if (raiders && raiders.numAttacksAvailable > 0) {
+                    // Get random targets (exclude the attacker)
+                    const targets = allPlayerIds.filter(id => id !== userId && safariPlayers.includes(id));
+                    
+                    if (targets.length === 0) {
+                        console.log(`⚠️ DEBUG: No valid targets for ${userId}, skipping attacks`);
+                        continue;
+                    }
+                    
+                    console.log(`⚔️ DEBUG: Scheduling ${raiders.numAttacksAvailable} attacks for ${userId}`);
+                    
+                    for (let i = 0; i < raiders.numAttacksAvailable; i++) {
+                        const randomTarget = targets[Math.floor(Math.random() * targets.length)];
+                        
+                        // Add to attack queue - PURE RANDOM CHAOS
+                        safariData[guildId].attackQueue.round1.push({
+                            attackingPlayer: userId,
+                            defendingPlayer: randomTarget,
+                            itemId: 'raider_499497',
+                            attacksPlanned: 1,
+                            totalDamage: 25  // Raiders do 25 damage each
+                        });
+                        
+                        totalAttacksScheduled++;
+                        console.log(`🎲 DEBUG: Attack ${i + 1}: ${userId} → ${randomTarget} (25 damage)`);
+                    }
+                    
+                    // Consume all attacks (they're scheduled now)
+                    playerData[guildId].players[userId].safari.inventory['raider_499497'].numAttacksAvailable = 0;
+                }
+            }
+            
+            console.log(`🎯 DEBUG: HACKY MVP - Scheduled ${totalAttacksScheduled} random attacks for Round 1!`);
+            
+            // Save attack queue
+            await saveSafariContent(safariData);
+        }
+        
         // Save updated player data
         await savePlayerData(playerData);
         
