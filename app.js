@@ -6088,28 +6088,22 @@ Your server is now ready for Tycoons gameplay!`;
             .setStyle(ButtonStyle.Primary)
             .setEmoji('🏪'),
           new ButtonBuilder()
+            .setCustomId('safari_store_manage_items')
+            .setLabel('Manage Store Items')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('📦'),
+          new ButtonBuilder()
             .setCustomId('safari_store_list')
             .setLabel('View All Stores')
             .setStyle(ButtonStyle.Secondary)
             .setEmoji('📋')
         ];
         
-        // Row 2: Management Functions
-        const managementButtonsRow2 = [
-          new ButtonBuilder()
-            .setCustomId('safari_store_manage_items')
-            .setLabel('Edit Store')
-            .setStyle(ButtonStyle.Success)
-            .setEmoji('📦'),
-          new ButtonBuilder()
-            .setCustomId('safari_store_manage_existing')
-            .setLabel('Edit Existing Store')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('✏️')
-        ];
+        // Row 2: No longer needed - all buttons moved to row 1
+        const managementButtonsRow2 = [];
         
         const managementRow1 = new ActionRowBuilder().addComponents(managementButtonsRow1);
-        const managementRow2 = new ActionRowBuilder().addComponents(managementButtonsRow2);
+        // Row 2 removed - all buttons now in row 1
         
         // Create back button
         const backButton = new ButtonBuilder()
@@ -6162,8 +6156,7 @@ Your server is now ready for Tycoons gameplay!`;
           {
             type: 14 // Separator
           },
-          managementRow1.toJSON(), // Store management buttons row 1
-          managementRow2.toJSON(), // Store management buttons row 2
+          managementRow1.toJSON(), // Store management buttons
           {
             type: 14 // Separator
           },
@@ -6571,89 +6564,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     END COMMENTED OUT - REDUNDANT INTERFACE */
-    } else if (custom_id === 'safari_store_manage_existing') {
-      // MVP2: Edit existing store interface
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit stores.')) return;
-        
-        console.log(`✏️ DEBUG: Edit existing store clicked for guild ${guildId}`);
-        
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const stores = safariData[guildId]?.stores || {};
-        
-        if (Object.keys(stores).length === 0) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ **No stores to edit**\n\nCreate your first store before you can edit existing ones.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Create store selection dropdown
-        const storeOptions = Object.entries(stores).slice(0, 25).map(([storeId, store]) => ({
-          label: `${store.emoji || '🏪'} ${store.name}`.slice(0, 100),
-          value: storeId,
-          description: `${store.description || 'No description'}`.slice(0, 100)
-        }));
-        
-        // Store editing functionality has been replaced by safari_store_manage_items
-        // This select menu is no longer used
-        
-        const selectRow = new ActionRowBuilder().addComponents(storeSelect);
-        
-        // Create back button
-        const backButton = new ButtonBuilder()
-          .setCustomId('safari_manage_stores')
-          .setLabel('⬅ Back to Store Management')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        
-        // Create response with Components V2
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## ✏️ Edit Existing Store\n\nSelect a store to edit from the dropdown below:`
-          },
-          selectRow.toJSON(), // Store selection dropdown
-          {
-            type: 14 // Separator
-          },
-          backRow.toJSON() // Back button
-        ];
-        
-        const container = {
-          type: 17, // Container component
-          accent_color: 0xf39c12, // Orange accent color for editing
-          components: containerComponents
-        };
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [container]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_store_manage_existing:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading store editor.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+    // safari_store_manage_existing handler removed - functionality replaced by safari_store_manage_items
     } else if (custom_id === 'safari_store_manage_items') {
       // MVP2 Sprint 1: Manage store items (add/remove items from stores)
       try {
