@@ -4858,9 +4858,9 @@ function formatCombatResults(attacksReceived, items, customTerms, playerInventor
             content += `${attackSummary}\n`;
         }
         
-        // Calculate net damage (attack - defense, but net result for display)
-        const netDamage = totalAttackDamage - totalDefense;
-        content += `Combat Damage: ${netDamage > 0 ? '-' : ''}${Math.abs(netDamage)}${customTerms.currencyEmoji}`;
+        // Calculate net damage (attack - defense, minimum 0 for display)
+        const netDamage = Math.max(0, totalAttackDamage - totalDefense);
+        content += `Combat Damage: ${netDamage > 0 ? '-' : ''}${netDamage}${customTerms.currencyEmoji}`;
         
         return content;
         
