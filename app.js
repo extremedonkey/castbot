@@ -6889,6 +6889,13 @@ Your server is now ready for Tycoons gameplay!`;
                 label: 'Open Store',
                 style: 1,
                 emoji: { name: '🏪' }
+              },
+              {
+                type: 2, // Button
+                custom_id: `safari_store_delete_${selectedStoreId}`,
+                label: 'Delete Store',
+                style: 4, // Red/Destructive style
+                emoji: { name: '🗑️' }
               }
             ]
           }

@@ -3327,25 +3327,13 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         await savePlayerData(playerData);
         console.log(`✅ DEBUG: Player data saved with reduced attack availability`);
         
-        // Get target name for success message
-        let targetName = 'the selected player';
-        try {
-            const guild = client?.guilds?.cache?.get(guildId);
-            const targetMember = await guild?.members?.fetch(targetId);
-            targetName = targetMember?.displayName || targetMember?.user?.username || targetName;
-        } catch (e) {
-            // Use fallback
-        }
-        
-        // Return to inventory with success message
-        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, attackerId, reqBody.member);
-        
-        // Add success message to the inventory display
+        // Return simple success message immediately
         return {
             type: InteractionResponseType.UPDATE_MESSAGE,
             data: {
-                content: `✅ **Attack Scheduled!** ${quantity} ${item.name}${quantity > 1 ? 's' : ''} will attack ${targetName} when round results are announced.`,
-                ...inventoryDisplay
+                content: `✅ **Attack Scheduled!** ${quantity} ${item.name}${quantity > 1 ? 's' : ''} will attack the selected player when round results are announced.\n\nUse the "My ${safariData[guildId]?.safariConfig?.inventoryName || 'Nest'}" button to view your updated inventory.`,
+                components: [],
+                flags: InteractionResponseFlags.EPHEMERAL
             }
         };
         
