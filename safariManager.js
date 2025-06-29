@@ -2036,6 +2036,7 @@ async function processRoundResults(guildId, channelId, client, useV2Display = fa
         
         // If currentRound == 4, show reset interface
         if (currentRound === 4) {
+            console.log('🔄 DEBUG: Game completed (currentRound=4), showing reset interface');
             return createResetInterface();
         }
         
@@ -2199,7 +2200,8 @@ async function processRoundResults(guildId, channelId, client, useV2Display = fa
             await saveSafariContent(safariData);
             
             if (useV2Display) {
-                // Use V2 display for Round 3 (future enhancement)
+                // Use V2 display for Round 3 - show final results with rankings
+                console.log('🏆 DEBUG: Round 3 completed, creating V2 final results display');
                 return await createRoundResultsV2(guildId, roundData, customTerms);
             } else {
                 // Show detailed Round 3 results PLUS final rankings
@@ -4231,6 +4233,11 @@ async function clearCorruptedAttacks(guildId) {
 async function createRoundResultsV2(guildId, roundData, customTerms) {
     try {
         console.log('🎨 DEBUG: Creating V2 round results display');
+        console.log('🎨 DEBUG: Round data:', { 
+            currentRound: roundData.currentRound, 
+            eligiblePlayersCount: roundData.eligiblePlayers?.length,
+            hasBalanceChanges: Object.keys(roundData.playerBalanceChanges || {}).length
+        });
         
         const { 
             currentRound, 
@@ -4242,6 +4249,19 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
             playerBalanceChanges 
         } = roundData;
         
+        // Validate required data
+        if (!eligiblePlayers || eligiblePlayers.length === 0) {
+            console.log('❌ DEBUG: No eligible players found in round data');
+            throw new Error('No eligible players in round data');
+        }
+        
+        if (!playerBalanceChanges || Object.keys(playerBalanceChanges).length === 0) {
+            console.log('❌ DEBUG: No balance changes found in round data');
+            throw new Error('No balance changes in round data');
+        }
+        
+        console.log('🎨 DEBUG: Creating player result cards...');
+        
         // Create player result cards
         const playerCards = await createPlayerResultCards(
             guildId, 
@@ -4249,6 +4269,8 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
             roundData, 
             customTerms
         );
+        
+        console.log(`🎨 DEBUG: Created ${playerCards.length} player cards`);
         
         // Create header container
         const headerContainer = {
@@ -4500,7 +4522,7 @@ function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji
         const inventoryItems = Object.entries(inventory);
         
         if (inventoryItems.length === 0) {
-            content += '*No income items owned*\n\n**Total Income:** 0 ' + customTerms.currencyEmoji;
+            content += '*No income items owned*\n\n**Total Income:** 0 ' + (customTerms.currencyEmoji || '🪙');
             return content;
         }
         
@@ -4540,7 +4562,7 @@ function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji
             content += '\n';
         }
         
-        content += `**Total Income:** ${totalIncome} ${customTerms.currencyEmoji}`;
+        content += `**Total Income:** ${totalIncome} ${customTerms.currencyEmoji || '🪙'}`;
         
         return content;
         
@@ -4562,7 +4584,7 @@ function formatCombatResults(attacksReceived, items, customTerms) {
         let content = '## ⚔️ COMBAT RESULTS\n\n';
         
         if (attacksReceived.length === 0) {
-            content += '*No attacks received this round*\n\n**Combat Damage:** 0 ' + customTerms.currencyEmoji;
+            content += '*No attacks received this round*\n\n**Combat Damage:** 0 ' + (customTerms.currencyEmoji || '🪙');
             return content;
         }
         
@@ -4596,7 +4618,7 @@ function formatCombatResults(attacksReceived, items, customTerms) {
             totalDamage += attackerDamage;
         }
         
-        content += `\n**Total Damage Taken:** ${totalDamage} ${customTerms.currencyEmoji}`;
+        content += `\n**Total Damage Taken:** ${totalDamage} ${customTerms.currencyEmoji || '🪙'}`;
         
         return content;
         
