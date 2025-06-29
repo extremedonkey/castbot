@@ -2925,6 +2925,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_post_') && 
         !custom_id.startsWith('safari_manage_') && 
         !custom_id.startsWith('safari_view_') && 
+        !custom_id.startsWith('safari_inventory_') &&
         !custom_id.startsWith('safari_my_') &&
         !custom_id.startsWith('safari_store_') &&
         !custom_id.startsWith('safari_item_') &&
