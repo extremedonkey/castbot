@@ -1671,9 +1671,24 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
             // Initialize attack availability first
             await initializeAttackAvailability(guildId, userId);
             
+            // Reload player data after initialization to get updated values
+            const updatedPlayerData = await loadPlayerData();
+            const updatedPlayer = updatedPlayerData[guildId]?.players?.[userId];
+            const updatedInventory = updatedPlayer?.safari?.inventory || {};
+            
+            // Re-filter inventory items with updated data
+            const updatedInventoryItems = Object.entries(updatedInventory).filter(([itemId, itemData]) => {
+                if (typeof itemData === 'number') {
+                    return itemData > 0;
+                } else if (typeof itemData === 'object' && itemData !== null) {
+                    return (itemData.quantity || 0) > 0;
+                }
+                return false;
+            });
+            
             // Add items with separators between them
-            for (let i = 0; i < inventoryItems.length; i++) {
-                const [itemId, inventoryData] = inventoryItems[i];
+            for (let i = 0; i < updatedInventoryItems.length; i++) {
+                const [itemId, inventoryData] = updatedInventoryItems[i];
                 console.log(`🔍 DEBUG: Processing inventory item ${itemId}, data:`, inventoryData);
                 const item = items[itemId];
                 if (!item) {
@@ -2715,7 +2730,7 @@ async function initializeAttackAvailability(guildId, userId) {
                     };
                     updated = true;
                     console.log(`🗡️ DEBUG: Initialized attacks for ${itemId}: ${itemData} available`);
-                } else if (typeof itemData === 'object' && itemData !== null && !itemData.numAttacksAvailable) {
+                } else if (typeof itemData === 'object' && itemData !== null && !('numAttacksAvailable' in itemData)) {
                     // Add numAttacksAvailable if missing - CRITICAL: Create new object to avoid reference issues
                     playerData[guildId].players[userId].safari.inventory[itemId] = {
                         ...itemData,
