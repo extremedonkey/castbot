@@ -8455,7 +8455,7 @@ Your server is now ready for Tycoons gameplay!`;
         console.log(`📦 DEBUG: About to send response`);
         
         return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             flags: (1 << 15), // IS_COMPONENTS_V2 flag
             components: [container]
