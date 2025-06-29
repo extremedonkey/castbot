@@ -63,8 +63,10 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_currency_view_all` | 👥 View All Currency | app.js:~5710 | Direct handler | ✅ Active |
 | `safari_currency_set_player` | 💰 Set Player Currency | app.js:~5760 | Direct handler | ✅ Active |
 | `safari_currency_reset_all` | 🗑️ Reset All Currency | app.js:~5832 | Direct handler | ✅ Active |
-| `safari_item_player_qty_*` | 📦 Player Qty (Item Management) | app.js:~8391 | Pattern handler | ✅ Active |
-| `safari_item_qty_user_select_*` | User Select for Item Quantity | app.js:~10494 | Pattern handler | ✅ Active |
+| `safari_view_player_inventory` | 👀 Player Inventory | app.js:~8396 | Direct handler | ✅ Active |
+| `safari_inventory_user_select` | User Select for Inventory Viewing | app.js:~10660 | Direct handler | ✅ Active |
+| `safari_item_player_qty_*` | 📦 Player Qty (Item Management) | app.js:~8461 | Pattern handler | ✅ Active |
+| `safari_item_qty_user_select_*` | User Select for Item Quantity | app.js:~10580 | Pattern handler | ✅ Active |
 | `safari_button_manage_existing` | ✏️ Edit Existing Button | app.js:~5983 | Direct handler | ✅ Active |
 | `safari_button_edit_select` | Button Selection Dropdown | app.js:~6078 | Select handler | ✅ Active |
 | `safari_edit_properties_*` | Edit Properties | app.js:~6329 | Pattern handler | ✅ Active |

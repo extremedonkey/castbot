@@ -579,6 +579,11 @@ async function createSafariMenu(guildId, userId, member) {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💰'),
     new ButtonBuilder()
+      .setCustomId('safari_view_player_inventory')
+      .setLabel('Player Inventory')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('👀'),
+    new ButtonBuilder()
       .setCustomId('safari_round_results')
       .setLabel(roundResultsLabel)
       .setStyle(ButtonStyle.Secondary)
@@ -8388,6 +8393,71 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'safari_view_player_inventory') {
+      // Handle View Player Inventory - show user select for inventory viewing
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to view player inventories.')) return;
+
+        console.log('👀 DEBUG: View Player Inventory clicked');
+        
+        // Create user selection dropdown
+        const userSelect = new UserSelectMenuBuilder()
+          .setCustomId('safari_inventory_user_select')
+          .setPlaceholder('Choose a player to view their inventory...')
+          .setMinValues(1)
+          .setMaxValues(1);
+        
+        const userSelectRow = new ActionRowBuilder().addComponents(userSelect);
+        
+        // Create cancel button (back to safari menu)
+        const cancelButton = new ButtonBuilder()
+          .setCustomId('prod_safari_menu')
+          .setLabel('⬅ Back to Safari')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
+        
+        // Create response with Components V2
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 👀 View Player Inventory\n\nSelect a player to view their complete inventory:`
+          },
+          userSelectRow.toJSON(), // User selection dropdown
+          {
+            type: 14 // Separator
+          },
+          cancelRow.toJSON() // Back button
+        ];
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0x9b59b6, // Purple accent color for viewing
+          components: containerComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in view player inventory:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error viewing player inventory.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('safari_item_player_qty_')) {
       // Handle Player Qty button click - show user select for item quantity management
       try {
@@ -10583,6 +10653,82 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error selecting user for item management.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_inventory_user_select') {
+      // Handle user selection for inventory viewing - show complete player inventory
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const selectedUserId = data.values[0];
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to view player inventories.')) return;
+        
+        console.log(`👀 DEBUG: Selected user ${selectedUserId} for inventory viewing`);
+        
+        // Import and use the existing inventory display function
+        const { createPlayerInventoryDisplay } = await import('./safariManager.js');
+        
+        // Get user info for display
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(selectedUserId);
+        
+        // Create inventory display for the selected player
+        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, selectedUserId);
+        
+        // Add admin header and back button to the inventory display
+        const adminComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## 👀 Admin View: ${targetMember.displayName}'s Inventory\n\n**Player:** ${targetMember.displayName}\n**User ID:** ${selectedUserId}`
+          },
+          {
+            type: 14 // Separator
+          }
+        ];
+        
+        // Add the inventory components
+        const allComponents = [
+          ...adminComponents,
+          ...inventoryDisplay.components
+        ];
+        
+        // Add back button at the end
+        const backButton = new ButtonBuilder()
+          .setCustomId('safari_view_player_inventory')
+          .setLabel('⬅ Back to Player Select')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        
+        allComponents.push({
+          type: 14 // Separator
+        });
+        allComponents.push(backRow.toJSON());
+        
+        const container = {
+          type: 17, // Container component
+          accent_color: 0x9b59b6, // Purple accent color for viewing
+          components: allComponents
+        };
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [container]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling inventory user selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error viewing player inventory.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
