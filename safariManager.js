@@ -3318,17 +3318,42 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
             };
         }
         
+        // Reload player data to avoid race conditions
+        const freshPlayerData = await loadPlayerData();
+        const freshInventoryItem = freshPlayerData[guildId]?.players?.[attackerId]?.safari?.inventory?.[itemId];
+        
+        if (!freshInventoryItem) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: '❌ Item no longer in inventory.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
+        // Final validation with fresh data
+        if (freshInventoryItem.numAttacksAvailable < quantity) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: `❌ Not enough attacks available. You have ${freshInventoryItem.numAttacksAvailable} attacks available.`,
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
         // Reduce attack availability in player inventory
-        console.log(`⚔️ DEBUG: Reducing attack availability - Before: ${inventoryItem.numAttacksAvailable}, Reducing: ${quantity}`);
-        inventoryItem.numAttacksAvailable -= quantity;
-        console.log(`⚔️ DEBUG: After reduction: ${inventoryItem.numAttacksAvailable}`);
+        console.log(`⚔️ DEBUG: Reducing attack availability - Before: ${freshInventoryItem.numAttacksAvailable}, Reducing: ${quantity}`);
+        freshInventoryItem.numAttacksAvailable -= quantity;
+        console.log(`⚔️ DEBUG: After reduction: ${freshInventoryItem.numAttacksAvailable}`);
         
         // Save updated player data
-        await savePlayerData(playerData);
+        await savePlayerData(freshPlayerData);
         console.log(`✅ DEBUG: Player data saved with reduced attack availability`);
         
-        // Return simple success message immediately
-        return {
+        // Create response object
+        const response = {
             type: InteractionResponseType.UPDATE_MESSAGE,
             data: {
                 content: `✅ **Attack Scheduled!** ${quantity} ${item.name}${quantity > 1 ? 's' : ''} will attack the selected player when round results are announced.\n\nUse the "My Nest" button to view your updated inventory.`,
@@ -3336,6 +3361,11 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
                 flags: InteractionResponseFlags.EPHEMERAL
             }
         };
+        
+        console.log(`🚀 DEBUG: About to return response:`, JSON.stringify(response, null, 2));
+        
+        // Return simple success message immediately
+        return response;
         
     } catch (error) {
         console.error('Error scheduling attack:', error);
