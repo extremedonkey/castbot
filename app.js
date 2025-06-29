@@ -5704,6 +5704,16 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_attack_player_disabled_')) {
+      // Handle disabled attack button click
+      console.log(`⚔️ DEBUG: User clicked disabled attack button`);
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          content: '❌ You have no attacks available for this item. Attacks will be available again after the next round results.',
+          flags: InteractionResponseFlags.EPHEMERAL
+        }
+      });
     } else if (custom_id.startsWith('safari_attack_player_')) {
       // Handle attack player button click
       try {

@@ -1727,21 +1727,36 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     }
                     
                     // Create Section component with attack button
-                    components.push({
+                    const sectionComponent = {
                         type: 9, // Section component
                         components: [
                             {
                                 type: 10, // Text Display
                                 content: attackItemContent
                             }
-                        ],
-                        accessory: {
+                        ]
+                    };
+                    
+                    // Only add button if attacks are available
+                    if (numAttacksAvailable > 0) {
+                        sectionComponent.accessory = {
                             type: 2, // Button
                             custom_id: `safari_attack_player_${itemId}`,
                             label: '⚔️ Attack Player',
                             style: 1 // Primary (blue)
-                        }
-                    });
+                        };
+                    } else {
+                        // Add disabled button for clarity
+                        sectionComponent.accessory = {
+                            type: 2, // Button
+                            custom_id: `safari_attack_player_disabled_${itemId}`,
+                            label: '⚔️ No Attacks Available',
+                            style: 2, // Secondary (gray)
+                            disabled: true
+                        };
+                    }
+                    
+                    components.push(sectionComponent);
                     console.log(`⚔️ DEBUG: Added attack item ${item.name} with Section component`);
                 } else {
                     // Non-attack item - use regular Text Display
@@ -2944,6 +2959,17 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
             numAttacksAvailable = itemData.numAttacksAvailable || 0;
         }
         
+        // Check if player has any attacks available
+        if (numAttacksAvailable <= 0) {
+            return {
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    content: '❌ You have no attacks available for this item. Attacks will be available again after the next round results.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
         // Get eligible players (excluding attacker)
         const eligiblePlayers = await getEligiblePlayersFixed(guildId, client);
         const targetPlayers = eligiblePlayers.filter(p => p.userId !== attackerId);
@@ -3286,15 +3312,27 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         await savePlayerData(playerData);
         console.log(`✅ DEBUG: Player data saved with reduced attack availability`);
         
-        // Get updated interface showing the scheduled attack
-        const response = await createOrUpdateAttackUI(guildId, attackerId, itemId, targetId, 0, client);
-        
-        // Add success message
-        if (response.data && !response.data.content) {
-            response.data.content = `✅ Attack scheduled! ${quantity} ${item.name} will attack the selected player during round results.`;
+        // Get target name for success message
+        let targetName = 'the selected player';
+        try {
+            const guild = client?.guilds?.cache?.get(guildId);
+            const targetMember = await guild?.members?.fetch(targetId);
+            targetName = targetMember?.displayName || targetMember?.user?.username || targetName;
+        } catch (e) {
+            // Use fallback
         }
         
-        return response;
+        // Return to inventory with success message
+        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, attackerId, reqBody.member);
+        
+        // Add success message to the inventory display
+        return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+                content: `✅ **Attack Scheduled!** ${quantity} ${item.name}${quantity > 1 ? 's' : ''} will attack ${targetName} when round results are announced.`,
+                ...inventoryDisplay
+            }
+        };
         
     } catch (error) {
         console.error('Error scheduling attack:', error);
