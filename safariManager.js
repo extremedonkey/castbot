@@ -4574,9 +4574,9 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
                             {
                                 type: 2, // Button
                                 custom_id: 'safari_player_inventory',
-                                label: 'View My Inventory',
-                                style: 2, // Secondary
-                                emoji: { name: '🎒' }
+                                label: customTerms.inventoryName,
+                                style: 1, // Primary (blue)
+                                emoji: { name: '🦕' } // Dinosaur emoji
                             }
                         ]
                     }
