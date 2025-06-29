@@ -3304,114 +3304,126 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
             content: `## ⚔️ Attack Player with ${item.name}\n\nSelect a player to attack. They will be attacked when round results are announced.`
         });
         
-        // Get eligible players for string select
-        const eligibleTargets = await getEligiblePlayersFixed(guildId, attackerId);
-        console.log(`🎯 DEBUG: Found ${eligibleTargets.length} eligible players for attack target selection`);
-        console.log(`🎯 DEBUG: eligibleTargets:`, eligibleTargets.map(p => ({ userId: p.userId, playerName: p.playerName, currency: p.currency })));
-        
-        // Create string select with eligible players only
-        const playerOptions = eligibleTargets.map(player => {
-            console.log(`🎯 DEBUG: Processing player option:`, { userId: player.userId, playerName: player.playerName, currency: player.currency });
-            return {
-                label: player.playerName || 'Unknown Player',
-                value: player.userId,
-                description: `${player.currency || 0} ${customTerms.currencyName || 'currency'}${player.inventory && Object.keys(player.inventory).length > 0 ? ' + items' : ''}`,
-                default: targetId === player.userId
-            };
-        });
-        console.log(`🎯 DEBUG: Created ${playerOptions.length} player options for string select`);
-        
-        // Use pipe separator to avoid underscore parsing issues
-        const playerSelectRow = {
-            type: 1, // Action Row
-            components: [
-                {
-                    type: 3, // String Select
-                    custom_id: `safari_attack_target|${itemId}|${selectedQuantity}`,
-                    placeholder: targetId ? `Selected: ${targetName}` : 'Select a player to attack',
-                    min_values: 1,
-                    max_values: 1,
-                    options: playerOptions.length > 0 ? playerOptions : [{
-                        label: 'No eligible players found',
-                        value: 'none',
-                        description: 'All players have 0 currency and no items'
-                    }]
-                }
-            ]
-        };
-        components.push(playerSelectRow);
-        
-        // Divider
-        components.push({ type: 14 }); // Separator
-        
-        // Attack info display
-        const infoContent = `**Target Player:** ${targetName}\n**Number of available attacks:** ${numAttacksAvailable}\n**Attacks planned this round:** ${attacksPlanned}\n**Damage per attack:** ${item.attackValue}\n**Total attack damage this round:** ${totalDamage}${attacksPlannedText}`;
-        
-        components.push({
-            type: 10, // Text Display
-            content: infoContent
-        });
-        
-        // Divider
-        components.push({ type: 14 }); // Separator
-        
-        // String select for attack quantity
-        const attackOptions = [];
-        
-        if (numAttacksAvailable <= 0) {
-            // No attacks available
-            attackOptions.push({
-                label: 'No more attacks available',
-                value: '0',
-                description: 'You have used all available attacks',
-                default: true
+        // Only show target selection if no target selected yet
+        if (!targetId) {
+            // Get eligible players for string select
+            const eligibleTargets = await getEligiblePlayersFixed(guildId, attackerId);
+            console.log(`🎯 DEBUG: Found ${eligibleTargets.length} eligible players for attack target selection`);
+            console.log(`🎯 DEBUG: eligibleTargets:`, eligibleTargets.map(p => ({ userId: p.userId, playerName: p.playerName, currency: p.currency })));
+            
+            // Create string select with eligible players only
+            const playerOptions = eligibleTargets.map(player => {
+                console.log(`🎯 DEBUG: Processing player option:`, { userId: player.userId, playerName: player.playerName, currency: player.currency });
+                return {
+                    label: player.playerName || 'Unknown Player',
+                    value: player.userId,
+                    description: `${player.currency || 0} ${customTerms.currencyName || 'currency'}${player.inventory && Object.keys(player.inventory).length > 0 ? ' + items' : ''}`,
+                    default: false
+                };
             });
+            console.log(`🎯 DEBUG: Created ${playerOptions.length} player options for string select`);
+            
+            // Use pipe separator to avoid underscore parsing issues
+            const playerSelectRow = {
+                type: 1, // Action Row
+                components: [
+                    {
+                        type: 3, // String Select
+                        custom_id: `safari_attack_target|${itemId}|${selectedQuantity}`,
+                        placeholder: 'Select a player to attack',
+                        min_values: 1,
+                        max_values: 1,
+                        options: playerOptions.length > 0 ? playerOptions : [{
+                            label: 'No eligible players found',
+                            value: 'none',
+                            description: 'All players have 0 currency and no items'
+                        }]
+                    }
+                ]
+            };
+            components.push(playerSelectRow);
         } else {
-            // Create options up to available attacks (max 25)
-            const maxOptions = Math.min(numAttacksAvailable, 25);
-            for (let i = 1; i <= maxOptions; i++) {
-                const description = i === 25 && numAttacksAvailable > 25 
-                    ? 'Max 25 attacks per turn allowed' 
-                    : `Attack ${targetName !== '*Select a player above*' ? targetName : 'target'} with ${i} ${item.name}`;
-                    
-                attackOptions.push({
-                    label: `${i} Attack${i > 1 ? 's' : ''}`,
-                    value: i.toString(),
-                    description: description,
-                    emoji: { name: '⚔️' },
-                    default: i === selectedQuantity
-                });
-            }
+            // Target selected - show selected target info
+            components.push({
+                type: 10, // Text Display
+                content: `**🎯 Selected Target:** ${targetName}`
+            });
         }
         
-        const attackSelectRow = {
-            type: 1, // Action Row
-            components: [
-                {
-                    type: 3, // String Select
-                    custom_id: `safari_attack_quantity|${itemId}|${targetId || 'none'}`,
-                    placeholder: selectedQuantity > 0 ? `Selected: ${selectedQuantity} attacks` : `Select number of ${item.name} attacks`,
-                    options: attackOptions,
-                    disabled: numAttacksAvailable <= 0
+        // Only show quantity selection and schedule button if target is selected
+        if (targetId) {
+            // Divider
+            components.push({ type: 14 }); // Separator
+            
+            // Attack info display
+            const infoContent = `**Number of available attacks:** ${numAttacksAvailable}\n**Attacks planned this round:** ${attacksPlanned}\n**Damage per attack:** ${item.attackValue}\n**Total attack damage this round:** ${totalDamage}${attacksPlannedText}`;
+            
+            components.push({
+                type: 10, // Text Display
+                content: infoContent
+            });
+            
+            // Divider
+            components.push({ type: 14 }); // Separator
+            
+            // String select for attack quantity
+            const attackOptions = [];
+            
+            if (numAttacksAvailable <= 0) {
+                // No attacks available
+                attackOptions.push({
+                    label: 'No more attacks available',
+                    value: '0',
+                    description: 'You have used all available attacks',
+                    default: true
+                });
+            } else {
+                // Create options up to available attacks (max 25)
+                const maxOptions = Math.min(numAttacksAvailable, 25);
+                for (let i = 1; i <= maxOptions; i++) {
+                    const description = i === 25 && numAttacksAvailable > 25 
+                        ? 'Max 25 attacks per turn allowed' 
+                        : `Attack ${targetName} with ${i} ${item.name}`;
+                        
+                    attackOptions.push({
+                        label: `${i} Attack${i > 1 ? 's' : ''}`,
+                        value: i.toString(),
+                        description: description,
+                        emoji: { name: '⚔️' },
+                        default: i === selectedQuantity
+                    });
                 }
-            ]
-        };
-        components.push(attackSelectRow);
-        
-        // Schedule Attack button with state
-        const buttonRow = {
-            type: 1, // Action Row
-            components: [
-                {
-                    type: 2, // Button
-                    custom_id: `safari_schedule_attack_${itemId}_${targetId || 'none'}_${selectedQuantity}`,
-                    label: '⚔️ Schedule Attack',
-                    style: 3, // Success (green)
-                    disabled: numAttacksAvailable <= 0 || !targetId || selectedQuantity === 0
-                }
-            ]
-        };
-        components.push(buttonRow);
+            }
+            
+            const attackSelectRow = {
+                type: 1, // Action Row
+                components: [
+                    {
+                        type: 3, // String Select
+                        custom_id: `safari_attack_quantity|${itemId}|${targetId}`,
+                        placeholder: selectedQuantity > 0 ? `Selected: ${selectedQuantity} attacks` : `Select number of ${item.name} attacks`,
+                        options: attackOptions,
+                        disabled: numAttacksAvailable <= 0
+                    }
+                ]
+            };
+            components.push(attackSelectRow);
+            
+            // Schedule Attack button with state
+            const buttonRow = {
+                type: 1, // Action Row
+                components: [
+                    {
+                        type: 2, // Button
+                        custom_id: `safari_schedule_attack_${itemId}_${targetId}_${selectedQuantity}`,
+                        label: '⚔️ Schedule Attack',
+                        style: 3, // Success (green)
+                        disabled: numAttacksAvailable <= 0 || selectedQuantity === 0
+                    }
+                ]
+            };
+            components.push(buttonRow);
+        }
         
         // Divider
         components.push({ type: 14 }); // Separator
