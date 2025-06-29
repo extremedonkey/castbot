@@ -525,7 +525,7 @@ async function createReeceStuffMenu() {
 async function createSafariMenu(guildId, userId, member) {
   // Get the inventory name and current round for this guild
   let inventoryName = 'Nest'; // Default
-  let inventoryEmoji = '🥚'; // Default emoji
+  let inventoryEmoji = '🦕'; // Default emoji
   let currentRound = 1; // Default round
   
   try {
@@ -2751,6 +2751,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
         
+        // Add separator and navigation button
+        containerComponents.push({ type: 14 }); // Separator
+        
+        // Create navigation button to return to inventory
+        const backButton = new ButtonBuilder()
+          .setCustomId('safari_player_inventory')
+          .setLabel(customTerms.inventoryName)
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('🦕'); // Dinosaur emoji
+        
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+        containerComponents.push(backRow.toJSON());
+        
         const container = {
           type: 17, // Container
           accent_color: store.settings?.accentColor || 0x3498db,
@@ -2906,10 +2919,24 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         console.log(`✅ DEBUG: Purchase successful - ${userId} bought ${itemId} for ${price} coins`);
         
+        // Get custom terms for inventory name
+        const { getCustomTerms } = await import('./safariManager.js');
+        const customTerms = await getCustomTerms(guildId);
+        
+        // Create inventory navigation button
+        const inventoryButton = new ButtonBuilder()
+          .setCustomId('safari_player_inventory')
+          .setLabel(customTerms.inventoryName)
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('🦕'); // Dinosaur emoji
+        
+        const inventoryRow = new ActionRowBuilder().addComponents(inventoryButton);
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙 ${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${finalQuantity}`
+            content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙 ${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${finalQuantity}`,
+            components: [inventoryRow]
           }
         });
         

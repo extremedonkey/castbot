@@ -720,6 +720,394 @@ safari_schedule_attack_{itemId}_{targetId}_{quantity} → Execute attack schedul
 
 The Safari Attack System represents a complete tactical combat framework built on CastBot's Safari foundation, providing competitive gameplay mechanics while maintaining scalability for advanced features.
 
+---
+
+## MVP3 Enhanced: Round Results V2 System (December 2025)
+
+### **🎲 ROUND RESULTS PROCESSING ARCHITECTURE**
+
+The Safari Round Results system has been completely redesigned to provide player-centric, ultra-compact results display that handles high-volume attack scenarios while staying within Discord's 4000 character limit.
+
+#### **📊 Round Processing Pipeline**
+
+**Phase 1: Income Resolution**
+1. **Event Determination**: Random event selection based on configured probabilities
+   - Round 1: 75% Clear Skies, 25% Asteroid Strike
+   - Round 2: 50% Clear Skies, 50% Asteroid Strike  
+   - Round 3: 25% Clear Skies, 75% Asteroid Strike
+2. **Income Calculation**: Per-item earnings based on event outcome
+   - Clear Skies: Uses `goodOutcomeValue` from item definitions
+   - Asteroid Strike: Uses `badOutcomeValue` from item definitions
+3. **Currency Updates**: Player balances increased by total income
+
+**Phase 2: Combat Resolution**
+1. **Attack Queue Processing**: All attacks for current round processed simultaneously
+2. **Defense Calculation**: Total defense from inventory items with `defenseValue`
+3. **Damage Application**: `Math.max(0, totalAttackDamage - totalDefense)` applied to currency
+4. **Item Consumption**: Consumable attack items removed from attacker inventories
+5. **Queue Cleanup**: Attack queue cleared after processing
+
+**Phase 3: Results Display Generation**
+1. **Player Cards**: Individual result cards for each eligible player
+2. **Balance Tracking**: Before/after currency amounts with change calculations
+3. **Attack Summaries**: Compact combat breakdowns with attacker/defender details
+4. **Character Optimization**: Ultra-compact format to handle 10+ players under 4000 chars
+
+#### **⚔️ ATTACK SYSTEM DETAILED DESIGN**
+
+**Attack Queue Data Structure (safariContent.json):**
+```json
+{
+  "guildId": {
+    "attackQueue": {
+      "round1": [
+        {
+          "attackingPlayer": "391415444084490240",
+          "defendingPlayer": "676262975132139522",
+          "itemId": "raider_499497",
+          "attacksPlanned": 1,
+          "totalDamage": 25,
+          "timestamp": 1751174570983
+        }
+      ]
+    }
+  }
+}
+```
+
+**Combat Resolution Algorithm:**
+```javascript
+async function processAttackQueue(guildId, currentRound, playerData, items, client) {
+    const safariData = await loadSafariContent();
+    const attackQueue = safariData[guildId]?.attackQueue?.[`round${currentRound}`] || [];
+    
+    // Group attacks by defender for efficient processing
+    const attacksByDefender = {};
+    for (const attack of attackQueue) {
+        if (!attacksByDefender[attack.defendingPlayer]) {
+            attacksByDefender[attack.defendingPlayer] = [];
+        }
+        attacksByDefender[attack.defendingPlayer].push(attack);
+    }
+    
+    // Process each defended player
+    const attackResults = [];
+    for (const [defenderId, attacks] of Object.entries(attacksByDefender)) {
+        const defender = playerData[guildId]?.players?.[defenderId];
+        
+        // Calculate total attack damage
+        const totalAttackDamage = attacks.reduce((sum, attack) => sum + attack.totalDamage, 0);
+        
+        // Calculate defender's total defense
+        const totalDefense = calculatePlayerDefense(defender.safari.inventory || {}, items);
+        
+        // Apply damage (minimum 0)
+        const netDamage = Math.max(0, totalAttackDamage - totalDefense);
+        const originalCurrency = defender.safari.currency || 0;
+        defender.safari.currency = Math.max(0, originalCurrency - netDamage);
+        
+        attackResults.push({
+            defenderId,
+            defenderName: await getPlayerDisplayName(defenderId, guildId, client),
+            totalAttackDamage,
+            totalDefense,
+            damageDealt: netDamage,
+            originalCurrency,
+            newCurrency: defender.safari.currency,
+            attackCount: attacks.length,
+            attackers: attacks.map(a => ({ 
+                name: a.attackingPlayerName, 
+                damage: a.totalDamage,
+                itemName: a.itemName,
+                quantity: a.attacksPlanned
+            }))
+        });
+    }
+    
+    // Consume attack items
+    await consumeAttackItems(attackQueue, playerData, guildId, items);
+    
+    return { attackResults, attackQueue, attacksByDefender };
+}
+```
+
+**Defense Calculation System:**
+```javascript
+function calculatePlayerDefense(playerInventory, items) {
+    let totalDefense = 0;
+    
+    for (const [itemId, itemData] of Object.entries(playerInventory)) {
+        const item = items[itemId];
+        if (!item?.defenseValue) continue;
+        
+        const quantity = typeof itemData === 'object' ? itemData.quantity : itemData;
+        totalDefense += (item.defenseValue * quantity);
+    }
+    
+    return totalDefense;
+}
+```
+
+#### **🎨 ROUND RESULTS V2 DISPLAY SYSTEM**
+
+**Ultra-Compact Player Card Format:**
+```
+🎯 Mike
+Start: 620🥚
+
+📈 INCOME
+☄️ Asteroid Strike
+
+🐣 8x35: 280🥚 
+🦖 8x0: 0🥚
+
+Total: 280🥚
+
+⚔️ COMBAT
+🦎🗡️ 3x25 (75) - 🦕🛡️ 3x50 (150)
+Combat Damage: 0🥚
+
+Final: 900🥚
+```
+
+**Character Budget Management:**
+- **Target**: ~300-400 characters per player card
+- **For 10 players**: ~3000-4000 characters total (within Discord limit)
+- **Compression Strategy**: 
+  - Remove verbose text ("Starting Balance" → "Start")
+  - Eliminate spaces before emoji
+  - Compact calculations (show formula results only)
+  - Ultra-compact combat format for high attack volumes
+
+**Combat Display Compression Levels:**
+
+1. **Standard Format** (≤5 attacks on player):
+   ```
+   ⚔️ COMBAT
+   🦎🗡️ 3x25 (75) - 🦕🛡️ 2x50 (100)
+   Combat Damage: 0🥚
+   ```
+
+2. **Compact Format** (5-10 attacks on player):
+   ```
+   ⚔️ COMBAT
+   🦎🗡️ 8x25 (200) - 🦕🛡️ 4x50 (200)
+   Combat Damage: 0🥚
+   ```
+
+3. **Ultra-Compact Format** (>10 attacks on player):
+   ```
+   ⚔️ COMBAT
+   5 attackers, 15 attacks
+   Combat Damage: 25🥚
+   ```
+
+#### **🔄 ROUND LIFECYCLE MANAGEMENT**
+
+**Round Initialization:**
+```javascript
+async function startNewRound(guildId) {
+    const safariData = await loadSafariContent();
+    if (!safariData[guildId]?.safariConfig) {
+        throw new Error('Safari not configured for this guild');
+    }
+    
+    // Increment round counter
+    safariData[guildId].safariConfig.currentRound = 
+        (safariData[guildId].safariConfig.currentRound || 0) + 1;
+    
+    // Clear previous round's attack queue
+    const currentRound = safariData[guildId].safariConfig.currentRound;
+    if (safariData[guildId].attackQueue?.[`round${currentRound}`]) {
+        delete safariData[guildId].attackQueue[`round${currentRound}`];
+    }
+    
+    await saveSafariContent(safariData);
+}
+```
+
+**Round Results Execution:**
+```javascript
+async function processRoundResults(guildId, client) {
+    const playerData = await loadPlayerData();
+    const safariData = await loadSafariContent();
+    const items = safariData[guildId]?.items || {};
+    const config = safariData[guildId]?.safariConfig || {};
+    
+    // Determine round event
+    const currentRound = config.currentRound || 1;
+    const goodProbability = config[`round${currentRound}GoodProbability`] || 50;
+    const isGoodEvent = Math.random() * 100 < goodProbability;
+    
+    // Process income for all eligible players
+    const eligiblePlayers = await getEligibleSafariPlayers(guildId, playerData);
+    const playerBalanceChanges = {};
+    
+    for (const player of eligiblePlayers) {
+        const originalBalance = player.currency || 0;
+        const income = calculatePlayerIncome(player.inventory, items, isGoodEvent);
+        player.currency = originalBalance + income;
+        
+        playerBalanceChanges[player.userId] = {
+            starting: originalBalance,
+            ending: player.currency,
+            change: income
+        };
+    }
+    
+    // Process attack queue
+    const { attackResults, attacksByDefender } = await processAttackQueue(
+        guildId, currentRound, playerData, items, client
+    );
+    
+    // Update balance changes with attack damage
+    for (const result of attackResults) {
+        if (playerBalanceChanges[result.defenderId]) {
+            playerBalanceChanges[result.defenderId].ending = result.newCurrency;
+            playerBalanceChanges[result.defenderId].change = 
+                result.newCurrency - playerBalanceChanges[result.defenderId].starting;
+        }
+    }
+    
+    // Save updated player data
+    await savePlayerData(playerData);
+    
+    // Generate V2 results display
+    return createRoundResultsV2(guildId, {
+        currentRound,
+        isGoodEvent,
+        eventName: isGoodEvent ? config.goodEventName : config.badEventName,
+        eventEmoji: isGoodEvent ? config.goodEventEmoji : config.badEventEmoji,
+        eligiblePlayers,
+        attacksByDefender,
+        playerBalanceChanges
+    }, config);
+}
+```
+
+#### **📱 DISCORD COMPONENTS V2 IMPLEMENTATION**
+
+**Header Container:**
+```javascript
+const headerContainer = {
+    type: 17, // Container
+    accent_color: isGoodEvent ? 0x27ae60 : 0xe74c3c, // Green/Red
+    components: [
+        {
+            type: 10, // Text Display
+            content: `# 🎲 Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n**${eligiblePlayers.length} players participated**`
+        }
+    ]
+};
+```
+
+**Player Result Cards:**
+```javascript
+// Each player gets individual container with accent color based on balance change
+const playerCard = {
+    type: 17, // Container
+    accent_color: change > 0 ? 0x27ae60 : change < 0 ? 0xe74c3c : 0x95a5a6,
+    components: [
+        {
+            type: 10, // Text Display
+            content: ultraCompactPlayerContent // Generated from income + combat + final balance
+        }
+    ]
+};
+```
+
+**Navigation Components:**
+```javascript
+// Optional inventory button if component count allows
+if (componentCount < 39) {
+    const buttonContainer = {
+        type: 17, // Container
+        accent_color: 0x3498db, // Blue
+        components: [
+            {
+                type: 1, // Action Row
+                components: [
+                    {
+                        type: 2, // Button
+                        custom_id: 'safari_player_inventory',
+                        label: 'View My Inventory',
+                        style: 2, // Secondary
+                        emoji: { name: '🎒' }
+                    }
+                ]
+            }
+        ]
+    };
+}
+```
+
+#### **⚡ PERFORMANCE OPTIMIZATIONS**
+
+**Component Limit Management:**
+- **Discord Limit**: 40 components maximum per message
+- **Strategy**: 1 header + N player cards + optional buttons
+- **Safeguard**: Skip buttons if player count > 38
+
+**Character Limit Management:**
+- **Discord Limit**: 4000 characters across ALL components
+- **Strategy**: Ultra-compact format with progressive compression
+- **Dynamic Sizing**: Character budget calculated per player count
+
+**Memory Efficiency:**
+- **Attack Queue**: Cleared immediately after processing
+- **Player Name Caching**: Reduces Discord API calls during result generation
+- **Batch Operations**: All currency updates applied in single save operation
+
+#### **🛡️ ERROR HANDLING & EDGE CASES**
+
+**Attack Validation:**
+```javascript
+// Skip corrupted attack records
+if (!attack.defendingPlayer || !attack.attackingPlayer || !attack.itemId ||
+    !attack.attacksPlanned || attack.attacksPlanned > 1000 || attack.attacksPlanned < 0 ||
+    isNaN(attack.totalDamage)) {
+    console.log(`⚠️ DEBUG: Skipping invalid attack:`, attack);
+    continue;
+}
+```
+
+**Defense Calculation Protection:**
+```javascript
+// Handle missing or invalid defense values
+const defenseValue = item?.defenseValue;
+if (defenseValue && !isNaN(defenseValue) && defenseValue > 0) {
+    totalDefense += (defenseValue * quantity);
+}
+```
+
+**Currency Floor Protection:**
+```javascript
+// Never allow negative currency
+defender.safari.currency = Math.max(0, originalCurrency - netDamage);
+```
+
+#### **🔮 FUTURE ENHANCEMENTS**
+
+**Advanced Combat Mechanics:**
+- **Weapon Durability**: Items degrade with use
+- **Critical Hits**: Random damage multipliers
+- **Battle Formations**: Strategic positioning bonuses
+- **Alliance Combat**: Team-based attack coordination
+
+**Enhanced Results Display:**
+- **Interactive Results**: Clickable player cards for detailed breakdown
+- **Animation Effects**: Progressive reveal of results
+- **Historical Comparison**: Compare with previous rounds
+- **Export Functionality**: Save results as images or documents
+
+**Strategic Depth:**
+- **Terrain Effects**: Map-based combat modifiers
+- **Weather Systems**: Dynamic event probability changes
+- **Resource Scarcity**: Limited item availability per round
+- **Economic Warfare**: Market manipulation through supply/demand
+
+The Round Results V2 System provides a complete, scalable foundation for complex competitive gameplay while maintaining Discord platform constraints and user experience excellence.
+
 ## Test Cases
 
 ### MVP1 Test Scenarios

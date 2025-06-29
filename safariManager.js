@@ -1593,7 +1593,7 @@ async function getStoreBrowseButtons(guildId) {
                 custom_id: `safari_store_browse_${guildId}_${store.id}`,
                 label: `Browse ${store.name}`.slice(0, 80),
                 style: 1, // Primary (blue)
-                emoji: { name: emoji }
+                emoji: { name: '🪺' } // Nest emoji for consistency
             };
             
             buttons.push(button);

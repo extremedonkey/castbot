@@ -374,12 +374,34 @@ export async function createPlayerManagementUI(options) {
           // Get custom terms for inventory name and emoji
           const customTerms = await getCustomTerms(guildId);
           
+          // Get store browse buttons
+          const { getStoreBrowseButtons } = await import('./safariManager.js');
+          const storeBrowseButtons = await getStoreBrowseButtons(guildId);
+          
+          // Create inventory button with new dinosaur emoji
+          const inventoryButton = new ButtonBuilder()
+            .setCustomId('safari_player_inventory')
+            .setLabel(`${customTerms.currencyEmoji} ${customTerms.inventoryName}`)
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🦕'); // Dinosaur emoji
+          
+          // Create inventory row with store buttons
+          const inventoryComponents = [inventoryButton];
+          
+          // Add store browse buttons (max 4 to stay within 5-button limit)
+          for (let i = 0; i < Math.min(storeBrowseButtons.length, 4); i++) {
+            const storeButton = storeBrowseButtons[i];
+            inventoryComponents.push(new ButtonBuilder()
+              .setCustomId(storeButton.custom_id)
+              .setLabel(storeButton.label)
+              .setStyle(ButtonStyle.Primary)
+              .setEmoji('🪺') // Nest emoji
+            );
+          }
+          
           inventoryRow = {
             type: 1, // ActionRow
-            components: [new ButtonBuilder()
-              .setCustomId('safari_player_inventory')
-              .setLabel(`${customTerms.currencyEmoji} ${customTerms.inventoryName}`)
-              .setStyle(ButtonStyle.Primary)]
+            components: inventoryComponents
           };
         }
       } catch (error) {
