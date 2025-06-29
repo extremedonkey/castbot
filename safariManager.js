@@ -2970,14 +2970,38 @@ async function restockPlayers(guildId, client) {
             const oldCurrency = playerData[guildId].players[userId].safari.currency || 0;
             playerData[guildId].players[userId].safari.currency = restockAmount;
             
-            // Add 1x Nurturer item to inventory
+            // Add randomized items (0-8 of each type) for rapid testing
             if (!playerData[guildId].players[userId].safari.inventory) {
                 playerData[guildId].players[userId].safari.inventory = {};
             }
-            playerData[guildId].players[userId].safari.inventory['nurturer_361363'] = {
-                quantity: 1,
-                numAttacksAvailable: 0
-            };
+            
+            // Define the 4 item types for testing
+            const itemTypes = [
+                { id: 'nurturer_361363', name: 'Nurturer', emoji: '🐣' },
+                { id: 'territory_forager_404120', name: 'Territory Forager', emoji: '🦖' },
+                { id: 'nest_guardian_461600', name: 'Nest Guardian', emoji: '🦕' },
+                { id: 'raider_499497', name: 'Raider', emoji: '🦎' }
+            ];
+            
+            const playerInventoryItems = [];
+            
+            for (const item of itemTypes) {
+                const randomQuantity = Math.floor(Math.random() * 9); // 0-8 items
+                
+                if (randomQuantity > 0) {
+                    // For raiders, numAttacksAvailable equals quantity (consumable attack item)
+                    // For others, numAttacksAvailable is 0 (non-consumable or defense items)
+                    const numAttacksAvailable = item.id === 'raider_499497' ? randomQuantity : 0;
+                    
+                    playerData[guildId].players[userId].safari.inventory[item.id] = {
+                        quantity: randomQuantity,
+                        numAttacksAvailable: numAttacksAvailable
+                    };
+                    
+                    playerInventoryItems.push(`${randomQuantity}x ${item.name}`);
+                    console.log(`🎲 DEBUG: Added ${randomQuantity}x ${item.name} to ${userId} (attacks: ${numAttacksAvailable})`);
+                }
+            }
             
             // Get Discord user information (display name, username, and guild member info)
             let displayName = `Player ${userId.slice(-4)}`;
@@ -3017,8 +3041,9 @@ async function restockPlayers(guildId, client) {
                 console.log(`⚠️ DEBUG: Could not fetch Discord info for ${userId}, using fallback name`);
             }
             
-            // Format: * DisplayName (@username) - 100 Eggs, 1x Nurturer  
-            playerDetails.push(`* ${formattedName} - ${restockAmount} ${customTerms.currencyName}, 1x Nurturer`);
+            // Format: * DisplayName (@username) - 100 Eggs, [randomized items]
+            const itemsDisplay = playerInventoryItems.length > 0 ? playerInventoryItems.join(', ') : 'No items';
+            playerDetails.push(`* ${formattedName} - ${restockAmount} ${customTerms.currencyName}, ${itemsDisplay}`);
             
             playersRestocked++;
             console.log(`🪣 DEBUG: Restocked player ${userId}: ${oldCurrency} → ${restockAmount}`);
