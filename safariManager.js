@@ -2944,7 +2944,7 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
         const item = safariData[guildId]?.items?.[itemId];
         if (!item) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: '❌ Item not found.',
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -2958,7 +2958,7 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
         
         if (!itemData) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: '❌ You do not own this item.',
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -2977,7 +2977,7 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
         // Check if player has any attacks available
         if (numAttacksAvailable <= 0) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: '❌ You have no attacks available for this item. Attacks will be available again after the next round results.',
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -2991,7 +2991,7 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
         
         if (targetPlayers.length === 0) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: '❌ No eligible players to attack.',
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -3170,7 +3170,7 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
         };
         
         return {
-            type: InteractionResponseType.UPDATE_MESSAGE,
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
                 flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // Components V2 + Ephemeral
                 components: [container]
@@ -3180,7 +3180,7 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
     } catch (error) {
         console.error('Error creating/updating attack UI:', error);
         return {
-            type: InteractionResponseType.UPDATE_MESSAGE,
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
                 content: '❌ Error creating attack interface.',
                 flags: InteractionResponseFlags.EPHEMERAL
@@ -3229,7 +3229,7 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         
         if (!targetId || quantity === 0) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: '⚠️ Please select both a target and quantity before scheduling.',
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -3244,7 +3244,7 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         const item = safariData[guildId]?.items?.[itemId];
         if (!item) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: '❌ Item not found.',
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -3256,7 +3256,7 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         const attackerInventory = playerData[guildId]?.players?.[attackerId]?.safari?.inventory;
         if (!attackerInventory || !attackerInventory[itemId]) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: '❌ You do not have this item in your inventory.',
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -3271,7 +3271,7 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         
         if (numAttacksAvailable < quantity) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: `❌ Not enough attacks available. You have ${numAttacksAvailable} attacks available but requested ${quantity}.`,
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -3310,7 +3310,7 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         const success = await addAttackToQueue(guildId, attackRecord);
         if (!success) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: '❌ Failed to schedule attack. Please try again.',
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -3324,7 +3324,7 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         
         if (!freshInventoryItem) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: '❌ Item no longer in inventory.',
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -3335,7 +3335,7 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         // Final validation with fresh data
         if (freshInventoryItem.numAttacksAvailable < quantity) {
             return {
-                type: InteractionResponseType.UPDATE_MESSAGE,
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
                     content: `❌ Not enough attacks available. You have ${freshInventoryItem.numAttacksAvailable} attacks available.`,
                     flags: InteractionResponseFlags.EPHEMERAL
@@ -3354,10 +3354,9 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         
         // Create response object
         const response = {
-            type: InteractionResponseType.UPDATE_MESSAGE,
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
                 content: `✅ **Attack Scheduled!** ${quantity} ${item.name}${quantity > 1 ? 's' : ''} will attack the selected player when round results are announced.\n\nUse the "My Nest" button to view your updated inventory.`,
-                components: [],
                 flags: InteractionResponseFlags.EPHEMERAL
             }
         };
@@ -3370,7 +3369,7 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
     } catch (error) {
         console.error('Error scheduling attack:', error);
         return {
-            type: InteractionResponseType.UPDATE_MESSAGE,
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
                 content: '❌ Error scheduling attack.',
                 flags: InteractionResponseFlags.EPHEMERAL

@@ -5822,7 +5822,16 @@ Your server is now ready for Tycoons gameplay!`;
         const { scheduleAttack } = await import('./safariManager.js');
         const response = await scheduleAttack(guildId, attackerId, itemId, req.body, client);
         
-        return res.send(response);
+        console.log(`📤 DEBUG: About to send response via Express:`, JSON.stringify(response, null, 2));
+        
+        try {
+          const result = res.send(response);
+          console.log(`✅ DEBUG: Express res.send() completed successfully`);
+          return result;
+        } catch (sendError) {
+          console.error(`❌ DEBUG: Error in res.send():`, sendError);
+          throw sendError;
+        }
         
       } catch (error) {
         console.error('Error in safari_schedule_attack handler:', error);
