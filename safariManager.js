@@ -2947,6 +2947,9 @@ async function restockPlayers(guildId) {
         const restockAmount = 100;
         const playerDetails = [];
         
+        // Get custom terms for currency display
+        const customTerms = await getCustomTerms(guildId);
+        
         for (const userId of safariPlayers) {
             // Ensure player safari data exists
             if (!playerData[guildId]) {
@@ -2966,21 +2969,41 @@ async function restockPlayers(guildId) {
             const oldCurrency = playerData[guildId].players[userId].safari.currency || 0;
             playerData[guildId].players[userId].safari.currency = restockAmount;
             
-            // Get player name for display (simplified version)
-            let playerName = `Player ${userId.slice(-4)}`;
+            // Get Discord user information (display name, username, and guild member info)
+            let displayName = `Player ${userId.slice(-4)}`;
+            let username = 'unknown';
+            let formattedName = displayName;
+            
             try {
-                // Try to get actual username if client is available
+                // Try to get Discord user and guild member data
                 if (global.client) {
-                    const user = await global.client.users.fetch(userId).catch(() => null);
-                    if (user) {
-                        playerName = user.displayName || user.username || playerName;
+                    const guild = await global.client.guilds.fetch(guildId).catch(() => null);
+                    if (guild) {
+                        const member = await guild.members.fetch(userId).catch(() => null);
+                        if (member) {
+                            // Use guild-specific display name (nickname or global name)
+                            displayName = member.displayName || member.user.displayName || member.user.username;
+                            username = member.user.username;
+                            formattedName = `${displayName} (@${username})`;
+                            console.log(`👤 DEBUG: Found Discord user for ${userId}: ${formattedName}`);
+                        } else {
+                            // Fallback to basic user fetch
+                            const user = await global.client.users.fetch(userId).catch(() => null);
+                            if (user) {
+                                displayName = user.displayName || user.username;
+                                username = user.username;
+                                formattedName = `${displayName} (@${username})`;
+                                console.log(`👤 DEBUG: Found Discord user (no guild member) for ${userId}: ${formattedName}`);
+                            }
+                        }
                     }
                 }
             } catch (error) {
-                // Use fallback name
+                console.log(`⚠️ DEBUG: Could not fetch Discord info for ${userId}, using fallback name`);
             }
             
-            playerDetails.push(`• ${playerName}, ${restockAmount}`);
+            // Format: * DisplayName (@username) - 100 Eggs, {future item space}
+            playerDetails.push(`* ${formattedName} - ${restockAmount} ${customTerms.currencyName}`);
             
             playersRestocked++;
             console.log(`🪣 DEBUG: Restocked player ${userId}: ${oldCurrency} → ${restockAmount}`);
@@ -2990,9 +3013,6 @@ async function restockPlayers(guildId) {
         await savePlayerData(playerData);
         
         console.log(`✅ DEBUG: Successfully restocked ${playersRestocked} players to ${restockAmount} currency`);
-        
-        // Get custom terms for display
-        const customTerms = await getCustomTerms(guildId);
         
         return {
             type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
@@ -3004,7 +3024,7 @@ async function restockPlayers(guildId) {
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `# 🪣 Players Restocked\n\n**${playersRestocked} safari players** have been restocked to **${restockAmount} ${customTerms.currencyName}**:\n\n${playerDetails.join('\\n')}\n\n✅ All players are ready for the next round!`
+                            content: `# 🪣 Players Restocked\n\n**${playersRestocked} safari players** have been restocked to **${restockAmount} ${customTerms.currencyName}**:\n\n${playerDetails.join('\n')}\n\n✅ All players are ready for the next round!`
                         }
                     ]
                 }]
