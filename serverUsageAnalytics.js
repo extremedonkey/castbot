@@ -636,11 +636,12 @@ function formatServerUsageForDiscordV2(summary) {
       // Add last activity if available
       if (server.lastActivityEntry) {
         const lastEntry = server.lastActivityEntry;
-        // Extract timestamp from the raw log line (keeps original format)
-        const timestampMatch = lastEntry.rawLine.match(/^(\[[^\]]+\])/);
+        // Extract full timestamp including date from the raw log line
+        // Format: [4:04PM] Sun 29 Jun 25 | Connor (.connah) in EpochORG...
+        const timestampMatch = lastEntry.rawLine.match(/^(\[[^\]]+\] \w{3} \d{1,2} \w{3} \d{2})/);
         const timestamp = timestampMatch ? timestampMatch[1] : '[Unknown]';
         
-        // Format: └ Last Activity: [2:55AM] Sun 29 Jun 25 | Username
+        // Format: └ Last Activity: [4:04PM] Sun 29 Jun 25 | Username
         fullContent += `   └ Last Activity: ${timestamp} | ${lastEntry.user.displayName || lastEntry.user.username}\n`;
       }
       
