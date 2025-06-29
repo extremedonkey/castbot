@@ -1714,18 +1714,16 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                 const hasAttack = item.attackValue !== null && item.attackValue !== undefined;
                 
                 if (hasAttack) {
-                    // Calculate attacks planned for this item
-                    const attacksPlanned = await calculateAttacksPlanned(guildId, userId, itemId);
+                    // Calculate attacks planned using simple math: total - available
+                    const attacksPlanned = quantity - numAttacksAvailable;
                     
                     // Generate item content with attack info
                     let attackItemContent = generateItemContent(item, customTerms, quantity);
                     
                     // Add attack availability info
+                    attackItemContent += `\n> ⚔️ **Attacks Available:** ${numAttacksAvailable}`;
                     if (attacksPlanned > 0) {
-                        attackItemContent += `\n> \`Attacks Available: ${numAttacksAvailable}\``;
                         attackItemContent += `\n> 🎯 **Attacks Planned:** ${attacksPlanned}`;
-                    } else {
-                        attackItemContent += `\n> \`Attacks Available: ${numAttacksAvailable}\``;
                     }
                     
                     // Create Section component with attack button
@@ -2960,8 +2958,14 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
             };
         }
         
-        // Get attacks planned
-        const attacksPlanned = await calculateAttacksPlanned(guildId, attackerId, itemId);
+        // Calculate attacks planned using simple math
+        let totalQuantity;
+        if (typeof itemData === 'number') {
+            totalQuantity = itemData;
+        } else {
+            totalQuantity = itemData.quantity || 0;
+        }
+        const attacksPlanned = totalQuantity - numAttacksAvailable;
         
         // Get target name if targetId provided
         let targetName = '*Select a player above*';
@@ -2980,26 +2984,8 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
         // Calculate damage
         const totalDamage = selectedQuantity * (item.attackValue || 0);
         
-        // Get planned attacks for display
-        const plannedAttacks = await getPlannedAttacks(guildId, attackerId, itemId);
+        // Simplified - we'll show attacks planned in the info section based on simple math
         let attacksPlannedText = '';
-        
-        if (plannedAttacks.length > 0) {
-            attacksPlannedText = '\n\n**Attacks Planned**\n';
-            for (const attack of plannedAttacks) {
-                // Get target name for each planned attack
-                let plannedTargetName = `Player ${attack.defendingPlayer.slice(-4)}`;
-                try {
-                    const guild = client?.guilds?.cache?.get(guildId);
-                    const plannedTarget = await guild?.members?.fetch(attack.defendingPlayer);
-                    plannedTargetName = plannedTarget?.displayName || plannedTarget?.user?.username || plannedTargetName;
-                } catch (e) {
-                    // Use fallback
-                }
-                
-                attacksPlannedText += `• **${attack.attackingPlayerName || 'You'}** will attack **${plannedTargetName}** with ${attack.attacksPlanned}x ${attack.itemName} (${attack.attackValue} dmg), totaling ${attack.totalDamage} damage during round ${attack.round}\n`;
-            }
-        }
         
         const components = [];
         
@@ -3063,20 +3049,17 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
         // String select for attack quantity
         const attackOptions = [];
         
-        // Calculate actual available attacks (total available minus already planned)
-        const actualAvailable = numAttacksAvailable - attacksPlanned;
-        
-        if (actualAvailable <= 0) {
+        if (numAttacksAvailable <= 0) {
             // No attacks available
             attackOptions.push({
                 label: 'No more attacks available',
                 value: '0',
-                description: 'You have used all available attacks for this round',
+                description: 'You have used all available attacks',
                 default: true
             });
         } else {
             // Create options up to available attacks (max 25)
-            const maxOptions = Math.min(actualAvailable, 25);
+            const maxOptions = Math.min(numAttacksAvailable, 25);
             for (let i = 1; i <= maxOptions; i++) {
                 const description = i === 25 && numAttacksAvailable > 25 
                     ? 'Max 25 attacks per turn allowed' 
@@ -3100,7 +3083,7 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
                     custom_id: `safari_attack_quantity|${itemId}|${targetId || 'none'}`,
                     placeholder: selectedQuantity > 0 ? `Selected: ${selectedQuantity} attacks` : `Select number of ${item.name} attacks`,
                     options: attackOptions,
-                    disabled: actualAvailable <= 0
+                    disabled: numAttacksAvailable <= 0
                 }
             ]
         };
@@ -3115,7 +3098,7 @@ async function createOrUpdateAttackUI(guildId, attackerId, itemId, targetId = nu
                     custom_id: `safari_schedule_attack_${itemId}_${targetId || 'none'}_${selectedQuantity}`,
                     label: '⚔️ Schedule Attack',
                     style: 3, // Success (green)
-                    disabled: actualAvailable <= 0 || !targetId || selectedQuantity === 0
+                    disabled: numAttacksAvailable <= 0 || !targetId || selectedQuantity === 0
                 }
             ]
         };
@@ -3243,17 +3226,13 @@ async function scheduleAttack(guildId, attackerId, itemId, reqBody, client) {
         const inventoryItem = attackerInventory[itemId];
         const numAttacksAvailable = inventoryItem.numAttacksAvailable || 0;
         
-        // Calculate attacks already planned for this round
-        const attacksPlanned = await calculateAttacksPlanned(guildId, attackerId, itemId);
-        const actualAvailable = numAttacksAvailable - attacksPlanned;
+        console.log(`⚔️ DEBUG: Attack validation - Item: ${itemId}, Available: ${numAttacksAvailable}, Requested: ${quantity}`);
         
-        console.log(`⚔️ DEBUG: Attack validation - Item: ${itemId}, Total Available: ${numAttacksAvailable}, Already Planned: ${attacksPlanned}, Actually Available: ${actualAvailable}, Requested: ${quantity}`);
-        
-        if (actualAvailable < quantity) {
+        if (numAttacksAvailable < quantity) {
             return {
                 type: InteractionResponseType.UPDATE_MESSAGE,
                 data: {
-                    content: `❌ Not enough attacks available. You have ${actualAvailable} attacks remaining for this round (${numAttacksAvailable} total - ${attacksPlanned} already planned) but requested ${quantity}.`,
+                    content: `❌ Not enough attacks available. You have ${numAttacksAvailable} attacks available but requested ${quantity}.`,
                     flags: InteractionResponseFlags.EPHEMERAL
                 }
             };
