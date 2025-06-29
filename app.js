@@ -10500,7 +10500,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         // Extract item ID from custom_id: safari_item_qty_user_select_${guildId}_${itemId}
         const parts = custom_id.split('_');
-        const itemId = parts.slice(5).join('_'); // Everything after "safari_item_qty_user_select_guildId_"
+        // Skip: safari(0), item(1), qty(2), user(3), select(4), guildId(5), then itemId starts at index 6
+        const itemId = parts.slice(6).join('_'); // Everything after the guildId
         
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage player items.')) return;

@@ -2146,10 +2146,11 @@ async function processRoundResults(guildId, channelId, client) {
             safariConfig.currentRound = currentRound + 1;
             await saveSafariContent(safariData);
         } else {
-            // Round 3 completed - show final rankings and set to round 4 (reset state)
+            // Round 3 completed - show detailed results with final rankings and set to round 4 (reset state)
             safariConfig.currentRound = 4;
             await saveSafariContent(safariData);
-            return await createFinalRankings(guildId, playerResults, eventType, eventName, eventEmoji);
+            // Show detailed Round 3 results PLUS final rankings
+            return await createFinalRoundResults(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults, consumptionResults);
         }
         
         return output;
@@ -2628,6 +2629,207 @@ async function createFinalRankings(guildId, playerResults, eventType, eventName,
             type: 4,
             data: {
                 content: '❌ Error displaying final rankings.',
+                flags: 64 // EPHEMERAL
+            }
+        };
+    }
+}
+
+/**
+ * Create final round (Round 3) results with detailed earnings AND final rankings
+ */
+async function createFinalRoundResults(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults = [], consumptionResults = []) {
+    try {
+        // First, generate the standard round results content (same as Round 1 & 2)
+        const totalParticipants = playerResults.length;
+        const totalEarnings = playerResults.reduce((sum, p) => sum + p.earnings, 0);
+        
+        // Sort players by earnings (highest first)
+        const sortedResults = [...playerResults].sort((a, b) => b.earnings - a.earnings);
+        
+        // Build player summary (limit to 10 for summary format)
+        let playerSummary = '';
+        const displayResults = sortedResults.slice(0, 10);
+        
+        for (const result of displayResults) {
+            const currencyEmoji = customTerms.currencyEmoji || '🪙';
+            const sign = result.earnings >= 0 ? '+' : '';
+            playerSummary += `• **${result.playerName}**: ${sign}${result.earnings} ${currencyEmoji}\n`;
+            
+            // Add item details (max 2 lines per player)
+            if (result.itemDetails.length > 0) {
+                playerSummary += `  └ ${result.itemDetails.slice(0, 2).join(', ')}\n`;
+            }
+            
+            // Add defense details if any
+            if (result.defenseDetails.length > 0) {
+                playerSummary += `  └ ${result.defenseDetails.slice(0, 1).join(', ')}\n`;
+            }
+        }
+        
+        if (playerResults.length > 10) {
+            playerSummary += `*... and ${playerResults.length - 10} more players*\n`;
+        }
+
+        // Build attack results summary (same as regular rounds)
+        let attackSummary = '';
+        if (attackResults && attackResults.length > 0) {
+            attackSummary = '\n\n**⚔️ Attack Results:**\n';
+            
+            // Group attacks by defender for cleaner display
+            const attacksByDefender = {};
+            for (const attack of attackResults) {
+                if (!attacksByDefender[attack.defenderName]) {
+                    attacksByDefender[attack.defenderName] = {
+                        totalDamage: 0,
+                        attackCount: 0,
+                        attacks: []
+                    };
+                }
+                attacksByDefender[attack.defenderName].totalDamage += attack.damageDealt;
+                attacksByDefender[attack.defenderName].attackCount += 1;
+                attacksByDefender[attack.defenderName].attacks.push(attack);
+            }
+            
+            // Display attack summary (limit to 5 defenders for brevity)
+            const defenderNames = Object.keys(attacksByDefender).slice(0, 5);
+            for (const defenderName of defenderNames) {
+                const defenderStats = attacksByDefender[defenderName];
+                attackSummary += `• **${defenderName}**: -${defenderStats.totalDamage} ${customTerms.currencyEmoji || '🪙'} (${defenderStats.attackCount} attacks)\n`;
+            }
+            
+            if (Object.keys(attacksByDefender).length > 5) {
+                attackSummary += `*... and ${Object.keys(attacksByDefender).length - 5} more defenders*\n`;
+            }
+        }
+
+        // Build item consumption summary (same as regular rounds)
+        let consumptionSummary = '';
+        if (consumptionResults && consumptionResults.length > 0) {
+            consumptionSummary = '\n\n**🔄 Items Consumed:**\n';
+            
+            // Group by player for cleaner display
+            const consumptionByPlayer = {};
+            for (const consumption of consumptionResults) {
+                if (!consumptionByPlayer[consumption.playerName]) {
+                    consumptionByPlayer[consumption.playerName] = [];
+                }
+                consumptionByPlayer[consumption.playerName].push(consumption);
+            }
+            
+            // Display consumption summary (limit to 5 players)
+            const playerNames = Object.keys(consumptionByPlayer).slice(0, 5);
+            for (const playerName of playerNames) {
+                const consumptions = consumptionByPlayer[playerName];
+                const itemList = consumptions.map(c => `${c.itemName} x${c.quantityConsumed}`).join(', ');
+                consumptionSummary += `• **${playerName}**: ${itemList}\n`;
+            }
+            
+            if (Object.keys(consumptionByPlayer).length > 5) {
+                consumptionSummary += `*... and ${Object.keys(consumptionByPlayer).length - 5} more players*\n`;
+            }
+        }
+
+        // Now get final rankings
+        const playerData = await loadPlayerData();
+        const players = playerData[guildId]?.players || {};
+        
+        const finalStandings = [];
+        for (const [userId, data] of Object.entries(players)) {
+            const safari = data.safari || {};
+            const currency = safari.currency || 0;
+            if (currency > 0 || Object.keys(safari.inventory || {}).length > 0) {
+                let playerName = `Player ${userId.slice(-4)}`;
+                try {
+                    // Try to get name from results first, then fallback
+                    const resultPlayer = playerResults.find(p => p.userId === userId);
+                    if (resultPlayer) {
+                        playerName = resultPlayer.playerName;
+                    }
+                } catch (e) {
+                    playerName = data.globalName || data.displayName || data.username || playerName;
+                }
+                
+                finalStandings.push({
+                    userId,
+                    playerName,
+                    currency
+                });
+            }
+        }
+        
+        // Sort by currency (highest first)
+        finalStandings.sort((a, b) => b.currency - a.currency);
+        
+        // Build final rankings display
+        let rankingsDisplay = '';
+        for (let i = 0; i < Math.min(finalStandings.length, 15); i++) {
+            const player = finalStandings[i];
+            const trophy = i === 0 ? '🏆 ' : ''; // Trophy for winner
+            rankingsDisplay += `${trophy}**${player.playerName}**: ${player.currency} ${customTerms.currencyEmoji || '🪙'}\n`;
+        }
+        
+        if (finalStandings.length > 15) {
+            rankingsDisplay += `*... and ${finalStandings.length - 15} more players*\n`;
+        }
+
+        // Build the complete Round 3 results display
+        const roundResultsContent = `# Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n**${totalParticipants} players participated** | **Total earnings: ${totalEarnings >= 0 ? '+' : ''}${totalEarnings} ${customTerms.currencyEmoji || '🪙'}**\n\n**Player Results:**\n${playerSummary}${attackSummary}${consumptionSummary}`;
+
+        return {
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [
+                    {
+                        type: 17, // Container
+                        accent_color: 0x3498db, // Blue for round results
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: roundResultsContent
+                            }
+                        ]
+                    },
+                    {
+                        type: 17, // Container
+                        accent_color: 0xf1c40f, // Gold for final rankings
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: `# 🏆 Final Rankings\n\n${rankingsDisplay}\n*Round 3 completed! Game reset available on next click.*`
+                            },
+                            {
+                                type: 1, // Action Row
+                                components: [
+                                    {
+                                        type: 2, // Button
+                                        custom_id: 'safari_player_inventory',
+                                        label: 'View My Inventory',
+                                        style: 2, // Secondary
+                                        emoji: { name: '🎒' }
+                                    },
+                                    {
+                                        type: 2, // Button
+                                        custom_id: 'safari_round_results',
+                                        label: 'Click for Game Reset',
+                                        style: 4, // Danger
+                                        emoji: { name: '🔄' }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        };
+        
+    } catch (error) {
+        console.error('Error creating final round results:', error);
+        return {
+            type: 4,
+            data: {
+                content: '❌ Error displaying final round results.',
                 flags: 64 // EPHEMERAL
             }
         };
@@ -3992,6 +4194,7 @@ export {
     processRoundResults,
     createRoundResultsOutput,
     createFinalRankings,
+    createFinalRoundResults,
     resetGameData,
     // Shared Display Functions
     generateItemContent,
