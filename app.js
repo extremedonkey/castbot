@@ -5633,11 +5633,18 @@ Your server is now ready for Tycoons gameplay!`;
         const member = req.body.member;
         const guildId = req.body.guild_id;
         const channelId = req.body.channel_id;
+        const token = req.body.token;
+        const applicationId = req.body.application_id || process.env.APP_ID;
         
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to process round results.')) return;
         
         console.log(`🎨 DEBUG: Processing V2 round results for guild ${guildId} in channel ${channelId}`);
+        
+        // Defer response immediately to prevent 3-second timeout with many players
+        await res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+        });
         
         // Import Safari manager functions - we need both the backend logic and V2 display
         const { processRoundResults } = await import('./safariManager.js');
@@ -5645,18 +5652,52 @@ Your server is now ready for Tycoons gameplay!`;
         // Process round results using the same backend logic
         const roundData = await processRoundResults(guildId, channelId, client, true); // Pass flag for V2 mode
         
-        // The V2 version should return the V2 display instead of the classic display
-        return res.send(roundData);
+        // Send the V2 display via webhook endpoint since we deferred the response
+        const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
+        
+        const webhookPayload = {
+          flags: roundData.data.flags,
+          components: roundData.data.components
+        };
+        
+        console.log(`🎨 DEBUG: Sending V2 display via webhook with ${roundData.data.components?.length || 0} components`);
+        
+        const webhookResponse = await fetch(webhookUrl, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(webhookPayload)
+        });
+        
+        if (!webhookResponse.ok) {
+          console.error('❌ DEBUG: Webhook failed:', await webhookResponse.text());
+        } else {
+          console.log('✅ DEBUG: V2 results sent successfully via webhook');
+        }
         
       } catch (error) {
         console.error('Error in safari_round_results_v2:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error processing V2 round results. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+        
+        // If we already deferred, send error via webhook
+        try {
+          const token = req.body.token;
+          const applicationId = req.body.application_id || process.env.APP_ID;
+          const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
+          
+          await fetch(webhookUrl, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              content: '❌ Error processing V2 round results. Please try again.',
+              flags: 64 // EPHEMERAL
+            })
+          });
+        } catch (webhookError) {
+          console.error('Error sending webhook error message:', webhookError);
+        }
       }
     } else if (custom_id === 'safari_confirm_reset_game') {
       // Handle game reset confirmation
