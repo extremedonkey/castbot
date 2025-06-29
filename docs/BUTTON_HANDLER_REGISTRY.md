@@ -50,8 +50,9 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_store_items_select` | Store Selection for Items | app.js:~6009 | Select handler | ✅ Active |
 | `safari_store_add_item_*` | ➕ Add Item to Store | app.js:~6197 | Pattern handler (::delimiter) | ✅ Active |
 | `safari_store_remove_item_*` | 🗑️ Remove Item from Store | app.js:~6288 | Pattern handler (::delimiter) | ✅ Active |
-| `safari_store_open_*` | 🏪 Open Store (Post to Channel) | app.js:~6364 | Pattern handler | ✅ Active |
-| `safari_store_delete_*` | 🗑️ Delete Store | app.js:~7183 | Pattern handler | ✅ Active |
+| `safari_store_edit_*` | ✏️ Edit Store Details | app.js:~7126 | Pattern handler | ✅ Active |
+| `safari_store_open_*` | 🏪 Open Store (Post to Channel) | app.js:~7217 | Pattern handler | ✅ Active |
+| `safari_store_delete_*` | 🗑️ Delete Store | app.js:~7420 | Pattern handler | ✅ Active |
 | `safari_confirm_delete_store_*` | ⚠️ Confirm Delete Store | app.js:~7268 | Pattern handler | ✅ Active |
 | `safari_store_post_channel_*` | Channel Selection for Store Posting | app.js:~7350 | Select handler | ✅ Active |
 | `safari_store_browse_*` | 🏪 Browse Store (Player Interface) | app.js:~2437 | Pattern handler | ✅ Active |
@@ -117,8 +118,9 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_action_modal_*` | Add Action Modals | app.js:~9229 | Pattern handler | ✅ Active |
 | `safari_edit_action_modal_*` | Edit Individual Action Modal | app.js:~9000+ | Pattern handler | ✅ Active |
 | `safari_currency_modal_*` | Set Currency Modal | app.js:~9631 | Pattern handler | ✅ Active |
-| `safari_store_modal` | Create New Store | app.js:~9747 | Modal handler | ✅ Active |
-| `safari_item_modal` | Create New Item | app.js:~9812 | Modal handler | ✅ Active |
+| `safari_store_modal` | Create New Store | app.js:~13467 | Modal handler | ✅ Active |
+| `safari_store_edit_modal_*` | Edit Store Details | app.js:~13524 | Pattern modal handler | ✅ Active |
+| `safari_item_modal` | Create New Item | app.js:~13609 | Modal handler | ✅ Active |
 | `safari_customize_terms_modal` | Customize Currency Terms | app.js:~12867 | Modal handler | ❌ Deprecated (Components V2) |
 | `safari_config_modal_*` | Field Group Modals | app.js:~13014 | Pattern handler | ✅ Active |
 | `safari_export_modal` | Export Safari Data | app.js:~13277 | Modal handler | ✅ Active |

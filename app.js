@@ -6909,6 +6909,13 @@ Your server is now ready for Tycoons gameplay!`;
               },
               {
                 type: 2, // Button
+                custom_id: `safari_store_edit_${selectedStoreId}`,
+                label: 'Edit Store',
+                style: 2, // Secondary/Grey style
+                emoji: { name: '✏️' }
+              },
+              {
+                type: 2, // Button
                 custom_id: `safari_store_open_${selectedStoreId}`,
                 label: 'Open Store',
                 style: 1,
@@ -7112,6 +7119,97 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error removing item from store.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_store_edit_')) {
+      // Edit Store - show modal with pre-populated store details
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit stores.')) return;
+        
+        // Parse storeId from custom_id
+        const storeId = custom_id.replace('safari_store_edit_', '');
+        console.log(`✏️ DEBUG: Editing store ${storeId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const store = safariData[guildId]?.stores?.[storeId];
+        
+        if (!store) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Store not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create edit store modal with pre-populated values (reusing creation modal structure)
+        const modal = new ModalBuilder()
+          .setCustomId(`safari_store_edit_modal_${storeId}`)
+          .setTitle('Edit Store Details');
+        
+        const storeNameInput = new TextInputBuilder()
+          .setCustomId('store_name')
+          .setLabel('Store Name')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+          .setMaxLength(50)
+          .setValue(store.name || '')
+          .setPlaceholder('e.g. Adventure Supplies');
+        
+        const storeEmojiInput = new TextInputBuilder()
+          .setCustomId('store_emoji')
+          .setLabel('Store Emoji')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(10)
+          .setValue(store.emoji || '')
+          .setPlaceholder('🏪');
+        
+        const storeDescriptionInput = new TextInputBuilder()
+          .setCustomId('store_description')
+          .setLabel('Store Description')
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(false)
+          .setMaxLength(500)
+          .setValue(store.description || '')
+          .setPlaceholder('A description of your store...');
+        
+        const storeownerTextInput = new TextInputBuilder()
+          .setCustomId('storeowner_text')
+          .setLabel('Store Owner Greeting')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(200)
+          .setValue(store.settings?.storeownerText || '')
+          .setPlaceholder('Welcome to my store!');
+        
+        const row1 = new ActionRowBuilder().addComponents(storeNameInput);
+        const row2 = new ActionRowBuilder().addComponents(storeEmojiInput);
+        const row3 = new ActionRowBuilder().addComponents(storeDescriptionInput);
+        const row4 = new ActionRowBuilder().addComponents(storeownerTextInput);
+        
+        modal.addComponents(row1, row2, row3, row4);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_store_edit:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error opening store edit interface.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -13419,6 +13517,91 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error creating store. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_store_edit_modal_')) {
+      // Handle Safari store edit modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit stores.')) return;
+        
+        // Parse storeId from custom_id
+        const storeId = custom_id.replace('safari_store_edit_modal_', '');
+        console.log(`✏️ DEBUG: Processing store edit for ${storeId}`);
+        
+        // Extract form data (same structure as creation modal)
+        const storeName = components[0].components[0].value?.trim();
+        const storeEmoji = components[1].components[0].value?.trim() || null;
+        const storeDescription = components[2].components[0].value?.trim() || null;
+        const storeownerText = components[3].components[0].value?.trim() || null;
+        
+        // Validate required fields
+        if (!storeName) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Store name is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Import Safari manager functions
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        
+        // Check if store exists
+        if (!safariData[guildId]?.stores?.[storeId]) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Store not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update store data while preserving existing metadata
+        const existingStore = safariData[guildId].stores[storeId];
+        safariData[guildId].stores[storeId] = {
+          ...existingStore,
+          name: storeName,
+          emoji: storeEmoji,
+          description: storeDescription,
+          settings: {
+            ...existingStore.settings,
+            storeownerText: storeownerText
+          },
+          metadata: {
+            ...existingStore.metadata,
+            lastModified: Date.now()
+          }
+        };
+        
+        // Save updated data
+        await saveSafariContent(safariData);
+        
+        console.log(`✅ DEBUG: Store ${storeId} updated successfully`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Store Updated Successfully!**\n\n**${storeEmoji ? storeEmoji + ' ' : ''}${storeName}**\n${storeDescription ? storeDescription : ''}\n\nStore details have been updated.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error updating store:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating store. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
