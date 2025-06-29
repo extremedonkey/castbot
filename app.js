@@ -5746,7 +5746,7 @@ Your server is now ready for Tycoons gameplay!`;
         const { restockPlayers } = await import('./safariManager.js');
         
         // Restock players and get the result response
-        const result = await restockPlayers(guildId);
+        const result = await restockPlayers(guildId, client);
         
         // Log the action
         await logInteraction(req.body, 'safari_restock_players', { guildId });

@@ -2902,9 +2902,10 @@ async function createFinalRoundResults(guildId, currentRound, eventType, eventNa
 /**
  * Restock all eligible players with 100 currency
  * @param {string} guildId - Discord guild ID
+ * @param {Object} client - Discord client for user name lookups
  * @returns {Object} Discord interaction response
  */
-async function restockPlayers(guildId) {
+async function restockPlayers(guildId, client) {
     try {
         console.log(`🪣 DEBUG: Starting player restock for guild ${guildId}`);
         
@@ -2969,6 +2970,15 @@ async function restockPlayers(guildId) {
             const oldCurrency = playerData[guildId].players[userId].safari.currency || 0;
             playerData[guildId].players[userId].safari.currency = restockAmount;
             
+            // Add 1x Nurturer item to inventory
+            if (!playerData[guildId].players[userId].safari.inventory) {
+                playerData[guildId].players[userId].safari.inventory = {};
+            }
+            playerData[guildId].players[userId].safari.inventory['nurturer_361363'] = {
+                quantity: 1,
+                numAttacksAvailable: 0
+            };
+            
             // Get Discord user information (display name, username, and guild member info)
             let displayName = `Player ${userId.slice(-4)}`;
             let username = 'unknown';
@@ -2976,8 +2986,8 @@ async function restockPlayers(guildId) {
             
             try {
                 // Try to get Discord user and guild member data
-                if (global.client) {
-                    const guild = await global.client.guilds.fetch(guildId).catch(() => null);
+                if (client) {
+                    const guild = await client.guilds.fetch(guildId).catch(() => null);
                     if (guild) {
                         const member = await guild.members.fetch(userId).catch(() => null);
                         if (member) {
@@ -2988,7 +2998,7 @@ async function restockPlayers(guildId) {
                             console.log(`👤 DEBUG: Found Discord user for ${userId}: ${formattedName}`);
                         } else {
                             // Fallback to basic user fetch
-                            const user = await global.client.users.fetch(userId).catch(() => null);
+                            const user = await client.users.fetch(userId).catch(() => null);
                             if (user) {
                                 displayName = user.displayName || user.username;
                                 username = user.username;
@@ -3002,8 +3012,8 @@ async function restockPlayers(guildId) {
                 console.log(`⚠️ DEBUG: Could not fetch Discord info for ${userId}, using fallback name`);
             }
             
-            // Format: * DisplayName (@username) - 100 Eggs, {future item space}
-            playerDetails.push(`* ${formattedName} - ${restockAmount} ${customTerms.currencyName}`);
+            // Format: * DisplayName (@username) - 100 Eggs, 1x Nurturer  
+            playerDetails.push(`* ${formattedName} - ${restockAmount} ${customTerms.currencyName}, 1x Nurturer`);
             
             playersRestocked++;
             console.log(`🪣 DEBUG: Restocked player ${userId}: ${oldCurrency} → ${restockAmount}`);
