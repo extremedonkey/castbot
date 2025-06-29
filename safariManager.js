@@ -2986,8 +2986,13 @@ async function restockPlayers(guildId, client) {
             
             try {
                 // Try to get Discord user and guild member data
+                console.log(`🔍 DEBUG: Attempting Discord lookup for ${userId}, client available: ${!!client}`);
                 if (client) {
-                    const guild = await client.guilds.fetch(guildId).catch(() => null);
+                    const guild = await client.guilds.fetch(guildId).catch((err) => {
+                        console.log(`⚠️ DEBUG: Guild fetch failed for ${guildId}:`, err.message);
+                        return null;
+                    });
+                    console.log(`🏰 DEBUG: Guild fetch result for ${guildId}: ${!!guild}`);
                     if (guild) {
                         const member = await guild.members.fetch(userId).catch(() => null);
                         if (member) {
