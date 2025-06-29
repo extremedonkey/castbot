@@ -4417,19 +4417,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
                             components: [
                                 {
                                     type: 10, // Text Display
-                                    content: `# ⚠️ Too Many Players for V2 Display\n\n**Player Count:** ${eligiblePlayers.length}\n**Components Needed:** ${componentCount}\n**Discord Limit:** 40\n\nV2 display supports up to ~35 players. Use "Classic Results View" for larger groups.`
-                                },
-                                {
-                                    type: 1, // Action Row
-                                    components: [
-                                        {
-                                            type: 2, // Button
-                                            custom_id: 'safari_round_results',
-                                            label: 'Classic Results View',
-                                            style: 2, // Secondary
-                                            emoji: { name: '📋' }
-                                        }
-                                    ]
+                                    content: `# ⚠️ Too Many Players for V2 Display\n\n**Player Count:** ${eligiblePlayers.length}\n**Components Needed:** ${componentCount}\n**Discord Limit:** 40\n\nV2 display supports up to ~35 players. Please contact an admin to process round results.`
                                 }
                             ]
                         }
@@ -4452,26 +4440,6 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
                             label: 'View My Inventory',
                             style: 2, // Secondary
                             emoji: { name: '🎒' }
-                        },
-                        {
-                            type: 2, // Button
-                            custom_id: 'safari_round_results',
-                            label: 'Classic Results View',
-                            style: 2, // Secondary
-                            emoji: { name: '📋' }
-                        },
-                        currentRound === 3 ? {
-                            type: 2, // Button
-                            custom_id: 'safari_round_results',
-                            label: 'Reset Game',
-                            style: 4, // Danger
-                            emoji: { name: '🔄' }
-                        } : {
-                            type: 2, // Button
-                            custom_id: 'safari_round_results_v2',
-                            label: `Start Round ${currentRound + 1}`,
-                            style: 3, // Success
-                            emoji: { name: '▶️' }
                         }
                     ]
                 }
