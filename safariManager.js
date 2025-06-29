@@ -4424,51 +4424,40 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
         const componentCount = allComponents.length;
         console.log(`🔢 DEBUG: Total components before buttons: ${componentCount}`);
         
-        if (componentCount > 38) { // Leave room for button container
-            console.log(`⚠️ WARNING: Component count ${componentCount} approaching Discord limit of 40`);
-            console.log(`🔄 DEBUG: Too many players for V2 display, showing component limit message`);
-            // Show error message with option to use classic display
-            return {
-                type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
-                data: {
-                    flags: (1 << 15), // IS_COMPONENTS_V2
-                    components: [
-                        {
-                            type: 17, // Container
-                            accent_color: 0xe74c3c, // Red
-                            components: [
-                                {
-                                    type: 10, // Text Display
-                                    content: `# ⚠️ Too Many Players for V2 Display\n\n**Player Count:** ${eligiblePlayers.length}\n**Components Needed:** ${componentCount}\n**Discord Limit:** 40\n\nV2 display supports up to ~35 players. Please contact an admin to process round results.`
-                                }
-                            ]
-                        }
-                    ]
-                }
-            };
+        // Check if we can add the inventory button (need to stay under 40 total components)
+        const canAddButton = componentCount < 39; // Leave room for button container (1 more component)
+        
+        if (componentCount > 39) { // No room for any buttons
+            console.log(`⚠️ WARNING: Component count ${componentCount} at Discord limit of 40`);
+            console.log(`🔄 DEBUG: Too many players for V2 display with buttons, showing without buttons`);
         }
         
-        // Add navigation buttons
-        const buttonContainer = {
-            type: 17, // Container
-            accent_color: 0x3498db, // Blue
-            components: [
-                {
-                    type: 1, // Action Row
-                    components: [
-                        {
-                            type: 2, // Button
-                            custom_id: 'safari_player_inventory',
-                            label: 'View My Inventory',
-                            style: 2, // Secondary
-                            emoji: { name: '🎒' }
-                        }
-                    ]
-                }
-            ]
-        };
-        
-        allComponents.push(buttonContainer);
+        // Add navigation buttons only if we have room
+        if (canAddButton) {
+            console.log(`✅ DEBUG: Adding inventory button (${componentCount + 1} total components)`);
+            const buttonContainer = {
+                type: 17, // Container
+                accent_color: 0x3498db, // Blue
+                components: [
+                    {
+                        type: 1, // Action Row
+                        components: [
+                            {
+                                type: 2, // Button
+                                custom_id: 'safari_player_inventory',
+                                label: 'View My Inventory',
+                                style: 2, // Secondary
+                                emoji: { name: '🎒' }
+                            }
+                        ]
+                    }
+                ]
+            };
+            
+            allComponents.push(buttonContainer);
+        } else {
+            console.log(`⚠️ DEBUG: Skipping inventory button - would exceed component limit (${componentCount + 1} > 40)`);
+        }
         
         return {
             type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
