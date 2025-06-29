@@ -2242,7 +2242,7 @@ async function getEligiblePlayersFixed(guildId, client = null) {
             const safari = data.safari || {};
             const currency = safari.currency || 0;
             const inventory = safari.inventory || {};
-            const hasInventory = Object.keys(inventory).length > 0 && Object.values(inventory).some(qty => qty > 0);
+            const hasInventory = Object.keys(inventory).length > 0 && Object.values(inventory).some(item => getItemQuantity(item) > 0);
             
             console.log(`🔍 DEBUG: Player ${userId}: currency=${currency}, inventory=${JSON.stringify(inventory)}, hasInventory=${hasInventory}`);
             
