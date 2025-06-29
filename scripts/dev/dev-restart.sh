@@ -35,9 +35,8 @@ fi
 
 # Send Discord notification
 echo "🔔 Sending restart notification to Discord..."
-cd "$(dirname "$0")"
 # Run notification with background execution and error handling
-(node scripts/notify-restart.js 2>&1 | head -20) &
+(cd /mnt/c/Users/extre/OneDrive/ORG/01\ Zeldavivor/Tagscript/Castbot/castbot && node scripts/notify-restart.js 2>&1 | head -20) &
 NOTIFY_PID=$!
 # Give it a few seconds to complete
 sleep 3
@@ -54,7 +53,7 @@ pkill -f "node app.js" 2>/dev/null || true
 sleep 2
 
 # Start in background
-cd "$(dirname "$0")"
+cd /mnt/c/Users/extre/OneDrive/ORG/01\ Zeldavivor/Tagscript/Castbot/castbot
 nohup node app.js > /tmp/castbot-dev.log 2>&1 &
 APP_PID=$!
 echo $APP_PID > /tmp/castbot-dev.pid
