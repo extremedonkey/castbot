@@ -2153,7 +2153,7 @@ async function processRoundResults(guildId, channelId, client, useV2Display = fa
         
         // Load player data for attack processing
         const playerData = await loadPlayerData();
-        const { attackResults, attackQueue } = await processAttackQueue(guildId, currentRound, playerData, items, client);
+        const { attackResults, attackQueue, attacksByDefender } = await processAttackQueue(guildId, currentRound, playerData, items, client);
         
         // Consume attack items for completed attacks
         const consumptionResults = await consumeAttackItems(attackQueue, playerData, guildId, items);
@@ -2172,7 +2172,7 @@ async function processRoundResults(guildId, channelId, client, useV2Display = fa
             eventName,
             eventEmoji,
             eligiblePlayers,
-            attacksByDefender: attackResults.attacksByDefender || {},
+            attacksByDefender: attacksByDefender || {},
             playerBalanceChanges: {}
         };
         
