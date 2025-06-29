@@ -14,7 +14,7 @@ import {
 } from 'discord-interactions';
 import { createPlayerCard, extractCastlistData, createCastlistRows } from './castlistV2.js';
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
-import { hasStoresInGuild } from './safariManager.js';
+import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms } from './safariManager.js';
 
 /**
  * Player management modes
@@ -363,9 +363,40 @@ export async function createPlayerManagementUI(options) {
       }];
     }
     
+    // Check if user is eligible for Safari inventory access
+    let inventoryRow = null;
+    if (targetMember && client) {
+      try {
+        const eligiblePlayers = await getEligiblePlayersFixed(guildId, client);
+        const isEligiblePlayer = eligiblePlayers.some(player => player.userId === targetMember.id);
+        
+        if (isEligiblePlayer) {
+          // Get custom terms for inventory name and emoji
+          const customTerms = await getCustomTerms(guildId);
+          
+          inventoryRow = {
+            type: 1, // ActionRow
+            components: [new ButtonBuilder()
+              .setCustomId('safari_player_inventory')
+              .setLabel(`${customTerms.currencyEmoji} ${customTerms.inventoryName}`)
+              .setStyle(ButtonStyle.Primary)]
+          };
+        }
+      } catch (error) {
+        console.error('Error checking Safari eligibility:', error);
+        // Don't show inventory button if there's an error
+      }
+    }
+    
+    // Build final component array
+    const finalComponents = [container, ...castlistRows];
+    if (inventoryRow) {
+      finalComponents.push(inventoryRow);
+    }
+    
     return {
       flags: (1 << 15), // IS_COMPONENTS_V2 only - ephemeral handled by caller
-      components: [container, ...castlistRows]
+      components: finalComponents
     };
   }
 }
