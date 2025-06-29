@@ -6086,6 +6086,55 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'safari_clear_corrupted_attacks') {
+      // Handle clearing corrupted attack queue entries
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to clear corrupted attacks.')) return;
+        
+        console.log(`🔧 DEBUG: Clearing corrupted attacks for guild ${guildId}`);
+        
+        // Clear corrupted attacks
+        const { clearCorruptedAttacks } = await import('./safariManager.js');
+        const summary = await clearCorruptedAttacks(guildId);
+        
+        // Log the action
+        await logInteraction(req.body, 'safari_clear_corrupted_attacks', { 
+          guildId,
+          summary 
+        });
+        
+        // Create success response
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15) | 64, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [{
+              type: 17, // Container
+              accent_color: 0x2ecc71, // Green for success
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `# 🔧 Attack Queue Cleanup Complete\n\n**📊 Summary:**\n• **Total attacks scanned:** ${summary.totalAttacks}\n• **🗑️ Corrupted removed:** ${summary.corruptedRemoved}\n• **✅ Valid remaining:** ${summary.validRemaining}\n\n${summary.corruptedRemoved > 0 ? 'Corrupted attack data has been cleaned up!' : 'No corrupted attacks found - your attack queues are clean!'}`
+                }
+              ]
+            }]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_clear_corrupted_attacks:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error clearing corrupted attacks. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'safari_manage_stores') {
       // MVP2: Store management interface with full functionality
       try {

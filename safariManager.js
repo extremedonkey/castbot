@@ -2658,6 +2658,12 @@ async function resetGameData(guildId) {
             safariData[guildId].roundHistory = [];
         }
         
+        // Clear all attack queues
+        if (safariData[guildId].attackQueue) {
+            safariData[guildId].attackQueue = {};
+            console.log(`🗑️ DEBUG: Cleared all attack queues for guild ${guildId}`);
+        }
+        
         await saveSafariContent(safariData);
         
         // Clear all player currency and inventories
@@ -2670,6 +2676,7 @@ async function resetGameData(guildId) {
                 data.safari.currency = 0;
                 data.safari.inventory = {};
                 data.safari.history = [];
+                data.safari.storeHistory = []; // Clear purchase history for clean per-game audit trails
                 playersReset++;
             }
         }
@@ -3874,6 +3881,71 @@ async function clearAllAttackQueues(guildId) {
     }
 }
 
+/**
+ * Clear corrupted attack queue entries (admin cleanup function)
+ * @param {string} guildId - The guild ID
+ * @returns {Promise<Object>} Cleanup summary with counts
+ */
+async function clearCorruptedAttacks(guildId) {
+    try {
+        console.log(`🔧 DEBUG: Scanning for corrupted attacks in guild ${guildId}`);
+        const safariData = await loadSafariContent();
+        
+        if (!safariData[guildId]?.attackQueue) {
+            return { totalAttacks: 0, corruptedRemoved: 0, validRemaining: 0 };
+        }
+        
+        let totalAttacks = 0;
+        let corruptedRemoved = 0;
+        let validRemaining = 0;
+        
+        // Process each round's attack queue
+        for (const [roundKey, attacks] of Object.entries(safariData[guildId].attackQueue)) {
+            if (!Array.isArray(attacks)) continue;
+            
+            const validAttacks = [];
+            
+            for (const attack of attacks) {
+                totalAttacks++;
+                
+                // Check for corruption indicators
+                const isCorrupted = (
+                    !attack.defendingPlayer || 
+                    !attack.attackingPlayer || 
+                    !attack.itemId ||
+                    !attack.attacksPlanned || 
+                    attack.attacksPlanned > 1000 || 
+                    attack.attacksPlanned < 0 ||
+                    isNaN(attack.totalDamage) || 
+                    attack.totalDamage === null || 
+                    attack.totalDamage === undefined
+                );
+                
+                if (isCorrupted) {
+                    console.log(`🗑️ DEBUG: Removing corrupted attack:`, attack);
+                    corruptedRemoved++;
+                } else {
+                    validAttacks.push(attack);
+                    validRemaining++;
+                }
+            }
+            
+            // Update the round with only valid attacks
+            safariData[guildId].attackQueue[roundKey] = validAttacks;
+        }
+        
+        await saveSafariContent(safariData);
+        
+        const summary = { totalAttacks, corruptedRemoved, validRemaining };
+        console.log(`✅ Corruption cleanup complete:`, summary);
+        return summary;
+        
+    } catch (error) {
+        console.error('Error clearing corrupted attacks:', error);
+        throw error;
+    }
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -3946,5 +4018,6 @@ export {
     processAttackQueue,
     consumeAttackItems,
     clearProcessedAttackQueue,
-    clearAllAttackQueues
+    clearAllAttackQueues,
+    clearCorruptedAttacks
 };
