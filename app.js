@@ -91,7 +91,8 @@ import {
   testRoleHierarchy
 } from './roleManager.js';
 import { 
-  createPlayerInventoryDisplay 
+  createPlayerInventoryDisplay,
+  createRoundResultsV2 
 } from './safariManager.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
 import { 
@@ -606,7 +607,12 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_customize_terms')
       .setLabel('Customize Safari')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️')
+      .setEmoji('⚙️'),
+    new ButtonBuilder()
+      .setCustomId('safari_round_results_v2')
+      .setLabel('Round Results V2')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🎨')
   ];
   
   const safariRow1 = new ActionRowBuilder().addComponents(safariButtonsRow1);
@@ -5612,6 +5618,37 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error processing round results. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_round_results_v2') {
+      // Handle V2 Round Results - Player-Centric Card Display
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const channelId = req.body.channel_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to process round results.')) return;
+        
+        console.log(`🎨 DEBUG: Processing V2 round results for guild ${guildId} in channel ${channelId}`);
+        
+        // Import Safari manager functions - we need both the backend logic and V2 display
+        const { processRoundResults } = await import('./safariManager.js');
+        
+        // Process round results using the same backend logic
+        const roundData = await processRoundResults(guildId, channelId, client, true); // Pass flag for V2 mode
+        
+        // The V2 version should return the V2 display instead of the classic display
+        return res.send(roundData);
+        
+      } catch (error) {
+        console.error('Error in safari_round_results_v2:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error processing V2 round results. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

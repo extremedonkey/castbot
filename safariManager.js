@@ -2016,7 +2016,7 @@ async function resetCustomTerms(guildId) {
  * Process Round Results - Challenge Game Logic Core Engine
  * Handles event determination, player earnings/losses, and round progression
  */
-async function processRoundResults(guildId, channelId, client) {
+async function processRoundResults(guildId, channelId, client, useV2Display = false) {
     try {
         console.log(`🏅 DEBUG: Starting round results processing for guild ${guildId}`);
         
@@ -2164,8 +2164,29 @@ async function processRoundResults(guildId, channelId, client) {
         // Clear processed attack queue
         await clearProcessedAttackQueue(guildId, currentRound);
         
-        // Create round results output (now includes attack results)
-        const output = await createRoundResultsOutput(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults, consumptionResults);
+        // Prepare round data for display functions
+        const roundData = {
+            currentRound,
+            isGoodEvent: eventType === 'good',
+            eventName,
+            eventEmoji,
+            eligiblePlayers,
+            attacksByDefender: attackResults.attacksByDefender || {},
+            playerBalanceChanges: {}
+        };
+        
+        // Calculate balance changes for V2 display
+        for (const player of eligiblePlayers) {
+            const startingBalance = player.currency;
+            // This will be updated with actual ending balance after attack processing
+            const playerData = await loadPlayerData();
+            const endingBalance = playerData[guildId]?.players?.[player.userId]?.safari?.currency || 0;
+            roundData.playerBalanceChanges[player.userId] = {
+                starting: startingBalance,
+                ending: endingBalance,
+                change: endingBalance - startingBalance
+            };
+        }
         
         // Advance to next round or complete game
         if (currentRound < 3) {
@@ -2176,11 +2197,24 @@ async function processRoundResults(guildId, channelId, client) {
             // Round 3 completed - show detailed results with final rankings and set to round 4 (reset state)
             safariConfig.currentRound = 4;
             await saveSafariContent(safariData);
-            // Show detailed Round 3 results PLUS final rankings
-            return await createFinalRoundResults(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults, consumptionResults);
+            
+            if (useV2Display) {
+                // Use V2 display for Round 3 (future enhancement)
+                return await createRoundResultsV2(guildId, roundData, customTerms);
+            } else {
+                // Show detailed Round 3 results PLUS final rankings
+                return await createFinalRoundResults(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults, consumptionResults);
+            }
         }
         
-        return output;
+        // Return appropriate display based on flag
+        if (useV2Display) {
+            return await createRoundResultsV2(guildId, roundData, customTerms);
+        } else {
+            // Create classic round results output (now includes attack results)
+            const output = await createRoundResultsOutput(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults, consumptionResults);
+            return output;
+        }
         
     } catch (error) {
         console.error('Error processing round results:', error);
@@ -4187,6 +4221,385 @@ async function clearCorruptedAttacks(guildId) {
     }
 }
 
+/**
+ * Create V2 round results display with player-centric cards
+ * @param {string} guildId - Guild ID
+ * @param {Object} roundData - Round processing results
+ * @param {Object} customTerms - Custom terminology
+ * @returns {Object} Discord response object
+ */
+async function createRoundResultsV2(guildId, roundData, customTerms) {
+    try {
+        console.log('🎨 DEBUG: Creating V2 round results display');
+        
+        const { 
+            currentRound, 
+            isGoodEvent, 
+            eventName, 
+            eventEmoji,
+            eligiblePlayers,
+            attacksByDefender,
+            playerBalanceChanges 
+        } = roundData;
+        
+        // Create player result cards
+        const playerCards = await createPlayerResultCards(
+            guildId, 
+            eligiblePlayers, 
+            roundData, 
+            customTerms
+        );
+        
+        // Create header container
+        const headerContainer = {
+            type: 17, // Container
+            accent_color: isGoodEvent ? 0x27ae60 : 0xe74c3c, // Green for good, red for bad
+            components: [
+                {
+                    type: 10, // Text Display
+                    content: `# 🎲 Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n**${eligiblePlayers.length} players participated** | **Total balance changes calculated below**`
+                }
+            ]
+        };
+        
+        // Combine header with player cards
+        const allComponents = [headerContainer, ...playerCards];
+        
+        // Add navigation buttons
+        const buttonContainer = {
+            type: 17, // Container
+            accent_color: 0x3498db, // Blue
+            components: [
+                {
+                    type: 1, // Action Row
+                    components: [
+                        {
+                            type: 2, // Button
+                            custom_id: 'safari_player_inventory',
+                            label: 'View My Inventory',
+                            style: 2, // Secondary
+                            emoji: { name: '🎒' }
+                        },
+                        {
+                            type: 2, // Button
+                            custom_id: 'safari_round_results',
+                            label: 'Classic Results View',
+                            style: 2, // Secondary
+                            emoji: { name: '📋' }
+                        },
+                        currentRound === 3 ? {
+                            type: 2, // Button
+                            custom_id: 'safari_round_results',
+                            label: 'Reset Game',
+                            style: 4, // Danger
+                            emoji: { name: '🔄' }
+                        } : {
+                            type: 2, // Button
+                            custom_id: 'safari_round_results_v2',
+                            label: `Start Round ${currentRound + 1}`,
+                            style: 3, // Success
+                            emoji: { name: '▶️' }
+                        }
+                    ]
+                }
+            ]
+        };
+        
+        allComponents.push(buttonContainer);
+        
+        return {
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: allComponents
+            }
+        };
+        
+    } catch (error) {
+        console.error('Error creating V2 round results:', error);
+        return {
+            type: 4,
+            data: {
+                content: '❌ Error displaying round results.',
+                flags: 64 // EPHEMERAL
+            }
+        };
+    }
+}
+
+/**
+ * Create individual player result cards
+ * @param {string} guildId - Guild ID
+ * @param {Array} eligiblePlayers - Array of eligible players
+ * @param {Object} roundData - Round processing results
+ * @param {Object} customTerms - Custom terminology
+ * @returns {Array} Array of player card containers
+ */
+async function createPlayerResultCards(guildId, eligiblePlayers, roundData, customTerms) {
+    try {
+        const cards = [];
+        const { 
+            attacksByDefender, 
+            playerBalanceChanges, 
+            isGoodEvent,
+            eventName,
+            eventEmoji 
+        } = roundData;
+        
+        // Load item data for income calculations
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        
+        for (const player of eligiblePlayers) {
+            const card = await createPlayerResultCard(
+                player, 
+                roundData, 
+                customTerms, 
+                items,
+                attacksByDefender[player.userId] || [],
+                playerBalanceChanges[player.userId] || { starting: 0, ending: 0, change: 0 }
+            );
+            cards.push(card);
+        }
+        
+        return cards;
+        
+    } catch (error) {
+        console.error('Error creating player result cards:', error);
+        return [];
+    }
+}
+
+/**
+ * Create individual player result card
+ * @param {Object} player - Player data
+ * @param {Object} roundData - Round processing results  
+ * @param {Object} customTerms - Custom terminology
+ * @param {Object} items - Item definitions
+ * @param {Array} attacksReceived - Attacks this player received
+ * @param {Object} balanceChange - Player's balance change data
+ * @returns {Object} Container component for this player
+ */
+async function createPlayerResultCard(player, roundData, customTerms, items, attacksReceived, balanceChange) {
+    try {
+        const { isGoodEvent, eventName, eventEmoji } = roundData;
+        const components = [];
+        
+        // Player name and starting balance
+        components.push({
+            type: 10, // Text Display
+            content: `# ${getPlayerEmoji(player.playerName)} ${player.playerName}\n\n**Starting Balance:** ${balanceChange.starting} ${customTerms.currencyEmoji}`
+        });
+        
+        // Divider
+        components.push({ type: 14 }); // Separator
+        
+        // Income section
+        const incomeBreakdown = formatIncomeBreakdown(
+            player, 
+            items, 
+            isGoodEvent, 
+            eventName, 
+            eventEmoji, 
+            customTerms
+        );
+        components.push({
+            type: 10, // Text Display
+            content: incomeBreakdown
+        });
+        
+        // Divider
+        components.push({ type: 14 }); // Separator
+        
+        // Combat section
+        const combatResults = formatCombatResults(
+            attacksReceived, 
+            items, 
+            customTerms
+        );
+        components.push({
+            type: 10, // Text Display
+            content: combatResults
+        });
+        
+        // Divider
+        components.push({ type: 14 }); // Separator
+        
+        // Final balance (emphasized)
+        const change = balanceChange.change;
+        const changeText = change > 0 ? `(+${change})` : change < 0 ? `(${change})` : '(±0)';
+        const changeEmoji = change > 0 ? '📈' : change < 0 ? '📉' : '➡️';
+        
+        components.push({
+            type: 10, // Text Display
+            content: `## ${changeEmoji} Final Balance: ${balanceChange.ending} ${customTerms.currencyEmoji} ${changeText}`
+        });
+        
+        // Create container with accent color based on change
+        const accentColor = change > 0 ? 0x27ae60 : change < 0 ? 0xe74c3c : 0x95a5a6; // Green/Red/Gray
+        
+        return {
+            type: 17, // Container
+            accent_color: accentColor,
+            components: components
+        };
+        
+    } catch (error) {
+        console.error('Error creating player result card:', error);
+        return {
+            type: 17, // Container
+            components: [
+                {
+                    type: 10, // Text Display
+                    content: `# ${player.playerName}\n\n❌ Error loading results`
+                }
+            ]
+        };
+    }
+}
+
+/**
+ * Format income breakdown by item type
+ * @param {Object} player - Player data
+ * @param {Object} items - Item definitions
+ * @param {boolean} isGoodEvent - Whether the event was good
+ * @param {string} eventName - Name of the event
+ * @param {string} eventEmoji - Event emoji
+ * @param {Object} customTerms - Custom terminology
+ * @returns {string} Formatted income breakdown
+ */
+function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji, customTerms) {
+    try {
+        let content = `## 📈 INCOME THIS ROUND\n\n**${eventEmoji} ${eventName} Event**\n\n`;
+        
+        const inventory = player.inventory || {};
+        const inventoryItems = Object.entries(inventory);
+        
+        if (inventoryItems.length === 0) {
+            content += '*No income items owned*\n\n**Total Income:** 0 ' + customTerms.currencyEmoji;
+            return content;
+        }
+        
+        let totalIncome = 0;
+        const incomeItems = [];
+        
+        // Calculate income per item type
+        for (const [itemId, itemData] of inventoryItems) {
+            const item = items[itemId];
+            if (!item) continue;
+            
+            const quantity = typeof itemData === 'object' ? itemData.quantity : itemData;
+            
+            // Check if item generates income
+            const incomeValue = isGoodEvent ? item.goodOutcomeValue : item.badOutcomeValue;
+            if (incomeValue !== null && incomeValue !== undefined) {
+                const itemIncome = quantity * incomeValue;
+                totalIncome += itemIncome;
+                
+                incomeItems.push({
+                    emoji: item.emoji || '📦',
+                    name: item.name,
+                    quantity: quantity,
+                    unitValue: incomeValue,
+                    totalValue: itemIncome
+                });
+            }
+        }
+        
+        if (incomeItems.length === 0) {
+            content += '*No income items for this event type*\n\n';
+        } else {
+            // Format each income item
+            for (const item of incomeItems) {
+                content += `${item.emoji} **${item.quantity}x ${item.name}:** ${item.totalValue} ${customTerms.currencyEmoji} (${item.quantity} × ${item.unitValue})\n`;
+            }
+            content += '\n';
+        }
+        
+        content += `**Total Income:** ${totalIncome} ${customTerms.currencyEmoji}`;
+        
+        return content;
+        
+    } catch (error) {
+        console.error('Error formatting income breakdown:', error);
+        return '## 📈 INCOME THIS ROUND\n\n❌ Error calculating income';
+    }
+}
+
+/**
+ * Format combat results for attacks received
+ * @param {Array} attacksReceived - Attacks this player received
+ * @param {Object} items - Item definitions
+ * @param {Object} customTerms - Custom terminology
+ * @returns {string} Formatted combat results
+ */
+function formatCombatResults(attacksReceived, items, customTerms) {
+    try {
+        let content = '## ⚔️ COMBAT RESULTS\n\n';
+        
+        if (attacksReceived.length === 0) {
+            content += '*No attacks received this round*\n\n**Combat Damage:** 0 ' + customTerms.currencyEmoji;
+            return content;
+        }
+        
+        let totalDamage = 0;
+        
+        // Group attacks by attacker
+        const attacksByAttacker = {};
+        for (const attack of attacksReceived) {
+            const attackerName = attack.attackingPlayerName || 'Unknown Player';
+            if (!attacksByAttacker[attackerName]) {
+                attacksByAttacker[attackerName] = [];
+            }
+            attacksByAttacker[attackerName].push(attack);
+        }
+        
+        // Format each attacker's attacks
+        for (const [attackerName, attacks] of Object.entries(attacksByAttacker)) {
+            let attackerDamage = 0;
+            const attackDetails = [];
+            
+            for (const attack of attacks) {
+                const item = items[attack.itemId];
+                const itemEmoji = item?.emoji || '⚔️';
+                const itemName = item?.name || 'Unknown Item';
+                
+                attackerDamage += attack.totalDamage || 0;
+                attackDetails.push(`${attack.attacksPlanned}x ${itemEmoji} ${itemName}`);
+            }
+            
+            content += `**${attackerName}:** ${attackDetails.join(', ')} → **${attackerDamage} damage**\n`;
+            totalDamage += attackerDamage;
+        }
+        
+        content += `\n**Total Damage Taken:** ${totalDamage} ${customTerms.currencyEmoji}`;
+        
+        return content;
+        
+    } catch (error) {
+        console.error('Error formatting combat results:', error);
+        return '## ⚔️ COMBAT RESULTS\n\n❌ Error calculating combat';
+    }
+}
+
+/**
+ * Get appropriate emoji for player name
+ * @param {string} playerName - Player's display name
+ * @returns {string} Emoji representing the player
+ */
+function getPlayerEmoji(playerName) {
+    // Simple emoji mapping based on name patterns
+    const name = playerName.toLowerCase();
+    if (name.includes('reece') || name.includes('bot')) return '🤖';
+    if (name.includes('morgane')) return '🦖';
+    if (name.includes('belle')) return '🔔';
+    
+    // Default player emojis
+    const emojis = ['👤', '🎭', '🎪', '🎨', '🎯', '🎲', '🎮', '🎸', '🎺', '🎻', '🎹', '🎤'];
+    const index = playerName.length % emojis.length;
+    return emojis[index];
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -4261,5 +4674,12 @@ export {
     consumeAttackItems,
     clearProcessedAttackQueue,
     clearAllAttackQueues,
-    clearCorruptedAttacks
+    clearCorruptedAttacks,
+    // V2 Results Display Functions
+    createRoundResultsV2,
+    createPlayerResultCards,
+    createPlayerResultCard,
+    formatIncomeBreakdown,
+    formatCombatResults,
+    getPlayerEmoji
 };
