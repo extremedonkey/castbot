@@ -2175,17 +2175,17 @@ async function processRoundResults(guildId, channelId, client, useV2Display = fa
             playerBalanceChanges: {}
         };
         
-        // Calculate balance changes for V2 display
+        // Calculate balance changes for V2 display - reload fresh data after all processing
+        const finalPlayerData = await loadPlayerData();
         for (const player of eligiblePlayers) {
-            const startingBalance = player.currency;
-            // This will be updated with actual ending balance after attack processing
-            const playerData = await loadPlayerData();
-            const endingBalance = playerData[guildId]?.players?.[player.userId]?.safari?.currency || 0;
+            const startingBalance = player.currency || 0; // Original balance before round processing
+            const endingBalance = finalPlayerData[guildId]?.players?.[player.userId]?.safari?.currency || 0;
             roundData.playerBalanceChanges[player.userId] = {
                 starting: startingBalance,
                 ending: endingBalance,
                 change: endingBalance - startingBalance
             };
+            console.log(`💰 DEBUG: ${player.playerName} balance: ${startingBalance} → ${endingBalance} (${endingBalance - startingBalance >= 0 ? '+' : ''}${endingBalance - startingBalance})`);
         }
         
         // Advance to next round or complete game
@@ -4265,6 +4265,46 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
         // Combine header with player cards
         const allComponents = [headerContainer, ...playerCards];
         
+        // Component limit safeguard - Discord has a 40 component limit per message
+        const componentCount = allComponents.length;
+        console.log(`🔢 DEBUG: Total components before buttons: ${componentCount}`);
+        
+        if (componentCount > 38) { // Leave room for button container
+            console.log(`⚠️ WARNING: Component count ${componentCount} approaching Discord limit of 40`);
+            console.log(`🔄 DEBUG: Too many players for V2 display, showing component limit message`);
+            // Show error message with option to use classic display
+            return {
+                type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+                data: {
+                    flags: (1 << 15), // IS_COMPONENTS_V2
+                    components: [
+                        {
+                            type: 17, // Container
+                            accent_color: 0xe74c3c, // Red
+                            components: [
+                                {
+                                    type: 10, // Text Display
+                                    content: `# ⚠️ Too Many Players for V2 Display\n\n**Player Count:** ${eligiblePlayers.length}\n**Components Needed:** ${componentCount}\n**Discord Limit:** 40\n\nV2 display supports up to ~35 players. Use "Classic Results View" for larger groups.`
+                                },
+                                {
+                                    type: 1, // Action Row
+                                    components: [
+                                        {
+                                            type: 2, // Button
+                                            custom_id: 'safari_round_results',
+                                            label: 'Classic Results View',
+                                            style: 2, // Secondary
+                                            emoji: { name: '📋' }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            };
+        }
+        
         // Add navigation buttons
         const buttonContainer = {
             type: 17, // Container
@@ -4383,16 +4423,10 @@ async function createPlayerResultCards(guildId, eligiblePlayers, roundData, cust
 async function createPlayerResultCard(player, roundData, customTerms, items, attacksReceived, balanceChange) {
     try {
         const { isGoodEvent, eventName, eventEmoji } = roundData;
-        const components = [];
         
-        // Player name and starting balance
-        components.push({
-            type: 10, // Text Display
-            content: `# ${getPlayerEmoji(player.playerName)} ${player.playerName}\n\n**Starting Balance:** ${balanceChange.starting} ${customTerms.currencyEmoji}`
-        });
-        
-        // Divider
-        components.push({ type: 14 }); // Separator
+        // Combine all content into a single Text Display to stay within 40 component limit
+        let content = `# ${getPlayerEmoji(player.playerName)} ${player.playerName}\n\n`;
+        content += `**Starting Balance:** ${balanceChange.starting} ${customTerms.currencyEmoji}\n\n`;
         
         // Income section
         const incomeBreakdown = formatIncomeBreakdown(
@@ -4403,45 +4437,35 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
             eventEmoji, 
             customTerms
         );
-        components.push({
-            type: 10, // Text Display
-            content: incomeBreakdown
-        });
+        content += incomeBreakdown + '\n\n';
         
-        // Divider
-        components.push({ type: 14 }); // Separator
-        
-        // Combat section
+        // Combat section  
         const combatResults = formatCombatResults(
             attacksReceived, 
             items, 
             customTerms
         );
-        components.push({
-            type: 10, // Text Display
-            content: combatResults
-        });
-        
-        // Divider
-        components.push({ type: 14 }); // Separator
+        content += combatResults + '\n\n';
         
         // Final balance (emphasized)
         const change = balanceChange.change;
         const changeText = change > 0 ? `(+${change})` : change < 0 ? `(${change})` : '(±0)';
         const changeEmoji = change > 0 ? '📈' : change < 0 ? '📉' : '➡️';
         
-        components.push({
-            type: 10, // Text Display
-            content: `## ${changeEmoji} Final Balance: ${balanceChange.ending} ${customTerms.currencyEmoji} ${changeText}`
-        });
+        content += `## ${changeEmoji} Final Balance: ${balanceChange.ending} ${customTerms.currencyEmoji} ${changeText}`;
         
-        // Create container with accent color based on change
+        // Create container with accent color based on change - SINGLE COMPONENT
         const accentColor = change > 0 ? 0x27ae60 : change < 0 ? 0xe74c3c : 0x95a5a6; // Green/Red/Gray
         
         return {
             type: 17, // Container
             accent_color: accentColor,
-            components: components
+            components: [
+                {
+                    type: 10, // Text Display
+                    content: content
+                }
+            ]
         };
         
     } catch (error) {
