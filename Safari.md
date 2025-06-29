@@ -442,6 +442,10 @@ async function postButtonToChannel(guildId, buttonId, channelId, client)
 ```
 
 ### Action Execution Pipeline
+
+The Safari system supports multiple action types for interactive experiences. The core pipeline handles traditional actions, while specialized systems like the Attack System use dedicated workflows.
+
+#### Core Action Execution
 ```javascript
 async function executeButtonActions(guildId, buttonId, userId, interaction) {
     const button = await getCustomButton(guildId, buttonId);
@@ -463,6 +467,12 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
             case 'follow_up_button':
                 results.push(await executeFollowUpButton(action.config, interaction));
                 break;
+            case 'conditional':
+                results.push(await executeConditional(action.config, userId, guildId, interaction));
+                break;
+            case 'random_outcome':
+                results.push(await executeRandomOutcome(action.config, userId, guildId, interaction));
+                break;
         }
     }
     
@@ -470,6 +480,245 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
     return combineActionResults(results);
 }
 ```
+
+#### **🔥 SAFARI ATTACK SYSTEM (MVP3 Complete)**
+
+**Overview:** Complete tactical attack system enabling players to strategically plan multi-target attacks using combat items with round-based queue scheduling.
+
+##### **Attack System Architecture**
+
+**Data Structure (playerData.json):**
+```json
+{
+  "guildId": {
+    "players": {
+      "userId": {
+        "safari": {
+          "inventory": {
+            "raider_499497": {
+              "quantity": 15,           // Total items owned
+              "numAttacksAvailable": 8  // Attacks not yet scheduled
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+**Queue Storage (safariContent.json):**
+```json
+{
+  "guildId": {
+    "attackQueue": {
+      "round1": [
+        {
+          "attackingPlayer": "391415444084490240",
+          "attackingPlayerName": "ReeceBot", 
+          "defendingPlayer": "676262975132139522",
+          "itemId": "raider_499497",
+          "itemName": "Raider",
+          "attacksPlanned": 3,
+          "attackValue": 25,
+          "totalDamage": 75,
+          "timestamp": 1751174570983,
+          "round": 1
+        }
+      ]
+    }
+  }
+}
+```
+
+##### **Key System Behaviors**
+
+**1. Attack Availability Tracking:**
+- **Purchase**: `numAttacksAvailable` equals purchased quantity for attack items
+- **Planning**: `numAttacksAvailable` reduced when attacks scheduled
+- **Validation**: System prevents scheduling more attacks than available
+- **Race Condition Protection**: Fresh data reload before modifications
+
+**2. Multi-Target Distribution:**
+- **Strategic Planning**: Single item type can attack multiple different players
+- **Quantity Management**: Players choose how many attacks to use per target
+- **Resource Optimization**: Split limited attack items across multiple enemies
+
+**3. Round-Based Queuing:**
+- **Current Round Tracking**: `safariConfig.currentRound` determines queue placement
+- **Persistent Storage**: All attack records stored in `attackQueue.roundX` arrays
+- **Complete Context**: Records include player names, item details, and damage calculations
+
+**4. Real-Time UI System:**
+- **Inventory Display**: Shows "⚔️ Attacks Available: X" and "🎯 Attacks Planned: Y"
+- **Attack Planning**: User Select (target) → Quantity Select → Damage Calculation → Schedule
+- **Enhanced Feedback**: Container components with attack details and damage totals
+
+##### **Attack Planning Workflow**
+
+**Step 1: Inventory Display**
+```javascript
+// Section components show attack items with blue buttons
+{
+  type: 9, // Section
+  components: [
+    {
+      type: 10, // Text Display  
+      content: `## 🦎 Raider\n⚔️ Attacks Available: 5\n🎯 Attacks Planned: 3`
+    }
+  ]
+},
+{
+  type: 1, // Action Row
+  components: [
+    {
+      type: 2, // Button
+      custom_id: `safari_attack_plan_raider_499497`,
+      label: "⚔️ Attack Player",
+      style: 1 // Primary (blue)
+    }
+  ]
+}
+```
+
+**Step 2: Target Selection**
+```javascript
+// Eligible target filtering: active players (currency ≥1 OR inventory items) excluding attacker
+const eligibleTargets = await getEligibleAttackTargets(guildId, attackerId);
+// User select menu with player options
+```
+
+**Step 3: Quantity Selection**  
+```javascript
+// String select with available attack quantities (1 to numAttacksAvailable)
+// UI limit: Maximum 25 options (Discord string select limit)
+```
+
+**Step 4: Attack Scheduling**
+```javascript
+async function scheduleAttack(guildId, attackerId, itemId, targetId, quantity) {
+    // 1. Validate attack availability
+    // 2. Create attack record with damage calculation
+    // 3. Add to current round queue
+    // 4. Reduce numAttacksAvailable in inventory
+    // 5. Return enhanced success message with Container
+}
+```
+
+##### **Advanced Features**
+
+**State Management:**
+- **Stateless Discord Interactions**: Attack state embedded in custom_ids
+- **Format**: `safari_schedule_attack_itemId_targetId_quantity`  
+- **State Preservation**: Complete context maintained through interaction chain
+
+**Damage Calculations:**
+- **Attack Value**: Item `attackValue` property × quantity planned
+- **Real-Time Display**: Total damage shown during planning and in confirmation
+- **Record Storage**: Complete damage calculations stored in attack queue
+
+**UI Components V2:**
+- **Enhanced Messages**: Container components with red accent for attack themes
+- **Button Styling**: Blue primary buttons for action emphasis
+- **Non-Ephemeral**: Attack confirmations visible to all for transparency
+- **Audit Trail**: Complete attack history maintained
+
+##### **Integration with Round System**
+
+**Current Implementation:**
+- **Queue Population**: Attacks scheduled into `attackQueue.roundX` based on `currentRound`
+- **Data Persistence**: Complete attack records with all necessary processing information
+- **Player Identification**: Both user IDs and display names stored for flexibility
+
+**Round Results Processing (Future Implementation):**
+```javascript
+// Planned round results integration
+async function processAttackQueue(guildId, round) {
+    const attacks = safariContent[guildId]?.attackQueue?.[`round${round}`] || [];
+    
+    for (const attack of attacks) {
+        // 1. Apply damage to defending player
+        // 2. Consume attack items if marked consumable
+        // 3. Calculate defense reductions
+        // 4. Generate attack results summary
+        // 5. Update player inventories and currency
+    }
+    
+    // Clear processed attack queue
+    delete safariContent[guildId].attackQueue[`round${round}`];
+}
+```
+
+**Defense Integration:**
+- **Defense Values**: Items with `defenseValue` property reduce incoming damage
+- **Damage Mitigation**: `totalDamage - defenseValue = actualDamage`
+- **Strategic Gameplay**: Balance between attack and defense item purchases
+
+##### **Error Handling & Validation**
+
+**Race Condition Prevention:**
+```javascript
+// Fresh data reload before critical modifications
+const freshPlayerData = await loadPlayerData();
+const freshInventoryItem = freshPlayerData[guildId]?.players?.[attackerId]?.safari?.inventory?.[itemId];
+
+// Validate with fresh data before proceeding
+if (freshInventoryItem.numAttacksAvailable < quantity) {
+    return errorResponse('Not enough attacks available');
+}
+```
+
+**Input Validation:**
+- **Target Eligibility**: Only active players (currency ≥1 OR inventory items)
+- **Self-Attack Prevention**: Attackers cannot target themselves
+- **Quantity Limits**: Cannot exceed `numAttacksAvailable`
+- **Item Validation**: Attack items must have `attackValue` property
+
+##### **Technical Implementation Details**
+
+**Button Handler Pattern:**
+```javascript
+// Attack planning handler
+safari_attack_plan_{itemId} → Show target selection
+
+// Target selection handler  
+safari_attack_target_{itemId}_{targetId} → Show quantity selection
+
+// Schedule attack handler
+safari_schedule_attack_{itemId}_{targetId}_{quantity} → Execute attack scheduling
+```
+
+**Database Operations:**
+- **Atomic Updates**: Inventory and queue updates in single transaction
+- **Data Validation**: Type checking and bounds validation
+- **Backup Strategy**: Original data preserved before modifications
+
+**Performance Considerations:**
+- **Efficient Targeting**: Pre-filter eligible targets to reduce UI complexity
+- **Batch Operations**: Multiple attack records can be processed simultaneously
+- **Memory Management**: Attack queues cleared after round processing
+
+##### **Future Enhancements**
+
+**Round Results Integration:**
+- **Damage Application**: Apply queued attacks to player inventories/currency
+- **Defense Calculations**: Factor in defense values for damage mitigation  
+- **Item Consumption**: Remove consumable attack items after use
+- **Results Summary**: Generate comprehensive attack results report
+
+**Advanced Attack Types:**
+- **Live Attacks**: Immediate damage application (vs queued)
+- **Instant Attacks**: Real-time combat outside round system
+- **Special Abilities**: Items with unique attack mechanics
+- **Combo Attacks**: Multi-item attack combinations
+
+**Strategic Enhancements:**
+- **Attack History**: Track player attack/defense patterns
+- **Alliance System**: Team-based attack coordination
+- **Revenge Tracking**: Monitor attack/counter-attack cycles
+- **Battle Analytics**: Statistical analysis of combat effectiveness
+
+The Safari Attack System represents a complete tactical combat framework built on CastBot's Safari foundation, providing competitive gameplay mechanics while maintaining scalability for advanced features.
 
 ## Test Cases
 
