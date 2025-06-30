@@ -954,6 +954,23 @@ async function executeSafariRoundResults(channelId, guildId) {
     // Process round results using the same backend logic as manual execution
     const roundData = await processRoundResults(guildId, channelId, client, true); // Pass flag for V2 mode
     
+    console.log(`🎨 DEBUG: Scheduled execution got round data with ${roundData.data.components?.length || 0} components`);
+    
+    // Send the results display directly to the channel using Discord client
+    const channel = await client.channels.fetch(channelId);
+    if (channel && roundData.data.components) {
+      console.log(`📤 DEBUG: Sending scheduled Safari results to channel ${channelId}`);
+      
+      await channel.send({
+        components: roundData.data.components,
+        flags: roundData.data.flags || 0
+      });
+      
+      console.log(`✅ DEBUG: Scheduled Safari results posted to channel successfully`);
+    } else {
+      console.log(`⚠️ DEBUG: Channel not found or no components to send`);
+    }
+    
     console.log(`✅ DEBUG: Scheduled Safari round results completed successfully`);
   } catch (error) {
     console.error(`❌ ERROR: Failed to execute scheduled Safari round results:`, error);
@@ -963,8 +980,7 @@ async function executeSafariRoundResults(channelId, guildId) {
       const channel = await client.channels.fetch(channelId);
       if (channel) {
         await channel.send({
-          content: '❌ **ERROR**: Scheduled Safari round results failed to execute. Please run the command manually.',
-          flags: 0
+          content: '❌ **ERROR**: Scheduled Safari round results failed to execute. Please run the command manually.'
         });
       }
     } catch (channelError) {
