@@ -15,6 +15,7 @@ safariContent.json
 desktop.ini
 .DS_Store
 Thumbs.db
+*.Zone.Identifier
 
 # Logs and temp
 logs/
