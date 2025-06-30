@@ -869,6 +869,110 @@ const client = new Client({
   partials: ['MESSAGE', 'CHANNEL', 'REACTION']
 });
 
+// ============================================================================
+// 📅 SAFARI SCHEDULING SYSTEM - IN-MEMORY TASK MANAGEMENT
+// ============================================================================
+const scheduledSafariTasks = new Map();
+
+// Generate unique task ID
+function generateTaskId() {
+  return `safari_task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Calculate remaining time display
+function calculateRemainingTime(executeAt) {
+  const now = new Date();
+  const diff = executeAt - now;
+  if (diff <= 0) return "Expired";
+  
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  return `${hours}h ${minutes}m`;
+}
+
+// Schedule a new Safari round results task
+function scheduleSafariTask(channelId, guildId, hours, minutes) {
+  const totalMs = (hours * 3600000) + (minutes * 60000);
+  const executeAt = new Date(Date.now() + totalMs);
+  const taskId = generateTaskId();
+  
+  console.log(`🔍 DEBUG: Scheduling Safari task for ${executeAt} in channel ${channelId}`);
+  
+  const timeoutId = setTimeout(async () => {
+    try {
+      console.log(`⚔️ DEBUG: Executing scheduled Safari round results in channel ${channelId}`);
+      await executeSafariRoundResults(channelId, guildId);
+      scheduledSafariTasks.delete(taskId);
+      console.log(`✅ DEBUG: Safari task ${taskId} completed and removed`);
+    } catch (error) {
+      console.error(`❌ ERROR: Safari task ${taskId} failed:`, error);
+      scheduledSafariTasks.delete(taskId);
+    }
+  }, totalMs);
+  
+  scheduledSafariTasks.set(taskId, {
+    id: taskId,
+    timeoutId: timeoutId,
+    channelId: channelId,
+    guildId: guildId,
+    executeAt: executeAt,
+    description: 'Safari Round Results',
+    hoursFromCreation: hours,
+    minutesFromCreation: minutes
+  });
+  
+  console.log(`✅ DEBUG: Safari task ${taskId} scheduled for ${hours}h ${minutes}m from now`);
+  return taskId;
+}
+
+// Clear a scheduled task
+function clearSafariTask(taskId) {
+  const task = scheduledSafariTasks.get(taskId);
+  if (task) {
+    clearTimeout(task.timeoutId);
+    scheduledSafariTasks.delete(taskId);
+    console.log(`🗑️ DEBUG: Safari task ${taskId} cleared`);
+    return true;
+  }
+  return false;
+}
+
+// Get all scheduled tasks sorted by execution time  
+function getAllScheduledSafariTasks() {
+  const tasks = Array.from(scheduledSafariTasks.values());
+  return tasks.sort((a, b) => a.executeAt - b.executeAt);
+}
+
+// Execute Safari round results in specified channel
+async function executeSafariRoundResults(channelId, guildId) {
+  try {
+    console.log(`⚔️ DEBUG: Starting Safari round results execution in channel ${channelId}`);
+    
+    // Import the Safari manager to execute results
+    const { createRoundResultsV2 } = await import('./safariManager.js');
+    
+    // Execute the round results
+    await createRoundResultsV2(guildId, channelId, client);
+    
+    console.log(`✅ DEBUG: Safari round results completed successfully`);
+  } catch (error) {
+    console.error(`❌ ERROR: Failed to execute Safari round results:`, error);
+    
+    // Try to send error message to channel
+    try {
+      const channel = await client.channels.fetch(channelId);
+      if (channel) {
+        await channel.send({
+          content: '❌ **ERROR**: Scheduled Safari round results failed to execute. Please run manually.',
+          flags: 0
+        });
+      }
+    } catch (channelError) {
+      console.error(`❌ ERROR: Could not send error message to channel:`, channelError);
+    }
+  }
+}
+
 // Add these event handlers after client initialization
 client.once('ready', async () => {
   console.log('Discord client is ready!');
@@ -6230,6 +6334,99 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error opening import interface. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_schedule_results') {
+      // Handle Safari scheduling interface
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const channelId = req.body.channel_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to schedule Safari results.')) return;
+        
+        console.log(`📅 DEBUG: Opening Safari scheduling modal for guild ${guildId}, channel ${channelId}`);
+        
+        // Get current scheduled tasks for display
+        const scheduledTasks = getAllScheduledSafariTasks();
+        
+        // Create scheduling modal
+        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+        
+        const modal = new ModalBuilder()
+          .setCustomId(`safari_schedule_modal_${channelId}`)
+          .setTitle('Schedule Round Results');
+        
+        // Text box 1: Hours from now
+        const hoursInput = new TextInputBuilder()
+          .setCustomId('schedule_hours')
+          .setLabel('Schedule Hours from now:')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('4')
+          .setMaxLength(3)
+          .setRequired(false);
+        
+        // Text box 2: Minutes from now
+        const minutesInput = new TextInputBuilder()
+          .setCustomId('schedule_minutes')
+          .setLabel('Schedule Minutes from now:')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('30')
+          .setMaxLength(3)
+          .setRequired(false);
+        
+        // Text box 3: Current task 1 (pre-filled with remaining time)
+        const task1Input = new TextInputBuilder()
+          .setCustomId('current_task1')
+          .setLabel('Next scheduled task (delete to cancel):')
+          .setStyle(TextInputStyle.Short)
+          .setValue(scheduledTasks[0] ? calculateRemainingTime(scheduledTasks[0].executeAt) : '')
+          .setPlaceholder('No tasks scheduled')
+          .setMaxLength(20)
+          .setRequired(false);
+        
+        // Text box 4: Current task 2
+        const task2Input = new TextInputBuilder()
+          .setCustomId('current_task2')
+          .setLabel('2nd scheduled task (delete to cancel):')
+          .setStyle(TextInputStyle.Short)
+          .setValue(scheduledTasks[1] ? calculateRemainingTime(scheduledTasks[1].executeAt) : '')
+          .setPlaceholder('No tasks scheduled')
+          .setMaxLength(20)
+          .setRequired(false);
+        
+        // Text box 5: Current task 3
+        const task3Input = new TextInputBuilder()
+          .setCustomId('current_task3')
+          .setLabel('3rd scheduled task (delete to cancel):')
+          .setStyle(TextInputStyle.Short)
+          .setValue(scheduledTasks[2] ? calculateRemainingTime(scheduledTasks[2].executeAt) : '')
+          .setPlaceholder('No tasks scheduled')
+          .setMaxLength(20)
+          .setRequired(false);
+        
+        modal.addComponents(
+          new ActionRowBuilder().addComponents(hoursInput),
+          new ActionRowBuilder().addComponents(minutesInput),
+          new ActionRowBuilder().addComponents(task1Input),
+          new ActionRowBuilder().addComponents(task2Input),
+          new ActionRowBuilder().addComponents(task3Input)
+        );
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_schedule_results:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error opening scheduling interface. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -14405,6 +14602,114 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: `❌ Import failed: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('safari_schedule_modal_')) {
+      // Handle Safari scheduling modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const member = req.body.member;
+        
+        // Extract channelId from custom_id: safari_schedule_modal_CHANNELID
+        const channelId = custom_id.split('safari_schedule_modal_')[1];
+        
+        // Security check - require ManageRoles permission
+        if (!member?.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to schedule Safari results.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🔍 DEBUG: Processing Safari scheduling for guild ${guildId}, channel ${channelId} by user ${userId}`);
+        
+        // Extract form data
+        const hoursValue = data.components[0]?.components[0]?.value?.trim();
+        const minutesValue = data.components[1]?.components[0]?.value?.trim();
+        const task1Value = data.components[2]?.components[0]?.value?.trim();
+        const task2Value = data.components[3]?.components[0]?.value?.trim();
+        const task3Value = data.components[4]?.components[0]?.value?.trim();
+        
+        // Get current scheduled tasks for comparison
+        const currentTasks = getAllScheduledSafariTasks();
+        
+        // Handle task deletions (if text was cleared)
+        const tasksToDelete = [];
+        if (currentTasks[0] && task1Value === '') tasksToDelete.push(currentTasks[0].id);
+        if (currentTasks[1] && task2Value === '') tasksToDelete.push(currentTasks[1].id);
+        if (currentTasks[2] && task3Value === '') tasksToDelete.push(currentTasks[2].id);
+        
+        // Clear deleted tasks
+        let deletedCount = 0;
+        for (const taskId of tasksToDelete) {
+          if (clearSafariTask(taskId)) {
+            deletedCount++;
+          }
+        }
+        
+        // Schedule new task if hours/minutes provided
+        let newTaskScheduled = false;
+        let scheduleDetails = '';
+        if (hoursValue || minutesValue) {
+          const hours = parseInt(hoursValue) || 0;
+          const minutes = parseInt(minutesValue) || 0;
+          
+          if (hours < 0 || minutes < 0 || hours > 168 || minutes > 59) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Invalid time values. Hours: 0-168, Minutes: 0-59.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          if (hours > 0 || minutes > 0) {
+            const taskId = scheduleSafariTask(channelId, guildId, hours, minutes);
+            newTaskScheduled = true;
+            
+            const executeAt = new Date(Date.now() + (hours * 3600000) + (minutes * 60000));
+            scheduleDetails = `\n\n⏰ **New Task Scheduled:**\nSafari Results will run in this channel in **${hours}h ${minutes}m**\n*Executing at: ${executeAt.toLocaleString()}*`;
+          }
+        }
+        
+        // Build response message
+        let responseText = '✅ **Safari Scheduling Updated**';
+        
+        if (deletedCount > 0) {
+          responseText += `\n🗑️ Cancelled ${deletedCount} scheduled task${deletedCount > 1 ? 's' : ''}`;
+        }
+        
+        if (newTaskScheduled) {
+          responseText += scheduleDetails;
+        }
+        
+        if (deletedCount === 0 && !newTaskScheduled) {
+          responseText = '📅 No changes made to Safari scheduling.';
+        }
+        
+        // Send response to channel (not ephemeral) so you can see the confirmation
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: responseText,
+            flags: 0 // Not ephemeral - visible to everyone for confirmation
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in Safari scheduling modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Scheduling failed: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
