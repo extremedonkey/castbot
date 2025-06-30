@@ -890,7 +890,7 @@ function calculateRemainingTime(executeAt) {
   return `${hours}h ${minutes}m`;
 }
 
-// Schedule a new Safari round results task
+// Schedule a new Safari round results task with smart reminders
 function scheduleSafariTask(channelId, guildId, hours, minutes) {
   const totalMs = (hours * 3600000) + (minutes * 60000);
   const executeAt = new Date(Date.now() + totalMs);
@@ -898,6 +898,7 @@ function scheduleSafariTask(channelId, guildId, hours, minutes) {
   
   console.log(`🔍 DEBUG: Scheduling Safari task for ${executeAt} in channel ${channelId}`);
   
+  // Schedule the main task
   const timeoutId = setTimeout(async () => {
     try {
       console.log(`⚔️ DEBUG: Executing scheduled Safari round results in channel ${channelId}`);
@@ -910,9 +911,58 @@ function scheduleSafariTask(channelId, guildId, hours, minutes) {
     }
   }, totalMs);
   
+  // Schedule smart reminders (only if there's enough time)
+  const reminderIds = [];
+  
+  // 30-minute reminder (only if total time > 45 minutes)
+  if (totalMs > 2700000) { // 45 minutes in ms
+    const reminder30Id = setTimeout(async () => {
+      try {
+        await sendReminderMessage(channelId, "30 minutes");
+        console.log(`🔔 DEBUG: 30-minute reminder sent for task ${taskId}`);
+      } catch (error) {
+        console.error(`❌ ERROR: 30-minute reminder failed for task ${taskId}:`, error);
+      }
+    }, totalMs - 1800000); // 30 minutes before
+    
+    reminderIds.push(reminder30Id);
+    console.log(`⏰ DEBUG: 30-minute reminder scheduled for task ${taskId}`);
+  }
+  
+  // 5-minute reminder (only if total time > 10 minutes)
+  if (totalMs > 600000) { // 10 minutes in ms
+    const reminder5Id = setTimeout(async () => {
+      try {
+        await sendReminderMessage(channelId, "5 minutes");
+        console.log(`🔔 DEBUG: 5-minute reminder sent for task ${taskId}`);
+      } catch (error) {
+        console.error(`❌ ERROR: 5-minute reminder failed for task ${taskId}:`, error);
+      }
+    }, totalMs - 300000); // 5 minutes before
+    
+    reminderIds.push(reminder5Id);
+    console.log(`⏰ DEBUG: 5-minute reminder scheduled for task ${taskId}`);
+  }
+  
+  // 1-minute reminder (only if total time > 2 minutes)
+  if (totalMs > 120000) { // 2 minutes in ms
+    const reminder1Id = setTimeout(async () => {
+      try {
+        await sendReminderMessage(channelId, "1 minute");
+        console.log(`🔔 DEBUG: 1-minute reminder sent for task ${taskId}`);
+      } catch (error) {
+        console.error(`❌ ERROR: 1-minute reminder failed for task ${taskId}:`, error);
+      }
+    }, totalMs - 60000); // 1 minute before
+    
+    reminderIds.push(reminder1Id);
+    console.log(`⏰ DEBUG: 1-minute reminder scheduled for task ${taskId}`);
+  }
+  
   scheduledSafariTasks.set(taskId, {
     id: taskId,
     timeoutId: timeoutId,
+    reminderIds: reminderIds, // Store reminder IDs for cleanup
     channelId: channelId,
     guildId: guildId,
     executeAt: executeAt,
@@ -921,17 +971,43 @@ function scheduleSafariTask(channelId, guildId, hours, minutes) {
     minutesFromCreation: minutes
   });
   
-  console.log(`✅ DEBUG: Safari task ${taskId} scheduled for ${hours}h ${minutes}m from now`);
+  const reminderCount = reminderIds.length;
+  console.log(`✅ DEBUG: Safari task ${taskId} scheduled for ${hours}h ${minutes}m from now with ${reminderCount} reminder(s)`);
   return taskId;
 }
 
-// Clear a scheduled task
+// Send reminder message to channel
+async function sendReminderMessage(channelId, timeLeft) {
+  try {
+    const channel = await client.channels.fetch(channelId);
+    if (channel) {
+      await channel.send({
+        content: `⏰ **Safari Round Results** will be revealed in **${timeLeft}**! 🦁`,
+        flags: 0
+      });
+    }
+  } catch (error) {
+    console.error(`❌ ERROR: Failed to send reminder message to channel ${channelId}:`, error);
+  }
+}
+
+// Clear a scheduled task and its reminders
 function clearSafariTask(taskId) {
   const task = scheduledSafariTasks.get(taskId);
   if (task) {
+    // Clear the main task
     clearTimeout(task.timeoutId);
+    
+    // Clear all reminder timeouts
+    if (task.reminderIds && task.reminderIds.length > 0) {
+      task.reminderIds.forEach(reminderId => {
+        clearTimeout(reminderId);
+      });
+      console.log(`🗑️ DEBUG: Cleared ${task.reminderIds.length} reminder(s) for task ${taskId}`);
+    }
+    
     scheduledSafariTasks.delete(taskId);
-    console.log(`🗑️ DEBUG: Safari task ${taskId} cleared`);
+    console.log(`🗑️ DEBUG: Safari task ${taskId} and all reminders cleared`);
     return true;
   }
   return false;
