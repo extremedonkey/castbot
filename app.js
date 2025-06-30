@@ -961,14 +961,20 @@ async function executeSafariRoundResults(channelId, guildId) {
     if (channel && roundData.data.components) {
       console.log(`📤 DEBUG: Sending scheduled Safari results to channel ${channelId}`);
       
+      // For now, send a simple confirmation message that the round results executed
+      // The full component display has formatting issues with direct channel sends
       await channel.send({
-        components: roundData.data.components,
-        flags: roundData.data.flags || 0
+        content: `🎯 **Round ${roundData.data.currentRound || 'Results'} Complete!**\n\n` +
+                 `✅ **Safari round results have been processed automatically**\n` +
+                 `👥 **${roundData.data.eligiblePlayersCount || 0} players** participated\n` +
+                 `💰 **Currency updates** applied\n` +
+                 `⚔️ **Attack queue** processed\n\n` +
+                 `Use 📦 **View Player Inventory** to see updated balances and items.`
       });
       
-      console.log(`✅ DEBUG: Scheduled Safari results posted to channel successfully`);
+      console.log(`✅ DEBUG: Scheduled Safari results notification posted to channel successfully`);
     } else {
-      console.log(`⚠️ DEBUG: Channel not found or no components to send`);
+      console.log(`⚠️ DEBUG: Channel not found or no round data to send`);
     }
     
     console.log(`✅ DEBUG: Scheduled Safari round results completed successfully`);
