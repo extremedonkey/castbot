@@ -43,6 +43,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_confirm_reset_game` | ⚠️ Reset to Round 1 | app.js:~5629 | Direct handler | ✅ Active |
 | `safari_export_data` | ⚙️ Export | app.js:~5817 | Direct handler | ✅ Active |
 | `safari_import_data` | ⚙️ Import | app.js:~5866 | Direct handler | ✅ Active |
+| `safari_schedule_results` | 📅 Schedule Results | app.js:~6341 | Direct handler | ✅ Active |
 | `safari_manage_safari_buttons` | 🎛️ Manage Safari Buttons | app.js:~3893 | Direct handler | ✅ Active |
 | `safari_manage_stores` | 🏪 Manage Stores | app.js:~5067 | Direct handler | ✅ Active |
 | `safari_manage_items` | 📦 Manage Items | app.js:~5195 | Direct handler | ✅ Active |
@@ -126,6 +127,7 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_config_modal_*` | Field Group Modals | app.js:~13014 | Pattern handler | ✅ Active |
 | `safari_export_modal` | Export Safari Data | app.js:~13277 | Modal handler | ✅ Active |
 | `safari_import_modal` | Import Safari Data | app.js:~13287 | Modal handler | ✅ Active |
+| `safari_schedule_modal_*` | Schedule Safari Results | app.js:~14610 | Modal handler | ✅ Active |
 
 ### **Castlist Navigation Buttons**
 | Custom ID | Label | Location | Handler Function | Status |

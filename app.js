@@ -946,24 +946,24 @@ function getAllScheduledSafariTasks() {
 // Execute Safari round results in specified channel
 async function executeSafariRoundResults(channelId, guildId) {
   try {
-    console.log(`⚔️ DEBUG: Starting Safari round results execution in channel ${channelId}`);
+    console.log(`⚔️ DEBUG: Starting scheduled Safari round results execution in channel ${channelId}`);
     
-    // Import the Safari manager to execute results
-    const { createRoundResultsV2 } = await import('./safariManager.js');
+    // Import the Safari manager - use the same function as the manual button
+    const { processRoundResults } = await import('./safariManager.js');
     
-    // Execute the round results
-    await createRoundResultsV2(guildId, channelId, client);
+    // Process round results using the same backend logic as manual execution
+    const roundData = await processRoundResults(guildId, channelId, client, true); // Pass flag for V2 mode
     
-    console.log(`✅ DEBUG: Safari round results completed successfully`);
+    console.log(`✅ DEBUG: Scheduled Safari round results completed successfully`);
   } catch (error) {
-    console.error(`❌ ERROR: Failed to execute Safari round results:`, error);
+    console.error(`❌ ERROR: Failed to execute scheduled Safari round results:`, error);
     
     // Try to send error message to channel
     try {
       const channel = await client.channels.fetch(channelId);
       if (channel) {
         await channel.send({
-          content: '❌ **ERROR**: Scheduled Safari round results failed to execute. Please run manually.',
+          content: '❌ **ERROR**: Scheduled Safari round results failed to execute. Please run the command manually.',
           flags: 0
         });
       }
