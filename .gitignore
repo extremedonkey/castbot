@@ -25,3 +25,10 @@ logs/
 # SSH keys
 castbot-key.pem
 *.pem
+
+# VS Code shit
+.vscode/settings.json
+.vscode/settings.local.json
+
+# Secrets
+.env.local
