@@ -15095,6 +15095,12 @@ client.on('messageReactionAdd', async (reaction, user) => {
     const guild = reaction.message.guild;
     const member = await guild.members.fetch(user.id);
 
+    // Check if client is ready before doing permission checks
+    if (!client || !client.user) {
+      console.error('❌ Client not ready in messageReactionAdd, skipping role assignment');
+      return;
+    }
+
     // Add permission check
     const permCheck = await checkRoleHierarchyPermission(guild, roleId);
     if (!permCheck.allowed) {

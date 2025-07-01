@@ -13,6 +13,15 @@ export async function checkRoleHierarchyPermission(guild, roleId) {
   // Import client dynamically to avoid circular dependency
   const { client } = await import('../app.js');
   
+  // Check if client and client.user are available
+  if (!client || !client.user) {
+    console.error('❌ Client or client.user is not available in checkRoleHierarchyPermission');
+    return { 
+      allowed: false, 
+      reason: 'Bot client is not ready' 
+    };
+  }
+  
   const bot = await guild.members.fetch(client.user.id);
   const role = await guild.roles.fetch(roleId);
   
