@@ -633,81 +633,40 @@ async function updateCastBotStorage(guildId, results) {
 function generateSetupResponse(results) {
     const sections = [];
     
-    // Pronoun Roles Section with individual role lists
+    // Pronoun Roles Section - concise summary
     const pronounTotal = results.pronouns.created.length + results.pronouns.existingAdded.length + results.pronouns.alreadyInCastBot.length;
     
     if (pronounTotal > 0) {
         const pronounParts = [];
-        if (results.pronouns.created.length > 0) pronounParts.push(`${results.pronouns.created.length} roles created in your server and added to CastBot`);
-        if (results.pronouns.existingAdded.length > 0) pronounParts.push(`${results.pronouns.existingAdded.length} existing roles added to CastBot`);
-        if (results.pronouns.alreadyInCastBot.length > 0) pronounParts.push(`${results.pronouns.alreadyInCastBot.length} roles were already configured in CastBot`);
+        if (results.pronouns.created.length > 0) pronounParts.push(`✅ ${results.pronouns.created.length} created`);
+        if (results.pronouns.existingAdded.length > 0) pronounParts.push(`➕ ${results.pronouns.existingAdded.length} existing added`);
+        if (results.pronouns.alreadyInCastBot.length > 0) pronounParts.push(`✓ ${results.pronouns.alreadyInCastBot.length} already configured`);
         
-        let pronounSection = `**🔀 Pronoun Roles:** ${pronounTotal} total (${pronounParts.join(', ')})`;
-        
-        // Add individual role lists
-        if (results.pronouns.created.length > 0) {
-            pronounSection += `\n**Created roles:** ${results.pronouns.created.map(r => `<@&${r.id}>`).join(', ')}`;
-        }
-        if (results.pronouns.existingAdded.length > 0) {
-            pronounSection += `\n**Existing roles added:** ${results.pronouns.existingAdded.map(r => `<@&${r.id}>`).join(', ')}`;
-        }
-        if (results.pronouns.alreadyInCastBot.length > 0) {
-            pronounSection += `\n**Already configured:** ${results.pronouns.alreadyInCastBot.map(r => `<@&${r.id}>`).join(', ')}`;
-        }
-        
-        sections.push(pronounSection);
+        sections.push(`**🔀 Pronoun Roles:** ${pronounTotal} total (${pronounParts.join(', ')})`);
     }
     
-    // Timezone Roles Section with individual role lists
+    // Timezone Roles Section - concise summary
     const timezoneTotal = results.timezones.created.length + results.timezones.existingAdded.length + results.timezones.alreadyInCastBot.length;
     
     if (timezoneTotal > 0) {
         const timezoneParts = [];
-        if (results.timezones.created.length > 0) timezoneParts.push(`${results.timezones.created.length} roles created in your server and added to CastBot`);
-        if (results.timezones.existingAdded.length > 0) timezoneParts.push(`${results.timezones.existingAdded.length} existing roles added to CastBot`);
-        if (results.timezones.alreadyInCastBot.length > 0) timezoneParts.push(`${results.timezones.alreadyInCastBot.length} roles were already configured in CastBot`);
+        if (results.timezones.created.length > 0) timezoneParts.push(`✅ ${results.timezones.created.length} created`);
+        if (results.timezones.existingAdded.length > 0) timezoneParts.push(`➕ ${results.timezones.existingAdded.length} existing added`);
+        if (results.timezones.alreadyInCastBot.length > 0) timezoneParts.push(`✓ ${results.timezones.alreadyInCastBot.length} already configured`);
         
-        let timezoneSection = `**🌍 Timezone Roles:** ${timezoneTotal} total (${timezoneParts.join(', ')})`;
-        
-        // Add individual role lists
-        if (results.timezones.created.length > 0) {
-            timezoneSection += `\n**Created roles:** ${results.timezones.created.map(r => `<@&${r.id}>`).join(', ')}`;
-        }
-        if (results.timezones.existingAdded.length > 0) {
-            timezoneSection += `\n**Existing roles added:** ${results.timezones.existingAdded.map(r => `<@&${r.id}>`).join(', ')}`;
-        }
-        if (results.timezones.alreadyInCastBot.length > 0) {
-            timezoneSection += `\n**Already configured:** ${results.timezones.alreadyInCastBot.map(r => `<@&${r.id}>`).join(', ')}`;
-        }
-        
-        sections.push(timezoneSection);
+        sections.push(`**🌍 Timezone Roles:** ${timezoneTotal} total (${timezoneParts.join(', ')})`);
     }
     
-    // Critical hierarchy warnings - shown prominently
+    // Critical hierarchy warnings - concise version
     const allWarnings = [...results.pronouns.hierarchyWarnings, ...results.timezones.hierarchyWarnings];
     if (allWarnings.length > 0) {
-        const warningText = [
-            `## ⚠️ WARNING: Below CastBot in role hierarchy (role still added)`,
-            '',
-            `${allWarnings.length} role(s) are positioned above the **${allWarnings[0].botRoleName}** role in your server's hierarchy.`,
-            `CastBot cannot assign these roles to users until they are moved below the bot role:`,
-            '',
-            allWarnings.map(role => `   • <@&${role.id}> (${role.name})`).join('\n'),
-            '',
-            `💡 **How to fix:** Drag the 'CastBot' role up to the top of your Role list from your Discord Settings > ⚙️ Server Settings > Roles.`
-        ].join('\n');
-        
-        sections.push(warningText);
+        sections.push(`⚠️ **Role Hierarchy Issue:** ${allWarnings.length} role(s) need to be moved below the CastBot role in Server Settings > Roles for auto-assignment to work.`);
     }
     
-    // Failed roles
+    // Failed roles - concise summary
     const allFailed = [...results.pronouns.failed, ...results.timezones.failed];
     if (allFailed.length > 0) {
-        const failedText = [
-            '❌ **Failed to create/add:**',
-            allFailed.map(role => `   • ${role.name}: ${role.error}`).join('\n')
-        ].join('\n');
-        sections.push(failedText);
+        sections.push(`❌ **Failed:** ${allFailed.length} role(s) couldn't be created/added. Check bot permissions.`);
     }
     
     // Success summary if no issues
