@@ -185,7 +185,7 @@ function getButtonLabel(customId, components) {
 async function logInteraction(userId, guildId, action, details, username, guildName, components = null, channelName = null, displayName = null) {
   try {
     // Get environment-specific timezone offset
-    const { getLoggingTimezoneOffset } = await import('./storage.js');
+    const { getLoggingTimezoneOffset } = await import('../../storage.js');
     const timezoneOffset = await getLoggingTimezoneOffset();
     
     // Apply environment-specific timezone offset
@@ -384,7 +384,7 @@ async function postToDiscordLogs(logEntry, userId, action, details, components) 
     }
 
     // Load environment config
-    const { loadEnvironmentConfig } = await import('./storage.js');
+    const { loadEnvironmentConfig } = await import('../../storage.js');
     const envConfig = await loadEnvironmentConfig();
     
     const loggingConfig = envConfig.liveDiscordLogging;
@@ -402,7 +402,7 @@ async function postToDiscordLogs(logEntry, userId, action, details, components) 
     // Get target channel if not cached
     if (!targetChannel) {
       try {
-        const { getLoggingChannelId } = await import('./storage.js');
+        const { getLoggingChannelId } = await import('../../storage.js');
         const targetChannelId = await getLoggingChannelId();
         
         const targetGuild = await discordClient.guilds.fetch(loggingConfig.targetGuildId);
@@ -496,7 +496,7 @@ async function logNewServerInstall(guild, ownerInfo = null) {
     }
 
     // Load environment config
-    const { loadEnvironmentConfig } = await import('./storage.js');
+    const { loadEnvironmentConfig } = await import('../../storage.js');
     const envConfig = await loadEnvironmentConfig();
     
     const loggingConfig = envConfig.liveDiscordLogging;
@@ -507,7 +507,7 @@ async function logNewServerInstall(guild, ownerInfo = null) {
     }
 
     // Get environment-specific timezone offset
-    const { getLoggingTimezoneOffset } = await import('./storage.js');
+    const { getLoggingTimezoneOffset } = await import('../../storage.js');
     const timezoneOffset = await getLoggingTimezoneOffset();
     
     // Apply environment-specific timezone offset
@@ -547,7 +547,7 @@ async function logNewServerInstall(guild, ownerInfo = null) {
     // Get target channel if not cached
     if (!targetChannel) {
       try {
-        const { getLoggingChannelId } = await import('./storage.js');
+        const { getLoggingChannelId } = await import('../../storage.js');
         const targetChannelId = await getLoggingChannelId();
         
         const targetGuild = await discordClient.guilds.fetch(loggingConfig.targetGuildId);
