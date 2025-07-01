@@ -7,11 +7,15 @@ import { PermissionFlagsBits } from 'discord.js';
  * Check if bot has permission to assign a specific role
  * @param {Object} guild - Discord guild object
  * @param {string} roleId - Role ID to check
+ * @param {Object} client - Discord client object (optional, will import if not provided)
  * @returns {Object} Result object with allowed status and reason
  */
-export async function checkRoleHierarchyPermission(guild, roleId) {
-  // Import client dynamically to avoid circular dependency
-  const { client } = await import('../app.js');
+export async function checkRoleHierarchyPermission(guild, roleId, client = null) {
+  // Use provided client or import dynamically
+  if (!client) {
+    const importedModule = await import('../app.js');
+    client = importedModule.client;
+  }
   
   // Check if client and client.user are available
   if (!client || !client.user) {

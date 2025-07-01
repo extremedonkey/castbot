@@ -10463,7 +10463,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
         // Check permissions for all selected roles before making any changes
         for (const roleId of selectedRoleIds) {
-          const permissionCheck = await checkRoleHierarchyPermission(guild, roleId);
+          const permissionCheck = await checkRoleHierarchyPermission(guild, roleId, client);
           if (!permissionCheck.allowed) {
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -10538,7 +10538,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Check permissions for selected role before making any changes
         if (selectedRoleIds.length > 0) {
           const selectedRoleId = selectedRoleIds[0]; // Only take the first one
-          const permissionCheck = await checkRoleHierarchyPermission(guild, selectedRoleId);
+          const permissionCheck = await checkRoleHierarchyPermission(guild, selectedRoleId, client);
           if (!permissionCheck.allowed) {
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -10627,7 +10627,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
         // Check permissions for all selected roles before making any changes
         for (const roleId of selectedRoleIds) {
-          const permissionCheck = await checkRoleHierarchyPermission(guild, roleId);
+          const permissionCheck = await checkRoleHierarchyPermission(guild, roleId, client);
           if (!permissionCheck.allowed) {
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -10715,7 +10715,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
         // Check permissions for selected role before making changes
         if (selectedRoleIds.length > 0) {
-          const permissionCheck = await checkRoleHierarchyPermission(guild, selectedRoleIds[0]);
+          const permissionCheck = await checkRoleHierarchyPermission(guild, selectedRoleIds[0], client);
           if (!permissionCheck.allowed) {
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -15101,8 +15101,8 @@ client.on('messageReactionAdd', async (reaction, user) => {
       return;
     }
 
-    // Add permission check
-    const permCheck = await checkRoleHierarchyPermission(guild, roleId);
+    // Add permission check - pass client directly
+    const permCheck = await checkRoleHierarchyPermission(guild, roleId, client);
     if (!permCheck.allowed) {
       // Remove the user's reaction to indicate failure
       await reaction.users.remove(user.id);
@@ -15174,8 +15174,8 @@ client.on('messageReactionRemove', async (reaction, user) => {
     const guild = reaction.message.guild;
     const member = await guild.members.fetch(user.id);
 
-    // Add permission check here too
-    const permCheck = await checkRoleHierarchyPermission(guild, roleId);
+    // Add permission check here too - pass client directly
+    const permCheck = await checkRoleHierarchyPermission(guild, roleId, client);
     if (!permCheck.allowed) {
       console.error(`Role removal failed in ${guild.name}: ${permCheck.reason}`);
       return;
