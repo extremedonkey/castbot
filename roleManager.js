@@ -1164,7 +1164,7 @@ async function nukeRoles(guildId, client) {
             }
             
             // Save the updated data
-            savePlayerData(playerData);
+            await savePlayerData(playerData);
             console.log(`✅ DEBUG: Cleared ${results.pronounsCleared} pronouns and ${results.timezonesCleared} timezones from storage`);
         }
 
