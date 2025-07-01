@@ -89,7 +89,8 @@ import {
   canBotManageRole,
   canBotManageRoles,
   generateHierarchyWarning,
-  testRoleHierarchy
+  testRoleHierarchy,
+  nukeRoles
 } from './roleManager.js';
 import { 
   createPlayerInventoryDisplay,
@@ -5605,6 +5606,62 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error running role hierarchy test. Check logs for details.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'nuke_roles') {
+      // Nuke all CastBot roles for testing - admin only
+      try {
+        const userId = req.body.member.user.id;
+        
+        // Security check - only allow specific Discord ID
+        if (!requireSpecificUser(req, res, '391415444084490240', 'Access denied. This feature is restricted.')) return;
+
+        const guildId = req.body.guild_id;
+        
+        console.log('💥 DEBUG: Starting role nuke...');
+        
+        // Run the nuke function
+        const nukeResults = await nukeRoles(guildId, client);
+        
+        // Create comprehensive response
+        const responseLines = [
+          '# 💥 Nuke Roles Complete',
+          '',
+          `**Server Reset Status:** ${nukeResults.success ? 'Success ✅' : 'Failed ❌'}`,
+          '',
+          '## Results:',
+          `**Roles Deleted:** ${nukeResults.rolesDeleted}`,
+          `**Pronouns Cleared:** ${nukeResults.pronounsCleared}`, 
+          `**Timezones Cleared:** ${nukeResults.timezonesCleared}`,
+          ''
+        ];
+
+        if (nukeResults.errors.length > 0) {
+          responseLines.push('## Errors:');
+          nukeResults.errors.forEach(error => {
+            responseLines.push(`❌ ${error}`);
+          });
+          responseLines.push('');
+        }
+
+        responseLines.push('🎯 **Next Step:** Run `/menu` → Production Menu → Setup to test fresh server behavior!');
+
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: responseLines.join('\n'),
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in nuke_roles:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error running nuke roles. Check logs for details.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
