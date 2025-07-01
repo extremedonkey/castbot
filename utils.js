@@ -25,8 +25,11 @@ export async function DiscordRequest(endpoint, options) {
   if (!res.ok) {
     const error = await res.text();
     
-    // Graceful handling for "Unknown Webhook" errors (Discord interaction token expiry)
-    if (error.includes('Unknown Webhook') || error.includes('"code": 10015')) {
+    // Graceful handling for webhook errors (Discord interaction token expiry/invalid)
+    if (error.includes('Unknown Webhook') || 
+        error.includes('Invalid Webhook Token') ||
+        error.includes('"code": 10015') || 
+        error.includes('"code": 50027')) {
       console.log(`⏰ DEBUG: Webhook interaction failed (${endpoint}) - likely expired or invalid token`);
       return null; // Return null instead of throwing error
     }
