@@ -563,7 +563,8 @@ async function executeSetup(guildId, guild) {
 async function updateCastBotStorage(guildId, results) {
     console.log(`💾 DEBUG: Updating CastBot storage for guild ${guildId}`);
     
-    const playerData = await loadPlayerData();
+    // Load fresh data before each update to avoid race conditions
+    let playerData = await loadPlayerData();
     
     // Initialize guild data structure if needed
     if (!playerData[guildId]) {
@@ -573,6 +574,7 @@ async function updateCastBotStorage(guildId, results) {
             timezones: {},
             pronounRoleIDs: []
         };
+        await savePlayerData(playerData);
     }
 
     // Update pronoun roles - add new and existing roles to CastBot tracking
@@ -582,6 +584,8 @@ async function updateCastBotStorage(guildId, results) {
     ];
     
     if (newPronounIds.length > 0) {
+        // Reload data to get any concurrent changes
+        playerData = await loadPlayerData();
         const currentPronounIds = playerData[guildId].pronounRoleIDs || [];
         const updatedPronounIds = [...new Set([...currentPronounIds, ...newPronounIds])];
         
@@ -589,14 +593,18 @@ async function updateCastBotStorage(guildId, results) {
         console.log(`💾 DEBUG: Current pronoun IDs:`, currentPronounIds);
         console.log(`💾 DEBUG: Updated pronoun IDs:`, updatedPronounIds);
         
-        await updateGuildPronouns(guildId, updatedPronounIds);
-        console.log(`💾 DEBUG: Successfully updated ${newPronounIds.length} pronoun roles in storage`);
+        // Update pronouns directly in our data object
+        playerData[guildId].pronounRoleIDs = updatedPronounIds;
+        await savePlayerData(playerData);
+        console.log(`💾 DEBUG: Successfully updated ${updatedPronounIds.length} pronoun roles in storage`);
     }
 
     // Update timezone roles - add new and existing roles with metadata
     const newTimezoneEntries = [...results.timezones.created, ...results.timezones.existingAdded];
     
     if (newTimezoneEntries.length > 0) {
+        // Reload data again to preserve pronoun changes
+        playerData = await loadPlayerData();
         const currentTimezones = playerData[guildId].timezones || {};
         
         // Add new timezone data with enhanced structure for future DST support

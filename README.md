@@ -601,13 +601,6 @@ Live logging settings are stored in `playerData.json` under `environmentConfig.l
 - Retrieves pronouns/timezones/ages from roles or slash commands
 - Dynamically fetches data from Discord each time /castlist is used
 
-### Example Usage
-
-To set the age for a user, use the `/setage` command:
-```bash
-/setage userid:123456789012345678 age:25
-```
-
 To display the dynamic castlist, use the `/castlist` command:
 ```bash
 /castlist
@@ -621,49 +614,5 @@ Contributions are welcome! Please fork the repository and submit a pull request 
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-## Further Info to be synthesized - Production Deployment
-RUNSHEET - AWS LIGHTSAIL DEPLOYMENT
-1. FileZilla - Ensure last backup has been put into its own folder
-2. Backup files to /bu
-3. Check .env between Prod and Dev - ensure key is correct, PRODUCTION=TRUE and check the DEV_GUILD_ID (should generally be where most active dev is taking place)
-4. Copy new files across BE CAREFUL NOT TO DO .ENV OR PLAYERDATA
-
-pm2 stop castbot-pm
-
-Run migration WINDOWS ONLY OOPS - 
-./migrate_to_multi_castlist_prod.ps1 playerDataProd.json
-
-https://jsonformatter.org/
-
-Update slash commands
-node fix_commands.js
-npm run deploy
-
-Restart bot
-pm2 restart castbot
-
-
-Check .env
-
-Prod Deployment
-
-npm install
-npm list --depth=0
-
-
-npm run deploy
-
-pm2 restart castbot-pm
-
-
-
-pm2 start app.js --name castbot-pm
-pm2 restart castbot-pm
-pm2 stop castbot-pm
-pm2 logs castbot-pm
-pm2 list
-sudo ls /opt/bitnami/apache/conf/bitnami/certs/
-sudo /opt/bitnami/bncert-tool
-sudo /opt/bitnami/ctlscript.sh restart apache
-nslookup castbotaws.reecewagner.com
-sudo /opt/bitnami/ctlscript.sh restart apache
+## Further Info
+1. FileZilla - User has SFTP access to amazon lightsail if needed

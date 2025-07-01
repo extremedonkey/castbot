@@ -1845,6 +1845,56 @@ If this conversation gets compacted and you're picking up implementation:
 
 This documentation serves as the complete guide for implementing and extending CastBot's Safari system. Always refer to this document when working with Safari, Idol Hunt, Questions, or dynamic content features.
 
+## Implementation History
+
+### SAFARI ATTACK SYSTEM ✅ MVP3 COMPLETE
+
+**Major Feature Addition: Safari Queued Attack System MVP3**
+- **⚔️ Attack Planning Interface**: Complete tactical attack system with target selection and quantity management
+- **🎯 Multi-Target Distribution**: Players can split attacks from single item across multiple targets for strategic gameplay
+- **📊 Attack Availability Tracking**: Persistent `numAttacksAvailable` storage with real-time inventory updates
+- **🗂️ Attack Queue Management**: Round-based attack scheduling stored in `safariContent.json` with full state persistence
+- **🔄 Dynamic UI Updates**: Real-time attack calculations, damage totals, and planned attack displays
+- **🛡️ Eligible Target Filtering**: Only shows active players (currency ≥1 OR inventory items) excluding attacker
+- **📈 Scalable Architecture**: Built for future attack types (live, instant) while hard-coding current queued approach
+
+**Technical Implementation:**
+- **Attack Data Structure**: Enhanced inventory format with `quantity` and `numAttacksAvailable` properties in `playerData.json`
+- **Queue Storage**: `safariContent.json` → `attackQueue.round{X}` with structured attack records including damage calculations
+- **State Management**: Discord interaction state embedded in custom_ids to handle stateless UI updates
+- **UI Components**: Section components with blue "⚔️ Attack Player" buttons for attack items in inventory display
+- **Handler Integration**: Complete button handler system with proper dynamic handler exclusions
+
+**MVP3 Status:** ✅ PRODUCTION READY
+- Complete attack planning and scheduling system operational
+- Multi-target attack distribution fully functional
+- Real-time UI updates and state management working
+- Attack queue persistence and round integration ready
+- Ready for Tycoons game deployment and competitive gameplay
+
+### SAFARI DYNAMIC CONTENT SYSTEM ✅ MVP1.5 COMPLETE
+
+**Major Feature Addition: Safari Dynamic Content Management System MVP1.5**
+- **🦁 Safari Submenu**: Complete dynamic content management interface in Production Menu
+- **🎛️ Manage Safari Buttons**: Reorganized submenu with button management capabilities following shop/item patterns
+- **✏️ Edit Existing Button**: Button selection dropdown with comprehensive edit functions (Properties, Actions, Delete)
+- **📝 Create Custom Button**: Modal-driven button creation with action configuration (display_text, update_currency, follow_up_button)
+- **📤 Post Custom Button**: Channel selection workflow for posting interactive buttons to any text channel
+- **💰 Manage Currency**: Complete currency management with view all balances, set player currency, and reset all functionality
+- **📊 View All Buttons**: Comprehensive listing of created buttons with usage statistics and metadata
+- **🚀 Dynamic Execution**: Real-time button interaction handling with action chaining and currency updates
+- **🔧 Conditional Actions**: Advanced conditional logic system with currency_gte conditions and success/failure actions
+
+**MVP1.5 Status:** ✅ PRODUCTION READY
+- All core functionality implemented and tested
+- Complete admin interface with intuitive workflows
+- Player interaction system fully functional
+- Currency management system operational
+- Button management interface following established patterns
+- Dynamic handler pattern exclusions implemented
+- Conditional action system with basic currency logic
+- Ready for community deployment and feedback
+
 # ORIGINAL TEXT PROMPT
 Only refer to the following instructions if trying to clarify a requirement. Otherwise, where there is ambiguity, always refer to the content above this line as the source of truth.
 
