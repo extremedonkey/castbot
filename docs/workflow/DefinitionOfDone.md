@@ -24,28 +24,24 @@ This checklist MUST be completed for every feature, fix, or enhancement before i
 - [ ] Network failures handled appropriately
 
 ### 4. Logging Requirements
-Every feature MUST include comprehensive logging:
+Every feature MUST include comprehensive logging following our logging standards:
+
+**📋 MANDATORY:** Follow [docs/architecture/LoggingStandards.md](docs/architecture/LoggingStandards.md) for all logging
 
 #### Required Logging Points
-- [ ] Function entry points:
+- [ ] Use logger utility (not direct console.log):
   ```javascript
-  console.log('🔍 DEBUG: [Feature] Starting [action] for user:', userId);
+  import { logger } from './logger.js';
+  logger.debug('FEATURE', 'Starting action', { userId, context });
   ```
-- [ ] Success confirmations:
+- [ ] Debug logging for development troubleshooting
+- [ ] Info logging for important user actions
+- [ ] Error logging with proper context and error objects
+- [ ] Performance logging for operations > 100ms:
   ```javascript
-  console.log('✅ DEBUG: [Feature] [step] completed successfully');
-  ```
-- [ ] Error scenarios:
-  ```javascript
-  console.log('❌ DEBUG: [Feature] [error] occurred:', error.message);
-  ```
-- [ ] Performance (operations > 100ms):
-  ```javascript
-  console.log('⏱️ DEBUG: [Feature] completed in', Date.now() - startTime, 'ms');
-  ```
-- [ ] State changes:
-  ```javascript
-  console.log('📝 DEBUG: [Feature] state changed from', oldState, 'to', newState);
+  const start = Date.now();
+  // ... operation ...
+  logger.perf('FEATURE', 'operation name', Date.now() - start);
   ```
 
 #### Analytics Logging
@@ -53,6 +49,11 @@ Every feature MUST include comprehensive logging:
   ```javascript
   await logInteraction(guildId, userId, interactionType, customId);
   ```
+
+#### Environment Awareness
+- [ ] Debug logs only run in development (unless FORCE_DEBUG=true)
+- [ ] Info/warn/error logs always run
+- [ ] Use consistent feature categories (SAFARI, MENU, BUTTON, etc.)
 
 ### 5. Discord Integration
 - [ ] Respects Discord API limits:

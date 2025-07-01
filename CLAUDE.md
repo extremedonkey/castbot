@@ -22,6 +22,8 @@ When working on specific features, refer to these dedicated documentation files:
 
 **📊 ANALYTICS:** Logging and analytics system → [docs/architecture/Analytics.md](docs/architecture/Analytics.md)
 
+**📝 LOGGING:** Logging standards and utilities → [docs/architecture/LoggingStandards.md](docs/architecture/LoggingStandards.md)
+
 ## 🛠️ Critical Development Information
 
 ### Primary Development Workflow
