@@ -815,6 +815,30 @@ Target Final:        2,000-3,000 lines (78-85% reduction)
 **Documentation:** See [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md) for complete feature documentation, technical design, and implementation details
 **Status:** In design phase - refer to docs/features/SeasonAppBuilder.md for current progress and sprint planning
 
+### Environment-Aware Logging Migration
+**Description:** Migrate from direct console.log to structured, environment-aware logging
+**Documentation:** See [docs/architecture/LoggingStandards.md](docs/architecture/LoggingStandards.md) for implementation guide
+**Status:** Phase 1 complete ✅ - Logger utility created and tested
+**Priority:** High - Improves production performance and debugging
+
+#### Phase 2: Feature-by-Feature Migration
+- **Scope:** Add new logger calls alongside existing console.log statements
+- **Features to migrate:** Safari (30 handlers), Menu (40 handlers), Button core (20 handlers)
+- **Approach:** One feature at a time, test thoroughly, keep old logs during transition
+- **Risk:** Low - purely additive, no existing code changes
+
+#### Phase 3: Legacy Log Cleanup  
+- **Scope:** Remove old console.log statements after new logging validated
+- **Prerequisites:** Phase 2 complete, extensive testing in production
+- **Timeline:** 2-3 weeks after Phase 2 deployment
+- **Risk:** Medium - requires careful removal of deprecated logs
+
+**Benefits:**
+- **Production Performance:** Debug logs only in development
+- **Better Troubleshooting:** Structured logs with timestamps and feature categories
+- **Emergency Debug Mode:** FORCE_DEBUG=true for production issues
+- **Log Filtering:** Feature-specific log analysis
+
 ### Enhanced Button Interaction Logging
 **Description:** Improve button interaction logging with human-readable labels
 **Documentation:** See [docs/architecture/ButtonInteractionLogging.md](docs/architecture/ButtonInteractionLogging.md) for complete technical analysis
