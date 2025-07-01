@@ -55,7 +55,20 @@ When working on specific features, refer to these dedicated documentation files:
 npm run deploy-remote-wsl      # Full deployment (HIGH RISK)
 npm run deploy-commands-wsl    # Commands only (lower risk)
 npm run deploy-remote-wsl-dry  # Preview changes (SAFE)
-npm run logs-remote-wsl        # Monitor logs
+```
+
+### Production Log Reading
+
+```bash
+npm run logs-prod              # Last 100 lines
+npm run logs-prod-follow       # Real-time log streaming
+npm run logs-prod-errors       # Only error logs
+npm run logs-prod-safari       # Only Safari feature logs
+npm run logs-prod-stats        # Log statistics and analysis
+
+# Advanced filtering
+npm run logs-prod -- --filter "user 391415444084490240"
+npm run logs-prod -- --feature BUTTON --level debug
 ```
 
 ## 🔧 Architecture Overview

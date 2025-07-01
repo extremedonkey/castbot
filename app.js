@@ -477,7 +477,12 @@ async function createReeceStuffMenu() {
       .setCustomId('test_role_hierarchy')
       .setLabel('Test Role Hierarchy')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔧')
+      .setEmoji('🔧'),
+    new ButtonBuilder()
+      .setCustomId('nuke_roles')
+      .setLabel('Nuke Roles')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('💥')
   ];
   
   const analyticsRow1 = new ActionRowBuilder().addComponents(analyticsButtonsRow1);

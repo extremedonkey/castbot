@@ -24,6 +24,13 @@ export async function DiscordRequest(endpoint, options) {
   // Handle non-ok responses
   if (!res.ok) {
     const error = await res.text();
+    
+    // Graceful handling for "Unknown Webhook" errors (Discord interaction token expiry)
+    if (error.includes('Unknown Webhook') || error.includes('"code": 10015')) {
+      console.log(`⏰ DEBUG: Webhook interaction failed (${endpoint}) - likely expired or invalid token`);
+      return null; // Return null instead of throwing error
+    }
+    
     throw new Error(error);
   }
   

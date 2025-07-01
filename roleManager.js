@@ -1107,6 +1107,130 @@ function formatOffset(offset) {
     return `UTC${offset}`;
 }
 
+// Pronoun role colors matching heart emojis (RGB to integer conversion)
+const PRONOUN_COLORS = {
+    'He/Him': 0xFF0000,      // ❤️ Red
+    'She/Her': 0xFFC0CB,     // 🩷 Pink 
+    'They/Them': 0x800080,   // 💜 Purple
+    'They/He': 0x00FF00,     // 💚 Green
+    'She/They': 0x87CEEB,    // 🩵 Light Blue
+    'Ask': 0xFFFF00,         // 💛 Yellow
+    'Any': 0xFFFFFF,         // 🤍 White
+    'All Pronouns': 0xFFFFFF // 🤍 White (same as Any)
+};
+
+/**
+ * Nuke all CastBot-created pronoun and timezone roles for testing
+ * This resets the server to a fresh state for testing setup functionality
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} client - Discord.js client instance
+ * @returns {Object} Results object with counts and details
+ */
+async function nukeRoles(guildId, client) {
+    console.log(`💥 DEBUG: Starting role nuke for guild ${guildId}`);
+    
+    const results = {
+        success: true,
+        pronounsCleared: 0,
+        timezonesCleared: 0,
+        rolesDeleted: 0,
+        errors: []
+    };
+
+    try {
+        // 1. Clear CastBot storage data for this guild
+        console.log('🗃️ DEBUG: Clearing CastBot storage data...');
+        const playerData = loadPlayerData();
+        
+        if (playerData[guildId]) {
+            // Clear pronoun and timezone role arrays
+            if (playerData[guildId].pronounRoleIDs) {
+                results.pronounsCleared = playerData[guildId].pronounRoleIDs.length;
+                playerData[guildId].pronounRoleIDs = [];
+            }
+            
+            if (playerData[guildId].timezones) {
+                results.timezonesCleared = Object.keys(playerData[guildId].timezones).length;
+                playerData[guildId].timezones = {};
+            }
+            
+            // Save the updated data
+            savePlayerData(playerData);
+            console.log(`✅ DEBUG: Cleared ${results.pronounsCleared} pronouns and ${results.timezonesCleared} timezones from storage`);
+        }
+
+        // 2. Delete Discord roles that match CastBot patterns
+        console.log('🗑️ DEBUG: Deleting Discord roles...');
+        const guild = client?.guilds?.cache?.get(guildId);
+        
+        if (!guild) {
+            results.errors.push('Could not access guild - Discord client may not be available');
+            return results;
+        }
+
+        const roles = guild.roles.cache;
+        const rolesToDelete = [];
+
+        // Find roles to delete
+        roles.forEach(role => {
+            const shouldDelete = isCastBotRole(role);
+            if (shouldDelete) {
+                rolesToDelete.push(role);
+                console.log(`🎯 DEBUG: Marked for deletion: ${role.name} (${role.id}) - ${shouldDelete.reason}`);
+            }
+        });
+
+        // Delete the roles
+        for (const role of rolesToDelete) {
+            try {
+                await role.delete('Nuke Roles - Testing reset');
+                results.rolesDeleted++;
+                console.log(`🗑️ DEBUG: Deleted role: ${role.name}`);
+                
+                // Small delay to avoid rate limits
+                await new Promise(resolve => setTimeout(resolve, 100));
+            } catch (error) {
+                const errorMsg = `Failed to delete role ${role.name}: ${error.message}`;
+                results.errors.push(errorMsg);
+                console.error(`❌ DEBUG: ${errorMsg}`);
+            }
+        }
+
+        console.log(`💥 DEBUG: Nuke complete! Deleted ${results.rolesDeleted} roles, cleared ${results.pronounsCleared} pronouns and ${results.timezonesCleared} timezones`);
+        
+    } catch (error) {
+        console.error('❌ DEBUG: Error during role nuke:', error);
+        results.success = false;
+        results.errors.push(`Nuke operation failed: ${error.message}`);
+    }
+
+    return results;
+}
+
+/**
+ * Determines if a role was created by CastBot and should be deleted during nuke
+ * @param {Object} role - Discord role object
+ * @returns {Object|false} Object with reason if should delete, false otherwise
+ */
+function isCastBotRole(role) {
+    // Check timezone pattern: Name like "PST (UTC-8)" or "AEDT (UTC+11)"
+    const timezonePattern = /^[A-Z]{2,4} \(UTC[+-][\d:]+\)$/;
+    if (timezonePattern.test(role.name)) {
+        return { reason: 'Timezone pattern match' };
+    }
+
+    // Check pronoun pattern: If role name matches our standard pronouns AND has our color
+    const pronounName = role.name;
+    if (PRONOUN_COLORS.hasOwnProperty(pronounName)) {
+        const expectedColor = PRONOUN_COLORS[pronounName];
+        if (role.color === expectedColor) {
+            return { reason: 'Pronoun name and color match' };
+        }
+    }
+
+    return false;
+}
+
 export {
     STANDARD_PRONOUN_ROLES,
     STANDARD_TIMEZONE_ROLES,
@@ -1120,5 +1244,6 @@ export {
     canBotManageRole,
     canBotManageRoles,
     generateHierarchyWarning,
-    testRoleHierarchy
+    testRoleHierarchy,
+    nukeRoles
 };
