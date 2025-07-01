@@ -828,8 +828,17 @@ async function createTimezoneReactionMessage(guildData, channelId, token, client
             return {
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: '❌ No timezone roles configured. Run Setup first.',
-                    flags: InteractionResponseFlags.EPHEMERAL
+                    content: '❌ **No Timezone Roles Configured**\n\nYou need to run **Setup** first to create timezone roles before you can create reaction messages.\n\n**Steps:**\n1. Use `/menu` → **🔧 Production** menu\n2. Click **⚙️ Setup CastBot**\n3. Follow the setup process\n4. Return here to create timezone reactions',
+                    flags: InteractionResponseFlags.EPHEMERAL,
+                    components: [{
+                        type: 1,
+                        components: [{
+                            type: 2,
+                            style: 1,
+                            label: 'Open Production Menu',
+                            custom_id: 'prod_menu_open'
+                        }]
+                    }]
                 }
             };
         }
@@ -944,8 +953,17 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
             return {
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: '❌ No pronoun roles configured. Run Setup first.',
-                    flags: InteractionResponseFlags.EPHEMERAL
+                    content: '❌ **No Pronoun Roles Configured**\n\nYou need to run **Setup** first to create pronoun roles before you can create reaction messages.\n\n**Steps:**\n1. Use `/menu` → **🔧 Production** menu\n2. Click **⚙️ Setup CastBot**\n3. Follow the setup process\n4. Return here to create pronoun reactions',
+                    flags: InteractionResponseFlags.EPHEMERAL,
+                    components: [{
+                        type: 1,
+                        components: [{
+                            type: 2,
+                            style: 1,
+                            label: 'Open Production Menu',
+                            custom_id: 'prod_menu_open'
+                        }]
+                    }]
                 }
             };
         }
@@ -953,10 +971,25 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
         // Get Discord client to fetch role names
         const guild = client?.guilds?.cache?.get(guildData.guildId);
         
+        if (!guild) {
+            return {
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: '❌ **Cannot Access Guild**\n\nThere was an issue accessing the Discord server. Please try again in a moment.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                }
+            };
+        }
+        
         // Convert to role objects with actual names and determine appropriate emojis
         const roleObjects = pronounRoleIds.map(roleId => {
-            const discordRole = guild?.roles?.cache?.get(roleId);
-            const roleName = discordRole?.name || `Role ${roleId}`;
+            const discordRole = guild.roles.cache.get(roleId);
+            if (!discordRole) {
+                console.log(`⚠️ WARNING: Pronoun role ${roleId} not found in Discord - may have been deleted`);
+                return null; // Filter out deleted roles
+            }
+            
+            const roleName = discordRole.name;
             
             // Find matching heart emoji based on role name
             const emoji = PRONOUN_HEART_EMOJIS[roleName] || null;
@@ -966,7 +999,28 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
                 name: roleName,
                 emoji: emoji // Will be null if no heart emoji matches
             };
-        }).sort((a, b) => a.name.localeCompare(b.name));
+        }).filter(role => role !== null) // Remove deleted roles
+          .sort((a, b) => a.name.localeCompare(b.name));
+        
+        // Check if we have any valid roles left after filtering
+        if (roleObjects.length === 0) {
+            return {
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: '❌ **No Valid Pronoun Roles Found**\n\nAll configured pronoun roles appear to have been deleted from Discord. Please run **Setup** again to recreate them.',
+                    flags: InteractionResponseFlags.EPHEMERAL,
+                    components: [{
+                        type: 1,
+                        components: [{
+                            type: 2,
+                            style: 1,
+                            label: 'Open Production Menu',
+                            custom_id: 'prod_menu_open'
+                        }]
+                    }]
+                }
+            };
+        }
 
         // Check Discord reaction limit
         if (roleObjects.length > REACTION_EMOJIS.length) {
@@ -1199,6 +1253,18 @@ function isCastBotRole(role) {
     const timezonePattern = /^[A-Z]{2,4} \(UTC[+-][\d:]+\)$/;
     if (timezonePattern.test(role.name)) {
         return { reason: 'Timezone pattern match' };
+    }
+
+    // Check for GMT+X timezone pattern specifically (handles cases like "GMT+8 (UTC+8)")
+    const gmtPattern = /^GMT[+-]\d+(\.\d+)? \(UTC[+-]\d+(\:\d+)?\)$/;
+    if (gmtPattern.test(role.name)) {
+        return { reason: 'GMT timezone pattern match' };
+    }
+
+    // Check for standalone UTC patterns that might be timezone roles
+    const standaloneUtcPattern = /^UTC[+-]\d+(\:\d+)?$/;
+    if (standaloneUtcPattern.test(role.name)) {
+        return { reason: 'Standalone UTC timezone pattern match' };
     }
 
     // Check pronoun pattern: If role name matches our standard pronouns AND has our color
