@@ -9537,12 +9537,36 @@ Your server is now ready for Tycoons gameplay!`;
         }
 
         // Get role objects and sort alphabetically
-        const roles = await Promise.all(
-          Object.keys(timezones).map(id => guild.roles.fetch(id))
-        );
-        const sortedRoles = roles
-          .filter(role => role) // Remove any null roles
-          .sort((a, b) => a.name.localeCompare(b.name));
+        console.log('🔍 DEBUG: Creating timezone reaction message');
+        const roleIds = Object.keys(timezones);
+        console.log('🔍 DEBUG: Found timezone role IDs:', roleIds);
+        
+        const roles = [];
+        for (const roleId of roleIds) {
+          try {
+            const role = await guild.roles.fetch(roleId);
+            if (role) {
+              roles.push(role);
+            } else {
+              console.log(`⚠️ WARNING: Timezone role ${roleId} not found in Discord - may have been deleted`);
+            }
+          } catch (error) {
+            console.log(`⚠️ WARNING: Failed to fetch timezone role ${roleId}:`, error.message);
+          }
+        }
+        
+        const sortedRoles = roles.sort((a, b) => a.name.localeCompare(b.name));
+        console.log('🔍 DEBUG: Found valid timezone roles:', sortedRoles.map(r => r.name));
+
+        if (sortedRoles.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **No Valid Timezone Roles Found**\n\nAll configured timezone roles appear to have been deleted. Please run **Setup** again to recreate them.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
 
         if (sortedRoles.length > REACTION_EMOJIS.length) {
           return res.send({

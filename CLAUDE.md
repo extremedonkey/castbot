@@ -170,3 +170,7 @@ Most admin functionality accessed via `/menu` → Production Menu
 ---
 
 For detailed information on any topic, follow the documentation references above. This file serves as your navigation guide to the comprehensive CastBot documentation.
+
+## Memories
+
+- What are we memorizing
