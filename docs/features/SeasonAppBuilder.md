@@ -7,257 +7,189 @@ This document serves as the source of truth for the Season Application Builder f
 ### Overall Objectives
 
 **For Server Admins:**
-- Create dynamic, customizable application forms for each season/game without coding knowledge
-- Streamline the player recruitment process with automated application collection
-- Efficiently review, sort, and rank applicants through a unified dashboard
-- Export application data for external analysis and decision-making
-- Reduce manual work in managing prospective players
+- Create application buttons for prospective player recruitment
+- Efficiently review and rank applicants through a unified dashboard
+- Manage the application process for Discord-based reality games (ORGs)
+- Streamline player recruitment with automated application collection
 
 **For Applicants/Players:**
-- Simple, intuitive application process directly within Discord
-- Clear question presentation with various response types
-- Progress tracking through multi-step applications
-- Immediate submission confirmation
-- Transparent application status updates
+- Simple application process via clicking application buttons
+- Private application channels for submitting applications
+- Clear indication of application status
 
-### Overall Solution Architecture
+### Current Implementation Status
 
-The Season Application Builder is designed as an extension of the Safari dynamic content management system, leveraging existing infrastructure while adding application-specific functionality.
+The Season Application Builder is currently a **basic applicant recruitment system** accessible through Production Menu > Season Applications. It provides application button creation and applicant ranking functionality, but does **not** include advanced features like dynamic question builders or structured application forms.
 
-**Key Architectural Components:**
-1. **Safari Framework Integration**: Built on top of `safariManager.js` for button creation and dynamic content
-2. **Entity Management**: Extends `entityManager.js` to support application entities with CRUD operations
-3. **Edit Framework**: Utilizes `editFramework.js` for the universal editing interface
-4. **Data Storage**: Applications stored in `safariContent.json`, responses in player-specific sections
-5. **Modal-Based UI**: Sequential modal presentation for questions (Discord's 5-field limit per modal)
-6. **Stateless Design**: Application progress tracked through custom_ids and temporary storage
+### Access Path
 
-**Technical Design Principles:**
-- **Separation of Concerns**: Application data separate from core player data
-- **Scalability**: Support for multiple concurrent applications per server
-- **Reusability**: Shared components with other Safari features
-- **Privacy**: Secure storage of applicant responses with admin-only access
-- **Performance**: Efficient data retrieval and sorting for large applicant pools
+**Production Menu** (`/menu`) → **📝 Season Applications** → Available features
 
 ### Alignment to Existing CastBot Features
 
 **Integration Points:**
-1. **Safari System**: Shares infrastructure with dynamic button creation and management
-2. **Player Management**: Seamlessly transitions accepted applicants to player roster
-3. **Cast Ranking**: Extends ranking functionality to applicant evaluation
-4. **Role Management**: Automatic role assignment for accepted/rejected applicants
-5. **Analytics**: Tracks application metrics through existing analytics system
-6. **Production Menu**: Accessible through Safari submenu in production interface
+1. **Production Menu**: Accessible through established menu system
+2. **Permission Model**: Uses CastBot's admin permission checking
+3. **Storage System**: Integrates with playerData.json storage
+4. **Analytics**: Tracks interactions through existing analytics system
+5. **Components V2**: Uses modern Discord UI components
 
-**Consistent User Experience:**
-- Follows established UI patterns from Safari buttons and player management
-- Uses familiar Components V2 interface elements
-- Maintains CastBot's admin permission model
-- Integrates with existing help and documentation systems
+## As-Built Deployment
 
-## Product Backlog
+### ✅ Current Features (Production Ready)
 
-### Core Application Management
-**Functional Description:** Basic CRUD operations for creating and managing applications
-**Technical Design:**
-- Extend `entityManager.js` with application entity type
-- Create `applicationBuilder.js` module for application-specific logic
-- Storage structure in `safariContent.json`:
+#### **📝 Create Application Process** (`season_app_creation`)
+**Status:** Fully implemented and operational
+**Function:** Creates application buttons that generate private application channels
+
+**Features:**
+- Modal-based application button configuration
+- Custom button text and explanatory messages
+- Channel/category selection for application placement
+- Private channel creation with proper permissions
+- Integration with existing applicationManager.js
+
+**Admin Requirements:** Manage Roles, Manage Channels, OR Manage Server permissions
+
+**Implementation:**
+- Handler: `season_app_creation` in app.js (~line 4827)
+- Module: Reuses applicationManager.js functionality
+- Data: Stores applications in playerData.json
+
+#### **🏆 Cast Ranking** (`season_app_ranking`) 
+**Status:** Fully implemented and operational
+**Function:** Comprehensive applicant ranking and evaluation system
+
+**Features:**
+- **Visual Applicant Display**: Shows applicant avatars using Media Gallery Components V2
+- **1-5 Rating System**: Individual scoring with visual feedback (selected scores appear green)
+- **Navigation Controls**: Previous/Next buttons for multi-applicant evaluation
+- **Score Analytics**: Real-time average scores and vote counts
+- **Ranking Leaderboard**: "View All Scores" with medal rankings (🥇🥈🥉)
+- **Application Integration**: Direct links to applicant channels
+
+**Admin Requirements:** Manage Roles, Manage Channels, OR Manage Server permissions
+
+**Implementation:**
+- Handler: `season_app_ranking` in app.js (~line 4866)
+- Rating Handlers: `rank_[score]_[channelId]_[appIndex]` in app.js (~line 3381)
+- Navigation: `ranking_prev_[index]` / `ranking_next_[index]` in app.js (~line 3597)
+- Summary: `ranking_view_all_scores` in app.js (~line 3597)
+
+**Data Structure:**
 ```json
 {
-  "applications": {
-    "app_[timestamp]": {
-      "name": "Season 3 Application",
-      "description": "Apply to join our Survivor game!",
-      "questions": [],
-      "active": true,
-      "createdBy": "userId",
-      "createdAt": 1234567890,
-      "channelId": "channelId"
-    }
-  }
-}
-```
-
-**User Stories:**
-- As an admin, I want to create a new application with a name and description
-- As an admin, I want to edit existing applications
-- As an admin, I want to activate/deactivate applications
-- As an admin, I want to delete old applications
-
-### Question Builder System
-**Functional Description:** Dynamic question creation with multiple types and validation
-**Technical Design:**
-```javascript
-const questionSchema = {
-  id: "q_[timestamp]",
-  text: "Question text",
-  type: "paragraph|text|multiple_choice|rating|checkbox",
-  required: true/false,
-  order: 1,
-  options: [], // for multiple_choice/checkbox
-  validation: {
-    minLength: 10,
-    maxLength: 1000,
-    pattern: "regex"
-  }
-}
-```
-
-**User Stories:**
-- As an admin, I want to add questions of different types to my application
-- As an admin, I want to reorder questions via drag-and-drop
-- As an admin, I want to set questions as required or optional
-- As an admin, I want to add validation rules to text questions
-- As an admin, I want to preview how questions will appear to applicants
-
-### Response Collection System
-**Functional Description:** Capture and store applicant responses securely
-**Technical Design:**
-- Response storage in player data section:
-```json
-{
-  "players": {
-    "userId": {
-      "applications": {
-        "app_id": {
-          "responses": {
-            "q1": "answer",
-            "q2": ["option1", "option2"]
-          },
-          "startedAt": 1234567890,
-          "submittedAt": 1234567890,
-          "status": "pending|accepted|rejected|waitlisted"
-        }
+  "guildId": {
+    "applications": {
+      "appId": {
+        "displayName": "Applicant Name",
+        "userId": "123456789",
+        "channelId": "application_channel_id",
+        "avatarURL": "avatar_url"
+      }
+    },
+    "rankings": {
+      "channelId": {
+        "adminUserId": 4,
+        "anotherAdminUserId": 5
       }
     }
   }
 }
 ```
 
-**User Stories:**
-- As an applicant, I want to start an application and see progress
-- As an applicant, I want to answer questions in a clear, sequential manner
-- As an applicant, I want to review my answers before submitting
-- As an applicant, I want confirmation that my application was received
+## Product Backlog
 
-### Admin Dashboard
-**Functional Description:** Comprehensive interface for reviewing and managing applications
-**Technical Design:**
-- New module `applicationDashboard.js` for dashboard functionality
-- Sortable/filterable table view with applicant data
-- Bulk action support for status updates
-- Integration with Discord embeds for display
+### Future Enhancement: Dynamic Question Builder System
+**Description:** Advanced application form creation with custom questions
+**Priority:** Medium
+**Status:** Not implemented - requires significant development
 
-**User Stories:**
-- As an admin, I want to see all applications in a sortable table
-- As an admin, I want to filter applications by status
-- As an admin, I want to view individual application details
-- As an admin, I want to bulk accept/reject applicants
-- As an admin, I want to export application data to CSV
+**Planned Features:**
+- Custom question creation interface
+- Multiple question types (text, multiple choice, rating, checkbox)
+- Sequential modal question presentation
+- Structured response collection and storage
+- Advanced applicant dashboard with response filtering
 
-### Advanced Features (Future Consideration)
-**Conditional Logic:**
-- Show/hide questions based on previous answers
-- Dynamic question text based on responses
-- Skip logic for different application paths
+**Technical Approach:**
+- Could leverage Safari framework infrastructure for dynamic content creation
+- Modal-based UI working within Discord's 5-field limitation
+- Data separation between applications and responses
+- Integration with existing ranking system
 
-**Auto-Scoring:**
-- Point values for questions
-- Automatic ranking based on responses
-- Keyword matching for text responses
+### Future Enhancement: Application Templates
+**Description:** Pre-built application templates for common ORG formats
+**Priority:** Low
+**Status:** Not implemented
 
-**Integration Features:**
-- Webhook notifications for new applications
-- Google Sheets export integration
-- Discord role-based question visibility
-
-**Templates:**
-- Pre-built application templates
-- Share templates between servers
-- Template marketplace
+### Future Enhancement: Advanced Analytics
+**Description:** Application completion rates, response analysis, and insights
+**Priority:** Low  
+**Status:** Not implemented
 
 ## Releases (Release Backlog)
 
-### Sprint 1: Core Infrastructure (Phase 1)
-**Target:** Foundation for application system
+### Sprint 1: Advanced Question Builder (Planning Phase)
+**Target:** Dynamic question creation and management system
+**Status:** ❌ Not started
 **Features:**
-- ✅ Extend entityManager.js for applications
-- ✅ Create applicationBuilder.js module structure
-- ✅ Basic application CRUD operations
-- ✅ Safari menu integration for "📋 Manage Applications"
-- ✅ Application creation modal flow
-- ✅ List existing applications interface
+- [ ] Question type system implementation
+- [ ] Add/Edit/Delete questions interface
+- [ ] Question ordering functionality
+- [ ] Question preview system
+- [ ] Validation rules for text questions
 
-### Sprint 2: Question Builder (Phase 2)
-**Target:** Dynamic question creation and management
+### Sprint 2: Response Collection System (Planning Phase)
+**Target:** Structured applicant response collection
+**Status:** ❌ Not started
 **Features:**
-- ✅ Question type system implementation
-- ✅ Add/Edit/Delete questions interface
-- ✅ Question ordering functionality
-- ✅ Question preview system
-- ✅ Validation rules for text questions
-- ✅ Post application button to channel
+- [ ] Sequential modal question presentation
+- [ ] Response validation and error handling
+- [ ] Progress tracking between questions
+- [ ] Response storage system
+- [ ] Submission confirmation workflow
 
-### Sprint 3: Player Experience (Phase 3)
-**Target:** Complete applicant flow
+### Sprint 3: Enhanced Admin Dashboard (Planning Phase)
+**Target:** Advanced applicant review and management
+**Status:** ❌ Not started
 **Features:**
-- ✅ Sequential modal question presentation
-- ✅ Response validation and error handling
-- ✅ Progress tracking between questions
-- ✅ Response storage system
-- ✅ Submission confirmation message
-- ✅ Application status checking
+- [ ] Response filtering and search
+- [ ] Export functionality (CSV/JSON)
+- [ ] Bulk applicant status updates
+- [ ] Advanced sorting options
+- [ ] Application analytics dashboard
 
-### Sprint 4: Admin Dashboard (Phase 4)
-**Target:** Application review and management
-**Features:**
-- ✅ Basic application listing interface
-- ✅ Individual application view
-- ✅ Status update functionality
-- ✅ Filter by application status
-- ✅ Sort by submission date
-- ✅ Basic export to CSV
+## Technical Implementation
 
-### Sprint 5: Enhanced Features (Phase 5)
-**Target:** Quality of life improvements
-**Features:**
-- Bulk status updates
-- Advanced filtering options
-- Response search functionality
-- Application analytics
-- Email notification integration
-- Role assignment automation
+### Current Architecture
+- **Access**: Production Menu → Season Applications submenu
+- **Permissions**: Admin-only features (Manage Roles/Channels/Server)
+- **Storage**: playerData.json with applications and rankings sections
+- **UI**: Discord Components V2 with Media Gallery support
+- **Integration**: Uses existing CastBot infrastructure
 
-## As-Built Deployment
+### Current Limitations
+- No dynamic question creation
+- No structured application forms
+- Limited to basic channel-based application process
+- No advanced applicant filtering or search
+- No response data collection beyond basic applicant info
 
-*Currently no features have been deployed to production. Features will be moved here as they are completed and released.*
+### Future Technical Considerations
+- **Safari Integration**: Could leverage Safari's dynamic content framework
+- **Modal Limitations**: Discord's 5-field per modal limit affects question presentation
+- **Data Scaling**: Current JSON-based storage suitable for small-medium servers
+- **Performance**: Real-time ranking updates work well for current implementation
 
----
+## Documentation Notes
 
-## Implementation Notes
+**Previous Version Issues:**
+- Documentation previously claimed features were implemented when they were not
+- Confused slash commands with menu-based access
+- Overstated current capabilities
 
-### Discord Limitations to Consider
-- Modal fields limited to 5 per interaction
-- String select menus limited to 25 options
-- Button rows limited to 5 per message
-- Custom ID length limited to 100 characters
-- Embed description limited to 4096 characters
-
-### Security Considerations
-- All admin functions require ManageRoles permission
-- Application responses stored with user privacy in mind
-- Export functionality restricted to server admins
-- Rate limiting on application submissions
-
-### Performance Considerations
-- Pagination for large application lists
-- Efficient data structures for sorting/filtering
-- Caching for frequently accessed application data
-- Background processing for bulk operations
-
-### Future Architecture Decisions
-- Consider moving to database storage for large-scale deployments
-- Implement application versioning for question changes
-- Add application analytics and insights
-- Create application template system
+**Current Accuracy:**
+- This document now reflects actual implemented features
+- Clear distinction between current functionality and planned enhancements
+- Accurate access paths and implementation details

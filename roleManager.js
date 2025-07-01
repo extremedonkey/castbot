@@ -834,12 +834,12 @@ async function createTimezoneReactionMessage(guildData, channelId, token, client
             };
         }
 
-        // Convert to role objects and sort
+        // Convert to role objects and sort by UTC offset (most negative first)
         const roleObjects = timezoneEntries.map(([roleId, data]) => ({
             id: roleId,
             name: `${getTimezoneDisplayName(data)} (${formatOffset(data.offset)})`,
             offset: data.offset
-        })).sort((a, b) => a.name.localeCompare(b.name));
+        })).sort((a, b) => a.offset - b.offset);
 
         // Check Discord reaction limit
         if (roleObjects.length > REACTION_EMOJIS.length) {
