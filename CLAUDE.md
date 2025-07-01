@@ -313,7 +313,11 @@ Before running `./dev-restart.sh`, verify:
 
 ### WSL Development Environment (Phase 1 - Active) ✅
 
-**Note: This is a SOLO DEVELOPMENT PROJECT - always work on main branch unless explicitly instructed otherwise.**
+**Development Environment Context:**
+- **Single Developer**: Solo development project - always work on main branch unless explicitly instructed otherwise
+- **Platform**: VS Code with integrated WSL terminal on Windows
+- **Shell**: Linux bash in WSL environment  
+- **Workflow**: Claude Code running within VS Code integrated terminal for seamless development experience
 
 **Primary Development Workflow:**
 ```bash

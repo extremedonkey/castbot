@@ -53,7 +53,7 @@ import {
   createApplicationButton,
   BUTTON_STYLES
 } from './applicationManager.js';
-import { logInteraction, setDiscordClient } from './analyticsLogger.js';
+import { logInteraction, setDiscordClient } from './src/analytics/analyticsLogger.js';
 import {
   calculateComponentsForTribe,
   determineDisplayScenario,
