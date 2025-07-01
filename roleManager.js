@@ -828,17 +828,8 @@ async function createTimezoneReactionMessage(guildData, channelId, token, client
             return {
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: '❌ **No Timezone Roles Configured**\n\nYou need to run **Setup** first to create timezone roles before you can create reaction messages.\n\n**Steps:**\n1. Use `/menu` → **🔧 Production** menu\n2. Click **⚙️ Setup CastBot**\n3. Follow the setup process\n4. Return here to create timezone reactions',
-                    flags: InteractionResponseFlags.EPHEMERAL,
-                    components: [{
-                        type: 1,
-                        components: [{
-                            type: 2,
-                            style: 1,
-                            label: 'Open Production Menu',
-                            custom_id: 'prod_menu_open'
-                        }]
-                    }]
+                    content: '❌ **No Timezone Roles Configured**\n\nYou need to run **Setup** first to create timezone roles before you can create reaction messages.\n\n**Steps:**\n1. Use `/menu` command\n2. Click **👑 Admin** button\n3. Click **⚙️ Initial Setup**\n4. Follow the setup process\n5. Return here to create timezone reactions',
+                    flags: InteractionResponseFlags.EPHEMERAL
                 }
             };
         }
@@ -953,17 +944,8 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
             return {
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: '❌ **No Pronoun Roles Configured**\n\nYou need to run **Setup** first to create pronoun roles before you can create reaction messages.\n\n**Steps:**\n1. Use `/menu` → **🔧 Production** menu\n2. Click **⚙️ Setup CastBot**\n3. Follow the setup process\n4. Return here to create pronoun reactions',
-                    flags: InteractionResponseFlags.EPHEMERAL,
-                    components: [{
-                        type: 1,
-                        components: [{
-                            type: 2,
-                            style: 1,
-                            label: 'Open Production Menu',
-                            custom_id: 'prod_menu_open'
-                        }]
-                    }]
+                    content: '❌ **No Pronoun Roles Configured**\n\nYou need to run **Setup** first to create pronoun roles before you can create reaction messages.\n\n**Steps:**\n1. Use `/menu` command\n2. Click **👑 Admin** button\n3. Click **⚙️ Initial Setup**\n4. Follow the setup process\n5. Return here to create pronoun reactions',
+                    flags: InteractionResponseFlags.EPHEMERAL
                 }
             };
         }
@@ -1007,17 +989,8 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
             return {
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: '❌ **No Valid Pronoun Roles Found**\n\nAll configured pronoun roles appear to have been deleted from Discord. Please run **Setup** again to recreate them.',
-                    flags: InteractionResponseFlags.EPHEMERAL,
-                    components: [{
-                        type: 1,
-                        components: [{
-                            type: 2,
-                            style: 1,
-                            label: 'Open Production Menu',
-                            custom_id: 'prod_menu_open'
-                        }]
-                    }]
+                    content: '❌ **No Valid Pronoun Roles Found**\n\nAll configured pronoun roles appear to have been deleted from Discord. Please run **Setup** again to recreate them.\n\n**Steps:**\n1. Use `/menu` command\n2. Click **👑 Admin** button\n3. Click **⚙️ Initial Setup**',
+                    flags: InteractionResponseFlags.EPHEMERAL
                 }
             };
         }
