@@ -4,6 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **🦁 SAFARI SYSTEM REFERENCE:** When prompts mention Safari, Idol Hunt, Questions, custom buttons, currency systems, dynamic content, or application builders, refer to [Safari.md](Safari.md) for complete documentation and implementation guidelines.
 
+**🗺️ SAFARI MAP EXPLORER:** When prompts mention map building, grid systems, image processing for maps, coordinate-based exploration, or map-related features, refer to [docs/SafariMapExplorer.md](docs/SafariMapExplorer.md) for the complete technical specification and implementation guide.
+
+**📋 SEASON APPLICATION BUILDER:** When prompts mention application systems, season applications, or applicant management, refer to [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md) for the source of truth on feature design, technical implementation, and sprint planning.
+
 ## PROJECT STATUS: 100% OPTIMIZATION COMPLETE ✅
 
 CastBot has undergone a major optimization initiative that has been fully completed. All core functionality has been refactored from inconsistent error handling patterns to a centralized, maintainable architecture.

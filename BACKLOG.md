@@ -557,6 +557,32 @@ Target Final:        2,000-3,000 lines (78-85% reduction)
 - Ensure message format works for both components v2 and legacy embeds
 - Message should guide users to: `/prod_menu` > 🔥 Tribes Button > 🛠️ Add Tribe
 
+### Safari Map Explorer System (MVP4)
+**Description:** Grid-based map exploration system allowing players to upload images and explore them through Discord channels
+**Documentation:** See [docs/SafariMapExplorer.md](docs/SafariMapExplorer.md) for complete technical specification
+**Current Status:** Planning Phase - Technical architecture documented
+
+**Core Features:**
+- Image upload and automatic grid overlay generation
+- Coordinate system (A1, B2, C3, etc.) with Discord channel creation
+- Player movement between grid locations
+- Visual progress tracking and fog of war
+- Item/NPC placement at coordinates
+
+**Technical Approach:**
+- Node.js with Canvas API for image processing
+- Lazy channel creation to manage Discord limits
+- Grid coordinate data stored in safariContent.json
+- Player progress tracked in playerData.json
+
+**Implementation Phases:**
+1. Core image processing and grid overlay
+2. Channel management and movement system
+3. Exploration features (fog of war, items)
+4. Advanced features (multi-floor, NPCs, quests)
+
+**Priority:** Medium-High (Major feature expansion for Safari system)
+
 ### Safari Dynamic Content System - Phase 2 (MVP2)
 **Description:** Advanced Safari dynamic content management with conditional logic, shop systems, and enhanced action types
 **Current Status:** Phase 1 (MVP1) Complete ✅ - Basic button creation, currency management, and action execution operational
@@ -784,29 +810,10 @@ Target Final:        2,000-3,000 lines (78-85% reduction)
 - Monitor server activity and engagement
 - Simple implementation with minimal production risk
 
-### Auto-Generated Application Questions
-**Description:** Expand the application system to automatically generate application questions based on server configuration
-**Acceptance Criteria:**
-- Admins can configure custom application questions
-- Questions can include multiple choice, text input, and rating scales
-- Questions are automatically included in application flow
-- Responses are stored and retrievable by admins
-
-### Admin Application Summary/Tabulation
-**Description:** Provide admins with summary views and tabulation of applicant responses
-**Acceptance Criteria:**
-- Dashboard showing all applicants for a server
-- Sortable/filterable applicant list
-- Export functionality for applicant data
-- Basic analytics on application completion rates
-
-### Applicant Ranking and Casting Management
-**Description:** Tools for admins to rank applicants and manage casting decisions
-**Acceptance Criteria:**
-- Drag-and-drop ranking interface
-- Bulk accept/reject functionality
-- Integration with role assignment for accepted applicants
-- Notification system for applicant status updates
+### Season Application Builder Features
+**Description:** A comprehensive application system for prospective players
+**Documentation:** See [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md) for complete feature documentation, technical design, and implementation details
+**Status:** In design phase - refer to docs/features/SeasonAppBuilder.md for current progress and sprint planning
 
 ### Enhanced Tribe Ordering Features
 **Description:** Implement advanced tribe ordering options beyond user-first display

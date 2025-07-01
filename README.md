@@ -590,7 +590,7 @@ Live logging settings are stored in `playerData.json` under `environmentConfig.l
 - "⬅️ Menu" navigation for admin workflow
 
 **Technical Improvements:**
-- Discord Components V2 architecture for modern UI (see [ComponentsV2.md](ComponentsV2.md) for complete API reference)
+- Discord Components V2 architecture for modern UI (see [ComponentsV2.md](docs/features/ComponentsV2.md) for complete API reference)
 - Centralized error handling across all command systems
 - Performance optimizations with 70-80% faster navigation
 - Mobile-friendly interface design

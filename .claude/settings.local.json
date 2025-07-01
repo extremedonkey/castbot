@@ -165,7 +165,8 @@
       "Bash(awk:*)",
       "Bash(perl:*)",
       "Bash(ln:*)",
-      "Bash(./scripts/dev/dev-restart.sh:*)"
+      "Bash(./scripts/dev/dev-restart.sh:*)",
+      "Bash(git rm:*)"
     ],
     "deny": []
   }

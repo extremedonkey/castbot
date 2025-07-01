@@ -1859,7 +1859,7 @@ So.. what is the common link between these two very different sounding features?
 What are some of our design principles?
 * Highly re-usable, well-documented functionality that you in particular are able to easily understand and continue to build upon. There is a good chance I'll use this core functionality to build something new.
 * Starting with a 'Lean MVP' but architecting it right, building toward more rich and complex functionality and technical architectures. I want to get something up and running in the next few hours!	
-* Alignment to the existing CastBot UX patterns which is usage of a the Container component, with nested buttons, selects and other components V2 control. Please ensure you refer to ComponentsV2.md (include in Safari.md).
+* Alignment to the existing CastBot UX patterns which is usage of a the Container component, with nested buttons, selects and other components V2 control. Please ensure you refer to docs/features/ComponentsV2.md for the Components V2 API reference.
 * Integration with the existing CastBot functionality, particularly the playerData.json player management approach. This is one area I'd rather not go too crazy with changing as I don't want to impact live users. If applicable we can maintain linkages between files using discord user ID as a common identifier, though I am concerned with possible user / player identification issues.
 
 What do I want for MVP1? The core technical plumbing to allow a production user for their server's prod menu to:
