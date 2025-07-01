@@ -5619,6 +5619,16 @@ Your server is now ready for Tycoons gameplay!`;
         if (!requireSpecificUser(req, res, '391415444084490240', 'Access denied. This feature is restricted.')) return;
 
         const guildId = req.body.guild_id;
+        const token = req.body.token;
+        const applicationId = req.body.application_id || process.env.APP_ID;
+        
+        // Send deferred response immediately to avoid timeout
+        res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
         
         console.log('💥 DEBUG: Starting role nuke...');
         
@@ -5648,13 +5658,19 @@ Your server is now ready for Tycoons gameplay!`;
 
         responseLines.push('🎯 **Next Step:** Run `/menu` → Production Menu → Setup to test fresh server behavior!');
 
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+        // Send follow-up message using webhook (since we already sent deferred response)
+        await fetch(`https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             content: responseLines.join('\n'),
             flags: InteractionResponseFlags.EPHEMERAL
-          }
+          })
         });
+        
+        return; // Don't send another response
         
       } catch (error) {
         console.error('Error in nuke_roles:', error);
