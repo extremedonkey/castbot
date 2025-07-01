@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { DiscordRequest } from './utils.js';
-import { ALL_COMMANDS } from './commands.js';
+import { DiscordRequest } from '../../utils.js';
+import { ALL_COMMANDS } from '../../commands.js';
 
 /**
  * CastBot Command Management Script

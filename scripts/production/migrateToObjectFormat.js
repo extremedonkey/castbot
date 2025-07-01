@@ -5,7 +5,7 @@
  * Usage: node migrateToObjectFormat.js [guildId]
  */
 
-import { migrateInventoryToObjectFormat } from './safariManager.js';
+import { migrateInventoryToObjectFormat } from '../../safariManager.js';
 
 async function runMigration() {
     const guildId = process.argv[2] || null; // Optional guild ID from command line

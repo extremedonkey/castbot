@@ -835,7 +835,7 @@ async function ensureServerData(guild) {
     
     // Post new server install announcement to Discord analytics channel
     try {
-      const { logNewServerInstall } = await import('./analyticsLogger.js');
+      const { logNewServerInstall } = await import('./src/analytics/analyticsLogger.js');
       await logNewServerInstall(guild, ownerInfo);
     } catch (error) {
       console.error('Error posting server install announcement:', error);
@@ -5130,7 +5130,7 @@ Your server is now ready for Tycoons gameplay!`;
 
         console.log('✅ DEBUG: User authorized, importing analytics function...');
         // Import and run analytics function
-        const { analyzePlayerData } = await import('./analytics.js');
+        const { analyzePlayerData } = await import('./src/analytics/analytics.js');
         console.log('✅ DEBUG: Analytics function imported successfully');
         
         // Capture analytics output
@@ -5225,7 +5225,7 @@ Your server is now ready for Tycoons gameplay!`;
 
         // Import fs and capture live analytics output
         const fs = await import('fs');
-        const { getLogFilePath } = await import('./analyticsLogger.js');
+        const { getLogFilePath } = await import('./src/analytics/analyticsLogger.js');
         
         const ANALYTICS_LOG_FILE = getLogFilePath();
         
@@ -5463,7 +5463,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Process analytics in the background
         console.log('✅ DEBUG: Starting background analytics processing...');
-        const { generateServerUsageSummary, formatServerUsageForDiscord, formatServerUsageForDiscordV2 } = await import('./serverUsageAnalytics.js');
+        const { generateServerUsageSummary, formatServerUsageForDiscord, formatServerUsageForDiscordV2 } = await import('./src/analytics/serverUsageAnalytics.js');
         console.log('✅ DEBUG: Server usage analytics imported successfully');
         
         // Generate 6-week usage summary

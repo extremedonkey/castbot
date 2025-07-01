@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import 'dotenv/config';
-import { loadEnvironmentConfig, updateLiveLoggingStatus, saveEnvironmentConfig, getLoggingChannelId, getLoggingTimezoneOffset } from './storage.js';
+import { loadEnvironmentConfig, updateLiveLoggingStatus, saveEnvironmentConfig, getLoggingChannelId, getLoggingTimezoneOffset } from '../../storage.js';
 
 /**
  * Toggle Live Discord Logging System
