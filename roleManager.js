@@ -958,14 +958,8 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
             const discordRole = guild?.roles?.cache?.get(roleId);
             const roleName = discordRole?.name || `Role ${roleId}`;
             
-            // Find matching standard pronoun for heart emoji
-            let emoji = null;
-            for (const [standardName, heartEmoji] of Object.entries(PRONOUN_HEART_EMOJIS)) {
-                if (findExistingPronounRole(guild, standardName)?.id === roleId) {
-                    emoji = heartEmoji;
-                    break;
-                }
-            }
+            // Find matching heart emoji based on role name
+            const emoji = PRONOUN_HEART_EMOJIS[roleName] || null;
             
             return {
                 id: roleId,
