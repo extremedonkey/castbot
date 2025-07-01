@@ -81,6 +81,7 @@ import {
 import {
   executeSetup,
   generateSetupResponse,
+  generateSetupResponseV2,
   checkRoleHierarchy,
   REACTION_EMOJIS,
   createTimezoneReactionMessage,
@@ -4275,16 +4276,17 @@ To fix this:
         console.log('🔍 DEBUG: Calling executeSetup from roleManager');
         const setupResults = await executeSetup(guildId, guild);
         
-        // Generate detailed response message with new format
-        const responseMessage = generateSetupResponse(setupResults);
+        // Generate detailed Components V2 response
+        const componentsV2Response = generateSetupResponseV2(setupResults);
         
-        // Send response with enhanced formatting
+        // Send response with Components V2 formatting
         const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            content: responseMessage,
-            flags: InteractionResponseFlags.EPHEMERAL
+            content: '', // Empty content as we're using Components V2
+            components: [componentsV2Response], // Wrap in array as Discord expects
+            flags: InteractionResponseFlags.EPHEMERAL | (1 << 15) // Add IS_COMPONENTS_V2 flag
           }
         });
         

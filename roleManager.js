@@ -678,6 +678,138 @@ function generateSetupResponse(results) {
 }
 
 /**
+ * Generate a detailed setup response using Components V2 format
+ * @param {Object} results - Setup results containing pronouns and timezones data
+ * @returns {Object} Components V2 formatted response with Container and TextDisplay
+ */
+function generateSetupResponseV2(results) {
+    const sections = [];
+    
+    // Header
+    sections.push('# ✅ CastBot Setup Complete\n');
+    
+    // Pronoun Roles Section - detailed with mentions
+    const pronounTotal = results.pronouns.created.length + results.pronouns.existingAdded.length + results.pronouns.alreadyInCastBot.length;
+    
+    if (pronounTotal > 0) {
+        sections.push('## 🔀 Pronoun Roles\n');
+        
+        if (results.pronouns.created.length > 0) {
+            sections.push('### ✅ Newly Created Pronoun Roles:');
+            results.pronouns.created.forEach(role => {
+                sections.push(`• <@&${role.id}> (${role.name})`);
+            });
+            sections.push('');
+        }
+        
+        if (results.pronouns.existingAdded.length > 0) {
+            sections.push('### ➕ Existing Roles Added to CastBot:');
+            results.pronouns.existingAdded.forEach(role => {
+                sections.push(`• <@&${role.id}> (${role.name})`);
+            });
+            sections.push('');
+        }
+        
+        if (results.pronouns.alreadyInCastBot.length > 0) {
+            sections.push('### ✓ Already Configured in CastBot:');
+            results.pronouns.alreadyInCastBot.forEach(role => {
+                sections.push(`• <@&${role.id}> (${role.name})`);
+            });
+            sections.push('');
+        }
+        
+        sections.push(`**Total Pronoun Roles:** ${pronounTotal}\n`);
+    }
+    
+    // Timezone Roles Section - detailed with mentions
+    const timezoneTotal = results.timezones.created.length + results.timezones.existingAdded.length + results.timezones.alreadyInCastBot.length;
+    
+    if (timezoneTotal > 0) {
+        sections.push('## 🌍 Timezone Roles\n');
+        
+        if (results.timezones.created.length > 0) {
+            sections.push('### ✅ Newly Created Timezone Roles:');
+            results.timezones.created.forEach(role => {
+                sections.push(`• <@&${role.id}> (${role.name})`);
+            });
+            sections.push('');
+        }
+        
+        if (results.timezones.existingAdded.length > 0) {
+            sections.push('### ➕ Existing Roles Added to CastBot:');
+            results.timezones.existingAdded.forEach(role => {
+                sections.push(`• <@&${role.id}> (${role.name})`);
+            });
+            sections.push('');
+        }
+        
+        if (results.timezones.alreadyInCastBot.length > 0) {
+            sections.push('### ✓ Already Configured in CastBot:');
+            results.timezones.alreadyInCastBot.forEach(role => {
+                sections.push(`• <@&${role.id}> (${role.name})`);
+            });
+            sections.push('');
+        }
+        
+        sections.push(`**Total Timezone Roles:** ${timezoneTotal}\n`);
+    }
+    
+    // Warnings and Errors Section
+    const allWarnings = [...results.pronouns.hierarchyWarnings, ...results.timezones.hierarchyWarnings];
+    const allFailed = [...results.pronouns.failed, ...results.timezones.failed];
+    
+    if (allWarnings.length > 0 || allFailed.length > 0) {
+        sections.push('## ⚠️ Important Notes\n');
+        
+        if (allWarnings.length > 0) {
+            sections.push('### 🔺 Role Hierarchy Issues:');
+            sections.push('The following roles need to be moved **below** the CastBot role in Server Settings → Roles for auto-assignment to work properly:\n');
+            allWarnings.forEach(role => {
+                sections.push(`• <@&${role.id}> (${role.name})`);
+            });
+            sections.push('\n**How to fix:** Go to Server Settings → Roles and drag these roles below the CastBot role.\n');
+        }
+        
+        if (allFailed.length > 0) {
+            sections.push('### ❌ Failed Operations:');
+            sections.push('The following roles could not be created or added:\n');
+            allFailed.forEach(role => {
+                sections.push(`• ${role.name} - ${role.reason || 'Unknown error'}`);
+            });
+            sections.push('\n**Possible causes:** Insufficient bot permissions, role limit reached, or Discord API issues.\n');
+        }
+    }
+    
+    // Success summary
+    if (allWarnings.length === 0 && allFailed.length === 0) {
+        sections.push('## 🎉 Setup Status\n');
+        sections.push('**All operations completed successfully!**\n');
+        sections.push('Your server is now fully configured for CastBot pronoun and timezone management. Players can use `/menu` to set their pronouns and timezones, or you can create reaction posts for bulk assignment.');
+    } else {
+        sections.push('## 📋 Next Steps\n');
+        sections.push('1. Fix any role hierarchy issues mentioned above');
+        sections.push('2. Players can use `/menu` to set their pronouns and timezones');
+        sections.push('3. Create reaction posts for bulk role assignment using the Production Menu');
+    }
+    
+    // Calculate character count for the detailed message
+    const fullMessage = sections.join('\n');
+    console.log(`📊 DEBUG: Setup response V2 character count: ${fullMessage.length} characters`);
+    
+    // Create Components V2 Container with TextDisplay
+    return {
+        type: 17, // Container component
+        accent_color: 0x7ED321, // Green accent color
+        components: [
+            {
+                type: 10, // TextDisplay component
+                content: fullMessage
+            }
+        ]
+    };
+}
+
+/**
  * Create timezone reaction message with emoji-based role selection
  * Handles Discord's 20-reaction limit gracefully
  * @param {Object} guildData - Guild data with timezone roles
@@ -981,6 +1113,7 @@ export {
     REACTION_EMOJIS,
     executeSetup,
     generateSetupResponse,
+    generateSetupResponseV2,
     checkRoleHierarchy,
     createTimezoneReactionMessage,
     createPronounReactionMessage,
