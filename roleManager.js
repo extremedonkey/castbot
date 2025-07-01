@@ -1107,18 +1107,6 @@ function formatOffset(offset) {
     return `UTC${offset}`;
 }
 
-// Pronoun role colors matching heart emojis (RGB to integer conversion)
-const PRONOUN_COLORS = {
-    'He/Him': 0xFF0000,      // ❤️ Red
-    'She/Her': 0xFFC0CB,     // 🩷 Pink 
-    'They/Them': 0x800080,   // 💜 Purple
-    'They/He': 0x00FF00,     // 💚 Green
-    'She/They': 0x87CEEB,    // 🩵 Light Blue
-    'Ask': 0xFFFF00,         // 💛 Yellow
-    'Any': 0xFFFFFF,         // 🤍 White
-    'All Pronouns': 0xFFFFFF // 🤍 White (same as Any)
-};
-
 /**
  * Nuke all CastBot-created pronoun and timezone roles for testing
  * This resets the server to a fresh state for testing setup functionality
