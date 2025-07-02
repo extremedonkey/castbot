@@ -111,7 +111,7 @@ function createApplicationButtonModal() {
     const welcomeDescriptionInput = new TextInputBuilder()
         .setCustomId('welcome_description')
         .setLabel('Welcome Message Description')
-        .setPlaceholder('Tell users what to do start their app such as enter a Carl-bot tag, e.g. "After you have set your age, pronouns and timezones, type ?q1 to continue."')
+        .setPlaceholder('Tell users what to do to start their application (e.g. type ?q1 to continue)')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(2000);
