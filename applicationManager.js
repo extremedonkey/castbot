@@ -102,7 +102,7 @@ function createApplicationButtonModal() {
     const welcomeTitleInput = new TextInputBuilder()
         .setCustomId('welcome_title')
         .setLabel('Welcome Message Title')
-        .setPlaceholder('Title that displays when the user opens their application channel.')
+        .setPlaceholder('Title that displays when applicant\'s channel opens')
         .setStyle(TextInputStyle.Short)
         .setRequired(true)
         .setMaxLength(100);
@@ -239,6 +239,28 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
             return { success: false, error: 'You already have an application channel!', channel: existingChannel };
         }
 
+        // Clean up any orphaned application data for this user (where channel was manually deleted)
+        // This ensures users can reapply after their channel is deleted by admins
+        const data = await loadPlayerData();
+        if (data[guild.id]?.applications) {
+            // Find any applications for this user where the channel no longer exists
+            const orphanedApplications = Object.entries(data[guild.id].applications)
+                .filter(([channelId, application]) => {
+                    return application.userId === user.id && !guild.channels.cache.has(channelId);
+                });
+            
+            // Remove orphaned application data
+            for (const [channelId] of orphanedApplications) {
+                console.log(`🧹 Cleaning up orphaned application data for channel ${channelId} (user: ${user.displayName})`);
+                delete data[guild.id].applications[channelId];
+            }
+            
+            if (orphanedApplications.length > 0) {
+                await savePlayerData(data);
+                console.log(`🧹 Cleaned up ${orphanedApplications.length} orphaned application(s) for user ${user.displayName}`);
+            }
+        }
+
         // Create the channel with proper permissions
         const channel = await guild.channels.create({
             name: channelName,
@@ -310,8 +332,7 @@ Click the button below to get started!`
             components: [welcomeContainer]
         });
 
-        // Store application data in playerData for cast ranking system
-        const data = await loadPlayerData();
+        // Store application data in playerData for cast ranking system (reuse data from cleanup above)
         if (!data[guild.id]) data[guild.id] = {};
         if (!data[guild.id].applications) data[guild.id].applications = {};
         
