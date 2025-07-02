@@ -185,7 +185,10 @@ export async function createPlayerManagementUI(options) {
     showVanityRoles = (mode === PlayerManagementMode.ADMIN),
     title = mode === PlayerManagementMode.ADMIN ? 'CastBot | Player Management' : 'CastBot | Player Menu',
     activeButton = null, // Which button is currently active
-    client = null // Discord client for fetching data
+    client = null, // Discord client for fetching data
+    // Application context options
+    isApplicationContext = false, // Whether this is being used in application channel
+    hideBottomButtons = false // Whether to hide bottom action row buttons
   } = options;
 
   // Check if this guild has stores
@@ -346,67 +349,69 @@ export async function createPlayerManagementUI(options) {
       components: [container]
     };
   } else {
-    // Player mode (Player Menu): Add castlist buttons outside the container
+    // Player mode (Player Menu): Add castlist buttons outside the container (unless hidden)
     let castlistRows = [];
-    
-    if (allCastlists && allCastlists.size > 0) {
-      // Player mode: don't include the "+" button (includeAddButton = false)
-      castlistRows = createCastlistRows(allCastlists, castlistTribes, false, hasStores);
-    } else {
-      // Fallback: single default castlist button if no castlist data found
-      castlistRows = [{
-        type: 1, // ActionRow
-        components: [new ButtonBuilder()
-          .setCustomId('show_castlist2_default')
-          .setLabel('📋 Castlist')
-          .setStyle(ButtonStyle.Primary)]
-      }];
-    }
-    
-    // Check if user is eligible for Safari inventory access
     let inventoryRow = null;
-    if (targetMember && client) {
-      try {
-        const eligiblePlayers = await getEligiblePlayersFixed(guildId, client);
-        const isEligiblePlayer = eligiblePlayers.some(player => player.userId === targetMember.id);
-        
-        if (isEligiblePlayer) {
-          // Get custom terms for inventory name and emoji
-          const customTerms = await getCustomTerms(guildId);
+    
+    if (!hideBottomButtons) {
+      if (allCastlists && allCastlists.size > 0) {
+        // Player mode: don't include the "+" button (includeAddButton = false)
+        castlistRows = createCastlistRows(allCastlists, castlistTribes, false, hasStores);
+      } else {
+        // Fallback: single default castlist button if no castlist data found
+        castlistRows = [{
+          type: 1, // ActionRow
+          components: [new ButtonBuilder()
+            .setCustomId('show_castlist2_default')
+            .setLabel('📋 Castlist')
+            .setStyle(ButtonStyle.Primary)]
+        }];
+      }
+      
+      // Check if user is eligible for Safari inventory access
+      if (targetMember && client) {
+        try {
+          const eligiblePlayers = await getEligiblePlayersFixed(guildId, client);
+          const isEligiblePlayer = eligiblePlayers.some(player => player.userId === targetMember.id);
           
-          // Get store browse buttons
-          const { getStoreBrowseButtons } = await import('./safariManager.js');
-          const storeBrowseButtons = await getStoreBrowseButtons(guildId);
-          
-          // Create inventory button with new dinosaur emoji
-          const inventoryButton = new ButtonBuilder()
-            .setCustomId('safari_player_inventory')
-            .setLabel(customTerms.inventoryName) // Remove currency emoji since we're using dinosaur emoji
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('🦕'); // Dinosaur emoji
-          
-          // Create inventory row with store buttons
-          const inventoryComponents = [inventoryButton];
-          
-          // Add store browse buttons (max 4 to stay within 5-button limit)
-          for (let i = 0; i < Math.min(storeBrowseButtons.length, 4); i++) {
-            const storeButton = storeBrowseButtons[i];
-            inventoryComponents.push(new ButtonBuilder()
-              .setCustomId(storeButton.custom_id)
-              .setLabel(storeButton.label)
+          if (isEligiblePlayer) {
+            // Get custom terms for inventory name and emoji
+            const customTerms = await getCustomTerms(guildId);
+            
+            // Get store browse buttons
+            const { getStoreBrowseButtons } = await import('./safariManager.js');
+            const storeBrowseButtons = await getStoreBrowseButtons(guildId);
+            
+            // Create inventory button with new dinosaur emoji
+            const inventoryButton = new ButtonBuilder()
+              .setCustomId('safari_player_inventory')
+              .setLabel(customTerms.inventoryName) // Remove currency emoji since we're using dinosaur emoji
               .setStyle(ButtonStyle.Primary)
-              .setEmoji('🪺') // Nest emoji
-            );
+              .setEmoji('🦕'); // Dinosaur emoji
+            
+            // Create inventory row with store buttons
+            const inventoryComponents = [inventoryButton];
+            
+            // Add store browse buttons (max 4 to stay within 5-button limit)
+            for (let i = 0; i < Math.min(storeBrowseButtons.length, 4); i++) {
+              const storeButton = storeBrowseButtons[i];
+              inventoryComponents.push(new ButtonBuilder()
+                .setCustomId(storeButton.custom_id)
+                .setLabel(storeButton.label)
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('🪺') // Nest emoji
+              );
+            }
+            
+            inventoryRow = {
+              type: 1, // ActionRow
+              components: inventoryComponents
+            };
           }
-          
-          inventoryRow = {
-            type: 1, // ActionRow
-            components: inventoryComponents
-          };
+        } catch (error) {
+          console.error('Error checking Safari eligibility:', error);
+          // Don't show inventory button if there's an error
         }
-      } catch (error) {
-        console.error('Error checking Safari eligibility:', error);
-        // Don't show inventory button if there's an error
       }
     }
     

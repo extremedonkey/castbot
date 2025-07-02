@@ -80,6 +80,18 @@ The Season Application Builder is currently a **basic applicant recruitment syst
 ```json
 {
   "guildId": {
+    "config_[timestamp]_[creatorUserId]": {
+      "buttonText": "Apply to Season 3",
+      "explanatoryText": "You are cool!",
+      "channelFormat": "%name%-meow",
+      "targetChannelId": "1337754151655833694",
+      "categoryId": "1334493817231114271",
+      "buttonStyle": "Primary",
+      "createdBy": "391415444084490240",
+      "stage": "active",
+      "createdAt": 1751465787477,
+      "lastUpdated": 1751465787477
+    },
     "applications": {
       "appId": {
         "displayName": "Applicant Name",

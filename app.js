@@ -10474,6 +10474,46 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    } else if (custom_id === 'player_menu_test') {
+      // TEST HANDLER: Proof of concept for new parameters (custom title + hidden bottom buttons)
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const guild = await client.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
+        const playerData = await loadPlayerData();
+        
+        console.log(`🧪 TEST: Testing new createPlayerManagementUI parameters for user ${userId}`);
+        
+        // Create player management UI with TEST PARAMETERS
+        const testMenuUI = await createPlayerManagementUI({
+          mode: PlayerManagementMode.PLAYER,
+          targetMember: member,
+          playerData,
+          guildId,
+          userId,
+          showUserSelect: false,
+          showVanityRoles: false,
+          title: '🧪 TEST MODE | Custom Title Demo', // CUSTOM TITLE
+          activeButton: null,
+          hideBottomButtons: true, // HIDE BOTTOM BUTTONS
+          client
+        });
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: testMenuUI
+        });
+      } catch (error) {
+        console.error('Error in player_menu_test handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Test handler error. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'select_pronouns') {
       // Handle pronoun role selection
       try {
