@@ -10441,10 +10441,21 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       // Show player management menu
       try {
         const guildId = req.body.guild_id;
+        const channelId = req.body.channel_id;
         const userId = req.body.member.user.id;
         const guild = await client.guilds.fetch(guildId);
         const member = await guild.members.fetch(userId);
         const playerData = await loadPlayerData();
+        
+        // Check if this is an application channel context
+        const isApplicationChannel = playerData[guildId]?.applications && 
+          Object.values(playerData[guildId].applications).some(app => app.channelId === channelId);
+        
+        // Use custom title and hide bottom buttons if in application context
+        const title = isApplicationChannel ? 'Set your age, pronouns and timezone.' : 'CastBot | Player Menu';
+        const hideBottomButtons = isApplicationChannel;
+        
+        console.log(`🔍 Player Menu Context: Channel ${channelId}, Application Channel: ${isApplicationChannel}, Title: "${title}"`);
         
         // Create player management UI
         const playerMenuUI = await createPlayerManagementUI({
@@ -10455,8 +10466,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           userId,
           showUserSelect: false,
           showVanityRoles: false,
-          title: 'CastBot | Player Menu',
+          title: title,
           activeButton: null,
+          hideBottomButtons: hideBottomButtons,
+          isApplicationContext: isApplicationChannel,
           client
         });
         
