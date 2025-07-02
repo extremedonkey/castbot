@@ -514,6 +514,22 @@ export async function handlePlayerButtonClick(req, res, customId, playerData, cl
   const guild = await client.guilds.fetch(guildId);
   const targetMember = await guild.members.fetch(targetUserId);
 
+  // Check if this is an application channel context (same logic as player_menu handler)
+  const channelId = req.body.channel_id;
+  const isApplicationChannel = playerData[guildId]?.applications && 
+    Object.values(playerData[guildId].applications).some(app => app.channelId === channelId);
+  
+  // Use custom title and hide bottom buttons if in application context
+  const applicationTitle = 'Set your age, pronouns and timezone.';
+  const defaultTitle = mode === PlayerManagementMode.ADMIN ? 
+    `Player Management | ${targetMember.displayName}` : 
+    'CastBot | Player Menu';
+  
+  const title = isApplicationChannel ? applicationTitle : defaultTitle;
+  const hideBottomButtons = isApplicationChannel;
+  
+  console.log(`🔍 Player Button Context: Channel ${channelId}, Application Channel: ${isApplicationChannel}, Title: "${title}"`);
+
   // Rebuild the UI with the active button
   const updatedUI = await createPlayerManagementUI({
     mode,
@@ -523,10 +539,10 @@ export async function handlePlayerButtonClick(req, res, customId, playerData, cl
     userId: mode === PlayerManagementMode.PLAYER ? userId : req.body.member.user.id,
     showUserSelect: mode === PlayerManagementMode.ADMIN,
     showVanityRoles: mode === PlayerManagementMode.ADMIN,
-    title: mode === PlayerManagementMode.ADMIN ? 
-      `Player Management | ${targetMember.displayName}` : 
-      'CastBot | Player Menu',
+    title: title,
     activeButton: buttonType,
+    hideBottomButtons: hideBottomButtons,
+    isApplicationContext: isApplicationChannel,
     client
   });
 
