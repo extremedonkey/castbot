@@ -13,6 +13,7 @@ import {
 } from 'discord.js';
 import { InteractionResponseFlags } from 'discord-interactions';
 import { loadPlayerData, savePlayerData } from './storage.js';
+import fetch from 'node-fetch';
 
 /**
  * Application Management Module for CastBot
@@ -287,16 +288,7 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
 
         // Removed old welcome embed as per user request
 
-        // Send interactive welcome container (Components V2) to help applicant get started
-        const welcomeButtons = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('player_menu')
-                    .setLabel('Start your application')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🚀')
-            );
-
+        // Send interactive welcome container (Components V2) - pure raw format to avoid Discord.js conflicts
         const welcomeContainer = {
             type: 17, // Container
             accent_color: 0x3498db, // Blue color (#3498db)
@@ -317,7 +309,18 @@ To get your application started, please set up your basic information using the 
 
 Click the button below to get started!`
                 },
-                welcomeButtons.toJSON(), // Convert to JSON format
+                {
+                    type: 1, // Action Row
+                    components: [
+                        {
+                            type: 2, // Button
+                            custom_id: 'player_menu',
+                            label: 'Start your application',
+                            style: 1, // Primary
+                            emoji: { name: '🚀' }
+                        }
+                    ]
+                },
                 {
                     type: 10, // Text Display  
                     content: `-# You can update this information from any channel at any time by typing \`/menu\``
@@ -325,9 +328,17 @@ Click the button below to get started!`
             ]
         };
 
-        await channel.send({ 
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [welcomeContainer]
+        // Send as pure Components V2 payload to avoid Discord.js ActionRowBuilder conflicts
+        await fetch(`https://discord.com/api/v10/channels/${channel.id}/messages`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [welcomeContainer]
+            })
         });
 
         // Store application data in playerData for cast ranking system (reuse data from cleanup above)
