@@ -9,8 +9,7 @@ import {
     ChannelSelectMenuBuilder,
     ModalBuilder,
     TextInputBuilder,
-    TextInputStyle,
-    EmbedBuilder
+    TextInputStyle
 } from 'discord.js';
 import { InteractionResponseFlags } from 'discord-interactions';
 import { loadPlayerData, savePlayerData } from './storage.js';
@@ -99,6 +98,24 @@ function createApplicationButtonModal() {
         .setRequired(true)
         .setMaxLength(2000);
 
+    // Welcome message title input
+    const welcomeTitleInput = new TextInputBuilder()
+        .setCustomId('welcome_title')
+        .setLabel('Welcome Message Title')
+        .setPlaceholder('Title that displays when the user opens their application channel.')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(100);
+
+    // Welcome message description input
+    const welcomeDescriptionInput = new TextInputBuilder()
+        .setCustomId('welcome_description')
+        .setLabel('Welcome Message Description')
+        .setPlaceholder('Tell users what to do start their app such as enter a Carl-bot tag, e.g. "After you have set your age, pronouns and timezones, type ?q1 to continue."')
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(true)
+        .setMaxLength(2000);
+
     // Channel name format input
     const channelFormatInput = new TextInputBuilder()
         .setCustomId('channel_format')
@@ -111,9 +128,11 @@ function createApplicationButtonModal() {
 
     const firstRow = new ActionRowBuilder().addComponents(buttonTextInput);
     const secondRow = new ActionRowBuilder().addComponents(explanatoryTextInput);
-    const thirdRow = new ActionRowBuilder().addComponents(channelFormatInput);
+    const thirdRow = new ActionRowBuilder().addComponents(welcomeTitleInput);
+    const fourthRow = new ActionRowBuilder().addComponents(welcomeDescriptionInput);
+    const fifthRow = new ActionRowBuilder().addComponents(channelFormatInput);
 
-    modal.addComponents(firstRow, secondRow, thirdRow);
+    modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
 
     return modal;
 }
@@ -199,7 +218,7 @@ function createApplicationButton(buttonText, configId) {
 /**
  * Create an application channel for a user
  */
-async function createApplicationChannel(guild, user, config) {
+async function createApplicationChannel(guild, user, config, configId = 'unknown') {
     try {
         // Get the category
         const category = await guild.channels.fetch(config.categoryId);
@@ -244,41 +263,51 @@ async function createApplicationChannel(guild, user, config) {
             ]
         });
 
-        // Send welcome message to the new channel
-        const welcomeEmbed = new EmbedBuilder()
-            .setTitle('🎯 Application Channel Created')
-            .setDescription(`Welcome ${user}! This is your private application channel.\n\nOnly you and the admin team can see this channel.`)
-            .setColor('#00ff00')
-            .setTimestamp()
-            .setFooter({ 
-                text: `Application for ${guild.name}`,
-                iconURL: guild.iconURL() 
-            });
+        // Removed old welcome embed as per user request
 
-        await channel.send({ embeds: [welcomeEmbed] });
+        // Send interactive welcome container (Components V2) to help applicant get started
+        const welcomeContainer = {
+            type: 17, // Container
+            accent_color: 0x3498db, // Blue color (#3498db)
+            components: [
+                {
+                    type: 10, // Text Display
+                    content: `## 🚀 Get Started with Your Application
 
-        // Send interactive welcome menu to help applicant get started
-        const welcomeButtons = new ActionRowBuilder()
-            .addComponents(
-                new ButtonBuilder()
-                    .setCustomId('player_menu')
-                    .setLabel('Start your application')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('🚀')
-            );
+Welcome ${user}! This is your private application channel.
 
-        const welcomeMenuEmbed = new EmbedBuilder()
-            .setTitle('🚀 Get Started with Your Application')
-            .setDescription('To get your application started, please set up your basic information using the button below:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button below to get started!')
-            .setColor('#3498db')
-            .setFooter({ 
-                text: 'You can update this information from any channel at any time by typing `/menu`',
-                iconURL: guild.iconURL() 
-            });
+Only you and the admin team can see this channel.
+
+To get your application started, please set up your basic information using the button below:
+
+• **Pronouns** - Let us know your preferred pronouns
+• **Timezone** - Help other players understand your availability  
+• **Age** - Set how old you are
+
+Click the button below to get started!`
+                },
+                {
+                    type: 1, // Action Row
+                    components: [
+                        {
+                            type: 2, // Button
+                            custom_id: 'player_menu',
+                            label: 'Start your application',
+                            style: 1, // Primary
+                            emoji: { name: '🚀' }
+                        }
+                    ]
+                },
+                {
+                    type: 10, // Text Display  
+                    content: `-# You can update this information from any channel at any time by typing \`/menu\``
+                }
+            ]
+        };
 
         await channel.send({ 
-            embeds: [welcomeMenuEmbed], 
-            components: [welcomeButtons] 
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [welcomeContainer]
         });
 
         // Store application data in playerData for cast ranking system
@@ -299,7 +328,7 @@ async function createApplicationChannel(guild, user, config) {
             avatarURL: user.user ? user.user.displayAvatarURL({ size: 128 }) : user.displayAvatarURL({ size: 128 }),
             channelName: channel.name,
             createdAt: new Date().toISOString(),
-            configId: config.id || 'unknown'
+            configId: configId
         };
         
         await savePlayerData(data);
@@ -323,7 +352,9 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         const components = interactionBody.data.components;
         const buttonText = components[0].components[0].value;
         const explanatoryText = components[1].components[0].value;
-        const channelFormat = components[2].components[0].value;
+        const welcomeTitle = components[2].components[0].value;
+        const welcomeDescription = components[3].components[0].value;
+        const channelFormat = components[4].components[0].value;
 
         // Validate channel format
         if (!channelFormat.includes('%name%')) {
@@ -364,6 +395,8 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         const tempConfig = {
             buttonText,
             explanatoryText,
+            welcomeTitle,
+            welcomeDescription,
             channelFormat,
             stage: 'awaiting_selections'
             // Note: intentionally not setting targetChannelId, categoryId, buttonStyle

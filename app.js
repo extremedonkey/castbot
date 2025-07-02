@@ -10487,6 +10487,87 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    } else if (custom_id.startsWith('app_continue_')) {
+      // Handle "Move on to main questions" button click in application channels
+      try {
+        // Extract guildId and userId from custom_id: app_continue_{guildId}_{userId}
+        const parts = custom_id.split('_');
+        const guildId = parts[2];
+        const userId = parts[3];
+        const channelId = req.body.channel_id;
+        
+        console.log(`🔍 App Continue: Guild ${guildId}, User ${userId}, Channel ${channelId}`);
+        
+        // Load player data to find the application and its configId
+        const playerData = await loadPlayerData();
+        const application = playerData[guildId]?.applications?.[channelId];
+        
+        if (!application) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Application data not found for this channel.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const configId = application.configId;
+        console.log(`🔍 Found configId: ${configId}`);
+        
+        // Get the application configuration to retrieve welcome message
+        const config = await getApplicationConfig(guildId, configId);
+        
+        if (!config) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Application configuration not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Get welcome title and description (with fallbacks for error handling)
+        const welcomeTitle = config.welcomeTitle || 'Next Steps';
+        const welcomeDescription = config.welcomeDescription || 'No additional instructions configured - ask your hosts what to do next!';
+        
+        console.log(`🔍 Welcome Title: "${welcomeTitle}"`);
+        console.log(`🔍 Welcome Description: "${welcomeDescription}"`);
+        
+        // Create custom welcome message container
+        const customWelcomeContainer = {
+          type: 17, // Container
+          accent_color: 0x3498db, // Blue color
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## ${welcomeTitle}
+
+${welcomeDescription}`
+            }
+          ]
+        };
+        
+        // Send the custom welcome message as a new message in the channel
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [customWelcomeContainer]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in app_continue handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading next steps. Please contact an admin.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'player_menu_test') {
       // TEST HANDLER: Proof of concept for new parameters (custom title + hidden bottom buttons)
       try {
@@ -12433,7 +12514,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
         
         // Create the application channel
-        const result = await createApplicationChannel(guild, member, config);
+        const result = await createApplicationChannel(guild, member, config, configId);
         
         if (!result.success) {
           return res.send({
@@ -12552,6 +12633,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             const finalConfig = {
               buttonText: tempConfig.buttonText,
               explanatoryText: tempConfig.explanatoryText,
+              welcomeTitle: tempConfig.welcomeTitle,
+              welcomeDescription: tempConfig.welcomeDescription,
               channelFormat: tempConfig.channelFormat,
               targetChannelId: tempConfig.targetChannelId,
               categoryId: tempConfig.categoryId,

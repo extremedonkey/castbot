@@ -415,10 +415,37 @@ export async function createPlayerManagementUI(options) {
       }
     }
     
+    // Add "Move on to main questions" button if in application context
+    let applicationContinueRow = null;
+    if (isApplicationContext) {
+      applicationContinueRow = {
+        type: 1, // ActionRow
+        components: [
+          {
+            type: 2, // Button
+            custom_id: `app_continue_${guildId}_${userId}`, // Include guildId and userId to retrieve config
+            label: 'Move on to the main questions',
+            style: 1, // Primary (blue)
+            emoji: { name: '❔' }
+          }
+        ]
+      };
+    }
+    
     // Build final component array
-    const finalComponents = [container, ...castlistRows];
-    if (inventoryRow) {
-      finalComponents.push(inventoryRow);
+    const finalComponents = [container];
+    
+    // Add application continue button if in application context (before other buttons)
+    if (applicationContinueRow) {
+      finalComponents.push(applicationContinueRow);
+    }
+    
+    // Add castlist and inventory buttons if not hidden
+    if (!hideBottomButtons) {
+      finalComponents.push(...castlistRows);
+      if (inventoryRow) {
+        finalComponents.push(inventoryRow);
+      }
     }
     
     return {
