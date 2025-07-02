@@ -288,6 +288,15 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
         // Removed old welcome embed as per user request
 
         // Send interactive welcome container (Components V2) to help applicant get started
+        const welcomeButtons = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('player_menu')
+                    .setLabel('Start your application')
+                    .setStyle(ButtonStyle.Primary)
+                    .setEmoji('🚀')
+            );
+
         const welcomeContainer = {
             type: 17, // Container
             accent_color: 0x3498db, // Blue color (#3498db)
@@ -308,18 +317,7 @@ To get your application started, please set up your basic information using the 
 
 Click the button below to get started!`
                 },
-                {
-                    type: 1, // Action Row
-                    components: [
-                        {
-                            type: 2, // Button
-                            custom_id: 'player_menu',
-                            label: 'Start your application',
-                            style: 1, // Primary
-                            emoji: { name: '🚀' }
-                        }
-                    ]
-                },
+                welcomeButtons.toJSON(), // Convert to JSON format
                 {
                     type: 10, // Text Display  
                     content: `-# You can update this information from any channel at any time by typing \`/menu\``
