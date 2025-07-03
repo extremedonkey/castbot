@@ -13519,10 +13519,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Create and post the button
           const button = createApplicationButton(tempConfig.buttonText, finalConfigId, tempConfig.buttonStyle);
           const row = new ActionRowBuilder().addComponents(button);
-          await targetChannel.send({
-            content: tempConfig.explanatoryText,
-            components: [row]
-          });
+          
+          const messageData = { components: [row] };
+          if (tempConfig.explanatoryText && tempConfig.explanatoryText.trim()) {
+            messageData.content = tempConfig.explanatoryText;
+          }
+          
+          await targetChannel.send(messageData);
           
           // Clean up temp config
           delete playerData[guildId].applicationConfigs[configId];
@@ -13545,10 +13548,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           const button = createApplicationButton(tempConfig.buttonText, configId, tempConfig.buttonStyle);
           const row = new ActionRowBuilder().addComponents(button);
-          await targetChannel.send({
-            content: tempConfig.explanatoryText,
-            components: [row]
-          });
+          
+          const messageData = { components: [row] };
+          if (tempConfig.explanatoryText && tempConfig.explanatoryText.trim()) {
+            messageData.content = tempConfig.explanatoryText;
+          }
+          
+          await targetChannel.send(messageData);
           
           return res.send({
             type: InteractionResponseType.UPDATE_MESSAGE,

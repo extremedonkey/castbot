@@ -96,7 +96,7 @@ function createApplicationButtonModal() {
         .setLabel('Explanatory Text')
         .setPlaceholder('Give your applicants some information about the season. This will display above the apply button.')
         .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
+        .setRequired(false)
         .setMaxLength(2000);
 
     // Welcome message title input
@@ -454,7 +454,7 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         // Extract data from modal components
         const components = interactionBody.data.components;
         const buttonText = components[0].components[0].value;
-        const explanatoryText = components[1].components[0].value;
+        const explanatoryText = components[1].components[0].value || '';
         const welcomeTitle = components[2].components[0].value;
         const welcomeDescription = components[3].components[0].value;
         const channelFormat = components[4].components[0].value;
