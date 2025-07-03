@@ -13557,25 +13557,43 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
         } else if (configId.startsWith('config_')) {
           // Update season config and post
+          console.log(`🔍 DEBUG: Entering config_ branch for configId: ${configId}`);
+          
           tempConfig.stage = 'active';
           tempConfig.lastUpdated = Date.now();
+          console.log(`🔍 DEBUG: About to save config...`);
           await saveApplicationConfig(guildId, configId, tempConfig);
+          console.log(`🔍 DEBUG: Config saved successfully`);
           
+          console.log(`🔍 DEBUG: Creating button...`);
           const button = createApplicationButton(tempConfig.buttonText, configId, tempConfig.buttonStyle);
           const row = new ActionRowBuilder().addComponents(button);
+          console.log(`🔍 DEBUG: Button created successfully`);
           
           const messageData = { components: [row] };
           if (tempConfig.explanatoryText && tempConfig.explanatoryText.trim()) {
             messageData.content = tempConfig.explanatoryText;
           }
           
+          console.log(`🔍 DEBUG: About to send message to channel...`);
           await targetChannel.send(messageData);
+          console.log(`🔍 DEBUG: Message sent successfully`);
           
+          console.log(`🔍 DEBUG: About to send response...`);
           return res.send({
             type: InteractionResponseType.UPDATE_MESSAGE,
             data: {
               content: `✅ **Season Application Button Posted!**\n\n**Button Text:** "${tempConfig.buttonText}"\n**Posted to:** ${targetChannel}\n**Category:** ${category.name}\n**Style:** ${tempConfig.buttonStyle}\n\nApplicants will now go through your configured questions when they apply.`,
               components: [],
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          console.log(`❌ DEBUG: Unknown configId format: ${configId}`);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid configuration ID format. Please try again.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
