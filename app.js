@@ -14954,6 +14954,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         await savePlayerData(playerData);
         
+        // Calculate current page based on question index (5 questions per page)
+        const questionsPerPage = 5;
+        const currentPage = Math.floor(questionIndex / questionsPerPage);
+        
         // Refresh the UI
         return refreshQuestionManagementUI(res, config, configId, currentPage);
         
