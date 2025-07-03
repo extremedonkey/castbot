@@ -101,12 +101,22 @@ import {
 import { createEntityManagementUI } from './entityManagementUI.js';
 
 // Helper function to refresh question management UI
-async function refreshQuestionManagementUI(res, config, configId) {
+async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
+  const questionsPerPage = 5;
+  const totalPages = Math.max(1, Math.ceil(config.questions.length / questionsPerPage));
+  const startIndex = currentPage * questionsPerPage;
+  const endIndex = Math.min(startIndex + questionsPerPage, config.questions.length);
+  
   const refreshedComponents = [];
+  
+  // Title with pagination info
+  const pageInfo = config.questions.length <= questionsPerPage 
+    ? '' 
+    : ` (Page ${currentPage + 1}/${totalPages})`;
   
   refreshedComponents.push({
     type: 10, // Text Display
-    content: `## ❔ Manage Questions: ${config.seasonName}`
+    content: `## ❔ Manage Questions: ${config.seasonName}${pageInfo}`
   });
   
   if (config.questions.length === 0) {
@@ -115,7 +125,9 @@ async function refreshQuestionManagementUI(res, config, configId) {
       content: '*No questions defined yet*'
     });
   } else {
-    config.questions.forEach((question, index) => {
+    // Show only questions for current page
+    for (let i = startIndex; i < endIndex; i++) {
+      const question = config.questions[i];
       const maxTitleLength = 50;
       const displayTitle = question.questionTitle.length > maxTitleLength 
         ? question.questionTitle.substring(0, maxTitleLength) + '...'
@@ -123,29 +135,29 @@ async function refreshQuestionManagementUI(res, config, configId) {
       
       refreshedComponents.push({
         type: 10, // Text Display
-        content: `**Q${index + 1}.** ${displayTitle}`
+        content: `**Q${i + 1}.** ${displayTitle}`
       });
       
       const questionButtons = [
         new ButtonBuilder()
-          .setCustomId(`season_question_edit_${configId}_${index}`)
+          .setCustomId(`season_question_edit_${configId}_${i}_${currentPage}`)
           .setLabel('Edit')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('✏️'),
         new ButtonBuilder()
-          .setCustomId(`season_question_up_${configId}_${index}`)
+          .setCustomId(`season_question_up_${configId}_${i}_${currentPage}`)
           .setLabel(' ')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('⬆️')
-          .setDisabled(index === 0),
+          .setDisabled(i === 0),
         new ButtonBuilder()
-          .setCustomId(`season_question_down_${configId}_${index}`)
+          .setCustomId(`season_question_down_${configId}_${i}_${currentPage}`)
           .setLabel(' ')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('⬇️')
-          .setDisabled(index === config.questions.length - 1),
+          .setDisabled(i === config.questions.length - 1),
         new ButtonBuilder()
-          .setCustomId(`season_question_delete_${configId}_${index}`)
+          .setCustomId(`season_question_delete_${configId}_${i}_${currentPage}`)
           .setLabel('Delete')
           .setStyle(ButtonStyle.Danger)
           .setEmoji('🗑️')
@@ -153,19 +165,19 @@ async function refreshQuestionManagementUI(res, config, configId) {
       
       const questionRow = new ActionRowBuilder().addComponents(questionButtons);
       refreshedComponents.push(questionRow.toJSON());
-    });
+    }
   }
   
   refreshedComponents.push({ type: 14 }); // Separator
   
   const managementButtons = [
     new ButtonBuilder()
-      .setCustomId(`season_new_question_${configId}`)
+      .setCustomId(`season_new_question_${configId}_${currentPage}`)
       .setLabel('New Question')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('✨'),
     new ButtonBuilder()
-      .setCustomId(`season_post_button_${configId}`)
+      .setCustomId(`season_post_button_${configId}_${currentPage}`)
       .setLabel('Post Apps Button')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('✅'),
@@ -179,31 +191,54 @@ async function refreshQuestionManagementUI(res, config, configId) {
   const managementRow = new ActionRowBuilder().addComponents(managementButtons);
   refreshedComponents.push(managementRow.toJSON());
   
-  const backRow = new ActionRowBuilder()
-    .addComponents(
-      new ButtonBuilder()
-        .setCustomId('season_management_menu')
-        .setLabel('← Back to Season List')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('⬅️')
-    );
-  
-  refreshedComponents.push(
-    { type: 14 }, // Separator
-    backRow.toJSON()
-  );
-  
   const refreshedContainer = {
     type: 17, // Container
     accent_color: 0xf39c12,
     components: refreshedComponents
   };
   
+  // Create navigation buttons below the container
+  const navComponents = [];
+  
+  if (config.questions.length > questionsPerPage) {
+    const prevDisabled = currentPage === 0;
+    const nextDisabled = currentPage === totalPages - 1;
+    
+    const prevButton = new ButtonBuilder()
+      .setCustomId(`season_nav_prev_${configId}_${currentPage}`)
+      .setLabel("◀")
+      .setStyle(prevDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
+      .setDisabled(prevDisabled);
+    
+    const nextButton = new ButtonBuilder()
+      .setCustomId(`season_nav_next_${configId}_${currentPage}`)
+      .setLabel("▶")
+      .setStyle(nextDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
+      .setDisabled(nextDisabled);
+    
+    const menuButton = new ButtonBuilder()
+      .setCustomId("season_management_menu")
+      .setLabel("📋 Menu")
+      .setStyle(ButtonStyle.Primary);
+    
+    const navRow = new ActionRowBuilder().addComponents(prevButton, menuButton, nextButton);
+    navComponents.push(navRow);
+  } else {
+    // If 5 or fewer questions, just show menu button
+    const menuButton = new ButtonBuilder()
+      .setCustomId("season_management_menu")
+      .setLabel("📋 Menu")
+      .setStyle(ButtonStyle.Primary);
+    
+    const navRow = new ActionRowBuilder().addComponents(menuButton);
+    navComponents.push(navRow);
+  }
+  
   return res.send({
     type: InteractionResponseType.UPDATE_MESSAGE,
     data: {
       flags: (1 << 15), // IS_COMPONENTS_V2
-      components: [refreshedContainer]
+      components: [refreshedContainer, ...navComponents]
     }
   });
 }
@@ -4813,12 +4848,13 @@ To fix this:
     } else if (custom_id.startsWith('season_question_up_')) {
       // Handle question reorder up
       try {
-        // Extract configId and index: season_question_up_{configId}_{index}
+        // Extract configId, index, and currentPage: season_question_up_{configId}_{index}_{currentPage}
         const prefix = 'season_question_up_';
         const remaining = custom_id.replace(prefix, '');
-        const lastUnderscoreIndex = remaining.lastIndexOf('_');
-        const configId = remaining.substring(0, lastUnderscoreIndex);
-        const questionIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
+        const parts = remaining.split('_');
+        const currentPage = parseInt(parts.pop()); // Get page from end
+        const questionIndex = parseInt(parts.pop()); // Get index 
+        const configId = parts.join('_'); // Join remaining parts as configId
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         
@@ -4850,7 +4886,7 @@ To fix this:
         await savePlayerData(playerData);
         
         // Refresh the UI
-        return refreshQuestionManagementUI(res, config, configId);
+        return refreshQuestionManagementUI(res, config, configId, currentPage);
         
       } catch (error) {
         console.error('Error reordering question up:', error);
@@ -4865,12 +4901,13 @@ To fix this:
     } else if (custom_id.startsWith('season_question_down_')) {
       // Handle question reorder down
       try {
-        // Extract configId and index: season_question_down_{configId}_{index}
+        // Extract configId, index, and currentPage: season_question_down_{configId}_{index}_{currentPage}
         const prefix = 'season_question_down_';
         const remaining = custom_id.replace(prefix, '');
-        const lastUnderscoreIndex = remaining.lastIndexOf('_');
-        const configId = remaining.substring(0, lastUnderscoreIndex);
-        const questionIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
+        const parts = remaining.split('_');
+        const currentPage = parseInt(parts.pop()); // Get page from end
+        const questionIndex = parseInt(parts.pop()); // Get index 
+        const configId = parts.join('_'); // Join remaining parts as configId
         const guildId = req.body.guild_id;
         
         console.log(`🔍 DEBUG: Reordering question down - Config: ${configId}, Index: ${questionIndex}`);
@@ -4901,7 +4938,7 @@ To fix this:
         await savePlayerData(playerData);
         
         // Refresh the UI
-        return refreshQuestionManagementUI(res, config, configId);
+        return refreshQuestionManagementUI(res, config, configId, currentPage);
         
       } catch (error) {
         console.error('Error reordering question down:', error);
@@ -4916,12 +4953,13 @@ To fix this:
     } else if (custom_id.startsWith('season_question_edit_')) {
       // Handle question edit modal
       try {
-        // Extract configId and index: season_question_edit_{configId}_{index}
+        // Extract configId, index, and currentPage: season_question_edit_{configId}_{index}_{currentPage}
         const prefix = 'season_question_edit_';
         const remaining = custom_id.replace(prefix, '');
-        const lastUnderscoreIndex = remaining.lastIndexOf('_');
-        const configId = remaining.substring(0, lastUnderscoreIndex);
-        const questionIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
+        const parts = remaining.split('_');
+        const currentPage = parseInt(parts.pop()); // Get page from end
+        const questionIndex = parseInt(parts.pop()); // Get index 
+        const configId = parts.join('_'); // Join remaining parts as configId
         const guildId = req.body.guild_id;
         
         // Load player data
@@ -4983,12 +5021,13 @@ To fix this:
     } else if (custom_id.startsWith('season_question_delete_')) {
       // Handle question deletion
       try {
-        // Extract configId and index: season_question_delete_{configId}_{index}
+        // Extract configId, index, and currentPage: season_question_delete_{configId}_{index}_{currentPage}
         const prefix = 'season_question_delete_';
         const remaining = custom_id.replace(prefix, '');
-        const lastUnderscoreIndex = remaining.lastIndexOf('_');
-        const configId = remaining.substring(0, lastUnderscoreIndex);
-        const questionIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
+        const parts = remaining.split('_');
+        const currentPage = parseInt(parts.pop()); // Get page from end
+        const questionIndex = parseInt(parts.pop()); // Get index 
+        const configId = parts.join('_'); // Join remaining parts as configId
         const guildId = req.body.guild_id;
         
         // Load player data
@@ -5016,7 +5055,7 @@ To fix this:
         await savePlayerData(playerData);
         
         // Refresh the UI
-        return refreshQuestionManagementUI(res, config, configId);
+        return refreshQuestionManagementUI(res, config, configId, currentPage);
         
       } catch (error) {
         console.error('Error deleting question:', error);
@@ -5028,15 +5067,97 @@ To fix this:
           }
         });
       }
+    } else if (custom_id.startsWith('season_nav_prev_')) {
+      // Handle previous page navigation
+      try {
+        // Extract configId and currentPage: season_nav_prev_{configId}_{currentPage}
+        const prefix = 'season_nav_prev_';
+        const remaining = custom_id.replace(prefix, '');
+        const lastUnderscoreIndex = remaining.lastIndexOf('_');
+        const configId = remaining.substring(0, lastUnderscoreIndex);
+        const currentPage = parseInt(remaining.substring(lastUnderscoreIndex + 1));
+        const guildId = req.body.guild_id;
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        const config = playerData[guildId]?.applicationConfigs?.[configId];
+        
+        if (!config) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Season configuration not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const newPage = Math.max(0, currentPage - 1);
+        return refreshQuestionManagementUI(res, config, configId, newPage);
+        
+      } catch (error) {
+        console.error('Error navigating to previous page:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error navigating to previous page.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_nav_next_')) {
+      // Handle next page navigation
+      try {
+        // Extract configId and currentPage: season_nav_next_{configId}_{currentPage}
+        const prefix = 'season_nav_next_';
+        const remaining = custom_id.replace(prefix, '');
+        const lastUnderscoreIndex = remaining.lastIndexOf('_');
+        const configId = remaining.substring(0, lastUnderscoreIndex);
+        const currentPage = parseInt(remaining.substring(lastUnderscoreIndex + 1));
+        const guildId = req.body.guild_id;
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        const config = playerData[guildId]?.applicationConfigs?.[configId];
+        
+        if (!config) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Season configuration not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const questionsPerPage = 5;
+        const totalPages = Math.ceil(config.questions.length / questionsPerPage);
+        const newPage = Math.min(totalPages - 1, currentPage + 1);
+        return refreshQuestionManagementUI(res, config, configId, newPage);
+        
+      } catch (error) {
+        console.error('Error navigating to next page:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error navigating to next page.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('season_new_question_')) {
       // Handle new question modal
       try {
-        // Extract configId by removing the prefix
-        const configId = custom_id.replace('season_new_question_', '');
+        // Extract configId and currentPage: season_new_question_{configId}_{currentPage}
+        const prefix = 'season_new_question_';
+        const remaining = custom_id.replace(prefix, '');
+        const parts = remaining.split('_');
+        const currentPage = parseInt(parts.pop()); // Get page from end
+        const configId = parts.join('_'); // Join remaining parts as configId
         
         // Show new question modal
         const modal = new ModalBuilder()
-          .setCustomId(`season_new_question_modal_${configId}`)
+          .setCustomId(`season_new_question_modal_${configId}_${currentPage}`)
           .setTitle('Create New Question');
           
         const titleInput = new TextInputBuilder()
@@ -5078,8 +5199,12 @@ To fix this:
     } else if (custom_id.startsWith('season_post_button_')) {
       // Handle post button to channel - reuse existing season_app_creation flow
       try {
-        // Extract configId by removing the prefix
-        const configId = custom_id.replace('season_post_button_', '');
+        // Extract configId and currentPage: season_post_button_{configId}_{currentPage}
+        const prefix = 'season_post_button_';
+        const remaining = custom_id.replace(prefix, '');
+        const parts = remaining.split('_');
+        const currentPage = parseInt(parts.pop()); // Get page from end
+        const configId = parts.join('_'); // Join remaining parts as configId
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
         const userId = req.body.member.user.id;
@@ -12348,7 +12473,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             };
 
             // Use the updated question management UI function
-            return refreshQuestionManagementUI(res, config, configId);
+            return refreshQuestionManagementUI(res, config, configId, currentPage);
           }
         }
         
@@ -14726,8 +14851,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id.startsWith('season_new_question_modal_')) {
       // Handle new question creation
       try {
-        // Extract configId by removing the prefix
-        const configId = custom_id.replace('season_new_question_modal_', '');
+        // Extract configId and currentPage: season_new_question_modal_{configId}_{currentPage}
+        const prefix = 'season_new_question_modal_';
+        const remaining = custom_id.replace(prefix, '');
+        const parts = remaining.split('_');
+        const currentPage = parseInt(parts.pop()); // Get page from end
+        const configId = parts.join('_'); // Join remaining parts as configId
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
         const questionTitle = components[0].components[0].value;
@@ -14765,8 +14894,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         config.questions.push(newQuestion);
         await savePlayerData(playerData);
         
-        // Refresh the UI
-        return refreshQuestionManagementUI(res, config, configId);
+        // Calculate the page for the new question (last page)
+        const questionsPerPage = 5;
+        const newQuestionPage = Math.floor((config.questions.length - 1) / questionsPerPage);
+        
+        // Refresh the UI on the page containing the new question
+        return refreshQuestionManagementUI(res, config, configId, newQuestionPage);
         
       } catch (error) {
         console.error('Error creating new question:', error);
@@ -14815,7 +14948,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         await savePlayerData(playerData);
         
         // Refresh the UI
-        return refreshQuestionManagementUI(res, config, configId);
+        return refreshQuestionManagementUI(res, config, configId, currentPage);
         
       } catch (error) {
         console.error('Error editing question:', error);
