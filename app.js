@@ -14713,11 +14713,118 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         await savePlayerData(playerData);
         
+        // Immediately open the newly created season's management interface
+        // Simulate the entity_select_seasons handler for this configId
+        const config = playerData[guildId].applicationConfigs[configId];
+        
+        // Ensure questions array exists
+        if (!config.questions) {
+          config.questions = [];
+          await savePlayerData(playerData);
+        }
+        
+        // Build question management interface for the new season
+        const seasonComponents = [
+          {
+            type: 10, // Text Display
+            content: `## 🎛️ Manage Questions: ${config.seasonName}\n\n**Current Questions** (${config.questions.length}):`
+          }
+        ];
+
+        // Add question list (will be empty for new season)
+        if (config.questions.length === 0) {
+          seasonComponents.push({
+            type: 10, // Text Display
+            content: '*No questions defined yet*'
+          });
+        } else {
+          config.questions.forEach((question, index) => {
+            const maxTitleLength = 50;
+            const displayTitle = question.questionTitle.length > maxTitleLength 
+              ? question.questionTitle.substring(0, maxTitleLength) + '...'
+              : question.questionTitle;
+            
+            seasonComponents.push({
+              type: 10, // Text Display
+              content: `**${index + 1}.** ${displayTitle}`
+            });
+            
+            const questionButtons = [
+              new ButtonBuilder()
+                .setCustomId(`season_question_up_${configId}_${index}`)
+                .setLabel('Up')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⬆️')
+                .setDisabled(index === 0),
+              new ButtonBuilder()
+                .setCustomId(`season_question_down_${configId}_${index}`)
+                .setLabel('Down')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⬇️')
+                .setDisabled(index === config.questions.length - 1),
+              new ButtonBuilder()
+                .setCustomId(`season_question_edit_${configId}_${index}`)
+                .setLabel('Edit')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('✏️'),
+              new ButtonBuilder()
+                .setCustomId(`season_question_delete_${configId}_${index}`)
+                .setLabel('Delete')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🗑️')
+            ];
+            
+            const questionRow = new ActionRowBuilder().addComponents(questionButtons);
+            seasonComponents.push(questionRow.toJSON());
+          });
+        }
+        
+        // Add divider
+        seasonComponents.push({ type: 14 }); // Separator
+        
+        // Add management buttons
+        const managementButtons = [
+          new ButtonBuilder()
+            .setCustomId(`season_new_question_${configId}`)
+            .setLabel('New Question')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('➕'),
+          new ButtonBuilder()
+            .setCustomId(`season_post_button_${configId}`)
+            .setLabel('Post Button to Channel')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('📮')
+        ];
+
+        const managementRow = new ActionRowBuilder().addComponents(managementButtons);
+        seasonComponents.push(managementRow.toJSON());
+
+        // Add Back button
+        const backRow = new ActionRowBuilder()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('season_management_menu')
+              .setLabel('← Back to Season List')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('⬅️')
+          );
+
+        seasonComponents.push(
+          { type: 14 }, // Separator
+          backRow.toJSON()
+        );
+
+        const seasonManagementContainer = {
+          type: 17, // Container
+          accent_color: 0xf39c12, // Orange like Safari
+          components: seasonComponents
+        };
+
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: `✅ **${seasonName}** has been created! Use the season management interface to configure channels and questions.`,
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [seasonManagementContainer]
           }
         });
 
