@@ -216,7 +216,7 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
         },
         {
           type: 2, // Button
-          custom_id: "season_management_menu",
+          custom_id: "viral_menu",
           label: "📋 Menu",
           style: 1 // Primary
         },
@@ -237,7 +237,7 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
       components: [
         {
           type: 2, // Button
-          custom_id: "season_management_menu",
+          custom_id: "viral_menu",
           label: "📋 Menu",
           style: 1 // Primary
         }
@@ -272,7 +272,7 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
   const questionComponents = [
     {
       type: 10, // Text Display
-      content: `## ${question.questionTitle}\n\n${question.questionText}`
+      content: `## Q${questionIndex + 1}. ${question.questionTitle}\n\n${question.questionText}`
     },
     {
       type: 14 // Separator
