@@ -14574,6 +14574,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         let existingConfigId = null;
         if (custom_id.startsWith('application_button_modal_')) {
           existingConfigId = custom_id.replace('application_button_modal_', '');
+          console.log(`🔍 DEBUG: Extracted config ID: ${existingConfigId}`);
+          console.log(`🔍 DEBUG: Original custom_id: ${custom_id}`);
+          
+          // Debug what configs exist
+          const data = await loadPlayerData();
+          if (data[guildId]?.applicationConfigs) {
+            console.log(`🔍 DEBUG: Available configs: ${Object.keys(data[guildId].applicationConfigs)}`);
+          }
         }
         
         // If we have an existing configId, pass it to the handler

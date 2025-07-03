@@ -481,21 +481,22 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
             };
         }
 
-        // Clean up any existing temp configs for this user first
-        const playerData = await loadPlayerData();
-        if (playerData[guild.id]?.applicationConfigs) {
-            const existingTempConfigs = Object.keys(playerData[guild.id].applicationConfigs)
-                .filter(id => id.startsWith(`temp_`) && id.includes(interactionBody.member.user.id));
-            
-            for (const tempId of existingTempConfigs) {
-                delete playerData[guild.id].applicationConfigs[tempId];
-            }
-            await savePlayerData(playerData);
-        }
-
-        // Store fresh temporary config data
         // Check if we're updating an existing config or creating a new one
         const configId = interactionBody.existingConfigId || `temp_${Date.now()}_${interactionBody.member.user.id}`;
+
+        // Only clean up temp configs if we're creating a new one (not updating existing)
+        if (!interactionBody.existingConfigId) {
+            const playerData = await loadPlayerData();
+            if (playerData[guild.id]?.applicationConfigs) {
+                const existingTempConfigs = Object.keys(playerData[guild.id].applicationConfigs)
+                    .filter(id => id.startsWith(`temp_`) && id.includes(interactionBody.member.user.id));
+                
+                for (const tempId of existingTempConfigs) {
+                    delete playerData[guild.id].applicationConfigs[tempId];
+                }
+                await savePlayerData(playerData);
+            }
+        }
         
         // If updating existing config, preserve seasonId and seasonName
         let existingConfig = null;
