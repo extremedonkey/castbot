@@ -98,6 +98,159 @@ import {
   createRoundResultsV2 
 } from './safariManager.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
+
+// Helper function to refresh question management UI
+async function refreshQuestionManagementUI(res, config, configId) {
+  const refreshedComponents = [];
+  
+  refreshedComponents.push({
+    type: 10, // Text Display
+    content: `## 🎛️ Manage Questions: ${config.seasonName}\n\n**Current Questions** (${config.questions.length}):`
+  });
+  
+  if (config.questions.length === 0) {
+    refreshedComponents.push({
+      type: 10, // Text Display
+      content: '*No questions defined yet*'
+    });
+  } else {
+    config.questions.forEach((question, index) => {
+      const maxTitleLength = 50;
+      const displayTitle = question.questionTitle.length > maxTitleLength 
+        ? question.questionTitle.substring(0, maxTitleLength) + '...'
+        : question.questionTitle;
+      
+      refreshedComponents.push({
+        type: 10, // Text Display
+        content: `**${index + 1}.** ${displayTitle}`
+      });
+      
+      const questionButtons = [
+        new ButtonBuilder()
+          .setCustomId(`season_question_up_${configId}_${index}`)
+          .setLabel('Up')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('⬆️')
+          .setDisabled(index === 0),
+        new ButtonBuilder()
+          .setCustomId(`season_question_down_${configId}_${index}`)
+          .setLabel('Down')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('⬇️')
+          .setDisabled(index === config.questions.length - 1),
+        new ButtonBuilder()
+          .setCustomId(`season_question_edit_${configId}_${index}`)
+          .setLabel('Edit')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('✏️'),
+        new ButtonBuilder()
+          .setCustomId(`season_question_delete_${configId}_${index}`)
+          .setLabel('Delete')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🗑️')
+      ];
+      
+      const questionRow = new ActionRowBuilder().addComponents(questionButtons);
+      refreshedComponents.push(questionRow.toJSON());
+    });
+  }
+  
+  refreshedComponents.push({ type: 14 }); // Separator
+  
+  const managementButtons = [
+    new ButtonBuilder()
+      .setCustomId(`season_new_question_${configId}`)
+      .setLabel('New Question')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('➕'),
+    new ButtonBuilder()
+      .setCustomId(`season_post_button_${configId}`)
+      .setLabel('Post Button to Channel')
+      .setStyle(ButtonStyle.Success)
+      .setEmoji('📮')
+  ];
+  
+  const managementRow = new ActionRowBuilder().addComponents(managementButtons);
+  refreshedComponents.push(managementRow.toJSON());
+  
+  const backRow = new ActionRowBuilder()
+    .addComponents(
+      new ButtonBuilder()
+        .setCustomId('season_management_menu')
+        .setLabel('← Back to Season List')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('⬅️')
+    );
+  
+  refreshedComponents.push(
+    { type: 14 }, // Separator
+    backRow.toJSON()
+  );
+  
+  const refreshedContainer = {
+    type: 17, // Container
+    accent_color: 0xf39c12,
+    components: refreshedComponents
+  };
+  
+  return res.send({
+    type: InteractionResponseType.UPDATE_MESSAGE,
+    data: {
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      components: [refreshedContainer]
+    }
+  });
+}
+
+// Helper function to show application questions
+async function showApplicationQuestion(res, config, channelId, questionIndex) {
+  const question = config.questions[questionIndex];
+  if (!question) {
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: '❌ Question not found.',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+  
+  const isLastQuestion = questionIndex === config.questions.length - 1;
+  const questionComponents = [
+    {
+      type: 10, // Text Display
+      content: `## ${question.questionTitle}\n\n${question.questionText}`
+    },
+    {
+      type: 14 // Separator
+    }
+  ];
+  
+  // Add navigation button
+  const navButton = new ButtonBuilder()
+    .setCustomId(`app_next_question_${channelId}_${questionIndex}`)
+    .setLabel(isLastQuestion ? 'Complete Application' : `Question ${questionIndex + 2}`)
+    .setStyle(ButtonStyle.Primary)
+    .setEmoji(isLastQuestion ? '✅' : '➡️');
+  
+  const navRow = new ActionRowBuilder().addComponents(navButton);
+  questionComponents.push(navRow.toJSON());
+  
+  const questionContainer = {
+    type: 17, // Container
+    accent_color: 0x3498db, // Blue color
+    components: questionComponents
+  };
+  
+  return res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: {
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      components: [questionContainer]
+    }
+  });
+}
+
 import { 
   loadEntity, 
   updateEntityFields, 
@@ -4742,6 +4895,309 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error loading Season Management interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_question_up_')) {
+      // Handle question reorder up
+      try {
+        const parts = custom_id.split('_');
+        const configId = parts[3];
+        const questionIndex = parseInt(parts[4]);
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        console.log(`🔍 DEBUG: Reordering question up - Config: ${configId}, Index: ${questionIndex}`);
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        const config = playerData[guildId]?.applicationConfigs?.[configId];
+        
+        if (!config || !config.questions || questionIndex <= 0 || questionIndex >= config.questions.length) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Unable to reorder question.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Swap questions
+        const temp = config.questions[questionIndex];
+        config.questions[questionIndex] = config.questions[questionIndex - 1];
+        config.questions[questionIndex - 1] = temp;
+        
+        // Update order properties
+        config.questions[questionIndex].order = questionIndex + 1;
+        config.questions[questionIndex - 1].order = questionIndex;
+        
+        await savePlayerData(playerData);
+        
+        // Refresh the UI
+        return refreshQuestionManagementUI(res, config, configId);
+        
+      } catch (error) {
+        console.error('Error reordering question up:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error reordering question.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_question_down_')) {
+      // Handle question reorder down
+      try {
+        const parts = custom_id.split('_');
+        const configId = parts[3];
+        const questionIndex = parseInt(parts[4]);
+        const guildId = req.body.guild_id;
+        
+        console.log(`🔍 DEBUG: Reordering question down - Config: ${configId}, Index: ${questionIndex}`);
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        const config = playerData[guildId]?.applicationConfigs?.[configId];
+        
+        if (!config || !config.questions || questionIndex < 0 || questionIndex >= config.questions.length - 1) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Unable to reorder question.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Swap questions
+        const temp = config.questions[questionIndex];
+        config.questions[questionIndex] = config.questions[questionIndex + 1];
+        config.questions[questionIndex + 1] = temp;
+        
+        // Update order properties
+        config.questions[questionIndex].order = questionIndex + 1;
+        config.questions[questionIndex + 1].order = questionIndex + 2;
+        
+        await savePlayerData(playerData);
+        
+        // Refresh the UI
+        return refreshQuestionManagementUI(res, config, configId);
+        
+      } catch (error) {
+        console.error('Error reordering question down:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error reordering question.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_question_edit_')) {
+      // Handle question edit modal
+      try {
+        const parts = custom_id.split('_');
+        const configId = parts[3];
+        const questionIndex = parseInt(parts[4]);
+        const guildId = req.body.guild_id;
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        const config = playerData[guildId]?.applicationConfigs?.[configId];
+        const question = config?.questions?.[questionIndex];
+        
+        if (!question) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Question not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Show edit modal
+        const modal = new ModalBuilder()
+          .setCustomId(`season_edit_question_modal_${configId}_${questionIndex}`)
+          .setTitle('Edit Question');
+          
+        const titleInput = new TextInputBuilder()
+          .setCustomId('questionTitle')
+          .setLabel('Question Title')
+          .setStyle(TextInputStyle.Short)
+          .setValue(question.questionTitle || '')
+          .setRequired(true)
+          .setMaxLength(100);
+          
+        const textInput = new TextInputBuilder()
+          .setCustomId('questionText')
+          .setLabel('Enter your application question')
+          .setStyle(TextInputStyle.Paragraph)
+          .setValue(question.questionText || '')
+          .setRequired(true)
+          .setMaxLength(1000);
+          
+        modal.addComponents(
+          new ActionRowBuilder().addComponents(titleInput),
+          new ActionRowBuilder().addComponents(textInput)
+        );
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error showing question edit modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error editing question.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_question_delete_')) {
+      // Handle question deletion
+      try {
+        const parts = custom_id.split('_');
+        const configId = parts[3];
+        const questionIndex = parseInt(parts[4]);
+        const guildId = req.body.guild_id;
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        const config = playerData[guildId]?.applicationConfigs?.[configId];
+        
+        if (!config || !config.questions || questionIndex < 0 || questionIndex >= config.questions.length) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Unable to delete question.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Remove the question
+        config.questions.splice(questionIndex, 1);
+        
+        // Re-index remaining questions
+        config.questions.forEach((q, idx) => {
+          q.order = idx + 1;
+        });
+        
+        await savePlayerData(playerData);
+        
+        // Refresh the UI
+        return refreshQuestionManagementUI(res, config, configId);
+        
+      } catch (error) {
+        console.error('Error deleting question:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error deleting question.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_new_question_')) {
+      // Handle new question modal
+      try {
+        const configId = custom_id.split('_')[3];
+        
+        // Show new question modal
+        const modal = new ModalBuilder()
+          .setCustomId(`season_new_question_modal_${configId}`)
+          .setTitle('Create New Question');
+          
+        const titleInput = new TextInputBuilder()
+          .setCustomId('questionTitle')
+          .setLabel('Question Title')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Why do you want to join our season?')
+          .setRequired(true)
+          .setMaxLength(100);
+          
+        const textInput = new TextInputBuilder()
+          .setCustomId('questionText')
+          .setLabel('Enter your application question')
+          .setStyle(TextInputStyle.Paragraph)
+          .setPlaceholder('Please provide a detailed explanation about...')
+          .setRequired(true)
+          .setMaxLength(1000);
+          
+        modal.addComponents(
+          new ActionRowBuilder().addComponents(titleInput),
+          new ActionRowBuilder().addComponents(textInput)
+        );
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error showing new question modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating new question.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_post_button_')) {
+      // Handle post button to channel - reuse existing season_app_creation flow
+      try {
+        const configId = custom_id.split('_')[3];
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
+        const userId = req.body.member.user.id;
+        
+        // Load existing config
+        const playerData = await loadPlayerData();
+        const existingConfig = playerData[guildId]?.applicationConfigs?.[configId];
+        
+        if (!existingConfig) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Season configuration not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Store the configId in a temporary location for the modal handler to use
+        if (!req.body.guild_state) req.body.guild_state = {};
+        req.body.guild_state.applicationConfigId = configId;
+        
+        // Show the standard application button modal
+        const modal = createApplicationButtonModal();
+        
+        // Pre-fill the modal with existing values if available
+        modal.components[0].components[0].setValue(existingConfig.buttonText || '');
+        modal.components[1].components[0].setValue(existingConfig.explanatoryText || '');
+        
+        // Modify the custom_id to indicate this is for an existing config
+        modal.setCustomId(`application_button_modal_${configId}`);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error showing post button modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error posting button.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -10655,7 +11111,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const configId = application.configId;
         console.log(`🔍 Found configId: ${configId}`);
         
-        // Get the application configuration to retrieve welcome message
+        // Get the application configuration to retrieve questions
         const config = await getApplicationConfig(guildId, configId);
         
         if (!config) {
@@ -10668,35 +11124,34 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        // Get welcome title and description (with fallbacks for error handling)
-        const welcomeTitle = config.welcomeTitle || 'Next Steps';
-        const welcomeDescription = config.welcomeDescription || 'No additional instructions configured - ask your hosts what to do next!';
-        
-        console.log(`🔍 Welcome Title: "${welcomeTitle}"`);
-        console.log(`🔍 Welcome Description: "${welcomeDescription}"`);
-        
-        // Create custom welcome message container
-        const customWelcomeContainer = {
-          type: 17, // Container
-          accent_color: 0x3498db, // Blue color
-          components: [
-            {
-              type: 10, // Text Display
-              content: `## ${welcomeTitle}
-
-${welcomeDescription}`
+        // Check if there are questions configured
+        if (!config.questions || config.questions.length === 0) {
+          // Fall back to legacy welcome message if no questions
+          const welcomeTitle = config.welcomeTitle || 'Next Steps';
+          const welcomeDescription = config.welcomeDescription || 'No additional instructions configured - ask your hosts what to do next!';
+          
+          const customWelcomeContainer = {
+            type: 17, // Container
+            accent_color: 0x3498db, // Blue color
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## ${welcomeTitle}\n\n${welcomeDescription}`
+              }
+            ]
+          };
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [customWelcomeContainer]
             }
-          ]
-        };
+          });
+        }
         
-        // Send the custom welcome message as a new message in the channel
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [customWelcomeContainer]
-          }
-        });
+        // Show first question
+        return showApplicationQuestion(res, config, channelId, 0);
         
       } catch (error) {
         console.error('Error in app_continue handler:', error);
@@ -10704,6 +11159,68 @@ ${welcomeDescription}`
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error loading next steps. Please contact an admin.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('app_next_question_')) {
+      // Handle next question navigation
+      try {
+        const parts = custom_id.split('_');
+        const channelId = parts[3];
+        const currentIndex = parseInt(parts[4]);
+        const nextIndex = currentIndex + 1;
+        const guildId = req.body.guild_id;
+        
+        console.log(`🔍 Next Question: Channel ${channelId}, Current: ${currentIndex}, Next: ${nextIndex}`);
+        
+        // Load player data to find the application and its configId
+        const playerData = await loadPlayerData();
+        const application = playerData[guildId]?.applications?.[channelId];
+        
+        if (!application) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Application data not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const config = await getApplicationConfig(guildId, application.configId);
+        
+        if (!config || !config.questions || nextIndex >= config.questions.length) {
+          // No more questions - show completion message
+          const completionContainer = {
+            type: 17, // Container
+            accent_color: 0x2ecc71, // Green color
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## ✅ Application Complete!\n\n${config.welcomeDescription || 'Thank you for completing your application. A host will review it soon!'}`
+              }
+            ]
+          };
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [completionContainer]
+            }
+          });
+        }
+        
+        // Show next question
+        return showApplicationQuestion(res, config, channelId, nextIndex);
+        
+      } catch (error) {
+        console.error('Error in app_next_question handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading next question. Please contact an admin.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -11791,38 +12308,86 @@ ${welcomeDescription}`
               });
             }
 
-            // Create season details display
+            // Ensure questions array exists
+            if (!config.questions) {
+              config.questions = [];
+              await savePlayerData(playerData);
+            }
+            
+            // Build question management interface (similar to safari_button_edit_select)
             const seasonComponents = [
               {
                 type: 10, // Text Display
-                content: `## ${config.seasonName} | Management`
-              },
-              {
-                type: 14 // Separator
-              },
-              {
-                type: 10, // Text Display
-                content: `**Season Details:**\n• **Name:** ${config.seasonName}\n• **Button Text:** ${config.buttonText}\n• **Created:** ${new Date(config.createdAt).toLocaleDateString()}\n• **Questions:** ${config.questions?.length || 0}\n• **Applications:** ${Object.keys(playerData[guildId]?.applications || {}).filter(appId => playerData[guildId].applications[appId].configId === configId).length}`
+                content: `## 🎛️ Manage Questions: ${config.seasonName}\n\n**Current Questions** (${config.questions.length}):`
               }
             ];
 
+            // Add question list with management buttons
+            if (config.questions.length === 0) {
+              seasonComponents.push({
+                type: 10, // Text Display
+                content: '*No questions defined yet*'
+              });
+            } else {
+              config.questions.forEach((question, index) => {
+                // Truncate question title if too long
+                const maxTitleLength = 50;
+                const displayTitle = question.questionTitle.length > maxTitleLength 
+                  ? question.questionTitle.substring(0, maxTitleLength) + '...'
+                  : question.questionTitle;
+                
+                // Add question display
+                seasonComponents.push({
+                  type: 10, // Text Display
+                  content: `**${index + 1}.** ${displayTitle}`
+                });
+                
+                // Add action row with management buttons
+                const questionButtons = [
+                  new ButtonBuilder()
+                    .setCustomId(`season_question_up_${configId}_${index}`)
+                    .setLabel('Up')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('⬆️')
+                    .setDisabled(index === 0),
+                  new ButtonBuilder()
+                    .setCustomId(`season_question_down_${configId}_${index}`)
+                    .setLabel('Down')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('⬇️')
+                    .setDisabled(index === config.questions.length - 1),
+                  new ButtonBuilder()
+                    .setCustomId(`season_question_edit_${configId}_${index}`)
+                    .setLabel('Edit')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('✏️'),
+                  new ButtonBuilder()
+                    .setCustomId(`season_question_delete_${configId}_${index}`)
+                    .setLabel('Delete')
+                    .setStyle(ButtonStyle.Danger)
+                    .setEmoji('🗑️')
+                ];
+                
+                const questionRow = new ActionRowBuilder().addComponents(questionButtons);
+                seasonComponents.push(questionRow.toJSON());
+              });
+            }
+            
+            // Add divider
+            seasonComponents.push({ type: 14 }); // Separator
+            
             // Add management buttons
             const managementButtons = [
               new ButtonBuilder()
-                .setCustomId(`season_edit_properties_${configId}`)
-                .setLabel('Edit Properties')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🔧'),
-              new ButtonBuilder()
-                .setCustomId(`season_manage_questions_${configId}`)
-                .setLabel('Manage Questions')
+                .setCustomId(`season_new_question_${configId}`)
+                .setLabel('New Question')
                 .setStyle(ButtonStyle.Primary)
-                .setEmoji('❓'),
+                .setEmoji('➕'),
               new ButtonBuilder()
-                .setCustomId(`season_view_applications_${configId}`)
-                .setLabel('View Applications')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('👥')
+                .setCustomId(`season_post_button_${configId}`)
+                .setLabel('Post Button to Channel')
+                .setStyle(ButtonStyle.Success)
+                .setEmoji('📮')
             ];
 
             const managementRow = new ActionRowBuilder().addComponents(managementButtons);
@@ -14041,12 +14606,23 @@ ${welcomeDescription}`
       // Use new modular handler for player age modal
       const playerData = await loadPlayerData();
       return await handlePlayerModalSubmit(req, res, custom_id, playerData, client);
-    } else if (custom_id === 'application_button_modal') {
+    } else if (custom_id === 'application_button_modal' || custom_id.startsWith('application_button_modal_')) {
       try {
         console.log('Processing application_button_modal submission');
         
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
+        
+        // Check if this is for an existing config
+        let existingConfigId = null;
+        if (custom_id.startsWith('application_button_modal_')) {
+          existingConfigId = custom_id.replace('application_button_modal_', '');
+        }
+        
+        // If we have an existing configId, pass it to the handler
+        if (existingConfigId) {
+          req.body.existingConfigId = existingConfigId;
+        }
         
         // Handle the modal submission
         const result = await handleApplicationButtonModalSubmit(req.body, guild);
@@ -14133,6 +14709,106 @@ ${welcomeDescription}`
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error creating season. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_new_question_modal_')) {
+      // Handle new question creation
+      try {
+        const configId = custom_id.split('_')[4];
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+        const questionTitle = components[0].components[0].value;
+        const questionText = components[1].components[0].value;
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        const config = playerData[guildId]?.applicationConfigs?.[configId];
+        
+        if (!config) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Season configuration not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Ensure questions array exists
+        if (!config.questions) {
+          config.questions = [];
+        }
+        
+        // Create new question with unique ID
+        const questionId = `question_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
+        const newQuestion = {
+          id: questionId,
+          order: config.questions.length + 1,
+          questionTitle: questionTitle,
+          questionText: questionText,
+          createdAt: Date.now()
+        };
+        
+        config.questions.push(newQuestion);
+        await savePlayerData(playerData);
+        
+        // Refresh the UI
+        return refreshQuestionManagementUI(res, config, configId);
+        
+      } catch (error) {
+        console.error('Error creating new question:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating question. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_edit_question_modal_')) {
+      // Handle question edit
+      try {
+        const parts = custom_id.split('_');
+        const configId = parts[4];
+        const questionIndex = parseInt(parts[5]);
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+        const questionTitle = components[0].components[0].value;
+        const questionText = components[1].components[0].value;
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        const config = playerData[guildId]?.applicationConfigs?.[configId];
+        const question = config?.questions?.[questionIndex];
+        
+        if (!question) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Question not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update question
+        question.questionTitle = questionTitle;
+        question.questionText = questionText;
+        question.lastUpdated = Date.now();
+        
+        await savePlayerData(playerData);
+        
+        // Refresh the UI
+        return refreshQuestionManagementUI(res, config, configId);
+        
+      } catch (error) {
+        console.error('Error editing question:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error editing question. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

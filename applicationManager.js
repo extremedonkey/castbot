@@ -421,18 +421,37 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         }
 
         // Store fresh temporary config data
-        const tempConfigId = `temp_${Date.now()}_${interactionBody.member.user.id}`;
+        // Check if we're updating an existing config or creating a new one
+        const configId = interactionBody.existingConfigId || `temp_${Date.now()}_${interactionBody.member.user.id}`;
+        
+        // If updating existing config, preserve seasonId and seasonName
+        let existingConfig = null;
+        if (interactionBody.existingConfigId) {
+            existingConfig = await getApplicationConfig(guild.id, interactionBody.existingConfigId);
+        }
+        
         const tempConfig = {
             buttonText,
             explanatoryText,
             welcomeTitle,
             welcomeDescription,
             channelFormat,
-            stage: 'awaiting_selections'
-            // Note: intentionally not setting targetChannelId, categoryId, buttonStyle
+            stage: 'awaiting_selections',
+            // Preserve season data if updating existing config
+            ...(existingConfig && {
+                seasonId: existingConfig.seasonId,
+                seasonName: existingConfig.seasonName,
+                questions: existingConfig.questions || [],
+                targetChannelId: existingConfig.targetChannelId,
+                categoryId: existingConfig.categoryId,
+                buttonStyle: existingConfig.buttonStyle,
+                createdBy: existingConfig.createdBy,
+                createdAt: existingConfig.createdAt,
+                lastUpdated: Date.now()
+            })
         };
 
-        await saveApplicationConfig(guild.id, tempConfigId, tempConfig);
+        await saveApplicationConfig(guild.id, configId, tempConfig);
 
         // Create selection components
         const channelSelect = createChannelSelectMenu();
