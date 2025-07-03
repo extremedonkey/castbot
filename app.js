@@ -13542,9 +13542,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             
             // Create and post the button
             const button = createApplicationButton(tempConfig.buttonText, configId, tempConfig.buttonStyle);
+            const row = new ActionRowBuilder().addComponents(button);
             await targetChannel.send({
               content: tempConfig.explanatoryText,
-              components: [button]
+              components: [row]
             });
             
             console.log(`Application button posted for season config ${configId}`);
