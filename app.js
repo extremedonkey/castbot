@@ -13414,27 +13414,27 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: 'Configuration session expired. Please run /apply-button again.',
+              content: 'Configuration session expired. Please try creating the application button again.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        // Find the temp config for this user
-        const tempConfigId = Object.keys(guildData.applicationConfigs)
-          .find(id => id.startsWith(`temp_`) && id.includes(userId));
+        // Find the config for this user - could be temp_ or config_ (from season management)
+        const configId = Object.keys(guildData.applicationConfigs)
+          .find(id => (id.startsWith(`temp_`) || id.startsWith(`config_`)) && id.includes(userId));
         
-        if (!tempConfigId) {
+        if (!configId) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: 'Configuration session not found. Please run /apply-button again.',
+              content: 'Configuration session not found. Please try creating the application button again.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        const tempConfig = guildData.applicationConfigs[tempConfigId];
+        const tempConfig = guildData.applicationConfigs[configId];
         
         console.log('Current tempConfig before update:', JSON.stringify(tempConfig, null, 2));
         
@@ -13452,8 +13452,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log('Updated tempConfig after selection:', JSON.stringify(tempConfig, null, 2));
         
-        // Save the updated temp config first
-        await saveApplicationConfig(guildId, tempConfigId, tempConfig);
+        // Save the updated config first
+        await saveApplicationConfig(guildId, configId, tempConfig);
         
         // Check if all required selections are made for auto-creation
         if (tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle) {
@@ -13502,8 +13502,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             console.log('Cleaning up temporary config...');
             // Clean up temporary config
             const freshPlayerData = await loadPlayerData();
-            if (freshPlayerData[guildId]?.applicationConfigs?.[tempConfigId]) {
-              delete freshPlayerData[guildId].applicationConfigs[tempConfigId];
+            // Only delete if it's a temporary config (don't delete season configs)
+            if (configId.startsWith('temp_') && freshPlayerData[guildId]?.applicationConfigs?.[configId]) {
+              delete freshPlayerData[guildId].applicationConfigs[configId];
               await savePlayerData(freshPlayerData);
             }
             
