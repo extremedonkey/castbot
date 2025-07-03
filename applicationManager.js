@@ -141,9 +141,10 @@ function createApplicationButtonModal() {
 /**
  * Create Components v2 native channel select menu
  */
-function createChannelSelectMenu(defaultChannelId = null) {
+function createChannelSelectMenu(defaultChannelId = null, configId = null) {
+    const customId = configId ? `select_target_channel_${configId}` : 'select_target_channel';
     const menu = new ChannelSelectMenuBuilder()
-        .setCustomId('select_target_channel')
+        .setCustomId(customId)
         .setPlaceholder('Select channel to post your app button in')
         .setChannelTypes([ChannelType.GuildText])
         .setMinValues(1)
@@ -159,9 +160,10 @@ function createChannelSelectMenu(defaultChannelId = null) {
 /**
  * Create the category selection component
  */
-function createCategorySelectMenu(categories, defaultCategoryId = null) {
+function createCategorySelectMenu(categories, defaultCategoryId = null, configId = null) {
+    const customId = configId ? `select_application_category_${configId}` : 'select_application_category';
     const menu = new StringSelectMenuBuilder()
-        .setCustomId('select_application_category')
+        .setCustomId(customId)
         .setPlaceholder('Select the category new apps will be added to')
         .setMinValues(1)
         .setMaxValues(1)
@@ -180,9 +182,10 @@ function createCategorySelectMenu(categories, defaultCategoryId = null) {
 /**
  * Create the button style selection component
  */
-function createButtonStyleSelectMenu(defaultStyle = null) {
+function createButtonStyleSelectMenu(defaultStyle = null, configId = null) {
+    const customId = configId ? `select_button_style_${configId}` : 'select_button_style';
     return new StringSelectMenuBuilder()
-        .setCustomId('select_button_style')
+        .setCustomId(customId)
         .setPlaceholder('Select app button color/style')
         .setMinValues(1)
         .setMaxValues(1)
@@ -418,15 +421,15 @@ function createApplicationSetupContainer(tempConfig, configId, categories) {
             },
             {
                 type: 1, // Action Row
-                components: [createChannelSelectMenu(tempConfig.targetChannelId).toJSON()]
+                components: [createChannelSelectMenu(tempConfig.targetChannelId, configId).toJSON()]
             },
             {
                 type: 1, // Action Row  
-                components: [createCategorySelectMenu(categories, tempConfig.categoryId).toJSON()]
+                components: [createCategorySelectMenu(categories, tempConfig.categoryId, configId).toJSON()]
             },
             {
                 type: 1, // Action Row
-                components: [createButtonStyleSelectMenu(tempConfig.buttonStyle).toJSON()]
+                components: [createButtonStyleSelectMenu(tempConfig.buttonStyle, configId).toJSON()]
             },
             { type: 14 }, // Separator
             {

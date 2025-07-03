@@ -13341,7 +13341,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id === 'select_target_channel' || custom_id === 'select_application_category' || custom_id === 'select_button_style') {
+    } else if (custom_id === 'select_target_channel' || custom_id === 'select_application_category' || custom_id === 'select_button_style' ||
+               custom_id.startsWith('select_target_channel_') || custom_id.startsWith('select_application_category_') || custom_id.startsWith('select_button_style_')) {
       try {
         console.log('Processing application configuration selection:', custom_id);
         
@@ -13378,9 +13379,23 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        // Find the config for this user - could be temp_ or config_ (from season management)
-        const configId = Object.keys(guildData.applicationConfigs)
-          .find(id => (id.startsWith(`temp_`) || id.startsWith(`config_`)) && id.endsWith(`_${userId}`));
+        // Extract config ID from custom_id if present, otherwise find by user ID
+        let configId;
+        if (custom_id.includes('_config_') || custom_id.includes('_temp_')) {
+          // Extract config ID from custom_id (e.g., select_target_channel_config_1751549410029_391415444084490240)
+          const configIdMatch = custom_id.match(/_(config|temp)_(.+)$/);
+          if (configIdMatch) {
+            configId = `${configIdMatch[1]}_${configIdMatch[2]}`;
+            console.log('🔍 DEBUG: Extracted config ID from custom_id:', configId);
+          }
+        }
+        
+        if (!configId) {
+          // Fallback to old method - find by user ID
+          configId = Object.keys(guildData.applicationConfigs)
+            .find(id => (id.startsWith(`temp_`) || id.startsWith(`config_`)) && id.endsWith(`_${userId}`));
+          console.log('🔍 DEBUG: Using fallback config ID search:', configId);
+        }
         
         if (!configId) {
           return res.send({
