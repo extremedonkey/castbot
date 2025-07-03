@@ -13412,13 +13412,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         console.log('Current tempConfig before update:', JSON.stringify(tempConfig, null, 2));
         
         // Update the temp config with the selection
-        if (custom_id === 'select_target_channel') {
+        if (custom_id === 'select_target_channel' || custom_id.startsWith('select_target_channel_')) {
           tempConfig.targetChannelId = selectedValue;
           console.log('Updated targetChannelId to:', selectedValue);
-        } else if (custom_id === 'select_application_category') {
+        } else if (custom_id === 'select_application_category' || custom_id.startsWith('select_application_category_')) {
           tempConfig.categoryId = selectedValue;
           console.log('Updated categoryId to:', selectedValue);
-        } else if (custom_id === 'select_button_style') {
+        } else if (custom_id === 'select_button_style' || custom_id.startsWith('select_button_style_')) {
           tempConfig.buttonStyle = selectedValue;
           console.log('Updated buttonStyle to:', selectedValue);
         }
