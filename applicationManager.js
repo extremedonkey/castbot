@@ -208,11 +208,19 @@ function createButtonStyleSelectMenu() {
 /**
  * Create the actual application button
  */
-function createApplicationButton(buttonText, configId) {
+function createApplicationButton(buttonText, configId, buttonStyle = 'Primary') {
+    // Map string style to ButtonStyle enum
+    const styleMap = {
+        'Primary': ButtonStyle.Primary,
+        'Secondary': ButtonStyle.Secondary,
+        'Success': ButtonStyle.Success,
+        'Danger': ButtonStyle.Danger
+    };
+    
     return new ButtonBuilder()
         .setCustomId(`apply_${configId}`)
         .setLabel(buttonText)
-        .setStyle(ButtonStyle.Primary)  // Default style, will be updated from config
+        .setStyle(styleMap[buttonStyle] || ButtonStyle.Primary)
         .setEmoji('📝');
 }
 

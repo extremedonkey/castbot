@@ -13487,8 +13487,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             
             console.log('Creating application button...');
             // Create the application button
-            const button = createApplicationButton(tempConfig.buttonText, finalConfigId);
-            button.setStyle(BUTTON_STYLES[tempConfig.buttonStyle]);
+            const button = createApplicationButton(tempConfig.buttonText, finalConfigId, tempConfig.buttonStyle);
             
             const row = new ActionRowBuilder().addComponents(button);
             
@@ -13542,7 +13541,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             await saveApplicationConfig(guildId, configId, tempConfig);
             
             // Create and post the button
-            const button = createApplicationButton(tempConfig, configId);
+            const button = createApplicationButton(tempConfig.buttonText, configId, tempConfig.buttonStyle);
             await targetChannel.send({
               content: tempConfig.explanatoryText,
               components: [button]
