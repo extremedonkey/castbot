@@ -108,51 +108,52 @@ async function refreshQuestionManagementUI(res, config, configId) {
     content: `## 🎛️ Manage Questions: ${config.seasonName}\n\n**Current Questions** (${config.questions.length}):`
   });
   
+  // Use compact format to avoid Discord component limits
   if (config.questions.length === 0) {
     refreshedComponents.push({
       type: 10, // Text Display
       content: '*No questions defined yet*'
     });
   } else {
+    // Create compact question list
+    let questionList = '';
     config.questions.forEach((question, index) => {
+      const maxTitleLength = 40;
+      const displayTitle = question.questionTitle.length > maxTitleLength 
+        ? question.questionTitle.substring(0, maxTitleLength) + '...'
+        : question.questionTitle;
+      questionList += `**${index + 1}.** ${displayTitle}\n`;
+    });
+    
+    refreshedComponents.push({
+      type: 10, // Text Display
+      content: questionList
+    });
+    
+    // Create question management dropdown (more compact than individual buttons)
+    const questionSelectMenu = new StringSelectMenuBuilder()
+      .setCustomId(`season_question_select_${configId}`)
+      .setPlaceholder('Select a question to manage...')
+      .setMinValues(1)
+      .setMaxValues(1);
+    
+    // Add options for each question (limit to 25 for Discord)
+    config.questions.slice(0, 25).forEach((question, index) => {
       const maxTitleLength = 50;
       const displayTitle = question.questionTitle.length > maxTitleLength 
         ? question.questionTitle.substring(0, maxTitleLength) + '...'
         : question.questionTitle;
       
-      refreshedComponents.push({
-        type: 10, // Text Display
-        content: `**${index + 1}.** ${displayTitle}`
+      questionSelectMenu.addOptions({
+        label: `${index + 1}. ${displayTitle}`,
+        value: `question_${index}`,
+        description: `Edit, reorder, or delete this question`,
+        emoji: '❓'
       });
-      
-      const questionButtons = [
-        new ButtonBuilder()
-          .setCustomId(`season_question_up_${configId}_${index}`)
-          .setLabel('Up')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('⬆️')
-          .setDisabled(index === 0),
-        new ButtonBuilder()
-          .setCustomId(`season_question_down_${configId}_${index}`)
-          .setLabel('Down')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('⬇️')
-          .setDisabled(index === config.questions.length - 1),
-        new ButtonBuilder()
-          .setCustomId(`season_question_edit_${configId}_${index}`)
-          .setLabel('Edit')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('✏️'),
-        new ButtonBuilder()
-          .setCustomId(`season_question_delete_${configId}_${index}`)
-          .setLabel('Delete')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('🗑️')
-      ];
-      
-      const questionRow = new ActionRowBuilder().addComponents(questionButtons);
-      refreshedComponents.push(questionRow.toJSON());
     });
+    
+    const questionSelectRow = new ActionRowBuilder().addComponents(questionSelectMenu);
+    refreshedComponents.push(questionSelectRow.toJSON());
   }
   
   refreshedComponents.push({ type: 14 }); // Separator
@@ -4895,6 +4896,147 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error loading Season Management interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_question_select_')) {
+      // Handle question selection from dropdown - show individual question management
+      try {
+        const configId = custom_id.replace('season_question_select_', '');
+        const selectedQuestionValue = data.values[0]; // e.g., "question_2"
+        const questionIndex = parseInt(selectedQuestionValue.replace('question_', ''));
+        const guildId = req.body.guild_id;
+        
+        console.log(`🔍 DEBUG: Selected question ${questionIndex} for config ${configId}`);
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        const config = playerData[guildId]?.applicationConfigs?.[configId];
+        
+        if (!config || !config.questions || questionIndex < 0 || questionIndex >= config.questions.length) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Question not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const question = config.questions[questionIndex];
+        
+        // Create individual question management interface
+        const questionComponents = [
+          {
+            type: 10, // Text Display
+            content: `## 🎯 Manage Question ${questionIndex + 1}\n\n**${question.questionTitle}**\n\n${question.questionText.substring(0, 200)}${question.questionText.length > 200 ? '...' : ''}`
+          },
+          {
+            type: 1, // Action Row
+            components: [
+              {
+                type: 2, // Button
+                custom_id: `season_question_up_${configId}_${questionIndex}`,
+                label: 'Move Up',
+                style: 2,
+                emoji: { name: '⬆️' },
+                disabled: questionIndex === 0
+              },
+              {
+                type: 2, // Button
+                custom_id: `season_question_down_${configId}_${questionIndex}`,
+                label: 'Move Down',
+                style: 2,
+                emoji: { name: '⬇️' },
+                disabled: questionIndex === config.questions.length - 1
+              },
+              {
+                type: 2, // Button
+                custom_id: `season_question_edit_${configId}_${questionIndex}`,
+                label: 'Edit Question',
+                style: 2,
+                emoji: { name: '✏️' }
+              },
+              {
+                type: 2, // Button
+                custom_id: `season_question_delete_${configId}_${questionIndex}`,
+                label: 'Delete',
+                style: 4,
+                emoji: { name: '🗑️' }
+              }
+            ]
+          },
+          { type: 14 }, // Separator
+          {
+            type: 1, // Action Row
+            components: [
+              {
+                type: 2, // Button
+                custom_id: `season_management_return_${configId}`,
+                label: '← Back to Question List',
+                style: 2,
+                emoji: { name: '⬅️' }
+              }
+            ]
+          }
+        ];
+
+        const questionManagementContainer = {
+          type: 17, // Container
+          accent_color: 0xf39c12, // Orange like Safari
+          components: questionComponents
+        };
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [questionManagementContainer]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling question selection:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading question management.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_management_return_')) {
+      // Handle return to question list from individual question management
+      try {
+        const configId = custom_id.replace('season_management_return_', '');
+        const guildId = req.body.guild_id;
+        
+        console.log(`🔍 DEBUG: Returning to question list for config ${configId}`);
+        
+        // Load player data
+        const playerData = await loadPlayerData();
+        const config = playerData[guildId]?.applicationConfigs?.[configId];
+        
+        if (!config) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Season not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Refresh the question management UI (this will use the new compact format)
+        return refreshQuestionManagementUI(res, config, configId);
+        
+      } catch (error) {
+        console.error('Error returning to question list:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error returning to question list.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -12331,7 +12473,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               await savePlayerData(playerData);
             }
             
-            // Build question management interface (similar to safari_button_edit_select)
+            // Build question management interface with compact display for many questions
             const seasonComponents = [
               {
                 type: 10, // Text Display
@@ -12339,55 +12481,52 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               }
             ];
 
-            // Add question list with management buttons
+            // Add question list - compact format to avoid Discord component limits
             if (config.questions.length === 0) {
               seasonComponents.push({
                 type: 10, // Text Display
                 content: '*No questions defined yet*'
               });
             } else {
+              // Create compact question list
+              let questionList = '';
               config.questions.forEach((question, index) => {
-                // Truncate question title if too long
+                const maxTitleLength = 40;
+                const displayTitle = question.questionTitle.length > maxTitleLength 
+                  ? question.questionTitle.substring(0, maxTitleLength) + '...'
+                  : question.questionTitle;
+                questionList += `**${index + 1}.** ${displayTitle}\n`;
+              });
+              
+              seasonComponents.push({
+                type: 10, // Text Display
+                content: questionList
+              });
+              
+              // Create question management dropdown (more compact than individual buttons)
+              const questionSelectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`season_question_select_${configId}`)
+                .setPlaceholder('Select a question to manage...')
+                .setMinValues(1)
+                .setMaxValues(1);
+              
+              // Add options for each question (limit to 25 for Discord)
+              config.questions.slice(0, 25).forEach((question, index) => {
                 const maxTitleLength = 50;
                 const displayTitle = question.questionTitle.length > maxTitleLength 
                   ? question.questionTitle.substring(0, maxTitleLength) + '...'
                   : question.questionTitle;
                 
-                // Add question display
-                seasonComponents.push({
-                  type: 10, // Text Display
-                  content: `**${index + 1}.** ${displayTitle}`
+                questionSelectMenu.addOptions({
+                  label: `${index + 1}. ${displayTitle}`,
+                  value: `question_${index}`,
+                  description: `Edit, reorder, or delete this question`,
+                  emoji: '❓'
                 });
-                
-                // Add action row with management buttons
-                const questionButtons = [
-                  new ButtonBuilder()
-                    .setCustomId(`season_question_up_${configId}_${index}`)
-                    .setLabel('Up')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('⬆️')
-                    .setDisabled(index === 0),
-                  new ButtonBuilder()
-                    .setCustomId(`season_question_down_${configId}_${index}`)
-                    .setLabel('Down')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('⬇️')
-                    .setDisabled(index === config.questions.length - 1),
-                  new ButtonBuilder()
-                    .setCustomId(`season_question_edit_${configId}_${index}`)
-                    .setLabel('Edit')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('✏️'),
-                  new ButtonBuilder()
-                    .setCustomId(`season_question_delete_${configId}_${index}`)
-                    .setLabel('Delete')
-                    .setStyle(ButtonStyle.Danger)
-                    .setEmoji('🗑️')
-                ];
-                
-                const questionRow = new ActionRowBuilder().addComponents(questionButtons);
-                seasonComponents.push(questionRow.toJSON());
               });
+              
+              const questionSelectRow = new ActionRowBuilder().addComponents(questionSelectMenu);
+              seasonComponents.push(questionSelectRow.toJSON());
             }
             
             // Add divider
