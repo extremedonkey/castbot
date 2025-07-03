@@ -289,11 +289,25 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
     {
       type: 10, // Text Display
       content: `## Q${questionIndex + 1}. ${question.questionTitle}\n\n${question.questionText}`
-    },
-    {
-      type: 14 // Separator
     }
   ];
+  
+  // Add Media Gallery if question has an image URL
+  if (question.imageURL && question.imageURL.trim()) {
+    questionComponents.push({
+      type: 12, // Media Gallery
+      items: [
+        {
+          type: 1, // Image
+          url: question.imageURL.trim()
+        }
+      ]
+    });
+  }
+  
+  questionComponents.push({
+    type: 14 // Separator
+  });
   
   // Add navigation button
   const navButton = new ButtonBuilder()
@@ -5026,9 +5040,19 @@ To fix this:
           .setRequired(true)
           .setMaxLength(1000);
           
+        const imageInput = new TextInputBuilder()
+          .setCustomId('imageURL')
+          .setLabel('Image URL')
+          .setPlaceholder('Enter the url of an image hosted on discord (https://cdn.discor..) to include.')
+          .setStyle(TextInputStyle.Short)
+          .setValue(question.imageURL || '')
+          .setRequired(false)
+          .setMaxLength(500);
+          
         modal.addComponents(
           new ActionRowBuilder().addComponents(titleInput),
-          new ActionRowBuilder().addComponents(textInput)
+          new ActionRowBuilder().addComponents(textInput),
+          new ActionRowBuilder().addComponents(imageInput)
         );
         
         return res.send({
@@ -5204,9 +5228,18 @@ To fix this:
           .setRequired(true)
           .setMaxLength(1000);
           
+        const imageInput = new TextInputBuilder()
+          .setCustomId('imageURL')
+          .setLabel('Image URL')
+          .setPlaceholder('Enter the url of an image hosted on discord (https://cdn.discor..) to include.')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(false)
+          .setMaxLength(500);
+          
         modal.addComponents(
           new ActionRowBuilder().addComponents(titleInput),
-          new ActionRowBuilder().addComponents(textInput)
+          new ActionRowBuilder().addComponents(textInput),
+          new ActionRowBuilder().addComponents(imageInput)
         );
         
         return res.send({
@@ -14831,6 +14864,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const components = req.body.data.components;
         const questionTitle = components[0].components[0].value;
         const questionText = components[1].components[0].value;
+        const imageURL = components[2].components[0].value;
         
         // Load player data
         const playerData = await loadPlayerData();
@@ -14858,6 +14892,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           order: config.questions.length + 1,
           questionTitle: questionTitle,
           questionText: questionText,
+          imageURL: imageURL || '',
           createdAt: Date.now()
         };
         
@@ -14894,6 +14929,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const components = req.body.data.components;
         const questionTitle = components[0].components[0].value;
         const questionText = components[1].components[0].value;
+        const imageURL = components[2].components[0].value;
         
         // Load player data
         const playerData = await loadPlayerData();
@@ -14913,6 +14949,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Update question
         question.questionTitle = questionTitle;
         question.questionText = questionText;
+        question.imageURL = imageURL || '';
         question.lastUpdated = Date.now();
         
         await savePlayerData(playerData);
