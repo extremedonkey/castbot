@@ -12246,7 +12246,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             const seasonComponents = [
               {
                 type: 10, // Text Display
-                content: `## 🎛️ Manage Questions: ${config.seasonName}\n\n**Current Questions** (${config.questions.length}):`
+                content: `## ❔ Manage Questions: ${config.seasonName}`
               }
             ];
 
@@ -12267,28 +12267,28 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 // Add question display
                 seasonComponents.push({
                   type: 10, // Text Display
-                  content: `**${index + 1}.** ${displayTitle}`
+                  content: `**Q${index + 1}.** ${displayTitle}`
                 });
                 
                 // Add action row with management buttons
                 const questionButtons = [
                   new ButtonBuilder()
+                    .setCustomId(`season_question_edit_${configId}_${index}`)
+                    .setLabel('Edit')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setEmoji('✏️'),
+                  new ButtonBuilder()
                     .setCustomId(`season_question_up_${configId}_${index}`)
-                    .setLabel('Up')
+                    .setLabel(' ')
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji('⬆️')
                     .setDisabled(index === 0),
                   new ButtonBuilder()
                     .setCustomId(`season_question_down_${configId}_${index}`)
-                    .setLabel('Down')
+                    .setLabel(' ')
                     .setStyle(ButtonStyle.Secondary)
                     .setEmoji('⬇️')
                     .setDisabled(index === config.questions.length - 1),
-                  new ButtonBuilder()
-                    .setCustomId(`season_question_edit_${configId}_${index}`)
-                    .setLabel('Edit')
-                    .setStyle(ButtonStyle.Secondary)
-                    .setEmoji('✏️'),
                   new ButtonBuilder()
                     .setCustomId(`season_question_delete_${configId}_${index}`)
                     .setLabel('Delete')
@@ -12309,13 +12309,18 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               new ButtonBuilder()
                 .setCustomId(`season_new_question_${configId}`)
                 .setLabel('New Question')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('➕'),
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('✨'),
               new ButtonBuilder()
                 .setCustomId(`season_post_button_${configId}`)
-                .setLabel('Post Button to Channel')
-                .setStyle(ButtonStyle.Success)
-                .setEmoji('📮')
+                .setLabel('Post Apps Button')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('✅'),
+              new ButtonBuilder()
+                .setCustomId('season_app_ranking')
+                .setLabel('Cast Ranking')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🏆')
             ];
 
             const managementRow = new ActionRowBuilder().addComponents(managementButtons);
@@ -12342,13 +12347,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               components: seasonComponents
             };
 
-            return res.send({
-              type: InteractionResponseType.UPDATE_MESSAGE,
-              data: {
-                flags: (1 << 15), // IS_COMPONENTS_V2
-                components: [seasonManagementContainer]
-              }
-            });
+            // Use the updated question management UI function
+            return refreshQuestionManagementUI(res, config, configId);
           }
         }
         
@@ -14612,7 +14612,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const seasonComponents = [
           {
             type: 10, // Text Display
-            content: `## 🎛️ Manage Questions: ${config.seasonName}\n\n**Current Questions** (${config.questions.length}):`
+            content: `## ❔ Manage Questions: ${config.seasonName}`
           }
         ];
 
@@ -14631,7 +14631,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             
             seasonComponents.push({
               type: 10, // Text Display
-              content: `**${index + 1}.** ${displayTitle}`
+              content: `**Q${index + 1}.** ${displayTitle}`
             });
             
             const questionButtons = [

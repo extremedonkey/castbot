@@ -170,7 +170,8 @@
       "Bash(./scripts/dev/dev-stop.sh:*)",
       "Bash(./scripts/dev/dev-status.sh:*)",
       "Bash(jq:*)",
-      "Bash(jq:*)"
+      "Bash(jq:*)",
+      "WebFetch(domain:cdn.discordapp.com)"
     ],
     "deny": []
   }
