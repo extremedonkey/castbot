@@ -13380,7 +13380,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         // Find the config for this user - could be temp_ or config_ (from season management)
         const configId = Object.keys(guildData.applicationConfigs)
-          .find(id => (id.startsWith(`temp_`) || id.startsWith(`config_`)) && id.includes(userId));
+          .find(id => (id.startsWith(`temp_`) || id.startsWith(`config_`)) && id.endsWith(`_${userId}`));
         
         if (!configId) {
           return res.send({
