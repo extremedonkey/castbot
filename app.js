@@ -298,8 +298,9 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
       type: 12, // Media Gallery
       items: [
         {
-          type: 1, // Image
-          url: question.imageURL.trim()
+          media: {
+            url: question.imageURL.trim()
+          }
         }
       ]
     });
