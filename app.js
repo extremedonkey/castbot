@@ -13496,7 +13496,18 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const playerData = await loadPlayerData();
         const tempConfig = playerData[guildId]?.applicationConfigs?.[configId];
         
+        console.log(`🔍 DEBUG: Config found:`, tempConfig ? 'YES' : 'NO');
+        if (tempConfig) {
+          console.log(`🔍 DEBUG: Config details:`, {
+            targetChannelId: tempConfig.targetChannelId,
+            categoryId: tempConfig.categoryId,
+            buttonStyle: tempConfig.buttonStyle,
+            buttonText: tempConfig.buttonText
+          });
+        }
+        
         if (!tempConfig) {
+          console.log(`❌ DEBUG: Config not found for ${configId}`);
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -13508,6 +13519,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         // Verify all selections are made
         if (!tempConfig.targetChannelId || !tempConfig.categoryId || !tempConfig.buttonStyle) {
+          console.log(`❌ DEBUG: Missing selections - Channel: ${tempConfig.targetChannelId}, Category: ${tempConfig.categoryId}, Style: ${tempConfig.buttonStyle}`);
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -13517,9 +13529,15 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
+        console.log(`🔍 DEBUG: Fetching guild and channels...`);
         const guild = await client.guilds.fetch(guildId);
+        console.log(`🔍 DEBUG: Guild fetched: ${guild.name}`);
+        
         const targetChannel = await guild.channels.fetch(tempConfig.targetChannelId);
+        console.log(`🔍 DEBUG: Target channel fetched: ${targetChannel.name}`);
+        
         const category = await guild.channels.fetch(tempConfig.categoryId);
+        console.log(`🔍 DEBUG: Category fetched: ${category.name}`);
         
         if (configId.startsWith('temp_')) {
           // Create final configuration for temp configs
