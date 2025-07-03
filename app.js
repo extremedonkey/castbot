@@ -106,7 +106,7 @@ async function refreshQuestionManagementUI(res, config, configId) {
   
   refreshedComponents.push({
     type: 10, // Text Display
-    content: `## 🎛️ Manage Questions: ${config.seasonName}\n\n**Current Questions** (${config.questions.length}):`
+    content: `## ❔ Manage Questions: ${config.seasonName}`
   });
   
   if (config.questions.length === 0) {
@@ -123,27 +123,27 @@ async function refreshQuestionManagementUI(res, config, configId) {
       
       refreshedComponents.push({
         type: 10, // Text Display
-        content: `**${index + 1}.** ${displayTitle}`
+        content: `**Q${index + 1}.** ${displayTitle}`
       });
       
       const questionButtons = [
-        new ButtonBuilder()
-          .setCustomId(`season_question_up_${configId}_${index}`)
-          .setLabel('Up')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('⬆️')
-          .setDisabled(index === 0),
-        new ButtonBuilder()
-          .setCustomId(`season_question_down_${configId}_${index}`)
-          .setLabel('Down')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('⬇️')
-          .setDisabled(index === config.questions.length - 1),
         new ButtonBuilder()
           .setCustomId(`season_question_edit_${configId}_${index}`)
           .setLabel('Edit')
           .setStyle(ButtonStyle.Secondary)
           .setEmoji('✏️'),
+        new ButtonBuilder()
+          .setCustomId(`season_question_up_${configId}_${index}`)
+          .setLabel(' ')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('⬆️')
+          .setDisabled(index === 0),
+        new ButtonBuilder()
+          .setCustomId(`season_question_down_${configId}_${index}`)
+          .setLabel(' ')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('⬇️')
+          .setDisabled(index === config.questions.length - 1),
         new ButtonBuilder()
           .setCustomId(`season_question_delete_${configId}_${index}`)
           .setLabel('Delete')
@@ -162,13 +162,18 @@ async function refreshQuestionManagementUI(res, config, configId) {
     new ButtonBuilder()
       .setCustomId(`season_new_question_${configId}`)
       .setLabel('New Question')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('➕'),
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('✨'),
     new ButtonBuilder()
       .setCustomId(`season_post_button_${configId}`)
-      .setLabel('Post Button to Channel')
-      .setStyle(ButtonStyle.Success)
-      .setEmoji('📮')
+      .setLabel('Post Apps Button')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('✅'),
+    new ButtonBuilder()
+      .setCustomId('season_app_ranking')
+      .setLabel('Cast Ranking')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏆')
   ];
   
   const managementRow = new ActionRowBuilder().addComponents(managementButtons);
@@ -486,7 +491,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Add new administrative action row (misc features)
   const adminActionButtons = [
     new ButtonBuilder()
-      .setCustomId('prod_season_applications')
+      .setCustomId('season_app_creation')
       .setLabel('Season Applications')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('📝'),
@@ -4667,101 +4672,6 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: 'Error loading tribe management interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id === 'prod_season_applications') {
-      // Show Season Applications submenu with two options
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const userId = req.body.member.user.id;
-        const channelId = req.body.channel_id;
-
-        // Use helper function to check if we should update the production menu
-        const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
-
-        // Check admin permissions
-        const member = await guild.members.fetch(userId);
-        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Create Season Applications submenu with three buttons
-        const seasonAppsButtons = [
-          new ButtonBuilder()
-            .setCustomId('season_app_creation')
-            .setLabel('Create Application Process')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('📝'),
-          new ButtonBuilder()
-            .setCustomId('season_management_menu')
-            .setLabel('Season Applications')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('📝'),
-          new ButtonBuilder()
-            .setCustomId('season_app_ranking')
-            .setLabel('Cast Ranking')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🏆')
-        ];
-        
-        const seasonAppsRow = new ActionRowBuilder().addComponents(seasonAppsButtons);
-        
-        // Create Components V2 Container for Season Applications submenu
-        const seasonAppsComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## Season Applications | ${guild.name}`
-          },
-          {
-            type: 14 // Separator
-          },
-          {
-            type: 10, // Text Display component
-            content: `> **Choose an option below:**`
-          },
-          seasonAppsRow.toJSON()
-        ];
-        
-        // Always add Back to Main Menu button for consistent UX
-        const backRow = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('prod_menu_back')
-              .setLabel('← Back to Main Menu')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('⬅️')
-          );
-        
-        seasonAppsComponents.push(
-          { type: 14 }, // Separator
-          backRow.toJSON()
-        );
-        
-        const seasonAppsContainer = {
-          type: 17, // Container component
-          accent_color: 0x3498DB, // Blue accent color
-          components: seasonAppsComponents
-        };
-        
-        return await sendProductionSubmenuResponse(res, channelId, [seasonAppsContainer], shouldUpdateMessage);
-        
-      } catch (error) {
-        console.error('Error handling prod_season_applications button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error loading Season Applications interface.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
