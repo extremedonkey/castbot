@@ -382,6 +382,58 @@ Click the button below to get started!`
 }
 
 /**
+ * Create refreshed application setup Container with current selections
+ */
+function createApplicationSetupContainer(tempConfig, configId, categories) {
+    // Check if all selections are made
+    const allSelectionsMade = tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle;
+    
+    // Build selection status display
+    let statusText = `## 🔧 Configure Application Button\n\n**Button:** "${tempConfig.buttonText}"\n\n`;
+    statusText += `✅ **Channel:** ${tempConfig.targetChannelId ? '✅ Selected' : '❌ Not selected'}\n`;
+    statusText += `✅ **Category:** ${tempConfig.categoryId ? '✅ Selected' : '❌ Not selected'}\n`;
+    statusText += `✅ **Style:** ${tempConfig.buttonStyle ? `✅ ${tempConfig.buttonStyle}` : '❌ Not selected'}\n\n`;
+    statusText += allSelectionsMade ? '**Ready to create!** Click the button below.' : 'Complete all selections to enable Create button.';
+    
+    return {
+        type: 17, // Container
+        accent_color: allSelectionsMade ? 0x27ae60 : 0x3498db, // Green when ready, blue when pending
+        components: [
+            {
+                type: 10, // Text Display
+                content: statusText
+            },
+            {
+                type: 1, // Action Row
+                components: [createChannelSelectMenu().toJSON()]
+            },
+            {
+                type: 1, // Action Row  
+                components: [createCategorySelectMenu(categories).toJSON()]
+            },
+            {
+                type: 1, // Action Row
+                components: [createButtonStyleSelectMenu().toJSON()]
+            },
+            { type: 14 }, // Separator
+            {
+                type: 1, // Action Row
+                components: [
+                    {
+                        type: 2, // Button
+                        custom_id: `create_app_button_${configId}`,
+                        label: 'Create App Button',
+                        style: 3, // Success (Green)
+                        emoji: { name: '✅' },
+                        disabled: !allSelectionsMade
+                    }
+                ]
+            }
+        ]
+    };
+}
+
+/**
  * Handle the completion of the application button modal
  */
 async function handleApplicationButtonModalSubmit(interactionBody, guild) {
@@ -461,21 +513,13 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
 
         await saveApplicationConfig(guild.id, configId, tempConfig);
 
-        // Create selection components
-        const channelSelect = createChannelSelectMenu();
-        const categorySelect = createCategorySelectMenu(categories);
-        const styleSelect = createButtonStyleSelectMenu();
-
-        const channelRow = new ActionRowBuilder().addComponents(channelSelect);
-        const categoryRow = new ActionRowBuilder().addComponents(categorySelect);
-        const styleRow = new ActionRowBuilder().addComponents(styleSelect);
+        // Create Components V2 Container with all selection components
+        const applicationSetupContainer = createApplicationSetupContainer(tempConfig, configId, categories);
 
         const responseData = {
-            components: [channelRow, categoryRow, styleRow]
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [applicationSetupContainer]
         };
-
-        // Components v2: No content needed, just ephemeral flags
-        responseData.flags = InteractionResponseFlags.EPHEMERAL;
 
         return {
             success: true,
@@ -503,5 +547,6 @@ export {
     createApplicationButton,
     createApplicationChannel,
     handleApplicationButtonModalSubmit,
+    createApplicationSetupContainer,
     BUTTON_STYLES
 };
