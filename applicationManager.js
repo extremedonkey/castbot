@@ -472,7 +472,7 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         return {
             success: true,
             response: responseData,
-            tempConfigId
+            tempConfigId: configId
         };
 
     } catch (error) {
