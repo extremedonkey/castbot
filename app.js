@@ -4902,9 +4902,12 @@ To fix this:
     } else if (custom_id.startsWith('season_question_up_')) {
       // Handle question reorder up
       try {
-        const parts = custom_id.split('_');
-        const configId = parts[3];
-        const questionIndex = parseInt(parts[4]);
+        // Extract configId and index: season_question_up_{configId}_{index}
+        const prefix = 'season_question_up_';
+        const remaining = custom_id.replace(prefix, '');
+        const lastUnderscoreIndex = remaining.lastIndexOf('_');
+        const configId = remaining.substring(0, lastUnderscoreIndex);
+        const questionIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         
@@ -4951,9 +4954,12 @@ To fix this:
     } else if (custom_id.startsWith('season_question_down_')) {
       // Handle question reorder down
       try {
-        const parts = custom_id.split('_');
-        const configId = parts[3];
-        const questionIndex = parseInt(parts[4]);
+        // Extract configId and index: season_question_down_{configId}_{index}
+        const prefix = 'season_question_down_';
+        const remaining = custom_id.replace(prefix, '');
+        const lastUnderscoreIndex = remaining.lastIndexOf('_');
+        const configId = remaining.substring(0, lastUnderscoreIndex);
+        const questionIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
         const guildId = req.body.guild_id;
         
         console.log(`🔍 DEBUG: Reordering question down - Config: ${configId}, Index: ${questionIndex}`);
@@ -4999,9 +5005,12 @@ To fix this:
     } else if (custom_id.startsWith('season_question_edit_')) {
       // Handle question edit modal
       try {
-        const parts = custom_id.split('_');
-        const configId = parts[3];
-        const questionIndex = parseInt(parts[4]);
+        // Extract configId and index: season_question_edit_{configId}_{index}
+        const prefix = 'season_question_edit_';
+        const remaining = custom_id.replace(prefix, '');
+        const lastUnderscoreIndex = remaining.lastIndexOf('_');
+        const configId = remaining.substring(0, lastUnderscoreIndex);
+        const questionIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
         const guildId = req.body.guild_id;
         
         // Load player data
@@ -5063,9 +5072,12 @@ To fix this:
     } else if (custom_id.startsWith('season_question_delete_')) {
       // Handle question deletion
       try {
-        const parts = custom_id.split('_');
-        const configId = parts[3];
-        const questionIndex = parseInt(parts[4]);
+        // Extract configId and index: season_question_delete_{configId}_{index}
+        const prefix = 'season_question_delete_';
+        const remaining = custom_id.replace(prefix, '');
+        const lastUnderscoreIndex = remaining.lastIndexOf('_');
+        const configId = remaining.substring(0, lastUnderscoreIndex);
+        const questionIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
         const guildId = req.body.guild_id;
         
         // Load player data
@@ -5108,7 +5120,8 @@ To fix this:
     } else if (custom_id.startsWith('season_new_question_')) {
       // Handle new question modal
       try {
-        const configId = custom_id.split('_')[3];
+        // Extract configId by removing the prefix
+        const configId = custom_id.replace('season_new_question_', '');
         
         // Show new question modal
         const modal = new ModalBuilder()
@@ -5154,7 +5167,8 @@ To fix this:
     } else if (custom_id.startsWith('season_post_button_')) {
       // Handle post button to channel - reuse existing season_app_creation flow
       try {
-        const configId = custom_id.split('_')[3];
+        // Extract configId by removing the prefix
+        const configId = custom_id.replace('season_post_button_', '');
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
         const userId = req.body.member.user.id;
@@ -11166,9 +11180,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id.startsWith('app_next_question_')) {
       // Handle next question navigation
       try {
-        const parts = custom_id.split('_');
-        const channelId = parts[3];
-        const currentIndex = parseInt(parts[4]);
+        // Extract channelId and index: app_next_question_{channelId}_{index}
+        const prefix = 'app_next_question_';
+        const remaining = custom_id.replace(prefix, '');
+        const lastUnderscoreIndex = remaining.lastIndexOf('_');
+        const channelId = remaining.substring(0, lastUnderscoreIndex);
+        const currentIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
         const nextIndex = currentIndex + 1;
         const guildId = req.body.guild_id;
         
@@ -14716,7 +14733,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id.startsWith('season_new_question_modal_')) {
       // Handle new question creation
       try {
-        const configId = custom_id.split('_')[4];
+        // Extract configId by removing the prefix
+        const configId = custom_id.replace('season_new_question_modal_', '');
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
         const questionTitle = components[0].components[0].value;
@@ -14770,9 +14788,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id.startsWith('season_edit_question_modal_')) {
       // Handle question edit
       try {
-        const parts = custom_id.split('_');
-        const configId = parts[4];
-        const questionIndex = parseInt(parts[5]);
+        // Extract configId and index: season_edit_question_modal_{configId}_{index}
+        const prefix = 'season_edit_question_modal_';
+        const remaining = custom_id.replace(prefix, '');
+        const lastUnderscoreIndex = remaining.lastIndexOf('_');
+        const configId = remaining.substring(0, lastUnderscoreIndex);
+        const questionIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
         const questionTitle = components[0].components[0].value;
