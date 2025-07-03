@@ -141,20 +141,26 @@ function createApplicationButtonModal() {
 /**
  * Create Components v2 native channel select menu
  */
-function createChannelSelectMenu() {
-    return new ChannelSelectMenuBuilder()
+function createChannelSelectMenu(defaultChannelId = null) {
+    const menu = new ChannelSelectMenuBuilder()
         .setCustomId('select_target_channel')
         .setPlaceholder('Select channel to post your app button in')
         .setChannelTypes([ChannelType.GuildText])
         .setMinValues(1)
         .setMaxValues(1);
+    
+    if (defaultChannelId) {
+        menu.setDefaultChannels([defaultChannelId]);
+    }
+    
+    return menu;
 }
 
 /**
  * Create the category selection component
  */
-function createCategorySelectMenu(categories) {
-    return new StringSelectMenuBuilder()
+function createCategorySelectMenu(categories, defaultCategoryId = null) {
+    const menu = new StringSelectMenuBuilder()
         .setCustomId('select_application_category')
         .setPlaceholder('Select the category new apps will be added to')
         .setMinValues(1)
@@ -163,15 +169,18 @@ function createCategorySelectMenu(categories) {
             categories.map(category => ({
                 label: category.name,
                 description: `${category.children.cache.size} channels`,
-                value: category.id
+                value: category.id,
+                default: category.id === defaultCategoryId
             }))
         );
+    
+    return menu;
 }
 
 /**
  * Create the button style selection component
  */
-function createButtonStyleSelectMenu() {
+function createButtonStyleSelectMenu(defaultStyle = null) {
     return new StringSelectMenuBuilder()
         .setCustomId('select_button_style')
         .setPlaceholder('Select app button color/style')
@@ -182,25 +191,29 @@ function createButtonStyleSelectMenu() {
                 label: 'Primary (Blue)',
                 description: 'Blue button style',
                 value: 'Primary',
-                emoji: '🔵'
+                emoji: '🔵',
+                default: defaultStyle === 'Primary'
             },
             {
                 label: 'Secondary (Gray)',
                 description: 'Gray button style',
                 value: 'Secondary',
-                emoji: '⚪'
+                emoji: '⚪',
+                default: defaultStyle === 'Secondary'
             },
             {
                 label: 'Success (Green)',
                 description: 'Green button style',
                 value: 'Success',
-                emoji: '🟢'
+                emoji: '🟢',
+                default: defaultStyle === 'Success'
             },
             {
                 label: 'Danger (Red)',
                 description: 'Red button style',
                 value: 'Danger',
-                emoji: '🔴'
+                emoji: '🔴',
+                default: defaultStyle === 'Danger'
             }
         ]);
 }
@@ -405,15 +418,15 @@ function createApplicationSetupContainer(tempConfig, configId, categories) {
             },
             {
                 type: 1, // Action Row
-                components: [createChannelSelectMenu().toJSON()]
+                components: [createChannelSelectMenu(tempConfig.targetChannelId).toJSON()]
             },
             {
                 type: 1, // Action Row  
-                components: [createCategorySelectMenu(categories).toJSON()]
+                components: [createCategorySelectMenu(categories, tempConfig.categoryId).toJSON()]
             },
             {
                 type: 1, // Action Row
-                components: [createButtonStyleSelectMenu().toJSON()]
+                components: [createButtonStyleSelectMenu(tempConfig.buttonStyle).toJSON()]
             },
             { type: 14 }, // Separator
             {
