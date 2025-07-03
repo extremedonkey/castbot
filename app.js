@@ -12472,8 +12472,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               components: seasonComponents
             };
 
-            // Use the updated question management UI function
-            return refreshQuestionManagementUI(res, config, configId, currentPage);
+            // Use the updated question management UI function (start at page 0)
+            return refreshQuestionManagementUI(res, config, configId, 0);
           }
         }
         
