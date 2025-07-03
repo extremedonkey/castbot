@@ -491,7 +491,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Add new administrative action row (misc features)
   const adminActionButtons = [
     new ButtonBuilder()
-      .setCustomId('season_app_creation')
+      .setCustomId('season_management_menu')
       .setLabel('Season Applications')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('📝'),
