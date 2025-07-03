@@ -138,58 +138,76 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
         content: `**Q${i + 1}.** ${displayTitle}`
       });
       
-      const questionButtons = [
-        new ButtonBuilder()
-          .setCustomId(`season_question_edit_${configId}_${i}_${currentPage}`)
-          .setLabel('Edit')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('✏️'),
-        new ButtonBuilder()
-          .setCustomId(`season_question_up_${configId}_${i}_${currentPage}`)
-          .setLabel(' ')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('⬆️')
-          .setDisabled(i === 0),
-        new ButtonBuilder()
-          .setCustomId(`season_question_down_${configId}_${i}_${currentPage}`)
-          .setLabel(' ')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('⬇️')
-          .setDisabled(i === config.questions.length - 1),
-        new ButtonBuilder()
-          .setCustomId(`season_question_delete_${configId}_${i}_${currentPage}`)
-          .setLabel('Delete')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('🗑️')
-      ];
+      const questionRow = {
+        type: 1, // Action Row
+        components: [
+          {
+            type: 2, // Button
+            custom_id: `season_question_edit_${configId}_${i}_${currentPage}`,
+            label: 'Edit',
+            style: 2, // Secondary
+            emoji: { name: '✏️' }
+          },
+          {
+            type: 2, // Button
+            custom_id: `season_question_up_${configId}_${i}_${currentPage}`,
+            label: ' ',
+            style: 2, // Secondary
+            emoji: { name: '⬆️' },
+            disabled: i === 0
+          },
+          {
+            type: 2, // Button
+            custom_id: `season_question_down_${configId}_${i}_${currentPage}`,
+            label: ' ',
+            style: 2, // Secondary
+            emoji: { name: '⬇️' },
+            disabled: i === config.questions.length - 1
+          },
+          {
+            type: 2, // Button
+            custom_id: `season_question_delete_${configId}_${i}_${currentPage}`,
+            label: 'Delete',
+            style: 4, // Danger
+            emoji: { name: '🗑️' }
+          }
+        ]
+      };
       
-      const questionRow = new ActionRowBuilder().addComponents(questionButtons);
-      refreshedComponents.push(questionRow.toJSON());
+      refreshedComponents.push(questionRow);
     }
   }
   
   refreshedComponents.push({ type: 14 }); // Separator
   
-  const managementButtons = [
-    new ButtonBuilder()
-      .setCustomId(`season_new_question_${configId}_${currentPage}`)
-      .setLabel('New Question')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('✨'),
-    new ButtonBuilder()
-      .setCustomId(`season_post_button_${configId}_${currentPage}`)
-      .setLabel('Post Apps Button')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('✅'),
-    new ButtonBuilder()
-      .setCustomId('season_app_ranking')
-      .setLabel('Cast Ranking')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🏆')
-  ];
+  const managementRow = {
+    type: 1, // Action Row
+    components: [
+      {
+        type: 2, // Button
+        custom_id: `season_new_question_${configId}_${currentPage}`,
+        label: 'New Question',
+        style: 2, // Secondary
+        emoji: { name: '✨' }
+      },
+      {
+        type: 2, // Button
+        custom_id: `season_post_button_${configId}_${currentPage}`,
+        label: 'Post Apps Button',
+        style: 2, // Secondary
+        emoji: { name: '✅' }
+      },
+      {
+        type: 2, // Button
+        custom_id: 'season_app_ranking',
+        label: 'Cast Ranking',
+        style: 2, // Secondary
+        emoji: { name: '🏆' }
+      }
+    ]
+  };
   
-  const managementRow = new ActionRowBuilder().addComponents(managementButtons);
-  refreshedComponents.push(managementRow.toJSON());
+  refreshedComponents.push(managementRow);
   
   const refreshedContainer = {
     type: 17, // Container
