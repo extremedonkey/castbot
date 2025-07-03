@@ -197,40 +197,52 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
     components: refreshedComponents
   };
   
-  // Create navigation buttons below the container
+  // Create navigation buttons below the container (Components V2 format)
   const navComponents = [];
   
   if (config.questions.length > questionsPerPage) {
     const prevDisabled = currentPage === 0;
     const nextDisabled = currentPage === totalPages - 1;
     
-    const prevButton = new ButtonBuilder()
-      .setCustomId(`season_nav_prev_${configId}_${currentPage}`)
-      .setLabel("◀")
-      .setStyle(prevDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
-      .setDisabled(prevDisabled);
-    
-    const nextButton = new ButtonBuilder()
-      .setCustomId(`season_nav_next_${configId}_${currentPage}`)
-      .setLabel("▶")
-      .setStyle(nextDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
-      .setDisabled(nextDisabled);
-    
-    const menuButton = new ButtonBuilder()
-      .setCustomId("season_management_menu")
-      .setLabel("📋 Menu")
-      .setStyle(ButtonStyle.Primary);
-    
-    const navRow = new ActionRowBuilder().addComponents(prevButton, menuButton, nextButton);
+    const navRow = {
+      type: 1, // Action Row
+      components: [
+        {
+          type: 2, // Button
+          custom_id: `season_nav_prev_${configId}_${currentPage}`,
+          label: "◀",
+          style: prevDisabled ? 2 : 1, // Secondary : Primary
+          disabled: prevDisabled
+        },
+        {
+          type: 2, // Button
+          custom_id: "season_management_menu",
+          label: "📋 Menu",
+          style: 1 // Primary
+        },
+        {
+          type: 2, // Button
+          custom_id: `season_nav_next_${configId}_${currentPage}`,
+          label: "▶",
+          style: nextDisabled ? 2 : 1, // Secondary : Primary
+          disabled: nextDisabled
+        }
+      ]
+    };
     navComponents.push(navRow);
   } else {
     // If 5 or fewer questions, just show menu button
-    const menuButton = new ButtonBuilder()
-      .setCustomId("season_management_menu")
-      .setLabel("📋 Menu")
-      .setStyle(ButtonStyle.Primary);
-    
-    const navRow = new ActionRowBuilder().addComponents(menuButton);
+    const navRow = {
+      type: 1, // Action Row
+      components: [
+        {
+          type: 2, // Button
+          custom_id: "season_management_menu",
+          label: "📋 Menu",
+          style: 1 // Primary
+        }
+      ]
+    };
     navComponents.push(navRow);
   }
   
