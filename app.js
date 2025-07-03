@@ -13455,8 +13455,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Save the updated config first
         await saveApplicationConfig(guildId, configId, tempConfig);
         
-        // Check if all required selections are made for auto-creation
-        if (tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle) {
+        // Check if all required selections are made for auto-creation (only for temp configs)
+        if (configId.startsWith('temp_') && tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle) {
           console.log('All 3 selections complete, creating application button...');
           try {
             // All selections complete, create the final configuration and button
@@ -13523,6 +13523,48 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               type: InteractionResponseType.UPDATE_MESSAGE,
               data: {
                 content: `❌ Error creating application button: ${autoCreateError.message}`,
+                components: [],
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+        } else if (configId.startsWith('config_') && tempConfig.targetChannelId && tempConfig.categoryId && tempConfig.buttonStyle) {
+          // All selections complete for season config - create button and show success
+          console.log('All 3 selections complete for season config, creating application button...');
+          try {
+            const guild = await client.guilds.fetch(guildId);
+            const targetChannel = await guild.channels.fetch(tempConfig.targetChannelId);
+            const category = await guild.channels.fetch(tempConfig.categoryId);
+            
+            // Update the existing config as active
+            tempConfig.stage = 'active';
+            tempConfig.lastUpdated = Date.now();
+            await saveApplicationConfig(guildId, configId, tempConfig);
+            
+            // Create and post the button
+            const button = createApplicationButton(tempConfig, configId);
+            await targetChannel.send({
+              content: tempConfig.explanatoryText,
+              components: [button]
+            });
+            
+            console.log(`Application button posted for season config ${configId}`);
+            
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                content: `✅ **Season Application Button Posted!**\n\n**Button Text:** "${tempConfig.buttonText}"\n**Posted to:** ${targetChannel}\n**Category:** ${category.name}\n**Style:** ${tempConfig.buttonStyle}\n\nApplicants will now go through your configured questions when they apply.`,
+                components: [],
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+
+          } catch (buttonError) {
+            console.error('Error creating season application button:', buttonError);
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                content: `❌ Error creating application button: ${buttonError.message}`,
                 components: [],
                 flags: InteractionResponseFlags.EPHEMERAL
               }
