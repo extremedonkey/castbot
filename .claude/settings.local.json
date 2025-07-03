@@ -169,6 +169,7 @@
       "Bash(git rm:*)",
       "Bash(./scripts/dev/dev-stop.sh:*)",
       "Bash(./scripts/dev/dev-status.sh:*)",
+      "Bash(jq:*)",
       "Bash(jq:*)"
     ],
     "deny": []
