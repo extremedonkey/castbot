@@ -178,8 +178,6 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
     }
   }
   
-  refreshedComponents.push({ type: 14 }); // Separator
-  
   const managementRow = {
     type: 1, // Action Row
     components: [
