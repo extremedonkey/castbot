@@ -47,6 +47,49 @@ async function saveSafariContent(data) {
 }
 
 /**
+ * Upload image to Discord and get CDN URL by sending it to a channel
+ * @param {Guild} guild - Discord guild object
+ * @param {string} imagePath - Path to image file
+ * @param {string} filename - Filename for upload
+ * @returns {string} Discord CDN URL
+ */
+async function uploadImageToDiscord(guild, imagePath, filename) {
+  try {
+    const { AttachmentBuilder } = await import('discord.js');
+    
+    // Find or create a temporary storage channel
+    let storageChannel = guild.channels.cache.find(ch => ch.name === 'map-storage' && ch.type === 0);
+    
+    if (!storageChannel) {
+      storageChannel = await guild.channels.create({
+        name: 'map-storage',
+        type: 0, // Text channel
+        topic: 'Storage for map images - do not delete',
+        permissionOverwrites: [
+          {
+            id: guild.roles.everyone.id,
+            deny: ['ViewChannel', 'SendMessages']
+          }
+        ]
+      });
+    }
+    
+    // Create attachment and send to storage channel
+    const attachment = new AttachmentBuilder(imagePath, { name: filename });
+    const message = await storageChannel.send({
+      content: `Map image for ${guild.name}`,
+      files: [attachment]
+    });
+    
+    // Return the Discord CDN URL
+    return message.attachments.first().url;
+  } catch (error) {
+    console.error('❌ Failed to upload image to Discord:', error);
+    throw error;
+  }
+}
+
+/**
  * Creates a map grid for the guild
  * @param {Guild} guild - Discord guild object
  * @param {string} userId - User ID creating the map
@@ -129,6 +172,12 @@ async function createMapGrid(guild, userId) {
     let progressMessages = [];
     progressMessages.push('🏗️ Creating map category...');
     
+    // Upload map image to Discord and get CDN URL
+    progressMessages.push('📤 Uploading map image to Discord...');
+    const discordImageUrl = await uploadImageToDiscord(guild, outputPath, `${mapId}.png`);
+    console.log(`📤 Map image uploaded to Discord CDN: ${discordImageUrl}`);
+    progressMessages.push('✅ Map image uploaded to Discord CDN');
+    
     const category = await guild.channels.create({
       name: '🗺️ Map Explorer',
       type: ChannelType.GuildCategory,
@@ -196,6 +245,7 @@ async function createMapGrid(guild, userId) {
       name: 'Adventure Island',
       gridSize: gridSize,
       imageFile: outputPath.replace(__dirname + '/', ''),
+      discordImageUrl: discordImageUrl, // Store Discord CDN URL
       category: category.id,
       createdAt: new Date().toISOString(),
       createdBy: userId,

@@ -12939,10 +12939,26 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         ];
         
-        // TODO: Add Media Gallery for map image later - skipping for now to fix Components V2 response
-        if (hasActiveMap && guildMaps[activeMapId].imageFile) {
-          console.log(`🖼️ DEBUG: Map exists but skipping image display for now: ${guildMaps[activeMapId].imageFile}`);
-          // Add a text note about the map instead
+        // Add Media Gallery if there's an active map with Discord CDN URL
+        if (hasActiveMap && guildMaps[activeMapId].discordImageUrl) {
+          console.log(`🖼️ DEBUG: Adding map image from Discord CDN: ${guildMaps[activeMapId].discordImageUrl}`);
+          
+          containerComponents.push({
+            type: 12, // Media Gallery
+            items: [
+              {
+                media: {
+                  url: guildMaps[activeMapId].discordImageUrl
+                }
+              }
+            ]
+          });
+          containerComponents.push({
+            type: 14 // Separator
+          });
+        } else if (hasActiveMap && guildMaps[activeMapId].imageFile) {
+          // Fallback for maps without Discord CDN URL
+          console.log(`🖼️ DEBUG: Map exists but no Discord CDN URL: ${guildMaps[activeMapId].imageFile}`);
           containerComponents.push({
             type: 10, // Text Display
             content: `📍 **Map Image:** \`${guildMaps[activeMapId].imageFile.split('/').pop()}\``
