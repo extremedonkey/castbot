@@ -12895,38 +12895,37 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     // ==================== MAP EXPLORER HANDLERS ====================
     
     } else if (custom_id === 'safari_map_explorer') {
-      // Handle Map Explorer menu display
+      // Handle Map Explorer menu display - using standard production menu pattern
       try {
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         const member = req.body.member;
+        const channelId = req.body.channel_id;
         
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to access Map Explorer.')) return;
         
         console.log(`🗺️ DEBUG: Opening Map Explorer interface for guild ${guildId}`);
-        console.log(`🗺️ DEBUG: About to call createMapExplorerMenu...`);
+        
+        const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
         
         // Create Map Explorer interface
         const mapExplorerData = await createMapExplorerMenu(guildId);
         
-        console.log(`🗺️ DEBUG: createMapExplorerMenu returned:`, mapExplorerData ? 'data received' : 'null/undefined');
-        console.log(`🗺️ DEBUG: mapExplorerData keys:`, Object.keys(mapExplorerData || {}));
-        console.log(`🗺️ DEBUG: Full mapExplorerData:`, JSON.stringify(mapExplorerData, null, 2));
+        const responseType = shouldUpdateMessage ? 
+          InteractionResponseType.UPDATE_MESSAGE : 
+          InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
         
-        // Test with a minimal response to isolate the issue
-        const testResponse = {
-          type: InteractionResponseType.UPDATE_MESSAGE,
+        console.log(`🔍 DEBUG: Using response type: ${responseType === InteractionResponseType.UPDATE_MESSAGE ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'}`);
+        console.log(`🔍 DEBUG: Adding ephemeral flag - only user can see this message`);
+        
+        return res.send({
+          type: responseType,
           data: {
-            content: "🗺️ Map Explorer interface loading...",
-            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
-            components: []
+            ...mapExplorerData,
+            flags: (mapExplorerData.flags || 0) | InteractionResponseFlags.EPHEMERAL
           }
-        };
-        
-        console.log(`🗺️ DEBUG: Sending test response:`, JSON.stringify(testResponse, null, 2));
-        
-        return res.send(testResponse);
+        });
         
       } catch (error) {
         console.error('❌ Error in safari_map_explorer handler:', error);
