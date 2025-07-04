@@ -12914,10 +12914,19 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         console.log(`🗺️ DEBUG: mapExplorerData keys:`, Object.keys(mapExplorerData || {}));
         console.log(`🗺️ DEBUG: Full mapExplorerData:`, JSON.stringify(mapExplorerData, null, 2));
         
-        return res.send({
+        // Test with a minimal response to isolate the issue
+        const testResponse = {
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: mapExplorerData
-        });
+          data: {
+            content: "🗺️ Map Explorer interface loading...",
+            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
+            components: []
+          }
+        };
+        
+        console.log(`🗺️ DEBUG: Sending test response:`, JSON.stringify(testResponse, null, 2));
+        
+        return res.send(testResponse);
         
       } catch (error) {
         console.error('❌ Error in safari_map_explorer handler:', error);
