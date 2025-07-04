@@ -12939,38 +12939,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         ];
         
-        // Add Media Gallery if there's an active map with image
-        let files = [];
+        // TODO: Add Media Gallery for map image later - skipping for now to fix Components V2 response
         if (hasActiveMap && guildMaps[activeMapId].imageFile) {
-          const path = await import('path');
-          const imagePath = path.default.join(process.cwd(), guildMaps[activeMapId].imageFile);
-          
-          console.log(`🖼️ DEBUG: Reading map image from: ${imagePath}`);
-          
-          try {
-            // Use Discord.js AttachmentBuilder approach
-            files.push({
-              attachment: imagePath,
-              name: 'map.png'
-            });
-            
-            // Add Media Gallery component referencing the attachment
-            containerComponents.push({
-              type: 12, // Media Gallery
-              items: [
-                {
-                  media: {
-                    url: 'attachment://map.png'
-                  }
-                }
-              ]
-            });
-            containerComponents.push({
-              type: 14 // Separator
-            });
-          } catch (error) {
-            console.error('🖼️ ERROR: Failed to process map image:', error);
-          }
+          console.log(`🖼️ DEBUG: Map exists but skipping image display for now: ${guildMaps[activeMapId].imageFile}`);
+          // Add a text note about the map instead
+          containerComponents.push({
+            type: 10, // Text Display
+            content: `📍 **Map Image:** \`${guildMaps[activeMapId].imageFile.split('/').pop()}\``
+          });
+          containerComponents.push({
+            type: 14 // Separator
+          });
         }
         
         // Create map management buttons
@@ -13024,19 +13003,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log(`🔍 DEBUG: Using response type: ${responseType === InteractionResponseType.UPDATE_MESSAGE ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'}`);
         
-        const responseData = {
-          flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
-          components: [mapExplorerContainer]
-        };
-        
-        // Add files if we have them
-        if (files.length > 0) {
-          responseData.files = files;
-        }
-        
         return res.send({
           type: responseType,
-          data: responseData
+          data: {
+            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [mapExplorerContainer]
+          }
         });
         
       } catch (error) {
