@@ -132,29 +132,29 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         const mainMessage = await channel.send({
           files: [attachment],
           flags: 32768, // IS_COMPONENTS_V2 flag (1 << 15)
-          components: [
-            {
-              type: 17, // Container component
-              accent_color: 0x5865F2, // Discord blurple
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: `# 🗺️ Location ${coord} - Your View\n\nThis is the map from your perspective. Your area is clearly visible, while other areas are shrouded in fog of war.`
-                },
-                {
-                  type: 12, // Media Gallery
-                  items: [
-                    {
-                      media: {
-                        url: attachment.name // This will reference the uploaded attachment
-                      },
-                      description: `Fog of war map for location ${coord}`
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
+          components: [{
+            type: 17, // Container component
+            accent_color: 0x5865F2, // Discord blurple
+            components: [
+              {
+                type: 10, // Text Display
+                content: `# 🗺️ Location ${coord} - Your View\n\nThis is the map from your perspective. Your area is clearly visible, while other areas are shrouded in fog of war.`
+              },
+              {
+                type: 14 // Thin separator
+              },
+              {
+                type: 8, // Media Gallery
+                components: [{
+                  type: 9, // Media
+                  media: {
+                    type: 0, // Image
+                    attachment: 0 // Reference first attachment
+                  }
+                }]
+              }
+            ]
+          }]
         });
         
         // Send ephemeral follow-up message with action buttons
@@ -162,28 +162,26 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         
         // Create follow-up with edit/view buttons
         await channel.send({
-          content: ' ', // Empty content required for components
-          components: [
-            {
-              type: 1, // Action Row
-              components: [
-                {
-                  type: 2, // Button
-                  custom_id: `map_grid_edit_${coord}`,
-                  label: 'Edit Content',
-                  style: 2, // Secondary
-                  emoji: { name: '✏️' }
-                },
-                {
-                  type: 2, // Button
-                  custom_id: `map_grid_view_${coord}`,
-                  label: 'View Content',
-                  style: 2, // Secondary  
-                  emoji: { name: '👁️' }
-                }
-              ]
-            }
-          ]
+          content: `**Map Management for ${coord}**`,
+          components: [{
+            type: 1, // Action Row
+            components: [
+              {
+                type: 2, // Button
+                custom_id: `map_grid_edit_${coord}`,
+                label: 'Edit Grid Content',
+                style: 1, // Primary
+                emoji: { name: '✏️' }
+              },
+              {
+                type: 2, // Button
+                custom_id: `map_grid_view_${coord}`,
+                label: 'Display Grid Content',
+                style: 2, // Secondary  
+                emoji: { name: '👁️' }
+              }
+            ]
+          }]
         });
         
         console.log(`✅ Posted fog of war map for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);

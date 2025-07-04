@@ -13279,7 +13279,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        // Build content display
+        // Build Components V2 container for content display
+        const containerComponents = [];
+        
+        // Build content text
         let contentParts = [`# ${coordData.baseContent?.title || `📍 Location ${coord}`}`];
         
         if (coordData.baseContent?.description) {
@@ -13295,10 +13298,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        if (coordData.baseContent?.image) {
-          contentParts.push(`\n**Image URL:** ${coordData.baseContent.image}`);
-        }
-        
         // Navigation info
         contentParts.push('\n**Navigation:**');
         const navDirs = ['north', 'east', 'south', 'west'];
@@ -13309,11 +13308,41 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
         
+        // Add text display component
+        containerComponents.push({
+          type: 10, // Text Display
+          content: contentParts.join('\n')
+        });
+        
+        // Add image as media gallery if present
+        if (coordData.baseContent?.image) {
+          containerComponents.push({
+            type: 14 // Thin separator
+          });
+          containerComponents.push({
+            type: 8, // Media Gallery
+            components: [{
+              type: 9, // Media
+              media: {
+                type: 0, // Image
+                url: coordData.baseContent.image
+              }
+            }]
+          });
+        }
+        
+        // Create container
+        const container = {
+          type: 17, // Container
+          accent_color: 0x5865f2, // Discord blue
+          components: containerComponents
+        };
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: contentParts.join('\n'),
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [container]
           }
         });
         
