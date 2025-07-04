@@ -123,14 +123,67 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         // Create fog of war map for this specific coordinate
         const fogOfWarBuffer = await createFogOfWarMap(fullMapPath, gridSystem, coord, coordinates);
         
-        // Create attachment and post to channel
+        // Create attachment
         const attachment = new AttachmentBuilder(fogOfWarBuffer, { 
           name: `${coord.toLowerCase()}_fogmap.png` 
         });
         
+        // Send message with Components V2 container
+        const mainMessage = await channel.send({
+          files: [attachment],
+          flags: 32768, // IS_COMPONENTS_V2 flag (1 << 15)
+          components: [
+            {
+              type: 17, // Container component
+              accent_color: 0x5865F2, // Discord blurple
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `# 🗺️ Location ${coord} - Your View\n\nThis is the map from your perspective. Your area is clearly visible, while other areas are shrouded in fog of war.`
+                },
+                {
+                  type: 12, // Media Gallery
+                  items: [
+                    {
+                      media: {
+                        url: attachment.name // This will reference the uploaded attachment
+                      },
+                      description: `Fog of war map for location ${coord}`
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        });
+        
+        // Send ephemeral follow-up message with action buttons
+        const { InteractionResponseType, InteractionResponseFlags } = await import('discord-interactions');
+        
+        // Create follow-up with edit/view buttons
         await channel.send({
-          content: `🗺️ **Location ${coord} - Your View**\n\nThis is the map from your perspective. Your area is clearly visible, while other areas are shrouded in fog of war.`,
-          files: [attachment]
+          content: ' ', // Empty content required for components
+          components: [
+            {
+              type: 1, // Action Row
+              components: [
+                {
+                  type: 2, // Button
+                  custom_id: `map_grid_edit_${coord}`,
+                  label: 'Edit Content',
+                  style: 2, // Secondary
+                  emoji: { name: '✏️' }
+                },
+                {
+                  type: 2, // Button
+                  custom_id: `map_grid_view_${coord}`,
+                  label: 'View Content',
+                  style: 2, // Secondary  
+                  emoji: { name: '👁️' }
+                }
+              ]
+            }
+          ]
         });
         
         console.log(`✅ Posted fog of war map for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
@@ -726,4 +779,4 @@ async function createMapExplorerMenu(guildId) {
 }
 
 // Export functions
-export { createMapGrid, deleteMapGrid, createMapExplorerMenu };
+export { createMapGrid, deleteMapGrid, createMapExplorerMenu, loadSafariContent, saveSafariContent };

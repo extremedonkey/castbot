@@ -13157,6 +13157,176 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           console.error('Error sending followup:', followupError);
         }
       }
+    } else if (custom_id.startsWith('map_grid_edit_')) {
+      // Handle grid content editing
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const coord = custom_id.replace('map_grid_edit_', '');
+        
+        console.log(`🔍 DEBUG: Processing map_grid_edit for coord ${coord} by user ${userId}`);
+        
+        // Load safari content to get current data
+        const { loadSafariContent } = await import('./mapExplorer.js');
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const mapData = safariData[guildId]?.maps?.[activeMapId];
+        const coordData = mapData?.coordinates?.[coord];
+        
+        if (!coordData) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Location not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Show edit modal
+        const modal = new ModalBuilder()
+          .setCustomId(`map_grid_edit_modal_${coord}`)
+          .setTitle(`Edit Content for Location ${coord}`);
+          
+        const titleInput = new TextInputBuilder()
+          .setCustomId('title')
+          .setLabel('Location Title')
+          .setStyle(TextInputStyle.Short)
+          .setValue(coordData.baseContent?.title || `📍 Location ${coord}`)
+          .setRequired(true)
+          .setMaxLength(100);
+          
+        const descriptionInput = new TextInputBuilder()
+          .setCustomId('description')
+          .setLabel('Location Description')
+          .setStyle(TextInputStyle.Paragraph)
+          .setValue(coordData.baseContent?.description || '')
+          .setRequired(true)
+          .setMaxLength(1000);
+          
+        const imageInput = new TextInputBuilder()
+          .setCustomId('image')
+          .setLabel('Image URL (Discord CDN only)')
+          .setPlaceholder('https://cdn.discordapp.com/...')
+          .setStyle(TextInputStyle.Short)
+          .setValue(coordData.baseContent?.image || '')
+          .setRequired(false)
+          .setMaxLength(500);
+          
+        const cluesInput = new TextInputBuilder()
+          .setCustomId('clues')
+          .setLabel('Clues (one per line)')
+          .setStyle(TextInputStyle.Paragraph)
+          .setValue((coordData.baseContent?.clues || []).join('\n'))
+          .setRequired(false)
+          .setMaxLength(500);
+          
+        const cellTypeInput = new TextInputBuilder()
+          .setCustomId('cellType')
+          .setLabel('Cell Type')
+          .setPlaceholder('unexplored, village, forest, mountain, water, desert, special')
+          .setStyle(TextInputStyle.Short)
+          .setValue(coordData.cellType || 'unexplored')
+          .setRequired(true)
+          .setMaxLength(50);
+          
+        modal.addComponents(
+          new ActionRowBuilder().addComponents(titleInput),
+          new ActionRowBuilder().addComponents(descriptionInput),
+          new ActionRowBuilder().addComponents(imageInput),
+          new ActionRowBuilder().addComponents(cluesInput),
+          new ActionRowBuilder().addComponents(cellTypeInput)
+        );
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in map_grid_edit handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('map_grid_view_')) {
+      // Handle grid content viewing
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const coord = custom_id.replace('map_grid_view_', '');
+        
+        console.log(`🔍 DEBUG: Processing map_grid_view for coord ${coord} by user ${userId}`);
+        
+        // Load safari content to get current data
+        const { loadSafariContent } = await import('./mapExplorer.js');
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const mapData = safariData[guildId]?.maps?.[activeMapId];
+        const coordData = mapData?.coordinates?.[coord];
+        
+        if (!coordData) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Location not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Build content display
+        let contentParts = [`# ${coordData.baseContent?.title || `📍 Location ${coord}`}`];
+        
+        if (coordData.baseContent?.description) {
+          contentParts.push(`\n${coordData.baseContent.description}`);
+        }
+        
+        contentParts.push(`\n**Cell Type:** ${coordData.cellType || 'unexplored'}`);
+        
+        if (coordData.baseContent?.clues && coordData.baseContent.clues.length > 0) {
+          contentParts.push('\n**Clues:**');
+          coordData.baseContent.clues.forEach(clue => {
+            contentParts.push(`• ${clue}`);
+          });
+        }
+        
+        if (coordData.baseContent?.image) {
+          contentParts.push(`\n**Image URL:** ${coordData.baseContent.image}`);
+        }
+        
+        // Navigation info
+        contentParts.push('\n**Navigation:**');
+        const navDirs = ['north', 'east', 'south', 'west'];
+        navDirs.forEach(dir => {
+          const nav = coordData.navigation?.[dir];
+          if (nav) {
+            contentParts.push(`• ${dir.charAt(0).toUpperCase() + dir.slice(1)}: ${nav.to} ${nav.blocked ? '(blocked)' : ''}`);
+          }
+        });
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: contentParts.join('\n'),
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in map_grid_view handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     
     // ==================== END MAP EXPLORER HANDLERS ====================
     
@@ -15525,6 +15695,102 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error setting item quantity.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('map_grid_edit_modal_')) {
+      // Handle map grid edit modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const coord = custom_id.replace('map_grid_edit_modal_', '');
+        const components = req.body.data.components;
+        
+        // Extract values from modal
+        const title = components[0].components[0].value;
+        const description = components[1].components[0].value;
+        const imageURL = components[2].components[0].value;
+        const cluesText = components[3].components[0].value;
+        const cellType = components[4].components[0].value;
+        
+        console.log(`🗺️ DEBUG: Processing map grid edit for ${coord}`);
+        
+        // Validate image URL if provided
+        if (imageURL && !imageURL.startsWith('https://cdn.discordapp.com/')) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **Invalid Image URL**\n\nImages must be hosted on Discord CDN (https://cdn.discordapp.com/...)',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Parse clues (one per line)
+        const clues = cluesText
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line.length > 0);
+        
+        // Load and update safari content
+        const { loadSafariContent, saveSafariContent } = await import('./mapExplorer.js');
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const mapData = safariData[guildId]?.maps?.[activeMapId];
+        
+        if (!mapData || !mapData.coordinates[coord]) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Location not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update coordinate data
+        mapData.coordinates[coord].baseContent = {
+          title: title,
+          description: description,
+          image: imageURL || null,
+          clues: clues
+        };
+        mapData.coordinates[coord].cellType = cellType;
+        
+        // Save updated data
+        await saveSafariContent(safariData);
+        
+        // Create confirmation message
+        let confirmationParts = [
+          `✅ **Location ${coord} Updated!**`,
+          '',
+          `**Title:** ${title}`,
+          `**Cell Type:** ${cellType}`,
+          `**Description:** ${description.substring(0, 100)}${description.length > 100 ? '...' : ''}`
+        ];
+        
+        if (clues.length > 0) {
+          confirmationParts.push(`**Clues:** ${clues.length} clue(s) added`);
+        }
+        
+        if (imageURL) {
+          confirmationParts.push(`**Image:** Image URL saved`);
+        }
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: confirmationParts.join('\n'),
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in map_grid_edit_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating location content.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

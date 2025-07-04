@@ -80,12 +80,15 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_map_explorer` | 🗺️ Map Explorer | app.js:~12967 | Direct handler | ✅ Active |
 | `map_create` | 🏗️ Create Map | app.js:~13001 | Direct handler | ✅ Active |
 | `map_delete` | 🗑️ Delete Map | app.js:~13061 | Direct handler | ✅ Active |
+| `map_grid_edit_*` | ✏️ Edit Content | app.js:~13160 | Pattern handler | ✅ Active |
+| `map_grid_view_*` | 👁️ View Content | app.js:~13256 | Pattern handler | ✅ Active |
 
 ### **Modal Submission Handlers**
 | Custom ID | Purpose | Location | Handler Type | Status |
 |-----------|---------|----------|--------------|--------|
 | `safari_customize_terms_modal` | Custom Terms Modal | app.js:~12591 | Modal handler | ✅ Active |
 | `safari_item_qty_modal_*` | Item Quantity Modal | app.js:~12976 | Modal handler | ✅ Active |
+| `map_grid_edit_modal_*` | Map Grid Content Edit Modal | app.js:~15702 | Modal handler | ✅ Active |
 | `safari_test_button_*` | Test Button | app.js:~6603 | Pattern handler | ✅ Active |
 | `safari_action_edit_*` | Edit Individual Actions | app.js:~6384 | Pattern handler | ✅ Active |
 | `safari_action_move_up_*` | Move Action Up | app.js:~6195 | Pattern handler | ✅ Active |
