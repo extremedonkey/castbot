@@ -12985,9 +12985,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to access Map Explorer.')) return;
         
         console.log(`🗺️ DEBUG: Opening Map Explorer interface for guild ${guildId}`);
+        console.log(`🗺️ DEBUG: About to call createMapExplorerMenu...`);
         
         // Create Map Explorer interface
         const mapExplorerData = await createMapExplorerMenu(guildId);
+        
+        console.log(`🗺️ DEBUG: createMapExplorerMenu returned:`, mapExplorerData ? 'data received' : 'null/undefined');
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
@@ -12998,11 +13001,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
         
       } catch (error) {
-        console.error('Error in safari_map_explorer handler:', error);
+        console.error('❌ Error in safari_map_explorer handler:', error);
+        console.error('❌ Error stack:', error.stack);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error loading Map Explorer interface.',
+            content: `❌ Error loading Map Explorer interface: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
