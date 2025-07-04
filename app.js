@@ -1440,6 +1440,9 @@ app.use((req, res, next) => {
   }
 });
 
+// Serve static files from img directory for map images
+app.use('/img', express.static('./img'));
+
 // Update handleSetTribe function to properly handle role options
 async function handleSetTribe(guildId, roleIdOrOption, options) {
   const guild = await client.guilds.fetch(guildId);
@@ -12939,6 +12942,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Add Media Gallery if there's an active map with image
         if (hasActiveMap && guildMaps[activeMapId].imageFile) {
           const imageUrl = `https://adapted-deeply-stag.ngrok-free.app/${guildMaps[activeMapId].imageFile}`;
+          console.log(`🖼️ DEBUG: Map image URL: ${imageUrl}`);
           containerComponents.push({
             type: 12, // Media Gallery
             items: [

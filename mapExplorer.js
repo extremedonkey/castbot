@@ -109,7 +109,20 @@ async function createMapGrid(guild, userId) {
       labelStyle: 'standard'
     });
     
-    await gridSystem.generateGridOverlay(outputPath);
+    // Generate grid overlay as SVG buffer and composite with base image
+    const svg = gridSystem.generateGridSVG();
+    const svgBuffer = Buffer.from(svg);
+    
+    // Composite the SVG grid onto the base map image
+    await sharp(mapPath)
+      .composite([{
+        input: svgBuffer,
+        top: 0,
+        left: 0
+      }])
+      .png()
+      .toFile(outputPath);
+    
     console.log(`✅ Generated map image: ${outputPath}`);
     
     // Create map category
