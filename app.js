@@ -12912,6 +12912,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log(`🗺️ DEBUG: createMapExplorerMenu returned:`, mapExplorerData ? 'data received' : 'null/undefined');
         console.log(`🗺️ DEBUG: mapExplorerData keys:`, Object.keys(mapExplorerData || {}));
+        console.log(`🗺️ DEBUG: Full mapExplorerData:`, JSON.stringify(mapExplorerData, null, 2));
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
