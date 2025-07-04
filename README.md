@@ -199,7 +199,7 @@ npm run status-remote              # Check production status
 - ✅ Static ngrok domain - no more webhook URL updates required
 - ✅ Automated git safety net with commit/push functionality
 - ✅ PM2 process management matching production architecture
-- ✅ Three-command workflow: `./dev-start.sh`, `./dev-restart.sh`, `./dev-stop.sh`
+- ✅ Three-command workflow: `./scripts/dev/dev-start.sh`, `./scripts/dev/dev-restart.sh`, `./scripts/dev/dev-stop.sh`
 
 **WSL Development Benefits:**
 - **Stable URLs**: Static ngrok domain preserves webhook configuration

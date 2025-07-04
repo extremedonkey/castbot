@@ -1,4 +1,4 @@
-● Bash(./dev-restart.sh "Update BUTTON_HANDLER_REGISTRY.md with Custom Terms functionality documentation")
+● Bash(./scripts/dev/dev-restart.sh "Update BUTTON_HANDLER_REGISTRY.md with Custom Terms functionality documentation")
   ⎿  === CastBot Dev Restart ===
      🔄 Handling git operations...
      📝 Committing: Update BUTTON_HANDLER_REGISTRY.md with Custom Terms functionality documentation

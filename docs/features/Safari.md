@@ -1159,7 +1159,7 @@ The Round Results V2 System provides a complete, scalable foundation for complex
 
 1. **Development Testing**
    ```bash
-   ./dev-restart.sh "Add Safari dynamic content system MVP1"
+   ./scripts/dev/dev-restart.sh "Add Safari dynamic content system MVP1"
    ```
 
 2. **Verify Core Functionality**
@@ -1777,7 +1777,7 @@ cp playerData.backup.TIMESTAMP.json playerData.json
 git checkout HEAD~1 safariManager.js
 
 # 3. Restart service
-./dev-restart.sh "Rollback object format migration"
+./scripts/dev/dev-restart.sh "Rollback object format migration"
 ```
 
 #### **If Step 2 Fails (Attack Resolution)**
@@ -1786,7 +1786,7 @@ git checkout HEAD~1 safariManager.js
 git checkout HEAD~1 safariManager.js
 
 # 2. Restart service  
-./dev-restart.sh "Rollback attack resolution, keep object format"
+./scripts/dev/dev-restart.sh "Rollback attack resolution, keep object format"
 ```
 
 #### **If Step 3 Fails (Display Enhancement)**

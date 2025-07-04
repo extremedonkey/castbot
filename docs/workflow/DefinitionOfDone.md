@@ -165,7 +165,7 @@ If feature includes Discord buttons/components:
 
 Before running `npm run deploy-remote-wsl`:
 - [ ] All above items checked
-- [ ] `./dev-restart.sh` run successfully
+- [ ] `./scripts/dev/dev-restart.sh` run successfully
 - [ ] No errors in development log
 - [ ] Feature tested in dev environment
 - [ ] Git committed and pushed
