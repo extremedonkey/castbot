@@ -52,7 +52,7 @@ async function saveSafariContent(data) {
  * @param {string} userId - User ID creating the map
  * @returns {Object} Result with success status and message
  */
-export async function createMapGrid(guild, userId) {
+async function createMapGrid(guild, userId) {
   try {
     console.log(`🏗️ Creating map grid for guild ${guild.id}`);
     
@@ -255,7 +255,7 @@ export async function createMapGrid(guild, userId) {
  * @param {Guild} guild - Discord guild object
  * @returns {Object} Result with success status and message
  */
-export async function deleteMapGrid(guild) {
+async function deleteMapGrid(guild) {
   try {
     console.log(`🗑️ Deleting map grid for guild ${guild.id}`);
     
