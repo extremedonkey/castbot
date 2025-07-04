@@ -430,13 +430,13 @@ function generateNavigation(coord, gridSize) {
 }
 
 /**
- * Create Map Explorer interface menu
+ * Create Map Explorer interface menu using Components V2 format
  * @param {string} guildId - Discord guild ID
- * @returns {Object} Discord UI components for Map Explorer
+ * @returns {Object} Components V2 format for Map Explorer
  */
 async function createMapExplorerMenu(guildId) {
   try {
-    const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = await import('discord.js');
+    const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
     
     // Load Safari content to check for existing maps
     const safariData = await loadSafariContent();
@@ -444,63 +444,67 @@ async function createMapExplorerMenu(guildId) {
     const activeMapId = guildMaps.active;
     const hasActiveMap = activeMapId && guildMaps[activeMapId];
     
-    // Create embed with map status
-    const embed = new EmbedBuilder()
-      .setTitle('🗺️ Safari Map Explorer')
-      .setColor(0x00AE86);
-    
+    // Create header text based on map status
+    let headerText;
     if (hasActiveMap) {
       const activeMap = guildMaps[activeMapId];
-      embed.setDescription(`**Current Map:** ${activeMap.name || 'Adventure Map'}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Status:** Active ✅`);
-      embed.setImage(`attachment://${path.basename(activeMap.imageFile)}`);
+      headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${activeMap.name || 'Adventure Map'}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Status:** Active ✅`;
     } else {
-      embed.setDescription('**No active map found**\nCreate a new map to begin exploration!');
+      headerText = "# 🗺️ Map Explorer\n\n**No active map found**\nCreate a new map to begin exploration!";
     }
     
-    // Create action buttons
-    const row = new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId('map_create')
-          .setLabel('🏗️ Create Map')
-          .setStyle(ButtonStyle.Primary)
-          .setDisabled(hasActiveMap), // Disable if map already exists
-        new ButtonBuilder()
-          .setCustomId('map_delete')
-          .setLabel('🗑️ Delete Map')
-          .setStyle(ButtonStyle.Danger)
-          .setDisabled(!hasActiveMap), // Disable if no map exists
-        new ButtonBuilder()
-          .setCustomId('prod_safari_menu')
-          .setLabel('⬅️ Back to Safari')
-          .setStyle(ButtonStyle.Secondary)
-      );
+    // Create text display component
+    const textDisplay = {
+      type: 10, // Text display component
+      content: headerText
+    };
     
-    const components = [row];
-    const embeds = [embed];
+    // Create map management buttons
+    const mapButtons = [
+      new ButtonBuilder()
+        .setCustomId('map_create')
+        .setLabel('Create Map')
+        .setStyle(hasActiveMap ? ButtonStyle.Secondary : ButtonStyle.Primary)
+        .setEmoji('🏗️')
+        .setDisabled(hasActiveMap), // Disable if map exists
+      new ButtonBuilder()
+        .setCustomId('map_delete')
+        .setLabel('Delete Map')
+        .setStyle(ButtonStyle.Danger)
+        .setEmoji('🗑️')
+        .setDisabled(!hasActiveMap) // Disable if no map
+    ];
     
-    // Include map image if available
-    const files = [];
-    if (hasActiveMap && guildMaps[activeMapId].imageFile) {
-      try {
-        const imageFile = guildMaps[activeMapId].imageFile;
-        const imageExists = await fs.access(imageFile).then(() => true).catch(() => false);
-        if (imageExists) {
-          files.push({
-            attachment: imageFile,
-            name: path.basename(imageFile)
-          });
-        }
-      } catch (error) {
-        console.warn('Could not attach map image:', error.message);
-      }
-    }
+    const mapButtonRow = new ActionRowBuilder().addComponents(mapButtons);
     
+    // Create back button
+    const backButton = new ButtonBuilder()
+      .setCustomId('prod_safari_menu')
+      .setLabel('⬅ Safari Menu')
+      .setStyle(ButtonStyle.Secondary);
+    
+    const backRow = new ActionRowBuilder().addComponents([backButton]);
+    
+    // Build container components
+    const containerComponents = [
+      textDisplay,
+      { type: 13 }, // Separator
+      mapButtonRow.toJSON(),
+      { type: 14 }, // Thin separator
+      backRow.toJSON()
+    ];
+    
+    // Create container using Components V2 format
+    const mapExplorerContainer = {
+      type: 17, // Container component
+      accent_color: 0x00AE86, // Teal accent for map theme
+      components: containerComponents
+    };
+    
+    // Return Components V2 format
     return {
-      content: '',
-      embeds,
-      components,
-      files
+      flags: (1 << 15), // IS_COMPONENTS_V2 flag
+      components: [mapExplorerContainer]
     };
     
   } catch (error) {
