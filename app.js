@@ -841,11 +841,11 @@ async function createSafariMenu(guildId, userId, member) {
     new ButtonBuilder()
       .setCustomId('safari_round_results')
       .setLabel(roundResultsLabel)
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🏅')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🎨')
   ];
   
-  // Row 2: Admin & Management Functions (4 buttons max - removed dangerous Restock Players button)
+  // Row 2: Admin & Management Functions (3 buttons max)
   const safariButtonsRow2 = [
     new ButtonBuilder()
       .setCustomId('safari_manage_stores')
@@ -861,12 +861,7 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_customize_terms')
       .setLabel('Customize Safari')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️'),
-    new ButtonBuilder()
-      .setCustomId('safari_round_results_v2')
-      .setLabel(roundResultsV2Label)
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('🎨')
+      .setEmoji('⚙️')
   ];
   
   // Row 3: Map Explorer (new feature)
@@ -6671,38 +6666,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_round_results') {
-      // Handle Round Results - Challenge Game Logic Core Engine
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        const channelId = req.body.channel_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to process round results.')) return;
-        
-        console.log(`🏅 DEBUG: Processing round results for guild ${guildId} in channel ${channelId}`);
-        
-        // Import Safari manager functions
-        const { processRoundResults } = await import('./safariManager.js');
-        
-        // Process round results and get the result response
-        const result = await processRoundResults(guildId, channelId, client);
-        
-        // The new processRoundResults returns a complete Discord response object
-        return res.send(result);
-        
-      } catch (error) {
-        console.error('Error in safari_round_results:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error processing round results. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id === 'safari_round_results_v2') {
-      // Handle V2 Round Results - Player-Centric Card Display
+      // Handle Round Results - Player-Centric Card Display with Components V2
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -6713,20 +6677,20 @@ Your server is now ready for Tycoons gameplay!`;
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to process round results.')) return;
         
-        console.log(`🎨 DEBUG: Processing V2 round results for guild ${guildId} in channel ${channelId}`);
+        console.log(`🎨 DEBUG: Processing round results for guild ${guildId} in channel ${channelId}`);
         
         // Defer response immediately to prevent 3-second timeout with many players
         await res.send({
           type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
         });
         
-        // Import Safari manager functions - we need both the backend logic and V2 display
+        // Import Safari manager functions
         const { processRoundResults } = await import('./safariManager.js');
         
-        // Process round results using the same backend logic
-        const roundData = await processRoundResults(guildId, channelId, client, true); // Pass flag for V2 mode
+        // Process round results using modern display
+        const roundData = await processRoundResults(guildId, channelId, client);
         
-        // Send the V2 display via webhook endpoint since we deferred the response
+        // Send the modern display via webhook endpoint since we deferred the response
         const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
         
         const webhookPayload = {
@@ -6734,7 +6698,7 @@ Your server is now ready for Tycoons gameplay!`;
           components: roundData.data.components
         };
         
-        console.log(`🎨 DEBUG: Sending V2 display via webhook with ${roundData.data.components?.length || 0} components`);
+        console.log(`🎨 DEBUG: Sending modern display via webhook with ${roundData.data.components?.length || 0} components`);
         
         const webhookResponse = await fetch(webhookUrl, {
           method: 'PATCH',
@@ -6747,11 +6711,11 @@ Your server is now ready for Tycoons gameplay!`;
         if (!webhookResponse.ok) {
           console.error('❌ DEBUG: Webhook failed:', await webhookResponse.text());
         } else {
-          console.log('✅ DEBUG: V2 results sent successfully via webhook');
+          console.log('✅ DEBUG: Round results sent successfully via webhook');
         }
         
       } catch (error) {
-        console.error('Error in safari_round_results_v2:', error);
+        console.error('Error in safari_round_results:', error);
         
         // If we already deferred, send error via webhook
         try {
@@ -6765,7 +6729,7 @@ Your server is now ready for Tycoons gameplay!`;
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              content: '❌ Error processing V2 round results. Please try again.',
+              content: '❌ Error processing round results. Please try again.',
               flags: 64 // EPHEMERAL
             })
           });

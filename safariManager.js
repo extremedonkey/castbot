@@ -2016,7 +2016,7 @@ async function resetCustomTerms(guildId) {
  * Process Round Results - Challenge Game Logic Core Engine
  * Handles event determination, player earnings/losses, and round progression
  */
-async function processRoundResults(guildId, channelId, client, useV2Display = false) {
+async function processRoundResults(guildId, channelId, client) {
     try {
         console.log(`🏅 DEBUG: Starting round results processing for guild ${guildId}`);
         
@@ -2199,24 +2199,13 @@ async function processRoundResults(guildId, channelId, client, useV2Display = fa
             safariConfig.currentRound = 4;
             await saveSafariContent(safariData);
             
-            if (useV2Display) {
-                // Use V2 display for Round 3 - show final results with rankings
-                console.log('🏆 DEBUG: Round 3 completed, creating V2 final results display');
-                return await createRoundResultsV2(guildId, roundData, customTerms);
-            } else {
-                // Show detailed Round 3 results PLUS final rankings
-                return await createFinalRoundResults(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults, consumptionResults);
-            }
+            // Use modern display for Round 3 - show final results with rankings
+            console.log('🏆 DEBUG: Round 3 completed, creating final results display');
+            return await createRoundResultsV2(guildId, roundData, customTerms);
         }
         
-        // Return appropriate display based on flag
-        if (useV2Display) {
-            return await createRoundResultsV2(guildId, roundData, customTerms);
-        } else {
-            // Create classic round results output (now includes attack results)
-            const output = await createRoundResultsOutput(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults, consumptionResults);
-            return output;
-        }
+        // Return modern round results display
+        return await createRoundResultsV2(guildId, roundData, customTerms);
         
     } catch (error) {
         console.error('Error processing round results:', error);
@@ -2442,9 +2431,7 @@ async function storeRoundResult(guildId, roundResult) {
 }
 
 /**
- * Create round results output with Components V2 formatting
- */
-async function createRoundResultsOutput(guildId, currentRound, eventType, eventName, eventEmoji, playerResults, customTerms, attackResults = [], consumptionResults = []) {
+ * Restock all eligible players with 100 currency
     try {
         const totalParticipants = playerResults.length;
         const totalEarnings = playerResults.reduce((sum, p) => sum + p.earnings, 0);
@@ -4932,9 +4919,7 @@ export {
     resetCustomTerms,
     // Challenge Game Logic exports
     processRoundResults,
-    createRoundResultsOutput,
     createFinalRankings,
-    createFinalRoundResults,
     resetGameData,
     restockPlayers,
     // Shared Display Functions
