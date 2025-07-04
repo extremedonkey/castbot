@@ -44,10 +44,13 @@ When working on specific features, refer to these dedicated documentation files:
 ./dev-stop.sh
 ```
 
-**🚨 CRITICAL Protocol:**
-- **ALWAYS** run `./dev-restart.sh` after making code changes
+**🚨 CRITICAL Protocol - RESTART AFTER EVERY CODE CHANGE:**
+- **MANDATORY:** Run `./scripts/dev/dev-restart.sh` after ANY code changes
 - **INFORM** the user that dev has been restarted so they can test
 - **This ensures** immediate testing without manual intervention
+- **DO NOT** use `npm run dev` - use the restart script only
+
+**⚠️ IMPORTANT:** The restart script handles git commits, Discord notifications, and proper app restart
 
 ### Production Deployment
 
