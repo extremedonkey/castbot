@@ -254,14 +254,75 @@ async function moveToCoordinate(guildId, userId, coordinate) {
                 "A1": {
                     "channelId": "987654321",
                     "description": "Rocky shores with crashing waves",
-                    "items": ["treasure_chest", "compass"],
-                    "exploredBy": ["userId1", "userId2"]
+                    "textPrompts": {
+                        "onEnter": "The salty breeze hits your face as waves crash against jagged rocks.",
+                        "onExamine": "You notice something glinting between the rocks...",
+                        "onSearch": "After carefully searching, you find a weathered treasure chest!"
+                    },
+                    "items": [
+                        {
+                            "id": "treasure_chest",
+                            "name": "Weathered Treasure Chest",
+                            "description": "An old chest partially buried in the sand",
+                            "discoverable": true,
+                            "collectable": true,
+                            "requiresKey": false
+                        }
+                    ],
+                    "hiddenCommands": [
+                        {
+                            "trigger": "climb rocks",
+                            "response": "You climb the rocks and spot a hidden cave entrance!",
+                            "unlocks": "A2",
+                            "requiresItem": null
+                        }
+                    ],
+                    "navigationOptions": {
+                        "north": { "to": "A2", "blocked": false, "description": "Dense jungle path" },
+                        "east": { "to": "B1", "blocked": false, "description": "Sandy beach continues" },
+                        "south": { "to": null, "blocked": true, "description": "Treacherous cliffs" },
+                        "west": { "to": null, "blocked": true, "description": "Open ocean" }
+                    },
+                    "exploredBy": ["userId1", "userId2"],
+                    "cellType": "coast",
+                    "difficulty": 1,
+                    "requiresPermission": false,
+                    "customData": {
+                        "weatherEffect": "windy",
+                        "ambientSound": "ocean_waves.mp3"
+                    }
                 },
                 "A2": {
-                    "channelId": null, // Not created yet
-                    "description": "Dense jungle",
+                    "channelId": null,
+                    "description": "Dense jungle with towering trees",
+                    "textPrompts": {
+                        "onEnter": "Thick vines and exotic sounds surround you in this verdant jungle.",
+                        "onExamine": "The canopy blocks most sunlight, creating an eerie green glow.",
+                        "onSearch": "You hear movement in the undergrowth..."
+                    },
                     "items": [],
-                    "exploredBy": []
+                    "hiddenCommands": [
+                        {
+                            "trigger": "follow sound",
+                            "response": "You discover a small clearing with ancient ruins!",
+                            "unlocks": "secret_area_jungle",
+                            "requiresItem": null
+                        }
+                    ],
+                    "navigationOptions": {
+                        "north": { "to": "A3", "blocked": false, "description": "Jungle path continues" },
+                        "east": { "to": "B2", "blocked": true, "description": "Thick brambles block the way" },
+                        "south": { "to": "A1", "blocked": false, "description": "Return to the coast" },
+                        "west": { "to": null, "blocked": true, "description": "Impassable jungle" }
+                    },
+                    "exploredBy": [],
+                    "cellType": "jungle",
+                    "difficulty": 2,
+                    "requiresPermission": false,
+                    "customData": {
+                        "weatherEffect": "humid",
+                        "ambientSound": "jungle_sounds.mp3"
+                    }
                 }
                 // ... more coordinates
             },
@@ -302,19 +363,201 @@ async function moveToCoordinate(guildId, userId, coordinate) {
 }
 ```
 
+## Enhanced Grid Cell Data Structure Design
+
+### Current Implementation Status
+✅ **Grid Generation:** Complete - can overlay grids on pre-defined server images
+✅ **Coordinate System:** Complete - supports multiple schemas and programmatic reference
+✅ **Grid Rendering:** Can render full maps with grid overlay (e.g., map_grid_10x10.png)
+✅ **Tile Extraction:** Proven capability to extract individual grid cells from maps
+✅ **Map Creation System:** Complete - generates maps and Discord infrastructure
+✅ **Data Storage:** Complete - integrated with Safari system via safariContent.json
+✅ **UI Integration:** Complete - Map Explorer added to Safari menu system
+🔄 **Cell Content Management:** Next phase - editing individual cell content
+
+### Technical Capabilities
+
+#### Core Grid System
+- **Base Map:** Using pre-defined `img/map.png` as source image for all generated maps
+- **Grid Overlay:** MapGridSystem class generates grids of various sizes (5x5, 8x8, 10x10, 12x12)
+- **Recommended Style:** Thick grid lines (4px) with white borders for maximum visibility
+- **Coordinate System:** Standard letter-number format (A1-E5 for 5x5 grid)
+
+#### Image Processing & Extraction
+- **Tile Extraction:** ✅ PROVEN - Can extract individual grid cells from rendered maps
+  - Successfully extracted map_c8.png (250x250px tile from 10x10 grid)
+  - Can identify exact pixel coordinates for any grid cell
+  - **Capability confirmed:** Can draw player icons or markers on specific coordinates
+  - Created proof-of-concept tiles: map_a1.png, map_e5.png, map_a5.png, map_e1.png
+
+#### File Storage & Organization
+- **Map Storage:** `img/{guildId}/map_{gridSize}x{gridSize}_{timestamp}.png`
+- **Base Image:** Always uses `img/map.png` as the source (hardcoded for MVP)
+- **Directory Structure:** Guild-specific folders for organized map storage
+- **Tile Storage:** Future capability for `img/{guildId}/tiles/` individual cell images
+
+### Architecture Decisions
+
+#### 1. Interface Integration
+- **Menu System:** Reuse existing button-menu interface via /menu (player menu)
+- **Safari Buttons:** Leverage existing Safari button system for cell interactions
+- **Management UI:** New 'Map' button in prod_safari_menu container interface
+- **Channel Creation:** One Discord channel per grid coordinate in 🗺️ Map category
+
+#### 2. Grid Specifications
+- **Recommended Size:** 5x5 (25 cells) for most servers
+- **Maximum Size:** 8x8 (64 cells) - larger grids become unwieldy
+- **Coordinate System:** Standard letter-number (A1-E5 for 5x5)
+- **Base Map:** Using hardcoded `img/map.png` for initial implementation
+
+#### 3. Player State Management
+- **Shared Base Content:** All players see same cell descriptions
+- **Individual State:** Each player tracks their own progress/items found
+- **Chest Options:** Configurable as either individual (each player can loot) or shared (first come, first served)
+- **Movement System:** Stamina-based with configurable moves per turn
+
+#### 4. Content Structure per Cell
+- **Description Text:** Primary content describing what players see
+- **Safari Buttons:** Interactive elements using existing Safari action system
+- **Clues/Hints:** Embedded in descriptions or revealed through actions
+- **Items:** Discoverable objects that integrate with Safari inventory
+- **Navigation:** Movement options to adjacent cells
+
+#### 5. Technical Implementation
+
+**Channel Creation Strategy:**
+- Implement rate limiting: 5 channels per 5 seconds (Discord recommended)
+- Recovery mechanism for interruptions
+- Progress tracking and logging during creation
+- Cleanup functionality for map deletion
+
+**File Storage Pattern:**
+```
+img/
+  {guildId}/
+    map_5x5_{timestamp}.png     # Full map with grid
+    map_8x8_{timestamp}.png     # Different size maps
+    tiles/                      # Individual cell extracts if needed
+      map_{timestamp}_A1.png
+      map_{timestamp}_A2.png
+```
+
+**Data Integration:**
+- ✅ **IMPLEMENTED:** Extends `safariContent.json` with new `maps` section
+- ✅ **IMPLEMENTED:** Links Discord channel IDs to grid coordinates
+- ✅ **IMPLEMENTED:** Stores complete map metadata and coordinate data
+- 🔄 **PLANNED:** Player position tracking and exploration state
+- 🔄 **PLANNED:** Integration with existing Safari currency/shop systems
+
+#### Discord Infrastructure Management
+- **Category Creation:** Creates "🗺️ Map Explorer" category for map channels
+- **Channel Creation:** Generates one channel per coordinate (#a1, #a2, etc.)
+- **Rate Limiting:** 5 channels per 5 seconds to comply with Discord API limits
+- **Permission Management:** Channels hidden by default, revealed as players explore
+- **Cleanup System:** Complete removal of channels and data when map is deleted
+- **Recovery Handling:** Graceful error handling for interrupted channel creation
+
+### Map-Specific Safari Button Actions
+
+New action types to be added to the Safari button system:
+- `move_player` - Moves player to adjacent grid cell
+- `check_stamina` - Validates player has enough stamina for action
+- `give_item` - Adds item to player's map inventory
+- `mark_searched` - Marks location as searched by player
+- `mark_chest_opened` - Records chest as opened (for shared chests)
+- `broadcast_discovery` - Announces major discoveries server-wide
+
+These extend the existing Safari action system without breaking current functionality.
+
 ## Implementation Roadmap
 
-### Phase 1: Core Image Processing
-1. Implement image upload command
-2. Add grid overlay functionality
-3. Return processed image to user
-4. Store map metadata
+### Phase 1: Core Image Processing ✅ COMPLETED
+1. ✅ Implement image upload command
+2. ✅ Add grid overlay functionality
+3. ✅ Return processed image to user
+4. ✅ Store map metadata
 
-### Phase 2: Channel Management
-1. Create coordinate channel system
-2. Implement movement commands
+### Phase 2A: Basic Map Creation & Management ✅ COMPLETED
+
+#### Core Implementation
+1. ✅ **UI Integration:** Added Map Explorer button to Safari menu (Row 2, Position 5)
+2. ✅ **Interface Design:** Created Map Explorer submenu with state management
+3. ✅ **Map Generation:** Implemented Create Map functionality
+4. ✅ **Map Deletion:** Implemented Delete Map functionality
+5. ✅ **Data Persistence:** Integrated with Safari content system
+
+#### Create Map Process (Detailed)
+- ✅ Generates 5x5 grid overlay on hardcoded `img/map.png`
+- ✅ Saves processed image to `img/{guildId}/map_5x5_{timestamp}.png`
+- ✅ Creates Discord category "🗺️ Map Explorer" 
+- ✅ Creates 25 channels (#a1 through #e5) with proper rate limiting
+- ✅ Stores complete map data structure in `safariContent.json`
+- ✅ Progress reporting during channel creation process
+- ✅ Error handling and recovery for interrupted operations
+
+#### Delete Map Process (Detailed)
+- ✅ Removes all map channels with rate limiting (2 second delays)
+- ✅ Deletes the map category
+- ✅ Cleans up generated map image files
+- ✅ Preserves base `map.png` file for future use
+- ✅ Removes map data from safariContent.json storage
+- ✅ Progress reporting during cleanup process
+
+#### Technical Architecture Completed
+- ✅ **File Structure:** `mapExplorer.js` - 400+ lines of core functionality
+- ✅ **Button Handlers:** 3 new handlers in app.js (safari_map_explorer, map_create, map_delete)
+- ✅ **Data Layer:** Safari content integration with load/save pattern
+- ✅ **UI Components:** Components V2 interface with proper state management
+- ✅ **Error Handling:** Comprehensive try/catch with user feedback
+- ✅ **Documentation:** Button handlers registered in BUTTON_HANDLER_REGISTRY.md
+
+#### MapGridSystem Capabilities
+- ✅ **Grid Generation:** Supports 5x5, 8x8, 10x10, 12x12 grids
+- ✅ **Styling Options:** Customizable border size, line width, fonts, colors
+- ✅ **Coordinate Systems:** Standard (A1-E5), chess-style (a1-e5), numbers-only (1-1 to 5-5)
+- ✅ **Programmatic Access:** Coordinate ↔ pixel conversion functions
+- ✅ **Marker System:** Can highlight specific cells and draw on coordinates
+- ✅ **Tile Extraction:** Proven capability to extract individual grid cells
+
+#### Data Structure Implementation
+```json
+{
+  "guildId": {
+    "maps": {
+      "active": "map_5x5_1704236400000",
+      "map_5x5_1704236400000": {
+        "id": "map_5x5_1704236400000",
+        "name": "Adventure Island",
+        "gridSize": 5,
+        "imageFile": "img/391415444084490240/map_5x5_1704236400000.png",
+        "category": "1234567890",
+        "coordinates": {
+          "A1": {
+            "channelId": "1234567891",
+            "baseContent": { /* cell content */ },
+            "navigation": { /* movement options */ }
+          }
+        },
+        "playerStates": { /* individual player progress */ },
+        "globalState": { /* shared map state */ },
+        "config": { /* map settings */ }
+      }
+    }
+  }
+}
+```
+
+### Phase 2B: Cell Content Management (Next Steps)
+1. 🔄 Extend entityManagementUI.js for cell content editing
+2. 🔄 Implement map cell editor interface
+3. 🔄 Add Safari button actions: move_player, check_stamina, etc.
+4. 🔄 Create player exploration interface
+
+### Phase 2C: Movement & Exploration
+1. Implement movement commands
+2. Add stamina system (12hr reset)
 3. Add permission management
-4. Handle channel cleanup
+4. Player state tracking
 
 ### Phase 3: Exploration Features
 1. Add fog of war (show/hide unexplored areas)

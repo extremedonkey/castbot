@@ -7,6 +7,38 @@ This is a living requirements backlog for CastBot features and improvements, ord
 
 ## HIGH Priority
 
+### Enhanced Pronoun Role Origin Tracking System
+**Description:** Add metadata tracking to distinguish between CastBot-created and pre-existing pronoun roles for smarter management and safer operations
+**Current Structure:** `pronounRoleIDs` is a simple array of role ID strings
+**Proposed Structure:** Array of objects with origin tracking:
+```json
+"pronounRoleIDs": [
+  {
+    "id": "1389543002346885282",
+    "createdBy": "castbot",
+    "standardName": "He/Him"
+  },
+  {
+    "id": "1389543002346885283", 
+    "createdBy": "existing",
+    "standardName": "She/Her",
+    "originalName": "she/her"
+  }
+]
+```
+**Benefits:**
+- Smarter nuke command: Could delete only CastBot-created roles, preserve existing ones
+- Better setup feedback: "Found 3 existing roles, created 2 new ones"
+- Safer operations: Avoid accidentally deleting user's original roles
+- Enhanced debugging: Know exactly what CastBot created vs found
+**Implementation Requirements:**
+- Add backward compatibility migration logic
+- Update all functions that use `pronounRoleIDs` array
+- Modify `executeSetup()` to mark roles during creation/detection
+- Update `createPronounReactionMessage()` to handle new format
+**Priority:** High - Enhances safety and provides better user experience
+**Risk Level:** Medium - Requires careful migration and testing
+
 ### Remove Deprecated Safari Customize Terms Modal Handler
 **Description:** Remove commented-out legacy safari_customize_terms_modal handler after confirming new Components V2 field group interface works properly
 **Location:** app.js lines ~12867-13013 (legacy modal handler is commented out)

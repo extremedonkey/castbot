@@ -77,6 +77,9 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_attack_quantity_*` | String Select for Attack Quantity | app.js:~5755 | Pattern handler | ✅ Active |
 | `safari_schedule_attack_*` | ⚔️ Schedule Attack | app.js:~5785 | Pattern handler | ✅ Active |
 | `safari_restock_players` | 🪣 Restock Players | app.js:~3893 | Direct handler | ✅ Active |
+| `safari_map_explorer` | 🗺️ Map Explorer | app.js:~12967 | Direct handler | ✅ Active |
+| `map_create` | 🏗️ Create Map | app.js:~13001 | Direct handler | ✅ Active |
+| `map_delete` | 🗑️ Delete Map | app.js:~13061 | Direct handler | ✅ Active |
 
 ### **Modal Submission Handlers**
 | Custom ID | Purpose | Location | Handler Type | Status |

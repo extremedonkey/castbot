@@ -864,8 +864,18 @@ async function createSafariMenu(guildId, userId, member) {
       .setEmoji('🎨')
   ];
   
+  // Row 3: Map Explorer (new feature)
+  const safariButtonsRow3 = [
+    new ButtonBuilder()
+      .setCustomId('safari_map_explorer')
+      .setLabel('Map Explorer')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🗺️')
+  ];
+  
   const safariRow1 = new ActionRowBuilder().addComponents(safariButtonsRow1);
   const safariRow2 = new ActionRowBuilder().addComponents(safariButtonsRow2);
+  const safariRow3 = new ActionRowBuilder().addComponents(safariButtonsRow3);
   
   // Create back button
   const backButton = [
@@ -885,6 +895,7 @@ async function createSafariMenu(guildId, userId, member) {
     },
     safariRow1.toJSON(), // Core safari buttons
     safariRow2.toJSON(), // Admin management buttons
+    safariRow3.toJSON(), // Map Explorer button
     {
       type: 14 // Separator
     },
@@ -901,6 +912,92 @@ async function createSafariMenu(guildId, userId, member) {
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2 flag
     components: [safariMenuContainer]
+  };
+}
+
+/**
+ * Creates the Map Explorer menu interface
+ * @param {string} guildId - The guild ID to check for existing maps
+ * @returns {Object} Map explorer menu in Components V2 format
+ */
+async function createMapExplorerMenu(guildId) {
+  // Load Safari content data
+  const { loadSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  
+  // Check if guild has data and if a map already exists
+  const guildData = safariData[guildId];
+  const hasActiveMap = guildData?.maps?.active ? true : false;
+  const activeMapId = guildData?.maps?.active || null;
+  const activeMap = hasActiveMap ? guildData.maps[activeMapId] : null;
+  
+  // Create header text
+  const headerText = hasActiveMap 
+    ? `# 🗺️ Map Explorer\n\n**Active Map:** ${activeMap.name}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Created:** <t:${Math.floor(new Date(activeMap.createdAt).getTime() / 1000)}:R>`
+    : "# 🗺️ Map Explorer\n\nNo active map. Create a new map to begin exploring!";
+  
+  // Create text display component
+  const textDisplay = {
+    type: 10, // Text display component
+    text: headerText
+  };
+  
+  // Create map management buttons
+  const mapButtons = [
+    new ButtonBuilder()
+      .setCustomId('map_create')
+      .setLabel('Create Map')
+      .setStyle(hasActiveMap ? ButtonStyle.Secondary : ButtonStyle.Success)
+      .setEmoji('🏗️')
+      .setDisabled(hasActiveMap), // Disable if map exists
+    new ButtonBuilder()
+      .setCustomId('map_delete')
+      .setLabel('Delete Map')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🗑️')
+      .setDisabled(!hasActiveMap) // Disable if no map
+  ];
+  
+  // If map exists, add exploration button
+  if (hasActiveMap) {
+    mapButtons.push(
+      new ButtonBuilder()
+        .setCustomId('map_view')
+        .setLabel('View Map')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('🔍')
+    );
+  }
+  
+  const mapButtonRow = new ActionRowBuilder().addComponents(mapButtons);
+  
+  // Create back button
+  const backButton = new ButtonBuilder()
+    .setCustomId('prod_safari_menu')
+    .setLabel('⬅ Safari Menu')
+    .setStyle(ButtonStyle.Secondary);
+  
+  const backRow = new ActionRowBuilder().addComponents([backButton]);
+  
+  // Build container components
+  const containerComponents = [
+    textDisplay,
+    { type: 13 }, // Separator
+    mapButtonRow.toJSON(),
+    { type: 14 }, // Thin separator
+    backRow.toJSON()
+  ];
+  
+  // Create container
+  const mapExplorerContainer = {
+    type: 17, // Container component
+    accent_color: 0x3498db, // Blue accent for map theme
+    components: containerComponents
+  };
+  
+  return {
+    flags: (1 << 15), // IS_COMPONENTS_V2 flag
+    components: [mapExplorerContainer]
   };
 }
 
@@ -12874,6 +12971,164 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    
+    // ==================== MAP EXPLORER HANDLERS ====================
+    
+    } else if (custom_id === 'safari_map_explorer') {
+      // Handle Map Explorer menu display
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to access Map Explorer.')) return;
+        
+        console.log(`🗺️ DEBUG: Opening Map Explorer interface for guild ${guildId}`);
+        
+        // Create Map Explorer interface
+        const mapExplorerData = await createMapExplorerMenu(guildId);
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            ...mapExplorerData,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_map_explorer handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error loading Map Explorer interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id === 'map_create') {
+      // Handle Map Creation
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const member = req.body.member;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create maps.')) return;
+        
+        console.log(`🏗️ DEBUG: Creating map for guild ${guildId}`);
+        
+        // Defer response for long operation
+        await res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+        // Get guild and create map
+        const guild = await client.guilds.fetch(guildId);
+        const { createMapGrid } = await import('./mapExplorer.js');
+        const result = await createMapGrid(guild, userId);
+        
+        // Send followup with result
+        const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        
+        await fetch(followupUrl, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            content: result.message,
+            flags: InteractionResponseFlags.EPHEMERAL
+          })
+        });
+        
+      } catch (error) {
+        console.error('Error in map_create handler:', error);
+        
+        // Try to send error as followup
+        try {
+          const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          await fetch(followupUrl, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              content: `❌ Error creating map: ${error.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            })
+          });
+        } catch (followupError) {
+          console.error('Error sending followup:', followupError);
+        }
+      }
+      
+    } else if (custom_id === 'map_delete') {
+      // Handle Map Deletion
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to delete maps.')) return;
+        
+        console.log(`🗑️ DEBUG: Deleting map for guild ${guildId}`);
+        
+        // Defer response for long operation
+        await res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+        // Get guild and delete map
+        const guild = await client.guilds.fetch(guildId);
+        const { deleteMapGrid } = await import('./mapExplorer.js');
+        const result = await deleteMapGrid(guild);
+        
+        // Send followup with result
+        const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        
+        await fetch(followupUrl, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            content: result.message,
+            flags: InteractionResponseFlags.EPHEMERAL
+          })
+        });
+        
+      } catch (error) {
+        console.error('Error in map_delete handler:', error);
+        
+        // Try to send error as followup
+        try {
+          const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          await fetch(followupUrl, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              content: `❌ Error deleting map: ${error.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            })
+          });
+        } catch (followupError) {
+          console.error('Error sending followup:', followupError);
+        }
+      }
+    
+    // ==================== END MAP EXPLORER HANDLERS ====================
+    
     } else if (custom_id === 'prod_add_tribe_role_select') {
       // Step 2: After role selected, show castlist selection
       try {
