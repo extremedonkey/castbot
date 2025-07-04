@@ -32,16 +32,16 @@ When working on specific features, refer to these dedicated documentation files:
 
 ```bash
 # Start development session
-./dev-start.sh [optional-commit-message]
+./scripts/dev/dev-start.sh [optional-commit-message]
 
 # Your new "save" command - use frequently!
-./dev-restart.sh [optional-commit-message]
+./scripts/dev/dev-restart.sh [optional-commit-message]
 
 # Check status
-./dev-status.sh
+./scripts/dev/dev-status.sh
 
 # Clean shutdown
-./dev-stop.sh
+./scripts/dev/dev-stop.sh
 ```
 
 **🚨 CRITICAL Protocol - RESTART AFTER EVERY CODE CHANGE:**

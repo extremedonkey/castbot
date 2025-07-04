@@ -84,7 +84,7 @@ graph LR
 ### Process
 1. **Development Setup**
    ```bash
-   ./dev-start.sh "Starting work on [feature]"
+   ./scripts/dev/dev-start.sh "Starting work on [feature]"
    ```
 
 2. **Coding Standards**
@@ -95,7 +95,7 @@ graph LR
 
 3. **Regular Commits**
    ```bash
-   ./dev-restart.sh "WIP: [feature] - [what you just did]"
+   ./scripts/dev/dev-restart.sh "WIP: [feature] - [what you just did]"
    ```
 
 ### Exit Criteria
@@ -139,7 +139,7 @@ graph LR
 ### Process
 1. **Pre-Deployment**
    ```bash
-   ./dev-restart.sh "Ready to deploy: [feature]"
+   ./scripts/dev/dev-restart.sh "Ready to deploy: [feature]"
    ```
 
 2. **Production Deployment**
@@ -270,19 +270,19 @@ In BACKLOG.md, point to dedicated .md files:
 ### Standard Commands
 ```bash
 # Start development
-./dev-start.sh "Starting [feature] development"
+./scripts/dev/dev-start.sh "Starting [feature] development"
 
 # Regular saves (your new Ctrl+S)
-./dev-restart.sh "WIP: [what you just did]"
+./scripts/dev/dev-restart.sh "WIP: [what you just did]"
 
 # Check status
-./dev-status.sh
+./scripts/dev/dev-status.sh
 
 # Deploy to production
 npm run deploy-remote-wsl
 
 # Clean shutdown
-./dev-stop.sh
+./scripts/dev/dev-stop.sh
 ```
 
 ### Git Workflow
