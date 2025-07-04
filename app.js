@@ -12895,7 +12895,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     // ==================== MAP EXPLORER HANDLERS ====================
     
     } else if (custom_id === 'safari_map_explorer') {
-      // Handle Map Explorer menu display - using standard production menu pattern
+      // Handle Map Explorer menu display - using Components V2 with Container
       try {
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
@@ -12920,9 +12920,38 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         let headerText;
         if (hasActiveMap) {
           const activeMap = guildMaps[activeMapId];
-          headerText = `🗺️ **Map Explorer**\n\n**Active Map:** ${activeMap.name || 'Adventure Map'}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Status:** Active ✅`;
+          headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${activeMap.name || 'Adventure Map'}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Status:** Active ✅`;
         } else {
-          headerText = `🗺️ **Map Explorer**\n\n**No active map found**\nCreate a new map to begin exploration!`;
+          headerText = `# 🗺️ Map Explorer\n\n**No active map found**\nCreate a new map to begin exploration!`;
+        }
+        
+        // Build container components starting with text display
+        const containerComponents = [
+          {
+            type: 10, // Text Display
+            content: headerText
+          },
+          {
+            type: 14 // Separator
+          }
+        ];
+        
+        // Add Media Gallery if there's an active map with image
+        if (hasActiveMap && guildMaps[activeMapId].imageFile) {
+          const imageUrl = `https://adapted-deeply-stag.ngrok-free.app/${guildMaps[activeMapId].imageFile}`;
+          containerComponents.push({
+            type: 12, // Media Gallery
+            items: [
+              {
+                media: {
+                  url: imageUrl
+                }
+              }
+            ]
+          });
+          containerComponents.push({
+            type: 14 // Separator
+          });
         }
         
         // Create map management buttons
@@ -12956,6 +12985,20 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         const backRow = new ActionRowBuilder().addComponents([backButton]);
         
+        // Add action row components to container
+        containerComponents.push(mapButtonRow.toJSON());
+        containerComponents.push({
+          type: 14 // Separator
+        });
+        containerComponents.push(backRow.toJSON());
+        
+        // Create container using Components V2 format
+        const mapExplorerContainer = {
+          type: 17, // Container component
+          accent_color: 0x00AE86, // Teal accent for map theme
+          components: containerComponents
+        };
+        
         const responseType = shouldUpdateMessage ? 
           InteractionResponseType.UPDATE_MESSAGE : 
           InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
@@ -12965,9 +13008,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return res.send({
           type: responseType,
           data: {
-            content: headerText,
-            components: [mapButtonRow, backRow],
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [mapExplorerContainer]
           }
         });
         
