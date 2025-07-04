@@ -444,6 +444,8 @@ async function createMapExplorerMenu(guildId) {
     const activeMapId = guildMaps.active;
     const hasActiveMap = activeMapId && guildMaps[activeMapId];
     
+    console.log(`🗺️ Map Explorer Debug - Guild: ${guildId}, Active Map ID: ${activeMapId}, Has Active Map: ${hasActiveMap}`);
+    
     // Create header text based on map status
     let headerText;
     if (hasActiveMap) {
@@ -460,20 +462,27 @@ async function createMapExplorerMenu(guildId) {
     };
     
     // Create map management buttons
-    const mapButtons = [
-      new ButtonBuilder()
-        .setCustomId('map_create')
-        .setLabel('Create Map')
-        .setStyle(hasActiveMap ? ButtonStyle.Secondary : ButtonStyle.Primary)
-        .setEmoji('🏗️')
-        .setDisabled(hasActiveMap), // Disable if map exists
-      new ButtonBuilder()
-        .setCustomId('map_delete')
-        .setLabel('Delete Map')
-        .setStyle(ButtonStyle.Danger)
-        .setEmoji('🗑️')
-        .setDisabled(!hasActiveMap) // Disable if no map
-    ];
+    const createButton = new ButtonBuilder()
+      .setCustomId('map_create')
+      .setLabel('Create Map')
+      .setEmoji('🏗️');
+    
+    const deleteButton = new ButtonBuilder()
+      .setCustomId('map_delete')
+      .setLabel('Delete Map')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🗑️');
+    
+    // Set states based on whether map exists
+    if (hasActiveMap) {
+      createButton.setStyle(ButtonStyle.Secondary).setDisabled(true);
+      deleteButton.setDisabled(false);
+    } else {
+      createButton.setStyle(ButtonStyle.Primary).setDisabled(false);
+      deleteButton.setDisabled(true);
+    }
+    
+    const mapButtons = [createButton, deleteButton];
     
     const mapButtonRow = new ActionRowBuilder().addComponents(mapButtons);
     
