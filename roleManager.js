@@ -1164,7 +1164,7 @@ async function nukeRoles(guildId, client) {
     try {
         // 1. Clear CastBot storage data for this guild
         console.log('🗃️ DEBUG: Clearing CastBot storage data...');
-        const playerData = loadPlayerData();
+        const playerData = await loadPlayerData();
         
         if (playerData[guildId]) {
             // Clear pronoun and timezone role arrays
