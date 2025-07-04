@@ -12909,21 +12909,65 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
         
-        // Create Map Explorer interface
-        const mapExplorerData = await createMapExplorerMenu(guildId);
+        // Load safari content to check for existing maps
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const guildMaps = safariData[guildId]?.maps || {};
+        const activeMapId = guildMaps.active;
+        const hasActiveMap = activeMapId && guildMaps[activeMapId];
+        
+        // Create header text based on map status
+        let headerText;
+        if (hasActiveMap) {
+          const activeMap = guildMaps[activeMapId];
+          headerText = `🗺️ **Map Explorer**\n\n**Active Map:** ${activeMap.name || 'Adventure Map'}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Status:** Active ✅`;
+        } else {
+          headerText = `🗺️ **Map Explorer**\n\n**No active map found**\nCreate a new map to begin exploration!`;
+        }
+        
+        // Create map management buttons
+        const createButton = new ButtonBuilder()
+          .setCustomId('map_create')
+          .setLabel('Create Map')
+          .setEmoji('🏗️');
+        
+        const deleteButton = new ButtonBuilder()
+          .setCustomId('map_delete')
+          .setLabel('Delete Map')
+          .setStyle(ButtonStyle.Danger)
+          .setEmoji('🗑️');
+        
+        // Set states based on whether map exists
+        if (hasActiveMap) {
+          createButton.setStyle(ButtonStyle.Secondary).setDisabled(true);
+          deleteButton.setDisabled(false);
+        } else {
+          createButton.setStyle(ButtonStyle.Primary).setDisabled(false);
+          deleteButton.setDisabled(true);
+        }
+        
+        const mapButtonRow = new ActionRowBuilder().addComponents([createButton, deleteButton]);
+        
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('prod_safari_menu')
+          .setLabel('⬅ Safari Menu')
+          .setStyle(ButtonStyle.Secondary);
+        
+        const backRow = new ActionRowBuilder().addComponents([backButton]);
         
         const responseType = shouldUpdateMessage ? 
           InteractionResponseType.UPDATE_MESSAGE : 
           InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
         
         console.log(`🔍 DEBUG: Using response type: ${responseType === InteractionResponseType.UPDATE_MESSAGE ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'}`);
-        console.log(`🔍 DEBUG: Adding ephemeral flag - only user can see this message`);
         
         return res.send({
           type: responseType,
           data: {
-            ...mapExplorerData,
-            flags: (mapExplorerData.flags || 0) | InteractionResponseFlags.EPHEMERAL
+            content: headerText,
+            components: [mapButtonRow, backRow],
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         
