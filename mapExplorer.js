@@ -152,22 +152,32 @@ async function createMapGrid(guild, userId) {
       labelStyle: 'standard'
     });
     
-    // Initialize grid system and generate SVG overlay
+    // Initialize grid system and generate SVG overlay (without embedded map image)
     await gridSystem.initialize();
-    const svg = gridSystem.generateGridSVG();
+    const svg = gridSystem.generateGridOverlaySVG();
     const svgBuffer = Buffer.from(svg);
     
-    // Resize the base image to match SVG dimensions (including border)
-    await sharp(mapPath)
-      .resize(gridSystem.totalWidth, gridSystem.totalHeight, {
-        fit: 'contain',
-        background: { r: 255, g: 255, b: 255, alpha: 1 }
+    // Create a white border canvas first, then composite the map, then the grid
+    await sharp({
+        create: {
+          width: gridSystem.totalWidth,
+          height: gridSystem.totalHeight,
+          channels: 4,
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        }
       })
-      .composite([{
-        input: svgBuffer,
-        top: 0,
-        left: 0
-      }])
+      .composite([
+        {
+          input: mapPath,
+          top: gridSystem.options.borderSize,
+          left: gridSystem.options.borderSize
+        },
+        {
+          input: svgBuffer,
+          top: 0,
+          left: 0
+        }
+      ])
       .png()
       .toFile(outputPath);
     

@@ -154,6 +154,26 @@ export class MapGridSystem {
     }
 
     /**
+     * Generate SVG overlay only (no background or embedded image)
+     */
+    generateGridOverlaySVG() {
+        const { gridSize, borderSize, lineWidth, fontSize, gridColor, borderColor } = this.options;
+        
+        return `
+            <svg width="${this.totalWidth}" height="${this.totalHeight}" xmlns="http://www.w3.org/2000/svg">
+                <!-- Transparent background for overlay -->
+                <rect width="${this.totalWidth}" height="${this.totalHeight}" fill="transparent"/>
+                
+                <!-- Grid lines -->
+                ${this.generateGridLines()}
+                
+                <!-- Coordinate labels with white background -->
+                ${this.generateCoordinateLabels()}
+            </svg>
+        `;
+    }
+
+    /**
      * Generate grid lines SVG
      */
     generateGridLines() {
