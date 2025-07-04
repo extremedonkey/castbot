@@ -12911,13 +12911,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const mapExplorerData = await createMapExplorerMenu(guildId);
         
         console.log(`🗺️ DEBUG: createMapExplorerMenu returned:`, mapExplorerData ? 'data received' : 'null/undefined');
+        console.log(`🗺️ DEBUG: mapExplorerData keys:`, Object.keys(mapExplorerData || {}));
+        
+        // Don't add ephemeral flag if there are file attachments
+        const responseData = { ...mapExplorerData };
+        if (!mapExplorerData.files || mapExplorerData.files.length === 0) {
+          responseData.flags = InteractionResponseFlags.EPHEMERAL;
+        }
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            ...mapExplorerData,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          data: responseData
         });
         
       } catch (error) {
