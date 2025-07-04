@@ -90,6 +90,82 @@ async function uploadImageToDiscord(guild, imagePath, filename) {
 }
 
 /**
+ * Extract and post individual grid tiles to their corresponding channels
+ * @param {Guild} guild - Discord guild object
+ * @param {string} fullMapPath - Path to the complete map with grid
+ * @param {MapGridSystem} gridSystem - Initialized grid system
+ * @param {Object} channels - Map of coordinates to channel IDs
+ * @param {Array} coordinates - Array of coordinate strings
+ */
+async function postTilesToChannels(guild, fullMapPath, gridSystem, channels, coordinates) {
+  try {
+    console.log(`🖼️ Starting tile extraction and posting for ${coordinates.length} locations...`);
+    
+    const { AttachmentBuilder } = await import('discord.js');
+    
+    for (let i = 0; i < coordinates.length; i++) {
+      const coord = coordinates[i];
+      const channelId = channels[coord];
+      
+      if (!channelId) {
+        console.log(`⚠️ No channel found for coordinate ${coord}`);
+        continue;
+      }
+      
+      try {
+        // Get the channel
+        const channel = await guild.channels.fetch(channelId);
+        if (!channel) {
+          console.log(`⚠️ Could not fetch channel for ${coord}`);
+          continue;
+        }
+        
+        // Parse coordinate and get pixel boundaries
+        const pos = gridSystem.parseCoordinate(coord);
+        const cellCoords = gridSystem.getCellPixelCoordinatesWithBorder(pos.x, pos.y);
+        
+        // Extract the tile using Sharp
+        const tileBuffer = await sharp(fullMapPath)
+          .extract({
+            left: Math.round(cellCoords.x),
+            top: Math.round(cellCoords.y),
+            width: Math.round(cellCoords.width),
+            height: Math.round(cellCoords.height)
+          })
+          .png()
+          .toBuffer();
+        
+        // Create attachment and post to channel
+        const attachment = new AttachmentBuilder(tileBuffer, { 
+          name: `${coord.toLowerCase()}_tile.png` 
+        });
+        
+        await channel.send({
+          content: `📍 **Location ${coord}**\n\nThis is your area of the map! Use buttons and commands to explore this location.`,
+          files: [attachment]
+        });
+        
+        console.log(`✅ Posted tile for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
+        
+        // Rate limiting: pause every 5 posts
+        if ((i + 1) % 5 === 0 && i < coordinates.length - 1) {
+          console.log(`⏳ Rate limiting: pausing after ${i + 1} tile posts...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+      } catch (error) {
+        console.error(`❌ Failed to post tile for ${coord}:`, error);
+      }
+    }
+    
+    console.log(`🎉 Completed tile posting for all ${coordinates.length} locations!`);
+    
+  } catch (error) {
+    console.error('❌ Error in tile posting process:', error);
+  }
+}
+
+/**
  * Creates a map grid for the guild
  * @param {Guild} guild - Discord guild object
  * @param {string} userId - User ID creating the map
@@ -309,6 +385,12 @@ async function createMapGrid(guild, userId) {
     await saveSafariContent(safariData);
     
     progressMessages.push('✅ Map data structure created and saved');
+    
+    // Post individual tiles to each channel as proof of concept
+    progressMessages.push('🖼️ Posting individual map tiles to channels...');
+    await postTilesToChannels(guild, outputPath, gridSystem, channels, coordinates);
+    progressMessages.push('✅ Individual tiles posted to all channels');
+    
     progressMessages.push(`🎉 **Map creation complete!**`);
     progressMessages.push(`• Grid Size: ${gridSize}x${gridSize}`);
     progressMessages.push(`• Total Locations: ${coordinates.length}`);
