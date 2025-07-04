@@ -90,16 +90,16 @@ async function uploadImageToDiscord(guild, imagePath, filename) {
 }
 
 /**
- * Extract and post individual grid tiles to their corresponding channels
+ * Create fog of war maps and post to their corresponding channels
  * @param {Guild} guild - Discord guild object
  * @param {string} fullMapPath - Path to the complete map with grid
  * @param {MapGridSystem} gridSystem - Initialized grid system
  * @param {Object} channels - Map of coordinates to channel IDs
  * @param {Array} coordinates - Array of coordinate strings
  */
-async function postTilesToChannels(guild, fullMapPath, gridSystem, channels, coordinates) {
+async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channels, coordinates) {
   try {
-    console.log(`🖼️ Starting tile extraction and posting for ${coordinates.length} locations...`);
+    console.log(`🌫️ Starting fog of war map generation for ${coordinates.length} locations...`);
     
     const { AttachmentBuilder } = await import('discord.js');
     
@@ -120,48 +120,91 @@ async function postTilesToChannels(guild, fullMapPath, gridSystem, channels, coo
           continue;
         }
         
-        // Parse coordinate and get pixel boundaries
-        const pos = gridSystem.parseCoordinate(coord);
-        const cellCoords = gridSystem.getCellPixelCoordinatesWithBorder(pos.x, pos.y);
-        
-        // Extract the tile using Sharp
-        const tileBuffer = await sharp(fullMapPath)
-          .extract({
-            left: Math.round(cellCoords.x),
-            top: Math.round(cellCoords.y),
-            width: Math.round(cellCoords.width),
-            height: Math.round(cellCoords.height)
-          })
-          .png()
-          .toBuffer();
+        // Create fog of war map for this specific coordinate
+        const fogOfWarBuffer = await createFogOfWarMap(fullMapPath, gridSystem, coord, coordinates);
         
         // Create attachment and post to channel
-        const attachment = new AttachmentBuilder(tileBuffer, { 
-          name: `${coord.toLowerCase()}_tile.png` 
+        const attachment = new AttachmentBuilder(fogOfWarBuffer, { 
+          name: `${coord.toLowerCase()}_fogmap.png` 
         });
         
         await channel.send({
-          content: `📍 **Location ${coord}**\n\nThis is your area of the map! Use buttons and commands to explore this location.`,
+          content: `🗺️ **Location ${coord} - Your View**\n\nThis is the map from your perspective. Your area is clearly visible, while other areas are shrouded in fog of war.`,
           files: [attachment]
         });
         
-        console.log(`✅ Posted tile for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
+        console.log(`✅ Posted fog of war map for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
         
         // Rate limiting: pause every 5 posts
         if ((i + 1) % 5 === 0 && i < coordinates.length - 1) {
-          console.log(`⏳ Rate limiting: pausing after ${i + 1} tile posts...`);
+          console.log(`⏳ Rate limiting: pausing after ${i + 1} fog maps...`);
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
         
       } catch (error) {
-        console.error(`❌ Failed to post tile for ${coord}:`, error);
+        console.error(`❌ Failed to post fog map for ${coord}:`, error);
       }
     }
     
-    console.log(`🎉 Completed tile posting for all ${coordinates.length} locations!`);
+    console.log(`🎉 Completed fog of war map posting for all ${coordinates.length} locations!`);
     
   } catch (error) {
-    console.error('❌ Error in tile posting process:', error);
+    console.error('❌ Error in fog of war process:', error);
+  }
+}
+
+/**
+ * Create a fog of war version of the map with only one cell visible
+ * @param {string} fullMapPath - Path to the complete map with grid
+ * @param {MapGridSystem} gridSystem - Initialized grid system
+ * @param {string} visibleCoord - The coordinate that should remain visible
+ * @param {Array} allCoordinates - Array of all coordinate strings
+ * @returns {Buffer} Image buffer of the fog of war map
+ */
+async function createFogOfWarMap(fullMapPath, gridSystem, visibleCoord, allCoordinates) {
+  try {
+    // Start with the full map
+    let mapImage = sharp(fullMapPath);
+    
+    // Create a composite array for all the fog overlays
+    const fogOverlays = [];
+    
+    for (const coord of allCoordinates) {
+      // Skip the visible coordinate
+      if (coord === visibleCoord) continue;
+      
+      // Parse coordinate and get pixel boundaries
+      const pos = gridSystem.parseCoordinate(coord);
+      const cellCoords = gridSystem.getCellPixelCoordinatesWithBorder(pos.x, pos.y);
+      
+      // Create a semi-transparent black overlay for this cell
+      const fogOverlay = await sharp({
+        create: {
+          width: Math.round(cellCoords.width),
+          height: Math.round(cellCoords.height),
+          channels: 4,
+          background: { r: 0, g: 0, b: 0, alpha: 0.7 } // 70% transparent black
+        }
+      }).png().toBuffer();
+      
+      fogOverlays.push({
+        input: fogOverlay,
+        top: Math.round(cellCoords.y),
+        left: Math.round(cellCoords.x)
+      });
+    }
+    
+    // Apply all fog overlays at once
+    const foggedMapBuffer = await mapImage
+      .composite(fogOverlays)
+      .png()
+      .toBuffer();
+    
+    return foggedMapBuffer;
+    
+  } catch (error) {
+    console.error(`❌ Error creating fog of war map for ${visibleCoord}:`, error);
+    throw error;
   }
 }
 
@@ -386,10 +429,10 @@ async function createMapGrid(guild, userId) {
     
     progressMessages.push('✅ Map data structure created and saved');
     
-    // Post individual tiles to each channel as proof of concept
-    progressMessages.push('🖼️ Posting individual map tiles to channels...');
-    await postTilesToChannels(guild, outputPath, gridSystem, channels, coordinates);
-    progressMessages.push('✅ Individual tiles posted to all channels');
+    // Post fog of war maps to each channel
+    progressMessages.push('🌫️ Generating fog of war maps for each location...');
+    await postFogOfWarMapsToChannels(guild, outputPath, gridSystem, channels, coordinates);
+    progressMessages.push('✅ Fog of war maps posted to all channels');
     
     progressMessages.push(`🎉 **Map creation complete!**`);
     progressMessages.push(`• Grid Size: ${gridSize}x${gridSize}`);
