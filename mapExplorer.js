@@ -152,7 +152,8 @@ async function createMapGrid(guild, userId) {
       labelStyle: 'standard'
     });
     
-    // Generate grid overlay as SVG buffer and composite with base image
+    // Initialize grid system and generate SVG overlay
+    await gridSystem.initialize();
     const svg = gridSystem.generateGridSVG();
     const svgBuffer = Buffer.from(svg);
     
