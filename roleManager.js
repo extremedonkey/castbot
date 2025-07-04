@@ -41,7 +41,7 @@ const PRONOUN_COLORS = {
     'They/He': 0x00FF00,     // 💚 Green
     'She/They': 0x87CEEB,    // 🩵 Light Blue
     'Ask': 0xFFFF00,         // 💛 Yellow
-    'Any': 0xFFFFFF,         // 🤍 White
+    'Any': 0xA52A2A,         // 🤎 Brown
     'All Pronouns': 0xFFFFFF // 🤍 White (same as Any)
 };
 
@@ -973,8 +973,23 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
             
             const roleName = discordRole.name;
             
-            // Find matching heart emoji based on role name
-            const emoji = PRONOUN_HEART_EMOJIS[roleName] || null;
+            // Find matching heart emoji based on role name using fuzzy matching
+            let emoji = null;
+            
+            // First try exact match
+            if (PRONOUN_HEART_EMOJIS[roleName]) {
+                emoji = PRONOUN_HEART_EMOJIS[roleName];
+            } else {
+                // Use fuzzy matching to find the standard pronoun name
+                for (const [standardName, patterns] of Object.entries(PRONOUN_PATTERNS)) {
+                    const roleNameLower = roleName.toLowerCase().trim();
+                    if (patterns.some(pattern => pattern.toLowerCase() === roleNameLower)) {
+                        emoji = PRONOUN_HEART_EMOJIS[standardName];
+                        console.log(`🎯 DEBUG: Mapped existing role "${roleName}" to standard "${standardName}" with emoji ${emoji}`);
+                        break;
+                    }
+                }
+            }
             
             return {
                 id: roleId,
