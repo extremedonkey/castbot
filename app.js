@@ -921,7 +921,7 @@ async function createSafariMenu(guildId, userId, member) {
  * @returns {Object} Map explorer menu in Components V2 format
  */
 async function createMapExplorerMenu(guildId) {
-  // Load Safari content data
+  // Load Safari content data using dynamic import
   const { loadSafariContent } = await import('./safariManager.js');
   const safariData = await loadSafariContent();
   
