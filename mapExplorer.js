@@ -157,8 +157,12 @@ async function createMapGrid(guild, userId) {
     const svg = gridSystem.generateGridSVG();
     const svgBuffer = Buffer.from(svg);
     
-    // Composite the SVG grid onto the base map image
+    // Resize the base image to match SVG dimensions (including border)
     await sharp(mapPath)
+      .resize(gridSystem.totalWidth, gridSystem.totalHeight, {
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      })
       .composite([{
         input: svgBuffer,
         top: 0,
