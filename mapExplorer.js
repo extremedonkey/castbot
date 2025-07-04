@@ -510,9 +510,9 @@ async function createMapExplorerMenu(guildId) {
       components: containerComponents
     };
     
-    // Return Components V2 format with ephemeral flag
+    // Return Components V2 format - remove ephemeral flag for troubleshooting
     return {
-      flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 flag + EPHEMERAL flag
+      flags: 32768, // IS_COMPONENTS_V2 flag only (1 << 15)
       components: [mapExplorerContainer]
     };
     
