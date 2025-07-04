@@ -128,60 +128,35 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
           name: `${coord.toLowerCase()}_fogmap.png` 
         });
         
-        // Send message with Components V2 container
+        // Send fog of war map to channel
         const mainMessage = await channel.send({
-          files: [attachment],
-          flags: 32768, // IS_COMPONENTS_V2 flag (1 << 15)
-          components: [{
-            type: 17, // Container component
-            accent_color: 0x5865F2, // Discord blurple
-            components: [
-              {
-                type: 10, // Text Display
-                content: `# 🗺️ Location ${coord} - Your View\n\nThis is the map from your perspective. Your area is clearly visible, while other areas are shrouded in fog of war.`
-              },
-              {
-                type: 14 // Thin separator
-              },
-              {
-                type: 8, // Media Gallery
-                components: [{
-                  type: 9, // Media
-                  media: {
-                    type: 0, // Image
-                    attachment: 0 // Reference first attachment
-                  }
-                }]
-              }
-            ]
-          }]
+          content: `# 🗺️ Location ${coord} - Your View\n\nThis is the map from your perspective. Your area is clearly visible, while other areas are shrouded in fog of war.`,
+          files: [attachment]
         });
         
-        // Send ephemeral follow-up message with action buttons
-        const { InteractionResponseType, InteractionResponseFlags } = await import('discord-interactions');
+        // Send ephemeral follow-up message with action buttons using Discord.js builders
+        const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
         
-        // Create follow-up with edit/view buttons
+        // Create buttons using Discord.js builders
+        const editButton = new ButtonBuilder()
+          .setCustomId(`map_grid_edit_${coord}`)
+          .setLabel('Edit Grid Content')
+          .setStyle(ButtonStyle.Primary)
+          .setEmoji('✏️');
+          
+        const viewButton = new ButtonBuilder()
+          .setCustomId(`map_grid_view_${coord}`)
+          .setLabel('Display Grid Content')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('👁️');
+        
+        const actionRow = new ActionRowBuilder()
+          .addComponents(editButton, viewButton);
+        
+        // Send the management buttons
         await channel.send({
           content: `**Map Management for ${coord}**`,
-          components: [{
-            type: 1, // Action Row
-            components: [
-              {
-                type: 2, // Button
-                custom_id: `map_grid_edit_${coord}`,
-                label: 'Edit Grid Content',
-                style: 1, // Primary
-                emoji: { name: '✏️' }
-              },
-              {
-                type: 2, // Button
-                custom_id: `map_grid_view_${coord}`,
-                label: 'Display Grid Content',
-                style: 2, // Secondary  
-                emoji: { name: '👁️' }
-              }
-            ]
-          }]
+          components: [actionRow.toJSON()]
         });
         
         console.log(`✅ Posted fog of war map for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
