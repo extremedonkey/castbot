@@ -99,6 +99,11 @@ import {
   createRoundResultsV2 
 } from './safariManager.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
+import { 
+  createMapGrid,
+  deleteMapGrid,
+  createMapExplorerMenu 
+} from './mapExplorer.js';
 
 // Helper function to refresh question management UI
 async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
