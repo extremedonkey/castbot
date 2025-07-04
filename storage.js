@@ -6,7 +6,30 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const STORAGE_FILE = path.join(__dirname, 'playerData.json');
 
+// Request-scoped cache for player data
+const requestCache = new Map();
+let cacheHits = 0;
+let cacheMisses = 0;
+
+// Clear the request cache (called at start of each Discord interaction)
+export function clearRequestCache() {
+    if (requestCache.size > 0) {
+        console.log(`🗑️ Clearing request cache (${requestCache.size} entries, ${cacheHits} hits, ${cacheMisses} misses)`);
+    }
+    requestCache.clear();
+    cacheHits = 0;
+    cacheMisses = 0;
+}
+
 async function ensureStorageFile() {
+    // Check cache for full data
+    const cacheKey = 'playerData_all';
+    if (requestCache.has(cacheKey)) {
+        cacheHits++;
+        return requestCache.get(cacheKey);
+    }
+    
+    cacheMisses++;
     try {
         let data;
         const exists = await fs.access(STORAGE_FILE).then(() => true).catch(() => false);
@@ -45,6 +68,9 @@ async function ensureStorageFile() {
                 "/* Server ID */": null
             };
         }
+        
+        // Cache the full data before returning
+        requestCache.set(cacheKey, data);
         return data;
     } catch (error) {
         console.error('Error in ensureStorageFile:', error);
@@ -53,8 +79,20 @@ async function ensureStorageFile() {
 }
 
 export async function loadPlayerData(guildId) {
+    const cacheKey = `playerData_${guildId || 'all'}`;
+    
+    // Check cache first
+    if (requestCache.has(cacheKey)) {
+        cacheHits++;
+        return requestCache.get(cacheKey);
+    }
+    
+    cacheMisses++;
     const data = await ensureStorageFile();
+    
     if (!guildId) {
+        // Cache the full data
+        requestCache.set(cacheKey, data);
         return data;
     }
     
@@ -72,11 +110,15 @@ export async function loadPlayerData(guildId) {
         };
     }
     
+    // Cache the guild-specific data
+    requestCache.set(cacheKey, data[guildId]);
     return data[guildId];
 }
 
 export async function savePlayerData(data) {
     await fs.writeFile(STORAGE_FILE, JSON.stringify(data, null, 2));
+    // Clear cache after save to ensure fresh data on next read
+    requestCache.clear();
 }
 
 export async function updatePlayer(guildId, playerId, data) {

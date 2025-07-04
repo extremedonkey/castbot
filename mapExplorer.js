@@ -7,44 +7,12 @@ import { dirname } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const SAFARI_CONTENT_FILE = path.join(__dirname, 'safariContent.json');
 
 // Import MapGridSystem from scripts
 import MapGridSystem from './scripts/map-tests/mapGridSystem.js';
 
-/**
- * Load Safari content data
- */
-async function loadSafariContent() {
-  try {
-    const exists = await fs.access(SAFARI_CONTENT_FILE).then(() => true).catch(() => false);
-    if (!exists) {
-      // Create initial structure if file doesn't exist
-      const initialData = {};
-      await fs.writeFile(SAFARI_CONTENT_FILE, JSON.stringify(initialData, null, 2));
-      return initialData;
-    }
-    
-    const data = JSON.parse(await fs.readFile(SAFARI_CONTENT_FILE, 'utf8'));
-    return data;
-  } catch (error) {
-    console.error('Error loading safari content:', error);
-    throw error;
-  }
-}
-
-/**
- * Save Safari content data
- */
-async function saveSafariContent(data) {
-  try {
-    await fs.writeFile(SAFARI_CONTENT_FILE, JSON.stringify(data, null, 2));
-    console.log('✅ Safari content saved successfully');
-  } catch (error) {
-    console.error('Error saving safari content:', error);
-    throw error;
-  }
-}
+// Import loadSafariContent and saveSafariContent from safariManager to benefit from caching
+import { loadSafariContent, saveSafariContent } from './safariManager.js';
 
 /**
  * Upload image to Discord and get CDN URL by sending it to a channel

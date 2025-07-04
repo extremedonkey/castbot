@@ -1595,6 +1595,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     console.log("Got headers:", JSON.stringify(req.headers, null, 2));
     console.log("Got body:", req.body);
     
+    // Clear request-scoped caches at the start of each interaction
+    const { clearRequestCache } = await import('./storage.js');
+    const { clearSafariCache } = await import('./safariManager.js');
+    clearRequestCache();
+    clearSafariCache();
+    
   // Interaction type and data
   const { type, id, data, guild_id } = req.body;
 

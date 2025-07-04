@@ -20,6 +20,23 @@ const SAFARI_CONTENT_FILE = path.join(__dirname, 'safariContent.json');
 // Player name cache to ensure consistency within the same request
 const playerNameCache = new Map();
 
+// Request-scoped cache for safari content
+const safariRequestCache = new Map();
+let safariCacheHits = 0;
+let safariCacheMisses = 0;
+
+/**
+ * Clear the safari request cache (called at start of each Discord interaction)
+ */
+export function clearSafariCache() {
+    if (safariRequestCache.size > 0) {
+        console.log(`🗑️ Clearing Safari cache (${safariRequestCache.size} entries, ${safariCacheHits} hits, ${safariCacheMisses} misses)`);
+    }
+    safariRequestCache.clear();
+    safariCacheHits = 0;
+    safariCacheMisses = 0;
+}
+
 /**
  * Clear the player name cache (call at the start of new operations)
  */
@@ -195,10 +212,23 @@ async function ensureSafariContentFile() {
 }
 
 /**
- * Load safari content data
+ * Load safari content data with request-scoped caching
  */
 async function loadSafariContent() {
-    return await ensureSafariContentFile();
+    const cacheKey = 'safariContent_all';
+    
+    // Check cache first
+    if (safariRequestCache.has(cacheKey)) {
+        safariCacheHits++;
+        return safariRequestCache.get(cacheKey);
+    }
+    
+    safariCacheMisses++;
+    const data = await ensureSafariContentFile();
+    
+    // Cache the data for this request
+    safariRequestCache.set(cacheKey, data);
+    return data;
 }
 
 /**
@@ -208,6 +238,8 @@ async function saveSafariContent(data) {
     try {
         await fs.writeFile(SAFARI_CONTENT_FILE, JSON.stringify(data, null, 2));
         console.log('✅ Safari content saved successfully');
+        // Clear cache after save to ensure fresh data on next read
+        safariRequestCache.clear();
     } catch (error) {
         console.error('Error saving safari content:', error);
         throw error;
