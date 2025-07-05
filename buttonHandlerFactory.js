@@ -233,6 +233,13 @@ export const BUTTON_REGISTRY = {
   },
 
   // Safari Item Management Submenu
+  'safari_item_manage_existing': {
+    label: 'Manage Items',
+    description: 'Edit existing Safari items',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'safari_items'
+  },
   'safari_item_edit_select': {
     label: 'Select Item',
     description: 'Select item to edit',
@@ -244,6 +251,13 @@ export const BUTTON_REGISTRY = {
     label: 'Set Player Quantity',
     description: 'Set item quantity for specific player',
     emoji: '📊',
+    style: 'Secondary',
+    category: 'safari_items'
+  },
+  'safari_item_qty_user_select': {
+    label: 'User Select for Item Quantity',
+    description: 'User selection for item quantity management',
+    emoji: '👤',
     style: 'Secondary',
     category: 'safari_items'
   },
