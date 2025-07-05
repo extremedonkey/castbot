@@ -6451,203 +6451,134 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_manage_currency') {
-      // Handle Manage Currency - MVP1 placeholder
-      try {
-        const member = req.body.member;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage currency.')) return;
-
-        console.log('💰 DEBUG: Manage Currency clicked');
-        
-        const guildId = req.body.guild_id;
-        
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
-        const playerData = await loadPlayerData();
-        
-        // Get all players with safari currency data
-        const guildPlayers = playerData[guildId]?.players || {};
-        const playersWithCurrency = Object.entries(guildPlayers)
-          .filter(([userId, player]) => player.safari?.currency !== undefined)
-          .sort(([, a], [, b]) => (b.safari?.currency || 0) - (a.safari?.currency || 0)); // Sort by currency desc
-        
-        // Create currency management buttons
-        const managementButtons = [
-          new ButtonBuilder()
-            .setCustomId('safari_currency_view_all')
-            .setLabel('View All Balances')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('👥'),
-          new ButtonBuilder()
-            .setCustomId('safari_currency_set_player')
-            .setLabel('Set Player Currency')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('💰'),
-          new ButtonBuilder()
-            .setCustomId('safari_currency_reset_all')
-            .setLabel('Reset All Currency')
-            .setStyle(ButtonStyle.Danger)
-            .setEmoji('🗑️')
-        ];
-        
-        const managementRow = new ActionRowBuilder().addComponents(managementButtons);
-        
-        // Create back button
-        const backButton = new ButtonBuilder()
-          .setCustomId('prod_safari_menu')
-          .setLabel('⬅ Back to Safari')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        
-        // Create summary content
-        const totalPlayers = playersWithCurrency.length;
-        const totalCurrency = playersWithCurrency.reduce((sum, [, player]) => sum + (player.safari?.currency || 0), 0);
-        const averageCurrency = totalPlayers > 0 ? Math.round(totalCurrency / totalPlayers) : 0;
-        
-        // Show top players (limit to 5)
-        let topPlayersText = '';
-        if (totalPlayers > 0) {
-          const topPlayers = playersWithCurrency.slice(0, 5);
-          topPlayersText = topPlayers.map(([userId, player], index) => {
-            const rank = index + 1;
-            const currency = player.safari?.currency || 0;
-            return `**${rank}.** <@${userId}> - ${currency} coins`;
-          }).join('\n');
-        } else {
-          topPlayersText = '*No players have currency yet.*';
-        }
-        
-        // Create response with Components V2
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## 💰 Manage Currency\n\nCurrency system overview and management tools.`
-          },
-          {
-            type: 10, // Text Display component
-            content: `> **Players with Currency:** ${totalPlayers}\n> **Total Currency:** ${totalCurrency} coins\n> **Average per Player:** ${averageCurrency} coins`
-          },
-          {
-            type: 10, // Text Display component
-            content: `**🏆 Top Players:**\n${topPlayersText}`
-          },
-          {
-            type: 14 // Separator
-          },
-          managementRow.toJSON(), // Currency management buttons
-          {
-            type: 14 // Separator
-          },
-          backRow.toJSON() // Back button
-        ];
-        
-        const container = {
-          type: 17, // Container component
-          accent_color: 0xf1c40f, // Gold accent color for currency theme
-          components: containerComponents
-        };
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL flags
-            components: [container]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_manage_currency:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error managing currency.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id === 'safari_round_results') {
-      // Handle Round Results - Player-Centric Card Display with Components V2
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        const channelId = req.body.channel_id;
-        const token = req.body.token;
-        const applicationId = req.body.application_id || process.env.APP_ID;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to process round results.')) return;
-        
-        console.log(`🎨 DEBUG: Processing round results for guild ${guildId} in channel ${channelId}`);
-        
-        // Defer response immediately to prevent 3-second timeout with many players
-        await res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-        });
-        
-        // Import Safari manager functions
-        const { processRoundResults } = await import('./safariManager.js');
-        
-        // Process round results using modern display
-        const roundData = await processRoundResults(guildId, channelId, client);
-        
-        // Send the modern display via webhook endpoint since we deferred the response
-        const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
-        
-        const webhookPayload = {
-          flags: roundData.data.flags || 0
-        };
-        
-        // Add content if present (for 0 eligible players case)
-        if (roundData.data.content) {
-          webhookPayload.content = roundData.data.content;
-        }
-        
-        // Add components if present (for normal round results)
-        if (roundData.data.components) {
-          webhookPayload.components = roundData.data.components;
-        }
-        
-        console.log(`🎨 DEBUG: Sending modern display via webhook with ${roundData.data.components?.length || 0} components${roundData.data.content ? ' and content message' : ''}`);
-        
-        const webhookResponse = await fetch(webhookUrl, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(webhookPayload)
-        });
-        
-        if (!webhookResponse.ok) {
-          console.error('❌ DEBUG: Webhook failed:', await webhookResponse.text());
-        } else {
-          console.log('✅ DEBUG: Round results sent successfully via webhook');
-        }
-        
-      } catch (error) {
-        console.error('Error in safari_round_results:', error);
-        
-        // If we already deferred, send error via webhook
-        try {
-          const token = req.body.token;
-          const applicationId = req.body.application_id || process.env.APP_ID;
-          const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
+      // Handle Manage Currency - MVP1 placeholder (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_manage_currency',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ephemeral: true,
+        handler: async (context) => {
+          console.log('💰 DEBUG: Manage Currency clicked');
           
-          await fetch(webhookUrl, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json'
+          // Import Safari manager functions
+          const { loadSafariContent } = await import('./safariManager.js');
+          const playerData = await loadPlayerData();
+          
+          // Get all players with safari currency data
+          const guildPlayers = playerData[context.guildId]?.players || {};
+          const playersWithCurrency = Object.entries(guildPlayers)
+            .filter(([userId, player]) => player.safari?.currency !== undefined)
+            .sort(([, a], [, b]) => (b.safari?.currency || 0) - (a.safari?.currency || 0)); // Sort by currency desc
+          
+          // Create currency management buttons
+          const managementButtons = [
+            new ButtonBuilder()
+              .setCustomId('safari_currency_view_all')
+              .setLabel('View All Balances')
+              .setStyle(ButtonStyle.Primary)
+              .setEmoji('👥'),
+            new ButtonBuilder()
+              .setCustomId('safari_currency_set_player')
+              .setLabel('Set Player Currency')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('💰'),
+            new ButtonBuilder()
+              .setCustomId('safari_currency_reset_all')
+              .setLabel('Reset All Currency')
+              .setStyle(ButtonStyle.Danger)
+              .setEmoji('🗑️')
+          ];
+          
+          const managementRow = new ActionRowBuilder().addComponents(managementButtons);
+          
+          // Create back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('prod_safari_menu')
+            .setLabel('⬅ Back to Safari')
+            .setStyle(ButtonStyle.Secondary);
+          
+          const backRow = new ActionRowBuilder().addComponents(backButton);
+          
+          // Create summary content
+          const totalPlayers = playersWithCurrency.length;
+          const totalCurrency = playersWithCurrency.reduce((sum, [, player]) => sum + (player.safari?.currency || 0), 0);
+          const averageCurrency = totalPlayers > 0 ? Math.round(totalCurrency / totalPlayers) : 0;
+          
+          // Show top players (limit to 5)
+          let topPlayersText = '';
+          if (totalPlayers > 0) {
+            const topPlayers = playersWithCurrency.slice(0, 5);
+            topPlayersText = topPlayers.map(([userId, player], index) => {
+              const rank = index + 1;
+              const currency = player.safari?.currency || 0;
+              return `**${rank}.** <@${userId}> - ${currency} coins`;
+            }).join('\n');
+          } else {
+            topPlayersText = '*No players have currency yet.*';
+          }
+          
+          // Create response with Components V2
+          const containerComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## 💰 Manage Currency\n\nCurrency system overview and management tools.`
             },
-            body: JSON.stringify({
-              content: '❌ Error processing round results. Please try again.',
-              flags: 64 // EPHEMERAL
-            })
-          });
-        } catch (webhookError) {
-          console.error('Error sending webhook error message:', webhookError);
+            {
+              type: 10, // Text Display component
+              content: `> **Players with Currency:** ${totalPlayers}\n> **Total Currency:** ${totalCurrency} coins\n> **Average per Player:** ${averageCurrency} coins`
+            },
+            {
+              type: 10, // Text Display component
+              content: `**🏆 Top Players:**\n${topPlayersText}`
+            },
+            {
+              type: 14 // Separator
+            },
+            managementRow.toJSON(), // Currency management buttons
+            {
+              type: 14 // Separator
+            },
+            backRow.toJSON() // Back button
+          ];
+          
+          const container = {
+            type: 17, // Container component
+            accent_color: 0xf1c40f, // Gold accent color for currency theme
+            components: containerComponents
+          };
+          
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag (ephemeral handled by factory)
+            components: [container]
+          };
         }
-      }
+      })(req, res, client);
+    } else if (custom_id === 'safari_round_results') {
+      // Handle Round Results - Player-Centric Card Display with Components V2 (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_round_results',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        handler: async (context) => {
+          console.log(`🎨 DEBUG: Processing round results for guild ${context.guildId} in channel ${context.channelId}`);
+          
+          // Import Safari manager functions
+          const { processRoundResults } = await import('./safariManager.js');
+          
+          // Process round results using modern display
+          const roundData = await processRoundResults(context.guildId, context.channelId, client);
+          
+          console.log(`🎨 DEBUG: Sending modern display with ${roundData.data.components?.length || 0} components${roundData.data.content ? ' and content message' : ''}`);
+          
+          // Return the round data - factory will handle webhook followup
+          return {
+            flags: roundData.data.flags || 0,
+            content: roundData.data.content,
+            components: roundData.data.components
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_confirm_reset_game') {
       // Handle game reset confirmation
       try {
@@ -7269,129 +7200,111 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_manage_stores') {
-      // MVP2: Store management interface with full functionality
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage stores.')) return;
-        
-        console.log(`🏪 DEBUG: Opening store management interface`);
-        
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const stores = safariData[guildId]?.stores || {};
-        const items = safariData[guildId]?.items || {};
-        
-        // Create store management buttons (Row 1: Core Functions)
-        const managementButtonsRow1 = [
-          new ButtonBuilder()
-            .setCustomId('safari_store_create')
-            .setLabel('Create New Store')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('🏪'),
-          new ButtonBuilder()
-            .setCustomId('safari_store_manage_items')
-            .setLabel('Manage Store Items')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('📦'),
-          new ButtonBuilder()
-            .setCustomId('safari_store_list')
-            .setLabel('View All Stores')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('📋')
-        ];
-        
-        // Row 2: No longer needed - all buttons moved to row 1
-        const managementButtonsRow2 = [];
-        
-        const managementRow1 = new ActionRowBuilder().addComponents(managementButtonsRow1);
-        // Row 2 removed - all buttons now in row 1
-        
-        // Create back button
-        const backButton = new ButtonBuilder()
-          .setCustomId('prod_safari_menu')
-          .setLabel('⬅ Back to Safari')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        
-        // Create store summary
-        const storeCount = Object.keys(stores).length;
-        const itemCount = Object.keys(items).length;
-        let totalSales = 0;
-        
-        Object.values(stores).forEach(store => {
-          totalSales += store.metadata?.totalSales || 0;
-        });
-        
-        // Show overview of existing stores
-        let storesOverview = '';
-        if (storeCount === 0) {
-          storesOverview = '*No stores created yet.*';
-        } else {
-          const storeList = Object.values(stores).slice(0, 5); // Show first 5
-          storesOverview = storeList.map(store => {
-            const itemsInStore = store.items?.length || 0;
-            const sales = store.metadata?.totalSales || 0;
-            return `**${store.emoji || '🏪'} ${store.name}**\n└ ${itemsInStore} items • ${sales} sales`;
-          }).join('\n\n');
+      // MVP2: Store management interface with full functionality (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_manage_stores',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🏪 DEBUG: Opening store management interface`);
           
-          if (storeCount > 5) {
-            storesOverview += `\n\n*...and ${storeCount - 5} more stores*`;
+          // Import Safari manager functions
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const stores = safariData[context.guildId]?.stores || {};
+          const items = safariData[context.guildId]?.items || {};
+          
+          // Create store management buttons (Row 1: Core Functions)
+          const managementButtonsRow1 = [
+            new ButtonBuilder()
+              .setCustomId('safari_store_create')
+              .setLabel('Create New Store')
+              .setStyle(ButtonStyle.Primary)
+              .setEmoji('🏪'),
+            new ButtonBuilder()
+              .setCustomId('safari_store_manage_items')
+              .setLabel('Manage Store Items')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('📦'),
+            new ButtonBuilder()
+              .setCustomId('safari_store_list')
+              .setLabel('View All Stores')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('📋')
+          ];
+          
+          const managementRow1 = new ActionRowBuilder().addComponents(managementButtonsRow1);
+          
+          // Create back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('prod_safari_menu')
+            .setLabel('⬅ Back to Safari')
+            .setStyle(ButtonStyle.Secondary);
+          
+          const backRow = new ActionRowBuilder().addComponents(backButton);
+          
+          // Create store summary
+          const storeCount = Object.keys(stores).length;
+          const itemCount = Object.keys(items).length;
+          let totalSales = 0;
+          
+          Object.values(stores).forEach(store => {
+            totalSales += store.metadata?.totalSales || 0;
+          });
+          
+          // Show overview of existing stores
+          let storesOverview = '';
+          if (storeCount === 0) {
+            storesOverview = '*No stores created yet.*';
+          } else {
+            const storeList = Object.values(stores).slice(0, 5); // Show first 5
+            storesOverview = storeList.map(store => {
+              const itemsInStore = store.items?.length || 0;
+              const sales = store.metadata?.totalSales || 0;
+              return `**${store.emoji || '🏪'} ${store.name}**\n└ ${itemsInStore} items • ${sales} sales`;
+            }).join('\n\n');
+            
+            if (storeCount > 5) {
+              storesOverview += `\n\n*...and ${storeCount - 5} more stores*`;
+            }
           }
-        }
-        
-        // Create response with Components V2
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## 🏪 Store Management\n\nCreate and manage stores for your Safari adventures.`
-          },
-          {
-            type: 10, // Text Display component
-            content: `> **Total Stores:** ${storeCount}\n> **Available Items:** ${itemCount}\n> **Total Sales:** ${totalSales}`
-          },
-          {
-            type: 10, // Text Display component
-            content: `**📋 Current Stores:**\n${storesOverview}`
-          },
-          {
-            type: 14 // Separator
-          },
-          managementRow1.toJSON(), // Store management buttons
-          {
-            type: 14 // Separator
-          },
-          backRow.toJSON() // Back button
-        ];
-        
-        const container = {
-          type: 17, // Container component
-          accent_color: 0x2ecc71, // Green accent color for store theme
-          components: containerComponents
-        };
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+          
+          // Create response with Components V2
+          const containerComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## 🏪 Store Management\n\nCreate and manage stores for your Safari adventures.`
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **Total Stores:** ${storeCount}\n> **Available Items:** ${itemCount}\n> **Total Sales:** ${totalSales}`
+            },
+            {
+              type: 10, // Text Display component
+              content: `**📋 Current Stores:**\n${storesOverview}`
+            },
+            {
+              type: 14 // Separator
+            },
+            managementRow1.toJSON(), // Store management buttons
+            {
+              type: 14 // Separator
+            },
+            backRow.toJSON() // Back button
+          ];
+          
+          const container = {
+            type: 17, // Container component
+            accent_color: 0x2ecc71, // Green accent color for store theme
+            components: containerComponents
+          };
+          
+          return {
             flags: (1 << 15), // IS_COMPONENTS_V2 flag
             components: [container]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_manage_stores:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading store management.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_manage_items') {
       // Streamlined: Go directly to Item Management section (entity management UI) (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
@@ -9606,70 +9519,56 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_view_player_inventory') {
-      // Handle View Player Inventory - show user select for inventory viewing
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to view player inventories.')) return;
-
-        console.log('👀 DEBUG: View Player Inventory clicked');
-        
-        // Create user selection dropdown
-        const userSelect = new UserSelectMenuBuilder()
-          .setCustomId('safari_inventory_user_select')
-          .setPlaceholder('Choose a player to view their inventory...')
-          .setMinValues(1)
-          .setMaxValues(1);
-        
-        const userSelectRow = new ActionRowBuilder().addComponents(userSelect);
-        
-        // Create cancel button (back to safari menu)
-        const cancelButton = new ButtonBuilder()
-          .setCustomId('prod_safari_menu')
-          .setLabel('⬅ Back to Safari')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
-        
-        // Create response with Components V2
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## 👀 View Player Inventory\n\nSelect a player to view their complete inventory:`
-          },
-          userSelectRow.toJSON(), // User selection dropdown
-          {
-            type: 14 // Separator
-          },
-          cancelRow.toJSON() // Back button
-        ];
-        
-        const container = {
-          type: 17, // Container component
-          accent_color: 0x9b59b6, // Purple accent color for viewing
-          components: containerComponents
-        };
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+      // Handle View Player Inventory - show user select for inventory viewing (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_view_player_inventory',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log('👀 DEBUG: View Player Inventory clicked');
+          
+          // Create user selection dropdown
+          const userSelect = new UserSelectMenuBuilder()
+            .setCustomId('safari_inventory_user_select')
+            .setPlaceholder('Choose a player to view their inventory...')
+            .setMinValues(1)
+            .setMaxValues(1);
+          
+          const userSelectRow = new ActionRowBuilder().addComponents(userSelect);
+          
+          // Create cancel button (back to safari menu)
+          const cancelButton = new ButtonBuilder()
+            .setCustomId('prod_safari_menu')
+            .setLabel('⬅ Back to Safari')
+            .setStyle(ButtonStyle.Secondary);
+          
+          const cancelRow = new ActionRowBuilder().addComponents(cancelButton);
+          
+          // Create response with Components V2
+          const containerComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## 👀 View Player Inventory\n\nSelect a player to view their complete inventory:`
+            },
+            userSelectRow.toJSON(), // User selection dropdown
+            {
+              type: 14 // Separator
+            },
+            cancelRow.toJSON() // Back button
+          ];
+          
+          const container = {
+            type: 17, // Container component
+            accent_color: 0x9b59b6, // Purple accent color for viewing
+            components: containerComponents
+          };
+          
+          return {
             flags: (1 << 15), // IS_COMPONENTS_V2 flag
             components: [container]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in view player inventory:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error viewing player inventory.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_item_player_qty_')) {
       // Handle Player Qty button click - show user select for item quantity management
       try {
@@ -12746,146 +12645,127 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     // ==================== MAP EXPLORER HANDLERS ====================
     
     } else if (custom_id === 'safari_map_explorer') {
-      // Handle Map Explorer menu display - using Components V2 with Container
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        const member = req.body.member;
-        const channelId = req.body.channel_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to access Map Explorer.')) return;
-        
-        console.log(`🗺️ DEBUG: Opening Map Explorer interface for guild ${guildId}`);
-        
-        const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
-        
-        // Load safari content to check for existing maps
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const guildMaps = safariData[guildId]?.maps || {};
-        const activeMapId = guildMaps.active;
-        const hasActiveMap = activeMapId && guildMaps[activeMapId];
-        
-        // Create header text based on map status
-        let headerText;
-        if (hasActiveMap) {
-          const activeMap = guildMaps[activeMapId];
-          headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${activeMap.name || 'Adventure Map'}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Status:** Active ✅`;
-        } else {
-          headerText = `# 🗺️ Map Explorer\n\n**No active map found**\nCreate a new map to begin exploration!`;
-        }
-        
-        // Build container components starting with text display
-        const containerComponents = [
-          {
-            type: 10, // Text Display
-            content: headerText
-          },
-          {
-            type: 14 // Separator
-          }
-        ];
-        
-        // Add Media Gallery if there's an active map with Discord CDN URL
-        if (hasActiveMap && guildMaps[activeMapId].discordImageUrl) {
-          console.log(`🖼️ DEBUG: Adding map image from Discord CDN: ${guildMaps[activeMapId].discordImageUrl}`);
+      // Handle Map Explorer menu display - using Components V2 with Container (MIGRATED TO FACTORY)
+      const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
+      
+      return ButtonHandlerFactory.create({
+        id: 'safari_map_explorer',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: shouldUpdateMessage,
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`🗺️ DEBUG: Opening Map Explorer interface for guild ${context.guildId}`);
           
-          containerComponents.push({
-            type: 12, // Media Gallery
-            items: [
-              {
-                media: {
-                  url: guildMaps[activeMapId].discordImageUrl
+          // Load safari content to check for existing maps
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const guildMaps = safariData[context.guildId]?.maps || {};
+          const activeMapId = guildMaps.active;
+          const hasActiveMap = activeMapId && guildMaps[activeMapId];
+          
+          // Create header text based on map status
+          let headerText;
+          if (hasActiveMap) {
+            const activeMap = guildMaps[activeMapId];
+            headerText = `# 🗺️ Map Explorer\n\n**Active Map:** ${activeMap.name || 'Adventure Map'}\n**Grid Size:** ${activeMap.gridSize}x${activeMap.gridSize}\n**Status:** Active ✅`;
+          } else {
+            headerText = `# 🗺️ Map Explorer\n\n**No active map found**\nCreate a new map to begin exploration!`;
+          }
+          
+          // Build container components starting with text display
+          const containerComponents = [
+            {
+              type: 10, // Text Display
+              content: headerText
+            },
+            {
+              type: 14 // Separator
+            }
+          ];
+          
+          // Add Media Gallery if there's an active map with Discord CDN URL
+          if (hasActiveMap && guildMaps[activeMapId].discordImageUrl) {
+            console.log(`🖼️ DEBUG: Adding map image from Discord CDN: ${guildMaps[activeMapId].discordImageUrl}`);
+            
+            containerComponents.push({
+              type: 12, // Media Gallery
+              items: [
+                {
+                  media: {
+                    url: guildMaps[activeMapId].discordImageUrl
+                  }
                 }
-              }
-            ]
-          });
+              ]
+            });
+            containerComponents.push({
+              type: 14 // Separator
+            });
+          } else if (hasActiveMap && guildMaps[activeMapId].imageFile) {
+            // Fallback for maps without Discord CDN URL
+            console.log(`🖼️ DEBUG: Map exists but no Discord CDN URL: ${guildMaps[activeMapId].imageFile}`);
+            containerComponents.push({
+              type: 10, // Text Display
+              content: `📍 **Map Image:** \`${guildMaps[activeMapId].imageFile.split('/').pop()}\``
+            });
+            containerComponents.push({
+              type: 14 // Separator
+            });
+          }
+          
+          // Create map management buttons
+          const createButton = new ButtonBuilder()
+            .setCustomId('map_create')
+            .setLabel('Create Map')
+            .setEmoji('🏗️');
+          
+          const deleteButton = new ButtonBuilder()
+            .setCustomId('map_delete')
+            .setLabel('Delete Map')
+            .setStyle(ButtonStyle.Danger)
+            .setEmoji('🗑️');
+          
+          // Set states based on whether map exists
+          if (hasActiveMap) {
+            createButton.setStyle(ButtonStyle.Secondary).setDisabled(true);
+            deleteButton.setDisabled(false);
+          } else {
+            createButton.setStyle(ButtonStyle.Primary).setDisabled(false);
+            deleteButton.setDisabled(true);
+          }
+          
+          const mapButtonRow = new ActionRowBuilder().addComponents([createButton, deleteButton]);
+          
+          // Create back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('prod_safari_menu')
+            .setLabel('⬅ Safari Menu')
+            .setStyle(ButtonStyle.Secondary);
+          
+          const backRow = new ActionRowBuilder().addComponents([backButton]);
+          
+          // Add action row components to container
+          containerComponents.push(mapButtonRow.toJSON());
           containerComponents.push({
             type: 14 // Separator
           });
-        } else if (hasActiveMap && guildMaps[activeMapId].imageFile) {
-          // Fallback for maps without Discord CDN URL
-          console.log(`🖼️ DEBUG: Map exists but no Discord CDN URL: ${guildMaps[activeMapId].imageFile}`);
-          containerComponents.push({
-            type: 10, // Text Display
-            content: `📍 **Map Image:** \`${guildMaps[activeMapId].imageFile.split('/').pop()}\``
-          });
-          containerComponents.push({
-            type: 14 // Separator
-          });
-        }
-        
-        // Create map management buttons
-        const createButton = new ButtonBuilder()
-          .setCustomId('map_create')
-          .setLabel('Create Map')
-          .setEmoji('🏗️');
-        
-        const deleteButton = new ButtonBuilder()
-          .setCustomId('map_delete')
-          .setLabel('Delete Map')
-          .setStyle(ButtonStyle.Danger)
-          .setEmoji('🗑️');
-        
-        // Set states based on whether map exists
-        if (hasActiveMap) {
-          createButton.setStyle(ButtonStyle.Secondary).setDisabled(true);
-          deleteButton.setDisabled(false);
-        } else {
-          createButton.setStyle(ButtonStyle.Primary).setDisabled(false);
-          deleteButton.setDisabled(true);
-        }
-        
-        const mapButtonRow = new ActionRowBuilder().addComponents([createButton, deleteButton]);
-        
-        // Create back button
-        const backButton = new ButtonBuilder()
-          .setCustomId('prod_safari_menu')
-          .setLabel('⬅ Safari Menu')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const backRow = new ActionRowBuilder().addComponents([backButton]);
-        
-        // Add action row components to container
-        containerComponents.push(mapButtonRow.toJSON());
-        containerComponents.push({
-          type: 14 // Separator
-        });
-        containerComponents.push(backRow.toJSON());
-        
-        // Create container using Components V2 format
-        const mapExplorerContainer = {
-          type: 17, // Container component
-          accent_color: 0x00AE86, // Teal accent for map theme
-          components: containerComponents
-        };
-        
-        const responseType = shouldUpdateMessage ? 
-          InteractionResponseType.UPDATE_MESSAGE : 
-          InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
-        
-        console.log(`🔍 DEBUG: Using response type: ${responseType === InteractionResponseType.UPDATE_MESSAGE ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'}`);
-        
-        return res.send({
-          type: responseType,
-          data: {
-            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
+          containerComponents.push(backRow.toJSON());
+          
+          // Create container using Components V2 format
+          const mapExplorerContainer = {
+            type: 17, // Container component
+            accent_color: 0x00AE86, // Teal accent for map theme
+            components: containerComponents
+          };
+          
+          console.log(`🔍 DEBUG: Using ${shouldUpdateMessage ? 'UPDATE_MESSAGE' : 'CHANNEL_MESSAGE_WITH_SOURCE'} response type`);
+          
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag (ephemeral handled by factory)
             components: [mapExplorerContainer]
-          }
-        });
-        
-      } catch (error) {
-        console.error('❌ Error in safari_map_explorer handler:', error);
-        console.error('❌ Error stack:', error.stack);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `❌ Error loading Map Explorer interface: ${error.message}`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          };
+        }
+      })(req, res, client);
       
     } else if (custom_id === 'map_create') {
       // Handle Map Creation
