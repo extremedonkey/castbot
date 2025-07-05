@@ -128,6 +128,71 @@ export const BUTTON_REGISTRY = {
     emoji: '🦁',
     style: 'Primary',
     category: 'safari'
+  },
+
+  // Safari Main Menu Buttons
+  'safari_manage_safari_buttons': {
+    label: '📌 Manage Safari Buttons',
+    description: 'Create, edit, view, and post custom Safari buttons',
+    emoji: '📌',
+    style: 'Primary',
+    category: 'safari'
+  },
+  'safari_manage_currency': {
+    label: '💰 Manage Currency',
+    description: 'Safari currency management - view all, set player currency, reset all',
+    emoji: '💰',
+    style: 'Primary',
+    category: 'safari'
+  },
+  'safari_manage_stores': {
+    label: '🏪 Manage Stores',
+    description: 'Safari store management - create, edit, delete stores',
+    emoji: '🏪',
+    style: 'Primary',
+    category: 'safari'
+  },
+  'safari_manage_items': {
+    label: '📦 Manage Items',
+    description: 'Safari item management - create, edit, manage items',
+    emoji: '📦',
+    style: 'Primary',
+    category: 'safari'
+  },
+  'safari_customize_terms': {
+    label: '⚙️ Customize Safari',
+    description: 'Customize Safari terminology and settings',
+    emoji: '⚙️',
+    style: 'Primary',
+    category: 'safari'
+  },
+  'safari_round_results': {
+    label: '🎨 Round Results',
+    description: 'Safari round results management',
+    emoji: '🎨',
+    style: 'Primary',
+    category: 'safari'
+  },
+  'safari_player_inventory': {
+    label: '🦕 Player Inventory',
+    description: 'Show current user Safari inventory',
+    emoji: '🦕',
+    style: 'Primary',
+    category: 'safari'
+  },
+  'safari_view_player_inventory': {
+    label: '👀 View Player Inventory',
+    description: 'Admin view of any player Safari inventory',
+    emoji: '👀',
+    style: 'Primary',
+    category: 'safari'
+  },
+  'safari_map_explorer': {
+    label: '🗺️ Map Explorer',
+    description: 'Safari Map Explorer interface with grid-based exploration',
+    emoji: '🗺️',
+    style: 'Primary',
+    category: 'safari'
   }
 };
 

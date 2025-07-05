@@ -6758,37 +6758,20 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_player_inventory') {
-      // Handle "My Nest" player inventory display
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        const member = req.body.member;
-        
-        console.log(`🥚 DEBUG: User ${userId} viewing inventory in guild ${guildId}`);
-        
-        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, userId, member);
-        
-        console.log(`📤 DEBUG: About to send inventory response for user ${userId}`);
-        
-        const response = {
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: inventoryDisplay
-        };
-        
-        console.log(`📋 DEBUG: Final response type: ${response.type}, data keys: ${Object.keys(inventoryDisplay)}`);
-        
-        return res.send(response);
-        
-      } catch (error) {
-        console.error('Error in safari_player_inventory:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading your nest. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Handle "My Nest" player inventory display (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_player_inventory',
+        handler: async (context) => {
+          console.log(`🥚 DEBUG: User ${context.userId} viewing inventory in guild ${context.guildId}`);
+          
+          const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, context.userId, context.member);
+          
+          console.log(`📤 DEBUG: About to send inventory response for user ${context.userId}`);
+          console.log(`📋 DEBUG: Data keys: ${Object.keys(inventoryDisplay)}`);
+          
+          return inventoryDisplay;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_attack_player_disabled_')) {
       // Handle disabled attack button click
       console.log(`⚔️ DEBUG: User clicked disabled attack button`);
@@ -6928,39 +6911,26 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_customize_terms') {
-      // Handle "⚙️ Customize Terms" button - NEW Components V2 Interface
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to customize terms.')) return;
-        
-        console.log(`⚙️ DEBUG: User ${member.user.id} opening Safari customization interface for guild ${guildId}`);
-        
-        // Get current custom terms
-        const { getCustomTerms } = await import('./safariManager.js');
-        const currentTerms = await getCustomTerms(guildId);
-        
-        // Create new Components V2 Safari customization interface
-        const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
-        const interfaceData = await createSafariCustomizationUI(guildId, currentTerms);
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: interfaceData
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_customize_terms:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error opening Safari customization interface. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Handle "⚙️ Customize Terms" button - NEW Components V2 Interface (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_customize_terms',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`⚙️ DEBUG: User ${context.userId} opening Safari customization interface for guild ${context.guildId}`);
+          
+          // Get current custom terms
+          const { getCustomTerms } = await import('./safariManager.js');
+          const currentTerms = await getCustomTerms(context.guildId);
+          
+          // Create new Components V2 Safari customization interface
+          const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
+          const interfaceData = await createSafariCustomizationUI(context.guildId, currentTerms);
+          
+          return interfaceData;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_config_group_')) {
       // Handle field group button clicks - Currency, Events, Rounds
       try {
@@ -7423,41 +7393,27 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_manage_items') {
-      // Streamlined: Go directly to Item Management section (entity management UI)
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage items.')) return;
-        
-        console.log(`📦 DEBUG: Item management UI opened for guild ${guildId}`);
-        
-        // Create entity management UI
-        const uiResponse = await createEntityManagementUI({
-          entityType: 'item',
-          guildId: guildId,
-          selectedId: null,
-          activeFieldGroup: null,
-          searchTerm: '',
-          mode: 'edit'
-        });
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: uiResponse
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_manage_items:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading item management.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Streamlined: Go directly to Item Management section (entity management UI) (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_manage_items',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`📦 DEBUG: Item management UI opened for guild ${context.guildId}`);
+          
+          // Create entity management UI
+          const uiResponse = await createEntityManagementUI({
+            entityType: 'item',
+            guildId: context.guildId,
+            selectedId: null,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          
+          return uiResponse;
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_store_create') {
       // MVP2: Create new store interface
       console.log('🏪 DEBUG: safari_store_create handler called');
