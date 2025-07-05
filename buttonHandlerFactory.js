@@ -267,6 +267,20 @@ export const BUTTON_REGISTRY = {
     emoji: '📊',
     style: 'Secondary',
     category: 'safari_items'
+  },
+  'safari_item_qty_modal': {
+    label: 'Item Quantity Modal',
+    description: 'Modal handler for setting item quantities',
+    emoji: '📝',
+    style: 'Primary',
+    category: 'safari_items'
+  },
+  'safari_item_modal': {
+    label: 'Create Item Modal',
+    description: 'Modal handler for creating new Safari items',
+    emoji: '📦',
+    style: 'Primary',
+    category: 'safari_items'
   }
 };
 
