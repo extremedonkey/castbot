@@ -220,13 +220,6 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
         label: 'Cast Ranking',
         style: 2, // Secondary
         emoji: { name: '🏆' }
-      },
-      {
-        type: 2, // Button
-        custom_id: `season_emergency_reinit_${configId || 'undefined'}`,
-        label: 'Emergency Re-Init',
-        style: 4, // Danger (Red)
-        emoji: { name: '🚨' }
       }
     ]
   };
@@ -747,7 +740,12 @@ async function createReeceStuffMenu() {
       .setCustomId('nuke_roles')
       .setLabel('Nuke Roles')
       .setStyle(ButtonStyle.Danger)
-      .setEmoji('💥')
+      .setEmoji('💥'),
+    new ButtonBuilder()
+      .setCustomId('emergency_app_reinit')
+      .setLabel('Emergency App Re-Init')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🚨')
   ];
   
   const analyticsRow1 = new ActionRowBuilder().addComponents(analyticsButtonsRow1);
@@ -5356,17 +5354,14 @@ To fix this:
           }
         });
       }
-    } else if (custom_id.startsWith('season_emergency_reinit_')) {
+    } else if (custom_id === 'emergency_app_reinit') {
       // Handle emergency re-initialization of application questions
       try {
-        // Extract configId: season_emergency_reinit_{configId}
-        const prefix = 'season_emergency_reinit_';
-        const configId = custom_id.replace(prefix, '');
         const guildId = req.body.guild_id;
         const channelId = req.body.channel_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         
-        console.log(`🚨 Emergency Re-Init: ConfigId ${configId}, Channel ${channelId}, User ${userId}`);
+        console.log(`🚨 Emergency Re-Init: Channel ${channelId}, User ${userId}`);
         
         // Load player data to find application for this channel
         const playerData = await loadPlayerData();
