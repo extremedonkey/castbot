@@ -193,6 +193,43 @@ export const BUTTON_REGISTRY = {
     emoji: '🗺️',
     style: 'Primary',
     category: 'safari'
+  },
+
+  // Safari Currency Management Submenu
+  'safari_currency_view_all': {
+    label: 'View All Balances',
+    description: 'Display all player currency balances',
+    emoji: '👥',
+    style: 'Primary',
+    category: 'safari_currency'
+  },
+  'safari_currency_set_player': {
+    label: 'Set Player Currency',
+    description: 'Set specific player currency amount',
+    emoji: '💰',
+    style: 'Secondary',
+    category: 'safari_currency'
+  },
+  'safari_currency_reset_all': {
+    label: 'Reset All Currency',
+    description: 'Reset all player currency (DANGEROUS)',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_currency'
+  },
+  'safari_currency_select_user': {
+    label: 'Select User',
+    description: 'User selection for currency operations',
+    emoji: '👤',
+    style: 'Secondary',
+    category: 'safari_currency'
+  },
+  'safari_currency_reset_confirm': {
+    label: 'Confirm Reset',
+    description: 'Confirm currency reset operation',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'safari_currency'
   }
 };
 
