@@ -221,16 +221,57 @@ return res.send({
 
 ### Deferred Response Handler
 
+**🚨 CRITICAL: Use deferred responses for:**
+- Operations taking > 3 seconds
+- **Multi-message handlers** (multiple webhooks)
+- Long-running analytics or processing
+- Any handler that sends follow-up messages
+
 ```javascript
 } else if (custom_id === 'slow_operation') {
   return ButtonHandlerFactory.create({
     id: 'slow_operation',
     deferred: true,
+    ephemeral: true,  // Add this for private responses
     handler: async (context) => {
       // Long-running operation
       await someSlowOperation();
       
+      // Send follow-up messages if needed
+      for (let i = 1; i < chunks.length; i++) {
+        await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
+          method: 'POST',
+          body: { content: `Chunk ${i}: ${chunks[i]}` }
+        });
+      }
+      
       return { content: 'Operation completed!', ephemeral: true };
+    }
+  })(req, res, client);
+}
+```
+
+### Multi-Message Pattern (Analytics Example)
+
+```javascript
+} else if (custom_id === 'analytics_dump') {
+  return ButtonHandlerFactory.create({
+    id: 'analytics_dump',
+    deferred: true,  // MANDATORY for multi-message
+    ephemeral: true,
+    handler: async (context) => {
+      // Process data...
+      const chunks = splitIntoChunks(data);
+      
+      // Send additional chunks via webhook
+      for (let i = 1; i < chunks.length; i++) {
+        await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
+          method: 'POST',
+          body: { content: chunks[i] }
+        });
+      }
+      
+      return { content: chunks[0] }; // First chunk
     }
   })(req, res, client);
 }

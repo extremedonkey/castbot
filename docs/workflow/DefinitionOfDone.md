@@ -123,9 +123,11 @@ If feature includes Discord buttons/components:
   } else if (custom_id === 'button_id') {
     return ButtonHandlerFactory.create({
       id: 'button_id',
+      deferred: true,  // REQUIRED for: >3s ops, multi-messages, webhooks
+      ephemeral: true, // REQUIRED for private responses
       handler: async (context) => {
         // Your logic here
-        return { content: 'Success!', ephemeral: true };
+        return { content: 'Success!' };
       }
     })(req, res, client);
   }

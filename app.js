@@ -5895,18 +5895,19 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'prod_analytics_dump') {
-      // Special analytics dump button (MIGRATED TO FACTORY)
+      // Special analytics dump button (MIGRATED TO FACTORY - DEFERRED PATTERN)
       return ButtonHandlerFactory.create({
         id: 'prod_analytics_dump',
-        handler: async (context, req, res, client) => {
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
           console.log('🔍 DEBUG: Starting analytics dump for user:', context.userId);
           
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
             console.log('❌ DEBUG: Access denied for user:', context.userId);
             return {
-              content: '❌ Access denied. This feature is restricted.',
-              ephemeral: true
+              content: '❌ Access denied. This feature is restricted.'
             };
           }
 
@@ -5956,10 +5957,9 @@ Your server is now ready for Tycoons gameplay!`;
             }
           }
           
-          // Send first chunk as response (factory handles this)
           console.log('✅ DEBUG: Sending response with', chunks.length, 'chunks');
           
-          // Send additional chunks as follow-ups if needed
+          // Send additional chunks as follow-ups if needed (using webhook with valid token)
           for (let i = 1; i < chunks.length; i++) {
             await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
               method: 'POST',
@@ -5969,6 +5969,7 @@ Your server is now ready for Tycoons gameplay!`;
             });
           }
           
+          // Return first chunk for deferred update
           return {
             content: `## 📊 CastBot Analytics Report\n\n\`\`\`\n${chunks[0]}\n\`\`\``
           };
