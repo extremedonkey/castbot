@@ -370,13 +370,19 @@ export function sendPermissionDenied(res, permissionName) {
  * @param {boolean} updateMessage - Whether to update existing message
  */
 export function sendResponse(res, data, updateMessage = false) {
+  // Preserve existing flags and add ephemeral if needed
+  let flags = data.flags || 0;
+  if (data.ephemeral) {
+    flags |= InteractionResponseFlags.EPHEMERAL;
+  }
+  
   return res.send({
     type: updateMessage 
       ? InteractionResponseType.UPDATE_MESSAGE 
       : InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
     data: {
       ...data,
-      flags: data.ephemeral ? InteractionResponseFlags.EPHEMERAL : (data.flags || 0)
+      flags: flags
     }
   });
 }
