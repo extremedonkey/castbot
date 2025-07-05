@@ -6057,7 +6057,7 @@ Your server is now ready for Tycoons gameplay!`;
             return logDate >= cutoffDate;
           }
           
-          let analyticsOutput = '🔴 LIVE ANALYTICS - Last 3 Days\n';
+          let analyticsOutput = '🔴 LIVE ANALYTICS - Last 1 Day\n';
           analyticsOutput += '═'.repeat(50) + '\n\n';
           
           if (!fs.default.existsSync(ANALYTICS_LOG_FILE)) {
@@ -6071,7 +6071,7 @@ Your server is now ready for Tycoons gameplay!`;
             lines.forEach(line => {
               // Check if line matches format: [8:18AM] Thu 19 Jun 25 | ...
               if (line.match(/^\[\d{1,2}:\d{2}[AP]M\]/)) {
-                if (!shouldFilterOut(line, DEFAULT_FILTERED_BUTTONS) && isWithinRecentDays(line, 3)) {
+                if (!shouldFilterOut(line, DEFAULT_FILTERED_BUTTONS) && isWithinRecentDays(line, 1)) {
                   // Parse and format the log line with Markdown
                   const formattedLine = formatAnalyticsLine(line);
                   analyticsOutput += `* ${formattedLine}\n`;
@@ -6081,11 +6081,11 @@ Your server is now ready for Tycoons gameplay!`;
             });
             
             if (displayedCount === 0) {
-              analyticsOutput += '💡 No interactions found in the last 3 days.\n';
+              analyticsOutput += '💡 No interactions found in the last 1 day.\n';
               analyticsOutput += 'Try running CastBot commands to generate data!';
             } else {
               analyticsOutput += '\n' + '═'.repeat(50) + '\n';
-              analyticsOutput += `📊 Displayed ${displayedCount} interactions from last 3 days`;
+              analyticsOutput += `📊 Displayed ${displayedCount} interactions from last 1 day`;
             }
           }
           
