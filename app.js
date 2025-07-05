@@ -5964,186 +5964,174 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_live_analytics') {
-      // Special live analytics button - only available to specific user ID
-      try {
-        console.log('🔍 DEBUG: Starting live analytics for user:', req.body.member.user.id);
-        const userId = req.body.member.user.id;
-        
-        // Security check - only allow specific Discord ID
-        if (userId !== '391415444084490240') {
-          console.log('❌ DEBUG: Access denied for live analytics user:', userId);
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Access denied. This feature is restricted.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        console.log('✅ DEBUG: Live analytics user authorized...');
-
-        // Import fs and capture live analytics output
-        const fs = await import('fs');
-        const { getLogFilePath } = await import('./src/analytics/analyticsLogger.js');
-        
-        const ANALYTICS_LOG_FILE = getLogFilePath();
-        
-        // Function to format analytics line with Markdown
-        function formatAnalyticsLine(line) {
-          // Parse format: [8:33AM] Thu 19 Jun 25 | User (username) in Server Name (1234567890) | ACTION_TYPE | details
-          const match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
+      // Special live analytics button (MIGRATED TO FACTORY - DEFERRED PATTERN)
+      return ButtonHandlerFactory.create({
+        id: 'prod_live_analytics',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          console.log('🔍 DEBUG: Starting live analytics for user:', context.userId);
           
-          if (!match) {
-            return line; // Return original if parsing fails
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            console.log('❌ DEBUG: Access denied for live analytics user:', context.userId);
+            return {
+              content: '❌ Access denied. This feature is restricted.'
+            };
           }
+
+          console.log('✅ DEBUG: Live analytics user authorized...');
+
+          // Import fs and capture live analytics output
+          const fs = await import('fs');
+          const { getLogFilePath } = await import('./src/analytics/analyticsLogger.js');
           
-          const [, timestamp, user, serverName, serverId, actionType, details] = match;
+          const ANALYTICS_LOG_FILE = getLogFilePath();
           
-          // Format components with Markdown
-          const formattedUser = `**\`${user}\`**`;
-          const formattedServer = `__\`${serverName}\`__`;
-          
-          // Format the action details based on action type
-          let formattedDetails;
-          if (actionType === 'SLASH_COMMAND') {
-            // Bold the entire command for slash commands (e.g., **/menu**)
-            formattedDetails = `**${details}**`;
-          } else if (actionType === 'BUTTON_CLICK') {
-            // For button clicks, bold just the button name (first part before parentheses)
-            const buttonMatch = details.match(/^(.+?)\s+\((.+)\)$/);
-            if (buttonMatch) {
-              const [, buttonName, buttonId] = buttonMatch;
-              formattedDetails = `**${buttonName}** (${buttonId})`;
-            } else {
-              // Fallback if no parentheses found, bold the whole thing
+          // Function to format analytics line with Markdown
+          function formatAnalyticsLine(line) {
+            // Parse format: [8:33AM] Thu 19 Jun 25 | User (username) in Server Name (1234567890) | ACTION_TYPE | details
+            const match = line.match(/^(\[[\d:APM]+\]\s+\w{3}\s+\d{1,2}\s+\w{3}\s+\d{2})\s+\|\s+(.+?)\s+in\s+(.+?)\s+\((\d+)\)\s+\|\s+([\w_]+)\s+\|\s+(.+)$/);
+            
+            if (!match) {
+              return line; // Return original if parsing fails
+            }
+            
+            const [, timestamp, user, serverName, serverId, actionType, details] = match;
+            
+            // Format components with Markdown
+            const formattedUser = `**\`${user}\`**`;
+            const formattedServer = `__\`${serverName}\`__`;
+            
+            // Format the action details based on action type
+            let formattedDetails;
+            if (actionType === 'SLASH_COMMAND') {
+              // Bold the entire command for slash commands (e.g., **/menu**)
               formattedDetails = `**${details}**`;
-            }
-          } else {
-            // For other action types, keep details as-is
-            formattedDetails = details;
-          }
-          
-          return `${timestamp} | ${formattedUser} in ${formattedServer} (${serverId}) | ${actionType} | ${formattedDetails}`;
-        }
-        
-        // Default buttons to filter out (same as liveAnalytics.js)
-        const DEFAULT_FILTERED_BUTTONS = [
-          'disabled_',
-          'castlist2_nav_disabled',
-        ];
-        
-        function shouldFilterOut(logLine, filterPatterns) {
-          if (!filterPatterns || filterPatterns.length === 0) return false;
-          return filterPatterns.some(pattern => logLine.includes(pattern));
-        }
-        
-        function isWithinRecentDays(logLine, days) {
-          if (!days) return true;
-          
-          // Match format: [8:18AM] Thu 19 Jun 25
-          const timestampMatch = logLine.match(/^\[(\d{1,2}:\d{2}[AP]M)\] (\w{3}) (\d{1,2}) (\w{3}) (\d{2})/);
-          if (!timestampMatch) return true;
-          
-          const [, time, dayName, day, month, year] = timestampMatch;
-          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          const monthIndex = months.indexOf(month);
-          
-          if (monthIndex === -1) return true;
-          
-          const logDate = new Date(2000 + parseInt(year), monthIndex, parseInt(day));
-          const cutoffDate = new Date();
-          cutoffDate.setDate(cutoffDate.getDate() - days);
-          
-          return logDate >= cutoffDate;
-        }
-        
-        let analyticsOutput = '🔴 LIVE ANALYTICS - Last 3 Days\n';
-        analyticsOutput += '═'.repeat(50) + '\n\n';
-        
-        if (!fs.default.existsSync(ANALYTICS_LOG_FILE)) {
-          analyticsOutput += '📊 No analytics data found yet.\n';
-          analyticsOutput += 'Use CastBot to generate some interactions!';
-        } else {
-          const logContent = fs.default.readFileSync(ANALYTICS_LOG_FILE, 'utf8');
-          const lines = logContent.split('\n').filter(line => line.trim());
-          let displayedCount = 0;
-          
-          lines.forEach(line => {
-            // Check if line matches format: [8:18AM] Thu 19 Jun 25 | ...
-            if (line.match(/^\[\d{1,2}:\d{2}[AP]M\]/)) {
-              if (!shouldFilterOut(line, DEFAULT_FILTERED_BUTTONS) && isWithinRecentDays(line, 3)) {
-                // Parse and format the log line with Markdown
-                const formattedLine = formatAnalyticsLine(line);
-                analyticsOutput += `* ${formattedLine}\n`;
-                displayedCount++;
+            } else if (actionType === 'BUTTON_CLICK') {
+              // For button clicks, bold just the button name (first part before parentheses)
+              const buttonMatch = details.match(/^(.+?)\s+\((.+)\)$/);
+              if (buttonMatch) {
+                const [, buttonName, buttonId] = buttonMatch;
+                formattedDetails = `**${buttonName}** (${buttonId})`;
+              } else {
+                // Fallback if no parentheses found, bold the whole thing
+                formattedDetails = `**${details}**`;
               }
-            }
-          });
-          
-          if (displayedCount === 0) {
-            analyticsOutput += '💡 No interactions found in the last 3 days.\n';
-            analyticsOutput += 'Try running CastBot commands to generate data!';
-          } else {
-            analyticsOutput += '\n' + '═'.repeat(50) + '\n';
-            analyticsOutput += `📊 Displayed ${displayedCount} interactions from last 3 days`;
-          }
-        }
-        
-        // Format the output for Discord
-        const formattedOutput = analyticsOutput.trim();
-        
-        // Split into chunks if too long (Discord has 2000 char limit)
-        const chunks = [];
-        const maxLength = 1900; // Leave room for formatting
-        
-        if (formattedOutput.length <= maxLength) {
-          chunks.push(formattedOutput);
-        } else {
-          let remaining = formattedOutput;
-          while (remaining.length > 0) {
-            let chunk = remaining.substring(0, maxLength);
-            // Try to break at a newline
-            const lastNewline = chunk.lastIndexOf('\n');
-            if (lastNewline > maxLength * 0.8) {
-              chunk = remaining.substring(0, lastNewline);
-              remaining = remaining.substring(lastNewline + 1);
             } else {
-              remaining = remaining.substring(maxLength);
+              // For other action types, keep details as-is
+              formattedDetails = details;
             }
-            chunks.push(chunk);
+            
+            return `${timestamp} | ${formattedUser} in ${formattedServer} (${serverId}) | ${actionType} | ${formattedDetails}`;
           }
-        }
-        
-        // Send initial response with first chunk
-        console.log('✅ DEBUG: Sending live analytics response with', chunks.length, 'chunks, content length:', chunks[0].length);
-        await res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+          
+          // Default buttons to filter out (same as liveAnalytics.js)
+          const DEFAULT_FILTERED_BUTTONS = [
+            'disabled_',
+            'castlist2_nav_disabled',
+          ];
+          
+          function shouldFilterOut(logLine, filterPatterns) {
+            if (!filterPatterns || filterPatterns.length === 0) return false;
+            return filterPatterns.some(pattern => logLine.includes(pattern));
+          }
+          
+          function isWithinRecentDays(logLine, days) {
+            if (!days) return true;
+            
+            // Match format: [8:18AM] Thu 19 Jun 25
+            const timestampMatch = logLine.match(/^\[(\d{1,2}:\d{2}[AP]M)\] (\w{3}) (\d{1,2}) (\w{3}) (\d{2})/);
+            if (!timestampMatch) return true;
+            
+            const [, time, dayName, day, month, year] = timestampMatch;
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthIndex = months.indexOf(month);
+            
+            if (monthIndex === -1) return true;
+            
+            const logDate = new Date(2000 + parseInt(year), monthIndex, parseInt(day));
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - days);
+            
+            return logDate >= cutoffDate;
+          }
+          
+          let analyticsOutput = '🔴 LIVE ANALYTICS - Last 3 Days\n';
+          analyticsOutput += '═'.repeat(50) + '\n\n';
+          
+          if (!fs.default.existsSync(ANALYTICS_LOG_FILE)) {
+            analyticsOutput += '📊 No analytics data found yet.\n';
+            analyticsOutput += 'Use CastBot to generate some interactions!';
+          } else {
+            const logContent = fs.default.readFileSync(ANALYTICS_LOG_FILE, 'utf8');
+            const lines = logContent.split('\n').filter(line => line.trim());
+            let displayedCount = 0;
+            
+            lines.forEach(line => {
+              // Check if line matches format: [8:18AM] Thu 19 Jun 25 | ...
+              if (line.match(/^\[\d{1,2}:\d{2}[AP]M\]/)) {
+                if (!shouldFilterOut(line, DEFAULT_FILTERED_BUTTONS) && isWithinRecentDays(line, 3)) {
+                  // Parse and format the log line with Markdown
+                  const formattedLine = formatAnalyticsLine(line);
+                  analyticsOutput += `* ${formattedLine}\n`;
+                  displayedCount++;
+                }
+              }
+            });
+            
+            if (displayedCount === 0) {
+              analyticsOutput += '💡 No interactions found in the last 3 days.\n';
+              analyticsOutput += 'Try running CastBot commands to generate data!';
+            } else {
+              analyticsOutput += '\n' + '═'.repeat(50) + '\n';
+              analyticsOutput += `📊 Displayed ${displayedCount} interactions from last 3 days`;
+            }
+          }
+          
+          // Format the output for Discord
+          const formattedOutput = analyticsOutput.trim();
+          
+          // Split into chunks if too long (Discord has 2000 char limit)
+          const chunks = [];
+          const maxLength = 1900; // Leave room for formatting
+          
+          if (formattedOutput.length <= maxLength) {
+            chunks.push(formattedOutput);
+          } else {
+            let remaining = formattedOutput;
+            while (remaining.length > 0) {
+              let chunk = remaining.substring(0, maxLength);
+              // Try to break at a newline
+              const lastNewline = chunk.lastIndexOf('\n');
+              if (lastNewline > maxLength * 0.8) {
+                chunk = remaining.substring(0, lastNewline);
+                remaining = remaining.substring(lastNewline + 1);
+              } else {
+                remaining = remaining.substring(maxLength);
+              }
+              chunks.push(chunk);
+            }
+          }
+          
+          console.log('✅ DEBUG: Sending live analytics response with', chunks.length, 'chunks, content length:', chunks[0].length);
+          
+          // Send additional chunks as follow-ups if needed (using webhook with valid token)
+          for (let i = 1; i < chunks.length; i++) {
+            await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
+              method: 'POST',
+              body: {
+                content: chunks[i]
+              }
+            });
+          }
+          
+          // Return first chunk for deferred update
+          return {
             content: chunks[0]
-          }
-        });
-        
-        // Send additional chunks as follow-ups if needed
-        for (let i = 1; i < chunks.length; i++) {
-          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
-            method: 'POST',
-            body: {
-              content: chunks[i]
-            }
-          });
+          };
         }
-        
-      } catch (error) {
-        console.error('Error running live analytics:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error running live analytics. Check logs for details.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'prod_toggle_live_analytics') {
       // Toggle live analytics logging on/off
       try {
