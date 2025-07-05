@@ -6700,11 +6700,20 @@ Your server is now ready for Tycoons gameplay!`;
         const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
         
         const webhookPayload = {
-          flags: roundData.data.flags,
-          components: roundData.data.components
+          flags: roundData.data.flags || 0
         };
         
-        console.log(`🎨 DEBUG: Sending modern display via webhook with ${roundData.data.components?.length || 0} components`);
+        // Add content if present (for 0 eligible players case)
+        if (roundData.data.content) {
+          webhookPayload.content = roundData.data.content;
+        }
+        
+        // Add components if present (for normal round results)
+        if (roundData.data.components) {
+          webhookPayload.components = roundData.data.components;
+        }
+        
+        console.log(`🎨 DEBUG: Sending modern display via webhook with ${roundData.data.components?.length || 0} components${roundData.data.content ? ' and content message' : ''}`);
         
         const webhookResponse = await fetch(webhookUrl, {
           method: 'PATCH',
