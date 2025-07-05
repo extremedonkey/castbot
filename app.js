@@ -3123,7 +3123,26 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     console.log('Processing MESSAGE_COMPONENT with custom_id:', custom_id);
     
     // Check if button uses new factory pattern or old pattern
-    const isFactoryButton = BUTTON_REGISTRY[custom_id];
+    // Check exact match first, then check dynamic patterns
+    let isFactoryButton = BUTTON_REGISTRY[custom_id];
+    
+    if (!isFactoryButton) {
+      // Check for dynamic patterns in registry
+      const dynamicPatterns = [
+        'safari_item_player_qty',
+        'safari_item_qty_user_select',
+        'safari_item_qty_modal',
+        'safari_item_modal'
+      ];
+      
+      for (const pattern of dynamicPatterns) {
+        if (custom_id.startsWith(pattern + '_')) {
+          isFactoryButton = BUTTON_REGISTRY[pattern];
+          break;
+        }
+      }
+    }
+    
     const buttonType = isFactoryButton ? '✨ FACTORY' : '🪨 LEGACY';
     console.log(`🔍 BUTTON DEBUG: Checking handlers for ${custom_id} [${buttonType}]`);
 
