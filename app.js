@@ -13390,14 +13390,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             type: 14 // Thin separator
           });
           containerComponents.push({
-            type: 8, // Media Gallery
-            components: [{
-              type: 9, // Media
-              media: {
-                type: 0, // Image
-                url: coordData.baseContent.image
+            type: 12, // Media Gallery
+            items: [
+              {
+                media: {
+                  url: coordData.baseContent.image
+                }
               }
-            }]
+            ]
           });
         }
         
