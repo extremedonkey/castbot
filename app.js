@@ -11964,10 +11964,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               mode: 'edit'
             });
             
-            return {
-              type: InteractionResponseType.UPDATE_MESSAGE,
-              data: uiResponse
-            };
+            return uiResponse;
           }
         }
       })(req, res, client);
