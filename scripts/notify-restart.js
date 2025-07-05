@@ -57,14 +57,29 @@ async function sendRestartNotification() {
         const isProduction = process.env.PRODUCTION === 'TRUE';
         const environment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
         
-        // Create the notification message
-        const message = `> \`\`\`⚠️ Alert! \`\`\`
+        // Create the notification message with button
+        const messageData = {
+            content: `> \`\`\`⚠️ Alert! \`\`\`
 # ${environment} SERVER RESTARTING NOW...
 
-> \`\`\`⚠️ Alert! \`\`\``;
+> \`\`\`⚠️ Alert! \`\`\``,
+            components: [
+                {
+                    type: 1, // Action Row
+                    components: [
+                        {
+                            type: 2, // Button
+                            custom_id: "viral_menu",
+                            label: "📋 Open Prod Menu",
+                            style: 1 // Primary
+                        }
+                    ]
+                }
+            ]
+        };
 
         // Send the message
-        await channel.send(message);
+        await channel.send(messageData);
         console.log(`✅ Restart notification sent to ${environment} channel`);
 
     } catch (error) {
