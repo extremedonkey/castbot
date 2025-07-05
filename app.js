@@ -98,6 +98,13 @@ import {
   createPlayerInventoryDisplay,
   createRoundResultsV2 
 } from './safariManager.js';
+import { 
+  ButtonHandlerFactory,
+  ButtonRegistry,
+  MenuFactory,
+  BUTTON_REGISTRY,
+  MENU_FACTORY
+} from './buttonHandlerFactory.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
 import { 
   createMapGrid,
@@ -5450,42 +5457,30 @@ To fix this:
         });
       }
     } else if (custom_id === 'reece_stuff_menu') {
-      // Handle Reece Stuff submenu - special admin features
-      try {
-        const userId = req.body.member.user.id;
-        
-        // Security check - only allow specific Discord ID
-        if (!requireSpecificUser(req, res, '391415444084490240', 'Access denied. This feature is restricted.')) return;
+      // Handle Reece Stuff submenu - special admin features (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'reece_stuff_menu',
+        handler: async (context) => {
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            return {
+              content: 'Access denied. This feature is restricted.',
+              ephemeral: true
+            };
+          }
 
-        const channelId = req.body.channel_id;
-        const guildId = req.body.guild_id;
-        const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
-        
-        // Create Reece Stuff submenu
-        const reeceMenuData = await createReeceStuffMenu();
-        
-        const responseType = shouldUpdateMessage ? 
-          InteractionResponseType.UPDATE_MESSAGE : 
-          InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
-        
-        return res.send({
-          type: responseType,
-          data: {
+          const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(context.channelId);
+          
+          // Create Reece Stuff submenu
+          const reeceMenuData = await createReeceStuffMenu();
+          
+          return {
             ...reeceMenuData,
-            flags: (reeceMenuData.flags || 0) | InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error handling reece_stuff_menu button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error loading Reece Stuff interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+            updateMessage: shouldUpdateMessage,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_manage_safari_buttons') {
       // Handle Safari Button Management submenu
       try {
@@ -5587,46 +5582,20 @@ To fix this:
         });
       }
     } else if (custom_id === 'prod_menu_back') {
-      // Handle Back to Main Menu - restore production menu interface
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const userId = req.body.member.user.id;
-
-        // Check admin permissions
-        const member = await guild.members.fetch(userId);
-        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+      // Handle Back to Main Menu (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'prod_menu_back',
+        requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild,
+        permissionName: 'Manage Roles, Manage Channels, or Manage Server',
+        updateMessage: true,
+        handler: async (context) => {
+          // Load player data and create main production menu
+          const playerData = await loadPlayerData();
+          const menuData = await createProductionMenuInterface(context.guild, playerData, context.guildId, context.userId);
+          
+          return menuData;
         }
-
-        // Load player data and create main production menu
-        const playerData = await loadPlayerData();
-        const menuData = await createProductionMenuInterface(guild, playerData, guildId, userId);
-
-        // Always use UPDATE_MESSAGE for Back button since it should replace the current message
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: menuData
-        });
-
-      } catch (error) {
-        console.error('Error handling prod_menu_back button:', error);
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            content: 'Error loading main menu interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'season_app_creation') {
       // Handle Creation Application Process - show the original application modal
       try {
@@ -5922,98 +5891,85 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'prod_analytics_dump') {
-      // Special analytics dump button - only available to specific user ID
-      try {
-        console.log('🔍 DEBUG: Starting analytics dump for user:', req.body.member.user.id);
-        const userId = req.body.member.user.id;
-        
-        // Security check - only allow specific Discord ID
-        if (userId !== '391415444084490240') {
-          console.log('❌ DEBUG: Access denied for user:', userId);
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      // Special analytics dump button (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'prod_analytics_dump',
+        handler: async (context, req, res, client) => {
+          console.log('🔍 DEBUG: Starting analytics dump for user:', context.userId);
+          
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            console.log('❌ DEBUG: Access denied for user:', context.userId);
+            return {
               content: '❌ Access denied. This feature is restricted.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+              ephemeral: true
+            };
+          }
 
-        console.log('✅ DEBUG: User authorized, importing analytics function...');
-        // Import and run analytics function
-        const { analyzePlayerData } = await import('./src/analytics/analytics.js');
-        console.log('✅ DEBUG: Analytics function imported successfully');
-        
-        // Capture analytics output
-        let analyticsOutput = '';
-        const originalLog = console.log;
-        console.log = (...args) => {
-          analyticsOutput += args.join(' ') + '\n';
-        };
-        
-        try {
-          console.log('✅ DEBUG: Running analytics function...');
-          await analyzePlayerData();
-          console.log('✅ DEBUG: Analytics function completed');
-        } finally {
-          console.log = originalLog; // Restore original console.log
-          console.log('✅ DEBUG: Console restored, analytics output length:', analyticsOutput.length);
-        }
-        
-        // Format the output for Discord
-        const formattedOutput = analyticsOutput
-          .replace(/\x1b\[[0-9;]*m/g, '') // Remove ANSI color codes
-          .trim();
-        
-        // Split into chunks if too long (Discord has 2000 char limit)
-        const chunks = [];
-        const maxLength = 1900; // Leave room for formatting
-        
-        if (formattedOutput.length <= maxLength) {
-          chunks.push(formattedOutput);
-        } else {
-          let remaining = formattedOutput;
-          while (remaining.length > 0) {
-            let chunk = remaining.substring(0, maxLength);
-            // Try to break at a newline
-            const lastNewline = chunk.lastIndexOf('\n');
-            if (lastNewline > maxLength * 0.8) {
-              chunk = chunk.substring(0, lastNewline);
-            }
-            chunks.push(chunk);
-            remaining = remaining.substring(chunk.length);
+          console.log('✅ DEBUG: User authorized, importing analytics function...');
+          // Import and run analytics function
+          const { analyzePlayerData } = await import('./src/analytics/analytics.js');
+          console.log('✅ DEBUG: Analytics function imported successfully');
+          
+          // Capture analytics output
+          let analyticsOutput = '';
+          const originalLog = console.log;
+          console.log = (...args) => {
+            analyticsOutput += args.join(' ') + '\n';
+          };
+          
+          try {
+            console.log('✅ DEBUG: Running analytics function...');
+            await analyzePlayerData();
+            console.log('✅ DEBUG: Analytics function completed');
+          } finally {
+            console.log = originalLog; // Restore original console.log
+            console.log('✅ DEBUG: Console restored, analytics output length:', analyticsOutput.length);
           }
-        }
-        
-        // Send first chunk as response
-        console.log('✅ DEBUG: Sending response with', chunks.length, 'chunks');
-        res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+          
+          // Format the output for Discord
+          const formattedOutput = analyticsOutput
+            .replace(/\x1b\[[0-9;]*m/g, '') // Remove ANSI color codes
+            .trim();
+          
+          // Split into chunks if too long (Discord has 2000 char limit)
+          const chunks = [];
+          const maxLength = 1900; // Leave room for formatting
+          
+          if (formattedOutput.length <= maxLength) {
+            chunks.push(formattedOutput);
+          } else {
+            let remaining = formattedOutput;
+            while (remaining.length > 0) {
+              let chunk = remaining.substring(0, maxLength);
+              // Try to break at a newline
+              const lastNewline = chunk.lastIndexOf('\n');
+              if (lastNewline > maxLength * 0.8) {
+                chunk = chunk.substring(0, lastNewline);
+              }
+              chunks.push(chunk);
+              remaining = remaining.substring(chunk.length);
+            }
+          }
+          
+          // Send first chunk as response (factory handles this)
+          console.log('✅ DEBUG: Sending response with', chunks.length, 'chunks');
+          
+          // Send additional chunks as follow-ups if needed
+          for (let i = 1; i < chunks.length; i++) {
+            await DiscordRequest(`webhooks/${process.env.APP_ID}/${context.token}`, {
+              method: 'POST',
+              body: {
+                content: `\`\`\`\n${chunks[i]}\n\`\`\``
+              }
+            });
+          }
+          
+          return {
             content: `## 📊 CastBot Analytics Report\n\n\`\`\`\n${chunks[0]}\n\`\`\``
-          }
-        });
-        
-        // Send additional chunks as follow-ups if needed
-        for (let i = 1; i < chunks.length; i++) {
-          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
-            method: 'POST',
-            body: {
-              content: `\`\`\`\n${chunks[i]}\n\`\`\``
-            }
-          });
+          };
         }
-        
-      } catch (error) {
-        console.error('Error running analytics dump:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error running analytics. Check logs for details.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'prod_live_analytics') {
       // Special live analytics button - only available to specific user ID
       try {

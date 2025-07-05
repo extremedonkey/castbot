@@ -10,7 +10,296 @@ import { DiscordRequest } from './utils.js';
  * 
  * Reduces code duplication by providing a factory pattern for button handlers.
  * Handles common patterns like context extraction, permission checking, error handling.
+ * 
+ * Features:
+ * - Button Registry for easy identification by label/description
+ * - Menu Factory for reusable menu patterns
+ * - Natural language interface for Claude Code
  */
+
+/**
+ * Button Registry - Central repository of all button definitions
+ * Enables natural language identification of buttons and menus
+ */
+export const BUTTON_REGISTRY = {
+  // === REECE STUFF MENU SYSTEM ===
+  'reece_stuff_menu': {
+    label: 'Analytics',
+    description: 'Main analytics and admin menu for Reece',
+    emoji: '🧮',
+    style: 'Danger',
+    menu: 'reece_analytics',
+    parent: null,
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  
+  // Analytics Row 1
+  'prod_analytics_dump': {
+    label: 'Server List',
+    description: 'Analytics dump of all servers',
+    emoji: '📊',
+    style: 'Secondary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+  'prod_live_analytics': {
+    label: 'Print Logs',
+    description: 'Display recent analytics logs',
+    emoji: '📝',
+    style: 'Secondary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+  'prod_server_usage_stats': {
+    label: 'Server Stats',
+    description: 'Display server usage statistics',
+    emoji: '📈',
+    style: 'Secondary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+  
+  // Analytics Row 2
+  'prod_toggle_live_analytics': {
+    label: 'Toggle Channel Logs',
+    description: 'Toggle live analytics logging for current channel',
+    emoji: '🔄',
+    style: 'Secondary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+  'test_role_hierarchy': {
+    label: 'Test Role Hierarchy',
+    description: 'Test and display role hierarchy information',
+    emoji: '🧪',
+    style: 'Secondary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'testing'
+  },
+  'nuke_roles': {
+    label: 'Nuke Roles',
+    description: 'Remove all roles from server (DANGEROUS)',
+    emoji: '💥',
+    style: 'Danger',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'emergency_app_reinit': {
+    label: 'Emergency Re-Init',
+    description: 'Emergency re-initialization of season applications',
+    emoji: '🚨',
+    style: 'Danger',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'emergency'
+  },
+  
+  // Navigation
+  'prod_menu_back': {
+    label: '⬅ Menu',
+    description: 'Return to main production menu',
+    emoji: '⬅',
+    style: 'Primary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'navigation'
+  }
+};
+
+/**
+ * Menu Factory - Reusable menu patterns and configurations
+ */
+export const MENU_FACTORY = {
+  reece_analytics: {
+    title: 'Analytics & Admin Menu',
+    description: 'Analytics tools and admin functions for Reece',
+    restrictedUser: '391415444084490240',
+    layout: [
+      // Row 1: Analytics Functions
+      ['prod_analytics_dump', 'prod_live_analytics', 'prod_server_usage_stats'],
+      // Row 2: Admin Functions
+      ['prod_toggle_live_analytics', 'test_role_hierarchy', 'nuke_roles', 'emergency_app_reinit'],
+      // Row 3: Navigation
+      ['prod_menu_back']
+    ],
+    maxButtonsPerRow: 5,
+    ephemeral: true
+  }
+};
+
+/**
+ * Button Registry Helper Functions
+ */
+export const ButtonRegistry = {
+  /**
+   * Find button by label (case-insensitive)
+   * @param {string} label - Button label to search for
+   * @returns {string|null} Button ID or null if not found
+   */
+  findByLabel(label) {
+    const searchLabel = label.toLowerCase();
+    for (const [id, button] of Object.entries(BUTTON_REGISTRY)) {
+      if (button.label.toLowerCase().includes(searchLabel)) {
+        return id;
+      }
+    }
+    return null;
+  },
+
+  /**
+   * Find button by description (case-insensitive)
+   * @param {string} description - Description text to search for
+   * @returns {string|null} Button ID or null if not found
+   */
+  findByDescription(description) {
+    const searchDesc = description.toLowerCase();
+    for (const [id, button] of Object.entries(BUTTON_REGISTRY)) {
+      if (button.description.toLowerCase().includes(searchDesc)) {
+        return id;
+      }
+    }
+    return null;
+  },
+
+  /**
+   * Get all buttons for a specific menu
+   * @param {string} menuId - Menu ID to get buttons for
+   * @returns {Object[]} Array of button objects with IDs
+   */
+  getMenuButtons(menuId) {
+    const buttons = [];
+    for (const [id, button] of Object.entries(BUTTON_REGISTRY)) {
+      if (button.parent === menuId) {
+        buttons.push({ id, ...button });
+      }
+    }
+    return buttons;
+  },
+
+  /**
+   * Get button information by ID
+   * @param {string} buttonId - Button ID to look up
+   * @returns {Object|null} Button object or null if not found
+   */
+  getButton(buttonId) {
+    return BUTTON_REGISTRY[buttonId] || null;
+  },
+
+  /**
+   * Search buttons by category
+   * @param {string} category - Category to search for
+   * @returns {Object[]} Array of button objects with IDs
+   */
+  findByCategory(category) {
+    const buttons = [];
+    for (const [id, button] of Object.entries(BUTTON_REGISTRY)) {
+      if (button.category === category) {
+        buttons.push({ id, ...button });
+      }
+    }
+    return buttons;
+  },
+
+  /**
+   * Natural language search across all button properties
+   * @param {string} query - Search query
+   * @returns {Object[]} Array of matching button objects with IDs
+   */
+  search(query) {
+    const searchQuery = query.toLowerCase();
+    const results = [];
+    
+    for (const [id, button] of Object.entries(BUTTON_REGISTRY)) {
+      const searchText = [
+        button.label,
+        button.description,
+        button.category,
+        id
+      ].join(' ').toLowerCase();
+      
+      if (searchText.includes(searchQuery)) {
+        results.push({ id, ...button });
+      }
+    }
+    
+    return results;
+  }
+};
+
+/**
+ * Menu Factory Helper Functions
+ */
+export const MenuFactory = {
+  /**
+   * Get menu configuration by ID
+   * @param {string} menuId - Menu ID to look up
+   * @returns {Object|null} Menu configuration or null if not found
+   */
+  getMenu(menuId) {
+    return MENU_FACTORY[menuId] || null;
+  },
+
+  /**
+   * Create Discord components for a menu
+   * @param {string} menuId - Menu ID to create components for
+   * @returns {Object[]} Array of Discord ActionRow components
+   */
+  createComponents(menuId) {
+    const menu = MENU_FACTORY[menuId];
+    if (!menu) return [];
+
+    const components = [];
+    
+    for (const row of menu.layout) {
+      const buttons = row.map(buttonId => {
+        const buttonConfig = BUTTON_REGISTRY[buttonId];
+        if (!buttonConfig) {
+          console.warn(`Button ${buttonId} not found in registry`);
+          return null;
+        }
+        
+        return {
+          type: 2, // Button
+          custom_id: buttonId,
+          label: buttonConfig.label,
+          style: this.getButtonStyle(buttonConfig.style),
+          emoji: buttonConfig.emoji ? { name: buttonConfig.emoji } : undefined
+        };
+      }).filter(Boolean);
+
+      if (buttons.length > 0) {
+        components.push({
+          type: 1, // ActionRow
+          components: buttons
+        });
+      }
+    }
+
+    return components;
+  },
+
+  /**
+   * Convert style name to Discord button style number
+   * @param {string} styleName - Style name (Primary, Secondary, Success, Danger)
+   * @returns {number} Discord button style number
+   */
+  getButtonStyle(styleName) {
+    const styles = {
+      'Primary': 1,
+      'Secondary': 2,
+      'Success': 3,
+      'Danger': 4
+    };
+    return styles[styleName] || 2; // Default to Secondary
+  }
+};
 
 /**
  * Extract context from Discord button interaction request
@@ -40,7 +329,7 @@ export function extractButtonContext(req) {
  */
 export function hasPermission(member, permission) {
   if (!member?.permissions) return false;
-  return (BigInt(member.permissions) & permission) === permission;
+  return (BigInt(member.permissions) & permission) !== 0n;
 }
 
 /**
