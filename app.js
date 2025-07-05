@@ -108,6 +108,19 @@ import {
 // Helper function to refresh question management UI
 async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
   console.log(`🔧 DEBUG: refreshQuestionManagementUI called with configId: ${configId}, currentPage: ${currentPage}`);
+  
+  // Validate required parameters
+  if (!configId) {
+    console.error('🚨 ERROR: configId is undefined in refreshQuestionManagementUI');
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: {
+        content: '❌ Internal error: Missing configuration ID.',
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    });
+  }
+  
   const questionsPerPage = 5;
   const totalPages = Math.max(1, Math.ceil(config.questions.length / questionsPerPage));
   const startIndex = currentPage * questionsPerPage;

@@ -96,6 +96,8 @@ npm run logs-prod -- --feature BUTTON --level debug
 
 **MANDATORY READING:** Before implementing ANY button, see [docs/architecture/BUTTON_HANDLER_ANALYSIS.md](docs/architecture/BUTTON_HANDLER_ANALYSIS.md)
 
+**🚨 CRITICAL: 5-Button Limit** - Action Rows can contain maximum 5 buttons (ComponentsV2.md line 61). Adding more will crash the menu!
+
 ### Button Handler Template
 ```javascript
 } else if (custom_id === 'your_button_id') {
@@ -162,6 +164,7 @@ Most admin functionality accessed via `/menu` → Production Menu
 - **Button not working** → Check dynamic handler exclusions
 - **Missing variables** → Ensure context extraction at handler start
 - **Permission errors** → Use BigInt for permission checks
+- **Menu crashes** → Check 5-button limit per Action Row (see ComponentsV2.md line 61)
 
 ### Development Best Practices
 1. Follow existing code patterns
