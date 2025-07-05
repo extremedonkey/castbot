@@ -6185,96 +6185,42 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'prod_server_usage_stats') {
-      // Server usage analytics button - only available to specific user ID
-      try {
-        console.log('📈 DEBUG: Starting server usage stats for user:', req.body.member.user.id);
-        const userId = req.body.member.user.id;
-        
-        // Security check - only allow specific Discord ID
-        if (userId !== '391415444084490240') {
-          console.log('❌ DEBUG: Access denied for user:', userId);
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Access denied. This feature is restricted.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        console.log('✅ DEBUG: User authorized, deferring response for background processing...');
-        
-        // Defer the response immediately to avoid 3-second timeout
-        res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-        });
-        
-        // Process analytics in the background
-        console.log('✅ DEBUG: Starting background analytics processing...');
-        const { generateServerUsageSummary, formatServerUsageForDiscord, formatServerUsageForDiscordV2 } = await import('./src/analytics/serverUsageAnalytics.js');
-        console.log('✅ DEBUG: Server usage analytics imported successfully');
-        
-        // Generate 6-week usage summary
-        console.log('✅ DEBUG: Generating server usage summary...');
-        const summary = await generateServerUsageSummary(42);
-        console.log('✅ DEBUG: Summary generated, formatting for Discord...');
-        
-        // Format for Discord display - use Components V2 everywhere now
-        const discordResponse = formatServerUsageForDiscordV2(summary);
-        
-        console.log(`✅ DEBUG: Formatted for Discord using Components V2, sending follow-up...`);
-        
-        // Send follow-up response with results
-        const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
-        console.log('🔗 DEBUG: Webhook URL:', followUpUrl);
-        console.log('📦 DEBUG: Payload size:', JSON.stringify(discordResponse).length, 'characters');
-        
-        const webhookResponse = await fetch(followUpUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(discordResponse)
-        });
-        
-        if (!webhookResponse.ok) {
-          const errorText = await webhookResponse.text();
-          console.error('❌ DEBUG: Webhook failed:', webhookResponse.status, webhookResponse.statusText);
-          console.error('❌ DEBUG: Error details:', errorText);
-          throw new Error(`Webhook failed: ${webhookResponse.status} ${webhookResponse.statusText}`);
-        }
-        
-        console.log('✅ DEBUG: Follow-up response sent successfully');
-        
-      } catch (error) {
-        console.error('Error running server usage stats:', error);
-        
-        // If we haven't sent the deferred response yet, send an error response
-        if (!res.headersSent) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Error running server usage analytics. Check logs for details.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        } else {
-          // If we already sent a deferred response, send error via webhook
-          try {
-            const followUpUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}`;
-            await fetch(followUpUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                content: '❌ Error processing server usage analytics. Please check logs.',
-                flags: InteractionResponseFlags.EPHEMERAL
-              })
-            });
-          } catch (webhookError) {
-            console.error('❌ DEBUG: Failed to send error via webhook:', webhookError);
+      // Server usage analytics button (MIGRATED TO FACTORY - DEFERRED PATTERN)
+      return ButtonHandlerFactory.create({
+        id: 'prod_server_usage_stats',
+        deferred: true,
+        ephemeral: false, // Results should be visible
+        handler: async (context) => {
+          console.log('📈 DEBUG: Starting server usage stats for user:', context.userId);
+          
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            console.log('❌ DEBUG: Access denied for user:', context.userId);
+            return {
+              content: '❌ Access denied. This feature is restricted.'
+            };
           }
+
+          console.log('✅ DEBUG: User authorized, starting background analytics processing...');
+          
+          // Process analytics in the background
+          const { generateServerUsageSummary, formatServerUsageForDiscordV2 } = await import('./src/analytics/serverUsageAnalytics.js');
+          console.log('✅ DEBUG: Server usage analytics imported successfully');
+          
+          // Generate 6-week usage summary
+          console.log('✅ DEBUG: Generating server usage summary...');
+          const summary = await generateServerUsageSummary(42);
+          console.log('✅ DEBUG: Summary generated, formatting for Discord...');
+          
+          // Format for Discord display - use Components V2
+          const discordResponse = formatServerUsageForDiscordV2(summary);
+          
+          console.log(`✅ DEBUG: Formatted for Discord using Components V2, payload size:`, JSON.stringify(discordResponse).length, 'characters');
+          
+          // Return the response for deferred update
+          return discordResponse;
         }
-      }
+      })(req, res, client);
     } else if (custom_id === 'test_role_hierarchy') {
       // Test role hierarchy functionality - admin only
       try {
