@@ -5438,105 +5438,92 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'safari_manage_safari_buttons') {
-      // Handle Safari Button Management submenu
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage Safari buttons.')) return;
-        
-        console.log(`🎛️ DEBUG: Opening Safari button management interface`);
-        
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const buttons = Object.values(safariData[guildId]?.buttons || {});
-        
-        // Create button management buttons
-        const managementButtons = [
-          new ButtonBuilder()
-            .setCustomId('safari_create_button')
-            .setLabel('Create Custom Button')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('📝'),
-          new ButtonBuilder()
-            .setCustomId('safari_view_buttons')
-            .setLabel('View All Buttons')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('📊'),
-          new ButtonBuilder()
-            .setCustomId('safari_button_manage_existing')
-            .setLabel('Edit Existing Button')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('✏️')
-        ];
-        
-        const managementRow = new ActionRowBuilder().addComponents(managementButtons);
-        
-        // Create posting button row
-        const postingButtons = [
-          new ButtonBuilder()
-            .setCustomId('safari_post_button')
-            .setLabel('Post Custom Button')
-            .setStyle(ButtonStyle.Success)
-            .setEmoji('📤')
-        ];
-        
-        const postingRow = new ActionRowBuilder().addComponents(postingButtons);
-        
-        // Create back button
-        const backButton = new ButtonBuilder()
-          .setCustomId('prod_safari_menu')
-          .setLabel('⬅ Back to Safari')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        
-        // Create button summary
-        const buttonCount = buttons.length;
-        const totalUsage = buttons.reduce((sum, btn) => sum + (btn.metadata?.usageCount || 0), 0);
-        const buttonsWithActions = buttons.filter(btn => btn.actions && btn.actions.length > 0).length;
-        
-        // Build container components
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## 📌 Manage Safari Buttons\n\nCreate, edit, and manage your interactive custom buttons.\n\n**📊 Statistics:**\n• **Total Buttons:** ${buttonCount}\n• **With Actions:** ${buttonsWithActions}\n• **Total Usage:** ${totalUsage} interactions`
-          },
-          managementRow.toJSON(), // Management buttons
-          postingRow.toJSON(), // Posting buttons
-          {
-            type: 14 // Separator
-          },
-          backRow.toJSON() // Back navigation
-        ];
-        
-        // Create Components V2 Container
-        const container = {
-          type: 17, // Container component
-          accent_color: 0x3498db, // Blue accent color
-          components: containerComponents
-        };
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
+      // Handle Safari Button Management submenu (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_manage_safari_buttons',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🎛️ DEBUG: Opening Safari button management interface`);
+          
+          // Import Safari manager functions
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const buttons = Object.values(safariData[context.guildId]?.buttons || {});
+          
+          // Create button management buttons
+          const managementButtons = [
+            new ButtonBuilder()
+              .setCustomId('safari_create_button')
+              .setLabel('Create Custom Button')
+              .setStyle(ButtonStyle.Primary)
+              .setEmoji('📝'),
+            new ButtonBuilder()
+              .setCustomId('safari_view_buttons')
+              .setLabel('View All Buttons')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('📊'),
+            new ButtonBuilder()
+              .setCustomId('safari_button_manage_existing')
+              .setLabel('Edit Existing Button')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('✏️')
+          ];
+          
+          const managementRow = new ActionRowBuilder().addComponents(managementButtons);
+          
+          // Create posting button row
+          const postingButtons = [
+            new ButtonBuilder()
+              .setCustomId('safari_post_button')
+              .setLabel('Post Custom Button')
+              .setStyle(ButtonStyle.Success)
+              .setEmoji('📤')
+          ];
+          
+          const postingRow = new ActionRowBuilder().addComponents(postingButtons);
+          
+          // Create back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('prod_safari_menu')
+            .setLabel('⬅ Back to Safari')
+            .setStyle(ButtonStyle.Secondary);
+          
+          const backRow = new ActionRowBuilder().addComponents(backButton);
+          
+          // Create button summary
+          const buttonCount = buttons.length;
+          const totalUsage = buttons.reduce((sum, btn) => sum + (btn.metadata?.usageCount || 0), 0);
+          const buttonsWithActions = buttons.filter(btn => btn.actions && btn.actions.length > 0).length;
+          
+          // Build container components
+          const containerComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## 📌 Manage Safari Buttons\n\nCreate, edit, and manage your interactive custom buttons.\n\n**📊 Statistics:**\n• **Total Buttons:** ${buttonCount}\n• **With Actions:** ${buttonsWithActions}\n• **Total Usage:** ${totalUsage} interactions`
+            },
+            managementRow.toJSON(), // Management buttons
+            postingRow.toJSON(), // Posting buttons
+            {
+              type: 14 // Separator
+            },
+            backRow.toJSON() // Back navigation
+          ];
+          
+          // Create Components V2 Container
+          const container = {
+            type: 17, // Container component
+            accent_color: 0x3498db, // Blue accent color
+            components: containerComponents
+          };
+          
+          return {
             flags: (1 << 15), // IS_COMPONENTS_V2 flag
             components: [container]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error handling safari_manage_safari_buttons:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading Safari button management interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_menu_back') {
       // Handle Back to Main Menu (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
