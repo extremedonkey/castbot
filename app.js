@@ -4367,66 +4367,54 @@ To fix this:
       }
       return;
     } else if (custom_id === 'viral_menu') {
-      // Handle menu button click from castlist (admin/user routing)
-      try {
-        const member = req.body.member;
-        const isAdmin = hasAdminPermissions(member);
-        const guildId = req.body.guild_id;
-        
-        console.log(`Menu button clicked: Admin=${isAdmin}, User=${member?.user?.username || 'unknown'}`);
-        
-        if (isAdmin) {
-          // Admin user - redirect to production menu interface (same as /prod_menu command)
-          const guild = await client.guilds.fetch(guildId);
-          const playerData = await loadPlayerData();
+      // Handle menu button click from castlist (admin/user routing) - MIGRATED TO FACTORY
+      return ButtonHandlerFactory.create({
+        id: 'viral_menu',
+        ephemeral: true,
+        handler: async (context) => {
+          const { member, guildId, client } = context;
+          const isAdmin = hasAdminPermissions(member);
           
-          // Create the full Components V2 admin interface (same as prod_menu)
-          const userId = member?.user?.id;
-          const menuResponse = await createProductionMenuInterface(guild, playerData, guildId, userId);
+          console.log(`Menu button clicked: Admin=${isAdmin}, User=${member?.user?.username || 'unknown'}`);
           
-          await res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: menuResponse
-          });
-        } else { // Player Menu code
-          // Regular user - use new player management UI
-          const playerData = await loadPlayerData();
-          const userId = member.user.id;
-          const guild = await client.guilds.fetch(guildId);
-          const targetMember = await guild.members.fetch(userId);
-          
-          // Create player management UI
-          const managementUI = await createPlayerManagementUI({
-            mode: PlayerManagementMode.PLAYER,
-            targetMember,
-            playerData,
-            guildId,
-            userId,
-            showUserSelect: false,
-            showVanityRoles: false,
-            title: 'CastBot | Player Menu',
-            client
-          });
-          
-          await res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+          if (isAdmin) {
+            // Admin user - redirect to production menu interface
+            const guild = await client.guilds.fetch(guildId);
+            const playerData = await loadPlayerData();
+            const userId = member?.user?.id;
+            const menuResponse = await createProductionMenuInterface(guild, playerData, guildId, userId);
+            
+            return {
+              ...menuResponse,
+              ephemeral: false // Admin menu is not ephemeral
+            };
+          } else {
+            // Regular user - use new player management UI
+            const playerData = await loadPlayerData();
+            const userId = member.user.id;
+            const guild = await client.guilds.fetch(guildId);
+            const targetMember = await guild.members.fetch(userId);
+            
+            // Create player management UI
+            const managementUI = await createPlayerManagementUI({
+              mode: PlayerManagementMode.PLAYER,
+              targetMember,
+              playerData,
+              guildId,
+              userId,
+              showUserSelect: false,
+              showVanityRoles: false,
+              title: 'CastBot | Player Menu',
+              client
+            });
+            
+            return {
               ...managementUI,
-              flags: (managementUI.flags || 0) | InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-      } catch (error) {
-        console.error('Error handling menu button:', error);
-        await res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error creating menu.',
-            flags: InteractionResponseFlags.EPHEMERAL
+              ephemeral: true // Player menu is ephemeral
+            };
           }
-        });
-      }
-      return;
+        }
+      })(req, res, client);
     } else if (custom_id === 'getting_started') {
       // Execute the same logic as the getting_started command
       try {
