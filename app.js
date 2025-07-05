@@ -5354,60 +5354,43 @@ To fix this:
         });
       }
     } else if (custom_id === 'emergency_app_reinit') {
-      // Handle emergency re-initialization of application questions
-      try {
-        const guildId = req.body.guild_id;
-        const channelId = req.body.channel_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        
-        console.log(`🚨 Emergency Re-Init: Channel ${channelId}, User ${userId}`);
-        
-        // Load player data to find application for this channel
-        const playerData = await loadPlayerData();
-        const application = playerData[guildId]?.applications?.[channelId];
-        
-        if (!application) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      // Emergency re-initialization of application questions (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'emergency_app_reinit',
+        handler: async (context, req, res, client) => {
+          console.log(`🚨 Emergency Re-Init: Channel ${context.channelId}, User ${context.userId}`);
+          
+          // Load player data to find application for this channel
+          const playerData = await loadPlayerData();
+          const application = playerData[context.guildId]?.applications?.[context.channelId];
+          
+          if (!application) {
+            return {
               content: '❌ **Emergency Re-Init Error**\n\nNo application found for this channel. This button can only be used from an existing user\'s application channel.\n\n**Troubleshooting:**\n• If this channel is broken, try deleting it and ask the user to re-apply\n• Make sure you\'re running this from the user\'s application channel (e.g., #username-app)',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Get the application configuration
-        const config = await getApplicationConfig(guildId, application.configId);
-        
-        if (!config) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ **Application Configuration Not Found**\n\nThe application config for this channel is missing or corrupted.\n\n**Next Steps:**\n• Delete this channel\n• Ask the user to re-apply through the main application flow\n• Contact development team if this persists',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Reset progress and restart from question 1
-        application.currentQuestion = 0;
-        await savePlayerData(playerData);
-        
-        console.log(`🔄 Emergency re-init successful for ${application.displayName} in channel ${channelId}`);
-        
-        // Show first question (same as app_continue flow)
-        return showApplicationQuestion(res, config, channelId, 0);
-        
-      } catch (error) {
-        console.error('Error in emergency re-init handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ **Emergency Re-Init Failed**\n\nAn unexpected error occurred. Please contact an admin.\n\n**Error logged for debugging.**',
-            flags: InteractionResponseFlags.EPHEMERAL
+              ephemeral: true
+            };
           }
-        });
-      }
+          
+          // Get the application configuration
+          const config = await getApplicationConfig(context.guildId, application.configId);
+          
+          if (!config) {
+            return {
+              content: '❌ **Application Configuration Not Found**\n\nThe application config for this channel is missing or corrupted.\n\n**Next Steps:**\n• Delete this channel\n• Ask the user to re-apply through the main application flow\n• Contact development team if this persists',
+              ephemeral: true
+            };
+          }
+          
+          // Reset progress and restart from question 1
+          application.currentQuestion = 0;
+          await savePlayerData(playerData);
+          
+          console.log(`🔄 Emergency re-init successful for ${application.displayName} in channel ${context.channelId}`);
+          
+          // Show first question (same as app_continue flow) - this handles its own response
+          return showApplicationQuestion(res, config, context.channelId, 0);
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
       // Handle Safari submenu - dynamic content management
       try {
@@ -6133,57 +6116,50 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_toggle_live_analytics') {
-      // Toggle live analytics logging on/off
-      try {
-        const userId = req.body.member.user.id;
-        
-        // Security check - only allow specific Discord ID
-        if (!requireSpecificUser(req, res, '391415444084490240', 'Access denied. This feature is restricted.')) return;
+      // Toggle live analytics logging (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'prod_toggle_live_analytics',
+        handler: async (context) => {
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            return {
+              content: 'Access denied. This feature is restricted.',
+              ephemeral: true
+            };
+          }
 
-        console.log('🪵 DEBUG: Starting live analytics toggle for user:', userId);
-        
-        // Load current configuration
-        const config = await loadEnvironmentConfig();
-        const currentStatus = config.liveDiscordLogging.enabled;
-        
-        console.log('🪵 DEBUG: Current live logging status:', currentStatus);
-        
-        // Toggle the status
-        const newStatus = !currentStatus;
-        const updatedConfig = await updateLiveLoggingStatus(newStatus);
-        
-        console.log('🪵 DEBUG: New live logging status:', newStatus);
-        
-        // Prepare response message
-        let responseMessage;
-        if (newStatus) {
-          responseMessage = `✅ **Live Analytics Logging ENABLED**\n\n` +
-                          `📤 Analytics events will now be posted to <#${updatedConfig.targetChannelId}>\n` +
-                          `🚫 Excluded users: ${updatedConfig.excludedUserIds.length}`;
-        } else {
-          responseMessage = `🔴 **Live Analytics Logging DISABLED**\n\n` +
-                          `📄 Only file logging will continue\n` +
-                          `🚫 Discord channel logging has been paused`;
-        }
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+          console.log('🪵 DEBUG: Starting live analytics toggle for user:', context.userId);
+          
+          // Load current configuration
+          const config = await loadEnvironmentConfig();
+          const currentStatus = config.liveDiscordLogging.enabled;
+          
+          console.log('🪵 DEBUG: Current live logging status:', currentStatus);
+          
+          // Toggle the status
+          const newStatus = !currentStatus;
+          const updatedConfig = await updateLiveLoggingStatus(newStatus);
+          
+          console.log('🪵 DEBUG: New live logging status:', newStatus);
+          
+          // Prepare response message
+          let responseMessage;
+          if (newStatus) {
+            responseMessage = `✅ **Live Analytics Logging ENABLED**\n\n` +
+                            `📤 Analytics events will now be posted to <#${updatedConfig.targetChannelId}>\n` +
+                            `🚫 Excluded users: ${updatedConfig.excludedUserIds.length}`;
+          } else {
+            responseMessage = `🔴 **Live Analytics Logging DISABLED**\n\n` +
+                            `📄 Only file logging will continue\n` +
+                            `🚫 Discord channel logging has been paused`;
+          }
+          
+          return {
             content: responseMessage,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error toggling live analytics:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error toggling live analytics. Check logs for details.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_server_usage_stats') {
       // Server usage analytics button (MIGRATED TO FACTORY - DEFERRED PATTERN)
       return ButtonHandlerFactory.create({
@@ -6222,152 +6198,117 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'test_role_hierarchy') {
-      // Test role hierarchy functionality - admin only
-      try {
-        const userId = req.body.member.user.id;
-        
-        // Security check - only allow specific Discord ID
-        if (!requireSpecificUser(req, res, '391415444084490240', 'Access denied. This feature is restricted.')) return;
+      // Test role hierarchy functionality (MIGRATED TO FACTORY - DEFERRED PATTERN)
+      return ButtonHandlerFactory.create({
+        id: 'test_role_hierarchy',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            return {
+              content: 'Access denied. This feature is restricted.'
+            };
+          }
 
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        
-        console.log('🔧 DEBUG: Starting role hierarchy test...');
-        
-        // Run the test function with your specified roles
-        const testResults = testRoleHierarchy(guild, client);
-        
-        // Create comprehensive response
-        const responseLines = [
-          '# 🔧 Role Hierarchy Test Results',
-          '',
-          `**Tests Run:** ${testResults.details.length}`,
-          `**Passed:** ${testResults.testsPassed} ✅`,
-          `**Failed:** ${testResults.testsFailed} ❌`,
-          ''
-        ];
+          console.log('🔧 DEBUG: Starting role hierarchy test...');
+          
+          // Run the test function with your specified roles
+          const testResults = testRoleHierarchy(context.guild, context.client);
+          
+          // Create comprehensive response
+          const responseLines = [
+            '# 🔧 Role Hierarchy Test Results',
+            '',
+            `**Tests Run:** ${testResults.details.length}`,
+            `**Passed:** ${testResults.testsPassed} ✅`,
+            `**Failed:** ${testResults.testsFailed} ❌`,
+            ''
+          ];
 
-        // Add detailed results for each test
-        for (const test of testResults.details) {
-          const statusEmoji = test.passed ? '✅' : '❌';
-          responseLines.push(`${statusEmoji} **${test.roleName}**`);
-          responseLines.push(`   Expected: ${test.expected}, Got: ${test.actual}`);
-          responseLines.push(`   Details: ${test.details}`);
+          // Add detailed results for each test
+          for (const test of testResults.details) {
+            const statusEmoji = test.passed ? '✅' : '❌';
+            responseLines.push(`${statusEmoji} **${test.roleName}**`);
+            responseLines.push(`   Expected: ${test.expected}, Got: ${test.actual}`);
+            responseLines.push(`   Details: ${test.details}`);
+            responseLines.push('');
+          }
+
+          // Add individual role checks using the new general-purpose function
+          responseLines.push('## 🔍 Individual Role Analysis');
           responseLines.push('');
+
+          const testRoleIds = ['1335645022774886490', '1385964464393949276'];
+          for (const roleId of testRoleIds) {
+            const check = canBotManageRole(context.guild, roleId, context.client);
+            const statusEmoji = check.canManage ? '✅' : '⚠️';
+            
+            responseLines.push(`${statusEmoji} **Role:** ${check.targetRoleName} (ID: ${roleId})`);
+            responseLines.push(`   **Can Manage:** ${check.canManage}`);
+            responseLines.push(`   **Bot Role:** ${check.botRoleName} (position ${check.botPosition})`);
+            responseLines.push(`   **Target Role:** ${check.targetRoleName} (position ${check.targetPosition})`);
+            responseLines.push(`   **Position Difference:** ${check.positionDifference}`);
+            
+            if (!check.canManage && !check.error) {
+              responseLines.push('   **Warning:** This role cannot be assigned to users!');
+            }
+            
+            responseLines.push('');
+          }
+
+          return {
+            content: responseLines.join('\n')
+          };
         }
-
-        // Add individual role checks using the new general-purpose function
-        responseLines.push('## 🔍 Individual Role Analysis');
-        responseLines.push('');
-
-        const testRoleIds = ['1335645022774886490', '1385964464393949276'];
-        for (const roleId of testRoleIds) {
-          const check = canBotManageRole(guild, roleId, client);
-          const statusEmoji = check.canManage ? '✅' : '⚠️';
-          
-          responseLines.push(`${statusEmoji} **Role:** ${check.targetRoleName} (ID: ${roleId})`);
-          responseLines.push(`   **Can Manage:** ${check.canManage}`);
-          responseLines.push(`   **Bot Role:** ${check.botRoleName} (position ${check.botPosition})`);
-          responseLines.push(`   **Target Role:** ${check.targetRoleName} (position ${check.targetPosition})`);
-          responseLines.push(`   **Position Difference:** ${check.positionDifference}`);
-          
-          if (!check.canManage && !check.error) {
-            responseLines.push('   **Warning:** This role cannot be assigned to users!');
-          }
-          
-          responseLines.push('');
-        }
-
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: responseLines.join('\n'),
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in role hierarchy test:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error running role hierarchy test. Check logs for details.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'nuke_roles') {
-      // Nuke all CastBot roles for testing - admin only
-      try {
-        const userId = req.body.member.user.id;
-        
-        // Security check - only allow specific Discord ID
-        if (!requireSpecificUser(req, res, '391415444084490240', 'Access denied. This feature is restricted.')) return;
-
-        const guildId = req.body.guild_id;
-        const token = req.body.token;
-        const applicationId = req.body.application_id || process.env.APP_ID;
-        
-        // Send deferred response immediately to avoid timeout
-        res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: InteractionResponseFlags.EPHEMERAL
+      // Nuke all CastBot roles for testing (MIGRATED TO FACTORY - DEFERRED PATTERN)
+      return ButtonHandlerFactory.create({
+        id: 'nuke_roles',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            return {
+              content: 'Access denied. This feature is restricted.'
+            };
           }
-        });
-        
-        console.log('💥 DEBUG: Starting role nuke...');
-        
-        // Run the nuke function
-        const nukeResults = await nukeRoles(guildId, client);
-        
-        // Create comprehensive response
-        const responseLines = [
-          '# 💥 Nuke Roles Complete',
-          '',
-          `**Server Reset Status:** ${nukeResults.success ? 'Success ✅' : 'Failed ❌'}`,
-          '',
-          '## Results:',
-          `**Roles Deleted:** ${nukeResults.rolesDeleted}`,
-          `**Pronouns Cleared:** ${nukeResults.pronounsCleared}`, 
-          `**Timezones Cleared:** ${nukeResults.timezonesCleared}`,
-          ''
-        ];
 
-        if (nukeResults.errors.length > 0) {
-          responseLines.push('## Errors:');
-          nukeResults.errors.forEach(error => {
-            responseLines.push(`❌ ${error}`);
-          });
-          responseLines.push('');
+          console.log('💥 DEBUG: Starting role nuke...');
+          
+          // Run the nuke function
+          const nukeResults = await nukeRoles(context.guildId, context.client);
+          
+          // Create comprehensive response
+          const responseLines = [
+            '# 💥 Nuke Roles Complete',
+            '',
+            `**Server Reset Status:** ${nukeResults.success ? 'Success ✅' : 'Failed ❌'}`,
+            '',
+            '## Results:',
+            `**Roles Deleted:** ${nukeResults.rolesDeleted}`,
+            `**Pronouns Cleared:** ${nukeResults.pronounsCleared}`, 
+            `**Timezones Cleared:** ${nukeResults.timezonesCleared}`,
+            ''
+          ];
+
+          if (nukeResults.errors.length > 0) {
+            responseLines.push('## Errors:');
+            nukeResults.errors.forEach(error => {
+              responseLines.push(`❌ ${error}`);
+            });
+            responseLines.push('');
+          }
+
+          responseLines.push('🎯 **Next Step:** Run `/menu` → Production Menu → Setup to test fresh server behavior!');
+
+          return {
+            content: responseLines.join('\n')
+          };
         }
-
-        responseLines.push('🎯 **Next Step:** Run `/menu` → Production Menu → Setup to test fresh server behavior!');
-
-        // Send follow-up message using webhook (since we already sent deferred response)
-        await fetch(`https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            content: responseLines.join('\n'),
-            flags: InteractionResponseFlags.EPHEMERAL
-          })
-        });
-        
-        return; // Don't send another response
-        
-      } catch (error) {
-        console.error('Error in nuke_roles:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error running nuke roles. Check logs for details.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'safari_create_button') {
       // Handle Create Custom Button - show initial modal
       console.log('🔍 DEBUG: safari_create_button handler reached');
