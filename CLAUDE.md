@@ -118,7 +118,12 @@ npm run logs-prod -- --feature BUTTON --level debug
     requiresPermission: PermissionFlagsBits.ManageRoles, // Optional
     permissionName: 'Manage Roles',
     handler: async (context) => {
+      // 🚨 MANDATORY LOGGING PATTERN - prevents "This interaction failed" confusion
+      console.log(`🔍 START: your_button_id - user ${context.userId}`);
+      
       // Your logic here - context has guildId, userId, member, etc.
+      
+      console.log(`✅ SUCCESS: your_button_id - completed`);
       return {
         content: 'Success!',
         ephemeral: true
@@ -136,6 +141,13 @@ npm run logs-prod -- --feature BUTTON --level debug
 **🚨 CRITICAL: 5-Button Limit** - Action Rows can contain maximum 5 buttons (ComponentsV2.md line 61)
 
 **Always update:** [docs/architecture/BUTTON_HANDLER_REGISTRY.md](docs/architecture/BUTTON_HANDLER_REGISTRY.md)
+
+### 🚨 Button Testing Protocol
+If a button shows "This interaction failed":
+1. Check logs for `🔍 START: button_id` - if missing, handler isn't being called
+2. Check logs for `✅ SUCCESS: button_id` - if missing, handler crashed
+3. For operations >3s, ensure `deferred: true` in factory config
+4. See [docs/architecture/ButtonDiagnostics.md](docs/architecture/ButtonDiagnostics.md) for detailed troubleshooting
 
 ## 📋 Feature Backlog
 

@@ -138,6 +138,15 @@ If feature includes Discord buttons/components:
   ```
 - [ ] BUTTON_HANDLER_REGISTRY.md updated
 - [ ] Natural language search works (test with ButtonRegistry.search())
+- [ ] **Mandatory logging pattern implemented**:
+  ```javascript
+  console.log(`🔍 START: ${custom_id} - user ${context.userId}`);
+  // ... handler logic ...
+  console.log(`✅ SUCCESS: ${custom_id} - completed`);
+  ```
+- [ ] **For operations >3 seconds**: `deferred: true` in factory config
+- [ ] **For multi-message responses**: `deferred: true` required
+- [ ] **Error cases log failure**: `console.log(`❌ FAILURE: ${custom_id}`, error);`
 
 **⚠️ DEPRECATED PATTERNS - DO NOT USE:**
 - ❌ Manual try-catch wrappers (factory handles this)

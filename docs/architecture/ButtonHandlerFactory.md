@@ -258,12 +258,15 @@ handler: async (context) => {
 - **Multi-message handlers** (multiple webhooks)
 - Long-running analytics or processing
 - Any handler that sends follow-up messages
+- Database operations or external API calls
+
+**Without `deferred: true`, Discord will show "This interaction failed" after 3 seconds!**
 
 ```javascript
 } else if (custom_id === 'slow_operation') {
   return ButtonHandlerFactory.create({
     id: 'slow_operation',
-    deferred: true,
+    deferred: true,  // MANDATORY for operations >3s
     ephemeral: true,  // Add this for private responses
     handler: async (context) => {
       // Long-running operation
