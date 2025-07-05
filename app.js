@@ -7386,83 +7386,73 @@ Your server is now ready for Tycoons gameplay!`;
       }
     /* COMMENTED OUT - REDUNDANT INTERFACE
     } else if (custom_id === 'safari_item_create') {
-      // MVP2: Create new item interface
-      try {
-        const member = req.body.member;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create items.')) return;
-        
-        console.log(`📦 DEBUG: Create new item clicked`);
-        
-        // Create enhanced item creation modal for Challenge Game Logic
-        const modal = new ModalBuilder()
-          .setCustomId('safari_item_modal')
-          .setTitle('📦 Create New Game Item');
-        
-        const itemNameInput = new TextInputBuilder()
-          .setCustomId('item_name')
-          .setLabel('Item Name')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setMaxLength(50)
-          .setPlaceholder('e.g. Territory Forager');
-        
-        const itemPriceInput = new TextInputBuilder()
-          .setCustomId('item_price')
-          .setLabel('Base Price')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setMaxLength(10)
-          .setPlaceholder('30');
-        
-        const goodOutcomeInput = new TextInputBuilder()
-          .setCustomId('good_outcome_value')
-          .setLabel('Good Outcome Yield')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(false)
-          .setMaxLength(10)
-          .setPlaceholder('Enter yield for good events (0 or blank for none)');
-        
-        const badOutcomeInput = new TextInputBuilder()
-          .setCustomId('bad_outcome_value')
-          .setLabel('Bad Outcome Yield')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(false)
-          .setMaxLength(10)
-          .setPlaceholder('Enter yield for bad events (0 or blank for none)');
-        
-        const attackValueInput = new TextInputBuilder()
-          .setCustomId('attack_value')
-          .setLabel('Attack Power')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(false)
-          .setMaxLength(10)
-          .setPlaceholder('Attack power (leave blank if no attack)');
-        
-        const row1 = new ActionRowBuilder().addComponents(itemNameInput);
-        const row2 = new ActionRowBuilder().addComponents(itemPriceInput);
-        const row3 = new ActionRowBuilder().addComponents(goodOutcomeInput);
-        const row4 = new ActionRowBuilder().addComponents(badOutcomeInput);
-        const row5 = new ActionRowBuilder().addComponents(attackValueInput);
-        
-        modal.addComponents(row1, row2, row3, row4, row5);
-        
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_item_create:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error creating item interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // MVP2: Create new item interface (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_create',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`📦 DEBUG: Create new item clicked`);
+          
+          // Create enhanced item creation modal for Challenge Game Logic
+          const modal = new ModalBuilder()
+            .setCustomId('safari_item_modal')
+            .setTitle('📦 Create New Game Item');
+          
+          const itemNameInput = new TextInputBuilder()
+            .setCustomId('item_name')
+            .setLabel('Item Name')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(50)
+            .setPlaceholder('e.g. Territory Forager');
+          
+          const itemPriceInput = new TextInputBuilder()
+            .setCustomId('item_price')
+            .setLabel('Base Price')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(10)
+            .setPlaceholder('30');
+          
+          const goodOutcomeInput = new TextInputBuilder()
+            .setCustomId('good_outcome_value')
+            .setLabel('Good Outcome Yield')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(10)
+            .setPlaceholder('Enter yield for good events (0 or blank for none)');
+          
+          const badOutcomeInput = new TextInputBuilder()
+            .setCustomId('bad_outcome_value')
+            .setLabel('Bad Outcome Yield')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(10)
+            .setPlaceholder('Enter yield for bad events (0 or blank for none)');
+          
+          const attackValueInput = new TextInputBuilder()
+            .setCustomId('attack_value')
+            .setLabel('Attack Power')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(10)
+            .setPlaceholder('Attack power (leave blank if no attack)');
+          
+          const row1 = new ActionRowBuilder().addComponents(itemNameInput);
+          const row2 = new ActionRowBuilder().addComponents(itemPriceInput);
+          const row3 = new ActionRowBuilder().addComponents(goodOutcomeInput);
+          const row4 = new ActionRowBuilder().addComponents(badOutcomeInput);
+          const row5 = new ActionRowBuilder().addComponents(attackValueInput);
+          
+          modal.addComponents(row1, row2, row3, row4, row5);
+          
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
     END COMMENTED OUT - REDUNDANT INTERFACE */
     } else if (custom_id === 'safari_store_list') {
       // MVP2: View all stores list interface
@@ -8543,41 +8533,27 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_item_manage_existing') {
-      // MVP2 Sprint 3: New entity management system for items
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit items.')) return;
-        
-        console.log(`✏️ DEBUG: Item management UI opened for guild ${guildId}`);
-        
-        // Create entity management UI
-        const uiResponse = await createEntityManagementUI({
-          entityType: 'item',
-          guildId: guildId,
-          selectedId: null,
-          activeFieldGroup: null,
-          searchTerm: '',
-          mode: 'edit'
-        });
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: uiResponse
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_item_manage_existing:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading item management.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // MVP2 Sprint 3: New entity management system for items (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_manage_existing',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`✏️ DEBUG: Item management UI opened for guild ${context.guildId}`);
+          
+          // Create entity management UI
+          const uiResponse = await createEntityManagementUI({
+            entityType: 'item',
+            guildId: context.guildId,
+            selectedId: null,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          
+          return uiResponse;
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_button_manage_existing') {
       // Edit existing button interface following store/item pattern
       try {
@@ -12021,42 +11997,30 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       }
     // safari_store_edit_select handler removed - functionality replaced by safari_store_manage_items
     } else if (custom_id === 'safari_item_edit_select') {
-      // Handle item selection for editing - redirect to new entity management UI
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        const selectedItemId = data.values[0];
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit items.')) return;
-        
-        console.log(`✏️ DEBUG: Selected item ${selectedItemId} for editing`);
-        
-        // Create entity management UI with selected item - go directly to edit mode
-        const uiResponse = await createEntityManagementUI({
-          entityType: 'item',
-          guildId: guildId,
-          selectedId: selectedItemId,
-          activeFieldGroup: null,
-          searchTerm: '',
-          mode: 'edit'
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: uiResponse
-        });
-        
-      } catch (error) {
-        console.error('Error handling item edit selection:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error selecting item for editing.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Handle item selection for editing - redirect to new entity management UI (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_edit_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectedItemId = context.values[0];
+          
+          console.log(`✏️ DEBUG: Selected item ${selectedItemId} for editing`);
+          
+          // Create entity management UI with selected item - go directly to edit mode
+          const uiResponse = await createEntityManagementUI({
+            entityType: 'item',
+            guildId: context.guildId,
+            selectedId: selectedItemId,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          
+          return uiResponse;
+        }
+      })(req, res, client);
     // ==================== ENTITY MANAGEMENT HANDLERS ====================
     // New entity management system for Safari items, stores, and buttons
     
