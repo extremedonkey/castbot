@@ -233,13 +233,6 @@ export const BUTTON_REGISTRY = {
   },
 
   // Safari Item Management Submenu
-  'safari_item_manage_existing': {
-    label: 'Manage Items',
-    description: 'Edit existing Safari items',
-    emoji: '✏️',
-    style: 'Secondary',
-    category: 'safari_items'
-  },
   'safari_item_edit_select': {
     label: 'Select Item',
     description: 'Select item to edit',
