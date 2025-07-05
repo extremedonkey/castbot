@@ -455,7 +455,6 @@ function getEntityDescription(entity, entityType) {
 }
 
 export {
-    getFieldGroups,
     getDefaultEmoji,
     getEntitiesForType,
     filterEntities
