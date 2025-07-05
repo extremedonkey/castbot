@@ -107,6 +107,7 @@ import {
 
 // Helper function to refresh question management UI
 async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
+  console.log(`🔧 DEBUG: refreshQuestionManagementUI called with configId: ${configId}, currentPage: ${currentPage}`);
   const questionsPerPage = 5;
   const totalPages = Math.max(1, Math.ceil(config.questions.length / questionsPerPage));
   const startIndex = currentPage * questionsPerPage;
@@ -209,7 +210,7 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
       },
       {
         type: 2, // Button
-        custom_id: `season_emergency_reinit_${configId}`,
+        custom_id: `season_emergency_reinit_${configId || 'undefined'}`,
         label: 'Emergency Re-Init',
         style: 4, // Danger (Red)
         emoji: { name: '🚨' }
