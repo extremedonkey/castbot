@@ -119,6 +119,15 @@ export const BUTTON_REGISTRY = {
     emoji: '📋',
     style: 'Primary',
     category: 'navigation'
+  },
+
+  // === SAFARI MENU SYSTEM ===
+  'prod_safari_menu': {
+    label: 'Safari',
+    description: 'Safari dynamic content management system',
+    emoji: '🦁',
+    style: 'Primary',
+    category: 'safari'
   }
 };
 

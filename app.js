@@ -5392,45 +5392,26 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
-      // Handle Safari submenu - dynamic content management
-      try {
-        const member = req.body.member;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to access Safari features.')) return;
-
-        const channelId = req.body.channel_id;
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(channelId);
-        
-        console.log('🦁 DEBUG: Creating Safari submenu');
-        
-        // Create Safari submenu
-        const safariMenuData = await createSafariMenu(guildId, userId, member);
-        
-        const responseType = shouldUpdateMessage ? 
-          InteractionResponseType.UPDATE_MESSAGE : 
-          InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE;
-        
-        return res.send({
-          type: responseType,
-          data: {
+      // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
+      const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
+      
+      return ButtonHandlerFactory.create({
+        id: 'prod_safari_menu',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: shouldUpdateMessage,
+        handler: async (context) => {
+          console.log('🦁 DEBUG: Creating Safari submenu');
+          
+          // Create Safari submenu
+          const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
+          
+          return {
             ...safariMenuData,
-            flags: (safariMenuData.flags || 0) | InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error loading Safari interface:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading Safari interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'reece_stuff_menu') {
       // Handle Reece Stuff submenu - special admin features (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
