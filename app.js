@@ -12088,19 +12088,30 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             // Insert the consumable select before the separator
             containerComponents.splice(insertIndex, 0, consumableSelect);
             
-            return {
-              type: InteractionResponseType.UPDATE_MESSAGE,
-              data: uiResponse
-            };
+            return uiResponse;
           } else {
             // Open modal directly for field group editing
-            const entity = await loadEntity(context.guildId, entityType, entityId);
-            if (!entity) throw new Error('Entity not found');
-            
-            const modalResponse = createFieldGroupModal(entityType, entityId, fieldGroup, entity);
-            if (!modalResponse) throw new Error('No modal available for this field group');
-            
-            return modalResponse;
+            try {
+              const entity = await loadEntity(context.guildId, entityType, entityId);
+              if (!entity) {
+                console.error(`🚨 Entity not found: ${entityType} ${entityId} in guild ${context.guildId}`);
+                throw new Error('Entity not found');
+              }
+              
+              console.log(`🔍 DEBUG: Creating modal for ${entityType} ${entityId} fieldGroup ${fieldGroup}`);
+              const modalResponse = createFieldGroupModal(entityType, entityId, fieldGroup, entity);
+              
+              if (!modalResponse) {
+                console.error(`🚨 No modal created for ${entityType} ${fieldGroup}`);
+                throw new Error('No modal available for this field group');
+              }
+              
+              console.log(`✅ DEBUG: Modal created successfully`);
+              return modalResponse;
+            } catch (error) {
+              console.error(`🚨 Error in field group handler:`, error);
+              throw error;
+            }
           }
         }
       })(req, res, client);

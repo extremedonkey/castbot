@@ -314,7 +314,7 @@ function createFieldGroupButtons(entityType, entityId, activeFieldGroup) {
 /**
  * Get field groups for entity type
  */
-function getFieldGroups(entityType) {
+export function getFieldGroups(entityType) {
     switch (entityType) {
         case 'item':
             return {
