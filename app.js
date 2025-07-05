@@ -206,6 +206,13 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
         label: 'Cast Ranking',
         style: 2, // Secondary
         emoji: { name: '🏆' }
+      },
+      {
+        type: 2, // Button
+        custom_id: `season_emergency_reinit_${configId}`,
+        label: 'Emergency Re-Init',
+        style: 4, // Danger (Red)
+        emoji: { name: '🚨' }
       }
     ]
   };
@@ -5331,6 +5338,64 @@ To fix this:
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error posting button.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('season_emergency_reinit_')) {
+      // Handle emergency re-initialization of application questions
+      try {
+        // Extract configId: season_emergency_reinit_{configId}
+        const prefix = 'season_emergency_reinit_';
+        const configId = custom_id.replace(prefix, '');
+        const guildId = req.body.guild_id;
+        const channelId = req.body.channel_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        console.log(`🚨 Emergency Re-Init: ConfigId ${configId}, Channel ${channelId}, User ${userId}`);
+        
+        // Load player data to find application for this channel
+        const playerData = await loadPlayerData();
+        const application = playerData[guildId]?.applications?.[channelId];
+        
+        if (!application) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **Emergency Re-Init Error**\n\nNo application found for this channel. This button can only be used from an existing user\'s application channel.\n\n**Troubleshooting:**\n• If this channel is broken, try deleting it and ask the user to re-apply\n• Make sure you\'re running this from the user\'s application channel (e.g., #username-app)',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Get the application configuration
+        const config = await getApplicationConfig(guildId, application.configId);
+        
+        if (!config) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **Application Configuration Not Found**\n\nThe application config for this channel is missing or corrupted.\n\n**Next Steps:**\n• Delete this channel\n• Ask the user to re-apply through the main application flow\n• Contact development team if this persists',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Reset progress and restart from question 1
+        application.currentQuestion = 0;
+        await savePlayerData(playerData);
+        
+        console.log(`🔄 Emergency re-init successful for ${application.displayName} in channel ${channelId}`);
+        
+        // Show first question (same as app_continue flow)
+        return showApplicationQuestion(res, config, channelId, 0);
+        
+      } catch (error) {
+        console.error('Error in emergency re-init handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ **Emergency Re-Init Failed**\n\nAn unexpected error occurred. Please contact an admin.\n\n**Error logged for debugging.**',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -11261,6 +11326,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
+        // Initialize progress tracker (backwards compatible)
+        if (!application.currentQuestion) {
+          application.currentQuestion = 0; // Initialize for existing applications
+        }
+        
+        // Save updated progress
+        await savePlayerData(playerData);
+        
         // Show first question
         return showApplicationQuestion(res, config, channelId, 0);
         
@@ -11325,6 +11398,15 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             }
           });
         }
+        
+        // Update progress tracker (backwards compatible)
+        if (!application.currentQuestion) {
+          application.currentQuestion = 0; // Initialize for existing applications
+        }
+        application.currentQuestion = nextIndex;
+        
+        // Save updated progress
+        await savePlayerData(playerData);
         
         // Show next question
         return showApplicationQuestion(res, config, channelId, nextIndex);

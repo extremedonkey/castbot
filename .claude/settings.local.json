@@ -172,7 +172,8 @@
       "Bash(jq:*)",
       "Bash(jq:*)",
       "WebFetch(domain:cdn.discordapp.com)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "WebFetch(domain:i.ibb.co)"
     ],
     "deny": []
   }
