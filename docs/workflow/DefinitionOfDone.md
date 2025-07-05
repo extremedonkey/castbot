@@ -105,17 +105,43 @@ Every feature MUST include comprehensive logging following our logging standards
 - [ ] Memory leaks checked
 
 ### 10. Button/Component Handlers
+**🚨 MANDATORY: Use Button Handler Factory System** - See [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
+
 If feature includes Discord buttons/components:
-- [ ] Handler added to app.js in correct location
-- [ ] Context variables extracted at start:
+- [ ] **Button defined in BUTTON_REGISTRY** (buttonHandlerFactory.js):
   ```javascript
-  const guildId = req.body.guild_id;
-  const userId = req.body.member?.user?.id || req.body.user?.id;
+  'button_id': {
+    label: 'Button Text',
+    description: 'What this button does',
+    emoji: '🔥',
+    style: 'Primary',
+    category: 'feature_name'
+  }
   ```
-- [ ] Try-catch wrapper implemented
+- [ ] **Handler uses ButtonHandlerFactory.create()**:
+  ```javascript
+  } else if (custom_id === 'button_id') {
+    return ButtonHandlerFactory.create({
+      id: 'button_id',
+      handler: async (context) => {
+        // Your logic here
+        return { content: 'Success!', ephemeral: true };
+      }
+    })(req, res, client);
+  }
+  ```
+- [ ] **Menu creation uses MenuFactory** (if applicable):
+  ```javascript
+  const components = MenuFactory.createComponents('menu_id');
+  ```
 - [ ] BUTTON_HANDLER_REGISTRY.md updated
-- [ ] Custom ID pattern documented
-- [ ] Dynamic handler exclusions added if needed
+- [ ] Natural language search works (test with ButtonRegistry.search())
+
+**⚠️ DEPRECATED PATTERNS - DO NOT USE:**
+- ❌ Manual try-catch wrappers (factory handles this)
+- ❌ Manual context extraction (factory handles this)  
+- ❌ Direct Discord component creation (use MenuFactory)
+- ❌ Manual error handling (factory standardizes this)
 
 ### 11. Data Management
 - [ ] Data structure documented

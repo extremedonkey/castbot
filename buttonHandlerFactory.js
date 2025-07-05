@@ -110,6 +110,15 @@ export const BUTTON_REGISTRY = {
     parent: 'reece_stuff_menu',
     restrictedUser: '391415444084490240',
     category: 'navigation'
+  },
+  
+  // === GENERAL NAVIGATION ===
+  'viral_menu': {
+    label: '📋 Open Prod Menu',
+    description: 'Quick access to production menu from restart notifications',
+    emoji: '📋',
+    style: 'Primary',
+    category: 'navigation'
   }
 };
 

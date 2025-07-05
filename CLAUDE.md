@@ -92,46 +92,48 @@ npm run logs-prod -- --feature BUTTON --level debug
 - Components V2 for modern Discord UI
 - Centralized error handling via errorHandler.js
 
-## ⚠️ Discord Button Implementation
+## 🚀 Discord Button Implementation
 
-**MANDATORY READING:** Before implementing ANY button, see [docs/architecture/BUTTON_HANDLER_ANALYSIS.md](docs/architecture/BUTTON_HANDLER_ANALYSIS.md)
+**🚨 MANDATORY: Use Button Handler Factory System** 
 
-**🚨 CRITICAL: 5-Button Limit** - Action Rows can contain maximum 5 buttons (ComponentsV2.md line 61). Adding more will crash the menu!
+**STEP 1:** Read [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md) for complete documentation
 
-### Button Handler Template
+**STEP 2:** Always use the factory pattern for ALL new buttons:
+
+### ✅ New Button Handler Template (MANDATORY)
 ```javascript
+// 1. ADD TO BUTTON_REGISTRY (buttonHandlerFactory.js)
+'your_button_id': {
+  label: 'Button Text',
+  description: 'What this button does',
+  emoji: '🔥',
+  style: 'Primary',
+  category: 'feature_name'
+}
+
+// 2. CREATE HANDLER (app.js)
 } else if (custom_id === 'your_button_id') {
-    try {
-        // 1. MANDATORY CONTEXT EXTRACTION
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        const member = req.body.member;
-        const channelId = req.body.channel_id;
-        
-        // 2. YOUR HANDLER LOGIC
-        console.log(`🔍 DEBUG: Processing ${custom_id} for user ${userId}`);
-        
-        // 3. SEND RESPONSE
-        return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-                content: 'Success!',
-                components: [...]
-            }
-        });
-        
-    } catch (error) {
-        console.error(`Error in ${custom_id} handler:`, error);
-        return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-                content: '❌ An error occurred. Please try again.',
-                flags: InteractionResponseFlags.EPHEMERAL
-            }
-        });
+  return ButtonHandlerFactory.create({
+    id: 'your_button_id',
+    requiresPermission: PermissionFlagsBits.ManageRoles, // Optional
+    permissionName: 'Manage Roles',
+    handler: async (context) => {
+      // Your logic here - context has guildId, userId, member, etc.
+      return {
+        content: 'Success!',
+        ephemeral: true
+      };
     }
+  })(req, res, client);
 }
 ```
+
+### ✅ Natural Language Benefits
+- You can now say "analytics button" instead of hunting for IDs
+- `ButtonRegistry.search('emergency')` finds emergency-related buttons
+- `ButtonRegistry.findByLabel('Server Stats')` returns exact button
+
+**🚨 CRITICAL: 5-Button Limit** - Action Rows can contain maximum 5 buttons (ComponentsV2.md line 61)
 
 **Always update:** [docs/architecture/BUTTON_HANDLER_REGISTRY.md](docs/architecture/BUTTON_HANDLER_REGISTRY.md)
 

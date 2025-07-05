@@ -3121,7 +3121,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   if (type === InteractionType.MESSAGE_COMPONENT) {
     const { custom_id } = data;
     console.log('Processing MESSAGE_COMPONENT with custom_id:', custom_id);
-    console.log('🔍 BUTTON DEBUG: Checking handlers for', custom_id);
+    
+    // Check if button uses new factory pattern or old pattern
+    const isFactoryButton = BUTTON_REGISTRY[custom_id];
+    const buttonType = isFactoryButton ? '✨ FACTORY' : '🪨 LEGACY';
+    console.log(`🔍 BUTTON DEBUG: Checking handlers for ${custom_id} [${buttonType}]`);
 
     // Analytics logging for button interactions
     const user = req.body.member?.user || req.body.user;
