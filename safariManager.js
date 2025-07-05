@@ -2114,7 +2114,8 @@ async function processRoundResults(guildId, channelId, client) {
             return {
                 type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
                 data: {
-                    content: `# Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n*No eligible players found. Players need currency ≥ 1 or items in inventory to participate.*`
+                    content: `# Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n*No eligible players found. Players need currency ≥ 1 or items in inventory to participate.*\n\n💡 **Tip:** Use the "Restock Players" button after resetting to seed test data.`,
+                    flags: (1 << 15) // IS_COMPONENTS_V2 for consistency
                 }
             };
         }
