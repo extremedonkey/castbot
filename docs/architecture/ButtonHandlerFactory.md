@@ -389,6 +389,149 @@ const menuButtons = ButtonRegistry.getMenuButtons('reece_stuff_menu');
 - **Easy menu modifications** without code changes
 - **Automated menu generation** from configurations
 
+## Common Pitfalls and Solutions
+
+### 🚨 Critical Issues to Avoid
+
+#### 1. Double-Wrapping UI Responses
+**Problem:** Wrapping already-formatted UI responses in additional Discord response objects.
+
+```javascript
+// ❌ INCORRECT: Double-wrapping response
+const uiResponse = await createEntityManagementUI({...});
+return {
+  type: InteractionResponseType.UPDATE_MESSAGE,
+  data: uiResponse  // uiResponse already has {flags, components}
+};
+
+// ✅ CORRECT: Return UI response directly
+const uiResponse = await createEntityManagementUI({...});
+return uiResponse;  // Factory handles the response type
+```
+
+**Symptoms:** "This interaction failed" errors, malformed Discord responses
+
+#### 2. Missing Function Exports
+**Problem:** Functions used by handlers not properly exported from modules.
+
+```javascript
+// ❌ INCORRECT: Function not exported
+function getFieldGroups(entityType) { /* ... */ }
+
+// ✅ CORRECT: Function properly exported
+export function getFieldGroups(entityType) { /* ... */ }
+```
+
+**Symptoms:** "getFieldGroups is not defined" errors, module import failures
+
+#### 3. Duplicate Exports
+**Problem:** Same function exported multiple times in different ways.
+
+```javascript
+// ❌ INCORRECT: Duplicate exports
+export function getFieldGroups(entityType) { /* ... */ }
+export { getFieldGroups }; // Duplicate!
+
+// ✅ CORRECT: Single export method
+export function getFieldGroups(entityType) { /* ... */ }
+```
+
+**Symptoms:** "Duplicate export" syntax errors, app startup failures
+
+#### 4. Missing Context Destructuring
+**Problem:** Not properly extracting needed properties from context.
+
+```javascript
+// ❌ INCORRECT: Assuming global variables
+handler: async (context) => {
+  const guild = await client.guilds.fetch(guildId); // client, guildId undefined
+}
+
+// ✅ CORRECT: Destructure from context
+handler: async (context) => {
+  const { guildId, client } = context;
+  const guild = await client.guilds.fetch(guildId);
+}
+```
+
+#### 5. Incorrect Modal Return Types
+**Problem:** Returning wrong response type for modals vs messages.
+
+```javascript
+// ❌ INCORRECT: Wrong response type for modal
+return {
+  type: InteractionResponseType.UPDATE_MESSAGE,
+  data: modalData
+};
+
+// ✅ CORRECT: Modal response type
+return {
+  type: InteractionResponseType.MODAL,
+  data: modalData
+};
+```
+
+### 🔍 Debugging Tips
+
+#### Enable Debug Logging
+Add comprehensive logging to track handler execution:
+
+```javascript
+handler: async (context) => {
+  console.log(`🔍 DEBUG: Handler started for ${context.customId}`);
+  
+  try {
+    const result = await someFunction();
+    console.log(`✅ DEBUG: Function completed successfully`);
+    return result;
+  } catch (error) {
+    console.error(`🚨 ERROR in handler:`, error);
+    throw error;
+  }
+}
+```
+
+#### Check Button Registry
+Verify buttons are properly registered:
+
+```javascript
+// Check if button exists in registry
+const isRegistered = BUTTON_REGISTRY[customId];
+console.log(`Button ${customId} registered:`, isRegistered);
+```
+
+#### Validate Response Format
+Ensure responses match expected Discord format:
+
+```javascript
+// Log response before returning
+const response = await createUI();
+console.log('Response format:', JSON.stringify(response, null, 2));
+return response;
+```
+
+### 📋 Pre-Migration Checklist
+
+Before converting a handler to Button Factory:
+
+- [ ] ✅ Button is registered in BUTTON_REGISTRY
+- [ ] ✅ All required functions are imported
+- [ ] ✅ No duplicate exports in dependency modules
+- [ ] ✅ Handler properly destructures context
+- [ ] ✅ Return type matches response type (modal vs message)
+- [ ] ✅ Error handling and logging added
+- [ ] ✅ Permissions properly configured
+- [ ] ✅ Test in Discord before deploying
+
+### 🚀 Migration Best Practices
+
+1. **Start Simple:** Convert basic handlers first, then complex ones
+2. **Test Thoroughly:** Test each converted handler individually
+3. **Add Logging:** Include debug logging during migration
+4. **Check Dependencies:** Ensure all imported functions are available
+5. **Validate Responses:** Check Discord response format requirements
+6. **Handle Errors:** Add proper error handling and user feedback
+
 ## Testing
 
 ### Unit Tests
