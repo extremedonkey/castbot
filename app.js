@@ -5458,8 +5458,11 @@ To fix this:
       }
     } else if (custom_id === 'reece_stuff_menu') {
       // Handle Reece Stuff submenu - special admin features (MIGRATED TO FACTORY)
+      const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
+      
       return ButtonHandlerFactory.create({
         id: 'reece_stuff_menu',
+        updateMessage: shouldUpdateMessage,
         handler: async (context) => {
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
@@ -5468,15 +5471,12 @@ To fix this:
               ephemeral: true
             };
           }
-
-          const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(context.channelId);
           
           // Create Reece Stuff submenu
           const reeceMenuData = await createReeceStuffMenu();
           
           return {
             ...reeceMenuData,
-            updateMessage: shouldUpdateMessage,
             ephemeral: true
           };
         }
