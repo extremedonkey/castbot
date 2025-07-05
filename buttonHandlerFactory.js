@@ -274,6 +274,22 @@ export const BUTTON_REGISTRY = {
     emoji: '📦',
     style: 'Primary',
     category: 'safari_items'
+  },
+
+  // === ENTITY MANAGEMENT SYSTEM ===
+  'entity_select': {
+    label: 'Entity Selection',
+    description: 'Handle entity selection from dropdown',
+    emoji: '📋',
+    style: 'Primary',
+    category: 'entity_management'
+  },
+  'entity_field_group': {
+    label: 'Field Group Edit',
+    description: 'Handle field group button click for editing',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'entity_management'
   }
 };
 

@@ -3132,7 +3132,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'safari_item_player_qty',
         'safari_item_qty_user_select',
         'safari_item_qty_modal',
-        'safari_item_modal'
+        'safari_item_modal',
+        'entity_select',
+        'entity_field_group',
+        'entity_delete_mode',
+        'entity_confirm_delete'
       ];
       
       for (const pattern of dynamicPatterns) {
@@ -11823,161 +11827,150 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     // New entity management system for Safari items, stores, and buttons
     
     } else if (custom_id.startsWith('entity_select_')) {
-      // Handle entity selection from dropdown
-      try {
-        const parts = custom_id.split('_');
-        const entityType = parts.slice(2).join('_'); // Handle entity types with underscores
-        const guildId = req.body.guild_id;
-        const selectedValue = data.values[0];
+      // Handle entity selection from dropdown (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'entity_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.split('_');
+          const entityType = parts.slice(2).join('_'); // Handle entity types with underscores
+          const selectedValue = context.values[0];
         
-        // Check permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, `You need Manage Roles permission to manage ${entityType}s.`)) return;
-        
-        console.log(`📋 DEBUG: Entity select - Type: ${entityType}, Value: ${selectedValue}`);
-        
-        // Handle seasons entity type specially
-        if (entityType === 'seasons') {
-          if (selectedValue === 'create_new_season') {
-            // Show season creation modal
-            const seasonModal = new ModalBuilder()
-              .setCustomId('create_season_modal')
-              .setTitle('Create New Season');
+          console.log(`📋 DEBUG: Entity select - Type: ${entityType}, Value: ${selectedValue}`);
+          
+          // Handle seasons entity type specially
+          if (entityType === 'seasons') {
+            if (selectedValue === 'create_new_season') {
+              // Show season creation modal
+              const seasonModal = new ModalBuilder()
+                .setCustomId('create_season_modal')
+                .setTitle('Create New Season');
 
-            const seasonNameInput = new TextInputBuilder()
-              .setCustomId('season_name')
-              .setLabel('Season Name')
-              .setPlaceholder('e.g., "Season 12 - Jurassic Park"')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-              .setMaxLength(100);
+              const seasonNameInput = new TextInputBuilder()
+                .setCustomId('season_name')
+                .setLabel('Season Name')
+                .setPlaceholder('e.g., "Season 12 - Jurassic Park"')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setMaxLength(100);
 
-            const seasonDescInput = new TextInputBuilder()
-              .setCustomId('season_description')
-              .setLabel('Season Description')
-              .setPlaceholder('Brief description of this season (optional)')
-              .setStyle(TextInputStyle.Paragraph)
-              .setRequired(false)
-              .setMaxLength(500);
+              const seasonDescInput = new TextInputBuilder()
+                .setCustomId('season_description')
+                .setLabel('Season Description')
+                .setPlaceholder('Brief description of this season (optional)')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(false)
+                .setMaxLength(500);
 
-            const nameRow = new ActionRowBuilder().addComponents(seasonNameInput);
-            const descRow = new ActionRowBuilder().addComponents(seasonDescInput);
-            seasonModal.addComponents(nameRow, descRow);
+              const nameRow = new ActionRowBuilder().addComponents(seasonNameInput);
+              const descRow = new ActionRowBuilder().addComponents(seasonDescInput);
+              seasonModal.addComponents(nameRow, descRow);
 
-            return res.send({
-              type: InteractionResponseType.MODAL,
-              data: seasonModal.toJSON()
-            });
-          } else {
-            // Selected an existing season - show season management UI
-            const configId = selectedValue;
-            const playerData = await loadPlayerData();
-            const config = playerData[guildId]?.applicationConfigs?.[configId];
-            
-            if (!config) {
-              return res.send({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: {
+              return {
+                type: InteractionResponseType.MODAL,
+                data: seasonModal.toJSON()
+              };
+            } else {
+              // Selected an existing season - show season management UI
+              const configId = selectedValue;
+              const playerData = await loadPlayerData();
+              const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+              
+              if (!config) {
+                return {
                   content: '❌ Season not found.',
-                  flags: InteractionResponseFlags.EPHEMERAL
-                }
-              });
-            }
+                  ephemeral: true
+                };
+              }
 
-            // Ensure questions array exists
-            if (!config.questions) {
-              config.questions = [];
-              await savePlayerData(playerData);
+              // Ensure questions array exists
+              if (!config.questions) {
+                config.questions = [];
+                await savePlayerData(playerData);
+              }
+              
+              // Use the updated question management UI function (start at page 0)
+              return refreshQuestionManagementUI(res, config, configId, 0);
+            }
+          }
+          
+          // Handle special actions for other entity types
+          if (selectedValue === 'search_entities') {
+            // Show search modal
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                title: `Search ${entityType}s`,
+                custom_id: `entity_search_modal_${entityType}`,
+                components: [{
+                  type: 1, // ActionRow
+                  components: [{
+                    type: 4, // Text Input
+                    custom_id: 'search_term',
+                    label: 'Search Term',
+                    style: 1, // Short
+                    placeholder: 'Enter name or description to search...',
+                    required: true,
+                    max_length: 50
+                  }]
+                }]
+              }
+            };
+          } else if (selectedValue === 'create_new') {
+            // Show creation modal with Item Info format (name, emoji, description)
+            const { createFieldGroupModal } = await import('./fieldEditors.js');
+            
+            try {
+              const modal = createFieldGroupModal(entityType, 'new', 'info', {});
+              if (modal) {
+                // Update modal title and custom_id for creation
+                modal.data.title = `Create New ${entityType === 'safari_button' ? 'Button' : entityType.charAt(0).toUpperCase() + entityType.slice(1)}`;
+                modal.data.custom_id = `entity_create_modal_${entityType}_info`;
+                return modal;
+              }
+            } catch (modalError) {
+              console.error('Error creating field group modal:', modalError);
             }
             
-            // Use the updated question management UI function (start at page 0)
-            return refreshQuestionManagementUI(res, config, configId, 0);
+            // Fallback to simple modal if field group modal fails
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                title: `Create New ${entityType === 'safari_button' ? 'Button' : entityType.charAt(0).toUpperCase() + entityType.slice(1)}`,
+                custom_id: `entity_create_modal_${entityType}`,
+                components: [{
+                  type: 1, // ActionRow
+                  components: [{
+                    type: 4, // Text Input
+                    custom_id: 'name',
+                    label: entityType === 'safari_button' ? 'Button Label' : 'Name',
+                    style: 1, // Short
+                    placeholder: `Enter ${entityType === 'safari_button' ? 'button label' : 'name'}...`,
+                    required: true,
+                    max_length: entityType === 'safari_button' ? 80 : 100
+                  }]
+                }]
+              }
+            };
+          } else {
+            // Regular entity selection - go straight to edit mode
+            const uiResponse = await createEntityManagementUI({
+              entityType: entityType,
+              guildId: context.guildId,
+              selectedId: selectedValue,
+              activeFieldGroup: null,
+              searchTerm: '',
+              mode: 'edit'
+            });
+            
+            return {
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: uiResponse
+            };
           }
         }
-        
-        // Handle special actions for other entity types
-        if (selectedValue === 'search_entities') {
-          // Show search modal
-          return res.send({
-            type: InteractionResponseType.MODAL,
-            data: {
-              title: `Search ${entityType}s`,
-              custom_id: `entity_search_modal_${entityType}`,
-              components: [{
-                type: 1, // ActionRow
-                components: [{
-                  type: 4, // Text Input
-                  custom_id: 'search_term',
-                  label: 'Search Term',
-                  style: 1, // Short
-                  placeholder: 'Enter name or description to search...',
-                  required: true,
-                  max_length: 50
-                }]
-              }]
-            }
-          });
-        } else if (selectedValue === 'create_new') {
-          // Show creation modal with Item Info format (name, emoji, description)
-          const { createFieldGroupModal } = await import('./fieldEditors.js');
-          
-          try {
-            const modal = createFieldGroupModal(entityType, 'new', 'info', {});
-            if (modal) {
-              // Update modal title and custom_id for creation
-              modal.data.title = `Create New ${entityType === 'safari_button' ? 'Button' : entityType.charAt(0).toUpperCase() + entityType.slice(1)}`;
-              modal.data.custom_id = `entity_create_modal_${entityType}_info`;
-              return res.send(modal);
-            }
-          } catch (modalError) {
-            console.error('Error creating field group modal:', modalError);
-          }
-          
-          // Fallback to simple modal if field group modal fails
-          return res.send({
-            type: InteractionResponseType.MODAL,
-            data: {
-              title: `Create New ${entityType === 'safari_button' ? 'Button' : entityType.charAt(0).toUpperCase() + entityType.slice(1)}`,
-              custom_id: `entity_create_modal_${entityType}`,
-              components: [{
-                type: 1, // ActionRow
-                components: [{
-                  type: 4, // Text Input
-                  custom_id: 'name',
-                  label: entityType === 'safari_button' ? 'Button Label' : 'Name',
-                  style: 1, // Short
-                  placeholder: `Enter ${entityType === 'safari_button' ? 'button label' : 'name'}...`,
-                  required: true,
-                  max_length: entityType === 'safari_button' ? 80 : 100
-                }]
-              }]
-            }
-          });
-        } else {
-          // Regular entity selection - go straight to edit mode
-          const uiResponse = await createEntityManagementUI({
-            entityType: entityType,
-            guildId: guildId,
-            selectedId: selectedValue,
-            activeFieldGroup: null,
-            searchTerm: '',
-            mode: 'edit'
-          });
-          
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: uiResponse
-          });
-        }
-      } catch (error) {
-        console.error('Error in entity_select handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error selecting entity.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
       
     } else if (custom_id.startsWith('entity_edit_mode_')) {
       // Switch to edit mode for an entity
@@ -12053,75 +12046,67 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       }
       
     } else if (custom_id.startsWith('entity_field_group_')) {
-      // Handle field group button click
-      try {
-        // Parse: entity_field_group_{entityType}_{entityId}_{fieldGroup}
-        const withoutPrefix = custom_id.replace('entity_field_group_', '');
-        const parts = withoutPrefix.split('_');
-        const entityType = parts[0];
-        const fieldGroup = parts[parts.length - 1]; // Last part is always fieldGroup
-        const entityId = parts.slice(1, -1).join('_'); // Everything between is entityId
-        const guildId = req.body.guild_id;
-        
-        console.log('🔍 DEBUG: Field group click - Type:', entityType, 'ID:', entityId, 'Group:', fieldGroup);
-        
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
-        
-        // For consumable property, show select menu instead of modal
-        if (fieldGroup === 'properties' && entityType === 'item') {
-          const entity = await loadEntity(guildId, entityType, entityId);
-          if (!entity) throw new Error('Entity not found');
+      // Handle field group button click (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'entity_field_group',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          // Parse: entity_field_group_{entityType}_{entityId}_{fieldGroup}
+          const withoutPrefix = context.customId.replace('entity_field_group_', '');
+          const parts = withoutPrefix.split('_');
+          const entityType = parts[0];
+          const fieldGroup = parts[parts.length - 1]; // Last part is always fieldGroup
+          const entityId = parts.slice(1, -1).join('_'); // Everything between is entityId
           
-          const uiResponse = await createEntityManagementUI({
-            entityType: entityType,
-            guildId: guildId,
-            selectedId: entityId,
-            activeFieldGroup: fieldGroup,
-            searchTerm: '',
-            mode: 'edit'
-          });
-          
-          // Add consumable select in the correct position (before the second separator)
-          const consumableSelect = createConsumableSelect(entityId, entity.consumable);
-          const containerComponents = uiResponse.components[0].components;
-          
-          // Find the position of the second separator (before Done button)
-          let insertIndex = containerComponents.length - 2; // Before separator and Done button
-          for (let i = containerComponents.length - 1; i >= 0; i--) {
-            if (containerComponents[i].type === 14) { // Separator
-              insertIndex = i;
-              break;
+          console.log('🔍 DEBUG: Field group click - Type:', entityType, 'ID:', entityId, 'Group:', fieldGroup);
+        
+          // For consumable property, show select menu instead of modal
+          if (fieldGroup === 'properties' && entityType === 'item') {
+            const entity = await loadEntity(context.guildId, entityType, entityId);
+            if (!entity) throw new Error('Entity not found');
+            
+            const uiResponse = await createEntityManagementUI({
+              entityType: entityType,
+              guildId: context.guildId,
+              selectedId: entityId,
+              activeFieldGroup: fieldGroup,
+              searchTerm: '',
+              mode: 'edit'
+            });
+            
+            // Add consumable select in the correct position (before the second separator)
+            const consumableSelect = createConsumableSelect(entityId, entity.consumable);
+            const containerComponents = uiResponse.components[0].components;
+            
+            // Find the position of the second separator (before Done button)
+            let insertIndex = containerComponents.length - 2; // Before separator and Done button
+            for (let i = containerComponents.length - 1; i >= 0; i--) {
+              if (containerComponents[i].type === 14) { // Separator
+                insertIndex = i;
+                break;
+              }
             }
+            
+            // Insert the consumable select before the separator
+            containerComponents.splice(insertIndex, 0, consumableSelect);
+            
+            return {
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: uiResponse
+            };
+          } else {
+            // Open modal directly for field group editing
+            const entity = await loadEntity(context.guildId, entityType, entityId);
+            if (!entity) throw new Error('Entity not found');
+            
+            const modalResponse = createFieldGroupModal(entityType, entityId, fieldGroup, entity);
+            if (!modalResponse) throw new Error('No modal available for this field group');
+            
+            return modalResponse;
           }
-          
-          // Insert the consumable select before the separator
-          containerComponents.splice(insertIndex, 0, consumableSelect);
-          
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: uiResponse
-          });
-        } else {
-          // Open modal directly for field group editing
-          const entity = await loadEntity(guildId, entityType, entityId);
-          if (!entity) throw new Error('Entity not found');
-          
-          const modalResponse = createFieldGroupModal(entityType, entityId, fieldGroup, entity);
-          if (!modalResponse) throw new Error('No modal available for this field group');
-          
-          return res.send(modalResponse);
         }
-        
-      } catch (error) {
-        console.error('Error handling field group selection:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error selecting field group.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
       
     } else if (custom_id.startsWith('entity_edit_modal_')) {
       // Show modal for editing fields (legacy handler - should not be used)
