@@ -6214,24 +6214,41 @@ Your server is now ready for Tycoons gameplay!`;
           console.log('🔧 DEBUG: Starting role hierarchy test...');
           
           // Run the test function with your specified roles
-          const testResults = testRoleHierarchy(context.guild, context.client);
+          const testResults = await testRoleHierarchy(context.guild, context.client);
           
+          // Handle potential errors
+          if (testResults.error) {
+            return {
+              content: `❌ **Error:** ${testResults.error}\n\nPlease ensure CastBot is properly configured in this server.`
+            };
+          }
+
           // Create comprehensive response
           const responseLines = [
             '# 🔧 Role Hierarchy Test Results',
             '',
-            `**Tests Run:** ${testResults.details.length}`,
+            `**Tests Run:** ${testResults.totalRoles || testResults.details.length}`,
             `**Passed:** ${testResults.testsPassed} ✅`,
             `**Failed:** ${testResults.testsFailed} ❌`,
             ''
           ];
 
-          // Add detailed results for each test
-          for (const test of testResults.details) {
+          // Add detailed results for each test - limit to first 10 to avoid message size limits
+          const detailsToShow = testResults.details.slice(0, 10);
+          for (const test of detailsToShow) {
             const statusEmoji = test.passed ? '✅' : '❌';
-            responseLines.push(`${statusEmoji} **${test.roleName}**`);
+            responseLines.push(`${statusEmoji} **${test.roleName}** (${test.category})`);
             responseLines.push(`   Expected: ${test.expected}, Got: ${test.actual}`);
-            responseLines.push(`   Details: ${test.details}`);
+            responseLines.push(`   Position: ${test.rolePosition} (Bot: ${test.botPosition})`);
+            if (test.details) {
+              responseLines.push(`   Details: ${test.details}`);
+            }
+            responseLines.push('');
+          }
+
+          // Add notice if there are more results
+          if (testResults.details.length > 10) {
+            responseLines.push(`*Showing first 10 of ${testResults.details.length} results. Check logs for complete results.*`);
             responseLines.push('');
           }
 

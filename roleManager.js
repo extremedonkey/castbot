@@ -312,49 +312,116 @@ function generateHierarchyWarning(hierarchyCheck) {
  * @param {Client} client - Discord.js client
  * @returns {Object} Test results for debugging
  */
-function testRoleHierarchy(guild, client) {
-    console.log('🔍 DEBUG: Testing role hierarchy with specific test roles...');
+async function testRoleHierarchy(guild, client) {
+    console.log('🔍 DEBUG: Testing role hierarchy with all CastBot-managed roles...');
     
-    // Test roles as specified by user
-    const testRoles = [
-        { id: '1335645022774886490', name: 'He/Him (should FAIL - above bot)', expectedResult: false },
-        { id: '1385964464393949276', name: 'NZST (should SUCCEED - below bot)', expectedResult: true }
-    ];
+    // Get all CastBot-managed roles from the server
+    const playerData = await loadPlayerData();
+    const guildData = playerData[guild.id];
+    
+    if (!guildData) {
+        console.log('❌ No CastBot data found for this guild');
+        return {
+            testsPassed: 0,
+            testsFailed: 0,
+            details: [],
+            error: 'No CastBot configuration found for this guild'
+        };
+    }
+
+    const testRoles = [];
+    
+    // Add pronoun roles
+    const pronounRoleIds = guildData.pronounRoleIDs || [];
+    for (const roleId of pronounRoleIds) {
+        const role = guild.roles.cache.get(roleId);
+        if (role) {
+            testRoles.push({
+                id: roleId,
+                name: role.name,
+                category: 'pronoun'
+            });
+        }
+    }
+    
+    // Add timezone roles
+    const timezoneRoles = guildData.timezones || {};
+    for (const [, roleId] of Object.entries(timezoneRoles)) {
+        const role = guild.roles.cache.get(roleId);
+        if (role) {
+            testRoles.push({
+                id: roleId,
+                name: role.name,
+                category: 'timezone'
+            });
+        }
+    }
+
+    console.log(`Found ${testRoles.length} CastBot-managed roles to test`);
 
     const results = {
         testsPassed: 0,
         testsFailed: 0,
-        details: []
+        details: [],
+        totalRoles: testRoles.length
     };
+
+    // Get bot's highest role position for reference
+    const botMember = guild.members.me || guild.members.cache.get(client.user.id);
+    const botHighestRole = botMember ? botMember.roles.highest : null;
+    const botPosition = botHighestRole ? botHighestRole.position : 0;
+
+    console.log(`Bot's highest role: ${botHighestRole ? botHighestRole.name : 'Unknown'} (position ${botPosition})`);
 
     for (const testRole of testRoles) {
         const check = canBotManageRole(guild, testRole.id, client);
-        const passed = check.canManage === testRole.expectedResult;
+        const role = guild.roles.cache.get(testRole.id);
+        
+        // Bot should be able to manage roles that are BELOW it in hierarchy
+        // A role is below the bot if its position is LESS than the bot's highest role position
+        const expectedResult = role ? role.position < botPosition : false;
+        const passed = check.canManage === expectedResult;
         
         const result = {
             roleId: testRole.id,
             roleName: testRole.name,
-            expected: testRole.expectedResult,
+            category: testRole.category,
+            expected: expectedResult,
             actual: check.canManage,
             passed,
             details: check.details,
-            hierarchyInfo: check
+            hierarchyInfo: check,
+            rolePosition: role ? role.position : 0,
+            botPosition: botPosition
         };
 
         results.details.push(result);
         
         if (passed) {
             results.testsPassed++;
-            console.log(`✅ TEST PASSED: ${testRole.name} - Expected: ${testRole.expectedResult}, Got: ${check.canManage}`);
+            console.log(`✅ ${testRole.name} - Bot ${check.canManage ? 'CAN' : 'CANNOT'} manage (expected: ${expectedResult})`);
         } else {
             results.testsFailed++;
-            console.log(`❌ TEST FAILED: ${testRole.name} - Expected: ${testRole.expectedResult}, Got: ${check.canManage}`);
+            console.log(`❌ ${testRole.name} - Bot ${check.canManage ? 'CAN' : 'CANNOT'} manage (expected: ${expectedResult})`);
+            console.log(`   Role position: ${role ? role.position : 'Unknown'}, Bot position: ${botPosition}`);
         }
         
-        console.log(`   Details: ${check.details}`);
+        if (check.details) {
+            console.log(`   Details: ${check.details}`);
+        }
     }
 
-    console.log(`🎯 Role Hierarchy Test Summary: ${results.testsPassed} passed, ${results.testsFailed} failed`);
+    console.log(`🎯 Role Hierarchy Test Summary: ${results.testsPassed} passed, ${results.testsFailed} failed (${testRoles.length} total)`);
+    
+    // Report problematic roles
+    const problemRoles = results.details.filter(r => !r.passed);
+    if (problemRoles.length > 0) {
+        console.log('⚠️ Problematic roles:');
+        problemRoles.forEach(role => {
+            console.log(`   ${role.roleName} (${role.category}): Expected ${role.expected}, Got ${role.actual}`);
+        });
+    }
+    
     return results;
 }
 
