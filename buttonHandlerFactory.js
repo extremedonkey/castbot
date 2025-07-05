@@ -454,6 +454,7 @@ export class ButtonHandlerFactory {
         const context = extractButtonContext(req);
         
         // 2. Add client and guild to context
+        context.client = client;
         if (context.guildId && client) {
           context.guild = await client.guilds.fetch(context.guildId);
         }

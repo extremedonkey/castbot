@@ -124,9 +124,10 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';
     permissionName: 'Manage Roles',
     handler: async (context) => {
       // Your business logic
-      const { guildId, userId, member } = context;
+      const { guildId, userId, member, client } = context;
       
-      // Do something
+      // Do something with client if needed
+      const guild = await client.guilds.fetch(guildId);
       
       return {
         content: 'Success!',
@@ -178,6 +179,37 @@ return res.send({
 | `deferred` | boolean | Use deferred response | No |
 | `updateMessage` | boolean | Update existing message | No |
 | `ephemeral` | boolean | Response visibility | No |
+
+### Context Object Properties
+
+The `context` object passed to handlers contains:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `guildId` | string | Discord guild ID |
+| `userId` | string | Discord user ID |
+| `member` | object | Discord member object |
+| `channelId` | string | Discord channel ID |
+| `messageId` | string | Discord message ID |
+| `token` | string | Interaction token |
+| `applicationId` | string | Discord application ID |
+| `customId` | string | Button custom ID |
+| `client` | object | Discord.js client instance |
+| `guild` | object | Discord guild object (if available) |
+
+**🚨 CRITICAL:** Always destructure `client` from context when needed for Discord API calls:
+
+```javascript
+handler: async (context) => {
+  const { guildId, userId, member, client } = context;
+  
+  // ✅ CORRECT: Access client from context
+  const guild = await client.guilds.fetch(guildId);
+  
+  // ❌ INCORRECT: client is undefined
+  const guild = await client.guilds.fetch(guildId);
+}
+```
 
 ### Menu Factory Properties
 
@@ -423,6 +455,20 @@ if (!menu) {
       // Handler logic
     }
   })(req, res, client); // Don't forget to call with (req, res, client)
+}
+```
+
+**Client is undefined error**
+```javascript
+// ❌ COMMON MISTAKE: Trying to access client directly
+handler: async (context) => {
+  const guild = await client.guilds.fetch(context.guildId); // client is undefined!
+}
+
+// ✅ CORRECT: Destructure client from context
+handler: async (context) => {
+  const { guildId, client } = context;
+  const guild = await client.guilds.fetch(guildId);
 }
 ```
 
