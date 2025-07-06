@@ -343,10 +343,34 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
     
     description += '\n\n*You can move once every 12 hours*';
     
-    // Return standard Discord format with content field
+    // Return Components V2 format following entity_select_ pattern
+    const components = [{
+        type: 17, // Container
+        accent_color: 0x2ecc71, // Green for movement/exploration
+        components: [
+            // Location header
+            {
+                type: 10, // Text Display
+                content: `## 🗺️ Current Location: ${coordinate}`
+            },
+            
+            // Movement description
+            {
+                type: 10, // Text Display
+                content: description
+            },
+            
+            // Add separator before movement buttons
+            { type: 14 }, // Separator
+            
+            // Movement button rows
+            ...actionRows
+        ]
+    }];
+    
     return {
-        content: `🗺️ **Current Location: ${coordinate}**\n\n${description}`,
-        components: actionRows
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        components
     };
 }
 

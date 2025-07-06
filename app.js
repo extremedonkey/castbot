@@ -12890,12 +12890,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const result = await initializePlayerOnMap(context.guildId, context.userId, startingCoordinate, context.client);
           
           if (result.success) {
-            // Get movement display for the starting position
+            // Get movement display for the starting position (Components V2)
             const movementDisplay = await getMovementDisplay(context.guildId, context.userId, startingCoordinate);
             
-            // Update the content to include welcome message
+            // Add welcome message as first Text Display component
             const welcomeMessage = `✅ Welcome to the map! You've been placed at ${startingCoordinate}.`;
-            movementDisplay.content = `${welcomeMessage}\n\n${movementDisplay.content}`;
+            
+            // Insert welcome message as the first Text Display component
+            movementDisplay.components[0].components.unshift({
+              type: 10, // Text Display
+              content: welcomeMessage
+            });
             
             console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${startingCoordinate}`);
             return {
