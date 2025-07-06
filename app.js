@@ -13219,62 +13219,71 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       
     } else if (custom_id.startsWith('map_admin_item_select_')) {
       // Handle item selection for map admin - show quantity modal
-      return ButtonHandlerFactory.create({
-        id: 'map_admin_item_select',
-        handler: async (context, req) => {
-          const targetUserId = context.customId.split('_').pop();
-          const selectedValue = req.body.data.values[0];
-          const [userId, itemId] = selectedValue.split('_');
-          
-          console.log(`🛡️ Processing map admin item select: user=${userId}, item=${itemId}`);
-          
-          // Load item data to get item name
-          const { loadEntity } = await import('./entityManager.js');
-          const item = await loadEntity(context.guildId, 'item', itemId);
-          const itemName = item?.name || 'Unknown Item';
-          
-          // Get current item quantity
-          const playerData = await loadPlayerData();
-          const inventory = playerData[context.guildId]?.players?.[userId]?.safari?.inventory || {};
-          const currentItem = inventory[itemId];
-          
-          let currentQuantity = '';
-          let modalLabel = 'Quantity';
-          
-          if (currentItem) {
-            currentQuantity = currentItem.quantity?.toString() || '0';
-            if (currentItem.numAttacksAvailable !== undefined) {
-              modalLabel = `Quantity (Attacks Available: ${currentItem.numAttacksAvailable})`;
-            }
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        const selectedValue = req.body.data.values[0];
+        const [userId, itemId] = selectedValue.split('_');
+        
+        console.log(`🛡️ Processing map admin item select: user=${userId}, item=${itemId}`);
+        
+        // Load item data to get item name
+        const { loadEntity } = await import('./entityManager.js');
+        const item = await loadEntity(req.body.guild_id, 'item', itemId);
+        const itemName = item?.name || 'Unknown Item';
+        
+        // Get current item quantity
+        const playerData = await loadPlayerData();
+        const inventory = playerData[req.body.guild_id]?.players?.[userId]?.safari?.inventory || {};
+        const currentItem = inventory[itemId];
+        
+        let currentQuantity = '';
+        let modalLabel = 'Quantity';
+        
+        if (currentItem) {
+          currentQuantity = currentItem.quantity?.toString() || '0';
+          if (currentItem.numAttacksAvailable !== undefined) {
+            modalLabel = `Quantity (Attacks Available: ${currentItem.numAttacksAvailable})`;
           }
-          
-          // Get target user info
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const targetMember = await guild.members.fetch(userId);
-          
-          // Create quantity modal
-          const modal = new ModalBuilder()
-            .setCustomId(`map_admin_item_qty_modal_${context.guildId}_${itemId}_${userId}`)
-            .setTitle(`Set ${itemName} for ${targetMember.displayName}`);
-          
-          const quantityInput = new TextInputBuilder()
-            .setCustomId('item_quantity')
-            .setLabel(modalLabel)
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Enter quantity (0 to remove)')
-            .setValue(currentQuantity)
-            .setRequired(true)
-            .setMaxLength(4);
-          
-          const row = new ActionRowBuilder().addComponents(quantityInput);
-          modal.addComponents(row);
-          
-          return {
-            type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
-          };
         }
-      })(req, res, client);
+        
+        // Get target user info
+        const guild = await client.guilds.fetch(req.body.guild_id);
+        const targetMember = await guild.members.fetch(userId);
+        
+        // Create quantity modal
+        const modal = new ModalBuilder()
+          .setCustomId(`map_admin_item_qty_modal_${req.body.guild_id}_${itemId}_${userId}`)
+          .setTitle(`Set ${itemName} for ${targetMember.displayName}`);
+        
+        const quantityInput = new TextInputBuilder()
+          .setCustomId('item_quantity')
+          .setLabel(modalLabel)
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Enter quantity (0 to remove)')
+          .setValue(currentQuantity)
+          .setRequired(true)
+          .setMaxLength(4);
+        
+        const row = new ActionRowBuilder().addComponents(quantityInput);
+        modal.addComponents(row);
+        
+        console.log(`✅ SUCCESS: map_admin_item_select - showing quantity modal`);
+        
+        // Send modal response directly
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal
+        });
+      } catch (error) {
+        console.error('Error in map_admin_item_select:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error showing item quantity modal.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
       
     } else if (custom_id.startsWith('map_admin_view_raw_')) {
       // Show raw player data
