@@ -3511,7 +3511,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     }
     
     // === MAP MOVEMENT HANDLERS (Button Factory) - MUST COME FIRST ===
-    } else if (custom_id.startsWith('safari_move_')) {
+    if (custom_id.startsWith('safari_move_')) {
       const targetCoordinate = custom_id.replace('safari_move_', '');
       return ButtonHandlerFactory.create({
         id: `safari_move_${targetCoordinate}`,
