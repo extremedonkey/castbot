@@ -11970,42 +11970,30 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       })(req, res, client);
       
     } else if (custom_id.startsWith('entity_edit_mode_')) {
-      // Switch to edit mode for an entity
-      try {
-        console.log('🔍 DEBUG: Processing entity_edit_mode_', custom_id);
-        const parts = custom_id.split('_');
-        const entityType = parts[3];
-        const entityId = parts.slice(4).join('_');
-        const guildId = req.body.guild_id;
-        console.log('🔍 DEBUG: Entity type:', entityType, 'ID:', entityId, 'Guild:', guildId);
-        
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
-        
-        const uiResponse = await createEntityManagementUI({
-          entityType: entityType,
-          guildId: guildId,
-          selectedId: entityId,
-          activeFieldGroup: null,
-          searchTerm: '',
-          mode: 'edit'
-        });
-        
-        console.log('🔍 DEBUG: UI Response created successfully, sending update');
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: uiResponse
-        });
-        
-      } catch (error) {
-        console.error('Error switching to edit mode:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error entering edit mode.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Switch to edit mode for an entity (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'entity_edit_mode',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.split('_');
+          const entityType = parts[3];
+          const entityId = parts.slice(4).join('_');
+          
+          console.log(`✏️ DEBUG: Edit mode - Type: ${entityType}, ID: ${entityId}`);
+          
+          const uiResponse = await createEntityManagementUI({
+            entityType: entityType,
+            guildId: context.guildId,
+            selectedId: entityId,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          
+          return uiResponse;
+        }
+      })(req, res, client);
       
     } else if (custom_id.startsWith('entity_view_mode_')) {
       // Switch back to view mode for an entity
@@ -12197,84 +12185,64 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       }
       
     } else if (custom_id.startsWith('entity_delete_mode_')) {
-      // Switch to delete confirmation mode
-      try {
-        const parts = custom_id.split('_');
-        const entityType = parts[3];
-        const entityId = parts.slice(4).join('_');
-        const guildId = req.body.guild_id;
-        
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
-        
-        const uiResponse = await createEntityManagementUI({
-          entityType: entityType,
-          guildId: guildId,
-          selectedId: entityId,
-          activeFieldGroup: null,
-          searchTerm: '',
-          mode: 'delete_confirm'
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: uiResponse
-        });
-        
-      } catch (error) {
-        console.error('Error entering delete mode:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error preparing deletion.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Switch to delete confirmation mode (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'entity_delete_mode',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.split('_');
+          const entityType = parts[3];
+          const entityId = parts.slice(4).join('_');
+          
+          console.log(`🗑️ DEBUG: Delete mode - Type: ${entityType}, ID: ${entityId}`);
+          
+          const uiResponse = await createEntityManagementUI({
+            entityType: entityType,
+            guildId: context.guildId,
+            selectedId: entityId,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'delete_confirm'
+          });
+          
+          return uiResponse;
+        }
+      })(req, res, client);
       
     } else if (custom_id.startsWith('entity_confirm_delete_')) {
-      // Confirm and execute deletion
-      try {
-        const parts = custom_id.split('_');
-        const entityType = parts[3];
-        const entityId = parts.slice(4).join('_');
-        const guildId = req.body.guild_id;
-        
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
-        
-        console.log(`🗑️ DEBUG: Deleting ${entityType} ${entityId}`);
-        
-        // Delete entity
-        const success = await deleteEntity(guildId, entityType, entityId);
-        
-        if (!success) {
-          throw new Error('Failed to delete entity');
-        }
-        
-        // Go back to entity list
-        const uiResponse = await createEntityManagementUI({
-          entityType: entityType,
-          guildId: guildId,
-          selectedId: null,
-          activeFieldGroup: null,
-          searchTerm: '',
-          mode: 'edit'
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: uiResponse
-        });
-        
-      } catch (error) {
-        console.error('Error deleting entity:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error deleting entity.',
-            flags: InteractionResponseFlags.EPHEMERAL
+      // Confirm and execute deletion (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'entity_confirm_delete',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.split('_');
+          const entityType = parts[3];
+          const entityId = parts.slice(4).join('_');
+          
+          console.log(`🗑️ DEBUG: Deleting ${entityType} ${entityId}`);
+          
+          // Delete entity
+          const success = await deleteEntity(context.guildId, entityType, entityId);
+          
+          if (!success) {
+            throw new Error('Failed to delete entity');
           }
-        });
-      }
+          
+          // Go back to entity list
+          const uiResponse = await createEntityManagementUI({
+            entityType: entityType,
+            guildId: context.guildId,
+            selectedId: null,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          
+          return uiResponse;
+        }
+      })(req, res, client);
       
     // ==================== END ENTITY MANAGEMENT HANDLERS ====================
     

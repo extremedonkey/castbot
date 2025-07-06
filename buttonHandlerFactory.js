@@ -283,6 +283,27 @@ export const BUTTON_REGISTRY = {
     emoji: '✏️',
     style: 'Secondary',
     category: 'entity_management'
+  },
+  'entity_edit_mode': {
+    label: 'Edit Mode',
+    description: 'Switch entity to edit mode',
+    emoji: '✏️',
+    style: 'Primary',
+    category: 'entity_management'
+  },
+  'entity_delete_mode': {
+    label: 'Delete Mode',
+    description: 'Switch entity to delete confirmation mode',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'entity_management'
+  },
+  'entity_confirm_delete': {
+    label: 'Confirm Delete',
+    description: 'Confirm and execute entity deletion',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'entity_management'
   }
 };
 
