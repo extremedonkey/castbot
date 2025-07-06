@@ -69,14 +69,14 @@ export function getValidMoves(currentCoordinate, movementSchema = 'adjacent_8') 
     const row = parseInt(currentCoordinate.substring(1)) - 1; // 1-based to 0-based
     
     const moves = {
+        northwest: { col: col - 1, row: row - 1, direction: '↖️ Northwest' },
         north: { col: col, row: row - 1, direction: '⬆️ North' },
         northeast: { col: col + 1, row: row - 1, direction: '↗️ Northeast' },
-        east: { col: col + 1, row: row, direction: '➡️ East' },
-        southeast: { col: col + 1, row: row + 1, direction: '↘️ Southeast' },
-        south: { col: col, row: row + 1, direction: '⬇️ South' },
-        southwest: { col: col - 1, row: row + 1, direction: '↙️ Southwest' },
         west: { col: col - 1, row: row, direction: '⬅️ West' },
-        northwest: { col: col - 1, row: row - 1, direction: '↖️ Northwest' }
+        east: { col: col + 1, row: row, direction: '➡️ East' },
+        southwest: { col: col - 1, row: row + 1, direction: '↙️ Southwest' },
+        south: { col: col, row: row + 1, direction: '⬇️ South' },
+        southeast: { col: col + 1, row: row + 1, direction: '↘️ Southeast' }
     };
     
     const validMoves = [];
@@ -93,7 +93,9 @@ export function getValidMoves(currentCoordinate, movementSchema = 'adjacent_8') 
             validMoves.push({
                 direction: move.direction,
                 coordinate: coordinate,
-                customId: `safari_move_${coordinate}`
+                customId: `safari_move_${coordinate}`,
+                // Add label with coordinate for button display
+                label: `${move.direction.split(' ')[1]} (${coordinate})`
             });
         }
     }
@@ -220,53 +222,138 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
     if (canMove) {
         description = 'Choose a direction to move:';
         
-        // Create movement buttons (max 5 per row)
-        for (let i = 0; i < validMoves.length; i += 5) {
-            const rowButtons = validMoves.slice(i, i + 5).map(move => ({
+        // Create 3x3 grid layout for movement buttons
+        const movesByDirection = {};
+        validMoves.forEach(move => {
+            const directionKey = move.direction.split(' ')[1].toLowerCase(); // northwest, north, etc.
+            movesByDirection[directionKey] = move;
+        });
+        
+        // Row 1: Northwest, North, Northeast
+        const row1 = ['northwest', 'north', 'northeast'].map(dir => 
+            movesByDirection[dir] ? {
                 type: 2,
-                custom_id: move.customId,
-                label: move.direction,
+                custom_id: movesByDirection[dir].customId,
+                label: movesByDirection[dir].label,
                 style: 1 // Primary
-            }));
+            } : null
+        ).filter(Boolean);
+        
+        // Row 2: West, East (current position is center)
+        const row2 = ['west', 'east'].map(dir => 
+            movesByDirection[dir] ? {
+                type: 2,
+                custom_id: movesByDirection[dir].customId,
+                label: movesByDirection[dir].label,
+                style: 1 // Primary
+            } : null
+        ).filter(Boolean);
+        
+        // Row 3: Southwest, South, Southeast
+        const row3 = ['southwest', 'south', 'southeast'].map(dir => 
+            movesByDirection[dir] ? {
+                type: 2,
+                custom_id: movesByDirection[dir].customId,
+                label: movesByDirection[dir].label,
+                style: 1 // Primary
+            } : null
+        ).filter(Boolean);
+        
+        // Add non-empty rows
+        if (row1.length > 0) {
             actionRows.push({
                 type: 1, // Action Row
-                components: rowButtons
+                components: row1
+            });
+        }
+        if (row2.length > 0) {
+            actionRows.push({
+                type: 1, // Action Row
+                components: row2
+            });
+        }
+        if (row3.length > 0) {
+            actionRows.push({
+                type: 1, // Action Row
+                components: row3
             });
         }
     } else {
         const timeUntil = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
         description = `*You need to rest! You can move again in ${timeUntil}*`;
         
-        // Show disabled movement buttons
-        for (let i = 0; i < validMoves.length; i += 5) {
-            const rowButtons = validMoves.slice(i, i + 5).map(move => ({
+        // Show disabled movement buttons in same 3x3 grid layout
+        const movesByDirection = {};
+        validMoves.forEach(move => {
+            const directionKey = move.direction.split(' ')[1].toLowerCase();
+            movesByDirection[directionKey] = move;
+        });
+        
+        // Disabled button rows
+        const row1 = ['northwest', 'north', 'northeast'].map(dir => 
+            movesByDirection[dir] ? {
                 type: 2,
-                custom_id: move.customId,
-                label: move.direction,
+                custom_id: movesByDirection[dir].customId,
+                label: movesByDirection[dir].label,
                 style: 2, // Secondary
                 disabled: true
-            }));
+            } : null
+        ).filter(Boolean);
+        
+        const row2 = ['west', 'east'].map(dir => 
+            movesByDirection[dir] ? {
+                type: 2,
+                custom_id: movesByDirection[dir].customId,
+                label: movesByDirection[dir].label,
+                style: 2, // Secondary
+                disabled: true
+            } : null
+        ).filter(Boolean);
+        
+        const row3 = ['southwest', 'south', 'southeast'].map(dir => 
+            movesByDirection[dir] ? {
+                type: 2,
+                custom_id: movesByDirection[dir].customId,
+                label: movesByDirection[dir].label,
+                style: 2, // Secondary
+                disabled: true
+            } : null
+        ).filter(Boolean);
+        
+        // Add non-empty rows
+        if (row1.length > 0) {
             actionRows.push({
                 type: 1, // Action Row
-                components: rowButtons
+                components: row1
+            });
+        }
+        if (row2.length > 0) {
+            actionRows.push({
+                type: 1, // Action Row
+                components: row2
+            });
+        }
+        if (row3.length > 0) {
+            actionRows.push({
+                type: 1, // Action Row
+                components: row3
             });
         }
     }
     
     description += '\n\n*You can move once every 12 hours*';
     
-    // Return Components V2 format with Container
-    return {
+    // Return Components V2 format - Add Text Display as first Action Row
+    const textDisplayRow = {
+        type: 1, // Action Row
         components: [{
-            type: 17, // Container
-            components: [
-                {
-                    type: 10, // Text Display
-                    text: `🗺️ **Current Location: ${coordinate}**\n\n${description}`
-                },
-                ...actionRows
-            ]
-        }],
+            type: 10, // Text Display
+            text: `🗺️ **Current Location: ${coordinate}**\n\n${description}`
+        }]
+    };
+    
+    return {
+        components: [textDisplayRow, ...actionRows],
         flags: (1 << 15) // IS_COMPONENTS_V2
     };
 }

@@ -12895,7 +12895,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             
             // Update the text display to include welcome message
             const welcomeMessage = `✅ Welcome to the map! You've been placed at ${startingCoordinate}.`;
-            movementDisplay.components[0].components[0].text = `${welcomeMessage}\n\n${movementDisplay.components[0].components[0].text}`;
+            const originalText = movementDisplay.components[0].components[0].text;
+            movementDisplay.components[0].components[0].text = `${welcomeMessage}\n\n${originalText}`;
             
             console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${startingCoordinate}`);
             return {
