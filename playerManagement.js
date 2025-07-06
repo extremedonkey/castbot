@@ -371,8 +371,16 @@ export async function createPlayerManagementUI(options) {
       // Check if user is eligible for Safari inventory access
       if (targetMember && client) {
         try {
-          const eligiblePlayers = await getEligiblePlayersFixed(guildId, client);
-          const isEligiblePlayer = eligiblePlayers.some(player => player.userId === targetMember.id);
+          // Fast eligibility check - only check current user, avoid expensive getEligiblePlayersFixed
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          const userData = playerData[guildId]?.players?.[targetMember.id];
+          const safari = userData?.safari || {};
+          const currency = safari.currency || 0;
+          const inventory = safari.inventory || {};
+          const { getItemQuantity } = await import('./safariManager.js');
+          const hasInventory = Object.keys(inventory).length > 0 && Object.values(inventory).some(item => getItemQuantity(item) > 0);
+          const isEligiblePlayer = (currency >= 1 || hasInventory);
           
           if (isEligiblePlayer) {
             // Get custom terms for inventory name and emoji
