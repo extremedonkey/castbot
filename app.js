@@ -5443,8 +5443,11 @@ To fix this:
         id: 'reece_stuff_menu',
         updateMessage: shouldUpdateMessage,
         handler: async (context) => {
+          console.log(`🔍 START: reece_stuff_menu - user ${context.userId}`);
+          
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
+            console.log(`❌ ACCESS DENIED: reece_stuff_menu - user ${context.userId} not authorized`);
             return {
               content: 'Access denied. This feature is restricted.',
               ephemeral: true
@@ -5454,6 +5457,7 @@ To fix this:
           // Create Reece Stuff submenu
           const reeceMenuData = await createReeceStuffMenu();
           
+          console.log(`✅ SUCCESS: reece_stuff_menu - completed`);
           return {
             ...reeceMenuData,
             ephemeral: true
@@ -5863,11 +5867,11 @@ Your server is now ready for Tycoons gameplay!`;
         deferred: true,
         ephemeral: true,
         handler: async (context) => {
-          console.log('🔍 DEBUG: Starting analytics dump for user:', context.userId);
+          console.log(`🔍 START: prod_analytics_dump - user ${context.userId}`);
           
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
-            console.log('❌ DEBUG: Access denied for user:', context.userId);
+            console.log(`❌ ACCESS DENIED: prod_analytics_dump - user ${context.userId} not authorized`);
             return {
               content: '❌ Access denied. This feature is restricted.'
             };
@@ -5932,6 +5936,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           // Return first chunk for deferred update
+          console.log(`✅ SUCCESS: prod_analytics_dump - completed with ${chunks.length} chunks`);
           return {
             content: `## 📊 CastBot Analytics Report\n\n\`\`\`\n${chunks[0]}\n\`\`\``
           };
@@ -5944,11 +5949,11 @@ Your server is now ready for Tycoons gameplay!`;
         deferred: true,
         ephemeral: true,
         handler: async (context) => {
-          console.log('🔍 DEBUG: Starting live analytics for user:', context.userId);
+          console.log(`🔍 START: prod_live_analytics - user ${context.userId}`);
           
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
-            console.log('❌ DEBUG: Access denied for live analytics user:', context.userId);
+            console.log(`❌ ACCESS DENIED: prod_live_analytics - user ${context.userId} not authorized`);
             return {
               content: '❌ Access denied. This feature is restricted.'
             };
@@ -6101,6 +6106,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           // Return first chunk for deferred update
+          console.log(`✅ SUCCESS: prod_live_analytics - completed with ${chunks.length} chunks`);
           return {
             content: chunks[0]
           };
@@ -6111,8 +6117,11 @@ Your server is now ready for Tycoons gameplay!`;
       return ButtonHandlerFactory.create({
         id: 'prod_toggle_live_analytics',
         handler: async (context) => {
+          console.log(`🔍 START: prod_toggle_live_analytics - user ${context.userId}`);
+          
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
+            console.log(`❌ ACCESS DENIED: prod_toggle_live_analytics - user ${context.userId} not authorized`);
             return {
               content: 'Access denied. This feature is restricted.',
               ephemeral: true
@@ -6145,6 +6154,7 @@ Your server is now ready for Tycoons gameplay!`;
                             `🚫 Discord channel logging has been paused`;
           }
           
+          console.log(`✅ SUCCESS: prod_toggle_live_analytics - toggled to ${newStatus}`);
           return {
             content: responseMessage,
             ephemeral: true
@@ -6158,11 +6168,11 @@ Your server is now ready for Tycoons gameplay!`;
         deferred: true,
         ephemeral: false, // Results should be visible
         handler: async (context) => {
-          console.log('📈 DEBUG: Starting server usage stats for user:', context.userId);
+          console.log(`🔍 START: prod_server_usage_stats - user ${context.userId}`);
           
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
-            console.log('❌ DEBUG: Access denied for user:', context.userId);
+            console.log(`❌ ACCESS DENIED: prod_server_usage_stats - user ${context.userId} not authorized`);
             return {
               content: '❌ Access denied. This feature is restricted.'
             };
@@ -6265,6 +6275,7 @@ Your server is now ready for Tycoons gameplay!`;
             responseLines.push('');
           }
 
+          console.log(`✅ SUCCESS: prod_server_usage_stats - completed with ${responseLines.length} lines`);
           return {
             content: responseLines.join('\n')
           };
