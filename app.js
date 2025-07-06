@@ -3510,8 +3510,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     }
     
-    // Handle player movement on map using Button Factory
-    if (custom_id.startsWith('safari_move_')) {
+    // === MAP MOVEMENT HANDLERS (Button Factory) - MUST COME FIRST ===
+    } else if (custom_id.startsWith('safari_move_')) {
       const targetCoordinate = custom_id.replace('safari_move_', '');
       return ButtonHandlerFactory.create({
         id: `safari_move_${targetCoordinate}`,
@@ -3558,7 +3558,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
       })(req, res, client);
-    }
     
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
     if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 

@@ -271,12 +271,13 @@ export async function initializePlayerOnMap(guildId, userId, startingCoordinate,
     
     if (activeMap && safariData[guildId].maps[activeMap].coordinates[startingCoordinate]?.channelId) {
         const guild = await client.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
         const channel = await guild.channels.fetch(
             safariData[guildId].maps[activeMap].coordinates[startingCoordinate].channelId
         );
         
         if (channel) {
-            await channel.permissionOverwrites.edit(userId, {
+            await channel.permissionOverwrites.edit(member, {
                 ViewChannel: true,
                 SendMessages: true
             });
