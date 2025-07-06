@@ -13201,7 +13201,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         await res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `📄 **Raw Safari Data for <@${targetUserId}>:**\n\\`\\`\\`json\n${chunks[0]}\\`\\`\\``,
+            content: `📄 **Raw Safari Data for <@${targetUserId}>:**\n\`\`\`json\n${chunks[0]}\`\`\``,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -13211,7 +13211,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
             method: 'POST',
             body: {
-              content: `\\`\\`\\`json\n${chunks[i]}\\`\\`\\``,
+              content: `\`\`\`json\n${chunks[i]}\`\`\``,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
