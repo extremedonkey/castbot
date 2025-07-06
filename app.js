@@ -3511,6 +3511,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     }
     
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
+    const safariParts = custom_id.split('_');
+    const safariLength = safariParts.length;
+    const startsWithSafari = custom_id.startsWith('safari_');
+    const isMove = custom_id.startsWith('safari_move_');
+    
+    console.log(`🐛 DEBUG: safari check - custom_id: ${custom_id}, starts: ${startsWithSafari}, length: ${safariLength}, isMove: ${isMove}`);
+    
     if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
         !custom_id.startsWith('safari_add_action_') && 
         !custom_id.startsWith('safari_finish_button_') && 
