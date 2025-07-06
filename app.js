@@ -3510,14 +3510,75 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     }
     
+    // Handle player movement on map (MUST come before dynamic Safari handler)
+    if (custom_id.startsWith('safari_move_')) {
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const targetCoordinate = custom_id.replace('safari_move_', '');
+        
+        console.log(`🚶 DEBUG: Processing movement to ${targetCoordinate} for user ${userId}`);
+        
+        // Import movement functions
+        const { movePlayer } = await import('./mapMovement.js');
+        
+        // Execute movement
+        const result = await movePlayer(guildId, userId, targetCoordinate, client);
+        
+        if (result.success) {
+          // Send success message (ephemeral)
+          await res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: result.message,
+              flags: InteractionResponseFlags.EPHEMERAL | (1 << 15) // Ephemeral + Components V2
+            }
+          });
+          
+          // Update the movement display in the new channel
+          const { getMovementDisplay } = await import('./mapMovement.js');
+          const { loadSafariContent } = await import('./safariManager.js');
+          
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[guildId]?.maps?.active;
+          const channelId = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[targetCoordinate]?.channelId;
+          
+          if (channelId) {
+            const movementDisplay = await getMovementDisplay(guildId, targetCoordinate);
+            
+            // Post movement interface to new channel
+            await DiscordRequest(`channels/${channelId}/messages`, {
+              method: 'POST',
+              body: {
+                content: `${movementDisplay.title}\n\n${movementDisplay.description}`,
+                components: movementDisplay.components,
+                flags: (1 << 15) // IS_COMPONENTS_V2
+              }
+            });
+          }
+        } else {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: result.message || '❌ Movement failed.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error handling movement:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error processing movement. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      return; // IMPORTANT: Exit here to prevent further processing
+    }
+    
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
-    const safariParts = custom_id.split('_');
-    const safariLength = safariParts.length;
-    const startsWithSafari = custom_id.startsWith('safari_');
-    const isMove = custom_id.startsWith('safari_move_');
-    
-    console.log(`🐛 DEBUG: safari check - custom_id: ${custom_id}, starts: ${startsWithSafari}, length: ${safariLength}, isMove: ${isMove}`);
-    
     if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
         !custom_id.startsWith('safari_add_action_') && 
         !custom_id.startsWith('safari_finish_button_') && 
@@ -12870,81 +12931,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('safari_move_')) {
-      // Handle player movement on map
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        const targetCoordinate = custom_id.replace('safari_move_', '');
-        
-        console.log(`🚶 DEBUG: Processing movement to ${targetCoordinate} for user ${userId}`);
-        
-        // Import movement functions
-        const { movePlayer } = await import('./mapMovement.js');
-        
-        // Execute movement
-        const result = await movePlayer(guildId, userId, targetCoordinate, client);
-        
-        if (result.success) {
-          // Send success message (ephemeral)
-          await res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: result.message,
-              flags: InteractionResponseFlags.EPHEMERAL | (1 << 15) // Ephemeral + Components V2
-            }
-          });
-          
-          // Update the movement display in the new channel
-          const { getMovementDisplay } = await import('./mapMovement.js');
-          const { loadSafariContent } = await import('./safariManager.js');
-          
-          const safariData = await loadSafariContent();
-          const activeMapId = safariData[guildId]?.maps?.active;
-          const channelId = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[targetCoordinate]?.channelId;
-          
-          if (channelId) {
-            const channel = await client.channels.fetch(channelId);
-            const movementDisplay = await getMovementDisplay(guildId, userId, targetCoordinate);
-            
-            // Create movement interface message
-            const components = [];
-            
-            // Add movement buttons in rows
-            for (const buttonRow of movementDisplay.buttons) {
-              components.push({
-                type: 1, // Action Row
-                components: buttonRow
-              });
-            }
-            
-            await channel.send({
-              content: `${movementDisplay.title}\n\n${movementDisplay.description}`,
-              components: components
-            });
-          }
-        } else {
-          // Send error message
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: result.message,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-      } catch (error) {
-        console.error('Error in safari_move handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ An error occurred while moving. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    
     // ==================== END MAP EXPLORER HANDLERS ====================
     
     } else if (custom_id === 'prod_add_tribe_role_select') {
