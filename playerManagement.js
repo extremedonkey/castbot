@@ -392,8 +392,16 @@ export async function createPlayerManagementUI(options) {
             // Create inventory row with store buttons
             const inventoryComponents = [inventoryButton];
             
-            // Add store browse buttons (max 4 to stay within 5-button limit)
-            for (let i = 0; i < Math.min(storeBrowseButtons.length, 4); i++) {
+            // Add Start Exploring button for map testing
+            const startExploringButton = new ButtonBuilder()
+              .setCustomId('safari_map_init_player')
+              .setLabel('Start Exploring')
+              .setStyle(ButtonStyle.Success)
+              .setEmoji('🚶');
+            inventoryComponents.push(startExploringButton);
+            
+            // Add store browse buttons (max 3 to stay within 5-button limit with Start Exploring)
+            for (let i = 0; i < Math.min(storeBrowseButtons.length, 3); i++) {
               const storeButton = storeBrowseButtons[i];
               inventoryComponents.push(new ButtonBuilder()
                 .setCustomId(storeButton.custom_id)
