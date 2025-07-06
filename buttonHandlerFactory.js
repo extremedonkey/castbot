@@ -202,6 +202,15 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
 
+  // Safari Map Movement Buttons (dynamic pattern: safari_move_COORDINATE)
+  'safari_move_*': {
+    label: 'Movement',
+    description: 'Player movement between map coordinates',
+    emoji: '🗺️',
+    style: 'Secondary',
+    category: 'safari_movement'
+  },
+
   // Safari Currency Management Submenu
   'safari_currency_view_all': {
     label: 'View All Balances',
