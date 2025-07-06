@@ -343,18 +343,10 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
     
     description += '\n\n*You can move once every 12 hours*';
     
-    // Return Components V2 format - Add Text Display as first Action Row
-    const textDisplayRow = {
-        type: 1, // Action Row
-        components: [{
-            type: 10, // Text Display
-            text: `🗺️ **Current Location: ${coordinate}**\n\n${description}`
-        }]
-    };
-    
+    // Return standard Discord format with content field
     return {
-        components: [textDisplayRow, ...actionRows],
-        flags: (1 << 15) // IS_COMPONENTS_V2
+        content: `🗺️ **Current Location: ${coordinate}**\n\n${description}`,
+        components: actionRows
     };
 }
 
