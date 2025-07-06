@@ -3531,24 +3531,29 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const result = await movePlayer(context.guildId, context.userId, targetCoordinate, context.client);
           
           if (result.success) {
-            // Post movement interface to new channel
+            // Post movement interface to new channel (if different from current)
             const safariData = await loadSafariContent();
             const activeMapId = safariData[context.guildId]?.maps?.active;
-            const channelId = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[targetCoordinate]?.channelId;
+            const targetChannelId = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[targetCoordinate]?.channelId;
+            const sourceChannelId = context.channelId;
             
-            if (channelId) {
-              const movementDisplay = await getMovementDisplay(context.guildId, context.userId, targetCoordinate);
+            if (targetChannelId && targetChannelId !== sourceChannelId) {
+              // Post to new channel with full Components V2 format
+              const movementDisplay = await getMovementDisplay(context.guildId, context.userId, targetCoordinate, false);
               
-              // Post movement interface to new channel (Components V2 format)
-              await DiscordRequest(`channels/${channelId}/messages`, {
+              console.log(`🔍 DEBUG: Posting movement interface to new channel ${targetChannelId}`);
+              await DiscordRequest(`channels/${targetChannelId}/messages`, {
                 method: 'POST',
                 body: movementDisplay
               });
             }
             
+            // For the interaction response, always use interaction-safe format
+            const responseDisplay = await getMovementDisplay(context.guildId, context.userId, targetCoordinate, true);
+            
             console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
             return {
-              content: result.message,
+              ...responseDisplay,
               ephemeral: true
             };
           } else {
@@ -12890,17 +12895,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const result = await initializePlayerOnMap(context.guildId, context.userId, startingCoordinate, context.client);
           
           if (result.success) {
-            // Get movement display for the starting position (Components V2)
-            const movementDisplay = await getMovementDisplay(context.guildId, context.userId, startingCoordinate);
+            // Get movement display for the starting position (for interaction response)
+            const movementDisplay = await getMovementDisplay(context.guildId, context.userId, startingCoordinate, true);
             
-            // Add welcome message as first Text Display component
+            // Prepend welcome message
             const welcomeMessage = `✅ Welcome to the map! You've been placed at ${startingCoordinate}.`;
-            
-            // Insert welcome message as the first Text Display component
-            movementDisplay.components[0].components.unshift({
-              type: 10, // Text Display
-              content: welcomeMessage
-            });
+            movementDisplay.content = `${welcomeMessage}\n\n${movementDisplay.content}`;
             
             console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${startingCoordinate}`);
             return {

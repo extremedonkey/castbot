@@ -211,7 +211,7 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
 }
 
 // Get movement display for a coordinate channel (Components V2 format)
-export async function getMovementDisplay(guildId, userId, coordinate) {
+export async function getMovementDisplay(guildId, userId, coordinate, isInteractionResponse = false) {
     const canMove = await canPlayerMove(guildId, userId);
     const entityId = `player_${userId}`;
     const validMoves = getValidMoves(coordinate);
@@ -343,7 +343,17 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
     
     description += '\n\n*You can move once every 12 hours*';
     
-    // Return Components V2 format following entity_select_ pattern
+    // For interaction responses, we can't use Container at top level
+    // Discord only allows Action Rows (type 1) at the top level for interactions
+    if (isInteractionResponse) {
+        // Return standard format with content field for interaction responses
+        return {
+            content: `## 🗺️ Current Location: ${coordinate}\n\n${description}`,
+            components: actionRows
+        };
+    }
+    
+    // For channel messages, use full Components V2 format with Container
     const components = [{
         type: 17, // Container
         accent_color: 0x2ecc71, // Green for movement/exploration
