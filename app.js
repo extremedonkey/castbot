@@ -12814,8 +12814,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id === 'safari_map_init_player') {
       return ButtonHandlerFactory.create({
         id: 'safari_map_init_player',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
         handler: async (context) => {
           console.log(`🗺️ START: safari_map_init_player - user ${context.userId}`);
           
