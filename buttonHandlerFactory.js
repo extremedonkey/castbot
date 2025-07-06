@@ -291,6 +291,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'entity_management'
   },
+  'entity_view_mode': {
+    label: 'View Mode',
+    description: 'Switch entity to view mode',
+    emoji: '👁️',
+    style: 'Secondary',
+    category: 'entity_management'
+  },
   'entity_delete_mode': {
     label: 'Delete Mode',
     description: 'Switch entity to delete confirmation mode',

@@ -11996,39 +11996,30 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       })(req, res, client);
       
     } else if (custom_id.startsWith('entity_view_mode_')) {
-      // Switch back to view mode for an entity
-      try {
-        const parts = custom_id.split('_');
-        const entityType = parts[3];
-        const entityId = parts.slice(4).join('_');
-        const guildId = req.body.guild_id;
-        
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
-        
-        const uiResponse = await createEntityManagementUI({
-          entityType: entityType,
-          guildId: guildId,
-          selectedId: entityId,
-          activeFieldGroup: null,
-          searchTerm: '',
-          mode: 'edit'
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: uiResponse
-        });
-        
-      } catch (error) {
-        console.error('Error switching to view mode:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error returning to view mode.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Switch back to view mode for an entity (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'entity_view_mode',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.split('_');
+          const entityType = parts[3];
+          const entityId = parts.slice(4).join('_');
+          
+          console.log(`👁️ DEBUG: View mode - Type: ${entityType}, ID: ${entityId}`);
+          
+          const uiResponse = await createEntityManagementUI({
+            entityType: entityType,
+            guildId: context.guildId,
+            selectedId: entityId,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          
+          return uiResponse;
+        }
+      })(req, res, client);
       
     } else if (custom_id.startsWith('entity_field_group_')) {
       // Handle field group button click (MIGRATED TO FACTORY)
