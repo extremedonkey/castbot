@@ -10,7 +10,6 @@ import {
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { getCustomTerms } from './safariManager.js';
-import { updatePlayerCurrency } from './safariManager.js';
 import { logger } from './logger.js';
 
 /**
