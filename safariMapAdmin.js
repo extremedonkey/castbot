@@ -303,7 +303,7 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
 /**
  * Move player to specific coordinate
  */
-export async function movePlayerToCoordinate(guildId, userId, coordinate) {
+export async function movePlayerToCoordinate(guildId, userId, coordinate, client = null) {
   const playerData = await loadPlayerData();
   const safariData = await loadSafariContent();
   
@@ -337,6 +337,12 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate) {
   });
   
   await savePlayerData(playerData);
+  
+  // Update Discord channel permissions if client is provided
+  if (client) {
+    const { updateChannelPermissions } = await import('./mapMovement.js');
+    await updateChannelPermissions(guildId, userId, previousLocation, coordinate, client);
+  }
   
   logger.info('MAP_ADMIN', 'Player moved by admin', { 
     guildId, 

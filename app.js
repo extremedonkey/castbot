@@ -15790,7 +15790,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         const { movePlayerToCoordinate, createMapAdminUI } = await import('./safariMapAdmin.js');
         
-        await movePlayerToCoordinate(guildId, targetUserId, coordinate);
+        await movePlayerToCoordinate(guildId, targetUserId, coordinate, client);
         
         // Return updated player view
         const ui = await createMapAdminUI({
