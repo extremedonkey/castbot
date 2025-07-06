@@ -9615,15 +9615,79 @@ Your server is now ready for Tycoons gameplay!`;
             data: modal.toJSON()
           });
         } else {
-          // Unknown action type - send error response
-          console.log(`❌ DEBUG: Unknown action type "${actionType}" for button "${buttonId}"`);
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `❌ **Unknown action type**: \`${actionType}\`\n\nSupported action types:\n• \`display_text\` - Show text message\n• \`update_currency\` - Change player currency\n• \`follow_up_button\` - Chain to another button\n• \`conditional\` - Conditional actions\n\nPlease use one of the supported action buttons.`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+          // This might be a request to show the action menu for an existing button
+          // Check if this is a numeric action ID (likely a mistake - show action menu instead)
+          if (/^\d+$/.test(actionType)) {
+            console.log(`🔧 DEBUG: Showing action menu for button "${buttonId}" (detected numeric suffix "${actionType}")`);
+            
+            // Show the action menu for this button
+            const actionMenuComponents = [
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: `safari_add_action_${buttonId}_display_text`,
+                    label: 'Add Text Display',
+                    style: 1,
+                    emoji: { name: '📄' }
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: `safari_add_action_${buttonId}_update_currency`,
+                    label: 'Add Currency Change',
+                    style: 1,
+                    emoji: { name: '💰' }
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: `safari_add_action_${buttonId}_follow_up`,
+                    label: 'Add Follow-up Button',
+                    style: 1,
+                    emoji: { name: '🔗' }
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: `safari_add_action_${buttonId}_conditional`,
+                    label: 'Add Conditional Action',
+                    style: 1,
+                    emoji: { name: '🔀' }
+                  }
+                ]
+              },
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: `safari_finish_button_${buttonId}`,
+                    label: 'Finish & Test Button',
+                    style: 3, // Success
+                    emoji: { name: '✅' }
+                  }
+                ]
+              }
+            ];
+
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `🎯 **Add Actions to Button: ${buttonId}**\n\nChoose an action type to add to this button:`,
+                components: actionMenuComponents,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          } else {
+            // Unknown action type - send error response
+            console.log(`❌ DEBUG: Unknown action type "${actionType}" for button "${buttonId}"`);
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ **Unknown action type**: \`${actionType}\`\n\nSupported action types:\n• \`display_text\` - Show text message\n• \`update_currency\` - Change player currency\n• \`follow_up_button\` - Chain to another button\n• \`conditional\` - Conditional actions\n\nPlease use one of the supported action buttons.`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
         }
         
       } catch (error) {
