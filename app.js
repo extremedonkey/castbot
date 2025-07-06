@@ -11797,8 +11797,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'safari_item_qty_user_select',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const selectedUserId = context.values[0];
+        handler: async (context, req) => {
+          const selectedUserId = req.body.data.values[0];
           
           // Extract item ID from custom_id: safari_item_qty_user_select_${guildId}_${itemId}
           const parts = context.customId.split('_');
@@ -13018,7 +13018,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const { initializePlayerOnMap, createMapAdminUI } = await import('./safariMapAdmin.js');
           
           try {
-            await initializePlayerOnMap(context.guildId, targetUserId);
+            await initializePlayerOnMap(context.guildId, targetUserId, 'A1', context.client);
             
             // Return updated player view
             const ui = await createMapAdminUI({
@@ -13124,62 +13124,151 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       })(req, res, client);
       
     } else if (custom_id.startsWith('map_admin_edit_currency_')) {
-      // Show currency edit modal
-      try {
-        const targetUserId = custom_id.split('_').pop();
-        
-        // Get current currency amount
-        const { loadPlayerData } = await import('./storage.js');
-        const { getCustomTerms } = await import('./safariManager.js');
-        const playerData = await loadPlayerData();
-        const customTerms = await getCustomTerms(req.body.guild_id);
-        
-        const currentAmount = playerData[req.body.guild_id]?.players?.[targetUserId]?.safari?.currency || 0;
-        
-        const { createCurrencyModal } = await import('./safariMapAdmin.js');
-        const modal = await createCurrencyModal(targetUserId, currentAmount, customTerms.currencyName);
-        
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-        
-      } catch (error) {
-        console.error('Error showing currency modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ An error occurred. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      // Show currency edit modal - Using Factory Pattern
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_edit_currency',
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛡️ START: map_admin_edit_currency for user ${targetUserId}`);
+          
+          // Get current currency amount
+          const { loadPlayerData } = await import('./storage.js');
+          const { getCustomTerms } = await import('./safariManager.js');
+          const playerData = await loadPlayerData();
+          const customTerms = await getCustomTerms(context.guildId);
+          
+          const currentAmount = playerData[context.guildId]?.players?.[targetUserId]?.safari?.currency || 0;
+          
+          const { createCurrencyModal } = await import('./safariMapAdmin.js');
+          const modal = await createCurrencyModal(targetUserId, currentAmount, customTerms.currencyName);
+          
+          console.log(`✅ SUCCESS: map_admin_edit_currency - showing modal`);
+          
+          // Return modal response directly - factory will handle the send
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
       
     } else if (custom_id.startsWith('map_admin_edit_items_')) {
-      // Use entity management UI for items
-      try {
-        const targetUserId = custom_id.split('_').pop();
-        const guildId = req.body.guild_id;
-        
-        // For now, show a message - this would integrate with entity management
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `📦 Item editing for <@${targetUserId}> will use the Entity Management framework.\n\nThis feature is coming soon!`,
-            flags: InteractionResponseFlags.EPHEMERAL
+      // Use Safari item management flow for specific player
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_edit_items',
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛡️ START: map_admin_edit_items for user ${targetUserId}`);
+          
+          // Import necessary functions
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { loadEntity } = await import('./entityManager.js');
+          const { createEditUI } = await import('./editFramework.js');
+          
+          // Load items
+          const safariData = await loadSafariContent();
+          const items = safariData[context.guildId]?.items || {};
+          
+          if (Object.keys(items).length === 0) {
+            return {
+              content: '❌ No items have been created yet. Please create items first using Safari → Manage Items.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
           }
-        });
-        
-      } catch (error) {
-        console.error('Error in map_admin_edit_items:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ An error occurred. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
+          
+          // Create item selection dropdown using the existing pattern
+          const options = [];
+          for (const [itemId, item] of Object.entries(items)) {
+            options.push({
+              label: item.name || 'Unnamed Item',
+              description: item.description?.substring(0, 100) || 'No description',
+              value: `${targetUserId}_${itemId}`, // Include target user in value
+              emoji: item.emoji ? { name: item.emoji } : undefined
+            });
           }
-        });
-      }
+          
+          // Limit to 25 items for Discord's dropdown limit
+          const limitedOptions = options.slice(0, 25);
+          
+          const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId(`map_admin_item_select_${targetUserId}`)
+            .setPlaceholder('Select an item to edit quantity...')
+            .addOptions(limitedOptions);
+          
+          const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+          
+          // Get user info for display
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const targetMember = await guild.members.fetch(targetUserId);
+          
+          console.log(`✅ SUCCESS: map_admin_edit_items - showing item selection`);
+          
+          return {
+            content: `## 📦 Edit Items for ${targetMember.displayName}\n\nSelect an item to set the quantity:`,
+            components: [selectRow],
+            flags: InteractionResponseFlags.EPHEMERAL
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_admin_item_select_')) {
+      // Handle item selection for map admin - show quantity modal
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_item_select',
+        handler: async (context, req) => {
+          const targetUserId = context.customId.split('_').pop();
+          const selectedValue = req.body.data.values[0];
+          const [userId, itemId] = selectedValue.split('_');
+          
+          console.log(`🛡️ Processing map admin item select: user=${userId}, item=${itemId}`);
+          
+          // Load item data to get item name
+          const { loadEntity } = await import('./entityManager.js');
+          const item = await loadEntity(context.guildId, 'item', itemId);
+          const itemName = item?.name || 'Unknown Item';
+          
+          // Get current item quantity
+          const playerData = await loadPlayerData();
+          const inventory = playerData[context.guildId]?.players?.[userId]?.safari?.inventory || {};
+          const currentItem = inventory[itemId];
+          
+          let currentQuantity = '';
+          let modalLabel = 'Quantity';
+          
+          if (currentItem) {
+            currentQuantity = currentItem.quantity?.toString() || '0';
+            if (currentItem.numAttacksAvailable !== undefined) {
+              modalLabel = `Quantity (Attacks Available: ${currentItem.numAttacksAvailable})`;
+            }
+          }
+          
+          // Get target user info
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const targetMember = await guild.members.fetch(userId);
+          
+          // Create quantity modal
+          const modal = new ModalBuilder()
+            .setCustomId(`map_admin_item_qty_modal_${context.guildId}_${itemId}_${userId}`)
+            .setTitle(`Set ${itemName} for ${targetMember.displayName}`);
+          
+          const quantityInput = new TextInputBuilder()
+            .setCustomId('item_quantity')
+            .setLabel(modalLabel)
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Enter quantity (0 to remove)')
+            .setValue(currentQuantity)
+            .setRequired(true)
+            .setMaxLength(4);
+          
+          const row = new ActionRowBuilder().addComponents(quantityInput);
+          modal.addComponents(row);
+          
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
       
     } else if (custom_id.startsWith('map_admin_view_raw_')) {
       // Show raw player data
@@ -15727,27 +15816,27 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       }
       
     } else if (custom_id.startsWith('map_admin_stamina_modal_')) {
-      // Handle stamina grant submission
+      // Handle stamina set submission
       try {
         const targetUserId = custom_id.split('_').pop();
         const guildId = req.body.guild_id;
         const amount = parseInt(components[0].components[0].value?.trim());
         
-        console.log(`🛡️ Processing stamina grant of ${amount} for user ${targetUserId}`);
+        console.log(`🛡️ Processing stamina set to ${amount} for user ${targetUserId}`);
         
-        if (isNaN(amount) || amount < 1 || amount > 99) {
+        if (isNaN(amount) || amount < 0 || amount > 10) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Invalid amount. Please enter a number between 1 and 99.',
+              content: '❌ Invalid amount. Please enter a number between 0 and 10.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
-        const { grantPlayerStamina, createMapAdminUI } = await import('./safariMapAdmin.js');
+        const { setPlayerStamina, createMapAdminUI } = await import('./safariMapAdmin.js');
         
-        await grantPlayerStamina(guildId, targetUserId, amount);
+        await setPlayerStamina(guildId, targetUserId, amount);
         
         // Return updated player view
         const ui = await createMapAdminUI({
@@ -15812,6 +15901,87 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
       } catch (error) {
         console.error('Error in map_admin_currency_modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('map_admin_item_qty_modal_')) {
+      // Handle map admin item quantity submission
+      try {
+        const parts = custom_id.split('_');
+        const userId = parts.pop();
+        const itemId = parts.slice(5, -1).join('_'); // Everything between 'modal' and userId
+        const guildId = req.body.guild_id;
+        const quantity = parseInt(components[0].components[0].value?.trim());
+        
+        console.log(`🛡️ Processing item quantity set: user=${userId}, item=${itemId}, qty=${quantity}`);
+        
+        if (isNaN(quantity) || quantity < 0 || quantity > 9999) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid quantity. Please enter a number between 0 and 9999.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Load item data to determine if it's an attack item
+        const { loadEntity } = await import('./entityManager.js');
+        const item = await loadEntity(guildId, 'item', itemId);
+        
+        // Update player inventory
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]) playerData[guildId] = { players: {} };
+        if (!playerData[guildId].players[userId]) playerData[guildId].players[userId] = { safari: {} };
+        if (!playerData[guildId].players[userId].safari.inventory) {
+          playerData[guildId].players[userId].safari.inventory = {};
+        }
+        
+        const inventory = playerData[guildId].players[userId].safari.inventory;
+        
+        if (quantity === 0) {
+          // Remove item
+          delete inventory[itemId];
+        } else {
+          // Set item quantity
+          if (item?.attackValue) {
+            // Attack item - use object format
+            inventory[itemId] = {
+              quantity: quantity,
+              numAttacksAvailable: quantity // For admin, set attacks equal to quantity
+            };
+          } else {
+            // Regular item - use object format for consistency
+            inventory[itemId] = {
+              quantity: quantity,
+              numAttacksAvailable: 0
+            };
+          }
+        }
+        
+        await savePlayerData(playerData);
+        
+        // Return to player view
+        const { createMapAdminUI } = await import('./safariMapAdmin.js');
+        const ui = await createMapAdminUI({
+          guildId,
+          userId,
+          mode: 'player_view'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+        
+      } catch (error) {
+        console.error('Error in map_admin_item_qty_modal:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {

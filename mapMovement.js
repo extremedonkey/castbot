@@ -188,9 +188,10 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
             const oldChannel = await guild.channels.fetch(mapData.coordinates[oldCoordinate].channelId);
             if (oldChannel) {
                 await oldChannel.permissionOverwrites.edit(member, {
-                    ViewChannel: false,
-                    SendMessages: false
+                    [PermissionFlagsBits.ViewChannel]: false,
+                    [PermissionFlagsBits.SendMessages]: false
                 });
+                console.log(`🚪 Removed permissions for ${member.displayName} from ${oldCoordinate} channel`);
             }
         }
         
@@ -199,9 +200,10 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
             const newChannel = await guild.channels.fetch(mapData.coordinates[newCoordinate].channelId);
             if (newChannel) {
                 await newChannel.permissionOverwrites.edit(member, {
-                    ViewChannel: true,
-                    SendMessages: true
+                    [PermissionFlagsBits.ViewChannel]: true,
+                    [PermissionFlagsBits.SendMessages]: true
                 });
+                console.log(`🔓 Granted permissions for ${member.displayName} to ${newCoordinate} channel`);
             }
         }
     } catch (error) {
@@ -407,9 +409,10 @@ export async function initializePlayerOnMap(guildId, userId, startingCoordinate,
         
         if (channel) {
             await channel.permissionOverwrites.edit(member, {
-                ViewChannel: true,
-                SendMessages: true
+                [PermissionFlagsBits.ViewChannel]: true,
+                [PermissionFlagsBits.SendMessages]: true
             });
+            console.log(`🔓 Granted initial permissions for ${member.displayName} to ${startingCoordinate} channel`);
         }
     }
     

@@ -267,7 +267,8 @@ export const BUTTON_REGISTRY = {
     description: 'Set player currency amount',
     emoji: '💰',
     style: 'Secondary',
-    category: 'safari_map_admin'
+    category: 'safari_map_admin',
+    requiresModal: true
   },
   'map_admin_edit_items_*': {
     label: 'Edit Items',
@@ -282,6 +283,14 @@ export const BUTTON_REGISTRY = {
     emoji: '📄',
     style: 'Secondary',
     category: 'safari_map_admin'
+  },
+  'map_admin_item_select_*': {
+    label: 'Item Select',
+    description: 'Select item for map admin quantity edit',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    type: 'select_menu'
   },
 
   // Safari Currency Management Submenu

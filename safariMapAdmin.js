@@ -149,7 +149,7 @@ async function createPlayerViewUI(guildId, userId) {
     mapButtons.push({
       type: 2, // Button
       custom_id: `map_admin_grant_stamina_${userId}`,
-      label: 'Grant Stamina',
+      label: 'Set Stamina',
       style: 3, // Success
       emoji: { name: '⚡' }
     });
@@ -179,7 +179,7 @@ async function createPlayerViewUI(guildId, userId) {
         custom_id: `map_admin_edit_currency_${userId}`,
         label: `Edit ${customTerms.currencyName}`,
         style: 2, // Secondary
-        emoji: { name: '💰' }
+        emoji: { name: customTerms.currencyEmoji || '💰' }
       },
       {
         type: 2, // Button
@@ -239,7 +239,7 @@ async function createPlayerViewUI(guildId, userId) {
 /**
  * Initialize player on map
  */
-export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1') {
+export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', client = null) {
   const playerData = await loadPlayerData();
   const safariData = await loadSafariContent();
   
@@ -283,6 +283,12 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1') 
   };
   
   await savePlayerData(playerData);
+  
+  // If client is provided, also initialize using the movement system for proper permission handling
+  if (client) {
+    const { initializePlayerOnMap: initMovementSystem } = await import('./mapMovement.js');
+    await initMovementSystem(guildId, userId, coordinate, client);
+  }
   
   logger.info('MAP_ADMIN', 'Player initialized on map', { 
     guildId, 
@@ -343,9 +349,9 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate) {
 }
 
 /**
- * Grant stamina to player
+ * Set stamina for player
  */
-export async function grantPlayerStamina(guildId, userId, amount) {
+export async function setPlayerStamina(guildId, userId, amount) {
   const playerData = await loadPlayerData();
   
   const player = playerData[guildId]?.players?.[userId];
@@ -354,12 +360,13 @@ export async function grantPlayerStamina(guildId, userId, amount) {
   }
   
   const stamina = player.safari.points.stamina;
-  stamina.current = Math.min(stamina.current + amount, stamina.maximum);
+  // Ensure amount is within valid range (0 to maximum)
+  stamina.current = Math.max(0, Math.min(amount, stamina.maximum));
   stamina.lastRegeneration = new Date().toISOString();
   
   await savePlayerData(playerData);
   
-  logger.info('MAP_ADMIN', 'Stamina granted to player', { 
+  logger.info('MAP_ADMIN', 'Stamina set for player', { 
     guildId, 
     userId, 
     amount,
@@ -441,11 +448,11 @@ export async function createStaminaModal(userId) {
   
   const modal = new ModalBuilder()
     .setCustomId(`map_admin_stamina_modal_${userId}`)
-    .setTitle('Grant Stamina to Player');
+    .setTitle('Set Player Stamina');
   
   const staminaInput = new TextInputBuilder()
     .setCustomId('amount')
-    .setLabel('Stamina Amount to Grant')
+    .setLabel('Stamina Amount (0-10)')
     .setStyle(TextInputStyle.Short)
     .setPlaceholder('5')
     .setRequired(true)
