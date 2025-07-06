@@ -3515,6 +3515,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const targetCoordinate = custom_id.replace('safari_move_', '');
       return ButtonHandlerFactory.create({
         id: `safari_move_${targetCoordinate}`,
+        deferred: true, // REQUIRED: Permission changes + channel updates take time
+        ephemeral: true,
         handler: async (context) => {
           console.log(`🗺️ START: safari_move_${targetCoordinate} - user ${context.userId}`);
           
@@ -12863,6 +12865,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id === 'safari_map_init_player') {
       return ButtonHandlerFactory.create({
         id: 'safari_map_init_player',
+        deferred: true, // REQUIRED: This operation takes >3 seconds
+        ephemeral: true,
         handler: async (context) => {
           console.log(`🗺️ START: safari_map_init_player - user ${context.userId}`);
           
