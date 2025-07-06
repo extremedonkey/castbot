@@ -15895,12 +15895,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        const { updatePlayerCurrency } = await import('./safariManager.js');
+        const { loadPlayerData, savePlayerData } = await import('./storage.js');
         const { createMapAdminUI } = await import('./safariMapAdmin.js');
         
-        // Set currency to specific amount
-        const currentBalance = await updatePlayerCurrency(guildId, targetUserId, 0);
-        await updatePlayerCurrency(guildId, targetUserId, amount - currentBalance);
+        // Set currency directly in player data
+        const playerData = await loadPlayerData();
+        if (!playerData[guildId]?.players?.[targetUserId]?.safari) {
+          throw new Error('Player safari data not found');
+        }
+        
+        playerData[guildId].players[targetUserId].safari.currency = amount;
+        await savePlayerData(playerData);
         
         // Return updated player view
         const ui = await createMapAdminUI({
@@ -15928,10 +15933,22 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id.startsWith('map_admin_item_qty_modal_')) {
       // Handle map admin item quantity submission
       try {
+        // Format: map_admin_item_qty_modal_${guildId}_${itemId}_${userId}
         const parts = custom_id.split('_');
-        const userId = parts.pop();
-        const itemId = parts.slice(5, -1).join('_'); // Everything between 'modal' and userId
+        const userId = parts.pop(); // Get last part
         const guildId = req.body.guild_id;
+        
+        // Find where guildId ends and itemId starts
+        let guildIdIndex = -1;
+        for (let i = 5; i < parts.length; i++) {
+          if (parts[i] === guildId) {
+            guildIdIndex = i;
+            break;
+          }
+        }
+        
+        // Extract itemId between guildId and userId
+        const itemId = parts.slice(guildIdIndex + 1).join('_');
         const quantity = parseInt(components[0].components[0].value?.trim());
         
         console.log(`🛡️ Processing item quantity set: user=${userId}, item=${itemId}, qty=${quantity}`);
