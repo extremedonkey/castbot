@@ -93,8 +93,48 @@ npm run logs-prod -- --feature BUTTON --level debug
 ### Key Patterns
 - Work on main branch (solo development)
 - Use existing patterns in codebase
-- Components V2 for modern Discord UI
+- **MANDATORY: Discord Components V2** - ALL UI must use Components V2 pattern with Container/Text Display
 - Centralized error handling via errorHandler.js
+
+## 🎨 Discord Components V2 (MANDATORY)
+
+**🚨 CRITICAL: ALL Discord UI must use Components V2 pattern**
+
+### ✅ Components V2 Requirements
+```javascript
+// MANDATORY: Set Components V2 flag for ALL messages
+const flags = 1 << 15; // IS_COMPONENTS_V2
+
+// ❌ FORBIDDEN: Cannot use 'content' field with Components V2
+const response = {
+  content: "Text here", // THIS WILL FAIL
+  flags: flags
+};
+
+// ✅ REQUIRED: Use Container + Text Display pattern
+const response = {
+  components: [{
+    type: 17, // Container
+    components: [
+      {
+        type: 10, // Text Display
+        text: "Your message content here"
+      },
+      {
+        type: 1, // Action Row
+        components: [/* buttons here */]
+      }
+    ]
+  }],
+  flags: flags
+};
+```
+
+**Key Rules:**
+- NEVER use `content` field with `IS_COMPONENTS_V2` flag
+- ALWAYS use Container (type 17) for visual grouping
+- Use Text Display (type 10) instead of content field
+- Reference: [docs/features/ComponentsV2.md](docs/features/ComponentsV2.md)
 
 ## 🚀 Discord Button Implementation
 

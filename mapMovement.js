@@ -208,20 +208,17 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
     }
 }
 
-// Get movement display for a coordinate channel
+// Get movement display for a coordinate channel (Components V2 format)
 export async function getMovementDisplay(guildId, userId, coordinate) {
     const canMove = await canPlayerMove(guildId, userId);
     const entityId = `player_${userId}`;
     const validMoves = getValidMoves(coordinate);
     
-    let display = {
-        title: `🗺️ **Current Location: ${coordinate}**`,
-        description: '',
-        buttons: []
-    };
+    let description = '';
+    let actionRows = [];
     
     if (canMove) {
-        display.description = 'Choose a direction to move:';
+        description = 'Choose a direction to move:';
         
         // Create movement buttons (max 5 per row)
         for (let i = 0; i < validMoves.length; i += 5) {
@@ -231,11 +228,14 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
                 label: move.direction,
                 style: 1 // Primary
             }));
-            display.buttons.push(rowButtons);
+            actionRows.push({
+                type: 1, // Action Row
+                components: rowButtons
+            });
         }
     } else {
         const timeUntil = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
-        display.description = `*You need to rest! You can move again in ${timeUntil}*`;
+        description = `*You need to rest! You can move again in ${timeUntil}*`;
         
         // Show disabled movement buttons
         for (let i = 0; i < validMoves.length; i += 5) {
@@ -246,13 +246,29 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
                 style: 2, // Secondary
                 disabled: true
             }));
-            display.buttons.push(rowButtons);
+            actionRows.push({
+                type: 1, // Action Row
+                components: rowButtons
+            });
         }
     }
     
-    display.description += '\n\n*You can move once every 12 hours*';
+    description += '\n\n*You can move once every 12 hours*';
     
-    return display;
+    // Return Components V2 format with Container
+    return {
+        components: [{
+            type: 17, // Container
+            components: [
+                {
+                    type: 10, // Text Display
+                    text: `🗺️ **Current Location: ${coordinate}**\n\n${description}`
+                },
+                ...actionRows
+            ]
+        }],
+        flags: (1 << 15) // IS_COMPONENTS_V2
+    };
 }
 
 // Initialize player on map (admin function)

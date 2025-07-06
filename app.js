@@ -3136,12 +3136,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'entity_select',
         'entity_field_group',
         'entity_delete_mode',
-        'entity_confirm_delete'
+        'entity_confirm_delete',
+        'safari_move'
       ];
       
       for (const pattern of dynamicPatterns) {
         if (custom_id.startsWith(pattern + '_')) {
-          isFactoryButton = BUTTON_REGISTRY[pattern];
+          // Check if there's a wildcard version in registry
+          const wildcardPattern = `${pattern}_*`;
+          isFactoryButton = BUTTON_REGISTRY[wildcardPattern] || BUTTON_REGISTRY[pattern];
           break;
         }
       }
@@ -3536,14 +3539,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             if (channelId) {
               const movementDisplay = await getMovementDisplay(context.guildId, context.userId, targetCoordinate);
               
-              // Post movement interface to new channel
+              // Post movement interface to new channel (Components V2 format)
               await DiscordRequest(`channels/${channelId}/messages`, {
                 method: 'POST',
-                body: {
-                  content: `${movementDisplay.title}\n\n${movementDisplay.description}`,
-                  components: movementDisplay.components,
-                  flags: (1 << 15) // IS_COMPONENTS_V2
-                }
+                body: movementDisplay
               });
             }
             
@@ -12891,22 +12890,16 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const result = await initializePlayerOnMap(context.guildId, context.userId, startingCoordinate, context.client);
           
           if (result.success) {
-            // Get movement display for the starting position
+            // Get movement display for the starting position (Components V2 format)
             const movementDisplay = await getMovementDisplay(context.guildId, context.userId, startingCoordinate);
             
-            // Create movement interface
-            const components = [];
-            for (const buttonRow of movementDisplay.buttons) {
-              components.push({
-                type: 1, // Action Row
-                components: buttonRow
-              });
-            }
+            // Update the text display to include welcome message
+            const welcomeMessage = `✅ Welcome to the map! You've been placed at ${startingCoordinate}.`;
+            movementDisplay.components[0].components[0].text = `${welcomeMessage}\n\n${movementDisplay.components[0].components[0].text}`;
             
             console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${startingCoordinate}`);
             return {
-              content: `✅ Welcome to the map! You've been placed at ${startingCoordinate}.\n\n${movementDisplay.title}\n\n${movementDisplay.description}`,
-              components: components,
+              ...movementDisplay,
               ephemeral: true
             };
           } else {
