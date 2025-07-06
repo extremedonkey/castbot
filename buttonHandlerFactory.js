@@ -211,6 +211,79 @@ export const BUTTON_REGISTRY = {
     category: 'safari_movement'
   },
 
+  // Safari Map Admin
+  'safari_map_admin': {
+    label: 'Map Admin',
+    description: 'Admin panel for managing player map states',
+    emoji: '🛡️',
+    style: 'Danger',
+    category: 'safari',
+    requiresPermission: 'ManageRoles'
+  },
+  'map_admin_user_select': {
+    label: 'User Select',
+    description: 'Select player for map administration',
+    emoji: '👤',
+    style: 'Primary',
+    category: 'safari_map_admin'
+  },
+  'map_admin_select_new': {
+    label: 'Select Different Player',
+    description: 'Return to player selection',
+    emoji: '👤',
+    style: 'Secondary',
+    category: 'safari_map_admin'
+  },
+  'map_admin_init_player_*': {
+    label: 'Initialize on Map',
+    description: 'Initialize player at starting position',
+    emoji: '🚀',
+    style: 'Success',
+    category: 'safari_map_admin'
+  },
+  'map_admin_move_player_*': {
+    label: 'Move Player',
+    description: 'Move player to specific coordinate',
+    emoji: '📍',
+    style: 'Primary',
+    category: 'safari_map_admin'
+  },
+  'map_admin_grant_stamina_*': {
+    label: 'Grant Stamina',
+    description: 'Grant stamina points to player',
+    emoji: '⚡',
+    style: 'Success',
+    category: 'safari_map_admin'
+  },
+  'map_admin_reset_explored_*': {
+    label: 'Reset Explored',
+    description: 'Reset player exploration progress',
+    emoji: '🔄',
+    style: 'Danger',
+    category: 'safari_map_admin'
+  },
+  'map_admin_edit_currency_*': {
+    label: 'Edit Currency',
+    description: 'Set player currency amount',
+    emoji: '💰',
+    style: 'Secondary',
+    category: 'safari_map_admin'
+  },
+  'map_admin_edit_items_*': {
+    label: 'Edit Items',
+    description: 'Manage player inventory items',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'safari_map_admin'
+  },
+  'map_admin_view_raw_*': {
+    label: 'View Raw Data',
+    description: 'View raw Safari data JSON',
+    emoji: '📄',
+    style: 'Secondary',
+    category: 'safari_map_admin'
+  },
+
   // Safari Currency Management Submenu
   'safari_currency_view_all': {
     label: 'View All Balances',

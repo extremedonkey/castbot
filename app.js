@@ -896,7 +896,12 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_map_explorer')
       .setLabel('Map Explorer')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🗺️')
+      .setEmoji('🗺️'),
+    new ButtonBuilder()
+      .setCustomId('safari_map_admin')
+      .setLabel('Map Admin')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🛡️')
   ];
   
   const safariRow1 = new ActionRowBuilder().addComponents(safariButtonsRow1);
@@ -12917,6 +12922,313 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       })(req, res, client);
     // ==================== END MAP EXPLORER HANDLERS ====================
     
+    // ==================== START MAP ADMIN HANDLERS ====================
+    } else if (custom_id === 'safari_map_admin') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_map_admin',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🛡️ START: safari_map_admin - user ${context.userId}`);
+          
+          const { createMapAdminUI } = await import('./safariMapAdmin.js');
+          
+          const ui = await createMapAdminUI({
+            guildId: context.guildId,
+            mode: 'user_select'
+          });
+          
+          console.log(`✅ SUCCESS: safari_map_admin - showing user selection`);
+          return ui;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'map_admin_user_select') {
+      // Handle user selection for map admin
+      try {
+        const guildId = req.body.guild_id;
+        const selectedUserId = req.body.data.values[0];
+        
+        console.log(`🛡️ Processing map admin user selection: ${selectedUserId}`);
+        
+        const { createMapAdminUI } = await import('./safariMapAdmin.js');
+        
+        const ui = await createMapAdminUI({
+          guildId,
+          userId: selectedUserId,
+          mode: 'player_view'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+        
+      } catch (error) {
+        console.error('Error in map_admin_user_select:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id === 'map_admin_select_new') {
+      // Return to user selection
+      try {
+        const guildId = req.body.guild_id;
+        
+        const { createMapAdminUI } = await import('./safariMapAdmin.js');
+        
+        const ui = await createMapAdminUI({
+          guildId,
+          mode: 'user_select'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+        
+      } catch (error) {
+        console.error('Error in map_admin_select_new:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('map_admin_init_player_')) {
+      // Initialize player on map
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_init_player',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛡️ START: map_admin_init_player for user ${targetUserId}`);
+          
+          const { initializePlayerOnMap, createMapAdminUI } = await import('./safariMapAdmin.js');
+          
+          try {
+            await initializePlayerOnMap(context.guildId, targetUserId);
+            
+            // Return updated player view
+            const ui = await createMapAdminUI({
+              guildId: context.guildId,
+              userId: targetUserId,
+              mode: 'player_view'
+            });
+            
+            console.log(`✅ SUCCESS: map_admin_init_player - initialized user ${targetUserId}`);
+            return ui;
+            
+          } catch (error) {
+            console.error('Error initializing player:', error);
+            return {
+              content: `❌ Error: ${error.message}`,
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_admin_move_player_')) {
+      // Show coordinate input modal
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        
+        const { createCoordinateModal } = await import('./safariMapAdmin.js');
+        const modal = await createCoordinateModal(targetUserId);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error showing coordinate modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('map_admin_grant_stamina_')) {
+      // Show stamina grant modal
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        
+        const { createStaminaModal } = await import('./safariMapAdmin.js');
+        const modal = await createStaminaModal(targetUserId);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error showing stamina modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('map_admin_reset_explored_')) {
+      // Reset player's explored coordinates
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_reset_explored',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛡️ START: map_admin_reset_explored for user ${targetUserId}`);
+          
+          const { resetPlayerExploration, createMapAdminUI } = await import('./safariMapAdmin.js');
+          
+          try {
+            await resetPlayerExploration(context.guildId, targetUserId);
+            
+            // Return updated player view
+            const ui = await createMapAdminUI({
+              guildId: context.guildId,
+              userId: targetUserId,
+              mode: 'player_view'
+            });
+            
+            console.log(`✅ SUCCESS: map_admin_reset_explored - reset for user ${targetUserId}`);
+            return ui;
+            
+          } catch (error) {
+            console.error('Error resetting exploration:', error);
+            return {
+              content: `❌ Error: ${error.message}`,
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_admin_edit_currency_')) {
+      // Show currency edit modal
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        
+        // Get current currency amount
+        const { loadPlayerData } = await import('./storage.js');
+        const { getCustomTerms } = await import('./safariManager.js');
+        const playerData = await loadPlayerData();
+        const customTerms = await getCustomTerms(req.body.guild_id);
+        
+        const currentAmount = playerData[req.body.guild_id]?.players?.[targetUserId]?.safari?.currency || 0;
+        
+        const { createCurrencyModal } = await import('./safariMapAdmin.js');
+        const modal = await createCurrencyModal(targetUserId, currentAmount, customTerms.currencyName);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error showing currency modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('map_admin_edit_items_')) {
+      // Use entity management UI for items
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        const guildId = req.body.guild_id;
+        
+        // For now, show a message - this would integrate with entity management
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `📦 Item editing for <@${targetUserId}> will use the Entity Management framework.\n\nThis feature is coming soon!`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in map_admin_edit_items:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('map_admin_view_raw_')) {
+      // Show raw player data
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        const guildId = req.body.guild_id;
+        
+        const { loadPlayerData } = await import('./storage.js');
+        const playerData = await loadPlayerData();
+        
+        const safariData = playerData[guildId]?.players?.[targetUserId]?.safari || {};
+        const rawData = JSON.stringify(safariData, null, 2);
+        
+        // Split into chunks if needed
+        const chunks = [];
+        for (let i = 0; i < rawData.length; i += 1900) {
+          chunks.push(rawData.slice(i, i + 1900));
+        }
+        
+        // Send first chunk
+        await res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `📄 **Raw Safari Data for <@${targetUserId}>:**\n\\`\\`\\`json\n${chunks[0]}\\`\\`\\``,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+        // Send additional chunks if needed
+        for (let i = 1; i < chunks.length; i++) {
+          await DiscordRequest(`webhooks/${process.env.APP_ID}/${req.body.token}`, {
+            method: 'POST',
+            body: {
+              content: `\\`\\`\\`json\n${chunks[i]}\\`\\`\\``,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error viewing raw data:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    // ==================== END MAP ADMIN HANDLERS ====================
+    
     } else if (custom_id === 'prod_add_tribe_role_select') {
       // Step 2: After role selected, show castlist selection
       try {
@@ -15365,6 +15677,148 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    } else if (custom_id.startsWith('map_admin_coordinate_modal_')) {
+      // Handle player move coordinate submission
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        const guildId = req.body.guild_id;
+        const coordinate = components[0].components[0].value?.trim().toUpperCase();
+        
+        console.log(`🛡️ Processing map admin move to ${coordinate} for user ${targetUserId}`);
+        
+        // Validate coordinate format
+        if (!coordinate.match(/^[A-Z][1-9]\d?$/)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid coordinate format. Use letter + number (e.g., B3, D5).',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const { movePlayerToCoordinate, createMapAdminUI } = await import('./safariMapAdmin.js');
+        
+        await movePlayerToCoordinate(guildId, targetUserId, coordinate);
+        
+        // Return updated player view
+        const ui = await createMapAdminUI({
+          guildId,
+          userId: targetUserId,
+          mode: 'player_view'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+        
+      } catch (error) {
+        console.error('Error in map_admin_coordinate_modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('map_admin_stamina_modal_')) {
+      // Handle stamina grant submission
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        const guildId = req.body.guild_id;
+        const amount = parseInt(components[0].components[0].value?.trim());
+        
+        console.log(`🛡️ Processing stamina grant of ${amount} for user ${targetUserId}`);
+        
+        if (isNaN(amount) || amount < 1 || amount > 99) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid amount. Please enter a number between 1 and 99.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const { grantPlayerStamina, createMapAdminUI } = await import('./safariMapAdmin.js');
+        
+        await grantPlayerStamina(guildId, targetUserId, amount);
+        
+        // Return updated player view
+        const ui = await createMapAdminUI({
+          guildId,
+          userId: targetUserId,
+          mode: 'player_view'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+        
+      } catch (error) {
+        console.error('Error in map_admin_stamina_modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('map_admin_currency_modal_')) {
+      // Handle currency edit submission
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        const guildId = req.body.guild_id;
+        const amount = parseInt(components[0].components[0].value?.trim());
+        
+        console.log(`🛡️ Processing currency set to ${amount} for user ${targetUserId}`);
+        
+        if (isNaN(amount) || amount < 0 || amount > 999999) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid amount. Please enter a number between 0 and 999999.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        const { updatePlayerCurrency } = await import('./safariManager.js');
+        const { createMapAdminUI } = await import('./safariMapAdmin.js');
+        
+        // Set currency to specific amount
+        const currentBalance = await updatePlayerCurrency(guildId, targetUserId, 0);
+        await updatePlayerCurrency(guildId, targetUserId, amount - currentBalance);
+        
+        // Return updated player view
+        const ui = await createMapAdminUI({
+          guildId,
+          userId: targetUserId,
+          mode: 'player_view'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+        
+      } catch (error) {
+        console.error('Error in map_admin_currency_modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
     } else if (custom_id.startsWith('safari_buy_')) {
       // MVP2: Handle item purchases (format: safari_buy_guildId_storeId_itemId_timestamp)
       try {
