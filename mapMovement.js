@@ -178,11 +178,14 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
         
         const mapData = safariData[guildId].maps[activeMap];
         
+        // Get Discord member object for permission operations
+        const member = await guild.members.fetch(userId);
+        
         // Remove permissions from old channel
         if (oldCoordinate && mapData.coordinates[oldCoordinate]?.channelId) {
             const oldChannel = await guild.channels.fetch(mapData.coordinates[oldCoordinate].channelId);
             if (oldChannel) {
-                await oldChannel.permissionOverwrites.edit(userId, {
+                await oldChannel.permissionOverwrites.edit(member, {
                     ViewChannel: false,
                     SendMessages: false
                 });
@@ -193,7 +196,7 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
         if (newCoordinate && mapData.coordinates[newCoordinate]?.channelId) {
             const newChannel = await guild.channels.fetch(mapData.coordinates[newCoordinate].channelId);
             if (newChannel) {
-                await newChannel.permissionOverwrites.edit(userId, {
+                await newChannel.permissionOverwrites.edit(member, {
                     ViewChannel: true,
                     SendMessages: true
                 });

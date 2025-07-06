@@ -12879,12 +12879,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const result = await movePlayer(guildId, userId, targetCoordinate, client);
         
         if (result.success) {
-          // Send success message
+          // Send success message (ephemeral)
           await res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
               content: result.message,
-              flags: 0 // Not ephemeral - show to everyone
+              flags: InteractionResponseFlags.EPHEMERAL | (1 << 15) // Ephemeral + Components V2
             }
           });
           
