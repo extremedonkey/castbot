@@ -3560,6 +3560,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
       })(req, res, client);
+    }
     
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
     if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
