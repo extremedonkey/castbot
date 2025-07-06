@@ -9614,6 +9614,16 @@ Your server is now ready for Tycoons gameplay!`;
             type: InteractionResponseType.MODAL,
             data: modal.toJSON()
           });
+        } else {
+          // Unknown action type - send error response
+          console.log(`❌ DEBUG: Unknown action type "${actionType}" for button "${buttonId}"`);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ **Unknown action type**: \`${actionType}\`\n\nSupported action types:\n• \`display_text\` - Show text message\n• \`update_currency\` - Change player currency\n• \`follow_up_button\` - Chain to another button\n• \`conditional\` - Conditional actions\n\nPlease use one of the supported action buttons.`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
         }
         
       } catch (error) {
