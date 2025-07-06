@@ -194,6 +194,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'safari_map_init_player': {
+    label: 'Start Exploring',
+    description: 'Initialize player on Safari map with starting position and stamina',
+    emoji: '🚶',
+    style: 'Success',
+    category: 'safari'
+  },
 
   // Safari Currency Management Submenu
   'safari_currency_view_all': {

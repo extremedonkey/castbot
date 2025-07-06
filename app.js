@@ -3536,6 +3536,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_action_') &&
         !custom_id.startsWith('safari_config_') &&
         !custom_id.startsWith('safari_move_') &&
+        custom_id !== 'safari_map_init_player' &&
         custom_id !== 'safari_post_select_button' &&
         custom_id !== 'safari_confirm_reset_game' && 
         !custom_id.startsWith('safari_post_channel_')) {
@@ -12811,76 +12812,59 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
     } else if (custom_id === 'safari_map_init_player') {
-      // Initialize player on map with starting position
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        
-        console.log(`🗺️ DEBUG: Initializing player ${userId} on map`);
-        
-        // Import movement functions
-        const { initializePlayerOnMap, getMovementDisplay } = await import('./mapMovement.js');
-        const { loadSafariContent } = await import('./safariManager.js');
-        
-        // Get active map
-        const safariData = await loadSafariContent();
-        const activeMapId = safariData[guildId]?.maps?.active;
-        
-        if (!activeMapId) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ No active map found. Please create a map first.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Initialize player at A1
-        const startingCoordinate = 'A1';
-        const result = await initializePlayerOnMap(guildId, userId, startingCoordinate, client);
-        
-        if (result.success) {
-          // Get movement display for the starting position
-          const movementDisplay = await getMovementDisplay(guildId, userId, startingCoordinate);
+      return ButtonHandlerFactory.create({
+        id: 'safari_map_init_player',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🗺️ START: safari_map_init_player - user ${context.userId}`);
           
-          // Create movement interface
-          const components = [];
-          for (const buttonRow of movementDisplay.buttons) {
-            components.push({
-              type: 1, // Action Row
-              components: buttonRow
-            });
+          // Import movement functions
+          const { initializePlayerOnMap, getMovementDisplay } = await import('./mapMovement.js');
+          const { loadSafariContent } = await import('./safariManager.js');
+          
+          // Get active map
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          
+          if (!activeMapId) {
+            return {
+              content: '❌ No active map found. Please create a map first.',
+              ephemeral: true
+            };
           }
           
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+          // Initialize player at A1
+          const startingCoordinate = 'A1';
+          const result = await initializePlayerOnMap(context.guildId, context.userId, startingCoordinate, context.client);
+          
+          if (result.success) {
+            // Get movement display for the starting position
+            const movementDisplay = await getMovementDisplay(context.guildId, context.userId, startingCoordinate);
+            
+            // Create movement interface
+            const components = [];
+            for (const buttonRow of movementDisplay.buttons) {
+              components.push({
+                type: 1, // Action Row
+                components: buttonRow
+              });
+            }
+            
+            console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${startingCoordinate}`);
+            return {
               content: `✅ Welcome to the map! You've been placed at ${startingCoordinate}.\n\n${movementDisplay.title}\n\n${movementDisplay.description}`,
               components: components,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        } else {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+              ephemeral: true
+            };
+          } else {
+            return {
               content: result.message || '❌ Failed to initialize player on map.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-      } catch (error) {
-        console.error('Error in safari_map_init_player handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ An error occurred. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
+              ephemeral: true
+            };
           }
-        });
-      }
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_move_')) {
       // Handle player movement on map
       try {
