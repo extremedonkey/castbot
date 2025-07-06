@@ -13124,33 +13124,39 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       })(req, res, client);
       
     } else if (custom_id.startsWith('map_admin_edit_currency_')) {
-      // Show currency edit modal - Using Factory Pattern
-      return ButtonHandlerFactory.create({
-        id: 'map_admin_edit_currency',
-        handler: async (context) => {
-          const targetUserId = context.customId.split('_').pop();
-          console.log(`🛡️ START: map_admin_edit_currency for user ${targetUserId}`);
-          
-          // Get current currency amount
-          const { loadPlayerData } = await import('./storage.js');
-          const { getCustomTerms } = await import('./safariManager.js');
-          const playerData = await loadPlayerData();
-          const customTerms = await getCustomTerms(context.guildId);
-          
-          const currentAmount = playerData[context.guildId]?.players?.[targetUserId]?.safari?.currency || 0;
-          
-          const { createCurrencyModal } = await import('./safariMapAdmin.js');
-          const modal = await createCurrencyModal(targetUserId, currentAmount, customTerms.currencyName);
-          
-          console.log(`✅ SUCCESS: map_admin_edit_currency - showing modal`);
-          
-          // Return modal response directly - factory will handle the send
-          return {
-            type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
-          };
-        }
-      })(req, res, client);
+      // Show currency edit modal
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        console.log(`🛡️ START: map_admin_edit_currency for user ${targetUserId}`);
+        
+        // Get current currency amount
+        const { loadPlayerData } = await import('./storage.js');
+        const { getCustomTerms } = await import('./safariManager.js');
+        const playerData = await loadPlayerData();
+        const customTerms = await getCustomTerms(req.body.guild_id);
+        
+        const currentAmount = playerData[req.body.guild_id]?.players?.[targetUserId]?.safari?.currency || 0;
+        
+        const { createCurrencyModal } = await import('./safariMapAdmin.js');
+        const modal = await createCurrencyModal(targetUserId, currentAmount, customTerms.currencyName);
+        
+        console.log(`✅ SUCCESS: map_admin_edit_currency - showing modal`);
+        
+        // Send modal response directly
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal
+        });
+      } catch (error) {
+        console.error('Error in map_admin_edit_currency:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error showing currency modal.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
       
     } else if (custom_id.startsWith('map_admin_edit_items_')) {
       // Use Safari item management flow for specific player
