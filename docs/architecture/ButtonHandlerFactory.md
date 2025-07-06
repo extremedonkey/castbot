@@ -639,8 +639,118 @@ npm run generate:handler --name my_button --category admin --permission ManageRo
 - Usage analytics
 - Performance alerts
 
+## Troubleshooting Guide
+
+This section incorporates diagnostic strategies from multiple analyses to help quickly resolve button issues.
+
+### Common "This interaction failed" Causes
+
+#### 1. Handler Not Being Called
+**Symptom**: No `🔍 START` log in console
+**Causes & Fixes**:
+- Custom ID mismatch → Verify exact custom_id match
+- Handler not in if/else chain → Check app.js handler chain
+- Pattern matching issue → Check prefix/pattern logic
+- Wrong registry entry → Verify BUTTON_REGISTRY has correct ID
+
+#### 2. Handler Crashes Before Response
+**Symptom**: `🔍 START` present but no `✅ SUCCESS`
+**Causes & Fixes**:
+- Undefined variable → Check context extraction
+- Async error → Ensure all async operations are awaited
+- Missing imports → Verify all dependencies imported
+- Null checks failing → Add defensive programming
+
+#### 3. Response Timeout (3-Second Rule)
+**Symptom**: Handler runs but takes >3 seconds
+**Fix**: Add `deferred: true` to factory config:
+```javascript
+return ButtonHandlerFactory.create({
+  id: 'slow_button',
+  deferred: true,  // MANDATORY for operations >3s
+  handler: async (context) => {
+    // Long operation here
+  }
+})(req, res, client);
+```
+
+#### 4. Invalid Response Format
+**Symptom**: Handler completes but Discord rejects response
+**Causes & Fixes**:
+- Wrong response type → Match interaction type
+- Malformed components → Validate structure
+- Exceeding limits → Check 2000 char / 5 button limits
+- Missing fields → Ensure all required fields present
+
+### Diagnostic Flowchart
+
+```
+User clicks button → "This interaction failed"
+                    ↓
+         Check logs for button's custom_id
+                    ↓
+    ┌─────────────────────────────────────┐
+    │ Is there a 🔍 START log?            │
+    └─────────────┬───────────────────────┘
+                  │
+        NO ←──────┴──────→ YES
+        ↓                   ↓
+   Handler not         Check for
+   being called        ✅ SUCCESS log
+        ↓                   ↓
+   Check:              NO ←─┴─→ YES
+   - Custom ID             ↓      ↓
+   - If/else chain    Handler    Check
+   - Pattern match    crashed    response
+```
+
+### Root Cause Analysis Insights
+
+#### The "Silent Failure" Pattern
+Often what appears to be a "silent failure" is actually diagnostic confusion:
+- Handler completes successfully
+- But lacks explicit SUCCESS logging
+- Solution: Always add comprehensive logging
+
+#### Variable Extraction Patterns
+Inconsistent variable extraction is a major source of errors:
+```javascript
+// ✅ BEST PRACTICE: Destructure from context
+handler: async (context) => {
+  const { guildId, userId, member, client } = context;
+  // All variables available and validated
+}
+
+// ❌ AVOID: Manual extraction in each handler
+const guildId = req.body.guild_id;
+const userId = req.body.member?.user?.id;
+// Prone to errors and inconsistency
+```
+
+### Production Debugging Commands
+
+```bash
+# See all button interactions
+npm run logs-prod | grep "BUTTON_FACTORY\|🔍 START\|✅ SUCCESS\|❌ FAILURE"
+
+# Check specific button
+npm run logs-prod | grep "your_button_id"
+
+# Live debugging
+npm run logs-prod-follow | grep --line-buffered "🔍\|✅\|❌"
+```
+
+## Related Documentation
+
+- [BUTTON_HANDLER_REGISTRY.md](BUTTON_HANDLER_REGISTRY.md) - Complete registry of all buttons
+- [ComponentsV2.md](ComponentsV2.md) - Discord Components V2 architecture
+- [LoggingStandards.md](LoggingStandards.md) - Logging best practices
+- [EntityEditFramework.md](EntityEditFramework.md) - Advanced UI patterns
+
 ## Conclusion
 
 The Button Handler Factory System provides a comprehensive solution for CastBot's button management needs. It eliminates code duplication, provides powerful search capabilities, and establishes patterns for rapid feature development while maintaining high code quality standards.
+
+By incorporating diagnostic strategies and root cause analysis, this system helps developers quickly identify and resolve issues, reducing the "3 prompts to fix" pattern to immediate resolution.
 
 The system is designed to grow with the application, supporting both simple button handlers and complex menu systems with minimal code overhead.

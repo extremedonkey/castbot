@@ -603,7 +603,7 @@ Target Final:        2,000-3,000 lines (78-85% reduction)
 
 ### Safari Map Explorer System (MVP4)
 **Description:** Grid-based map exploration system allowing players to upload images and explore them through Discord channels
-**Documentation:** See [docs/SafariMapExplorer.md](docs/SafariMapExplorer.md) for complete technical specification
+**Documentation:** See [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md) for complete technical specification
 **Current Status:** Planning Phase - Technical architecture documented
 
 **Core Features:**

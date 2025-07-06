@@ -12,7 +12,7 @@ This file provides guidance to Claude Code when working with CastBot. This is a 
 
 When working on specific features, refer to these dedicated documentation files:
 
-**🦁 SAFARI SYSTEM:** Dynamic content, buttons, currency, stores → [docs/features/Safari.md](docs/features/Safari.md)
+**🦁 SAFARI SYSTEM:** Dynamic content, buttons, currency, stores → [docs/features/Safari.md](docs/features/Safari.md) | [Index](docs/features/safari/README.md)
 
 **🗺️ SAFARI MAP EXPLORER:** Map building, grid systems, exploration → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
 
@@ -22,7 +22,9 @@ When working on specific features, refer to these dedicated documentation files:
 
 **📋 SEASON APPLICATION BUILDER:** Application systems, applicant management → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
 
-**🎨 COMPONENTS V2:** Discord UI components reference → [docs/features/ComponentsV2.md](docs/features/ComponentsV2.md)
+**🎨 COMPONENTS V2:** Discord UI architecture (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
+
+**🔧 ENTITY/EDIT FRAMEWORK:** Universal UI system for content management → [docs/architecture/EntityEditFramework.md](docs/architecture/EntityEditFramework.md)
 
 **📊 ANALYTICS:** Logging and analytics system → [docs/architecture/Analytics.md](docs/architecture/Analytics.md)
 
@@ -93,7 +95,7 @@ npm run logs-prod -- --feature BUTTON --level debug
 ### Key Patterns
 - Work on main branch (solo development)
 - Use existing patterns in codebase
-- **MANDATORY: Discord Components V2** - ALL UI must use Components V2 pattern with Container/Text Display
+- **MANDATORY: Discord Components V2** - ALL UI must use Components V2 pattern (see architecture docs)
 - Centralized error handling via errorHandler.js
 
 ## 🎨 Discord Components V2 (MANDATORY)
@@ -134,7 +136,7 @@ const response = {
 - NEVER use `content` field with `IS_COMPONENTS_V2` flag
 - ALWAYS use Container (type 17) for visual grouping
 - Use Text Display (type 10) instead of content field
-- Reference: [docs/features/ComponentsV2.md](docs/features/ComponentsV2.md)
+- Reference: [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
 
 ## 🚀 Discord Button Implementation
 
@@ -191,7 +193,7 @@ If a button shows "This interaction failed":
 1. Check logs for `🔍 START: button_id` - if missing, handler isn't being called
 2. Check logs for `✅ SUCCESS: button_id` - if missing, handler crashed
 3. For operations >3s, ensure `deferred: true` in factory config
-4. See [docs/architecture/ButtonDiagnostics.md](docs/architecture/ButtonDiagnostics.md) for detailed troubleshooting
+4. See troubleshooting section in [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
 
 ## 📋 Feature Backlog
 
