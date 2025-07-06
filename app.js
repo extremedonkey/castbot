@@ -3126,6 +3126,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   if (type === InteractionType.MESSAGE_COMPONENT) {
     const { custom_id } = data;
     console.log('Processing MESSAGE_COMPONENT with custom_id:', custom_id);
+    console.log('Component type:', data.component_type, 'Values:', data.values);
     
     // Check if button uses new factory pattern or old pattern
     // Check exact match first, then check dynamic patterns
@@ -12945,6 +12946,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       
     } else if (custom_id === 'map_admin_user_select') {
       // Handle user selection for map admin
+      console.log(`🛡️ START: map_admin_user_select handler`);
       try {
         const guildId = req.body.guild_id;
         const selectedUserId = req.body.data.values[0];
