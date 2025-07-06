@@ -12,6 +12,25 @@ import {
 } from 'discord-interactions';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { initializeGuildSafariData } from './safariInitialization.js';
+import { 
+    initializeEntityPoints,
+    getEntityPoints,
+    hasEnoughPoints,
+    usePoints,
+    setEntityPoints,
+    getTimeUntilRegeneration,
+    getPointsDisplay,
+    initializePointsConfig
+} from './pointsManager.js';
+import {
+    getPlayerLocation,
+    setPlayerLocation,
+    getValidMoves,
+    canPlayerMove,
+    movePlayer,
+    getMovementDisplay,
+    initializePlayerOnMap
+} from './mapMovement.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,7 +149,12 @@ const ACTION_TYPES = {
     CONDITIONAL: 'conditional',          // NEW: MVP2
     STORE_DISPLAY: 'store_display',        // NEW: MVP2
     BUY_ITEM: 'buy_item',               // NEW: MVP2
-    RANDOM_OUTCOME: 'random_outcome'     // NEW: MVP2
+    RANDOM_OUTCOME: 'random_outcome',     // NEW: MVP2
+    // Points System Actions
+    CHECK_POINTS: 'check_points',        // NEW: Check if entity has enough points
+    MODIFY_POINTS: 'modify_points',      // NEW: Add/subtract points
+    MOVE_PLAYER: 'move_player',          // NEW: Move player on map
+    APPLY_REGENERATION: 'apply_regeneration' // NEW: Force regeneration check
 };
 
 // Condition types for conditional actions
@@ -140,7 +164,12 @@ const CONDITION_TYPES = {
     HAS_ITEM: 'has_item',               // Player has item
     NOT_HAS_ITEM: 'not_has_item',       // Player doesn't have item
     BUTTON_USED: 'button_used',         // Button used N times
-    COOLDOWN_EXPIRED: 'cooldown_expired' // Cooldown expired
+    COOLDOWN_EXPIRED: 'cooldown_expired', // Cooldown expired
+    // Points System Conditions
+    POINTS_GTE: 'points_gte',           // Points >= value for specified type
+    POINTS_LTE: 'points_lte',           // Points <= value for specified type
+    CAN_MOVE: 'can_move',               // Player has stamina to move
+    AT_LOCATION: 'at_location'          // Player is at specific coordinate
 };
 
 /**
@@ -615,6 +644,21 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
                     responses.push(result);
                     break;
                     
+                case ACTION_TYPES.CHECK_POINTS:
+                    result = await executeCheckPoints(action.config, guildId, userId, interaction);
+                    if (result) responses.push(result);
+                    break;
+                    
+                case ACTION_TYPES.MODIFY_POINTS:
+                    result = await executeModifyPoints(action.config, guildId, userId, interaction);
+                    responses.push(result);
+                    break;
+                    
+                case ACTION_TYPES.MOVE_PLAYER:
+                    result = await executeMovePlayer(action.config, guildId, userId, interaction);
+                    responses.push(result);
+                    break;
+                    
                 default:
                     console.log(`⚠️ Unknown action type: ${action.type}`);
             }
@@ -917,6 +961,23 @@ async function checkCondition(guildId, userId, condition) {
                 const lastUsed = cooldowns[condition.buttonId] || 0;
                 const now = Date.now();
                 return (now - lastUsed) >= (condition.cooldownMs || 0);
+                
+            case CONDITION_TYPES.POINTS_GTE:
+                const entityIdGte = condition.entityId || `player_${userId}`;
+                const pointsGte = await getEntityPoints(guildId, entityIdGte, condition.pointType || 'stamina');
+                return pointsGte.current >= condition.value;
+                
+            case CONDITION_TYPES.POINTS_LTE:
+                const entityIdLte = condition.entityId || `player_${userId}`;
+                const pointsLte = await getEntityPoints(guildId, entityIdLte, condition.pointType || 'stamina');
+                return pointsLte.current <= condition.value;
+                
+            case CONDITION_TYPES.CAN_MOVE:
+                return await canPlayerMove(guildId, userId);
+                
+            case CONDITION_TYPES.AT_LOCATION:
+                const mapState = await getPlayerLocation(guildId, userId);
+                return mapState && mapState.currentCoordinate === condition.coordinate;
                 
             default:
                 console.log(`⚠️ Unknown condition type: ${condition.type}`);
@@ -1232,6 +1293,130 @@ async function executeRandomOutcome(config, guildId, userId, interaction) {
         console.error('Error executing random outcome:', error);
         return {
             content: '❌ Error processing random outcome.',
+            flags: InteractionResponseFlags.EPHEMERAL
+        };
+    }
+}
+
+/**
+ * Execute check points action - validates if player has enough points
+ */
+async function executeCheckPoints(config, guildId, userId, interaction) {
+    try {
+        const entityId = config.entityId || `player_${userId}`;
+        const pointType = config.pointType || 'stamina';
+        const requiredAmount = config.amount || 1;
+        
+        const hasPoints = await hasEnoughPoints(guildId, entityId, pointType, requiredAmount);
+        
+        if (!hasPoints && config.failureMessage) {
+            const timeUntil = await getTimeUntilRegeneration(guildId, entityId, pointType);
+            const message = config.failureMessage.replace('{time}', timeUntil);
+            
+            return {
+                content: message,
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+        
+        // If check passes, continue with other actions
+        return null;
+        
+    } catch (error) {
+        console.error('Error checking points:', error);
+        return {
+            content: '❌ Error checking points.',
+            flags: InteractionResponseFlags.EPHEMERAL
+        };
+    }
+}
+
+/**
+ * Execute modify points action - add or subtract points
+ */
+async function executeModifyPoints(config, guildId, userId, interaction) {
+    try {
+        const entityId = config.entityId || `player_${userId}`;
+        const pointType = config.pointType || 'stamina';
+        const amount = config.amount || 0;
+        
+        if (amount < 0) {
+            // Use points (subtract)
+            const result = await usePoints(guildId, entityId, pointType, Math.abs(amount));
+            if (!result.success) {
+                return {
+                    content: config.failureMessage || result.message,
+                    flags: InteractionResponseFlags.EPHEMERAL
+                };
+            }
+        } else {
+            // Add points
+            const points = await getEntityPoints(guildId, entityId, pointType);
+            await setEntityPoints(guildId, entityId, pointType, 
+                Math.min(points.current + amount, points.max));
+        }
+        
+        if (config.successMessage) {
+            const points = await getEntityPoints(guildId, entityId, pointType);
+            const display = await getPointsDisplay(guildId, entityId, pointType);
+            
+            let message = config.successMessage
+                .replace('{current}', points.current)
+                .replace('{max}', points.max)
+                .replace('{display}', display.display || '');
+                
+            return {
+                content: message,
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+        
+        return null;
+        
+    } catch (error) {
+        console.error('Error modifying points:', error);
+        return {
+            content: '❌ Error modifying points.',
+            flags: InteractionResponseFlags.EPHEMERAL
+        };
+    }
+}
+
+/**
+ * Execute move player action - move player on map
+ */
+async function executeMovePlayer(config, guildId, userId, interaction) {
+    try {
+        const targetCoordinate = config.coordinate;
+        
+        if (!targetCoordinate) {
+            return {
+                content: '❌ No target coordinate specified.',
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+        
+        // Get client from interaction
+        const client = interaction.client || interaction.guild?.client;
+        if (!client) {
+            console.error('No Discord client available for movement');
+            return {
+                content: '❌ Unable to process movement.',
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+        
+        const result = await movePlayer(guildId, userId, targetCoordinate, client);
+        
+        return {
+            content: result.message,
+            flags: result.success ? 0 : InteractionResponseFlags.EPHEMERAL
+        };
+        
+    } catch (error) {
+        console.error('Error executing player movement:', error);
+        return {
+            content: '❌ Error processing movement.',
             flags: InteractionResponseFlags.EPHEMERAL
         };
     }
@@ -4948,6 +5133,26 @@ export {
     getEmojiTwemojiUrl,
     // Custom Terms exports
     getCustomTerms,
+    // Points System exports
+    executeCheckPoints,
+    executeModifyPoints,
+    executeMovePlayer,
+    initializeEntityPoints,
+    getEntityPoints,
+    hasEnoughPoints,
+    usePoints,
+    setEntityPoints,
+    getTimeUntilRegeneration,
+    getPointsDisplay,
+    initializePointsConfig,
+    // Movement System exports
+    getPlayerLocation,
+    setPlayerLocation,
+    getValidMoves,
+    canPlayerMove,
+    movePlayer,
+    getMovementDisplay,
+    initializePlayerOnMap,
     updateCustomTerms,
     resetCustomTerms,
     // Challenge Game Logic exports

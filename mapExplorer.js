@@ -358,6 +358,15 @@ async function createMapGrid(guild, userId) {
         channels[coord] = channel.id;
         console.log(`Created channel #${coord.toLowerCase()} (${i + 1}/${coordinates.length})`);
         
+        // Add initial welcome message with location info
+        try {
+          await channel.send({
+            content: `📍 **Welcome to Location ${coord}!**\n\nThis area is unexplored. What mysteries might it hold?\n\n*Players with access can use movement buttons when they arrive here.*`
+          });
+        } catch (msgError) {
+          console.error(`Failed to send initial message to ${coord}:`, msgError);
+        }
+        
         if ((i + 1) % 5 === 0 || i === coordinates.length - 1) {
           progressMessages.push(`📍 Progress: ${i + 1}/${coordinates.length} channels created`);
         }

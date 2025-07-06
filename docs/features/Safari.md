@@ -46,6 +46,8 @@ Both features leverage the same technical infrastructure:
 /castbot
 ├── safariManager.js        # Core safari functionality
 ├── safariContent.json      # Button/content definitions
+├── pointsManager.js        # Points system (stamina, HP, etc.)
+├── mapMovement.js          # Map exploration and movement
 ├── Safari.md              # This documentation
 ├── app.js                 # Button handler integration
 └── playerData.json        # Extended with safari fields
@@ -71,12 +73,65 @@ Both features leverage the same technical infrastructure:
 - Rate limiting on currency actions
 - Audit trail for all safari modifications
 
+## Points System
+
+The Safari Points System provides flexible resource management for pacing player activities and creating strategic gameplay decisions.
+
+### Core Concepts
+- **Resource Management**: Points (stamina, HP, mana) that limit player actions
+- **Time-Based Regeneration**: Points recover automatically over time
+- **Strategic Gameplay**: Forces meaningful choices about resource usage
+- **Content Pacing**: Prevents players from rushing through content
+
+### MVP Implementation: Movement Stamina
+- **Purpose**: Limits map exploration to create meaningful exploration decisions
+- **Cost**: 1 stamina point per map movement
+- **Regeneration**: Full reset every 12 hours (configurable)
+- **Integration**: Seamless with Safari button actions and conditions
+
+### Technical Features
+- **On-Demand Calculation**: No background processes needed
+- **Timezone-Safe**: UTC-based timestamps for consistency
+- **Entity-Agnostic**: Supports points for players, NPCs, items, locations
+- **Configurable**: Server-specific point types and regeneration patterns
+
+For detailed documentation, see [Safari Points System](SafariPoints.md) and [Map Movement System](SafariMapMovement.md).
+
 ## Data Structures
 
 ### safariContent.json
 ```json
 {
   "guildId": {
+    "pointsConfig": {
+      "definitions": {
+        "stamina": {
+          "displayName": "Stamina",
+          "emoji": "⚡",
+          "defaultMax": 10,
+          "defaultMin": 0,
+          "regeneration": {
+            "type": "full_reset",
+            "interval": 43200000,
+            "amount": "max"
+          },
+          "visibility": "hidden"
+        }
+      },
+      "movementCost": {
+        "stamina": 1
+      }
+    },
+    "entityPoints": {
+      "player_391415444084490240": {
+        "stamina": {
+          "current": 8,
+          "max": 10,
+          "lastRegeneration": 1703001234567,
+          "lastUse": 1703001234567
+        }
+      }
+    },
     "buttons": {
       "unique_button_id": {
         "id": "unique_button_id",
@@ -160,7 +215,13 @@ Both features leverage the same technical infrastructure:
           "history": ["button1", "button2"],
           "lastInteraction": 1703001234567,
           "achievements": ["first_steps"],
-          "inventory": {}
+          "inventory": {},
+          "mapState": {
+            "currentCoordinate": "A1",
+            "currentMapId": "map_5x5_1704236400000",
+            "lastMovement": 1703001234567,
+            "visitedCoordinates": ["A1", "B1", "B2"]
+          }
         },
         "applications": {
           "app_id": {
@@ -299,7 +360,23 @@ async function executeComponent(componentId, userId, interaction) {
 - **Advanced Condition Chaining**: Multi-level conditional trees
 - **Visual Map Editor**: Image upload with auto-grid coordinate system
 
-### MVP5 - Enterprise Features (Future: Month 1)
+### MVP5 - Points System & Movement ✅ COMPLETE (January 2025)
+**Features:**
+- **Points Management System**: Flexible resource system for stamina, HP, mana, etc.
+- **Map Movement System**: Grid-based exploration with stamina limitations
+- **Discord Channel Integration**: Physical movement between map coordinate channels
+- **On-Demand Regeneration**: Efficient, timezone-safe point recovery
+- **Admin Controls**: Set player positions and points directly
+- **Safari Action Integration**: New action types for points and movement
+
+**Implementation:**
+- ✅ `pointsManager.js`: Core points functionality with regeneration
+- ✅ `mapMovement.js`: Movement logic and permission management
+- ✅ Movement handlers in `app.js`: Player initialization and movement
+- ✅ Safari action types: CHECK_POINTS, MODIFY_POINTS, MOVE_PLAYER
+- ✅ Safari condition types: POINTS_GTE, POINTS_LTE, CAN_MOVE, AT_LOCATION
+
+### MVP6 - Enterprise Features (Future: Month 1)
 **Features:**
 - **Multiple Safaris per Guild**: Separate themed adventures per server
 - **Multiplayer Interactions**: Cross-player actions and trading

@@ -3535,6 +3535,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_confirm_delete_store_') &&
         !custom_id.startsWith('safari_action_') &&
         !custom_id.startsWith('safari_config_') &&
+        !custom_id.startsWith('safari_move_') &&
         custom_id !== 'safari_post_select_button' &&
         custom_id !== 'safari_confirm_reset_game' && 
         !custom_id.startsWith('safari_post_channel_')) {
@@ -12441,16 +12442,24 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setStyle(ButtonStyle.Danger)
             .setEmoji('🗑️');
           
+          const initPlayerButton = new ButtonBuilder()
+            .setCustomId('safari_map_init_player')
+            .setLabel('Start Exploring')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('🚶');
+          
           // Set states based on whether map exists
           if (hasActiveMap) {
             createButton.setStyle(ButtonStyle.Secondary).setDisabled(true);
             deleteButton.setDisabled(false);
+            initPlayerButton.setDisabled(false);
           } else {
             createButton.setStyle(ButtonStyle.Primary).setDisabled(false);
             deleteButton.setDisabled(true);
+            initPlayerButton.setDisabled(true);
           }
           
-          const mapButtonRow = new ActionRowBuilder().addComponents([createButton, deleteButton]);
+          const mapButtonRow = new ActionRowBuilder().addComponents([createButton, deleteButton, initPlayerButton]);
           
           // Create back button
           const backButton = new ButtonBuilder()
@@ -12797,6 +12806,151 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_map_init_player') {
+      // Initialize player on map with starting position
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        console.log(`🗺️ DEBUG: Initializing player ${userId} on map`);
+        
+        // Import movement functions
+        const { initializePlayerOnMap, getMovementDisplay } = await import('./mapMovement.js');
+        const { loadSafariContent } = await import('./safariManager.js');
+        
+        // Get active map
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        
+        if (!activeMapId) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ No active map found. Please create a map first.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Initialize player at A1
+        const startingCoordinate = 'A1';
+        const result = await initializePlayerOnMap(guildId, userId, startingCoordinate, client);
+        
+        if (result.success) {
+          // Get movement display for the starting position
+          const movementDisplay = await getMovementDisplay(guildId, userId, startingCoordinate);
+          
+          // Create movement interface
+          const components = [];
+          for (const buttonRow of movementDisplay.buttons) {
+            components.push({
+              type: 1, // Action Row
+              components: buttonRow
+            });
+          }
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Welcome to the map! You've been placed at ${startingCoordinate}.\n\n${movementDisplay.title}\n\n${movementDisplay.description}`,
+              components: components,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } else {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: result.message || '❌ Failed to initialize player on map.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error in safari_map_init_player handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_move_')) {
+      // Handle player movement on map
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const targetCoordinate = custom_id.replace('safari_move_', '');
+        
+        console.log(`🚶 DEBUG: Processing movement to ${targetCoordinate} for user ${userId}`);
+        
+        // Import movement functions
+        const { movePlayer } = await import('./mapMovement.js');
+        
+        // Execute movement
+        const result = await movePlayer(guildId, userId, targetCoordinate, client);
+        
+        if (result.success) {
+          // Send success message
+          await res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: result.message,
+              flags: 0 // Not ephemeral - show to everyone
+            }
+          });
+          
+          // Update the movement display in the new channel
+          const { getMovementDisplay } = await import('./mapMovement.js');
+          const { loadSafariContent } = await import('./safariManager.js');
+          
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[guildId]?.maps?.active;
+          const channelId = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[targetCoordinate]?.channelId;
+          
+          if (channelId) {
+            const channel = await client.channels.fetch(channelId);
+            const movementDisplay = await getMovementDisplay(guildId, userId, targetCoordinate);
+            
+            // Create movement interface message
+            const components = [];
+            
+            // Add movement buttons in rows
+            for (const buttonRow of movementDisplay.buttons) {
+              components.push({
+                type: 1, // Action Row
+                components: buttonRow
+              });
+            }
+            
+            await channel.send({
+              content: `${movementDisplay.title}\n\n${movementDisplay.description}`,
+              components: components
+            });
+          }
+        } else {
+          // Send error message
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: result.message,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error in safari_move handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred while moving. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

@@ -16,6 +16,10 @@ When working on specific features, refer to these dedicated documentation files:
 
 **🗺️ SAFARI MAP EXPLORER:** Map building, grid systems, exploration → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
 
+**⚡ SAFARI POINTS SYSTEM:** Resource management, stamina, regeneration → [docs/features/SafariPoints.md](docs/features/SafariPoints.md)
+
+**🚶 SAFARI MAP MOVEMENT:** Player movement, permissions, exploration → [docs/features/SafariMapMovement.md](docs/features/SafariMapMovement.md)
+
 **📋 SEASON APPLICATION BUILDER:** Application systems, applicant management → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
 
 **🎨 COMPONENTS V2:** Discord UI components reference → [docs/features/ComponentsV2.md](docs/features/ComponentsV2.md)
