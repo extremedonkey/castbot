@@ -3,6 +3,7 @@
 /**
  * Discord Restart Notification Script
  * Sends a notification to the testing channel when the development server restarts
+ * Usage: node notify-restart.js [custom-message]
  */
 
 import { Client, GatewayIntentBits } from 'discord.js';
@@ -17,6 +18,9 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 const GUILD_ID = '1331657596087566398';
 const CHANNEL_ID = '1337754151655833694'; // #🧪test channel (from logs)
 const TIMEOUT_MS = 8000; // 8 second timeout
+
+// Parse command line arguments
+const customMessage = process.argv[2]; // First argument after script name
 
 /**
  * Send restart notification to Discord
@@ -57,12 +61,22 @@ async function sendRestartNotification() {
         const isProduction = process.env.PRODUCTION === 'TRUE';
         const environment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
         
-        // Create the notification message with button
-        const messageData = {
-            content: `> \`\`\`⚠️ Alert! \`\`\`
+        // Build message content with optional custom message
+        let messageContent = `> \`\`\`⚠️ Alert! \`\`\`
 # ${environment} SERVER RESTARTING NOW...
 
-> \`\`\`⚠️ Alert! \`\`\``,
+<@391415444084490240>`;
+
+        // Add custom message if provided
+        if (customMessage) {
+            messageContent += `\n\n**🤖 Claude Message:** ${customMessage}`;
+        }
+
+        messageContent += `\n\n> \`\`\`⚠️ Alert! \`\`\``;
+        
+        // Create the notification message with button
+        const messageData = {
+            content: messageContent,
             components: [
                 {
                     type: 1, // Action Row

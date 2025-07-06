@@ -3,6 +3,11 @@
 # CastBot Development Restart Script
 # Your new "Ctrl+C" - restarts app while preserving ngrok tunnel
 # Includes git safety net (replaces start-and-push.ps1 functionality)
+# 
+# Usage: ./dev-restart.sh [commit-message] [custom-discord-message]
+# Examples:
+#   ./dev-restart.sh "Fix safari buttons"
+#   ./dev-restart.sh "Fix safari buttons" "Safari Add Action button is now working!"
 
 set -e  # Exit on any error
 
@@ -11,6 +16,7 @@ echo "=== CastBot Dev Restart ==="
 # Configuration
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 COMMIT_MESSAGE="${1:-Dev checkpoint - $(date '+%H:%M:%S')}"
+CUSTOM_MESSAGE="${2}" # Optional custom message for Discord notification
 
 # Git operations (safety net) - non-blocking
 echo "🔄 Handling git operations..."
@@ -36,7 +42,13 @@ fi
 # Send Discord notification
 echo "🔔 Sending restart notification to Discord..."
 # Run notification with background execution and error handling
-(node scripts/notify-restart.js 2>&1 | head -20) &
+# Pass custom message if provided
+if [ -n "$CUSTOM_MESSAGE" ]; then
+    echo "📝 Including custom message: $CUSTOM_MESSAGE"
+    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" 2>&1 | head -20) &
+else
+    (node scripts/notify-restart.js 2>&1 | head -20) &
+fi
 NOTIFY_PID=$!
 # Give it a few seconds to complete
 sleep 3
