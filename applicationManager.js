@@ -7,6 +7,7 @@ import {
     ButtonStyle,
     StringSelectMenuBuilder,
     ChannelSelectMenuBuilder,
+    RoleSelectMenuBuilder,
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle
@@ -121,8 +122,8 @@ function createApplicationButtonModal() {
     const channelFormatInput = new TextInputBuilder()
         .setCustomId('channel_format')
         .setLabel('Channel Name Format')
-        .setPlaceholder('%name%-app')
-        .setValue('%name%-app')
+        .setPlaceholder('📝%name%-app')
+        .setValue('📝%name%-app')
         .setStyle(TextInputStyle.Short)
         .setRequired(true)
         .setMaxLength(50);
@@ -219,6 +220,24 @@ function createButtonStyleSelectMenu(defaultStyle = null, configId = null) {
                 default: defaultStyle === 'Danger'
             }
         ]);
+}
+
+/**
+ * Create the role selection component for production team
+ */
+function createRoleSelectMenu(defaultRoleId = null, configId = null) {
+    const customId = configId ? `select_production_role_${configId}` : 'select_production_role';
+    const menu = new RoleSelectMenuBuilder()
+        .setCustomId(customId)
+        .setPlaceholder('Production role to ping (optional)')
+        .setMinValues(0) // Allow no selection (optional)
+        .setMaxValues(1);
+    
+    if (defaultRoleId) {
+        menu.setDefaultRoles([defaultRoleId]);
+    }
+    
+    return menu;
 }
 
 /**
@@ -323,7 +342,7 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
 
 Welcome ${user}! This is your private application channel.
 
-Only you and the admin team can see this channel.
+Only you and the ${config.productionRole ? `production team (<@&${config.productionRole}>)` : 'admin team'} can see this channel.
 
 To get your application started, please set up your basic information using the button below:
 
@@ -408,7 +427,8 @@ function createApplicationSetupContainer(tempConfig, configId, categories) {
     let statusText = `## 🔧 Configure Application Button\n\n**Button:** "${tempConfig.buttonText}"\n\n`;
     statusText += `✅ **Channel:** ${tempConfig.targetChannelId ? '✅ Selected' : '❌ Not selected'}\n`;
     statusText += `✅ **Category:** ${tempConfig.categoryId ? '✅ Selected' : '❌ Not selected'}\n`;
-    statusText += `✅ **Style:** ${tempConfig.buttonStyle ? `✅ ${tempConfig.buttonStyle}` : '❌ Not selected'}\n\n`;
+    statusText += `✅ **Style:** ${tempConfig.buttonStyle ? `✅ ${tempConfig.buttonStyle}` : '❌ Not selected'}\n`;
+    statusText += `🏷️ **Production Role:** ${tempConfig.productionRole ? '✅ Selected' : '➖ Optional'}\n\n`;
     statusText += allSelectionsMade ? '**Ready to create!** Click the button below.' : 'Complete all selections to enable Create button.';
     
     return {
@@ -430,6 +450,10 @@ function createApplicationSetupContainer(tempConfig, configId, categories) {
             {
                 type: 1, // Action Row
                 components: [createButtonStyleSelectMenu(tempConfig.buttonStyle, configId).toJSON()]
+            },
+            {
+                type: 1, // Action Row
+                components: [createRoleSelectMenu(tempConfig.productionRole, configId).toJSON()]
             },
             { type: 14 }, // Separator
             {
@@ -561,6 +585,7 @@ export {
     createChannelSelectMenu,
     createCategorySelectMenu,
     createButtonStyleSelectMenu,
+    createRoleSelectMenu,
     createApplicationButton,
     createApplicationChannel,
     handleApplicationButtonModalSubmit,

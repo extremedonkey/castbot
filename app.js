@@ -13949,6 +13949,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         } else if (custom_id === 'select_button_style' || custom_id.startsWith('select_button_style_')) {
           tempConfig.buttonStyle = selectedValue;
           console.log('Updated buttonStyle to:', selectedValue);
+        } else if (custom_id === 'select_production_role' || custom_id.startsWith('select_production_role_')) {
+          // For role select, the value might be empty (no selection)
+          tempConfig.productionRole = selectedValue || null;
+          console.log('Updated productionRole to:', selectedValue || 'none');
         }
         
         console.log('Updated tempConfig after selection:', JSON.stringify(tempConfig, null, 2));
@@ -14056,6 +14060,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 targetChannelId: tempConfig.targetChannelId,
                 categoryId: tempConfig.categoryId,
                 buttonStyle: tempConfig.buttonStyle,
+                productionRole: tempConfig.productionRole || null,
                 createdBy: userId,
                 stage: 'active'
               };
@@ -15210,7 +15215,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           explanatoryText: seasonDescription || `Join ${seasonName}!`,
           welcomeTitle: `Welcome to ${seasonName}`,
           welcomeDescription: 'Click the button below to start your application.',
-          channelFormat: '%name%-app',
+          channelFormat: '📝%name%-app',
           targetChannelId: null,
           categoryId: null,
           buttonStyle: 'Primary',
