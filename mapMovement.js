@@ -191,6 +191,11 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
         }
     }
     
+    // BEFORE removing permissions, post "You have moved" message in current channel
+    if (client && oldCoordinate !== newCoordinate) {
+        await postMovementNotification(guildId, userId, oldCoordinate, newCoordinate, client);
+    }
+    
     // Update location
     await setPlayerLocation(guildId, userId, newCoordinate);
     
@@ -208,6 +213,50 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
         newCoordinate,
         adminMove
     };
+}
+
+// Post movement notification in current channel before removing permissions
+async function postMovementNotification(guildId, userId, oldCoordinate, newCoordinate, client) {
+    try {
+        const { DiscordRequest } = await import('./utils.js');
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        
+        if (!activeMapId) return;
+        
+        const mapData = safariData[guildId].maps[activeMapId];
+        const oldChannelId = mapData.coordinates[oldCoordinate]?.channelId;
+        const newChannelId = mapData.coordinates[newCoordinate]?.channelId;
+        
+        if (oldChannelId && newChannelId) {
+            // Create movement notification with channel link
+            const notificationMessage = {
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [{
+                    type: 17, // Container
+                    accent_color: 0x2ecc71, // Green for movement
+                    components: [
+                        {
+                            type: 10, // Text Display
+                            content: `# You have moved to <#${newChannelId}>\n\n📍 **${oldCoordinate}** → **${newCoordinate}**\n\nClick the channel link above to continue exploring!`
+                        }
+                    ]
+                }]
+            };
+            
+            // Send notification to old channel before permissions are removed
+            await DiscordRequest(`channels/${oldChannelId}/messages`, {
+                method: 'POST',
+                body: {
+                    content: `<@${userId}>`, // Tag the player
+                    ...notificationMessage
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Error posting movement notification:', error);
+        // Don't throw - movement should continue even if notification fails
+    }
 }
 
 // Update Discord channel permissions based on movement
@@ -307,9 +356,9 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
     const row1 = {
         type: 1, // Action Row
         components: [
-            createButton('northwest', '↖️ Northwest', col - 1, row - 1),
+            createButton('northwest', '↖️ NW', col - 1, row - 1),
             createButton('north', '⬆️ North', col, row - 1),
-            createButton('northeast', '↗️ Northeast', col + 1, row - 1)
+            createButton('northeast', '↗️ NE', col + 1, row - 1)
         ]
     };
     
@@ -333,9 +382,9 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
     const row3 = {
         type: 1, // Action Row
         components: [
-            createButton('southwest', '↙️ Southwest', col - 1, row + 1),
+            createButton('southwest', '↙️ SW', col - 1, row + 1),
             createButton('south', '⬇️ South', col, row + 1),
-            createButton('southeast', '↘️ Southeast', col + 1, row + 1)
+            createButton('southeast', '↘️ SE', col + 1, row + 1)
         ]
     };
     
