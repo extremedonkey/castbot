@@ -317,7 +317,7 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
   const questionComponents = [
     {
       type: 10, // Text Display
-      content: `## ${question.questionTitle}\n\n${question.questionText}`
+      content: `## ${isLastQuestion ? '' : `Q${questionIndex + 1}. `}${question.questionTitle}\n\n${question.questionText}`
     }
   ];
   
