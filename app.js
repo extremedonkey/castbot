@@ -11082,13 +11082,18 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         const config = await getApplicationConfig(guildId, application.configId);
         
-        // Update channel name to include checkmark
+        // Update channel name to include blue checkmark and remove document emoji
         try {
           const channel = await client.channels.fetch(channelId);
-          const currentName = channel.name;
-          if (!currentName.startsWith('✅')) {
-            await channel.setName(`✅${currentName}`);
-            console.log(`📝 Updated channel name to: ✅${currentName}`);
+          let currentName = channel.name;
+          
+          // Remove document emoji if it exists
+          currentName = currentName.replace(/^📝/, '');
+          
+          // Only update if it doesn't already have a checkmark
+          if (!currentName.startsWith('☑️') && !currentName.startsWith('✅')) {
+            await channel.setName(`☑️${currentName}`);
+            console.log(`📝 Updated channel name to: ☑️${currentName}`);
           }
         } catch (channelError) {
           console.error('Error updating channel name:', channelError);
