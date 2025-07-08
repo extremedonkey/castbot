@@ -265,126 +265,87 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
     let description = '';
     let actionRows = [];
     
+    // Get grid size for bounds checking
+    const gridSize = await getMapGridSize(guildId);
+    const col = coordinate.charCodeAt(0) - 65; // A=0, B=1, etc.
+    const row = parseInt(coordinate.substring(1)) - 1; // 1-based to 0-based
+    
+    // Create 3x3 grid layout for movement buttons
+    const movesByDirection = {};
+    validMoves.forEach(move => {
+        const directionKey = move.direction.split(' ')[1].toLowerCase(); // northwest, north, etc.
+        movesByDirection[directionKey] = move;
+    });
+    
+    // Helper to create button for direction
+    const createButton = (dir, dirLabel, targetCol, targetRow) => {
+        const isOutOfBounds = targetCol < 0 || targetCol >= gridSize || targetRow < 0 || targetRow >= gridSize;
+        const targetCoordinate = !isOutOfBounds ? String.fromCharCode(65 + targetCol) + (targetRow + 1) : null;
+        
+        if (movesByDirection[dir] && !isOutOfBounds) {
+            // Valid move
+            return {
+                type: 2,
+                custom_id: movesByDirection[dir].customId,
+                label: `${dirLabel} (${targetCoordinate})`,
+                style: canMove ? 1 : 2, // Primary if can move, Secondary if out of stamina
+                disabled: !canMove
+            };
+        } else {
+            // Invalid move (out of bounds)
+            return {
+                type: 2,
+                custom_id: `disabled_${dir}`,
+                label: dirLabel,
+                style: 2, // Secondary
+                disabled: true
+            };
+        }
+    };
+    
+    // Row 1: Northwest, North, Northeast
+    const row1 = {
+        type: 1, // Action Row
+        components: [
+            createButton('northwest', '↖️ NW', col - 1, row - 1),
+            createButton('north', '⬆️ N', col, row - 1),
+            createButton('northeast', '↗️ NE', col + 1, row - 1)
+        ]
+    };
+    
+    // Row 2: West, Current (disabled), East
+    const row2 = {
+        type: 1, // Action Row
+        components: [
+            createButton('west', '⬅️ W', col - 1, row),
+            {
+                type: 2,
+                custom_id: 'current_position',
+                label: `📍 ${coordinate}`,
+                style: 2, // Secondary
+                disabled: true
+            },
+            createButton('east', '➡️ E', col + 1, row)
+        ]
+    };
+    
+    // Row 3: Southwest, South, Southeast
+    const row3 = {
+        type: 1, // Action Row
+        components: [
+            createButton('southwest', '↙️ SW', col - 1, row + 1),
+            createButton('south', '⬇️ S', col, row + 1),
+            createButton('southeast', '↘️ SE', col + 1, row + 1)
+        ]
+    };
+    
+    actionRows = [row1, row2, row3];
+    
     if (canMove) {
         description = 'Choose a direction to move:';
-        
-        // Create 3x3 grid layout for movement buttons
-        const movesByDirection = {};
-        validMoves.forEach(move => {
-            const directionKey = move.direction.split(' ')[1].toLowerCase(); // northwest, north, etc.
-            movesByDirection[directionKey] = move;
-        });
-        
-        // Row 1: Northwest, North, Northeast
-        const row1 = ['northwest', 'north', 'northeast'].map(dir => 
-            movesByDirection[dir] ? {
-                type: 2,
-                custom_id: movesByDirection[dir].customId,
-                label: movesByDirection[dir].label,
-                style: 1 // Primary
-            } : null
-        ).filter(Boolean);
-        
-        // Row 2: West, East (current position is center)
-        const row2 = ['west', 'east'].map(dir => 
-            movesByDirection[dir] ? {
-                type: 2,
-                custom_id: movesByDirection[dir].customId,
-                label: movesByDirection[dir].label,
-                style: 1 // Primary
-            } : null
-        ).filter(Boolean);
-        
-        // Row 3: Southwest, South, Southeast
-        const row3 = ['southwest', 'south', 'southeast'].map(dir => 
-            movesByDirection[dir] ? {
-                type: 2,
-                custom_id: movesByDirection[dir].customId,
-                label: movesByDirection[dir].label,
-                style: 1 // Primary
-            } : null
-        ).filter(Boolean);
-        
-        // Add non-empty rows
-        if (row1.length > 0) {
-            actionRows.push({
-                type: 1, // Action Row
-                components: row1
-            });
-        }
-        if (row2.length > 0) {
-            actionRows.push({
-                type: 1, // Action Row
-                components: row2
-            });
-        }
-        if (row3.length > 0) {
-            actionRows.push({
-                type: 1, // Action Row
-                components: row3
-            });
-        }
     } else {
         const timeUntil = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
         description = `*You need to rest! You can move again in ${timeUntil}*`;
-        
-        // Show disabled movement buttons in same 3x3 grid layout
-        const movesByDirection = {};
-        validMoves.forEach(move => {
-            const directionKey = move.direction.split(' ')[1].toLowerCase();
-            movesByDirection[directionKey] = move;
-        });
-        
-        // Disabled button rows
-        const row1 = ['northwest', 'north', 'northeast'].map(dir => 
-            movesByDirection[dir] ? {
-                type: 2,
-                custom_id: movesByDirection[dir].customId,
-                label: movesByDirection[dir].label,
-                style: 2, // Secondary
-                disabled: true
-            } : null
-        ).filter(Boolean);
-        
-        const row2 = ['west', 'east'].map(dir => 
-            movesByDirection[dir] ? {
-                type: 2,
-                custom_id: movesByDirection[dir].customId,
-                label: movesByDirection[dir].label,
-                style: 2, // Secondary
-                disabled: true
-            } : null
-        ).filter(Boolean);
-        
-        const row3 = ['southwest', 'south', 'southeast'].map(dir => 
-            movesByDirection[dir] ? {
-                type: 2,
-                custom_id: movesByDirection[dir].customId,
-                label: movesByDirection[dir].label,
-                style: 2, // Secondary
-                disabled: true
-            } : null
-        ).filter(Boolean);
-        
-        // Add non-empty rows
-        if (row1.length > 0) {
-            actionRows.push({
-                type: 1, // Action Row
-                components: row1
-            });
-        }
-        if (row2.length > 0) {
-            actionRows.push({
-                type: 1, // Action Row
-                components: row2
-            });
-        }
-        if (row3.length > 0) {
-            actionRows.push({
-                type: 1, // Action Row
-                components: row3
-            });
-        }
     }
     
     description += '\n\n*You can move once every 12 hours*';
