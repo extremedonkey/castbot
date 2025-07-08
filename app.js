@@ -13869,8 +13869,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id === 'select_target_channel' || custom_id === 'select_application_category' || custom_id === 'select_button_style' ||
-               custom_id.startsWith('select_target_channel_') || custom_id.startsWith('select_application_category_') || custom_id.startsWith('select_button_style_')) {
+    } else if (custom_id === 'select_target_channel' || custom_id === 'select_application_category' || custom_id === 'select_button_style' || custom_id === 'select_production_role' ||
+               custom_id.startsWith('select_target_channel_') || custom_id.startsWith('select_application_category_') || custom_id.startsWith('select_button_style_') || custom_id.startsWith('select_production_role_')) {
       try {
         console.log('Processing application configuration selection:', custom_id);
         
