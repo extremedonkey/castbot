@@ -335,7 +335,7 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
             components: [
               {
                 type: 10, // Text Display
-                content: `📍 <@${userId}> You have been moved by the Production team to coordinate **${coordinate}**\n\nClick below to see your movement options.`
+                text: `📍 <@${userId}> You have been moved by the Production team to coordinate **${coordinate}**\n\nClick below to see your movement options.`
               },
               {
                 type: 1, // Action Row
@@ -354,10 +354,7 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
         // Send the notification to the channel
         await DiscordRequest(`channels/${newChannelId}/messages`, {
           method: 'POST',
-          body: {
-            content: `<@${userId}>`, // Tag the player
-            ...notificationMessage
-          }
+          body: notificationMessage
         });
       }
     } catch (error) {
