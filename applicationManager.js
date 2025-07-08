@@ -100,23 +100,23 @@ function createApplicationButtonModal() {
         .setRequired(false)
         .setMaxLength(2000);
 
-    // Welcome message title input
-    const welcomeTitleInput = new TextInputBuilder()
-        .setCustomId('welcome_title')
-        .setLabel('Welcome Message Title')
-        .setPlaceholder('Title that displays when applicant\'s channel opens')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(true)
-        .setMaxLength(100);
-
-    // Welcome message description input
-    const welcomeDescriptionInput = new TextInputBuilder()
-        .setCustomId('welcome_description')
-        .setLabel('Welcome Message Description')
-        .setPlaceholder('Tell users what to do to start their application (e.g. type ?q1 to continue)')
+    // Application completion message input
+    const completionDescriptionInput = new TextInputBuilder()
+        .setCustomId('completion_description')
+        .setLabel('Application Complete Message')
+        .setPlaceholder('Message shown after the user has reached the final question in their application')
         .setStyle(TextInputStyle.Paragraph)
         .setRequired(true)
         .setMaxLength(2000);
+
+    // Completion image input
+    const completionImageInput = new TextInputBuilder()
+        .setCustomId('completion_image')
+        .setLabel('Completion Image URL')
+        .setPlaceholder('Enter the url of an image hosted on discord (https://cdn.discordapp.com/...) to include.')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)
+        .setMaxLength(500);
 
     // Channel name format input
     const channelFormatInput = new TextInputBuilder()
@@ -130,8 +130,8 @@ function createApplicationButtonModal() {
 
     const firstRow = new ActionRowBuilder().addComponents(buttonTextInput);
     const secondRow = new ActionRowBuilder().addComponents(explanatoryTextInput);
-    const thirdRow = new ActionRowBuilder().addComponents(welcomeTitleInput);
-    const fourthRow = new ActionRowBuilder().addComponents(welcomeDescriptionInput);
+    const thirdRow = new ActionRowBuilder().addComponents(completionDescriptionInput);
+    const fourthRow = new ActionRowBuilder().addComponents(completionImageInput);
     const fifthRow = new ActionRowBuilder().addComponents(channelFormatInput);
 
     modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
@@ -482,8 +482,8 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         const components = interactionBody.data.components;
         const buttonText = components[0].components[0].value;
         const explanatoryText = components[1].components[0].value || '';
-        const welcomeTitle = components[2].components[0].value;
-        const welcomeDescription = components[3].components[0].value;
+        const completionDescription = components[2].components[0].value;
+        const completionImage = components[3].components[0].value || '';
         const channelFormat = components[4].components[0].value;
 
         // Validate channel format
@@ -534,8 +534,8 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         const tempConfig = {
             buttonText,
             explanatoryText,
-            welcomeTitle,
-            welcomeDescription,
+            completionDescription,
+            completionImage,
             channelFormat,
             stage: 'awaiting_selections',
             // Preserve season data if updating existing config
@@ -546,9 +546,13 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
                 targetChannelId: existingConfig.targetChannelId,
                 categoryId: existingConfig.categoryId,
                 buttonStyle: existingConfig.buttonStyle,
+                productionRole: existingConfig.productionRole,
                 createdBy: existingConfig.createdBy,
                 createdAt: existingConfig.createdAt,
-                lastUpdated: Date.now()
+                lastUpdated: Date.now(),
+                // Backwards compatibility: preserve old welcomeDescription if it exists
+                welcomeDescription: existingConfig.welcomeDescription,
+                welcomeTitle: existingConfig.welcomeTitle
             })
         };
 

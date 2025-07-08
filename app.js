@@ -10976,15 +10976,27 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         if (!config || !config.questions || nextIndex >= config.questions.length) {
           // No more questions - show completion message
+          const completionComponents = [
+            {
+              type: 10, // Text Display
+              content: `## ✅ Application Complete!\n\n${config.completionDescription || config.welcomeDescription || 'Thank you for completing your application. A host will review it soon!'}`
+            }
+          ];
+          
+          // Add image if provided
+          if (config.completionImage) {
+            completionComponents.push({
+              type: 28, // Image Gallery
+              media: [{
+                url: config.completionImage
+              }]
+            });
+          }
+          
           const completionContainer = {
             type: 17, // Container
             accent_color: 0x2ecc71, // Green color
-            components: [
-              {
-                type: 10, // Text Display
-                content: `## ✅ Application Complete!\n\n${config.welcomeDescription || 'Thank you for completing your application. A host will review it soon!'}`
-              }
-            ]
+            components: completionComponents
           };
           
           return res.send({
@@ -14054,15 +14066,18 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               const finalConfig = {
                 buttonText: tempConfig.buttonText,
                 explanatoryText: tempConfig.explanatoryText,
-                welcomeTitle: tempConfig.welcomeTitle,
-                welcomeDescription: tempConfig.welcomeDescription,
+                completionDescription: tempConfig.completionDescription,
+                completionImage: tempConfig.completionImage || null,
                 channelFormat: tempConfig.channelFormat,
                 targetChannelId: tempConfig.targetChannelId,
                 categoryId: tempConfig.categoryId,
                 buttonStyle: tempConfig.buttonStyle,
                 productionRole: tempConfig.productionRole || null,
                 createdBy: userId,
-                stage: 'active'
+                stage: 'active',
+                // Backwards compatibility
+                welcomeDescription: tempConfig.welcomeDescription,
+                welcomeTitle: tempConfig.welcomeTitle
               };
               
               logger.debug('APPLICATION', 'Saving final config', { finalConfigId });
@@ -15213,8 +15228,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         playerData[guildId].applicationConfigs[configId] = {
           buttonText: `Apply to ${seasonName}`,
           explanatoryText: seasonDescription || `Join ${seasonName}!`,
-          welcomeTitle: `Welcome to ${seasonName}`,
-          welcomeDescription: 'Click the button below to start your application.',
+          completionDescription: 'Thank you for completing your application! A host will review it soon.',
+          completionImage: null,
           channelFormat: '📝%name%-app',
           targetChannelId: null,
           categoryId: null,
