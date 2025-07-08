@@ -11001,12 +11001,15 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         const config = await getApplicationConfig(guildId, application.configId);
         
+        console.log(`🔍 COMPLETION CHECK: config exists=${!!config}, questions exist=${!!config?.questions}, questions length=${config?.questions?.length}, nextIndex=${nextIndex}, should complete=${nextIndex >= (config?.questions?.length || 0)}`);
+        
         if (!config || !config.questions || nextIndex >= config.questions.length) {
           // No more questions - show completion message
+          console.log(`✅ TRIGGERING COMPLETION FLOW: nextIndex=${nextIndex}, questionsLength=${config?.questions?.length}`);
           const completionComponents = [
             {
               type: 10, // Text Display
-              content: `## ✅ Application Complete!\n\n${config.completionDescription || config.welcomeDescription || 'Thank you for completing your application. A host will review it soon!'}`
+              text: `## ✅ Application Complete!\n\n${config.completionDescription || config.welcomeDescription || 'Thank you for completing your application. A host will review it soon!'}`
             }
           ];
           
@@ -11048,7 +11051,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         return showApplicationQuestion(res, config, channelId, nextIndex);
         
       } catch (error) {
-        console.error('Error in app_next_question handler:', error);
+        console.error('❌ CRITICAL ERROR in app_next_question handler:', error);
+        console.error('❌ Error stack:', error.stack);
+        console.error('❌ Channel ID:', channelId);
+        console.error('❌ Current Index:', currentIndex);
+        console.error('❌ Next Index:', nextIndex);
+        console.error('❌ Application data:', application);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
