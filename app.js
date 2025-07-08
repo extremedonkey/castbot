@@ -56,6 +56,7 @@ import {
   BUTTON_STYLES
 } from './applicationManager.js';
 import { logInteraction, setDiscordClient } from './src/analytics/analyticsLogger.js';
+import { logger } from './logger.js';
 import {
   calculateComponentsForTribe,
   determineDisplayScenario,
@@ -13984,158 +13985,162 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
       }
     } else if (custom_id.startsWith('create_app_button_')) {
-      // Handle the Create App Button click (new UX)
-      try {
-        const configId = custom_id.replace('create_app_button_', '');
-        const guildId = req.body.guild_id;
-        const userId = req.body.member.user.id;
-        
-        console.log(`🔍 DEBUG: Creating app button for config ${configId}`);
-        
-        // Load the config
-        const playerData = await loadPlayerData();
-        const tempConfig = playerData[guildId]?.applicationConfigs?.[configId];
-        
-        console.log(`🔍 DEBUG: Config found:`, tempConfig ? 'YES' : 'NO');
-        if (tempConfig) {
-          console.log(`🔍 DEBUG: Config details:`, {
-            targetChannelId: tempConfig.targetChannelId,
-            categoryId: tempConfig.categoryId,
-            buttonStyle: tempConfig.buttonStyle,
-            buttonText: tempConfig.buttonText
-          });
-        }
-        
-        if (!tempConfig) {
-          console.log(`❌ DEBUG: Config not found for ${configId}`);
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Configuration not found. Please try again.',
-              flags: InteractionResponseFlags.EPHEMERAL
+      return ButtonHandlerFactory.create({
+        id: 'create_app_button',
+        deferred: true, // MANDATORY - this operation involves multiple API calls and can take >3s
+        ephemeral: true,
+        handler: async (context) => {
+          const { guildId, userId, customId, client } = context;
+          const configId = customId.replace('create_app_button_', '');
+          
+          logger.info('BUTTON', 'START: create_app_button', { userId, guildId, configId });
+          
+          try {
+            // Load the config
+            logger.debug('APPLICATION', 'Loading application config', { configId });
+            const playerData = await loadPlayerData();
+            const tempConfig = playerData[guildId]?.applicationConfigs?.[configId];
+            
+            if (!tempConfig) {
+              logger.warn('APPLICATION', 'Config not found', { configId, guildId });
+              return {
+                content: '❌ Configuration not found. Please try again.',
+                components: [],
+                flags: InteractionResponseFlags.EPHEMERAL
+              };
             }
-          });
-        }
-        
-        // Verify all selections are made
-        if (!tempConfig.targetChannelId || !tempConfig.categoryId || !tempConfig.buttonStyle) {
-          console.log(`❌ DEBUG: Missing selections - Channel: ${tempConfig.targetChannelId}, Category: ${tempConfig.categoryId}, Style: ${tempConfig.buttonStyle}`);
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Please complete all selections before creating the button.',
-              flags: InteractionResponseFlags.EPHEMERAL
+            
+            logger.debug('APPLICATION', 'Config loaded', {
+              targetChannelId: tempConfig.targetChannelId,
+              categoryId: tempConfig.categoryId,
+              buttonStyle: tempConfig.buttonStyle,
+              buttonText: tempConfig.buttonText
+            });
+            
+            // Verify all selections are made
+            if (!tempConfig.targetChannelId || !tempConfig.categoryId || !tempConfig.buttonStyle) {
+              logger.warn('APPLICATION', 'Missing required config fields', {
+                targetChannelId: tempConfig.targetChannelId,
+                categoryId: tempConfig.categoryId,
+                buttonStyle: tempConfig.buttonStyle
+              });
+              return {
+                content: '❌ Please complete all selections before creating the button.',
+                components: [],
+                flags: InteractionResponseFlags.EPHEMERAL
+              };
             }
-          });
-        }
-        
-        console.log(`🔍 DEBUG: Fetching guild and channels...`);
-        const guild = await client.guilds.fetch(guildId);
-        console.log(`🔍 DEBUG: Guild fetched: ${guild.name}`);
-        
-        const targetChannel = await guild.channels.fetch(tempConfig.targetChannelId);
-        console.log(`🔍 DEBUG: Target channel fetched: ${targetChannel.name}`);
-        
-        const category = await guild.channels.fetch(tempConfig.categoryId);
-        console.log(`🔍 DEBUG: Category fetched: ${category.name}`);
-        
-        if (configId.startsWith('temp_')) {
-          // Create final configuration for temp configs
-          const finalConfigId = `config_${Date.now()}_${userId}`;
-          
-          const finalConfig = {
-            buttonText: tempConfig.buttonText,
-            explanatoryText: tempConfig.explanatoryText,
-            welcomeTitle: tempConfig.welcomeTitle,
-            welcomeDescription: tempConfig.welcomeDescription,
-            channelFormat: tempConfig.channelFormat,
-            targetChannelId: tempConfig.targetChannelId,
-            categoryId: tempConfig.categoryId,
-            buttonStyle: tempConfig.buttonStyle,
-            createdBy: userId,
-            stage: 'active'
-          };
-          
-          await saveApplicationConfig(guildId, finalConfigId, finalConfig);
-          
-          // Create and post the button
-          const button = createApplicationButton(tempConfig.buttonText, finalConfigId, tempConfig.buttonStyle);
-          const row = new ActionRowBuilder().addComponents(button);
-          
-          const messageData = { components: [row] };
-          if (tempConfig.explanatoryText && tempConfig.explanatoryText.trim()) {
-            messageData.content = tempConfig.explanatoryText;
+            
+            // Fetch guild and channels
+            logger.debug('APPLICATION', 'Fetching guild and channels');
+            const guild = await client.guilds.fetch(guildId);
+            const targetChannel = await guild.channels.fetch(tempConfig.targetChannelId);
+            const category = await guild.channels.fetch(tempConfig.categoryId);
+            
+            logger.debug('APPLICATION', 'Discord resources fetched', {
+              guildName: guild.name,
+              targetChannel: targetChannel.name,
+              category: category.name
+            });
+            
+            if (configId.startsWith('temp_')) {
+              // Create final configuration for temp configs
+              const finalConfigId = `config_${Date.now()}_${userId}`;
+              
+              const finalConfig = {
+                buttonText: tempConfig.buttonText,
+                explanatoryText: tempConfig.explanatoryText,
+                welcomeTitle: tempConfig.welcomeTitle,
+                welcomeDescription: tempConfig.welcomeDescription,
+                channelFormat: tempConfig.channelFormat,
+                targetChannelId: tempConfig.targetChannelId,
+                categoryId: tempConfig.categoryId,
+                buttonStyle: tempConfig.buttonStyle,
+                createdBy: userId,
+                stage: 'active'
+              };
+              
+              logger.debug('APPLICATION', 'Saving final config', { finalConfigId });
+              await saveApplicationConfig(guildId, finalConfigId, finalConfig);
+              
+              // Create and post the button
+              const button = createApplicationButton(tempConfig.buttonText, finalConfigId, tempConfig.buttonStyle);
+              const row = new ActionRowBuilder().addComponents(button);
+              
+              const messageData = { components: [row] };
+              if (tempConfig.explanatoryText && tempConfig.explanatoryText.trim()) {
+                messageData.content = tempConfig.explanatoryText;
+              }
+              
+              logger.debug('APPLICATION', 'Posting button to channel', { channelId: targetChannel.id });
+              await targetChannel.send(messageData);
+              
+              // Clean up temp config
+              delete playerData[guildId].applicationConfigs[configId];
+              await savePlayerData(playerData);
+              logger.debug('APPLICATION', 'Temp config cleaned up', { configId });
+              
+              logger.info('APPLICATION', 'SUCCESS: Application button created', {
+                userId,
+                guildId,
+                channelName: targetChannel.name,
+                buttonText: tempConfig.buttonText
+              });
+              
+              return {
+                content: `✅ Application button successfully created in ${targetChannel}!\n\n**Button Text:** "${tempConfig.buttonText}"\n**Style:** ${tempConfig.buttonStyle}\n**Category:** ${category.name}`,
+                components: []
+              };
+              
+            } else if (configId.startsWith('config_')) {
+              // Update season config and post
+              logger.debug('APPLICATION', 'Processing season config', { configId });
+              
+              tempConfig.stage = 'active';
+              tempConfig.lastUpdated = Date.now();
+              await saveApplicationConfig(guildId, configId, tempConfig);
+              logger.debug('APPLICATION', 'Config updated', { configId });
+              
+              const button = createApplicationButton(tempConfig.buttonText, configId, tempConfig.buttonStyle);
+              const row = new ActionRowBuilder().addComponents(button);
+              
+              const messageData = { components: [row] };
+              if (tempConfig.explanatoryText && tempConfig.explanatoryText.trim()) {
+                messageData.content = tempConfig.explanatoryText;
+              }
+              
+              logger.debug('APPLICATION', 'Posting season button to channel', { channelId: targetChannel.id });
+              await targetChannel.send(messageData);
+              
+              logger.info('APPLICATION', 'SUCCESS: Season application button posted', {
+                userId,
+                guildId,
+                channelName: targetChannel.name,
+                buttonText: tempConfig.buttonText,
+                categoryName: category.name
+              });
+              
+              return {
+                content: `✅ **Season Application Button Posted!**\n\n**Button Text:** "${tempConfig.buttonText}"\n**Posted to:** ${targetChannel}\n**Category:** ${category.name}\n**Style:** ${tempConfig.buttonStyle}\n\nApplicants will now go through your configured questions when they apply.`,
+                components: []
+              };
+            } else {
+              logger.error('APPLICATION', 'Unknown configId format', { configId });
+              return {
+                content: '❌ Invalid configuration ID format. Please try again.',
+                components: []
+              };
+            }
+            
+          } catch (error) {
+            logger.error('APPLICATION', 'Failed to create application button', error);
+            return {
+              content: '❌ Error creating application button. Please try again.',
+              components: []
+            };
           }
-          
-          await targetChannel.send(messageData);
-          
-          // Clean up temp config
-          delete playerData[guildId].applicationConfigs[configId];
-          await savePlayerData(playerData);
-          
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              content: `✅ Application button successfully created in ${targetChannel}!\n\n**Button Text:** "${tempConfig.buttonText}"\n**Style:** ${tempConfig.buttonStyle}\n**Category:** ${category.name}`,
-              components: [],
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-          
-        } else if (configId.startsWith('config_')) {
-          // Update season config and post
-          console.log(`🔍 DEBUG: Entering config_ branch for configId: ${configId}`);
-          
-          tempConfig.stage = 'active';
-          tempConfig.lastUpdated = Date.now();
-          console.log(`🔍 DEBUG: About to save config...`);
-          await saveApplicationConfig(guildId, configId, tempConfig);
-          console.log(`🔍 DEBUG: Config saved successfully`);
-          
-          console.log(`🔍 DEBUG: Creating button...`);
-          const button = createApplicationButton(tempConfig.buttonText, configId, tempConfig.buttonStyle);
-          const row = new ActionRowBuilder().addComponents(button);
-          console.log(`🔍 DEBUG: Button created successfully`);
-          
-          const messageData = { components: [row] };
-          if (tempConfig.explanatoryText && tempConfig.explanatoryText.trim()) {
-            messageData.content = tempConfig.explanatoryText;
-          }
-          
-          console.log(`🔍 DEBUG: About to send message to channel...`);
-          await targetChannel.send(messageData);
-          console.log(`🔍 DEBUG: Message sent successfully`);
-          
-          console.log(`🔍 DEBUG: About to send response...`);
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              content: `✅ **Season Application Button Posted!**\n\n**Button Text:** "${tempConfig.buttonText}"\n**Posted to:** ${targetChannel}\n**Category:** ${category.name}\n**Style:** ${tempConfig.buttonStyle}\n\nApplicants will now go through your configured questions when they apply.`,
-              components: [],
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        } else {
-          console.log(`❌ DEBUG: Unknown configId format: ${configId}`);
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Invalid configuration ID format. Please try again.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
         }
-        
-      } catch (error) {
-        console.error('Error creating application button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error creating application button. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id.startsWith('castlist2_nav_')) {
       // Handle new castlist2 navigation system
       try {

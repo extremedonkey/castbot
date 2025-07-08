@@ -418,6 +418,15 @@ export const BUTTON_REGISTRY = {
     emoji: '⚠️',
     style: 'Danger',
     category: 'entity_management'
+  },
+
+  // === APPLICATION MANAGEMENT SYSTEM ===
+  'create_app_button_*': {
+    label: 'Create App Button',
+    description: 'Creates and posts the configured application button to the selected channel',
+    emoji: '🎯',
+    style: 'Success',
+    category: 'application_management'
   }
 };
 
