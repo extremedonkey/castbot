@@ -165,6 +165,13 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
     
     // Get current location
     const mapState = await getPlayerLocation(guildId, userId);
+    if (!mapState) {
+        return { 
+            success: false, 
+            message: `❌ You are not currently on the map. Please use Map Explorer to initialize your position.` 
+        };
+    }
+    
     const oldCoordinate = mapState.currentCoordinate;
     
     // Validate move is allowed (unless admin move)
@@ -175,7 +182,7 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
         if (!isValidMove) {
             return { 
                 success: false, 
-                message: `You cannot move to ${newCoordinate} from ${oldCoordinate}.` 
+                message: `❌ You cannot move to ${newCoordinate} from ${oldCoordinate}. Your current location may have changed.` 
             };
         }
     }
@@ -238,7 +245,7 @@ async function postMovementNotification(guildId, userId, oldCoordinate, newCoord
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `# You have moved to <#${newChannelId}>\n\n📍 **${oldCoordinate}** → **${newCoordinate}**\n\nClick the channel link above to continue exploring!`
+                            text: `# <@${userId}> You have moved to <#${newChannelId}>\n\n📍 **${oldCoordinate}** → **${newCoordinate}**\n\nClick the channel link above to continue exploring!`
                         }
                     ]
                 }]
@@ -247,11 +254,11 @@ async function postMovementNotification(guildId, userId, oldCoordinate, newCoord
             // Send notification to old channel before permissions are removed
             await DiscordRequest(`channels/${oldChannelId}/messages`, {
                 method: 'POST',
-                body: {
-                    content: `<@${userId}>`, // Tag the player
-                    ...notificationMessage
-                }
+                body: notificationMessage
             });
+            
+            // Wait 2 seconds to ensure user sees the notification before losing access
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
     } catch (error) {
         console.error('Error posting movement notification:', error);
@@ -417,13 +424,13 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
             // Location header
             {
                 type: 10, // Text Display
-                content: `## 🗺️ Current Location: ${coordinate}`
+                text: `## 🗺️ Current Location: ${coordinate}`
             },
             
             // Movement description
             {
                 type: 10, // Text Display
-                content: description
+                text: description
             },
             
             // Add separator before movement buttons

@@ -3530,42 +3530,69 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         handler: async (context) => {
           console.log(`🗺️ START: safari_move_${targetCoordinate} - user ${context.userId}`);
           
-          // Import movement functions
-          const { movePlayer, getMovementDisplay } = await import('./mapMovement.js');
-          const { loadSafariContent } = await import('./safariManager.js');
-          
-          // Execute movement
-          const result = await movePlayer(context.guildId, context.userId, targetCoordinate, context.client);
-          
-          if (result.success) {
-            // Post movement interface to new channel (if different from current)
-            const safariData = await loadSafariContent();
-            const activeMapId = safariData[context.guildId]?.maps?.active;
-            const targetChannelId = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[targetCoordinate]?.channelId;
-            const sourceChannelId = context.channelId;
+          try {
+            // Import movement functions
+            const { movePlayer, getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
+            const { loadSafariContent } = await import('./safariManager.js');
             
-            if (targetChannelId && targetChannelId !== sourceChannelId) {
-              // Post to new channel with full Components V2 format
-              const movementDisplay = await getMovementDisplay(context.guildId, context.userId, targetCoordinate, false);
-              
-              console.log(`🔍 DEBUG: Posting movement interface to new channel ${targetChannelId}`);
-              await DiscordRequest(`channels/${targetChannelId}/messages`, {
-                method: 'POST',
-                body: movementDisplay
-              });
+            // Validate that user is in the correct channel for their current position
+            const mapState = await getPlayerLocation(context.guildId, context.userId);
+            if (mapState) {
+              const safariData = await loadSafariContent();
+              const activeMapId = safariData[context.guildId]?.maps?.active;
+              if (activeMapId) {
+                const currentLocationChannelId = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[mapState.currentCoordinate]?.channelId;
+                
+                // If user is trying to move from a channel they're not supposed to be in
+                if (currentLocationChannelId && currentLocationChannelId !== context.channelId) {
+                  return {
+                    content: `❌ You are no longer in this location. Your current position is **${mapState.currentCoordinate}**. Please check that channel for movement options.`,
+                    ephemeral: true
+                  };
+                }
+              }
             }
             
-            // For the interaction response, always use interaction-safe format
-            const responseDisplay = await getMovementDisplay(context.guildId, context.userId, targetCoordinate, true);
+            // Execute movement
+            const result = await movePlayer(context.guildId, context.userId, targetCoordinate, context.client);
             
-            console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
+            if (result.success) {
+              // Post movement interface to new channel (if different from current)
+              const safariData = await loadSafariContent();
+              const activeMapId = safariData[context.guildId]?.maps?.active;
+              const targetChannelId = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[targetCoordinate]?.channelId;
+              const sourceChannelId = context.channelId;
+              
+              if (targetChannelId && targetChannelId !== sourceChannelId) {
+                // Post to new channel with full Components V2 format
+                const movementDisplay = await getMovementDisplay(context.guildId, context.userId, targetCoordinate, false);
+                
+                console.log(`🔍 DEBUG: Posting movement interface to new channel ${targetChannelId}`);
+                await DiscordRequest(`channels/${targetChannelId}/messages`, {
+                  method: 'POST',
+                  body: movementDisplay
+                });
+              }
+              
+              // For the interaction response, always use interaction-safe format
+              const responseDisplay = await getMovementDisplay(context.guildId, context.userId, targetCoordinate, true);
+              
+              console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
+              return {
+                ...responseDisplay,
+                ephemeral: true
+              };
+            } else {
+              console.log(`❌ FAILED: safari_move_${targetCoordinate} - ${result.message}`);
+              return {
+                content: result.message || '❌ Movement failed.',
+                ephemeral: true
+              };
+            }
+          } catch (error) {
+            console.error(`❌ ERROR: safari_move_${targetCoordinate} - ${error.message}`);
             return {
-              ...responseDisplay,
-              ephemeral: true
-            };
-          } else {
-            return {
-              content: result.message || '❌ Movement failed.',
+              content: '❌ An error occurred while trying to move. Please try again or contact an admin.',
               ephemeral: true
             };
           }
