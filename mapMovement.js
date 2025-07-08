@@ -307,9 +307,9 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
     const row1 = {
         type: 1, // Action Row
         components: [
-            createButton('northwest', '↖️ NW', col - 1, row - 1),
-            createButton('north', '⬆️ N', col, row - 1),
-            createButton('northeast', '↗️ NE', col + 1, row - 1)
+            createButton('northwest', '↖️ Northwest', col - 1, row - 1),
+            createButton('north', '⬆️ North', col, row - 1),
+            createButton('northeast', '↗️ Northeast', col + 1, row - 1)
         ]
     };
     
@@ -317,7 +317,7 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
     const row2 = {
         type: 1, // Action Row
         components: [
-            createButton('west', '⬅️ W', col - 1, row),
+            createButton('west', '⬅️ West', col - 1, row),
             {
                 type: 2,
                 custom_id: 'current_position',
@@ -325,7 +325,7 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
                 style: 2, // Secondary
                 disabled: true
             },
-            createButton('east', '➡️ E', col + 1, row)
+            createButton('east', '➡️ East', col + 1, row)
         ]
     };
     
@@ -333,9 +333,9 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
     const row3 = {
         type: 1, // Action Row
         components: [
-            createButton('southwest', '↙️ SW', col - 1, row + 1),
-            createButton('south', '⬇️ S', col, row + 1),
-            createButton('southeast', '↘️ SE', col + 1, row + 1)
+            createButton('southwest', '↙️ Southwest', col - 1, row + 1),
+            createButton('south', '⬇️ South', col, row + 1),
+            createButton('southeast', '↘️ Southeast', col + 1, row + 1)
         ]
     };
     
