@@ -11006,36 +11006,49 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         if (!config || !config.questions || nextIndex >= config.questions.length) {
           // No more questions - show completion message
           console.log(`✅ TRIGGERING COMPLETION FLOW: nextIndex=${nextIndex}, questionsLength=${config?.questions?.length}`);
-          const completionComponents = [
-            {
-              type: 10, // Text Display
-              text: `## ✅ Application Complete!\n\n${config.completionDescription || config.welcomeDescription || 'Thank you for completing your application. A host will review it soon!'}`
-            }
-          ];
           
-          // Add image if provided
-          if (config.completionImage) {
-            completionComponents.push({
-              type: 28, // Image Gallery
-              media: [{
-                url: config.completionImage
-              }]
+          try {
+            const completionComponents = [
+              {
+                type: 10, // Text Display
+                text: `## ✅ Application Complete!\n\n${config.completionDescription || config.welcomeDescription || 'Thank you for completing your application. A host will review it soon!'}`
+              }
+            ];
+            
+            // Add image if provided - use simpler format
+            if (config.completionImage) {
+              console.log(`🖼️ Adding completion image: ${config.completionImage}`);
+              completionComponents.push({
+                type: 10, // Text Display with embedded image
+                text: `![Completion Image](${config.completionImage})`
+              });
+            }
+            
+            const completionContainer = {
+              type: 17, // Container
+              accent_color: 0x2ecc71, // Green color
+              components: completionComponents
+            };
+            
+            console.log(`📤 SENDING COMPLETION RESPONSE with ${completionComponents.length} components`);
+            
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [completionContainer]
+              }
+            });
+          } catch (completionError) {
+            console.error('❌ ERROR in completion flow:', completionError);
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '✅ Application Complete! Thank you for completing your application. A host will review it soon!',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
             });
           }
-          
-          const completionContainer = {
-            type: 17, // Container
-            accent_color: 0x2ecc71, // Green color
-            components: completionComponents
-          };
-          
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              components: [completionContainer]
-            }
-          });
         }
         
         // Update progress tracker (backwards compatible)
