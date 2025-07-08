@@ -326,21 +326,37 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
       const newChannelId = mapData.coordinates[coordinate]?.channelId;
       
       if (newChannelId) {
-        // Get movement display for the new location
-        const movementDisplay = await getMovementDisplay(guildId, userId, coordinate, false);
+        // Create a notification with a button to show movement options
+        const notificationMessage = {
+          flags: (1 << 15), // IS_COMPONENTS_V2
+          components: [{
+            type: 17, // Container
+            accent_color: 0x5865f2, // Discord blurple
+            components: [
+              {
+                type: 10, // Text Display
+                content: `📍 <@${userId}> You have been moved by the Production team to coordinate **${coordinate}**\n\nClick below to see your movement options.`
+              },
+              {
+                type: 1, // Action Row
+                components: [{
+                  type: 2, // Button
+                  custom_id: `safari_show_movement_${userId}_${coordinate}`,
+                  label: 'Show Movement Options',
+                  style: 1, // Primary
+                  emoji: { name: '🗺️' }
+                }]
+              }
+            ]
+          }]
+        };
         
-        // Add admin move notification to the display
-        movementDisplay.components[0].components.unshift({
-          type: 10, // Text Display
-          content: `📍 <@${userId}> You have been moved by the Production team to coordinate **${coordinate}**`
-        });
-        
-        // Send the movement interface to the new channel
+        // Send the notification to the channel
         await DiscordRequest(`channels/${newChannelId}/messages`, {
           method: 'POST',
           body: {
             content: `<@${userId}>`, // Tag the player
-            ...movementDisplay
+            ...notificationMessage
           }
         });
       }

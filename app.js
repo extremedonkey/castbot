@@ -3572,6 +3572,38 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     }
     
+    // === SHOW MOVEMENT OPTIONS HANDLER (for admin-moved players) ===
+    if (custom_id.startsWith('safari_show_movement_')) {
+      const parts = custom_id.split('_');
+      const targetUserId = parts[3];
+      const coordinate = parts[4];
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        ephemeral: true,
+        handler: async (context) => {
+          // Verify this button is for the correct user
+          if (context.userId !== targetUserId) {
+            return {
+              content: '❌ This movement panel is for another player.',
+              ephemeral: true
+            };
+          }
+          
+          // Import movement display function
+          const { getMovementDisplay } = await import('./mapMovement.js');
+          
+          // Get and return movement display as ephemeral response
+          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate, true);
+          
+          return {
+            ...movementDisplay,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    }
+    
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
     if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
         !custom_id.startsWith('safari_add_action_') && 

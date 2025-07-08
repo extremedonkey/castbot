@@ -210,6 +210,15 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_movement'
   },
+  
+  // Safari Show Movement Options (for admin-moved players)
+  'safari_show_movement_*': {
+    label: 'Show Movement Options',
+    description: 'Show movement options after admin move',
+    emoji: '🗺️',
+    style: 'Primary',
+    category: 'safari_movement'
+  },
 
   // Safari Map Admin
   'safari_map_admin': {
