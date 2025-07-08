@@ -12179,7 +12179,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               }
               
               // Use the updated question management UI function (start at page 0)
-              return refreshQuestionManagementUI(res, config, configId, 0);
+              // Call the function but don't return its result since it sends the response directly
+              await refreshQuestionManagementUI(res, config, configId, 0);
+              // Return undefined to indicate the response was already sent
+              return;
             }
           }
           
