@@ -100,24 +100,6 @@ function createApplicationButtonModal() {
         .setRequired(false)
         .setMaxLength(2000);
 
-    // Application completion message input
-    const completionDescriptionInput = new TextInputBuilder()
-        .setCustomId('completion_description')
-        .setLabel('Application Complete Message')
-        .setPlaceholder('Message shown after the user has reached the final question in their application')
-        .setStyle(TextInputStyle.Paragraph)
-        .setRequired(true)
-        .setMaxLength(2000);
-
-    // Completion image input
-    const completionImageInput = new TextInputBuilder()
-        .setCustomId('completion_image')
-        .setLabel('Completion Image URL')
-        .setPlaceholder('Enter the url of an image hosted on discord (https://cdn.discordapp.com/...) to include.')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(false)
-        .setMaxLength(500);
-
     // Channel name format input
     const channelFormatInput = new TextInputBuilder()
         .setCustomId('channel_format')
@@ -130,11 +112,9 @@ function createApplicationButtonModal() {
 
     const firstRow = new ActionRowBuilder().addComponents(buttonTextInput);
     const secondRow = new ActionRowBuilder().addComponents(explanatoryTextInput);
-    const thirdRow = new ActionRowBuilder().addComponents(completionDescriptionInput);
-    const fourthRow = new ActionRowBuilder().addComponents(completionImageInput);
-    const fifthRow = new ActionRowBuilder().addComponents(channelFormatInput);
+    const thirdRow = new ActionRowBuilder().addComponents(channelFormatInput);
 
-    modal.addComponents(firstRow, secondRow, thirdRow, fourthRow, fifthRow);
+    modal.addComponents(firstRow, secondRow, thirdRow);
 
     return modal;
 }
@@ -482,9 +462,7 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         const components = interactionBody.data.components;
         const buttonText = components[0].components[0].value;
         const explanatoryText = components[1].components[0].value || '';
-        const completionDescription = components[2].components[0].value;
-        const completionImage = components[3].components[0].value || '';
-        const channelFormat = components[4].components[0].value;
+        const channelFormat = components[2].components[0].value;
 
         // Validate channel format
         if (!channelFormat.includes('%name%')) {
@@ -534,8 +512,6 @@ async function handleApplicationButtonModalSubmit(interactionBody, guild) {
         const tempConfig = {
             buttonText,
             explanatoryText,
-            completionDescription,
-            completionImage,
             channelFormat,
             stage: 'awaiting_selections',
             // Preserve season data if updating existing config
