@@ -11078,6 +11078,102 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    } else if (custom_id === 'app_withdraw') {
+      // Handle application withdrawal
+      try {
+        const channelId = req.body.channel_id;
+        const guildId = req.body.guild_id;
+        
+        console.log(`❌ Application withdrawal requested for channel ${channelId}`);
+        
+        // Update channel name to show withdrawal
+        try {
+          const channel = await client.channels.fetch(channelId);
+          let currentName = channel.name;
+          
+          // Remove existing prefixes if they exist
+          currentName = currentName.replace(/^(📝|☑️)/, '');
+          
+          // Add withdrawal prefix
+          await channel.setName(`❌${currentName}`);
+          console.log(`📝 Updated channel name to: ❌${currentName}`);
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ **Application Withdrawn**\n\nYour application has been withdrawn. If you change your mind, you can re-apply using the button below.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } catch (channelError) {
+          console.error('Error updating channel name for withdrawal:', channelError);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error withdrawing application. Please contact an admin.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+      } catch (error) {
+        console.error('❌ ERROR in app_withdraw handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error withdrawing application. Please contact an admin.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'app_reapply') {
+      // Handle application re-apply
+      try {
+        const channelId = req.body.channel_id;
+        const guildId = req.body.guild_id;
+        
+        console.log(`🔄 Application re-apply requested for channel ${channelId}`);
+        
+        // Update channel name to restore document prefix
+        try {
+          const channel = await client.channels.fetch(channelId);
+          let currentName = channel.name;
+          
+          // Remove withdrawal prefix if it exists
+          currentName = currentName.replace(/^❌/, '');
+          
+          // Add document prefix if not already present
+          if (!currentName.startsWith('📝')) {
+            await channel.setName(`📝${currentName}`);
+            console.log(`📝 Updated channel name to: 📝${currentName}`);
+          }
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '🔄 **Application Reactivated**\n\nYour application has been reactivated. You can now continue with your application process.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        } catch (channelError) {
+          console.error('Error updating channel name for re-apply:', channelError);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error reactivating application. Please contact an admin.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+      } catch (error) {
+        console.error('❌ ERROR in app_reapply handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error reactivating application. Please contact an admin.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'player_menu_test') {
       // TEST HANDLER: Proof of concept for new parameters (custom title + hidden bottom buttons)
       try {

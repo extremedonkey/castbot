@@ -337,10 +337,18 @@ Click the button below to get started!`
                     components: [
                         {
                             type: 2, // Button
-                            custom_id: 'player_menu',
-                            label: 'Start your application',
+                            custom_id: channel.name.startsWith('❌') ? 'app_reapply' : 'player_menu',
+                            label: channel.name.startsWith('❌') ? 'Re-apply' : 'Start your application',
                             style: 1, // Primary
-                            emoji: { name: '🚀' }
+                            emoji: { name: channel.name.startsWith('❌') ? '🔄' : '🚀' }
+                        },
+                        {
+                            type: 2, // Button
+                            custom_id: 'app_withdraw',
+                            label: 'Withdraw your application',
+                            style: 2, // Secondary (grey)
+                            emoji: { name: '❌' },
+                            disabled: channel.name.startsWith('❌')
                         }
                     ]
                 },
