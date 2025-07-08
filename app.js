@@ -317,7 +317,7 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
   const questionComponents = [
     {
       type: 10, // Text Display
-      content: `## Q${questionIndex + 1}. ${question.questionTitle}\n\n${question.questionText}`
+      content: `## ${question.questionTitle}\n\n${question.questionText}`
     }
   ];
   
@@ -339,27 +339,25 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
     type: 14 // Separator
   });
   
-  // Add navigation button(s)
-  if (isLastQuestion) {
-    // Last question gets a "Complete Application" button
-    const completeButton = new ButtonBuilder()
-      .setCustomId(`app_complete_${channelId}`)
-      .setLabel('Complete Application')
-      .setStyle(ButtonStyle.Success) // Green button
-      .setEmoji('✅');
-    
-    const navRow = new ActionRowBuilder().addComponents(completeButton);
-    questionComponents.push(navRow.toJSON());
-  } else {
+  // Add navigation button(s) - but not for the last question
+  if (!isLastQuestion) {
     // Regular navigation button
     const navButton = new ButtonBuilder()
       .setCustomId(`app_next_question_${channelId}_${questionIndex}`)
-      .setLabel(isSecondToLast ? 'Final Question →' : `Question ${questionIndex + 2}`)
-      .setStyle(isSecondToLast ? 3 : ButtonStyle.Primary) // Warning (yellow) color for second-to-last
-      .setEmoji('➡️');
+      .setLabel(isSecondToLast ? 'Complete Application' : `Next`)
+      .setStyle(isSecondToLast ? ButtonStyle.Success : ButtonStyle.Primary) // Green for second-to-last
+      .setEmoji(isSecondToLast ? '✅' : '➡️');
     
     const navRow = new ActionRowBuilder().addComponents(navButton);
     questionComponents.push(navRow.toJSON());
+  }
+  
+  // Add thank you message for last question
+  if (isLastQuestion) {
+    questionComponents.push({
+      type: 10, // Text Display
+      content: `> **✅ Thank you for completing your application!**\n> Your application has been submitted successfully.\n> \n> ${config.productionRole ? `The <@&${config.productionRole}> team has been notified and will review your application soon.` : 'A host will review your application soon.'}`
+    });
   }
   
   const questionContainer = {
@@ -11031,6 +11029,28 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
+        // Check if we're on the second-to-last question clicking to the last
+        const isGoingToLastQuestion = nextIndex === config.questions.length - 1;
+        
+        // Update channel name when going to the last question
+        if (isGoingToLastQuestion) {
+          try {
+            const channel = await client.channels.fetch(channelId);
+            let currentName = channel.name;
+            
+            // Remove document emoji if it exists
+            currentName = currentName.replace(/^📝/, '');
+            
+            // Only update if it doesn't already have a checkmark
+            if (!currentName.startsWith('☑️') && !currentName.startsWith('✅')) {
+              await channel.setName(`☑️${currentName}`);
+              console.log(`📝 Updated channel name to: ☑️${currentName}`);
+            }
+          } catch (channelError) {
+            console.error('Error updating channel name:', channelError);
+          }
+        }
+        
         // Update progress tracker (backwards compatible)
         if (!application.currentQuestion) {
           application.currentQuestion = 0; // Initialize for existing applications
@@ -11054,77 +11074,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error loading next question. Please contact an admin.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id.startsWith('app_complete_')) {
-      // Handle application completion
-      try {
-        const channelId = custom_id.replace('app_complete_', '');
-        const guildId = req.body.guild_id;
-        
-        console.log(`✅ Application completion clicked for channel ${channelId}`);
-        
-        // Load player data to find the application
-        const playerData = await loadPlayerData();
-        const application = playerData[guildId]?.applications?.[channelId];
-        
-        if (!application) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Application data not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        const config = await getApplicationConfig(guildId, application.configId);
-        
-        // Update channel name to include blue checkmark and remove document emoji
-        try {
-          const channel = await client.channels.fetch(channelId);
-          let currentName = channel.name;
-          
-          // Remove document emoji if it exists
-          currentName = currentName.replace(/^📝/, '');
-          
-          // Only update if it doesn't already have a checkmark
-          if (!currentName.startsWith('☑️') && !currentName.startsWith('✅')) {
-            await channel.setName(`☑️${currentName}`);
-            console.log(`📝 Updated channel name to: ☑️${currentName}`);
-          }
-        } catch (channelError) {
-          console.error('Error updating channel name:', channelError);
-        }
-        
-        // Build thank you message
-        let thankYouMessage = '## ✅ Thank you for completing your application!\n\nYour application has been submitted successfully.';
-        
-        // Add production role mention if configured
-        if (config.productionRole) {
-          thankYouMessage += `\n\nThe <@&${config.productionRole}> team has been notified and will review your application soon.`;
-        } else {
-          thankYouMessage += '\n\nA host will review your application soon.';
-        }
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: thankYouMessage,
-            allowed_mentions: {
-              roles: config.productionRole ? [config.productionRole] : []
-            }
-          }
-        });
-        
-      } catch (error) {
-        console.error('❌ ERROR in app_complete handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error completing application. Please contact an admin.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
