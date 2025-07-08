@@ -11,56 +11,88 @@ import { hasEnoughPoints, usePoints, getTimeUntilRegeneration, initializeEntityP
 // Get player's current location on the map
 export async function getPlayerLocation(guildId, userId) {
     const playerData = await loadPlayerData();
+    const safariData = await loadSafariContent();
     const player = playerData[guildId]?.players?.[userId];
     
     if (!player?.safari) {
         return null;
     }
     
-    // Initialize map state if it doesn't exist
-    if (!player.safari.mapState) {
-        player.safari.mapState = {
-            currentCoordinate: "A1", // Default starting position
-            lastMovement: 0,
-            visitedCoordinates: ["A1"]
-        };
-        await savePlayerData(playerData);
+    // Get active map
+    const activeMapId = safariData[guildId]?.maps?.active;
+    if (!activeMapId) {
+        return null;
     }
     
-    return player.safari.mapState;
+    // Get map progress for active map
+    const mapProgress = player.safari.mapProgress?.[activeMapId];
+    if (!mapProgress) {
+        return null;
+    }
+    
+    // Return in expected format
+    return {
+        currentCoordinate: mapProgress.currentLocation,
+        lastMovement: mapProgress.movementHistory?.slice(-1)[0]?.timestamp || 0,
+        visitedCoordinates: mapProgress.exploredCoordinates || []
+    };
 }
 
 // Set player location (for initialization or admin commands)
 export async function setPlayerLocation(guildId, userId, coordinate, mapId = null) {
     const playerData = await loadPlayerData();
+    const safariData = await loadSafariContent();
     const player = playerData[guildId]?.players?.[userId];
     
     if (!player?.safari) {
         throw new Error("Player not found in safari system");
     }
     
-    if (!player.safari.mapState) {
-        player.safari.mapState = {
-            currentCoordinate: coordinate,
-            lastMovement: Date.now(),
-            visitedCoordinates: [coordinate]
-        };
-    } else {
-        player.safari.mapState.currentCoordinate = coordinate;
-        player.safari.mapState.lastMovement = Date.now();
-        
-        // Track visited coordinates
-        if (!player.safari.mapState.visitedCoordinates.includes(coordinate)) {
-            player.safari.mapState.visitedCoordinates.push(coordinate);
-        }
+    // Get active map if not provided
+    const activeMapId = mapId || safariData[guildId]?.maps?.active;
+    if (!activeMapId) {
+        throw new Error("No active map in this server");
     }
     
-    if (mapId) {
-        player.safari.mapState.currentMapId = mapId;
+    // Ensure mapProgress structure exists
+    if (!player.safari.mapProgress) {
+        player.safari.mapProgress = {};
+    }
+    
+    // Get or create map progress for this map
+    if (!player.safari.mapProgress[activeMapId]) {
+        player.safari.mapProgress[activeMapId] = {
+            currentLocation: coordinate,
+            exploredCoordinates: [coordinate],
+            itemsFound: [],
+            movementHistory: [{
+                from: null,
+                to: coordinate,
+                timestamp: new Date().toISOString()
+            }]
+        };
+    } else {
+        const mapProgress = player.safari.mapProgress[activeMapId];
+        const previousLocation = mapProgress.currentLocation;
+        
+        // Update location
+        mapProgress.currentLocation = coordinate;
+        
+        // Track explored coordinates
+        if (!mapProgress.exploredCoordinates.includes(coordinate)) {
+            mapProgress.exploredCoordinates.push(coordinate);
+        }
+        
+        // Add to movement history
+        mapProgress.movementHistory.push({
+            from: previousLocation,
+            to: coordinate,
+            timestamp: new Date().toISOString()
+        });
     }
     
     await savePlayerData(playerData);
-    return player.safari.mapState;
+    return player.safari.mapProgress[activeMapId];
 }
 
 // Get valid moves from current position based on movement schema
@@ -113,43 +145,50 @@ export async function canPlayerMove(guildId, userId) {
 }
 
 // Execute player movement
-export async function movePlayer(guildId, userId, newCoordinate, client) {
+export async function movePlayer(guildId, userId, newCoordinate, client, options = {}) {
+    const { bypassStamina = false, adminMove = false } = options;
     const entityId = `player_${userId}`;
     const safariData = await loadSafariContent();
     const movementCost = safariData[guildId]?.pointsConfig?.movementCost?.stamina || 1;
     
-    // Check stamina
-    const canMove = await canPlayerMove(guildId, userId);
-    if (!canMove) {
-        const timeUntil = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
-        return { 
-            success: false, 
-            message: `You're too tired to move! Rest for ${timeUntil} before moving again.` 
-        };
+    // Check stamina (unless bypassed for admin moves)
+    if (!bypassStamina) {
+        const canMove = await canPlayerMove(guildId, userId);
+        if (!canMove) {
+            const timeUntil = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
+            return { 
+                success: false, 
+                message: `You're too tired to move! Rest for ${timeUntil} before moving again.` 
+            };
+        }
     }
     
     // Get current location
     const mapState = await getPlayerLocation(guildId, userId);
     const oldCoordinate = mapState.currentCoordinate;
     
-    // Validate move is allowed
-    const validMoves = getValidMoves(oldCoordinate);
-    const isValidMove = validMoves.some(move => move.coordinate === newCoordinate);
-    
-    if (!isValidMove) {
-        return { 
-            success: false, 
-            message: `You cannot move to ${newCoordinate} from ${oldCoordinate}.` 
-        };
+    // Validate move is allowed (unless admin move)
+    if (!adminMove) {
+        const validMoves = getValidMoves(oldCoordinate);
+        const isValidMove = validMoves.some(move => move.coordinate === newCoordinate);
+        
+        if (!isValidMove) {
+            return { 
+                success: false, 
+                message: `You cannot move to ${newCoordinate} from ${oldCoordinate}.` 
+            };
+        }
     }
     
-    // Use stamina
-    const pointsResult = await usePoints(guildId, entityId, 'stamina', movementCost);
-    if (!pointsResult.success) {
-        return { 
-            success: false, 
-            message: pointsResult.message 
-        };
+    // Use stamina (unless bypassed)
+    if (!bypassStamina) {
+        const pointsResult = await usePoints(guildId, entityId, 'stamina', movementCost);
+        if (!pointsResult.success) {
+            return { 
+                success: false, 
+                message: pointsResult.message 
+            };
+        }
     }
     
     // Update location
@@ -158,11 +197,16 @@ export async function movePlayer(guildId, userId, newCoordinate, client) {
     // Update Discord permissions
     await updateChannelPermissions(guildId, userId, oldCoordinate, newCoordinate, client);
     
+    const message = adminMove 
+        ? `📍 You have been moved by the Production team to **${newCoordinate}**!`
+        : `You move to ${newCoordinate}!`;
+    
     return { 
         success: true, 
-        message: `You move to ${newCoordinate}!`,
+        message,
         oldCoordinate,
-        newCoordinate
+        newCoordinate,
+        adminMove
     };
 }
 

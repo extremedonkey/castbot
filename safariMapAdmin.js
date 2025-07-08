@@ -304,54 +304,65 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
  * Move player to specific coordinate
  */
 export async function movePlayerToCoordinate(guildId, userId, coordinate, client = null) {
-  const playerData = await loadPlayerData();
-  const safariData = await loadSafariContent();
+  // Use the unified movement system with admin options
+  const { movePlayer, getMovementDisplay } = await import('./mapMovement.js');
+  const { DiscordRequest } = await import('./utils.js');
   
-  const activeMapId = safariData[guildId]?.maps?.active;
-  if (!activeMapId) {
-    throw new Error('No active map in this server');
-  }
-  
-  const player = playerData[guildId]?.players?.[userId];
-  if (!player?.safari?.mapProgress?.[activeMapId]) {
-    throw new Error('Player not initialized on map');
-  }
-  
-  const mapProgress = player.safari.mapProgress[activeMapId];
-  const previousLocation = mapProgress.currentLocation;
-  
-  // Update location
-  mapProgress.currentLocation = coordinate;
-  
-  // Add to explored if not already
-  if (!mapProgress.exploredCoordinates.includes(coordinate)) {
-    mapProgress.exploredCoordinates.push(coordinate);
-  }
-  
-  // Add to movement history
-  mapProgress.movementHistory.push({
-    from: previousLocation,
-    to: coordinate,
-    timestamp: new Date().toISOString(),
+  const result = await movePlayer(guildId, userId, coordinate, client, {
+    bypassStamina: true,
     adminMove: true
   });
   
-  await savePlayerData(playerData);
+  if (!result.success) {
+    throw new Error(result.message);
+  }
   
-  // Update Discord channel permissions if client is provided
+  // Send notification to player in their new channel
   if (client) {
-    const { updateChannelPermissions } = await import('./mapMovement.js');
-    await updateChannelPermissions(guildId, userId, previousLocation, coordinate, client);
+    try {
+      const safariData = await loadSafariContent();
+      const activeMapId = safariData[guildId]?.maps?.active;
+      const mapData = safariData[guildId].maps[activeMapId];
+      const newChannelId = mapData.coordinates[coordinate]?.channelId;
+      
+      if (newChannelId) {
+        // Get movement display for the new location
+        const movementDisplay = await getMovementDisplay(guildId, userId, coordinate, false);
+        
+        // Add admin move notification to the display
+        movementDisplay.components[0].components.unshift({
+          type: 10, // Text Display
+          content: `📍 <@${userId}> You have been moved by the Production team to coordinate **${coordinate}**`
+        });
+        
+        // Send the movement interface to the new channel
+        await DiscordRequest(`channels/${newChannelId}/messages`, {
+          method: 'POST',
+          body: {
+            content: `<@${userId}>`, // Tag the player
+            ...movementDisplay
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error sending admin move notification:', error);
+      // Don't throw - movement should still succeed even if notification fails
+    }
   }
   
   logger.info('MAP_ADMIN', 'Player moved by admin', { 
     guildId, 
     userId, 
-    from: previousLocation,
+    from: result.oldCoordinate,
     to: coordinate 
   });
   
-  return mapProgress;
+  // Return updated map progress for UI
+  const playerData = await loadPlayerData();
+  const safariDataForReturn = await loadSafariContent();
+  const player = playerData[guildId]?.players?.[userId];
+  const activeMapId = safariDataForReturn[guildId]?.maps?.active;
+  return player?.safari?.mapProgress?.[activeMapId];
 }
 
 /**
