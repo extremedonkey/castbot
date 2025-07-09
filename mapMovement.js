@@ -1,7 +1,7 @@
 import { PermissionFlagsBits } from 'discord.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { loadSafariContent } from './safariManager.js';
-import { hasEnoughPoints, usePoints, getTimeUntilRegeneration, initializeEntityPoints } from './pointsManager.js';
+import { hasEnoughPoints, usePoints, getTimeUntilRegeneration, initializeEntityPoints, getEntityPoints } from './pointsManager.js';
 
 /**
  * Map Movement System for Safari

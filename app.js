@@ -12307,7 +12307,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'entity_select',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        handler: async (context) => {
+        handler: async (context, req, res) => {
           const parts = context.customId.split('_');
           const entityType = parts.slice(2).join('_'); // Handle entity types with underscores
           const selectedValue = context.values[0];
