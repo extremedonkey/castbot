@@ -15609,7 +15609,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Add management buttons
         const managementButtons = [
           new ButtonBuilder()
-            .setCustomId(`season_new_question_${configId}`)
+            .setCustomId(`season_new_question_${configId}_0`)
             .setLabel('New Question')
             .setStyle(ButtonStyle.Primary)
             .setEmoji('➕'),
