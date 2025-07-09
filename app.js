@@ -16161,11 +16161,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log(`🛡️ Processing stamina set to ${amount} for user ${targetUserId}`);
         
-        if (isNaN(amount) || amount < 0 || amount > 10) {
+        // Allow 99 as special test value for unlimited stamina
+        if (isNaN(amount) || amount < 0 || (amount > 10 && amount !== 99)) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Invalid amount. Please enter a number between 0 and 10.',
+              content: '❌ Invalid amount. Please enter a number between 0 and 10 (or 99 for test mode).',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });

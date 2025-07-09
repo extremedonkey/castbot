@@ -398,13 +398,13 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
     actionRows = [row1, row2, row3];
     
     if (canMove) {
-        description = 'Choose a direction to move:';
+        const stamina = await getEntityPoints(guildId, entityId, 'stamina');
+        description = `Choose a direction to move:\n\n⚡ **Stamina:** ${stamina.current}/${stamina.max}`;
     } else {
+        const stamina = await getEntityPoints(guildId, entityId, 'stamina');
         const timeUntil = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
-        description = `*You need to rest! You can move again in ${timeUntil}*`;
+        description = `*You're too tired to move! Rest for ${timeUntil} before moving again.*\n\n⚡ **Stamina:** ${stamina.current}/${stamina.max}`;
     }
-    
-    description += '\n\n*You can move once every 12 hours*';
     
     // For interaction responses, we can't use Container at top level
     // Discord only allows Action Rows (type 1) at the top level for interactions

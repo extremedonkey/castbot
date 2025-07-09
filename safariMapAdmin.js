@@ -390,8 +390,16 @@ export async function setPlayerStamina(guildId, userId, amount) {
   }
   
   const stamina = player.safari.points.stamina;
-  // Ensure amount is within valid range (0 to maximum)
-  stamina.current = Math.max(0, Math.min(amount, stamina.maximum));
+  
+  // Special test mode: 99 sets stamina to a very high value for unlimited testing
+  if (amount === 99) {
+    stamina.current = 999;
+    stamina.maximum = 999;
+  } else {
+    // Ensure amount is within valid range (0 to maximum)
+    stamina.current = Math.max(0, Math.min(amount, stamina.maximum));
+  }
+  
   stamina.lastRegeneration = new Date().toISOString();
   
   await savePlayerData(playerData);
@@ -482,7 +490,7 @@ export async function createStaminaModal(userId) {
   
   const staminaInput = new TextInputBuilder()
     .setCustomId('amount')
-    .setLabel('Stamina Amount (0-10)')
+    .setLabel('Stamina Amount (0-10, or 99 for test mode)')
     .setStyle(TextInputStyle.Short)
     .setPlaceholder('5')
     .setRequired(true)
