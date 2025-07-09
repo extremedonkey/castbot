@@ -8,6 +8,7 @@ import {
   InteractionResponseFlags 
 } from 'discord-interactions';
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
+import { setEntityPoints } from './pointsManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { getCustomTerms } from './safariManager.js';
 import { logger } from './logger.js';
@@ -382,27 +383,31 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
  * Set stamina for player
  */
 export async function setPlayerStamina(guildId, userId, amount) {
-  const playerData = await loadPlayerData();
-  
-  const player = playerData[guildId]?.players?.[userId];
-  if (!player?.safari?.points?.stamina) {
-    throw new Error('Player stamina not initialized');
-  }
-  
-  const stamina = player.safari.points.stamina;
+  // Use the new entity points system that the movement system uses
+  const entityId = `player_${userId}`;
   
   // Special test mode: 99 sets stamina to a very high value for unlimited testing
   if (amount === 99) {
-    stamina.current = 999;
-    stamina.maximum = 999;
+    await setEntityPoints(guildId, entityId, 'stamina', 999, 999);
   } else {
-    // Ensure amount is within valid range (0 to maximum)
-    stamina.current = Math.max(0, Math.min(amount, stamina.maximum));
+    // Set current stamina, keeping existing max
+    await setEntityPoints(guildId, entityId, 'stamina', amount);
   }
   
-  stamina.lastRegeneration = new Date().toISOString();
-  
-  await savePlayerData(playerData);
+  // Also update the old system for backwards compatibility
+  const playerData = await loadPlayerData();
+  const player = playerData[guildId]?.players?.[userId];
+  if (player?.safari?.points?.stamina) {
+    const stamina = player.safari.points.stamina;
+    if (amount === 99) {
+      stamina.current = 999;
+      stamina.maximum = 999;
+    } else {
+      stamina.current = Math.max(0, Math.min(amount, stamina.maximum));
+    }
+    stamina.lastRegeneration = new Date().toISOString();
+    await savePlayerData(playerData);
+  }
   
   logger.info('MAP_ADMIN', 'Stamina set for player', { 
     guildId, 
