@@ -1636,6 +1636,9 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
   };
 }
 
+// Keep track of processed interactions to prevent duplicates
+const processedInteractions = new Map();
+
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
     console.log("Got headers:", JSON.stringify(req.headers, null, 2));
     console.log("Got body:", req.body);
@@ -1648,6 +1651,22 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     
   // Interaction type and data
   const { type, id, data, guild_id } = req.body;
+  
+  // Check for duplicate interactions
+  if (id && processedInteractions.has(id)) {
+    console.log(`⚠️ Duplicate interaction detected: ${id}`);
+    return res.status(204).send(); // Return no content for duplicates
+  }
+  
+  // Store interaction ID with timestamp
+  if (id) {
+    processedInteractions.set(id, Date.now());
+    
+    // Clean up old entries after 5 minutes
+    setTimeout(() => {
+      processedInteractions.delete(id);
+    }, 5 * 60 * 1000);
+  }
 
   /**
    * Handle verification requests

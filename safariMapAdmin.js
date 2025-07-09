@@ -335,7 +335,7 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
             components: [
               {
                 type: 10, // Text Display
-                text: `📍 <@${userId}> You have been moved by the Production team to coordinate **${coordinate}**\n\nClick below to see your movement options.`
+                content: `📍 <@${userId}> You have been moved by the Production team to coordinate **${coordinate}**\n\nClick below to see your movement options.`
               },
               {
                 type: 1, // Action Row

@@ -245,7 +245,7 @@ async function postMovementNotification(guildId, userId, oldCoordinate, newCoord
                     components: [
                         {
                             type: 10, // Text Display
-                            text: `# <@${userId}> You have moved to <#${newChannelId}>\n\n📍 **${oldCoordinate}** → **${newCoordinate}**\n\nClick the channel link above to continue exploring!`
+                            content: `# <@${userId}> You have moved to <#${newChannelId}>\n\n📍 **${oldCoordinate}** → **${newCoordinate}**\n\nClick the channel link above to continue exploring!`
                         }
                     ]
                 }]
