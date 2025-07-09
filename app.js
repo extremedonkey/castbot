@@ -11140,7 +11140,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               },
               {
                 type: 10, // Text Display
-                content: `-# You can update this information from any channel at any time by typing \\`/menu\\``
+                content: `-# You can update this information from any channel at any time by typing \\\`/menu\\\``
               }
             ]
           };
@@ -11247,7 +11247,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               },
               {
                 type: 10, // Text Display
-                content: `-# You can update this information from any channel at any time by typing \\`/menu\\``
+                content: `-# You can update this information from any channel at any time by typing \\\`/menu\\\``
               }
             ]
           };
