@@ -12342,10 +12342,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               const descRow = new ActionRowBuilder().addComponents(seasonDescInput);
               seasonModal.addComponents(nameRow, descRow);
 
-              return {
+              // For modal responses, send directly via res instead of returning
+              return res.send({
                 type: InteractionResponseType.MODAL,
                 data: seasonModal.toJSON()
-              };
+              });
             } else {
               // Selected an existing season - show season management UI
               const configId = selectedValue;
@@ -12376,7 +12377,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Handle special actions for other entity types
           if (selectedValue === 'search_entities') {
             // Show search modal
-            return {
+            return res.send({
               type: InteractionResponseType.MODAL,
               data: {
                 title: `Search ${entityType}s`,
@@ -12394,7 +12395,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                   }]
                 }]
               }
-            };
+            });
           } else if (selectedValue === 'create_new') {
             // Show creation modal with Item Info format (name, emoji, description)
             const { createFieldGroupModal } = await import('./fieldEditors.js');
@@ -12405,14 +12406,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 // Update modal title and custom_id for creation
                 modal.data.title = `Create New ${entityType === 'safari_button' ? 'Button' : entityType.charAt(0).toUpperCase() + entityType.slice(1)}`;
                 modal.data.custom_id = `entity_create_modal_${entityType}_info`;
-                return modal;
+                return res.send(modal);
               }
             } catch (modalError) {
               console.error('Error creating field group modal:', modalError);
             }
             
             // Fallback to simple modal if field group modal fails
-            return {
+            return res.send({
               type: InteractionResponseType.MODAL,
               data: {
                 title: `Create New ${entityType === 'safari_button' ? 'Button' : entityType.charAt(0).toUpperCase() + entityType.slice(1)}`,
@@ -12430,7 +12431,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                   }]
                 }]
               }
-            };
+            });
           } else {
             // Regular entity selection - go straight to edit mode
             const uiResponse = await createEntityManagementUI({
@@ -12505,7 +12506,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'entity_field_group',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        handler: async (context) => {
+        handler: async (context, req, res) => {
           // Parse: entity_field_group_{entityType}_{entityId}_{fieldGroup}
           const withoutPrefix = context.customId.replace('entity_field_group_', '');
           const parts = withoutPrefix.split('_');
@@ -12517,8 +12518,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
           // For consumable property, show select menu instead of modal
           if (fieldGroup === 'properties' && entityType === 'item') {
+            const { loadEntity } = await import('./entityManager.js');
             const entity = await loadEntity(context.guildId, entityType, entityId);
             if (!entity) throw new Error('Entity not found');
+            
+            const { createEntityManagementUI } = await import('./entityManager.js');
+            const { createConsumableSelect } = await import('./fieldEditors.js');
             
             const uiResponse = await createEntityManagementUI({
               entityType: entityType,
@@ -12549,6 +12554,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           } else {
             // Open modal directly for field group editing
             try {
+              const { loadEntity } = await import('./entityManager.js');
+              const { createFieldGroupModal } = await import('./fieldEditors.js');
+              
               const entity = await loadEntity(context.guildId, entityType, entityId);
               if (!entity) {
                 console.error(`🚨 Entity not found: ${entityType} ${entityId} in guild ${context.guildId}`);
@@ -12564,7 +12572,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               }
               
               console.log(`✅ DEBUG: Modal created successfully`);
-              return modalResponse;
+              return res.send(modalResponse);
             } catch (error) {
               console.error(`🚨 Error in field group handler:`, error);
               throw error;
