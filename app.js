@@ -11083,6 +11083,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       try {
         const channelId = req.body.channel_id;
         const guildId = req.body.guild_id;
+        const messageId = req.body.message.id;
+        const userId = req.body.member.user.id;
         
         console.log(`❌ Application withdrawal requested for channel ${channelId}`);
         
@@ -11091,12 +11093,70 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const channel = await client.channels.fetch(channelId);
           let currentName = channel.name;
           
-          // Remove existing prefixes if they exist
-          currentName = currentName.replace(/^(📝|☑️)/, '');
+          // Remove ALL existing prefixes if they exist
+          currentName = currentName.replace(/^[📝☑️❌]+/, '');
           
           // Add withdrawal prefix
           await channel.setName(`❌${currentName}`);
           console.log(`📝 Updated channel name to: ❌${currentName}`);
+          
+          // Get application config to include production role
+          const playerData = await loadPlayerData();
+          const applications = playerData[guildId]?.applications || {};
+          const appData = Object.values(applications).find(app => app.channelId === channelId);
+          let config = null;
+          if (appData?.configId) {
+            config = await getApplicationConfig(guildId, appData.configId);
+          }
+          
+          // Update the original message with new button states
+          const welcomeContainer = {
+            type: 17, // Container
+            accent_color: 0x3498db, // Blue color (#3498db)
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 🚀 Get Started with Your Application\n\nWelcome <@${userId}>! This is your private application channel.\n\nOnly you and the ${config?.productionRole ? `production team (<@&${config.productionRole}>)` : 'admin team'} can see this channel.\n\nTo get your application started, please set up your basic information using the button below:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button below to get started!`
+              },
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: 'app_reapply',
+                    label: 'Re-apply',
+                    style: 1, // Primary
+                    emoji: { name: '🔄' }
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: 'app_withdraw',
+                    label: 'Withdraw your application',
+                    style: 2, // Secondary (grey)
+                    emoji: { name: '❌' },
+                    disabled: true // Disable since already withdrawn
+                  }
+                ]
+              },
+              {
+                type: 10, // Text Display
+                content: `-# You can update this information from any channel at any time by typing \\`/menu\\``
+              }
+            ]
+          };
+          
+          // Update the original message
+          await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [welcomeContainer]
+            })
+          });
           
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -11130,6 +11190,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       try {
         const channelId = req.body.channel_id;
         const guildId = req.body.guild_id;
+        const messageId = req.body.message.id;
+        const userId = req.body.member.user.id;
         
         console.log(`🔄 Application re-apply requested for channel ${channelId}`);
         
@@ -11138,14 +11200,70 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const channel = await client.channels.fetch(channelId);
           let currentName = channel.name;
           
-          // Remove withdrawal prefix if it exists
-          currentName = currentName.replace(/^❌/, '');
+          // Remove ALL existing prefixes if they exist
+          currentName = currentName.replace(/^[📝☑️❌]+/, '');
           
-          // Add document prefix if not already present
-          if (!currentName.startsWith('📝')) {
-            await channel.setName(`📝${currentName}`);
-            console.log(`📝 Updated channel name to: 📝${currentName}`);
+          // Add document prefix
+          await channel.setName(`📝${currentName}`);
+          console.log(`📝 Updated channel name to: 📝${currentName}`);
+          
+          // Get application config to include production role
+          const playerData = await loadPlayerData();
+          const applications = playerData[guildId]?.applications || {};
+          const appData = Object.values(applications).find(app => app.channelId === channelId);
+          let config = null;
+          if (appData?.configId) {
+            config = await getApplicationConfig(guildId, appData.configId);
           }
+          
+          // Update the original message with new button states
+          const welcomeContainer = {
+            type: 17, // Container
+            accent_color: 0x3498db, // Blue color (#3498db)
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 🚀 Get Started with Your Application\n\nWelcome <@${userId}>! This is your private application channel.\n\nOnly you and the ${config?.productionRole ? `production team (<@&${config.productionRole}>)` : 'admin team'} can see this channel.\n\nTo get your application started, please set up your basic information using the button below:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button below to get started!`
+              },
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: 'player_menu',
+                    label: 'Start your application',
+                    style: 1, // Primary
+                    emoji: { name: '🚀' }
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: 'app_withdraw',
+                    label: 'Withdraw your application',
+                    style: 2, // Secondary (grey)
+                    emoji: { name: '❌' },
+                    disabled: false // Enable since re-applied
+                  }
+                ]
+              },
+              {
+                type: 10, // Text Display
+                content: `-# You can update this information from any channel at any time by typing \\`/menu\\``
+              }
+            ]
+          };
+          
+          // Update the original message
+          await fetch(`https://discord.com/api/v10/channels/${channelId}/messages/${messageId}`, {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [welcomeContainer]
+            })
+          });
           
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
