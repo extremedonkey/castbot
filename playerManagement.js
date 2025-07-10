@@ -755,11 +755,15 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
             timezoneRoles.push({ role, offset: data.offset });
           }
         } catch (error) {
-          console.warn(`Could not fetch timezone role ${roleId}:`, error.message);
+          console.warn(`🚨 Skipping invalid timezone role ${roleId}:`, error.message);
+          // Role doesn't exist anymore - skip it
         }
       }
       
-      if (timezoneRoles.length === 0) return null;
+      if (timezoneRoles.length === 0) {
+        console.error('❌ No valid timezone roles found!');
+        return null;
+      }
       
       timezoneRoles.sort((a, b) => a.offset - b.offset);
       

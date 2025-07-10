@@ -10606,11 +10606,26 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             timezoneRoleIds.includes(role.id)
           );
           if (currentTimezoneRole) {
-            await targetMember.roles.remove(currentTimezoneRole.id);
+            try {
+              await targetMember.roles.remove(currentTimezoneRole.id);
+            } catch (error) {
+              console.warn(`🚨 Could not remove timezone role ${currentTimezoneRole.id}:`, error.message);
+            }
           }
           // Add new timezone
           if (selectedValues.length > 0) {
-            await targetMember.roles.add(selectedValues[0]);
+            try {
+              await targetMember.roles.add(selectedValues[0]);
+            } catch (error) {
+              console.error(`❌ Failed to add timezone role ${selectedValues[0]}:`, error.message);
+              return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                  content: '❌ Failed to update timezone. The selected role may no longer exist.',
+                  flags: InteractionResponseFlags.EPHEMERAL
+                }
+              });
+            }
           }
         } else if (actionType === 'age') {
           // Handle age selection
