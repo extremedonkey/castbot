@@ -3636,14 +3636,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 };
                 
                 console.log(`🔍 DEBUG: Posting arrival message to new channel ${targetChannelId}`);
-                const response = await DiscordRequest(`channels/${targetChannelId}/messages`, {
+                await DiscordRequest(`channels/${targetChannelId}/messages`, {
                   method: 'POST',
                   body: arrivalMessage
                 });
-                
-                // Store message ID for deletion later
-                const messageData = await response.json();
-                // We'll store this in a temporary cache or could add to player data
               }
               
               // Return ephemeral movement notification
