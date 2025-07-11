@@ -3646,13 +3646,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 // We'll store this in a temporary cache or could add to player data
               }
               
-              // Simple ephemeral acknowledgment - don't try to show movement interface
-              // This avoids "interaction failed" when permissions are removed
+              // Return ephemeral movement notification
+              const { createMovementNotification } = await import('./mapMovement.js');
+              const notification = createMovementNotification(
+                context.guildId, 
+                context.userId, 
+                result.oldCoordinate, 
+                result.newCoordinate, 
+                targetChannelId
+              );
+              
               console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
-              return {
-                content: `✅ ${result.message}`,
-                ephemeral: true
-              };
+              return notification;
             } else {
               console.log(`❌ FAILED: safari_move_${targetCoordinate} - ${result.message}`);
               return {

@@ -455,6 +455,8 @@ export async function setPlayerStamina(guildId, userId, amount) {
   // Also update the old system for backwards compatibility
   const playerData = await loadPlayerData();
   const player = playerData[guildId]?.players?.[userId];
+  let staminaResult = { current: amount, maximum: 10 };
+  
   if (player?.safari?.points?.stamina) {
     const stamina = player.safari.points.stamina;
     if (amount === 99) {
@@ -464,6 +466,7 @@ export async function setPlayerStamina(guildId, userId, amount) {
       stamina.current = Math.max(0, Math.min(amount, stamina.maximum));
     }
     stamina.lastRegeneration = new Date().toISOString();
+    staminaResult = stamina;
     await savePlayerData(playerData);
   }
   
@@ -471,10 +474,10 @@ export async function setPlayerStamina(guildId, userId, amount) {
     guildId, 
     userId, 
     amount,
-    newStamina: stamina.current 
+    newStamina: staminaResult.current 
   });
   
-  return stamina;
+  return staminaResult;
 }
 
 /**

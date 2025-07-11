@@ -201,15 +201,12 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
     // Update location first
     await setPlayerLocation(guildId, userId, newCoordinate);
     
-    // Grant permissions to new channel BEFORE posting notification
+    // Grant permissions to new channel BEFORE removing old
     if (client && oldCoordinate !== newCoordinate) {
         // First grant access to new channel
         await grantNewChannelPermissions(guildId, userId, newCoordinate, client);
         
-        // Then post "You have moved" message in current channel
-        await postMovementNotification(guildId, userId, oldCoordinate, newCoordinate, client);
-        
-        // Finally remove old channel permissions
+        // Then remove old channel permissions
         await removeOldChannelPermissions(guildId, userId, oldCoordinate, client);
     }
     
@@ -226,45 +223,12 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
     };
 }
 
-// Post movement notification in current channel before removing permissions
-async function postMovementNotification(guildId, userId, oldCoordinate, newCoordinate, client) {
-    try {
-        const { DiscordRequest } = await import('./utils.js');
-        const safariData = await loadSafariContent();
-        const activeMapId = safariData[guildId]?.maps?.active;
-        
-        if (!activeMapId) return;
-        
-        const mapData = safariData[guildId].maps[activeMapId];
-        const oldChannelId = mapData.coordinates[oldCoordinate]?.channelId;
-        const newChannelId = mapData.coordinates[newCoordinate]?.channelId;
-        
-        if (oldChannelId && newChannelId) {
-            // Create movement notification with channel link
-            const notificationMessage = {
-                flags: (1 << 15), // IS_COMPONENTS_V2
-                components: [{
-                    type: 17, // Container
-                    accent_color: 0x2ecc71, // Green for movement
-                    components: [
-                        {
-                            type: 10, // Text Display
-                            content: `# <@${userId}> You have moved to <#${newChannelId}>\n\n📍 **${oldCoordinate}** → **${newCoordinate}**\n\nClick the channel link above to continue exploring!`
-                        }
-                    ]
-                }]
-            };
-            
-            // Send notification to old channel (permissions already granted to new channel)
-            await DiscordRequest(`channels/${oldChannelId}/messages`, {
-                method: 'POST',
-                body: notificationMessage
-            });
-        }
-    } catch (error) {
-        console.error('Error posting movement notification:', error);
-        // Don't throw - movement should continue even if notification fails
-    }
+// Create movement notification for ephemeral response
+function createMovementNotification(guildId, userId, oldCoordinate, newCoordinate, newChannelId) {
+    return {
+        content: `✅ **You have moved to <#${newChannelId}>**\n\n📍 **${oldCoordinate}** → **${newCoordinate}**\n\nClick the channel link above to continue exploring!`,
+        ephemeral: true
+    };
 }
 
 // Grant permissions to new channel
