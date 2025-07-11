@@ -381,3 +381,86 @@ export async function updateLiveLoggingStatus(enabled) {
   await saveEnvironmentConfig(config);
   return config.liveDiscordLogging;
 }
+
+// Reaction mapping persistence functions
+export async function saveReactionMapping(guildId, messageId, roleMapping) {
+  const data = await loadPlayerData();
+  
+  // Initialize guild structure if needed
+  if (!data[guildId]) {
+    data[guildId] = {
+      players: {},
+      tribes: {},
+      timezones: {},
+      pronounRoleIDs: []
+    };
+  }
+  
+  // Initialize reaction mappings structure if it doesn't exist
+  if (!data[guildId].reactionMappings) {
+    data[guildId].reactionMappings = {};
+  }
+  
+  // Store the mapping with metadata
+  data[guildId].reactionMappings[messageId] = {
+    mapping: roleMapping,
+    createdAt: Date.now(),
+    lastAccessed: Date.now()
+  };
+  
+  await savePlayerData(data);
+  console.log(`💾 Saved reaction mapping for message ${messageId} in guild ${guildId}`);
+}
+
+export async function getReactionMapping(guildId, messageId) {
+  const data = await loadPlayerData();
+  if (!data[guildId] || !data[guildId].reactionMappings || !data[guildId].reactionMappings[messageId]) {
+    return null;
+  }
+  
+  // Update last accessed time
+  data[guildId].reactionMappings[messageId].lastAccessed = Date.now();
+  await savePlayerData(data);
+  
+  return data[guildId].reactionMappings[messageId].mapping;
+}
+
+export async function deleteReactionMapping(guildId, messageId) {
+  const data = await loadPlayerData();
+  if (data[guildId] && data[guildId].reactionMappings && data[guildId].reactionMappings[messageId]) {
+    delete data[guildId].reactionMappings[messageId];
+    await savePlayerData(data);
+    console.log(`🗑️ Deleted reaction mapping for message ${messageId} in guild ${guildId}`);
+  }
+}
+
+export async function loadAllReactionMappings(guildId) {
+  const data = await loadPlayerData();
+  if (!data[guildId] || !data[guildId].reactionMappings) {
+    return {};
+  }
+  return data[guildId].reactionMappings;
+}
+
+// Clean up old reaction mappings (older than 30 days)
+export async function cleanupOldReactionMappings(guildId) {
+  const data = await loadPlayerData();
+  if (!data[guildId] || !data[guildId].reactionMappings) return 0;
+  
+  const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+  let cleanedCount = 0;
+  
+  for (const [messageId, mappingData] of Object.entries(data[guildId].reactionMappings)) {
+    if (mappingData.createdAt < thirtyDaysAgo) {
+      delete data[guildId].reactionMappings[messageId];
+      cleanedCount++;
+    }
+  }
+  
+  if (cleanedCount > 0) {
+    await savePlayerData(data);
+    console.log(`🧹 Cleaned up ${cleanedCount} old reaction mappings in guild ${guildId}`);
+  }
+  
+  return cleanedCount;
+}

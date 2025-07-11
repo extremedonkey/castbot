@@ -43,7 +43,12 @@ import {
   getGuildTimezones, // Add this import
   getTimezoneOffset, // Add this import
   loadEnvironmentConfig,
-  updateLiveLoggingStatus
+  updateLiveLoggingStatus,
+  saveReactionMapping,
+  getReactionMapping,
+  deleteReactionMapping,
+  loadAllReactionMappings,
+  cleanupOldReactionMappings
 } from './storage.js';
 import {
   createApplicationButtonModal,
@@ -1431,10 +1436,42 @@ client.once('ready', async () => {
   // Set Discord client reference for analytics logging
   setDiscordClient(client);
   
-  // Update all existing servers
+  // Initialize reaction mappings from persistent storage
+  console.log('📥 Loading reaction mappings from persistent storage...');
+  client.roleReactions = new Map();
+  let totalMappingsLoaded = 0;
+  
   for (const guild of client.guilds.cache.values()) {
     await ensureServerData(guild);
+    
+    // Load reaction mappings for this guild
+    try {
+      const mappings = await loadAllReactionMappings(guild.id);
+      let guildMappingsCount = 0;
+      
+      for (const [messageId, mappingData] of Object.entries(mappings)) {
+        if (mappingData && mappingData.mapping) {
+          client.roleReactions.set(messageId, mappingData.mapping);
+          guildMappingsCount++;
+        }
+      }
+      
+      if (guildMappingsCount > 0) {
+        console.log(`  ✅ Loaded ${guildMappingsCount} reaction mappings for guild ${guild.name}`);
+        totalMappingsLoaded += guildMappingsCount;
+      }
+      
+      // Clean up old mappings while we're at it
+      const cleanedCount = await cleanupOldReactionMappings(guild.id);
+      if (cleanedCount > 0) {
+        console.log(`  🧹 Cleaned ${cleanedCount} old reaction mappings for guild ${guild.name}`);
+      }
+    } catch (error) {
+      console.error(`  ❌ Error loading reaction mappings for guild ${guild.name}:`, error);
+    }
   }
+  
+  console.log(`📥 Total reaction mappings loaded: ${totalMappingsLoaded}`);
 });
 
 client.on('guildCreate', async (guild) => {
@@ -10118,16 +10155,27 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
 
-        // Get the message ID from the interaction response
-        // Since this is the initial response, we need to fetch the message
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for message to be created
+        // Get the webhook message to add reactions
+        // Use interaction webhook to reliably get the message we just sent
+        const webhookUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`;
         
-        const channel = await client.channels.fetch(req.body.channel_id);
-        const messages = await channel.messages.fetch({ limit: 1 });
-        const messageId = messages.first()?.id;
-
-        if (!messageId) {
-          console.error('Failed to get message ID from interaction response');
+        // Wait a moment for the message to be fully processed
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        let messageId;
+        try {
+          const webhookResponse = await fetch(webhookUrl, {
+            headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+          });
+          const webhookData = await webhookResponse.json();
+          messageId = webhookData.id;
+          
+          if (!messageId) {
+            console.error('Failed to get message ID from webhook response');
+            return;
+          }
+        } catch (error) {
+          console.error('Failed to fetch webhook message:', error);
           return;
         }
 
@@ -10150,10 +10198,15 @@ Your server is now ready for Tycoons gameplay!`;
           }
         }
 
-        // Store role-emoji mappings in memory for reaction handler with timezone metadata
-        if (!client.roleReactions) client.roleReactions = new Map();
+        // Store role-emoji mappings persistently
         const roleMapping = Object.fromEntries(sortedRoles.map((role, i) => [REACTION_EMOJIS[i], role.id]));
         roleMapping.isTimezone = true;  // Mark this as a timezone role mapping
+        
+        // Save to persistent storage
+        await saveReactionMapping(guildId, messageId, roleMapping);
+        
+        // Also update in-memory cache for immediate use
+        if (!client.roleReactions) client.roleReactions = new Map();
         client.roleReactions.set(messageId, roleMapping);
 
       } catch (error) {
@@ -10175,6 +10228,7 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         const channelId = req.body.channel_id;
         const token = req.body.token;
+        const applicationId = req.body.application_id;
         
         // Load guild data for the enhanced function
         const playerData = await loadPlayerData();
@@ -10186,7 +10240,36 @@ Your server is now ready for Tycoons gameplay!`;
         // Call the enhanced function that includes heart emojis
         const response = await createPronounReactionMessage(guildData, channelId, token, client);
         
-        return res.send(response);
+        // Send the response first
+        res.send(response);
+        
+        // Handle reactions and persistent storage after sending response
+        if (response.type === InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE) {
+          setTimeout(async () => {
+            try {
+              // Get the message ID using webhook
+              const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
+              const webhookResponse = await fetch(webhookUrl, {
+                headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+              });
+              const webhookData = await webhookResponse.json();
+              const messageId = webhookData.id;
+              
+              if (messageId && client.roleReactions && client.roleReactions.has(messageId)) {
+                // Get the mapping that was set by createPronounReactionMessage
+                const roleMapping = client.roleReactions.get(messageId);
+                
+                // Save to persistent storage
+                await saveReactionMapping(guildId, messageId, roleMapping);
+                console.log(`💾 Persisted pronoun reaction mapping for message ${messageId}`);
+              }
+            } catch (error) {
+              console.error('Error persisting pronoun reaction mapping:', error);
+            }
+          }, 1000); // Give time for the message to be created and reactions added
+        }
+        
+        return;
 
       } catch (error) {
         console.error('Error in prod_pronoun_react:', error);
@@ -17530,9 +17613,21 @@ client.on('messageReactionAdd', async (reaction, user) => {
       }
     }
 
-    if (!client.roleReactions?.has(reaction.message.id)) return;
+    // Check in-memory cache first, then persistent storage
+    let roleMapping = client.roleReactions?.get(reaction.message.id);
+    
+    if (!roleMapping) {
+      // Try to load from persistent storage
+      const guildId = reaction.message.guild.id;
+      roleMapping = await getReactionMapping(guildId, reaction.message.id);
+      
+      if (!roleMapping) return; // No mapping found
+      
+      // Cache it for future use
+      if (!client.roleReactions) client.roleReactions = new Map();
+      client.roleReactions.set(reaction.message.id, roleMapping);
+    }
 
-    const roleMapping = client.roleReactions.get(reaction.message.id);
     const roleId = roleMapping[reaction.emoji.name];
     if (!roleId) return;
 
@@ -17565,7 +17660,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
     try {
       // Check if this is a timezone role - if so, remove other timezone roles first
-      const roleMapping = client.roleReactions.get(reaction.message.id);
+      // roleMapping is already retrieved above
       const isTimezoneRole = roleMapping.isTimezone;
       
       if (isTimezoneRole) {
@@ -17609,9 +17704,21 @@ client.on('messageReactionRemove', async (reaction, user) => {
       }
     }
 
-    if (!client.roleReactions?.has(reaction.message.id)) return;
+    // Check in-memory cache first, then persistent storage
+    let roleMapping = client.roleReactions?.get(reaction.message.id);
+    
+    if (!roleMapping) {
+      // Try to load from persistent storage
+      const guildId = reaction.message.guild.id;
+      roleMapping = await getReactionMapping(guildId, reaction.message.id);
+      
+      if (!roleMapping) return; // No mapping found
+      
+      // Cache it for future use
+      if (!client.roleReactions) client.roleReactions = new Map();
+      client.roleReactions.set(reaction.message.id, roleMapping);
+    }
 
-    const roleMapping = client.roleReactions.get(reaction.message.id);
     const roleId = roleMapping[reaction.emoji.name];
     if (!roleId) return;
 
@@ -17633,6 +17740,29 @@ client.on('messageReactionRemove', async (reaction, user) => {
     }
   } catch (error) {
     console.error('Error in messageReactionRemove:', error);
+  }
+});
+
+// Clean up reaction mappings when messages are deleted
+client.on('messageDelete', async (message) => {
+  try {
+    // Only process if we have a guild (not DM)
+    if (!message.guild) return;
+    
+    // Check if this message had reaction mappings
+    const hasMapping = client.roleReactions?.has(message.id);
+    
+    if (hasMapping) {
+      // Remove from in-memory cache
+      client.roleReactions.delete(message.id);
+      
+      // Remove from persistent storage
+      await deleteReactionMapping(message.guild.id, message.id);
+      
+      console.log(`🗑️ Cleaned up reaction mapping for deleted message ${message.id} in guild ${message.guild.name}`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up reaction mapping on message delete:', error);
   }
 });
 

@@ -4,7 +4,8 @@ import {
     savePlayerData, 
     updateGuildPronouns, 
     getGuildPronouns,
-    getGuildTimezones
+    getGuildTimezones,
+    saveReactionMapping
 } from './storage.js';
 import { 
     InteractionResponseType,
