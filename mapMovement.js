@@ -424,13 +424,13 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
             // Location header
             {
                 type: 10, // Text Display
-                text: `## 🗺️ Current Location: ${coordinate}`
+                content: `## 🗺️ Current Location: ${coordinate}`
             },
             
             // Movement description
             {
                 type: 10, // Text Display
-                text: description
+                content: description
             },
             
             // Add separator before movement buttons

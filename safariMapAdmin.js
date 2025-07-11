@@ -310,7 +310,7 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
             components: [
               {
                 type: 10, // Text Display
-                text: `🎉 **Welcome to the Safari Map!**\n\n<@${userId}> has been initialized at coordinate **${coordinate}**.\n\nYou have been granted **10 stamina** to start exploring!`
+                content: `🎉 **Welcome to the Safari Map!**\n\n<@${userId}> has been initialized at coordinate **${coordinate}**.\n\nYou have been granted **10 stamina** to start exploring!`
               },
               { type: 14 }, // Separator
               // Include the movement display components (without the container wrapper)
@@ -387,7 +387,7 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
             components: [
               {
                 type: 10, // Text Display
-                text: `📍 **Admin Move**\n\n<@${userId}> You have been moved by the Production team to coordinate **${coordinate}**.`
+                content: `📍 **Admin Move**\n\n<@${userId}> You have been moved by the Production team to coordinate **${coordinate}**.`
               },
               { type: 14 }, // Separator
               // Include the movement display components (without the container wrapper)
