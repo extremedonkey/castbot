@@ -3679,11 +3679,25 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 });
               }
               
-              // Update the ephemeral message to show movement completed
+              // Get the original movement display but with disabled buttons
+              const { getMovementDisplay } = await import('./mapMovement.js');
+              const disabledDisplay = await getMovementDisplay(context.guildId, context.userId, result.oldCoordinate, true);
+              
+              // Disable all buttons in the display
+              disabledDisplay.components.forEach(row => {
+                if (row.components) {
+                  row.components.forEach(button => {
+                    if (button.type === 2) { // Button type
+                      button.disabled = true;
+                    }
+                  });
+                }
+              });
+              
               console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
               return {
-                content: `✅ **You have moved to <#${targetChannelId}>**\n\n📍 **${result.oldCoordinate}** → **${result.newCoordinate}**\n\nClick the channel link above to continue exploring!`,
-                components: [], // Remove all buttons
+                content: `✅ **You have moved to <#${targetChannelId}>**\n\n📍 **${result.oldCoordinate}** → **${result.newCoordinate}**\n\n~~Choose a direction to move:~~\n\n*You have already moved from this location.*`,
+                components: disabledDisplay.components, // Show disabled buttons
                 ephemeral: true
               };
             } else {
