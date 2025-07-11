@@ -3609,9 +3609,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const targetCoordinate = custom_id.replace('safari_move_', '');
       return ButtonHandlerFactory.create({
         id: `safari_move_${targetCoordinate}`,
-        deferred: true, // REQUIRED: Permission changes + channel updates take time
-        ephemeral: true,
-        // Note: Cannot update original Navigate message due to Discord interaction chains
+        updateMessage: true, // Update the message containing the movement buttons
         handler: async (context) => {
           console.log(`🗺️ START: safari_move_${targetCoordinate} - user ${context.userId}`);
           
@@ -3681,12 +3679,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 });
               }
               
-              // Get the original movement display but with disabled buttons
+              // Get the original movement display to update it
               const { getMovementDisplay } = await import('./mapMovement.js');
-              const disabledDisplay = await getMovementDisplay(context.guildId, context.userId, result.oldCoordinate, true);
+              const updatedDisplay = await getMovementDisplay(context.guildId, context.userId, result.oldCoordinate, true);
               
               // Disable all buttons in the display
-              disabledDisplay.components.forEach(row => {
+              updatedDisplay.components.forEach(row => {
                 if (row.components) {
                   row.components.forEach(button => {
                     if (button.type === 2) { // Button type
@@ -3697,10 +3695,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               });
               
               console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
+              
+              // Update the original message with disabled buttons and moved status
+              // Must maintain Components V2 format for update
               return {
-                content: `✅ **You have moved to <#${targetChannelId}>**\n\n📍 **${result.oldCoordinate}** → **${result.newCoordinate}**\n\nHead to the new channel to continue exploring!\n\n*Note: You can dismiss this message and the previous navigation panel.*`,
-                components: [], // No buttons needed
-                ephemeral: true
+                flags: (1 << 15), // IS_COMPONENTS_V2 required for updates
+                components: [{
+                  type: 17, // Container
+                  accent_color: 0x2ecc71, // Green for movement
+                  components: [
+                    {
+                      type: 10, // Text Display
+                      content: `✅ **You have moved to <#${targetChannelId}>**\n\n📍 **Movement completed:** ${result.oldCoordinate} → ${result.newCoordinate}\n\n~~Choose a direction to move:~~\n\n⚡ **Stamina:** Used`
+                    },
+                    { type: 14 }, // Separator
+                    ...updatedDisplay.components // Disabled movement buttons
+                  ]
+                }]
               };
             } else {
               console.log(`❌ FAILED: safari_move_${targetCoordinate} - ${result.message}`);
