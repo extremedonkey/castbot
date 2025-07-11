@@ -10254,36 +10254,8 @@ Your server is now ready for Tycoons gameplay!`;
         // Call the enhanced function that includes heart emojis
         const response = await createPronounReactionMessage(guildData, channelId, token, client);
         
-        // Send the response first
-        res.send(response);
-        
-        // Handle reactions and persistent storage after sending response
-        if (response.type === InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE) {
-          setTimeout(async () => {
-            try {
-              // Get the message ID using webhook
-              const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
-              const webhookResponse = await fetch(webhookUrl, {
-                headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
-              });
-              const webhookData = await webhookResponse.json();
-              const messageId = webhookData.id;
-              
-              if (messageId && client.roleReactions && client.roleReactions.has(messageId)) {
-                // Get the mapping that was set by createPronounReactionMessage
-                const roleMapping = client.roleReactions.get(messageId);
-                
-                // Save to persistent storage
-                await saveReactionMapping(guildId, messageId, roleMapping);
-                console.log(`💾 Persisted pronoun reaction mapping for message ${messageId}`);
-              }
-            } catch (error) {
-              console.error('Error persisting pronoun reaction mapping:', error);
-            }
-          }, 1000); // Give time for the message to be created and reactions added
-        }
-        
-        return;
+        // Send the response
+        return res.send(response);
 
       } catch (error) {
         console.error('Error in prod_pronoun_react:', error);

@@ -974,6 +974,12 @@ async function createTimezoneReactionMessage(guildData, channelId, token, client
                 roleMapping.isTimezone = true; // Mark as timezone for handler
                 client.roleReactions.set(message.id, roleMapping);
                 
+                // Save to persistent storage
+                if (guildData.guildId) {
+                    await saveReactionMapping(guildData.guildId, message.id, roleMapping);
+                    console.log(`💾 Persisted timezone reaction mapping for message ${message.id}`);
+                }
+                
                 console.log('✅ DEBUG: Timezone reaction message setup complete');
                 
             } catch (error) {
@@ -1165,6 +1171,12 @@ async function createPronounReactionMessage(guildData, channelId, token, client)
                 const roleMapping = Object.fromEntries(roleObjects.map(role => [role.reactionEmoji, role.id]));
                 roleMapping.isPronoun = true; // Mark as pronoun for handler
                 client.roleReactions.set(message.id, roleMapping);
+                
+                // Save to persistent storage
+                if (guildData.guildId) {
+                    await saveReactionMapping(guildData.guildId, message.id, roleMapping);
+                    console.log(`💾 Persisted pronoun reaction mapping for message ${message.id}`);
+                }
                 
                 console.log('✅ DEBUG: Pronoun reaction message setup complete with heart emojis');
                 
