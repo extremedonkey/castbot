@@ -3611,6 +3611,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         id: `safari_move_${targetCoordinate}`,
         deferred: true, // REQUIRED: Permission changes + channel updates take time
         ephemeral: true,
+        updateMessage: true, // Update the original message instead of creating new one
         handler: async (context) => {
           console.log(`🗺️ START: safari_move_${targetCoordinate} - user ${context.userId}`);
           
