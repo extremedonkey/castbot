@@ -27,7 +27,8 @@ import {
   RoleSelectMenuBuilder,
   ChannelSelectMenuBuilder,
   ComponentType,
-  ChannelType
+  ChannelType,
+  Partials
 } from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';  // Add DiscordRequest to imports
 import { 
@@ -1187,7 +1188,7 @@ const client = new Client({
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent
   ],
-  partials: ['MESSAGE', 'CHANNEL', 'REACTION']
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction]
 });
 
 // ============================================================================
@@ -17587,6 +17588,8 @@ async function generateEmojisForRole(guild, role) {
 client.on('messageReactionAdd', async (reaction, user) => {
   try {
     if (user.bot) return;
+    
+    console.log(`🔍 DEBUG: Reaction added - Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag}`);
 
     // When a reaction is received, check if the structure is partial
     if (reaction.partial) {
