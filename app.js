@@ -3606,12 +3606,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 });
               }
               
-              // For the interaction response, always use interaction-safe format
-              const responseDisplay = await getMovementDisplay(context.guildId, context.userId, targetCoordinate, true);
-              
+              // Simple ephemeral acknowledgment - don't try to show movement interface
+              // This avoids "interaction failed" when permissions are removed
               console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
               return {
-                ...responseDisplay,
+                content: `✅ ${result.message}`,
                 ephemeral: true
               };
             } else {

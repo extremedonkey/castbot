@@ -198,16 +198,20 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
         }
     }
     
-    // BEFORE removing permissions, post "You have moved" message in current channel
-    if (client && oldCoordinate !== newCoordinate) {
-        await postMovementNotification(guildId, userId, oldCoordinate, newCoordinate, client);
-    }
-    
-    // Update location
+    // Update location first
     await setPlayerLocation(guildId, userId, newCoordinate);
     
-    // Update Discord permissions
-    await updateChannelPermissions(guildId, userId, oldCoordinate, newCoordinate, client);
+    // Grant permissions to new channel BEFORE posting notification
+    if (client && oldCoordinate !== newCoordinate) {
+        // First grant access to new channel
+        await grantNewChannelPermissions(guildId, userId, newCoordinate, client);
+        
+        // Then post "You have moved" message in current channel
+        await postMovementNotification(guildId, userId, oldCoordinate, newCoordinate, client);
+        
+        // Finally remove old channel permissions
+        await removeOldChannelPermissions(guildId, userId, oldCoordinate, client);
+    }
     
     const message = adminMove 
         ? `📍 You have been moved by the Production team to **${newCoordinate}**!`
@@ -251,18 +255,75 @@ async function postMovementNotification(guildId, userId, oldCoordinate, newCoord
                 }]
             };
             
-            // Send notification to old channel before permissions are removed
+            // Send notification to old channel (permissions already granted to new channel)
             await DiscordRequest(`channels/${oldChannelId}/messages`, {
                 method: 'POST',
                 body: notificationMessage
             });
-            
-            // Wait 2 seconds to ensure user sees the notification before losing access
-            await new Promise(resolve => setTimeout(resolve, 2000));
         }
     } catch (error) {
         console.error('Error posting movement notification:', error);
         // Don't throw - movement should continue even if notification fails
+    }
+}
+
+// Grant permissions to new channel
+async function grantNewChannelPermissions(guildId, userId, newCoordinate, client) {
+    try {
+        const guild = await client.guilds.fetch(guildId);
+        const safariData = await loadSafariContent();
+        const activeMap = safariData[guildId]?.maps?.active;
+        
+        if (!activeMap) {
+            console.error('No active map found for permission grant');
+            return;
+        }
+        
+        const mapData = safariData[guildId].maps[activeMap];
+        const member = await guild.members.fetch(userId);
+        
+        if (newCoordinate && mapData.coordinates[newCoordinate]?.channelId) {
+            const newChannel = await guild.channels.fetch(mapData.coordinates[newCoordinate].channelId);
+            if (newChannel) {
+                await newChannel.permissionOverwrites.edit(member, {
+                    [PermissionFlagsBits.ViewChannel]: true,
+                    [PermissionFlagsBits.SendMessages]: true
+                });
+                console.log(`🔓 Granted permissions for ${member.displayName} to ${newCoordinate} channel`);
+            }
+        }
+    } catch (error) {
+        console.error('Error granting new channel permissions:', error);
+    }
+}
+
+// Remove permissions from old channel
+async function removeOldChannelPermissions(guildId, userId, oldCoordinate, client) {
+    try {
+        const guild = await client.guilds.fetch(guildId);
+        const safariData = await loadSafariContent();
+        const activeMap = safariData[guildId]?.maps?.active;
+        
+        if (!activeMap) {
+            console.error('No active map found for permission removal');
+            return;
+        }
+        
+        const mapData = safariData[guildId].maps[activeMap];
+        const member = await guild.members.fetch(userId);
+        
+        if (oldCoordinate && mapData.coordinates[oldCoordinate]?.channelId) {
+            const oldChannel = await guild.channels.fetch(mapData.coordinates[oldCoordinate].channelId);
+            if (oldChannel) {
+                await oldChannel.permissionOverwrites.edit(member, {
+                    [PermissionFlagsBits.ViewChannel]: false,
+                    [PermissionFlagsBits.SendMessages]: false
+                });
+                console.log(`🚪 Removed permissions for ${member.displayName} from ${oldCoordinate} channel`);
+            }
+        }
+    } catch (error) {
+        console.error('Error removing old channel permissions:', error);
     }
 }
 
@@ -283,19 +344,7 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
         // Get Discord member object for permission operations
         const member = await guild.members.fetch(userId);
         
-        // Remove permissions from old channel
-        if (oldCoordinate && mapData.coordinates[oldCoordinate]?.channelId) {
-            const oldChannel = await guild.channels.fetch(mapData.coordinates[oldCoordinate].channelId);
-            if (oldChannel) {
-                await oldChannel.permissionOverwrites.edit(member, {
-                    [PermissionFlagsBits.ViewChannel]: false,
-                    [PermissionFlagsBits.SendMessages]: false
-                });
-                console.log(`🚪 Removed permissions for ${member.displayName} from ${oldCoordinate} channel`);
-            }
-        }
-        
-        // Add permissions to new channel
+        // FIRST: Add permissions to new channel (before removing old)
         if (newCoordinate && mapData.coordinates[newCoordinate]?.channelId) {
             const newChannel = await guild.channels.fetch(mapData.coordinates[newCoordinate].channelId);
             if (newChannel) {
@@ -304,6 +353,18 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
                     [PermissionFlagsBits.SendMessages]: true
                 });
                 console.log(`🔓 Granted permissions for ${member.displayName} to ${newCoordinate} channel`);
+            }
+        }
+        
+        // THEN: Remove permissions from old channel (after granting new)
+        if (oldCoordinate && mapData.coordinates[oldCoordinate]?.channelId) {
+            const oldChannel = await guild.channels.fetch(mapData.coordinates[oldCoordinate].channelId);
+            if (oldChannel) {
+                await oldChannel.permissionOverwrites.edit(member, {
+                    [PermissionFlagsBits.ViewChannel]: false,
+                    [PermissionFlagsBits.SendMessages]: false
+                });
+                console.log(`🚪 Removed permissions for ${member.displayName} from ${oldCoordinate} channel`);
             }
         }
     } catch (error) {
