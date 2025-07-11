@@ -3611,7 +3611,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         id: `safari_move_${targetCoordinate}`,
         deferred: true, // REQUIRED: Permission changes + channel updates take time
         ephemeral: true,
-        updateMessage: true, // Update the original message instead of creating new one
+        // Note: Cannot update original Navigate message due to Discord interaction chains
         handler: async (context) => {
           console.log(`🗺️ START: safari_move_${targetCoordinate} - user ${context.userId}`);
           
@@ -3698,8 +3698,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               
               console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
               return {
-                content: `✅ **You have moved to <#${targetChannelId}>**\n\n📍 **${result.oldCoordinate}** → **${result.newCoordinate}**\n\n~~Choose a direction to move:~~\n\n*You have already moved from this location.*`,
-                components: disabledDisplay.components, // Show disabled buttons
+                content: `✅ **You have moved to <#${targetChannelId}>**\n\n📍 **${result.oldCoordinate}** → **${result.newCoordinate}**\n\nHead to the new channel to continue exploring!\n\n*Note: You can dismiss this message and the previous navigation panel.*`,
+                components: [], // No buttons needed
                 ephemeral: true
               };
             } else {
