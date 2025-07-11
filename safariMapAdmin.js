@@ -287,8 +287,55 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
   
   // If client is provided, also initialize using the movement system for proper permission handling
   if (client) {
-    const { initializePlayerOnMap: initMovementSystem } = await import('./mapMovement.js');
+    const { initializePlayerOnMap: initMovementSystem, getMovementDisplay } = await import('./mapMovement.js');
+    const { DiscordRequest } = await import('./utils.js');
+    
     await initMovementSystem(guildId, userId, coordinate, client);
+    
+    // Post movement interface in the channel
+    try {
+      const mapData = safariData[guildId].maps[activeMapId];
+      const channelId = mapData.coordinates[coordinate]?.channelId;
+      
+      if (channelId) {
+        // Get movement display for channel message (not interaction response)
+        const movementDisplay = await getMovementDisplay(guildId, userId, coordinate, false);
+        
+        // Create welcome message with movement interface
+        const welcomeMessage = {
+          flags: (1 << 15), // IS_COMPONENTS_V2
+          components: [{
+            type: 17, // Container
+            accent_color: 0x5865f2, // Discord blurple
+            components: [
+              {
+                type: 10, // Text Display
+                text: `🎉 **Welcome to the Safari Map!**\n\n<@${userId}> has been initialized at coordinate **${coordinate}**.\n\nYou have been granted **10 stamina** to start exploring!`
+              },
+              { type: 14 }, // Separator
+              // Include the movement display components (without the container wrapper)
+              ...movementDisplay.components[0].components
+            ]
+          }]
+        };
+        
+        // Send the welcome message with movement options to the channel
+        await DiscordRequest(`channels/${channelId}/messages`, {
+          method: 'POST',
+          body: welcomeMessage
+        });
+        
+        logger.info('MAP_ADMIN', 'Posted movement interface for initialized player', {
+          guildId,
+          userId,
+          coordinate,
+          channelId
+        });
+      }
+    } catch (error) {
+      console.error('Error posting movement interface:', error);
+      // Don't throw - initialization should still succeed even if posting fails
+    }
   }
   
   logger.info('MAP_ADMIN', 'Player initialized on map', { 
@@ -327,7 +374,11 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
       const newChannelId = mapData.coordinates[coordinate]?.channelId;
       
       if (newChannelId) {
-        // Create a notification with a button to show movement options
+        // Get movement display for channel message
+        const { getMovementDisplay } = await import('./mapMovement.js');
+        const movementDisplay = await getMovementDisplay(guildId, userId, coordinate, false);
+        
+        // Create a notification with movement interface
         const notificationMessage = {
           flags: (1 << 15), // IS_COMPONENTS_V2
           components: [{
@@ -336,23 +387,16 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
             components: [
               {
                 type: 10, // Text Display
-                content: `📍 <@${userId}> You have been moved by the Production team to coordinate **${coordinate}**\n\nClick below to see your movement options.`
+                text: `📍 **Admin Move**\n\n<@${userId}> You have been moved by the Production team to coordinate **${coordinate}**.`
               },
-              {
-                type: 1, // Action Row
-                components: [{
-                  type: 2, // Button
-                  custom_id: `safari_show_movement_${userId}_${coordinate}`,
-                  label: 'Show Movement Options',
-                  style: 1, // Primary
-                  emoji: { name: '🗺️' }
-                }]
-              }
+              { type: 14 }, // Separator
+              // Include the movement display components (without the container wrapper)
+              ...movementDisplay.components[0].components
             ]
           }]
         };
         
-        // Send the notification to the channel
+        // Send the notification with movement options to the channel
         await DiscordRequest(`channels/${newChannelId}/messages`, {
           method: 'POST',
           body: notificationMessage

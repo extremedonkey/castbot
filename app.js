@@ -13233,8 +13233,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         handler: async (context) => {
           console.log(`🗺️ START: safari_map_init_player - user ${context.userId}`);
           
-          // Import movement functions
-          const { initializePlayerOnMap, getMovementDisplay } = await import('./mapMovement.js');
+          // Import functions  
+          const { initializePlayerOnMap } = await import('./safariMapAdmin.js');
           const { loadSafariContent } = await import('./safariManager.js');
           
           // Get active map
@@ -13248,29 +13248,31 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             };
           }
           
-          // Initialize player at A1
-          const startingCoordinate = 'A1';
-          const result = await initializePlayerOnMap(context.guildId, context.userId, startingCoordinate, context.client);
+          // Check if player is already initialized
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          const playerMapData = playerData[context.guildId]?.players?.[context.userId]?.safari?.mapProgress?.[activeMapId];
           
-          if (result.success) {
-            // Get movement display for the starting position (for interaction response)
-            const movementDisplay = await getMovementDisplay(context.guildId, context.userId, startingCoordinate, true);
-            
-            // Prepend welcome message
-            const welcomeMessage = `✅ Welcome to the map! You've been placed at ${startingCoordinate}.`;
-            movementDisplay.content = `${welcomeMessage}\n\n${movementDisplay.content}`;
-            
-            console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${startingCoordinate}`);
+          if (playerMapData) {
             return {
-              ...movementDisplay,
-              ephemeral: true
-            };
-          } else {
-            return {
-              content: result.message || '❌ Failed to initialize player on map.',
+              content: `❌ You're already on the map at coordinate **${playerMapData.currentLocation}**!\n\nUse the movement interface in that channel to continue exploring.`,
               ephemeral: true
             };
           }
+          
+          // Initialize player at A1 (this will also post movement interface)
+          const startingCoordinate = 'A1';
+          await initializePlayerOnMap(context.guildId, context.userId, startingCoordinate, context.client);
+          
+          // Get channel info for response
+          const mapData = safariData[context.guildId].maps[activeMapId];
+          const channelId = mapData.coordinates[startingCoordinate]?.channelId;
+          
+          console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${startingCoordinate}`);
+          return {
+            content: `✅ **Welcome to the Safari Map!**\n\nYou've been initialized at coordinate **${startingCoordinate}** with **10 stamina**.\n\nHead to <#${channelId}> to start exploring! Your movement options are waiting for you there.`,
+            ephemeral: true
+          };
         }
       })(req, res, client);
     // ==================== END MAP EXPLORER HANDLERS ====================
