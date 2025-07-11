@@ -3642,18 +3642,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 });
               }
               
-              // Return ephemeral movement notification
-              const { createMovementNotification } = await import('./mapMovement.js');
-              const notification = createMovementNotification(
-                context.guildId, 
-                context.userId, 
-                result.oldCoordinate, 
-                result.newCoordinate, 
-                targetChannelId
-              );
-              
+              // Update the ephemeral message to show movement completed
               console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
-              return notification;
+              return {
+                content: `✅ **You have moved to <#${targetChannelId}>**\n\n📍 **${result.oldCoordinate}** → **${result.newCoordinate}**\n\nClick the channel link above to continue exploring!`,
+                components: [], // Remove all buttons
+                ephemeral: true
+              };
             } else {
               console.log(`❌ FAILED: safari_move_${targetCoordinate} - ${result.message}`);
               return {
