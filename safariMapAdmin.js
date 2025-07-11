@@ -301,7 +301,7 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
         // Get movement display for channel message (not interaction response)
         const movementDisplay = await getMovementDisplay(guildId, userId, coordinate, false);
         
-        // Create welcome message with movement interface
+        // Create welcome message with Navigate button
         const welcomeMessage = {
           flags: (1 << 15), // IS_COMPONENTS_V2
           components: [{
@@ -312,9 +312,16 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
                 type: 10, // Text Display
                 content: `🎉 **Welcome to the Safari Map!**\n\n<@${userId}> has been initialized at coordinate **${coordinate}**.\n\nYou have been granted **10 stamina** to start exploring!`
               },
-              { type: 14 }, // Separator
-              // Include the movement display components (without the container wrapper)
-              ...movementDisplay.components[0].components
+              {
+                type: 1, // Action Row
+                components: [{
+                  type: 2, // Button
+                  custom_id: `safari_navigate_${userId}_${coordinate}`,
+                  label: 'Navigate',
+                  style: 1, // Primary
+                  emoji: { name: '🗺️' }
+                }]
+              }
             ]
           }]
         };
@@ -378,7 +385,7 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
         const { getMovementDisplay } = await import('./mapMovement.js');
         const movementDisplay = await getMovementDisplay(guildId, userId, coordinate, false);
         
-        // Create a notification with movement interface
+        // Create a notification with Navigate button
         const notificationMessage = {
           flags: (1 << 15), // IS_COMPONENTS_V2
           components: [{
@@ -389,9 +396,16 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
                 type: 10, // Text Display
                 content: `📍 **Admin Move**\n\n<@${userId}> You have been moved by the Production team to coordinate **${coordinate}**.`
               },
-              { type: 14 }, // Separator
-              // Include the movement display components (without the container wrapper)
-              ...movementDisplay.components[0].components
+              {
+                type: 1, // Action Row
+                components: [{
+                  type: 2, // Button
+                  custom_id: `safari_navigate_${userId}_${coordinate}`,
+                  label: 'Navigate',
+                  style: 1, // Primary
+                  emoji: { name: '🗺️' }
+                }]
+              }
             ]
           }]
         };

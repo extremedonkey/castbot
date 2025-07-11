@@ -219,6 +219,15 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari_movement'
   },
+  
+  // Safari Navigate (shows movement options and deletes itself)
+  'safari_navigate_*': {
+    label: 'Navigate',
+    description: 'Show navigation options for current location',
+    emoji: '🗺️',
+    style: 'Primary',
+    category: 'safari_movement'
+  },
 
   // Safari Map Admin
   'safari_map_admin': {

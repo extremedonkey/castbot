@@ -905,12 +905,26 @@ async function createSafariMenu(guildId, userId, member) {
   ];
   
   // Row 3: Map Explorer (new feature)
+  // Check if player is initialized on map for Navigate button
+  const { loadPlayerData } = await import('./storage.js');
+  const { loadSafariContent } = await import('./safariManager.js');
+  const playerData = await loadPlayerData();
+  const safariData = await loadSafariContent();
+  const activeMapId = safariData[guildId]?.maps?.active;
+  const playerMapData = playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId];
+  
   const safariButtonsRow3 = [
     new ButtonBuilder()
       .setCustomId('safari_map_explorer')
       .setLabel('Map Explorer')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🗺️'),
+    new ButtonBuilder()
+      .setCustomId(`safari_navigate_${userId}_${playerMapData?.currentLocation || 'none'}`)
+      .setLabel('Navigate')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🗺️')
+      .setDisabled(!playerMapData), // Disabled if not initialized
     new ButtonBuilder()
       .setCustomId('safari_map_admin')
       .setLabel('Map Admin')
@@ -3596,14 +3610,40 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               const sourceChannelId = context.channelId;
               
               if (targetChannelId && targetChannelId !== sourceChannelId) {
-                // Post to new channel with full Components V2 format
-                const movementDisplay = await getMovementDisplay(context.guildId, context.userId, targetCoordinate, false);
+                // Post arrival message with Navigate button
+                const arrivalMessage = {
+                  flags: (1 << 15), // IS_COMPONENTS_V2
+                  components: [{
+                    type: 17, // Container
+                    accent_color: 0x2ecc71, // Green for movement
+                    components: [
+                      {
+                        type: 10, // Text Display
+                        content: `<@${context.userId}> has arrived at **${targetCoordinate}**`
+                      },
+                      {
+                        type: 1, // Action Row
+                        components: [{
+                          type: 2, // Button
+                          custom_id: `safari_navigate_${context.userId}_${targetCoordinate}`,
+                          label: 'Navigate',
+                          style: 1, // Primary
+                          emoji: { name: '🗺️' }
+                        }]
+                      }
+                    ]
+                  }]
+                };
                 
-                console.log(`🔍 DEBUG: Posting movement interface to new channel ${targetChannelId}`);
-                await DiscordRequest(`channels/${targetChannelId}/messages`, {
+                console.log(`🔍 DEBUG: Posting arrival message to new channel ${targetChannelId}`);
+                const response = await DiscordRequest(`channels/${targetChannelId}/messages`, {
                   method: 'POST',
-                  body: movementDisplay
+                  body: arrivalMessage
                 });
+                
+                // Store message ID for deletion later
+                const messageData = await response.json();
+                // We'll store this in a temporary cache or could add to player data
               }
               
               // Simple ephemeral acknowledgment - don't try to show movement interface
@@ -3655,6 +3695,68 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Get and return movement display as ephemeral response
           const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate, true);
           
+          return {
+            ...movementDisplay,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    }
+    
+    // === NAVIGATE HANDLER (shows movement and deletes arrival message) ===
+    if (custom_id.startsWith('safari_navigate_')) {
+      const parts = custom_id.split('_');
+      const targetUserId = parts[2];
+      const coordinate = parts[3];
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`🗺️ START: safari_navigate - user ${context.userId}, coordinate ${coordinate}`);
+          
+          // Verify this button is for the correct user
+          if (context.userId !== targetUserId) {
+            return {
+              content: '❌ This navigation panel is for another player.',
+              ephemeral: true
+            };
+          }
+          
+          // Check if coordinate is 'none' (player not initialized)
+          if (coordinate === 'none') {
+            return {
+              content: '❌ You are not initialized on the map. Use the "Start Exploring" button in Map Explorer to begin!',
+              ephemeral: true
+            };
+          }
+          
+          // Import movement display function
+          const { getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
+          
+          // Verify player is at this location
+          const mapState = await getPlayerLocation(context.guildId, context.userId);
+          if (!mapState || mapState.currentCoordinate !== coordinate) {
+            return {
+              content: `❌ You are no longer at ${coordinate}. Your current location is ${mapState?.currentCoordinate || 'unknown'}.`,
+              ephemeral: true
+            };
+          }
+          
+          // Delete the arrival message
+          try {
+            await DiscordRequest(`channels/${context.channelId}/messages/${context.messageId}`, {
+              method: 'DELETE'
+            });
+            console.log(`🗑️ Deleted arrival message ${context.messageId}`);
+          } catch (error) {
+            console.error('Error deleting arrival message:', error);
+          }
+          
+          // Get and return movement display as ephemeral response
+          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate, true);
+          
+          console.log(`✅ SUCCESS: safari_navigate - displayed movement options`);
           return {
             ...movementDisplay,
             ephemeral: true

@@ -404,11 +404,26 @@ export async function createPlayerManagementUI(options) {
               .setStyle(ButtonStyle.Success)
               .setEmoji('🚶');
             
-            // Create inventory row with Start Exploring first, then inventory, then store buttons
-            const inventoryComponents = [startExploringButton, inventoryButton];
+            // Create Navigate button (check if player is initialized on map)
+            const { loadPlayerData } = await import('./storage.js');
+            const { loadSafariContent } = await import('./safariManager.js');
+            const playerData = await loadPlayerData();
+            const safariData = await loadSafariContent();
+            const activeMapId = safariData[guildId]?.maps?.active;
+            const playerMapData = playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId];
             
-            // Add store browse buttons (max 3 to stay within 5-button limit)
-            for (let i = 0; i < Math.min(storeBrowseButtons.length, 3); i++) {
+            const navigateButton = new ButtonBuilder()
+              .setCustomId(`safari_navigate_${userId}_${playerMapData?.currentLocation || 'none'}`)
+              .setLabel('Navigate')
+              .setStyle(ButtonStyle.Primary)
+              .setEmoji('🗺️')
+              .setDisabled(!playerMapData); // Disabled if not initialized
+            
+            // Create inventory row with Start Exploring first, Navigate, then inventory, then store buttons
+            const inventoryComponents = [startExploringButton, navigateButton, inventoryButton];
+            
+            // Add store browse buttons (max 2 to stay within 5-button limit due to Navigate)
+            for (let i = 0; i < Math.min(storeBrowseButtons.length, 2); i++) {
               const storeButton = storeBrowseButtons[i];
               inventoryComponents.push(new ButtonBuilder()
                 .setCustomId(storeButton.custom_id)
