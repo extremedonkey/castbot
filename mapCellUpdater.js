@@ -38,6 +38,20 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
     
     console.log(`🔍 Found fog map URL: ${fogMapUrl}`);
     
+    // If no fog map URL found, try to recreate from storage channel
+    if (!fogMapUrl) {
+      const guild = await client.guilds.fetch(guildId);
+      const storageChannel = guild.channels.cache.find(ch => ch.name === 'map-storage' && ch.type === 0);
+      if (storageChannel) {
+        const messages = await storageChannel.messages.fetch({ limit: 50 });
+        const fogMessage = messages.find(m => m.content.includes(`Fog map for ${coordinate}`));
+        if (fogMessage && fogMessage.attachments.size > 0) {
+          fogMapUrl = fogMessage.attachments.first().url;
+          console.log(`🔍 Recovered fog map URL from storage: ${fogMapUrl}`);
+        }
+      }
+    }
+    
     // Reconstruct the message with updated content
     const updatedComponents = await createAnchorMessageComponents(coordData, guildId, coordinate, fogMapUrl);
     
