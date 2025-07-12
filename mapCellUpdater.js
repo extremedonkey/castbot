@@ -33,7 +33,6 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
     const updatedComponents = await createAnchorMessageComponents(coordData, guildId, coordinate, fogMapUrl);
     
     await message.edit({
-      flags: (1 << 15), // IS_COMPONENTS_V2
       components: updatedComponents
     });
     
