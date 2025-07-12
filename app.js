@@ -3714,15 +3714,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               
               console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
               
-              // Simple ephemeral response showing movement completed
-              const { createMovementNotification } = await import('./mapMovement.js');
-              return createMovementNotification(
-                context.guildId,
-                context.userId,
-                result.oldCoordinate,
-                result.newCoordinate,
-                targetChannelId
-              );
+              // Return null to avoid sending any follow-up message since we've already updated the navigation message
+              return null;
             } else {
               console.log(`❌ FAILED: safari_move_${targetCoordinate} - ${result.message}`);
               return {
