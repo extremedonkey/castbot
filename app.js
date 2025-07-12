@@ -14078,9 +14078,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                   label: 'Tribe Emoji (Optional)',
                   style: 1, // Short
                   min_length: 0,
-                  max_length: 3,
+                  max_length: 4000,
                   required: false,
-                  placeholder: 'Shows a custom emoji in the tribe header'
+                  placeholder: 'Emoji or custom emoji: 🦅 or <:BlackEagles:1393529844779974687>'
                 }
               ]
             }
