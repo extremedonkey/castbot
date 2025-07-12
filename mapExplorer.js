@@ -101,16 +101,25 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
           name: `${coord.toLowerCase()}_fogmap.png` 
         });
         
-        // Send fog of war map and get URL
-        const fogMapMessage = await channel.send({
-          content: `🌫️ Fog of War Map for ${coord}`,
+        // Upload fog of war map to storage channel to get URL without redundant message in coordinate channel
+        let storageChannel = guild.channels.cache.find(ch => ch.name === 'map-storage' && ch.type === 0);
+        if (!storageChannel) {
+          storageChannel = await guild.channels.create({
+            name: 'map-storage',
+            type: 0,
+            topic: 'Storage for map images - do not delete',
+            permissionOverwrites: [{
+              id: guild.roles.everyone.id,
+              deny: ['ViewChannel', 'SendMessages']
+            }]
+          });
+        }
+        
+        const storageMessage = await storageChannel.send({
+          content: `Fog map for ${coord}`,
           files: [attachment]
         });
-        
-        // Get the attachment URL
-        const fogMapUrl = fogMapMessage.attachments.first()?.url;
-        
-        // Keep the message - don't delete it or the URL becomes invalid
+        const fogMapUrl = storageMessage.attachments.first()?.url;
         
         // Get coordinate data
         const coordData = safariData[guild.id]?.maps?.[activeMapId]?.coordinates?.[coord];
@@ -373,14 +382,7 @@ async function createMapGrid(guild, userId) {
         channels[coord] = channel.id;
         console.log(`Created channel #${coord.toLowerCase()} (${i + 1}/${coordinates.length})`);
         
-        // Add initial welcome message with location info
-        try {
-          await channel.send({
-            content: `📍 **Welcome to Location ${coord}!**\n\nThis area is unexplored. What mysteries might it hold?\n\n*Players with access can use movement buttons when they arrive here.*`
-          });
-        } catch (msgError) {
-          console.error(`Failed to send initial message to ${coord}:`, msgError);
-        }
+        // Skip initial welcome message - fog of war anchor message is more useful
         
         if ((i + 1) % 5 === 0 || i === coordinates.length - 1) {
           progressMessages.push(`📍 Progress: ${i + 1}/${coordinates.length} channels created`);

@@ -17352,6 +17352,18 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Update entity
         await updateEntityFields(guildId, entityType, entityId, fields);
         
+        // Special handling for map_cell - update anchor message
+        if (entityType === 'map_cell') {
+          try {
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            console.log(`📍 Map cell ${entityId} updating anchor message...`);
+            await updateAnchorMessage(guildId, entityId, client);
+            console.log(`✅ Anchor message updated for ${entityId}`);
+          } catch (error) {
+            console.error('Error updating anchor message:', error);
+          }
+        }
+        
         // Refresh UI
         const uiResponse = await createEntityManagementUI({
           entityType: entityType,
