@@ -12773,7 +12773,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 };
               }
               
-              // Use regular Discord.js components instead of Components V2 for select menus
+              // Use proper Components V2 pattern like safari_store_items_select
               const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
               
               const selectMenu = new StringSelectMenuBuilder()
@@ -12785,10 +12785,25 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 
               const selectRow = new ActionRowBuilder().addComponents(selectMenu);
               
+              // Create container components
+              const containerComponents = [
+                {
+                  type: 10, // Text Display
+                  content: `## 🏪 Select stores to add to ${entityId}\n\nSelect one or more stores to make available at this location.`
+                },
+                { type: 14 }, // Separator
+                selectRow.toJSON() // Convert to JSON
+              ];
+              
+              const container = {
+                type: 17, // Container
+                accent_color: 0x3498db,
+                components: containerComponents
+              };
+              
               return {
-                content: `## 🏪 Select stores to add to ${entityId}\n\nSelect one or more stores to make available at this location.`,
-                components: [selectRow.toJSON()],
-                ephemeral: true
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + ephemeral
+                components: [container]
               };
               
             } else if (fieldGroup === 'items') {
@@ -13416,8 +13431,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           await saveSafariContent(safariData);
           
           // Update anchor message
-          const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-          await updateMapCellAnchorMessage(context.guild, coord);
+          const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+          await updateAnchorMessage(context.guildId, coord, client);
           
           // Return to entity management UI
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
@@ -13622,7 +13637,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 {
                   type: 1, // Action Row
                   components: [{
-                    type: 6, // String Select
+                    type: 3, // String Select
                     custom_id: `map_item_drop_select_${coord}`,
                     placeholder: 'Select an item...',
                     options: itemOptions
@@ -13755,7 +13770,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 {
                   type: 1, // Action Row - Button style select
                   components: [{
-                    type: 6, // String Select
+                    type: 3, // String Select
                     custom_id: `map_drop_style_${coord}_${itemId}`,
                     placeholder: 'Select button style...',
                     options: [
@@ -13769,7 +13784,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 {
                   type: 1, // Action Row - Drop type select
                   components: [{
-                    type: 6, // String Select
+                    type: 3, // String Select
                     custom_id: `map_drop_type_${coord}_${itemId}`,
                     placeholder: 'How many are available?',
                     options: [
@@ -13906,8 +13921,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           // Update anchor message if needed
           if (drop.dropType === 'once_per_season') {
-            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-            await updateMapCellAnchorMessage(context.guild, coord);
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateAnchorMessage(context.guildId, coord, client);
           }
           
           console.log(`✅ SUCCESS: map_item_drop_player - gave ${drop.itemId} to ${context.userId}`);
@@ -13989,8 +14004,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           // Update anchor message if needed
           if (drop.dropType === 'once_per_season') {
-            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-            await updateMapCellAnchorMessage(context.guild, coord);
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateAnchorMessage(context.guildId, coord, client);
           }
           
           console.log(`✅ SUCCESS: map_currency_drop_player - gave ${drop.amount} currency to ${context.userId}`);
@@ -14031,8 +14046,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             await saveSafariContent(safariData);
             
             // Update anchor message
-            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-            await updateMapCellAnchorMessage(context.guild, coord);
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateAnchorMessage(context.guildId, coord, client);
           }
           
           // Refresh the configuration UI
@@ -14068,8 +14083,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             await saveSafariContent(safariData);
             
             // Update anchor message
-            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-            await updateMapCellAnchorMessage(context.guild, coord);
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateAnchorMessage(context.guildId, coord, client);
           }
           
           // Refresh the configuration UI
@@ -14187,8 +14202,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           await saveSafariContent(safariData);
           
           // Update anchor message
-          const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-          await updateMapCellAnchorMessage(context.guild, coord);
+          const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+          await updateAnchorMessage(context.guildId, coord, client);
           
           // Return to entity management UI
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
@@ -14230,8 +14245,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             await saveSafariContent(safariData);
             
             // Update anchor message
-            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-            await updateMapCellAnchorMessage(context.guild, coord);
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateAnchorMessage(context.guildId, coord, client);
           }
           
           // Return to entity management UI
@@ -14275,8 +14290,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             
             // Update anchor message if needed
             if (drop.dropType === 'once_per_season') {
-              const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-              await updateMapCellAnchorMessage(context.guild, coord);
+              const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+              await updateAnchorMessage(context.guildId, coord, client);
             }
           }
           
@@ -14308,8 +14323,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             await saveSafariContent(safariData);
             
             // Update anchor message
-            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-            await updateMapCellAnchorMessage(context.guild, coord);
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateAnchorMessage(context.guildId, coord, client);
           }
           
           // Refresh UI by re-showing currency config
@@ -14340,8 +14355,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             await saveSafariContent(safariData);
             
             // Update anchor message
-            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-            await updateMapCellAnchorMessage(context.guild, coord);
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateAnchorMessage(context.guildId, coord, client);
           }
           
           // Refresh UI
@@ -14385,8 +14400,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             await saveSafariContent(safariData);
             
             // Update anchor message
-            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-            await updateMapCellAnchorMessage(context.guild, coord);
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateAnchorMessage(context.guildId, coord, client);
           }
           
           // Return to entity management UI
@@ -14427,8 +14442,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             
             // Update anchor message if needed
             if (drop.dropType === 'once_per_season') {
-              const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-              await updateMapCellAnchorMessage(context.guild, coord);
+              const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+              await updateAnchorMessage(context.guildId, coord, client);
             }
           }
           
@@ -17522,8 +17537,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         await saveSafariContent(safariData);
         
         // Update anchor message
-        const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-        await updateMapCellAnchorMessage(client.guilds.cache.get(guildId), coord);
+        const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+        await updateAnchorMessage(guildId, coord, client);
         
         // Show currency drop configuration interface
         const dropIndex = 0; // Currency drops only have one per location
@@ -17674,8 +17689,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         await saveSafariContent(safariData);
         
         // Update anchor message
-        const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
-        await updateMapCellAnchorMessage(client.guilds.cache.get(guildId), coord);
+        const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+        await updateAnchorMessage(guildId, coord, client);
         
         // Return to item drop configuration
         const { createEntityManagementUI } = await import('./entityManagementUI.js');
