@@ -715,6 +715,18 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
       const pronounRoleIds = await getGuildPronouns(guildId);
       if (!pronounRoleIds || pronounRoleIds.length === 0) return null;
 
+      // Check if more than 25 pronoun roles exist
+      if (pronounRoleIds.length > 25) {
+        console.error(`❌ Too many pronoun roles (${pronounRoleIds.length}). Discord String Select limit is 25.`);
+        return {
+          type: 1, // ActionRow
+          components: [{
+            type: 10, // Text Display
+            content: `❌ **Error:** This server has ${pronounRoleIds.length} pronoun roles, but Discord only supports 25 in a select menu.\n\n**Please notify the production team to remove some pronoun roles to fix this issue.**`
+          }]
+        };
+      }
+
       // Get role objects and filter by configured pronoun roles
       const guild = await client.guilds.fetch(guildId);
       const pronounRoles = [];
@@ -758,6 +770,18 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
       const timezones = await getGuildTimezones(guildId);
       const timezoneEntries = Object.entries(timezones || {});
       if (timezoneEntries.length === 0) return null;
+
+      // Check if more than 25 timezone roles exist
+      if (timezoneEntries.length > 25) {
+        console.error(`❌ Too many timezone roles (${timezoneEntries.length}). Discord String Select limit is 25.`);
+        return {
+          type: 1, // ActionRow
+          components: [{
+            type: 10, // Text Display
+            content: `❌ **Error:** This server has ${timezoneEntries.length} timezone roles, but Discord only supports 25 in a select menu.\n\n**Please notify the production team to remove some timezone roles to fix this issue.**`
+          }]
+        };
+      }
 
       // Get role objects and sort by UTC offset
       const guild = await client.guilds.fetch(guildId);
