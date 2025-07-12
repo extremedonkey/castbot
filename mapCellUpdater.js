@@ -24,10 +24,19 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
     
     // Get the fog map URL from the existing message
     let fogMapUrl = null;
-    if (message.components?.[0]?.components?.[0]?.type === 12) {
-      // Media gallery component
-      fogMapUrl = message.components[0].components[0].items?.[0]?.media?.url;
+    
+    // Check all components for media gallery
+    for (const container of message.components || []) {
+      for (const component of container.components || []) {
+        if (component.type === 12) { // Media gallery
+          fogMapUrl = component.items?.[0]?.media?.url;
+          if (fogMapUrl) break;
+        }
+      }
+      if (fogMapUrl) break;
     }
+    
+    console.log(`🔍 Found fog map URL: ${fogMapUrl}`);
     
     // Reconstruct the message with updated content
     const updatedComponents = await createAnchorMessageComponents(coordData, guildId, coordinate, fogMapUrl);
