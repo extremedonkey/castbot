@@ -3609,7 +3609,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const targetCoordinate = custom_id.replace('safari_move_', '');
       return ButtonHandlerFactory.create({
         id: `safari_move_${targetCoordinate}`,
-        updateMessage: true, // Update the message containing the movement buttons
+        deferred: true, // Movement takes time with permissions
+        ephemeral: true,
         handler: async (context) => {
           console.log(`🗺️ START: safari_move_${targetCoordinate} - user ${context.userId}`);
           
@@ -3679,40 +3680,49 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 });
               }
               
-              // Get the original movement display to update it
-              const { getMovementDisplay } = await import('./mapMovement.js');
-              const updatedDisplay = await getMovementDisplay(context.guildId, context.userId, result.oldCoordinate, true);
-              
-              // Disable all buttons in the display
-              updatedDisplay.components.forEach(row => {
-                if (row.components) {
-                  row.components.forEach(button => {
-                    if (button.type === 2) { // Button type
-                      button.disabled = true;
+              // Try to edit the original navigation message to remove buttons
+              if (global.navigationInteractions) {
+                const navData = global.navigationInteractions.get(`${context.userId}_${result.oldCoordinate}`);
+                if (navData) {
+                  try {
+                    console.log(`🔍 Attempting to edit navigation message - appId: ${navData.appId}, token exists: ${!!navData.token}`);
+                    
+                    // Import DiscordRequest if not already imported
+                    const { DiscordRequest } = await import('./utils.js');
+                    
+                    // Use the stored app ID and token to edit the message
+                    const editResponse = await DiscordRequest(`webhooks/${navData.appId}/${navData.token}/messages/@original`, {
+                      method: 'PATCH',
+                      body: {
+                        content: `✅ **You have moved to <#${targetChannelId}>**\n\n📍 **${result.oldCoordinate}** → **${result.newCoordinate}**\n\nThis navigation panel is no longer active.`,
+                        components: [] // Remove all buttons
+                      }
+                    });
+                    
+                    console.log('✅ Successfully updated original navigation message');
+                    
+                    // Clean up the stored interaction
+                    global.navigationInteractions.delete(`${context.userId}_${result.oldCoordinate}`);
+                  } catch (error) {
+                    console.error('❌ Failed to update navigation message:', error.message);
+                    if (error.response) {
+                      console.error('Discord API response:', await error.response.text());
                     }
-                  });
+                  }
                 }
-              });
+              }
               
               console.log(`✅ SUCCESS: safari_move_${targetCoordinate} - player moved successfully`);
               
-              // Update the original message with disabled buttons and moved status
-              // Must maintain Components V2 format for update
-              return {
-                flags: (1 << 15), // IS_COMPONENTS_V2 required for updates
-                components: [{
-                  type: 17, // Container
-                  accent_color: 0x2ecc71, // Green for movement
-                  components: [
-                    {
-                      type: 10, // Text Display
-                      content: `✅ **You have moved to <#${targetChannelId}>**\n\n📍 **Movement completed:** ${result.oldCoordinate} → ${result.newCoordinate}\n\n~~Choose a direction to move:~~\n\n⚡ **Stamina:** Used`
-                    },
-                    { type: 14 }, // Separator
-                    ...updatedDisplay.components // Disabled movement buttons
-                  ]
-                }]
-              };
+              // Simple ephemeral response showing movement completed
+              const { createMovementNotification } = await import('./mapMovement.js');
+              return createMovementNotification(
+                context.guildId,
+                context.userId,
+                result.oldCoordinate,
+                result.newCoordinate,
+                targetChannelId
+              );
             } else {
               console.log(`❌ FAILED: safari_move_${targetCoordinate} - ${result.message}`);
               return {
@@ -3815,6 +3825,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           // Get and return movement display as ephemeral response
           const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate, true);
+          
+          // Store the interaction token for later editing
+          // We'll use a simple in-memory cache for this demo
+          if (!global.navigationInteractions) {
+            global.navigationInteractions = new Map();
+          }
+          
+          // Ensure we have the correct app ID
+          const appId = context.applicationId || req.body.application_id || process.env.APP_ID;
+          console.log(`🔍 Storing navigation interaction - userId: ${context.userId}, coordinate: ${coordinate}, appId: ${appId}`);
+          
+          global.navigationInteractions.set(`${context.userId}_${coordinate}`, {
+            token: context.token,
+            appId: appId
+          });
           
           console.log(`✅ SUCCESS: safari_navigate - displayed movement options`);
           return {
