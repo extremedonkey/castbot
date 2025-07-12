@@ -17317,9 +17317,18 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Parse: entity_modal_submit_{entityType}_{entityId}_{fieldGroup}
         const withoutPrefix = custom_id.replace('entity_modal_submit_', '');
         const parts = withoutPrefix.split('_');
-        const entityType = parts[0];
-        const fieldGroup = parts[parts.length - 1]; // Last part is always fieldGroup
-        const entityId = parts.slice(1, -1).join('_'); // Everything between is entityId
+        
+        // Handle special case for map_cell entityType
+        let entityType, entityId, fieldGroup;
+        if (parts[0] === 'map' && parts[1] === 'cell') {
+          entityType = 'map_cell';
+          fieldGroup = parts[parts.length - 1];
+          entityId = parts.slice(2, -1).join('_'); // Skip 'map_cell', take until fieldGroup
+        } else {
+          entityType = parts[0];
+          fieldGroup = parts[parts.length - 1];
+          entityId = parts.slice(1, -1).join('_');
+        }
         const guildId = req.body.guild_id;
         
         console.log(`📝 DEBUG: Modal submit - Type: ${entityType}, ID: ${entityId}, Group: ${fieldGroup}`);
