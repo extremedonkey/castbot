@@ -18,7 +18,8 @@ export async function exportSafariData(guildId) {
         const exportData = {
             stores: filterStoresForExport(guildData.stores || {}),
             items: filterItemsForExport(guildData.items || {}),
-            safariConfig: filterConfigForExport(guildData.safariConfig || {})
+            safariConfig: filterConfigForExport(guildData.safariConfig || {}),
+            maps: filterMapsForExport(guildData.maps || {})
         };
         
         // Use compact JSON format to save characters
@@ -58,6 +59,7 @@ export async function importSafariData(guildId, importJson) {
         const summary = {
             stores: { created: 0, updated: 0 },
             items: { created: 0, updated: 0 },
+            maps: { created: 0, updated: 0 },
             config: false
         };
         
@@ -115,6 +117,62 @@ export async function importSafariData(guildId, importJson) {
                         }
                     };
                     summary.items.created++;
+                }
+            }
+        }
+        
+        // Import maps with smart merge
+        if (importData.maps) {
+            if (!currentData[guildId].maps) {
+                currentData[guildId].maps = {};
+            }
+            
+            for (const [mapId, mapData] of Object.entries(importData.maps)) {
+                if (mapId === 'active') {
+                    // Only update active if no current active map
+                    if (!currentData[guildId].maps.active) {
+                        currentData[guildId].maps.active = mapData;
+                    }
+                    continue;
+                }
+                
+                if (currentData[guildId].maps[mapId]) {
+                    // Update existing map - merge coordinates
+                    const existingMap = currentData[guildId].maps[mapId];
+                    for (const [coord, coordData] of Object.entries(mapData.coordinates || {})) {
+                        if (existingMap.coordinates[coord]) {
+                            // Update existing coordinate - preserve runtime fields
+                            existingMap.coordinates[coord] = {
+                                ...existingMap.coordinates[coord],
+                                baseContent: coordData.baseContent,
+                                buttons: coordData.buttons,
+                                metadata: {
+                                    ...existingMap.coordinates[coord].metadata,
+                                    lastModified: Date.now()
+                                }
+                            };
+                        } else {
+                            // New coordinate
+                            existingMap.coordinates[coord] = {
+                                ...coordData,
+                                metadata: {
+                                    createdAt: Date.now(),
+                                    lastModified: Date.now()
+                                }
+                            };
+                        }
+                    }
+                    summary.maps.updated++;
+                } else {
+                    // Create new map
+                    currentData[guildId].maps[mapId] = {
+                        ...mapData,
+                        metadata: {
+                            createdAt: Date.now(),
+                            lastModified: Date.now()
+                        }
+                    };
+                    summary.maps.created++;
                 }
             }
         }
@@ -198,6 +256,43 @@ function filterItemsForExport(items) {
 }
 
 /**
+ * Filter maps for export (exclude runtime fields)
+ * @param {Object} maps - Map data
+ * @returns {Object} Filtered maps for export
+ */
+function filterMapsForExport(maps) {
+    const filtered = {};
+    
+    for (const [mapId, mapData] of Object.entries(maps)) {
+        if (mapId === 'active') {
+            // Preserve active map reference
+            filtered.active = mapData;
+            continue;
+        }
+        
+        filtered[mapId] = {
+            id: mapData.id,
+            name: mapData.name,
+            gridSize: mapData.gridSize,
+            coordinates: {}
+        };
+        
+        // Filter coordinates - exclude runtime fields
+        for (const [coord, coordData] of Object.entries(mapData.coordinates || {})) {
+            filtered[mapId].coordinates[coord] = {
+                baseContent: coordData.baseContent,
+                buttons: coordData.buttons || [],
+                cellType: coordData.cellType,
+                discovered: coordData.discovered
+                // Exclude: channelId, anchorMessageId, navigation (runtime fields)
+            };
+        }
+    }
+    
+    return filtered;
+}
+
+/**
  * Filter safari config for export (exclude runtime fields)
  * @param {Object} config - Safari config data
  * @returns {Object} Filtered config for export
@@ -229,7 +324,7 @@ function validateImportData(data) {
         throw new Error('Import data must be a valid JSON object');
     }
     
-    const validSections = ['stores', 'items', 'safariConfig'];
+    const validSections = ['stores', 'items', 'safariConfig', 'maps'];
     const hasValidSection = validSections.some(section => data[section]);
     
     if (!hasValidSection) {
@@ -247,6 +342,10 @@ function validateImportData(data) {
     
     if (data.safariConfig && typeof data.safariConfig !== 'object') {
         throw new Error('Safari config section must be an object');
+    }
+    
+    if (data.maps && typeof data.maps !== 'object') {
+        throw new Error('Maps section must be an object');
     }
 }
 
@@ -270,6 +369,13 @@ export function formatImportSummary(summary) {
         if (summary.items.created > 0) itemText.push(`${summary.items.created} created`);
         if (summary.items.updated > 0) itemText.push(`${summary.items.updated} updated`);
         parts.push(`📦 **Items:** ${itemText.join(', ')}`);
+    }
+    
+    if (summary.maps.created > 0 || summary.maps.updated > 0) {
+        const mapText = [];
+        if (summary.maps.created > 0) mapText.push(`${summary.maps.created} created`);
+        if (summary.maps.updated > 0) mapText.push(`${summary.maps.updated} updated`);
+        parts.push(`🗺️ **Maps:** ${mapText.join(', ')}`);
     }
     
     if (summary.config) {
