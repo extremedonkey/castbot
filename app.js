@@ -14058,6 +14058,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'map_drop_style',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           const parts = context.customId.replace('map_drop_style_', '').split('_');
           const coord = parts[0];
@@ -14093,6 +14094,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'map_drop_type',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           const parts = context.customId.replace('map_drop_type_', '').split('_');
           const coord = parts[0];
@@ -14338,6 +14340,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'map_currency_style',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           const coord = context.customId.replace('map_currency_style_', '');
           const selectedStyle = parseInt(context.values[0]);
@@ -14450,6 +14453,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'map_currency_type',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           const coord = context.customId.replace('map_currency_type_', '');
           const dropType = context.values[0];
