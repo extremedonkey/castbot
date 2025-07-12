@@ -14357,9 +14357,90 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             await updateAnchorMessage(context.guildId, coord, client);
           }
           
-          // Refresh UI by re-showing currency config
-          req.body.data.custom_id = `map_add_currency_drop_${coord}`;
-          return req.app._router.handle(req, res, next);
+          // Return updated currency configuration interface
+          const drop = coordData.currencyDrops[0];
+          return {
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `# Configure Currency Drop\n\n**Location:** ${coord}\n**Amount:** ${drop.amount}`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 10, // Text Display - Preview
+                  content: `**Button Preview:**\n${drop.buttonEmoji} ${drop.buttonText}\n\n**Current Setting:** ${drop.dropType === 'once_per_player' ? 'One per player' : 'One per entire season'}`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row - Button style select
+                  components: [{
+                    type: 3, // String Select (Components V2)
+                    custom_id: `map_currency_style_${coord}`,
+                    placeholder: 'Select button style...',
+                    options: [
+                      { label: 'Primary (Blue)', value: '1', default: drop.buttonStyle === 1 },
+                      { label: 'Secondary (Grey)', value: '2', default: drop.buttonStyle === 2 },
+                      { label: 'Success (Green)', value: '3', default: drop.buttonStyle === 3 },
+                      { label: 'Danger (Red)', value: '4', default: drop.buttonStyle === 4 }
+                    ]
+                  }]
+                },
+                {
+                  type: 1, // Action Row - Drop type select
+                  components: [{
+                    type: 3, // String Select (Components V2)
+                    custom_id: `map_currency_type_${coord}`,
+                    placeholder: 'How many are available?',
+                    options: [
+                      { 
+                        label: 'One per player', 
+                        value: 'once_per_player',
+                        description: 'Each player can collect once',
+                        default: drop.dropType === 'once_per_player'
+                      },
+                      { 
+                        label: 'One per entire season', 
+                        value: 'once_per_season',
+                        description: 'Only one player can collect',
+                        default: drop.dropType === 'once_per_season'
+                      }
+                    ]
+                  }]
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row - Actions
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: `map_currency_edit_${coord}`,
+                      label: 'Edit Amount/Text',
+                      style: 2, // Secondary
+                      emoji: { name: '✏️' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `map_currency_remove_${coord}`,
+                      label: 'Remove Currency',
+                      style: 4, // Danger
+                      emoji: { name: '🗑️' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `map_currency_reset_${coord}`,
+                      label: 'Reset Claims',
+                      style: 2, // Secondary
+                      emoji: { name: '🔃' }
+                    }
+                  ]
+                }
+              ]
+            }],
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            ephemeral: true
+          };
         }
       })(req, res, client);
       
