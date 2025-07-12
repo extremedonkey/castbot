@@ -12733,9 +12733,18 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Parse: entity_field_group_{entityType}_{entityId}_{fieldGroup}
           const withoutPrefix = context.customId.replace('entity_field_group_', '');
           const parts = withoutPrefix.split('_');
-          const entityType = parts[0];
-          const fieldGroup = parts[parts.length - 1]; // Last part is always fieldGroup
-          const entityId = parts.slice(1, -1).join('_'); // Everything between is entityId
+          
+          // Handle special case for map_cell entityType
+          let entityType, entityId, fieldGroup;
+          if (parts[0] === 'map' && parts[1] === 'cell') {
+            entityType = 'map_cell';
+            fieldGroup = parts[parts.length - 1];
+            entityId = parts.slice(2, -1).join('_'); // Skip 'map_cell', take until fieldGroup
+          } else {
+            entityType = parts[0];
+            fieldGroup = parts[parts.length - 1];
+            entityId = parts.slice(1, -1).join('_');
+          }
           
           console.log('🔍 DEBUG: Field group click - Type:', entityType, 'ID:', entityId, 'Group:', fieldGroup);
         
