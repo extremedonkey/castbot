@@ -12773,29 +12773,21 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 };
               }
               
+              // Use regular Discord.js components instead of Components V2 for select menus
+              const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+              
+              const selectMenu = new StringSelectMenuBuilder()
+                .setCustomId(`map_stores_select_${entityId}`)
+                .setPlaceholder('Select stores...')
+                .setMinValues(0)
+                .setMaxValues(Math.min(storeOptions.length, 25))
+                .addOptions(storeOptions.slice(0, 25));
+                
+              const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+              
               return {
-                components: [{
-                  type: 17, // Container
-                  components: [
-                    {
-                      type: 10, // Text Display
-                      content: `# Select stores to add to ${entityId}\n\nSelect one or more stores to make available at this location.`
-                    },
-                    { type: 14 }, // Separator
-                    {
-                      type: 1, // Action Row
-                      components: [{
-                        type: 6, // String Select
-                        custom_id: `map_stores_select_${entityId}`,
-                        placeholder: 'Select stores...',
-                        min_values: 0,
-                        max_values: Math.min(storeOptions.length, 25),
-                        options: storeOptions.slice(0, 25)
-                      }]
-                    }
-                  ]
-                }],
-                flags: (1 << 15), // IS_COMPONENTS_V2
+                content: `## 🏪 Select stores to add to ${entityId}\n\nSelect one or more stores to make available at this location.`,
+                components: [selectRow.toJSON()],
                 ephemeral: true
               };
               
