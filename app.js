@@ -17593,7 +17593,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 {
                   type: 1, // Action Row - Button style select
                   components: [{
-                    type: 6, // String Select
+                    type: 3, // String Select (Components V2)
                     custom_id: `map_currency_style_${coord}`,
                     placeholder: 'Select button style...',
                     options: [
@@ -17607,7 +17607,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 {
                   type: 1, // Action Row - Drop type select
                   components: [{
-                    type: 6, // String Select
+                    type: 3, // String Select (Components V2)
                     custom_id: `map_currency_type_${coord}`,
                     placeholder: 'How many are available?',
                     options: [
@@ -17626,7 +17626,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                     ]
                   }]
                 },
-                { type: 13 }, // Divider
+                { type: 14 }, // Separator
                 {
                   type: 1, // Action Row - Actions
                   components: [
