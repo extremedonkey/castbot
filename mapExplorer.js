@@ -269,7 +269,7 @@ async function createMapGrid(guild, userId) {
     }
     
     // Generate map image using MapGridSystem
-    const gridSize = 5; // 5x5 grid
+    const gridSize = 7; // 7x7 grid
     const timestamp = Date.now();
     const mapId = `map_${gridSize}x${gridSize}_${timestamp}`;
     
