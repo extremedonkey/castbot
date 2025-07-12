@@ -1896,7 +1896,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         await DiscordRequest(endpoint, {
           method: 'PATCH',
           body: {
-            content: 'No valid tribes found. Some tribe roles may have been deleted. Please use `/add_tribe` to set up tribes again.',
+            content: 'No valid tribes found. Some tribe roles may have been deleted. Please use the Add Tribes button to set up tribes again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -1998,7 +1998,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       await DiscordRequest(endpoint, {
         method: 'PATCH',
         body: {
-          content: 'No valid tribes found. Some tribe roles may have been deleted. Please use `/add_tribe` to set up tribes again.',
+          content: 'No valid tribes found. Some tribe roles may have been deleted. Please use the Add Tribes button to set up tribes again.',
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
@@ -3998,7 +3998,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           await DiscordRequest(endpoint, {
             method: 'PATCH',
             body: {
-              content: 'No valid tribes found. Some tribe roles may have been deleted. Please use `/add_tribe` to set up tribes again.',
+              content: 'No valid tribes found. Some tribe roles may have been deleted. Please use the Add Tribes button to set up tribes again.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
