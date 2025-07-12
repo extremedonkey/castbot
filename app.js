@@ -13428,6 +13428,16 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           // Update stores for this coordinate
           safariData[context.guildId].maps[activeMapId].coordinates[coord].stores = selectedStores;
+          
+          // Remove stores from buttons array (cleanup)
+          const coordData = safariData[context.guildId].maps[activeMapId].coordinates[coord];
+          if (coordData.buttons) {
+            coordData.buttons = coordData.buttons.filter(buttonId => 
+              !selectedStores.includes(buttonId) && 
+              !Object.keys(safariData[context.guildId]?.stores || {}).includes(buttonId)
+            );
+          }
+          
           await saveSafariContent(safariData);
           
           // Update anchor message
