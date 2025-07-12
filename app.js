@@ -13500,105 +13500,103 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           console.log(`✅ SUCCESS: map_coord_store - showing store ${storeId} at ${coord}`);
           
-          // Call the safari_store_browse handler by updating request and re-processing
-          req.body.data.custom_id = `safari_store_browse_${context.guildId}_${storeId}`;
+          // Import Safari manager functions to display store content
+          const { getCustomTerms, generateItemContent } = await import('./safariManager.js');
           
-          // Find and call the handler by searching through the conditional chain
-          // This is a bit hacky but works with the current architecture
-          const originalCustomId = context.customId;
-          try {
-            // Temporarily update the context
-            context.customId = req.body.data.custom_id;
-            
-            // Import the store UI creation function directly
-            const storeItems = store.items || [];
-            const allItems = safariData[context.guildId]?.items || {};
-            const config = safariData[context.guildId]?.safariConfig || {};
-            const currencyEmoji = config.currencyEmoji || '🪙';
-            const currencyName = config.currencyName || 'coins';
-            
-            // Build the store UI manually
-            let itemsDisplay = '';
+          const storeItems = store.items || [];
+          const allItems = safariData[context.guildId]?.items || {};
+          const config = safariData[context.guildId]?.safariConfig || {};
+          const currencyEmoji = config.currencyEmoji || '🪙';
+          const currencyName = config.currencyName || 'coins';
+          
+          // Load current player data to show balance
+          const playerData = await loadPlayerData();
+          const playerSafariData = playerData[context.guildId]?.players?.[context.userId]?.safari || {};
+          const currentBalance = playerSafariData.currency || 0;
+          
+          // Build the store content
+          const customTerms = getCustomTerms(config, safariData[context.guildId]?.safariConfig);
+          let itemContent = '';
+          
+          if (storeItems.length === 0) {
+            itemContent = '*This store has no items in stock.*';
+          } else {
             storeItems.forEach((storeItem, index) => {
               const itemId = storeItem.itemId || storeItem;
               const item = allItems[itemId];
               if (item) {
                 const price = storeItem.price || item.basePrice || 0;
-                itemsDisplay += `${index + 1}. **${item.emoji || '📦'} ${item.name}**\n   💰 ${price} ${currencyEmoji} • ${item.description || 'No description'}\n\n`;
+                itemContent += `**${index + 1}. ${item.emoji || '📦'} ${item.name}** - ${price} ${currencyEmoji}\n`;
+                if (item.description) {
+                  itemContent += `   *${item.description}*\n`;
+                }
+                itemContent += '\n';
               }
             });
-            
-            if (storeItems.length === 0) {
-              itemsDisplay = '*This store has no items in stock.*';
-            }
-            
-            // Create buy buttons (max 5 per row)
-            const buyButtons = [];
-            storeItems.slice(0, 10).forEach((storeItem, index) => {
-              const itemId = storeItem.itemId || storeItem;
-              const item = allItems[itemId];
-              if (item) {
-                buyButtons.push({
-                  type: 2,
-                  custom_id: `safari_store_buy_${context.guildId}_${storeId}_${itemId}`,
-                  label: `Buy ${item.name}`,
-                  style: 3, // Success
-                  emoji: item.emoji ? { name: item.emoji } : undefined
-                });
-              }
-            });
-            
-            // Create action rows with buttons
-            const buttonRows = [];
-            for (let i = 0; i < buyButtons.length; i += 5) {
-              buttonRows.push({
-                type: 1,
-                components: buyButtons.slice(i, i + 5)
-              });
-            }
-            
-            // Build container components
-            const containerComponents = [
-              {
-                type: 10, // Text Display
-                content: `# ${store.emoji || '🏪'} ${store.name}\n\n${store.description || ''}`
-              }
-            ];
-            
-            if (store.settings?.storeownerText) {
-              containerComponents.push({
-                type: 10,
-                content: `*"${store.settings.storeownerText}"*`
-              });
-            }
-            
-            containerComponents.push(
-              { type: 14 }, // Separator
-              {
-                type: 10,
-                content: `## Available Items\n\n${itemsDisplay}`
-              }
-            );
-            
-            if (buttonRows.length > 0) {
-              containerComponents.push({ type: 13 }); // Divider
-              containerComponents.push(...buttonRows);
-            }
-            
-            return {
-              components: [{
-                type: 17, // Container
-                accent_color: store.settings?.accentColor || 0x3498db,
-                components: containerComponents
-              }],
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              ephemeral: true
-            };
-            
-          } finally {
-            // Restore original custom_id
-            context.customId = originalCustomId;
           }
+          
+          // Create buy buttons
+          const buyButtons = [];
+          storeItems.slice(0, 10).forEach((storeItem) => {
+            const itemId = storeItem.itemId || storeItem;
+            const item = allItems[itemId];
+            if (item) {
+              buyButtons.push({
+                type: 2,
+                custom_id: `safari_store_buy_${context.guildId}_${storeId}_${itemId}`,
+                label: `Buy ${item.name}`,
+                style: 3, // Success
+                emoji: item.emoji ? { name: item.emoji } : undefined
+              });
+            }
+          });
+          
+          // Create action rows with buttons (max 5 per row)
+          const buttonRows = [];
+          for (let i = 0; i < buyButtons.length; i += 5) {
+            buttonRows.push({
+              type: 1,
+              components: buyButtons.slice(i, i + 5)
+            });
+          }
+          
+          // Build container components
+          const containerComponents = [
+            {
+              type: 10, // Text Display
+              content: `# ${store.emoji || '🏪'} ${store.name}\n\n${store.description || 'Welcome to our store!'}`
+            }
+          ];
+          
+          if (store.settings?.storeownerText) {
+            containerComponents.push({
+              type: 10,
+              content: `*"${store.settings.storeownerText}"*`
+            });
+          }
+          
+          containerComponents.push(
+            { type: 14 }, // Separator
+            {
+              type: 10,
+              content: `**Your Balance:** ${currentBalance} ${currencyEmoji}\n\n## Available Items\n\n${itemContent}`
+            }
+          );
+          
+          if (buttonRows.length > 0) {
+            containerComponents.push({ type: 14 }); // Separator
+            containerComponents.push(...buttonRows);
+          }
+          
+          return {
+            components: [{
+              type: 17, // Container
+              accent_color: store.settings?.accentColor || 0x3498db,
+              components: containerComponents
+            }],
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            ephemeral: true
+          };
         }
       })(req, res, client);
       
@@ -13910,14 +13908,19 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             };
           }
           
-          // Update player inventory
-          const { getPlayerSafariData, updatePlayerSafariData } = await import('./safariManager.js');
-          const playerData = await getPlayerSafariData(context.guildId, context.userId);
+          // Update player inventory  
+          const playerData = await loadPlayerData();
+          const guildPlayerData = playerData[context.guildId]?.players?.[context.userId]?.safari || {};
           
-          if (!playerData.inventory) playerData.inventory = {};
-          playerData.inventory[drop.itemId] = (playerData.inventory[drop.itemId] || 0) + 1;
+          if (!guildPlayerData.inventory) guildPlayerData.inventory = {};
+          guildPlayerData.inventory[drop.itemId] = (guildPlayerData.inventory[drop.itemId] || 0) + 1;
           
-          await updatePlayerSafariData(context.guildId, context.userId, playerData);
+          // Save the data
+          if (!playerData[context.guildId]) playerData[context.guildId] = { players: {} };
+          if (!playerData[context.guildId].players[context.userId]) playerData[context.guildId].players[context.userId] = {};
+          playerData[context.guildId].players[context.userId].safari = guildPlayerData;
+          
+          await savePlayerData(playerData);
           
           // Mark as claimed
           if (drop.dropType === 'once_per_player') {
@@ -13995,12 +13998,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
           
           // Give currency to player
-          const { getPlayerSafariData, updatePlayerSafariData } = await import('./safariManager.js');
-          const playerData = await getPlayerSafariData(context.guildId, context.userId);
+          const playerData = await loadPlayerData();
+          const guildPlayerData = playerData[context.guildId]?.players?.[context.userId]?.safari || {};
           
-          playerData.currency = (playerData.currency || 0) + drop.amount;
+          guildPlayerData.currency = (guildPlayerData.currency || 0) + drop.amount;
           
-          await updatePlayerSafariData(context.guildId, context.userId, playerData);
+          // Save the data
+          if (!playerData[context.guildId]) playerData[context.guildId] = { players: {} };
+          if (!playerData[context.guildId].players[context.userId]) playerData[context.guildId].players[context.userId] = {};
+          playerData[context.guildId].players[context.userId].safari = guildPlayerData;
+          
+          await savePlayerData(playerData);
           
           // Mark as claimed
           if (drop.dropType === 'once_per_player') {
@@ -14026,7 +14034,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const currencyEmoji = config.currencyEmoji || '🪙';
           
           return {
-            content: `✅ You collected **${drop.amount} ${currencyEmoji} ${currencyName}**!\n\nYour balance: ${playerData.currency} ${currencyEmoji}`,
+            content: `✅ You collected **${drop.amount} ${currencyEmoji} ${currencyName}**!\n\nYour balance: ${guildPlayerData.currency} ${currencyEmoji}`,
             ephemeral: true
           };
         }
