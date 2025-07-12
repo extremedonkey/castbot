@@ -32,8 +32,14 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
     // Reconstruct the message with updated content
     const updatedComponents = await createAnchorMessageComponents(coordData, guildId, coordinate, fogMapUrl);
     
-    await message.edit({
-      components: updatedComponents
+    // Use DiscordRequest for Components V2 editing
+    const { DiscordRequest } = await import('./utils.js');
+    await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+      method: 'PATCH',
+      body: {
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        components: updatedComponents
+      }
     });
     
     console.log(`✅ Updated anchor message for ${coordinate}`);
