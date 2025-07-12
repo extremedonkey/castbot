@@ -64,6 +64,24 @@ export const EDIT_CONFIGS = {
     operations: ['reorder', 'edit', 'delete', 'add']
   },
 
+  [EDIT_TYPES.MAP_CELL]: {
+    displayName: 'Map Location',
+    properties: {
+      title: { type: 'text', maxLength: 100, required: true, label: 'Location Title' },
+      description: { type: 'textarea', maxLength: 1000, required: true, label: 'Location Description' },
+      image: { type: 'text', maxLength: 500, required: false, label: 'Image URL' },
+      cellType: { type: 'text', maxLength: 50, required: false, label: 'Cell Type', placeholder: 'forest, village, dungeon' }
+    },
+    content: {
+      type: 'buttons',
+      label: 'Safari Buttons',
+      maxItems: 10,
+      itemLabel: 'button',
+      itemLabelPlural: 'buttons'
+    },
+    operations: ['reorder', 'edit', 'delete', 'add']
+  },
+
   [EDIT_TYPES.SAFARI_CONFIG]: {
     displayName: 'Safari Customization',
     fieldGroups: {

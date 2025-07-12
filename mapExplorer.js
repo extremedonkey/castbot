@@ -70,6 +70,11 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
     console.log(`🌫️ Starting fog of war map generation for ${coordinates.length} locations...`);
     
     const { AttachmentBuilder } = await import('discord.js');
+    const { createAnchorMessageComponents } = await import('./safariButtonHelper.js');
+    
+    // Load safari data to update with anchor message IDs
+    let safariData = await loadSafariContent();
+    const activeMapId = safariData[guild.id]?.maps?.active;
     
     for (let i = 0; i < coordinates.length; i++) {
       const coord = coordinates[i];
@@ -96,38 +101,39 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
           name: `${coord.toLowerCase()}_fogmap.png` 
         });
         
-        // Send fog of war map to channel
-        const mainMessage = await channel.send({
-          content: `# 🗺️ Location ${coord} - Your View\n\nThis is the map from your perspective. Your area is clearly visible, while other areas are shrouded in fog of war.`,
+        // Send fog of war map and get URL
+        const fogMapMessage = await channel.send({
+          content: `Uploading fog of war map...`,
           files: [attachment]
         });
         
-        // Send ephemeral follow-up message with action buttons using Discord.js builders
-        const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
+        // Get the attachment URL
+        const fogMapUrl = fogMapMessage.attachments.first()?.url;
         
-        // Create buttons using Discord.js builders
-        const editButton = new ButtonBuilder()
-          .setCustomId(`map_grid_edit_${coord}`)
-          .setLabel('Edit Grid Content')
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji('✏️');
-          
-        const viewButton = new ButtonBuilder()
-          .setCustomId(`map_grid_view_${coord}`)
-          .setLabel('Display Grid Content')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('👁️');
+        // Delete the temporary message
+        await fogMapMessage.delete();
         
-        const actionRow = new ActionRowBuilder()
-          .addComponents(editButton, viewButton);
+        // Get coordinate data
+        const coordData = safariData[guild.id]?.maps?.[activeMapId]?.coordinates?.[coord];
         
-        // Send the management buttons
-        await channel.send({
-          content: `**Map Management for ${coord}**`,
-          components: [actionRow.toJSON()]
+        if (!coordData) {
+          console.error(`No coordinate data found for ${coord}`);
+          continue;
+        }
+        
+        // Create anchor message components
+        const components = await createAnchorMessageComponents(coordData, guild.id, coord, fogMapUrl);
+        
+        // Send anchor message
+        const anchorMessage = await channel.send({
+          flags: (1 << 15), // IS_COMPONENTS_V2
+          components: components
         });
         
-        console.log(`✅ Posted fog of war map for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
+        // Store anchor message ID
+        safariData[guild.id].maps[activeMapId].coordinates[coord].anchorMessageId = anchorMessage.id;
+        
+        console.log(`✅ Posted anchor message for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
         
         // Rate limiting: pause every 5 posts
         if ((i + 1) % 5 === 0 && i < coordinates.length - 1) {
@@ -139,6 +145,9 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         console.error(`❌ Failed to post fog map for ${coord}:`, error);
       }
     }
+    
+    // Save safari data with anchor message IDs
+    await saveSafariContent(safariData);
     
     console.log(`🎉 Completed fog of war map posting for all ${coordinates.length} locations!`);
     

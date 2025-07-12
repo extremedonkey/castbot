@@ -13233,6 +13233,56 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           console.error('Error sending followup:', followupError);
         }
       }
+    } else if (custom_id.startsWith('map_location_actions_')) {
+      // Handle Location Actions button
+      return ButtonHandlerFactory.create({
+        id: 'map_location_actions',
+        ephemeral: true,
+        handler: async (context) => {
+          const coord = custom_id.replace('map_location_actions_', '');
+          
+          console.log(`📍 START: map_location_actions - user ${context.userId}, coord ${coord}`);
+          
+          // Check admin permissions
+          if (!hasPermission(context.member, PermissionFlagsBits.ManageRoles)) {
+            console.log(`❌ User ${context.userId} lacks permission for location actions`);
+            return {
+              content: '❌ You need Manage Roles permission to edit location content.',
+              ephemeral: true
+            };
+          }
+          
+          // Get map data
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          if (!coordData) {
+            console.log(`❌ Location data not found for ${coord}`);
+            return {
+              content: '❌ Location data not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Create entity management UI for this coordinate
+          const { createEntityManagementUI } = await import('./entityManagementUI.js');
+          const ui = await createEntityManagementUI({
+            entityType: 'map_cell',
+            guildId: context.guildId,
+            selectedId: coord,
+            mode: 'edit'
+          });
+          
+          console.log(`✅ SUCCESS: map_location_actions - showing entity UI for ${coord}`);
+          
+          return {
+            ...ui,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('map_grid_edit_')) {
       // Handle grid content editing
       try {

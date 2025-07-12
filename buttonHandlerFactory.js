@@ -228,6 +228,16 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari_movement'
   },
+  
+  // Map Location Actions
+  'map_location_actions_*': {
+    label: 'Location Actions',
+    description: 'Admin actions for map cell content management',
+    emoji: '📍',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
 
   // Safari Map Admin
   'safari_map_admin': {

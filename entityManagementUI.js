@@ -85,6 +85,9 @@ function getEntitiesForType(guildData, entityType) {
             return guildData.stores || {};
         case 'safari_button':
             return guildData.buttons || {};
+        case 'map_cell':
+            const activeMapId = guildData.maps?.active;
+            return guildData.maps?.[activeMapId]?.coordinates || {};
         default:
             return {};
     }
@@ -221,6 +224,19 @@ function createEntityDisplay(entity, entityType, safariConfig) {
                 lines.push(`**Actions**: ${entity.actions.length} actions configured`);
             }
             break;
+            
+        case 'map_cell':
+            lines.push(`**Location**: ${entity.id || 'Unknown'}`);
+            if (entity.baseContent?.title) {
+                lines.push(`**Title**: ${entity.baseContent.title}`);
+            }
+            if (entity.baseContent?.description) {
+                lines.push(`**Description**: ${entity.baseContent.description}`);
+            }
+            if (entity.buttons?.length > 0) {
+                lines.push(`**Safari Buttons**: ${entity.buttons.length} configured`);
+            }
+            break;
     }
     
     // Add metadata
@@ -333,6 +349,12 @@ export function getFieldGroups(entityType) {
             return {
                 info: { label: 'Button Info', emoji: '📝', fields: ['label', 'emoji', 'style'] },
                 actions: { label: 'Actions', emoji: '🎯', fields: ['actions'] }
+            };
+        case 'map_cell':
+            return {
+                info: { label: 'Location Info', emoji: '📝', fields: ['title', 'description'] },
+                media: { label: 'Media', emoji: '🖼️', fields: ['image'] },
+                interaction: { label: 'Safari Buttons', emoji: '🎯', fields: ['buttons'] }
             };
         default:
             return {};

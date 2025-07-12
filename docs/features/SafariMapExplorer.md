@@ -373,6 +373,9 @@ async function moveToCoordinate(guildId, userId, coordinate) {
 ✅ **Map Creation System:** Complete - generates maps and Discord infrastructure
 ✅ **Data Storage:** Complete - integrated with Safari system via safariContent.json
 ✅ **UI Integration:** Complete - Map Explorer added to Safari menu system
+✅ **Player Movement:** Complete - full navigation system with Navigate button pattern
+✅ **Permission Management:** Complete - automatic channel access control
+✅ **Admin Controls:** Complete - Map Admin interface for player management
 🔄 **Cell Content Management:** Next phase - editing individual cell content
 
 ### Technical Capabilities
@@ -457,17 +460,26 @@ img/
 - **Cleanup System:** Complete removal of channels and data when map is deleted
 - **Recovery Handling:** Graceful error handling for interrupted channel creation
 
-### Map-Specific Safari Button Actions
+### Movement System Integration
 
+#### Current Button Handlers
+- `safari_navigate_{userId}_{coordinate}` - Shows movement options grid
+- `safari_move_{coordinate}` - Executes movement to target coordinate
+- `safari_show_movement_{userId}_{coordinate}` - Admin-triggered movement display
+- `map_admin_*` - Full suite of admin controls
+
+#### Map-Specific Safari Button Actions (Planned)
 New action types to be added to the Safari button system:
 - `move_player` - Moves player to adjacent grid cell
-- `check_stamina` - Validates player has enough stamina for action
-- `give_item` - Adds item to player's map inventory
+- `check_location` - Validates player is at specific coordinate
+- `give_map_item` - Adds location-specific item to inventory
 - `mark_searched` - Marks location as searched by player
 - `mark_chest_opened` - Records chest as opened (for shared chests)
 - `broadcast_discovery` - Announces major discoveries server-wide
+- `unlock_path` - Opens new movement options
+- `trigger_event` - Starts location-based events
 
-These extend the existing Safari action system without breaking current functionality.
+These will extend the existing Safari action system without breaking current functionality.
 
 ## Implementation Roadmap
 
@@ -476,6 +488,39 @@ These extend the existing Safari action system without breaking current function
 2. ✅ Add grid overlay functionality
 3. ✅ Return processed image to user
 4. ✅ Store map metadata
+
+### Navigation Implementation Architecture
+
+#### User Flow
+1. **Initialization**: Player uses `/menu` → clicks "Start Exploring"
+2. **First Channel**: Receives welcome message with Navigate button at A1
+3. **Navigation**: Click Navigate → ephemeral movement grid appears
+4. **Movement**: Select direction → permissions update → arrive at new location
+5. **Continuation**: New Navigate button in arrival message
+
+#### Technical Flow
+```mermaid
+graph TD
+    A[Navigate Button Click] --> B[Delete Arrival Message]
+    B --> C[Show Movement Grid]
+    C --> D[Store Interaction Token]
+    D --> E[Player Selects Direction]
+    E --> F[Validate Movement]
+    F --> G[Check Stamina]
+    G --> H[Update Location Data]
+    H --> I[Grant New Permissions]
+    I --> J[Remove Old Permissions]
+    J --> K[Post Arrival Message]
+    K --> L[Edit Navigation UI]
+    L --> M[Delete Thinking Message]
+```
+
+#### Key Design Decisions
+- **Ephemeral Navigation**: Reduces channel clutter
+- **Navigate Button Pattern**: Clean interface, self-deleting
+- **Permission Order**: Grant-then-remove prevents lockouts
+- **Message Editing**: Updates original UI to prevent confusion
+- **Deferred Handling**: Manages long-running permission updates
 
 ### Phase 2A: Basic Map Creation & Management ✅ COMPLETED
 
@@ -547,17 +592,30 @@ These extend the existing Safari action system without breaking current function
 }
 ```
 
-### Phase 2B: Cell Content Management (Next Steps)
+### Phase 2B: Player Movement System ✅ COMPLETED
+1. ✅ **Navigation Interface:** Navigate button with ephemeral movement grid
+2. ✅ **Movement Validation:** 8-directional movement with adjacency checks
+3. ✅ **Stamina Integration:** Points-based movement limitation
+4. ✅ **Permission Flow:** Automatic channel access management
+5. ✅ **Admin Tools:** Complete player management interface
+
+### Phase 2D: Cell Content Management (Next Steps)
 1. 🔄 Extend entityManagementUI.js for cell content editing
 2. 🔄 Implement map cell editor interface
-3. 🔄 Add Safari button actions: move_player, check_stamina, etc.
-4. 🔄 Create player exploration interface
+3. 🔄 Add Safari button integration for location-specific content
+4. 🔄 Create interactive elements at coordinates
 
-### Phase 2C: Movement & Exploration
-1. Implement movement commands
-2. Add stamina system (12hr reset)
-3. Add permission management
-4. Player state tracking
+### Phase 2C: Movement & Exploration ✅ COMPLETED
+1. ✅ **Movement Commands:** Navigate button + directional movement grid
+2. ✅ **Stamina System:** Entity points integration with configurable regeneration
+3. ✅ **Permission Management:** Automatic grant/remove with proper ordering
+4. ✅ **Player State Tracking:** Complete progress tracking per map
+
+#### Implementation Details
+- **Navigation Pattern:** Players click Navigate → see movement options → select direction
+- **UI Updates:** Original navigation message edited to show completion
+- **Arrival System:** New Navigate button posted in destination channel
+- **Security:** Channel validation prevents using stale movement buttons
 
 ### Phase 3: Exploration Features
 1. Add fog of war (show/hide unexplored areas)

@@ -35,7 +35,8 @@ export const EDIT_TYPES = {
   BUTTON: 'button',
   STORE: 'store', 
   ITEM: 'item',
-  SAFARI_CONFIG: 'safari_config'
+  SAFARI_CONFIG: 'safari_config',
+  MAP_CELL: 'map_cell'
 };
 
 export const BUTTON_STYLES = [
