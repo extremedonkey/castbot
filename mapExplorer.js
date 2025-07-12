@@ -103,15 +103,14 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         
         // Send fog of war map and get URL
         const fogMapMessage = await channel.send({
-          content: `Uploading fog of war map...`,
+          content: `🌫️ Fog of War Map for ${coord}`,
           files: [attachment]
         });
         
         // Get the attachment URL
         const fogMapUrl = fogMapMessage.attachments.first()?.url;
         
-        // Delete the temporary message
-        await fogMapMessage.delete();
+        // Keep the message - don't delete it or the URL becomes invalid
         
         // Get coordinate data
         const coordData = safariData[guild.id]?.maps?.[activeMapId]?.coordinates?.[coord];
