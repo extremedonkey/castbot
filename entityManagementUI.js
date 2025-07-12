@@ -139,8 +139,15 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
     
     // Add entity options
     Object.entries(entities).forEach(([id, entity]) => {
-        const name = entity.name || entity.label || 'Unnamed';
-        const emoji = entity.emoji || getDefaultEmoji(entityType);
+        let name, emoji;
+        
+        if (entityType === 'map_cell') {
+            name = id; // Use coordinate as name (e.g., "A1")
+            emoji = '📍';
+        } else {
+            name = entity.name || entity.label || 'Unnamed';
+            emoji = entity.emoji || getDefaultEmoji(entityType);
+        }
         
         options.push({
             label: `${emoji} ${name}`.substring(0, 100),
@@ -439,6 +446,7 @@ function getDefaultEmoji(entityType) {
         case 'item': return '📦';
         case 'store': return '🏪';
         case 'safari_button': return '🦁';
+        case 'map_cell': return '📍';
         default: return '📋';
     }
 }
@@ -469,6 +477,17 @@ function getEntityDescription(entity, entityType) {
             }
             if (entity.style) {
                 parts.push(entity.style);
+            }
+            break;
+        case 'map_cell':
+            if (entity.baseContent?.title) {
+                parts.push(`Title: ${entity.baseContent.title.replace('📍 ', '')}`);
+            }
+            if (entity.buttons?.length > 0) {
+                parts.push(`${entity.buttons.length} safari buttons`);
+            }
+            if (entity.cellType && entity.cellType !== 'unexplored') {
+                parts.push(entity.cellType);
             }
             break;
     }

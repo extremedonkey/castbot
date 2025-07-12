@@ -41,6 +41,8 @@ export function createFieldGroupModal(entityType, entityId, fieldGroupId, curren
             return createStoreFieldModal(entityId, fieldGroupId, group, currentValues);
         case 'safari_button':
             return createButtonFieldModal(entityId, fieldGroupId, group, currentValues);
+        case 'map_cell':
+            return createMapCellFieldModal(entityId, fieldGroupId, group, currentValues);
         default:
             throw new Error(`Unknown entity type: ${entityType}`);
     }
@@ -471,10 +473,104 @@ export function validateFields(fields, entityType) {
                 }
             });
             break;
+        case 'map_cell':
+            // Validate map cell fields
+            if (fields.title && fields.title.length > 100) {
+                errors.push('Title must be 100 characters or less');
+            }
+            if (fields.description && fields.description.length > 1000) {
+                errors.push('Description must be 1000 characters or less');
+            }
+            if (fields.image && fields.image.length > 500) {
+                errors.push('Image URL must be 500 characters or less');
+            }
+            if (fields.buttons && typeof fields.buttons === 'string') {
+                // Parse buttons field as comma-separated list
+                const buttonIds = fields.buttons.split(',').map(id => id.trim()).filter(id => id);
+                if (buttonIds.length > 10) {
+                    errors.push('Maximum 10 safari buttons allowed per location');
+                }
+                // Convert back to array
+                fields.buttons = buttonIds;
+            }
+            break;
     }
     
     return {
         valid: errors.length === 0,
         errors
+    };
+}
+
+/**
+ * Create modal for map cell field editing
+ */
+function createMapCellFieldModal(entityId, fieldGroupId, group, currentValues) {
+    const modal = new ModalBuilder()
+        .setCustomId(`entity_modal_submit_map_cell_${entityId}_${fieldGroupId}`)
+        .setTitle(`Edit ${group.label}`);
+
+    // Define fields based on field group
+    switch (fieldGroupId) {
+        case 'info': {
+            const titleInput = new TextInputBuilder()
+                .setCustomId('title')
+                .setLabel('Location Title')
+                .setStyle(TextInputStyle.Short)
+                .setValue(currentValues.baseContent?.title || '')
+                .setRequired(true)
+                .setMaxLength(100);
+
+            const descriptionInput = new TextInputBuilder()
+                .setCustomId('description')
+                .setLabel('Location Description')
+                .setStyle(TextInputStyle.Paragraph)
+                .setValue(currentValues.baseContent?.description || '')
+                .setRequired(true)
+                .setMaxLength(1000);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(titleInput),
+                new ActionRowBuilder().addComponents(descriptionInput)
+            );
+            break;
+        }
+        case 'media': {
+            const imageInput = new TextInputBuilder()
+                .setCustomId('image')
+                .setLabel('Image URL (optional)')
+                .setStyle(TextInputStyle.Short)
+                .setValue(currentValues.baseContent?.image || '')
+                .setRequired(false)
+                .setMaxLength(500);
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(imageInput)
+            );
+            break;
+        }
+        case 'interaction': {
+            // Note: Safari buttons will be handled differently (not in modal)
+            const buttonsText = currentValues.buttons ? currentValues.buttons.join(', ') : '';
+            
+            const buttonsInput = new TextInputBuilder()
+                .setCustomId('buttons')
+                .setLabel('Safari Button IDs (comma separated)')
+                .setStyle(TextInputStyle.Paragraph)
+                .setValue(buttonsText)
+                .setRequired(false)
+                .setMaxLength(500)
+                .setPlaceholder('button_id_1, button_id_2, button_id_3');
+
+            modal.addComponents(
+                new ActionRowBuilder().addComponents(buttonsInput)
+            );
+            break;
+        }
+    }
+
+    return {
+        type: InteractionResponseType.MODAL,
+        data: modal
     };
 }

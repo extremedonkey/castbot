@@ -27,6 +27,9 @@ export async function loadEntities(guildId, entityType) {
             return guildData.buttons || {};
         case 'safari_config':
             return guildData.safariConfig || {};
+        case 'map_cell':
+            const activeMapId = guildData.maps?.active;
+            return guildData.maps?.[activeMapId]?.coordinates || {};
         default:
             return {};
     }
@@ -113,8 +116,15 @@ export async function updateEntityFields(guildId, entityType, entityId, fieldUpd
         throw new Error(`Guild ${guildId} not found`);
     }
     
-    const entityPath = getEntityPath(entityType);
-    const entity = safariData[guildId][entityPath]?.[entityId];
+    let entity;
+    if (entityType === 'map_cell') {
+        // Special handling for map cells
+        const activeMapId = safariData[guildId]?.maps?.active;
+        entity = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[entityId];
+    } else {
+        const entityPath = getEntityPath(entityType);
+        entity = safariData[guildId][entityPath]?.[entityId];
+    }
     
     if (!entity) {
         throw new Error(`Entity ${entityId} not found`);
@@ -122,15 +132,27 @@ export async function updateEntityFields(guildId, entityType, entityId, fieldUpd
     
     // Apply field updates
     for (const [field, value] of Object.entries(fieldUpdates)) {
-        // Handle nested fields (e.g., settings.storeownerText)
-        if (field.includes('.')) {
-            const [parent, child] = field.split('.');
-            if (!entity[parent]) {
-                entity[parent] = {};
+        // Special handling for map_cell fields
+        if (entityType === 'map_cell') {
+            if (field === 'title' || field === 'description' || field === 'image') {
+                // These go in baseContent
+                if (!entity.baseContent) entity.baseContent = {};
+                entity.baseContent[field] = value;
+            } else {
+                // Other fields go at root level
+                entity[field] = value;
             }
-            entity[parent][child] = value;
         } else {
-            entity[field] = value;
+            // Handle nested fields (e.g., settings.storeownerText)
+            if (field.includes('.')) {
+                const [parent, child] = field.split('.');
+                if (!entity[parent]) {
+                    entity[parent] = {};
+                }
+                entity[parent][child] = value;
+            } else {
+                entity[field] = value;
+            }
         }
     }
     
@@ -142,6 +164,18 @@ export async function updateEntityFields(guildId, entityType, entityId, fieldUpd
     
     // Save changes
     await saveSafariContent(safariData);
+    
+    // Special handling for map_cell - update anchor message
+    if (entityType === 'map_cell') {
+        try {
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            // Note: client is not available here, will need to be passed differently
+            // For now, just log that update is needed
+            console.log(`📍 Map cell ${entityId} updated - anchor message update needed`);
+        } catch (error) {
+            console.error('Error updating anchor message:', error);
+        }
+    }
     
     return entity;
 }
@@ -249,6 +283,7 @@ function getEntityPath(entityType) {
         case 'store': return 'stores';
         case 'safari_button': return 'buttons';
         case 'safari_config': return 'safariConfig';
+        case 'map_cell': return 'maps'; // Special case - handled differently
         default: throw new Error(`Unknown entity type: ${entityType}`);
     }
 }
