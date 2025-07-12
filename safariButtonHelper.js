@@ -115,11 +115,77 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
     });
   }
   
-  // Safari Buttons Container (if any)
+  // Create all buttons array to enforce 5 per row limit
+  const allButtons = [];
+  
+  // Add store buttons first
+  if (coordData.stores?.length > 0) {
+    const safariData = await loadSafariContent();
+    for (const storeId of coordData.stores) {
+      const store = safariData[guildId]?.stores?.[storeId];
+      if (store) {
+        allButtons.push({
+          type: 2, // Button
+          custom_id: `map_coord_store_${coord}_${storeId}`,
+          label: store.name,
+          style: 2, // Secondary/grey
+          emoji: store.emoji ? { name: store.emoji } : undefined
+        });
+      }
+    }
+  }
+  
+  // Add item drop buttons
+  if (coordData.itemDrops?.length > 0) {
+    for (const [index, drop] of coordData.itemDrops.entries()) {
+      const isExhausted = drop.dropType === 'once_per_season' && drop.claimedBy;
+      allButtons.push({
+        type: 2, // Button
+        custom_id: `map_item_drop_${coord}_${index}`,
+        label: isExhausted ? `${drop.buttonText} (Taken)` : drop.buttonText,
+        style: drop.buttonStyle || 2,
+        emoji: drop.buttonEmoji ? { name: drop.buttonEmoji } : undefined,
+        disabled: isExhausted
+      });
+    }
+  }
+  
+  // Add currency drop buttons
+  if (coordData.currencyDrops?.length > 0) {
+    for (const [index, drop] of coordData.currencyDrops.entries()) {
+      const isExhausted = drop.dropType === 'once_per_season' && drop.claimedBy;
+      allButtons.push({
+        type: 2, // Button
+        custom_id: `map_currency_drop_${coord}_${index}`,
+        label: isExhausted ? `${drop.buttonText} (Taken)` : drop.buttonText,
+        style: drop.buttonStyle || 2,
+        emoji: drop.buttonEmoji ? { name: drop.buttonEmoji } : undefined,
+        disabled: isExhausted
+      });
+    }
+  }
+  
+  // Safari Buttons (existing functionality)
   if (coordData.buttons?.length > 0) {
-    components.push({ type: 14 }); // Separator
     const safariButtonRows = await createSafariButtonComponents(coordData.buttons, guildId);
-    components.push(...safariButtonRows);
+    // Extract buttons from rows
+    for (const row of safariButtonRows) {
+      allButtons.push(...row.components);
+    }
+  }
+  
+  // Create action rows with 5 button limit
+  if (allButtons.length > 0) {
+    components.push({ type: 14 }); // Separator
+    
+    const buttonRows = [];
+    for (let i = 0; i < allButtons.length; i += 5) {
+      buttonRows.push({
+        type: 1, // Action Row
+        components: allButtons.slice(i, i + 5)
+      });
+    }
+    components.push(...buttonRows);
   }
   
   // Location Actions Button (always present)

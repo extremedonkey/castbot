@@ -82,6 +82,24 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `map_delete` | 🗑️ Delete Map | app.js:~13061 | Direct handler | ✅ Active |
 | `map_grid_edit_*` | ✏️ Edit Content | app.js:~13160 | Pattern handler | ✅ Active |
 | `map_grid_view_*` | 👁️ View Content | app.js:~13256 | Pattern handler | ✅ Active |
+| `map_stores_select_*` | Store Selection Dropdown | app.js:~13398 | Pattern handler | ✅ Active |
+| `map_coord_store_*` | 🏪 Store Button (from map) | app.js:~13448 | Pattern handler | ✅ Active |
+| `map_add_item_drop_*` | 🧰 Add Item Drop | app.js:~13588 | Pattern handler | ✅ Active |
+| `map_add_currency_drop_*` | 🪙 Add Currency Drop | app.js:~13647 | Pattern handler | ✅ Active |
+| `map_item_drop_select_*` | Item Drop Selection | app.js:~13703 | Pattern handler | ✅ Active |
+| `map_item_drop_*` | 📦 Item Drop (Player) | app.js:~13840 | Pattern handler | ✅ Active |
+| `map_currency_drop_*` | 🪙 Currency Drop (Player) | app.js:~13933 | Pattern handler | ✅ Active |
+| `map_drop_style_*` | Drop Style Select | app.js:~14017 | Pattern handler | ✅ Active |
+| `map_drop_type_*` | Drop Type Select | app.js:~14052 | Pattern handler | ✅ Active |
+| `map_drop_text_*` | ✏️ Set Button Text | app.js:~14089 | Pattern handler | ✅ Active |
+| `map_drop_save_*` | ✅ Save Drop | app.js:~14140 | Pattern handler | ✅ Active |
+| `map_drop_remove_*` | 🗑️ Remove Drop | app.js:~14218 | Pattern handler | ✅ Active |
+| `map_drop_reset_*` | 🔃 Reset Drop | app.js:~14260 | Pattern handler | ✅ Active |
+| `map_currency_style_*` | Currency Style Select | app.js:~14297 | Pattern handler | ✅ Active |
+| `map_currency_type_*` | Currency Type Select | app.js:~14328 | Pattern handler | ✅ Active |
+| `map_currency_edit_*` | ✏️ Edit Currency | app.js:~14360 | Pattern handler | ✅ Active |
+| `map_currency_remove_*` | 🗑️ Remove Currency | app.js:~14375 | Pattern handler | ✅ Active |
+| `map_currency_reset_*` | 🔃 Reset Currency | app.js:~14415 | Pattern handler | ✅ Active |
 
 ### **Modal Submission Handlers**
 | Custom ID | Purpose | Location | Handler Type | Status |
@@ -134,6 +152,8 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_export_modal` | Export Safari Data | app.js:~13277 | Modal handler | ✅ Active |
 | `safari_import_modal` | Import Safari Data | app.js:~13287 | Modal handler | ✅ Active |
 | `safari_schedule_modal_*` | Schedule Safari Results | app.js:~14610 | Modal handler | ✅ Active |
+| `map_currency_drop_modal_*` | Configure Currency Drop | app.js:~16954 | Modal handler | ✅ Active |
+| `map_drop_text_modal_*` | Configure Item Drop Button Text | app.js:~17128 | Modal handler | ✅ Active |
 
 ### **Castlist Navigation Buttons**
 | Custom ID | Label | Location | Handler Function | Status |

@@ -361,7 +361,9 @@ export function getFieldGroups(entityType) {
             return {
                 info: { label: 'Location Info', emoji: '📝', fields: ['title', 'description'] },
                 media: { label: 'Media', emoji: '🖼️', fields: ['image'] },
-                interaction: { label: 'Safari Buttons', emoji: '🎯', fields: ['buttons'] }
+                interaction: { label: 'Safari Buttons', emoji: '🎯', fields: ['buttons'] },
+                stores: { label: 'Add Store', emoji: '🏪', fields: ['stores'] },
+                items: { label: 'Add Item', emoji: '🧰', fields: ['itemDrops', 'currencyDrops'] }
             };
         default:
             return {};

@@ -12748,6 +12748,108 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           console.log('🔍 DEBUG: Field group click - Type:', entityType, 'ID:', entityId, 'Group:', fieldGroup);
         
+          // Handle special field groups for map_cell
+          if (entityType === 'map_cell') {
+            if (fieldGroup === 'stores') {
+              // Show store multi-select
+              const { loadSafariContent } = await import('./safariManager.js');
+              const safariData = await loadSafariContent();
+              const stores = safariData[context.guildId]?.stores || {};
+              const activeMapId = safariData[context.guildId]?.maps?.active;
+              const coordStores = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[entityId]?.stores || [];
+              
+              // Create store select menu
+              const storeOptions = Object.entries(stores).map(([storeId, store]) => ({
+                label: `${store.emoji || '🏪'} ${store.name}`.substring(0, 100),
+                value: storeId,
+                description: store.description?.substring(0, 100),
+                default: coordStores.includes(storeId)
+              }));
+              
+              if (storeOptions.length === 0) {
+                return {
+                  content: '❌ No stores available. Create stores first using Safari menu.',
+                  ephemeral: true
+                };
+              }
+              
+              return {
+                components: [{
+                  type: 17, // Container
+                  components: [
+                    {
+                      type: 10, // Text Display
+                      content: `# Select stores to add to ${entityId}\n\nSelect one or more stores to make available at this location.`
+                    },
+                    { type: 14 }, // Separator
+                    {
+                      type: 1, // Action Row
+                      components: [{
+                        type: 6, // String Select
+                        custom_id: `map_stores_select_${entityId}`,
+                        placeholder: 'Select stores...',
+                        min_values: 0,
+                        max_values: Math.min(storeOptions.length, 25),
+                        options: storeOptions.slice(0, 25)
+                      }]
+                    }
+                  ]
+                }],
+                flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+                ephemeral: true
+              };
+              
+            } else if (fieldGroup === 'items') {
+              // Show item selection interface for drop configuration
+              const { loadSafariContent } = await import('./safariManager.js');
+              const safariData = await loadSafariContent();
+              const items = safariData[context.guildId]?.items || {};
+              
+              // Check if there are any items
+              if (Object.keys(items).length === 0) {
+                return {
+                  content: '❌ No items available. Create items first using Safari menu.',
+                  ephemeral: true
+                };
+              }
+              
+              // Show item selection or currency drop option
+              return {
+                components: [{
+                  type: 17, // Container
+                  components: [
+                    {
+                      type: 10, // Text Display
+                      content: `# Add Drop to ${entityId}\n\nSelect what type of drop to add to this location.`
+                    },
+                    { type: 14 }, // Separator
+                    {
+                      type: 1, // Action Row
+                      components: [
+                        {
+                          type: 2, // Button
+                          custom_id: `map_add_item_drop_${entityId}`,
+                          label: 'Add Item Drop',
+                          style: 1, // Primary
+                          emoji: { name: '📦' }
+                        },
+                        {
+                          type: 2, // Button
+                          custom_id: `map_add_currency_drop_${entityId}`,
+                          label: 'Add Currency Drop',
+                          style: 1, // Primary
+                          emoji: { name: '🪙' }
+                        }
+                      ]
+                    }
+                  ]
+                }],
+                flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+                ephemeral: true
+              };
+            }
+          }
+          
           // For consumable property, show select menu instead of modal
           if (fieldGroup === 'properties' && entityType === 'item') {
             const { loadEntity } = await import('./entityManager.js');
@@ -13292,6 +13394,1059 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           };
         }
       })(req, res, client);
+    
+    } else if (custom_id.startsWith('map_stores_select_')) {
+      // Handle store selection for map coordinate
+      return ButtonHandlerFactory.create({
+        id: 'map_stores_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_stores_select_', '');
+          const selectedStores = context.values || [];
+          
+          console.log(`🏪 START: map_stores_select - coord ${coord}, stores: ${selectedStores.join(', ')}`);
+          
+          // Load and update safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          
+          if (!activeMapId || !safariData[context.guildId].maps[activeMapId].coordinates[coord]) {
+            return {
+              content: '❌ Location data not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Update stores for this coordinate
+          safariData[context.guildId].maps[activeMapId].coordinates[coord].stores = selectedStores;
+          await saveSafariContent(safariData);
+          
+          // Update anchor message
+          const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+          await updateMapCellAnchorMessage(context.guild, coord);
+          
+          // Return to entity management UI
+          const { createEntityManagementUI } = await import('./entityManagementUI.js');
+          const ui = await createEntityManagementUI({
+            entityType: 'map_cell',
+            guildId: context.guildId,
+            selectedId: coord,
+            mode: 'edit'
+          });
+          
+          console.log(`✅ SUCCESS: map_stores_select - updated stores for ${coord}`);
+          
+          return {
+            ...ui,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_coord_store_')) {
+      // Handle store button click from anchor message
+      return ButtonHandlerFactory.create({
+        id: 'map_coord_store',
+        ephemeral: true,
+        handler: async (context) => {
+          // Parse: map_coord_store_{coord}_{storeId}
+          const parts = context.customId.replace('map_coord_store_', '').split('_');
+          const coord = parts[0];
+          const storeId = parts.slice(1).join('_');
+          
+          console.log(`🏪 START: map_coord_store - coord ${coord}, store ${storeId}`);
+          
+          // Check if user is in the correct channel
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          if (!coordData || coordData.channelId !== context.channelId) {
+            console.log(`❌ User ${context.userId} tried to access store from wrong channel`);
+            return {
+              content: '❌ You can only access this store from its location!',
+              ephemeral: true
+            };
+          }
+          
+          // Verify store exists
+          const store = safariData[context.guildId]?.stores?.[storeId];
+          if (!store) {
+            return {
+              content: '❌ Store not found.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`✅ SUCCESS: map_coord_store - showing store ${storeId} at ${coord}`);
+          
+          // Call the safari_store_browse handler by updating request and re-processing
+          req.body.data.custom_id = `safari_store_browse_${context.guildId}_${storeId}`;
+          
+          // Find and call the handler by searching through the conditional chain
+          // This is a bit hacky but works with the current architecture
+          const originalCustomId = context.customId;
+          try {
+            // Temporarily update the context
+            context.customId = req.body.data.custom_id;
+            
+            // Import the store UI creation function directly
+            const storeItems = store.items || [];
+            const allItems = safariData[context.guildId]?.items || {};
+            const config = safariData[context.guildId]?.safariConfig || {};
+            const currencyEmoji = config.currencyEmoji || '🪙';
+            const currencyName = config.currencyName || 'coins';
+            
+            // Build the store UI manually
+            let itemsDisplay = '';
+            storeItems.forEach((storeItem, index) => {
+              const itemId = storeItem.itemId || storeItem;
+              const item = allItems[itemId];
+              if (item) {
+                const price = storeItem.price || item.basePrice || 0;
+                itemsDisplay += `${index + 1}. **${item.emoji || '📦'} ${item.name}**\n   💰 ${price} ${currencyEmoji} • ${item.description || 'No description'}\n\n`;
+              }
+            });
+            
+            if (storeItems.length === 0) {
+              itemsDisplay = '*This store has no items in stock.*';
+            }
+            
+            // Create buy buttons (max 5 per row)
+            const buyButtons = [];
+            storeItems.slice(0, 10).forEach((storeItem, index) => {
+              const itemId = storeItem.itemId || storeItem;
+              const item = allItems[itemId];
+              if (item) {
+                buyButtons.push({
+                  type: 2,
+                  custom_id: `safari_store_buy_${context.guildId}_${storeId}_${itemId}`,
+                  label: `Buy ${item.name}`,
+                  style: 3, // Success
+                  emoji: item.emoji ? { name: item.emoji } : undefined
+                });
+              }
+            });
+            
+            // Create action rows with buttons
+            const buttonRows = [];
+            for (let i = 0; i < buyButtons.length; i += 5) {
+              buttonRows.push({
+                type: 1,
+                components: buyButtons.slice(i, i + 5)
+              });
+            }
+            
+            // Build container components
+            const containerComponents = [
+              {
+                type: 10, // Text Display
+                content: `# ${store.emoji || '🏪'} ${store.name}\n\n${store.description || ''}`
+              }
+            ];
+            
+            if (store.settings?.storeownerText) {
+              containerComponents.push({
+                type: 10,
+                content: `*"${store.settings.storeownerText}"*`
+              });
+            }
+            
+            containerComponents.push(
+              { type: 14 }, // Separator
+              {
+                type: 10,
+                content: `## Available Items\n\n${itemsDisplay}`
+              }
+            );
+            
+            if (buttonRows.length > 0) {
+              containerComponents.push({ type: 13 }); // Divider
+              containerComponents.push(...buttonRows);
+            }
+            
+            return {
+              components: [{
+                type: 17, // Container
+                accent_color: store.settings?.accentColor || 0x3498db,
+                components: containerComponents
+              }],
+              flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+              ephemeral: true
+            };
+            
+          } finally {
+            // Restore original custom_id
+            context.customId = originalCustomId;
+          }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_add_item_drop_')) {
+      // Show item selection for drop configuration
+      return ButtonHandlerFactory.create({
+        id: 'map_add_item_drop',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ephemeral: true,
+        handler: async (context) => {
+          const coord = context.customId.replace('map_add_item_drop_', '');
+          
+          console.log(`📦 START: map_add_item_drop - coord ${coord}`);
+          
+          // Load items
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const items = safariData[context.guildId]?.items || {};
+          
+          if (Object.keys(items).length === 0) {
+            return {
+              content: '❌ No items available. Create items first using Safari menu.',
+              ephemeral: true
+            };
+          }
+          
+          // Create item select menu
+          const itemOptions = Object.entries(items).slice(0, 25).map(([itemId, item]) => ({
+            label: `${item.emoji || '📦'} ${item.name}`.substring(0, 100),
+            value: itemId,
+            description: item.description?.substring(0, 100)
+          }));
+          
+          console.log(`✅ SUCCESS: map_add_item_drop - showing item selection for ${coord}`);
+          
+          return {
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `# Select Item Drop for ${coord}\n\nChoose an item to add as a drop at this location.`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 6, // String Select
+                    custom_id: `map_item_drop_select_${coord}`,
+                    placeholder: 'Select an item...',
+                    options: itemOptions
+                  }]
+                }
+              ]
+            }],
+            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_add_currency_drop_')) {
+      // Show currency drop configuration modal
+      return ButtonHandlerFactory.create({
+        id: 'map_add_currency_drop',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_add_currency_drop_', '');
+          
+          console.log(`🪙 START: map_add_currency_drop - coord ${coord}`);
+          
+          // Show modal for currency configuration
+          const modal = new ModalBuilder()
+            .setCustomId(`map_currency_drop_modal_${coord}`)
+            .setTitle(`Configure Currency Drop for ${coord}`);
+            
+          const amountInput = new TextInputBuilder()
+            .setCustomId('amount')
+            .setLabel('Currency Amount')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('100')
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(10);
+            
+          const buttonTextInput = new TextInputBuilder()
+            .setCustomId('buttonText')
+            .setLabel('Button Text')
+            .setStyle(TextInputStyle.Short)
+            .setValue('Collect Coins')
+            .setRequired(true)
+            .setMaxLength(80);
+            
+          const buttonEmojiInput = new TextInputBuilder()
+            .setCustomId('buttonEmoji')
+            .setLabel('Button Emoji')
+            .setStyle(TextInputStyle.Short)
+            .setValue('🪙')
+            .setRequired(false)
+            .setMaxLength(100);
+            
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(amountInput),
+            new ActionRowBuilder().addComponents(buttonTextInput),
+            new ActionRowBuilder().addComponents(buttonEmojiInput)
+          );
+          
+          console.log(`✅ SUCCESS: map_add_currency_drop - showing modal for ${coord}`);
+          
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          });
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_item_drop_select_')) {
+      // Handle item selection for drop configuration
+      return ButtonHandlerFactory.create({
+        id: 'map_item_drop_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_item_drop_select_', '');
+          const itemId = context.values?.[0];
+          
+          if (!itemId) {
+            return {
+              content: '❌ No item selected.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`📦 START: map_item_drop_select - coord ${coord}, item ${itemId}`);
+          
+          // Load current data to check for existing drop
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          const item = safariData[context.guildId]?.items?.[itemId];
+          
+          if (!coordData || !item) {
+            return {
+              content: '❌ Location or item data not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Check if this item already has a drop at this location
+          const existingDropIndex = coordData.itemDrops?.findIndex(drop => drop.itemId === itemId);
+          
+          // Show configuration interface
+          const dropConfig = existingDropIndex >= 0 ? coordData.itemDrops[existingDropIndex] : {
+            itemId: itemId,
+            buttonText: `Open ${item.name}`,
+            buttonEmoji: item.emoji || '📦',
+            buttonStyle: 2,
+            dropType: 'once_per_player',
+            claimedBy: []
+          };
+          
+          return {
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `# Configure ${item.emoji || '📦'} ${item.name} Drop\n\n**Location:** ${coord}`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 10, // Text Display - Preview
+                  content: `**Button Preview:**\n${dropConfig.buttonEmoji} ${dropConfig.buttonText}\n\n**Current Setting:** ${dropConfig.dropType === 'once_per_player' ? 'One per player' : 'One per entire season'}`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row - Button style select
+                  components: [{
+                    type: 6, // String Select
+                    custom_id: `map_drop_style_${coord}_${itemId}`,
+                    placeholder: 'Select button style...',
+                    options: [
+                      { label: 'Primary (Blue)', value: '1', default: dropConfig.buttonStyle === 1 },
+                      { label: 'Secondary (Grey)', value: '2', default: dropConfig.buttonStyle === 2 },
+                      { label: 'Success (Green)', value: '3', default: dropConfig.buttonStyle === 3 },
+                      { label: 'Danger (Red)', value: '4', default: dropConfig.buttonStyle === 4 }
+                    ]
+                  }]
+                },
+                {
+                  type: 1, // Action Row - Drop type select
+                  components: [{
+                    type: 6, // String Select
+                    custom_id: `map_drop_type_${coord}_${itemId}`,
+                    placeholder: 'How many are available?',
+                    options: [
+                      { 
+                        label: 'One per player', 
+                        value: 'once_per_player',
+                        description: 'Each player can claim this item once',
+                        default: dropConfig.dropType === 'once_per_player'
+                      },
+                      { 
+                        label: 'One per entire season', 
+                        value: 'once_per_season',
+                        description: 'Only one player can claim this item',
+                        default: dropConfig.dropType === 'once_per_season'
+                      }
+                    ]
+                  }]
+                },
+                { type: 13 }, // Divider
+                {
+                  type: 1, // Action Row - Actions
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: `map_drop_text_${coord}_${itemId}`,
+                      label: 'Set Button Text',
+                      style: 2, // Secondary
+                      emoji: { name: '✏️' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `map_drop_save_${coord}_${itemId}`,
+                      label: existingDropIndex >= 0 ? 'Update Item' : 'Add Item',
+                      style: 3, // Success
+                      emoji: { name: '✅' }
+                    },
+                    existingDropIndex >= 0 ? {
+                      type: 2, // Button
+                      custom_id: `map_drop_remove_${coord}_${itemId}`,
+                      label: 'Remove Item',
+                      style: 4, // Danger
+                      emoji: { name: '🗑️' }
+                    } : null,
+                    {
+                      type: 2, // Button
+                      custom_id: `map_drop_reset_${coord}_${itemId}`,
+                      label: 'Reset Item',
+                      style: 2, // Secondary
+                      emoji: { name: '🔃' }
+                    }
+                  ].filter(Boolean)
+                }
+              ]
+            }],
+            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_item_drop_') && !custom_id.includes('_select_')) {
+      // Handle item drop button click from players
+      return ButtonHandlerFactory.create({
+        id: 'map_item_drop_player',
+        ephemeral: true,
+        handler: async (context) => {
+          // Parse: map_item_drop_{coord}_{index}
+          const parts = context.customId.replace('map_item_drop_', '').split('_');
+          const coord = parts[0];
+          const dropIndex = parseInt(parts[1]);
+          
+          console.log(`📦 START: map_item_drop_player - user ${context.userId}, coord ${coord}, index ${dropIndex}`);
+          
+          // Load safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          const drop = coordData?.itemDrops?.[dropIndex];
+          
+          if (!drop) {
+            return {
+              content: '❌ Item drop not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Check if already claimed
+          if (drop.dropType === 'once_per_player') {
+            if (drop.claimedBy?.includes(context.userId)) {
+              console.log(`❌ User ${context.userId} already claimed item at ${coord}`);
+              return {
+                content: '❌ You have already taken this item!',
+                ephemeral: true
+              };
+            }
+          } else if (drop.dropType === 'once_per_season') {
+            if (drop.claimedBy) {
+              console.log(`❌ Item at ${coord} already claimed by ${drop.claimedBy}`);
+              return {
+                content: '❌ This item has already been taken by someone else!',
+                ephemeral: true
+              };
+            }
+          }
+          
+          // Give item to player
+          const item = safariData[context.guildId]?.items?.[drop.itemId];
+          if (!item) {
+            return {
+              content: '❌ Item configuration not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Update player inventory
+          const { getPlayerSafariData, updatePlayerSafariData } = await import('./safariManager.js');
+          const playerData = await getPlayerSafariData(context.guildId, context.userId);
+          
+          if (!playerData.inventory) playerData.inventory = {};
+          playerData.inventory[drop.itemId] = (playerData.inventory[drop.itemId] || 0) + 1;
+          
+          await updatePlayerSafariData(context.guildId, context.userId, playerData);
+          
+          // Mark as claimed
+          if (drop.dropType === 'once_per_player') {
+            if (!drop.claimedBy) drop.claimedBy = [];
+            drop.claimedBy.push(context.userId);
+          } else {
+            drop.claimedBy = context.userId;
+          }
+          
+          await saveSafariContent(safariData);
+          
+          // Update anchor message if needed
+          if (drop.dropType === 'once_per_season') {
+            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateMapCellAnchorMessage(context.guild, coord);
+          }
+          
+          console.log(`✅ SUCCESS: map_item_drop_player - gave ${drop.itemId} to ${context.userId}`);
+          
+          // Get config for display names
+          const config = safariData[context.guildId]?.safariConfig || {};
+          const inventoryName = config.inventoryName || 'Inventory';
+          
+          return {
+            content: `✅ You found **${item.emoji || '📦'} ${item.name}**!\n\nIt has been added to your ${inventoryName}.`,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_currency_drop_') && !custom_id.includes('_modal_')) {
+      // Handle currency drop button click from players
+      return ButtonHandlerFactory.create({
+        id: 'map_currency_drop_player',
+        ephemeral: true,
+        handler: async (context) => {
+          // Parse: map_currency_drop_{coord}_{index}
+          const parts = context.customId.replace('map_currency_drop_', '').split('_');
+          const coord = parts[0];
+          const dropIndex = parseInt(parts[1]);
+          
+          console.log(`🪙 START: map_currency_drop_player - user ${context.userId}, coord ${coord}, index ${dropIndex}`);
+          
+          // Load safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          const drop = coordData?.currencyDrops?.[dropIndex];
+          
+          if (!drop) {
+            return {
+              content: '❌ Currency drop not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Check if already claimed
+          if (drop.dropType === 'once_per_player') {
+            if (drop.claimedBy?.includes(context.userId)) {
+              console.log(`❌ User ${context.userId} already claimed currency at ${coord}`);
+              return {
+                content: '❌ You have already collected this currency!',
+                ephemeral: true
+              };
+            }
+          } else if (drop.dropType === 'once_per_season') {
+            if (drop.claimedBy) {
+              console.log(`❌ Currency at ${coord} already claimed by ${drop.claimedBy}`);
+              return {
+                content: '❌ This currency has already been collected by someone else!',
+                ephemeral: true
+              };
+            }
+          }
+          
+          // Give currency to player
+          const { getPlayerSafariData, updatePlayerSafariData } = await import('./safariManager.js');
+          const playerData = await getPlayerSafariData(context.guildId, context.userId);
+          
+          playerData.currency = (playerData.currency || 0) + drop.amount;
+          
+          await updatePlayerSafariData(context.guildId, context.userId, playerData);
+          
+          // Mark as claimed
+          if (drop.dropType === 'once_per_player') {
+            if (!drop.claimedBy) drop.claimedBy = [];
+            drop.claimedBy.push(context.userId);
+          } else {
+            drop.claimedBy = context.userId;
+          }
+          
+          await saveSafariContent(safariData);
+          
+          // Update anchor message if needed
+          if (drop.dropType === 'once_per_season') {
+            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateMapCellAnchorMessage(context.guild, coord);
+          }
+          
+          console.log(`✅ SUCCESS: map_currency_drop_player - gave ${drop.amount} currency to ${context.userId}`);
+          
+          // Get config for display names
+          const config = safariData[context.guildId]?.safariConfig || {};
+          const currencyName = config.currencyName || 'coins';
+          const currencyEmoji = config.currencyEmoji || '🪙';
+          
+          return {
+            content: `✅ You collected **${drop.amount} ${currencyEmoji} ${currencyName}**!\n\nYour balance: ${playerData.currency} ${currencyEmoji}`,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_drop_style_')) {
+      // Handle item drop style selection
+      return ButtonHandlerFactory.create({
+        id: 'map_drop_style',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('map_drop_style_', '').split('_');
+          const coord = parts[0];
+          const itemId = parts.slice(1).join('_');
+          const selectedStyle = parseInt(context.values[0]);
+          
+          // Update drop style
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          const dropIndex = coordData?.itemDrops?.findIndex(drop => drop.itemId === itemId);
+          if (dropIndex >= 0) {
+            coordData.itemDrops[dropIndex].buttonStyle = selectedStyle;
+            await saveSafariContent(safariData);
+            
+            // Update anchor message
+            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateMapCellAnchorMessage(context.guild, coord);
+          }
+          
+          // Refresh the configuration UI
+          req.body.data.custom_id = `map_item_drop_select_${coord}`;
+          req.body.data.values = [itemId];
+          return req.app._router.handle(req, res, next);
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_drop_type_')) {
+      // Handle item drop type selection
+      return ButtonHandlerFactory.create({
+        id: 'map_drop_type',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('map_drop_type_', '').split('_');
+          const coord = parts[0];
+          const itemId = parts.slice(1).join('_');
+          const dropType = context.values[0];
+          
+          // Update drop type
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          const dropIndex = coordData?.itemDrops?.findIndex(drop => drop.itemId === itemId);
+          if (dropIndex >= 0) {
+            coordData.itemDrops[dropIndex].dropType = dropType;
+            // Reset claims when changing type
+            coordData.itemDrops[dropIndex].claimedBy = dropType === 'once_per_player' ? [] : null;
+            await saveSafariContent(safariData);
+            
+            // Update anchor message
+            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateMapCellAnchorMessage(context.guild, coord);
+          }
+          
+          // Refresh the configuration UI
+          req.body.data.custom_id = `map_item_drop_select_${coord}`;
+          req.body.data.values = [itemId];
+          return req.app._router.handle(req, res, next);
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_drop_text_')) {
+      // Show modal for item drop button text
+      return ButtonHandlerFactory.create({
+        id: 'map_drop_text',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('map_drop_text_', '').split('_');
+          const coord = parts[0];
+          const itemId = parts.slice(1).join('_');
+          
+          // Get current drop data
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          const drop = coordData?.itemDrops?.find(d => d.itemId === itemId);
+          
+          // Show modal
+          const modal = new ModalBuilder()
+            .setCustomId(`map_drop_text_modal_${coord}_${itemId}`)
+            .setTitle(`Configure Button for ${coord}`);
+            
+          const buttonTextInput = new TextInputBuilder()
+            .setCustomId('buttonText')
+            .setLabel('Button Text')
+            .setStyle(TextInputStyle.Short)
+            .setValue(drop?.buttonText || 'Open')
+            .setRequired(true)
+            .setMaxLength(80);
+            
+          const buttonEmojiInput = new TextInputBuilder()
+            .setCustomId('buttonEmoji')
+            .setLabel('Button Emoji')
+            .setStyle(TextInputStyle.Short)
+            .setValue(drop?.buttonEmoji || '📦')
+            .setRequired(false)
+            .setMaxLength(100);
+            
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(buttonTextInput),
+            new ActionRowBuilder().addComponents(buttonEmojiInput)
+          );
+          
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          });
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_drop_save_')) {
+      // Save item drop configuration
+      return ButtonHandlerFactory.create({
+        id: 'map_drop_save',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('map_drop_save_', '').split('_');
+          const coord = parts[0];
+          const itemId = parts.slice(1).join('_');
+          
+          console.log(`💾 START: map_drop_save - coord ${coord}, item ${itemId}`);
+          
+          // Load and save data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          if (!coordData) {
+            return {
+              content: '❌ Location not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Initialize itemDrops if needed
+          if (!coordData.itemDrops) {
+            coordData.itemDrops = [];
+          }
+          
+          // Check if drop already exists
+          const dropIndex = coordData.itemDrops.findIndex(drop => drop.itemId === itemId);
+          if (dropIndex === -1) {
+            // Get item data for defaults
+            const item = safariData[context.guildId]?.items?.[itemId];
+            if (!item) {
+              return {
+                content: '❌ Item not found.',
+                ephemeral: true
+              };
+            }
+            
+            // Add new drop with default values
+            coordData.itemDrops.push({
+              itemId: itemId,
+              buttonText: `Open ${item.name}`,
+              buttonEmoji: item.emoji || '📦',
+              buttonStyle: 2,
+              dropType: 'once_per_player',
+              claimedBy: []
+            });
+          }
+          
+          await saveSafariContent(safariData);
+          
+          // Update anchor message
+          const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+          await updateMapCellAnchorMessage(context.guild, coord);
+          
+          // Return to entity management UI
+          const { createEntityManagementUI } = await import('./entityManagementUI.js');
+          const ui = await createEntityManagementUI({
+            entityType: 'map_cell',
+            guildId: context.guildId,
+            selectedId: coord,
+            mode: 'edit'
+          });
+          
+          console.log(`✅ SUCCESS: map_drop_save - saved drop for ${itemId} at ${coord}`);
+          
+          return {
+            ...ui,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_drop_remove_')) {
+      // Remove item drop
+      return ButtonHandlerFactory.create({
+        id: 'map_drop_remove',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('map_drop_remove_', '').split('_');
+          const coord = parts[0];
+          const itemId = parts.slice(1).join('_');
+          
+          // Remove drop
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          if (coordData?.itemDrops) {
+            coordData.itemDrops = coordData.itemDrops.filter(drop => drop.itemId !== itemId);
+            await saveSafariContent(safariData);
+            
+            // Update anchor message
+            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateMapCellAnchorMessage(context.guild, coord);
+          }
+          
+          // Return to entity management UI
+          const { createEntityManagementUI } = await import('./entityManagementUI.js');
+          const ui = await createEntityManagementUI({
+            entityType: 'map_cell',
+            guildId: context.guildId,
+            selectedId: coord,
+            mode: 'edit'
+          });
+          
+          return {
+            ...ui,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_drop_reset_')) {
+      // Reset item drop claims
+      return ButtonHandlerFactory.create({
+        id: 'map_drop_reset',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('map_drop_reset_', '').split('_');
+          const coord = parts[0];
+          const itemId = parts.slice(1).join('_');
+          
+          // Reset claims
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          const dropIndex = coordData?.itemDrops?.findIndex(drop => drop.itemId === itemId);
+          if (dropIndex >= 0) {
+            const drop = coordData.itemDrops[dropIndex];
+            drop.claimedBy = drop.dropType === 'once_per_player' ? [] : null;
+            await saveSafariContent(safariData);
+            
+            // Update anchor message if needed
+            if (drop.dropType === 'once_per_season') {
+              const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+              await updateMapCellAnchorMessage(context.guild, coord);
+            }
+          }
+          
+          return {
+            content: '✅ Drop claims have been reset. Players can now claim this item again.',
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_currency_style_')) {
+      // Handle currency drop style selection
+      return ButtonHandlerFactory.create({
+        id: 'map_currency_style',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_currency_style_', '');
+          const selectedStyle = parseInt(context.values[0]);
+          
+          // Update style
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          if (coordData?.currencyDrops?.[0]) {
+            coordData.currencyDrops[0].buttonStyle = selectedStyle;
+            await saveSafariContent(safariData);
+            
+            // Update anchor message
+            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateMapCellAnchorMessage(context.guild, coord);
+          }
+          
+          // Refresh UI by re-showing currency config
+          req.body.data.custom_id = `map_add_currency_drop_${coord}`;
+          return req.app._router.handle(req, res, next);
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_currency_type_')) {
+      // Handle currency drop type selection
+      return ButtonHandlerFactory.create({
+        id: 'map_currency_type',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_currency_type_', '');
+          const dropType = context.values[0];
+          
+          // Update type
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          if (coordData?.currencyDrops?.[0]) {
+            coordData.currencyDrops[0].dropType = dropType;
+            coordData.currencyDrops[0].claimedBy = dropType === 'once_per_player' ? [] : null;
+            await saveSafariContent(safariData);
+            
+            // Update anchor message
+            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateMapCellAnchorMessage(context.guild, coord);
+          }
+          
+          // Refresh UI
+          req.body.data.custom_id = `map_add_currency_drop_${coord}`;
+          return req.app._router.handle(req, res, next);
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_currency_edit_')) {
+      // Show modal to edit currency amount/text
+      return ButtonHandlerFactory.create({
+        id: 'map_currency_edit',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_currency_edit_', '');
+          
+          // Reuse the currency drop modal
+          req.body.data.custom_id = `map_add_currency_drop_${coord}`;
+          return req.app._router.handle(req, res, next);
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_currency_remove_')) {
+      // Remove currency drop
+      return ButtonHandlerFactory.create({
+        id: 'map_currency_remove',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_currency_remove_', '');
+          
+          // Remove currency drop
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          if (coordData) {
+            coordData.currencyDrops = [];
+            await saveSafariContent(safariData);
+            
+            // Update anchor message
+            const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+            await updateMapCellAnchorMessage(context.guild, coord);
+          }
+          
+          // Return to entity management UI
+          const { createEntityManagementUI } = await import('./entityManagementUI.js');
+          const ui = await createEntityManagementUI({
+            entityType: 'map_cell',
+            guildId: context.guildId,
+            selectedId: coord,
+            mode: 'edit'
+          });
+          
+          return {
+            ...ui,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_currency_reset_')) {
+      // Reset currency drop claims
+      return ButtonHandlerFactory.create({
+        id: 'map_currency_reset',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_currency_reset_', '');
+          
+          // Reset claims
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          if (coordData?.currencyDrops?.[0]) {
+            const drop = coordData.currencyDrops[0];
+            drop.claimedBy = drop.dropType === 'once_per_player' ? [] : null;
+            await saveSafariContent(safariData);
+            
+            // Update anchor message if needed
+            if (drop.dropType === 'once_per_season') {
+              const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+              await updateMapCellAnchorMessage(context.guild, coord);
+            }
+          }
+          
+          return {
+            content: '✅ Currency claims have been reset. Players can now collect this currency again.',
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('map_grid_edit_')) {
       // Handle grid content editing
       try {
@@ -16300,6 +17455,259 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating location content.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('map_currency_drop_modal_')) {
+      // Handle currency drop configuration modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const coord = custom_id.replace('map_currency_drop_modal_', '');
+        const components = req.body.data.components;
+        
+        // Extract values from modal
+        const amount = parseInt(components[0].components[0].value);
+        const buttonText = components[1].components[0].value;
+        const buttonEmoji = components[2].components[0].value || '🪙';
+        
+        if (isNaN(amount) || amount <= 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid currency amount. Please enter a positive number.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🪙 Processing currency drop modal for ${coord}: ${amount} coins`);
+        
+        // Load and update safari data
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+        
+        if (!coordData) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Location not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Initialize currencyDrops array if needed
+        if (!coordData.currencyDrops) {
+          coordData.currencyDrops = [];
+        }
+        
+        // Check if currency drop already exists (only one per location)
+        if (coordData.currencyDrops.length > 0) {
+          // Update existing
+          coordData.currencyDrops[0] = {
+            amount: amount,
+            buttonText: buttonText,
+            buttonEmoji: buttonEmoji,
+            buttonStyle: coordData.currencyDrops[0].buttonStyle || 2,
+            dropType: coordData.currencyDrops[0].dropType || 'once_per_player',
+            claimedBy: coordData.currencyDrops[0].claimedBy || []
+          };
+        } else {
+          // Add new currency drop
+          coordData.currencyDrops.push({
+            amount: amount,
+            buttonText: buttonText,
+            buttonEmoji: buttonEmoji,
+            buttonStyle: 2, // Secondary/grey
+            dropType: 'once_per_player',
+            claimedBy: []
+          });
+        }
+        
+        await saveSafariContent(safariData);
+        
+        // Update anchor message
+        const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+        await updateMapCellAnchorMessage(client.guilds.cache.get(guildId), coord);
+        
+        // Show currency drop configuration interface
+        const dropIndex = 0; // Currency drops only have one per location
+        const drop = coordData.currencyDrops[dropIndex];
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `# Configure Currency Drop\n\n**Location:** ${coord}\n**Amount:** ${drop.amount}`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 10, // Text Display - Preview
+                  content: `**Button Preview:**\n${drop.buttonEmoji} ${drop.buttonText}\n\n**Current Setting:** ${drop.dropType === 'once_per_player' ? 'One per player' : 'One per entire season'}`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row - Button style select
+                  components: [{
+                    type: 6, // String Select
+                    custom_id: `map_currency_style_${coord}`,
+                    placeholder: 'Select button style...',
+                    options: [
+                      { label: 'Primary (Blue)', value: '1', default: drop.buttonStyle === 1 },
+                      { label: 'Secondary (Grey)', value: '2', default: drop.buttonStyle === 2 },
+                      { label: 'Success (Green)', value: '3', default: drop.buttonStyle === 3 },
+                      { label: 'Danger (Red)', value: '4', default: drop.buttonStyle === 4 }
+                    ]
+                  }]
+                },
+                {
+                  type: 1, // Action Row - Drop type select
+                  components: [{
+                    type: 6, // String Select
+                    custom_id: `map_currency_type_${coord}`,
+                    placeholder: 'How many are available?',
+                    options: [
+                      { 
+                        label: 'One per player', 
+                        value: 'once_per_player',
+                        description: 'Each player can collect once',
+                        default: drop.dropType === 'once_per_player'
+                      },
+                      { 
+                        label: 'One per entire season', 
+                        value: 'once_per_season',
+                        description: 'Only one player can collect',
+                        default: drop.dropType === 'once_per_season'
+                      }
+                    ]
+                  }]
+                },
+                { type: 13 }, // Divider
+                {
+                  type: 1, // Action Row - Actions
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: `map_currency_edit_${coord}`,
+                      label: 'Edit Amount/Text',
+                      style: 2, // Secondary
+                      emoji: { name: '✏️' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `map_currency_remove_${coord}`,
+                      label: 'Remove Currency',
+                      style: 4, // Danger
+                      emoji: { name: '🗑️' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `map_currency_reset_${coord}`,
+                      label: 'Reset Claims',
+                      style: 2, // Secondary
+                      emoji: { name: '🔃' }
+                    }
+                  ]
+                }
+              ]
+            }],
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + ephemeral
+            ephemeral: true
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in map_currency_drop_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error configuring currency drop.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('map_drop_text_modal_')) {
+      // Handle item drop button text modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const parts = custom_id.replace('map_drop_text_modal_', '').split('_');
+        const coord = parts[0];
+        const itemId = parts.slice(1).join('_');
+        const components = req.body.data.components;
+        
+        // Extract values
+        const buttonText = components[0].components[0].value;
+        const buttonEmoji = components[1].components[0].value || '📦';
+        
+        console.log(`✏️ Updating drop text for ${coord} item ${itemId}`);
+        
+        // Load and update safari data
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+        
+        if (!coordData) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Location not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Find and update the drop
+        const dropIndex = coordData.itemDrops?.findIndex(drop => drop.itemId === itemId);
+        if (dropIndex === -1) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Item drop not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        coordData.itemDrops[dropIndex].buttonText = buttonText;
+        coordData.itemDrops[dropIndex].buttonEmoji = buttonEmoji;
+        
+        await saveSafariContent(safariData);
+        
+        // Update anchor message
+        const { updateMapCellAnchorMessage } = await import('./mapCellUpdater.js');
+        await updateMapCellAnchorMessage(client.guilds.cache.get(guildId), coord);
+        
+        // Return to item drop configuration
+        const { createEntityManagementUI } = await import('./entityManagementUI.js');
+        const ui = await createEntityManagementUI({
+          entityType: 'map_cell',
+          guildId: guildId,
+          selectedId: coord,
+          mode: 'edit'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            ...ui,
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in map_drop_text_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating button text.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
