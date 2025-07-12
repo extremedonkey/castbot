@@ -12795,7 +12795,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                     }
                   ]
                 }],
-                flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+                flags: (1 << 15), // IS_COMPONENTS_V2
                 ephemeral: true
               };
               
@@ -12844,7 +12844,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                     }
                   ]
                 }],
-                flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+                flags: (1 << 15), // IS_COMPONENTS_V2
                 ephemeral: true
               };
             }
@@ -13574,7 +13574,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 accent_color: store.settings?.accentColor || 0x3498db,
                 components: containerComponents
               }],
-              flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+              flags: (1 << 15), // IS_COMPONENTS_V2
               ephemeral: true
             };
             
@@ -13638,7 +13638,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 }
               ]
             }],
-            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2
             ephemeral: true
           };
         }
@@ -13832,7 +13832,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 }
               ]
             }],
-            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2
             ephemeral: true
           };
         }
