@@ -124,10 +124,17 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         // Create anchor message components
         const components = await createAnchorMessageComponents(coordData, guild.id, coord, fogMapUrl);
         
-        // Send anchor message
-        const anchorMessage = await channel.send({
+        // Send anchor message using DiscordRequest for Components V2
+        const { DiscordRequest } = await import('./utils.js');
+        
+        const messagePayload = {
           flags: (1 << 15), // IS_COMPONENTS_V2
           components: components
+        };
+        
+        const anchorMessage = await DiscordRequest(`channels/${channel.id}/messages`, {
+          method: 'POST',
+          body: messagePayload
         });
         
         // Store anchor message ID
