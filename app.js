@@ -7409,8 +7409,8 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
       }
-    } else if (custom_id === 'safari_import_data') {
-      // Handle Safari data import
+    } else if (custom_id === 'safari_open_import_modal') {
+      // Handle opening the import modal
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -7429,9 +7429,9 @@ Your server is now ready for Tycoons gameplay!`;
         
         const importInput = new TextInputBuilder()
           .setCustomId('import_data')
-          .setLabel('Paste exported Safari data:')
+          .setLabel('Paste exported Safari JSON data here:')
           .setStyle(TextInputStyle.Paragraph)
-          .setPlaceholder('{"stores":{"store_123":{"name":"My Store",...}},"items":{...},"safariConfig":{...}}')
+          .setPlaceholder('Paste the complete JSON data from your export file here...')
           .setMaxLength(4000)
           .setRequired(true);
         
@@ -7440,6 +7440,54 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.MODAL,
           data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_open_import_modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error opening import modal. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_import_data') {
+      // Handle Safari data import
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to import Safari data.')) return;
+        
+        console.log(`📥 DEBUG: Opening Safari import modal for guild ${guildId}`);
+        
+        // First send a message with instructions
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `📥 **Safari Data Import Instructions**\n\n` +
+                    `**How to import:**\n` +
+                    `1. Open your exported Safari JSON file\n` +
+                    `2. Copy ALL the content (Ctrl+A, Ctrl+C)\n` +
+                    `3. Click the "Open Import Modal" button below\n` +
+                    `4. Paste the JSON data into the text field\n\n` +
+                    `**Note:** Due to Discord's 4000 character limit, only small Safari configurations can be imported via modal. ` +
+                    `For larger configurations, please contact the bot administrator.\n\n` +
+                    `**Expected format:** \`{"stores":{...},"items":{...},"safariConfig":{...}}\``,
+            components: [{
+              type: 1,
+              components: [{
+                type: 2,
+                style: 1,
+                label: 'Open Import Modal',
+                custom_id: 'safari_open_import_modal',
+                emoji: { name: '📤' }
+              }]
+            }],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
         });
         
       } catch (error) {
