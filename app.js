@@ -7453,53 +7453,138 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_import_data') {
-      // Handle Safari data import
+      // Handle Safari data import with file upload
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
+        const channelId = req.body.channel_id;
+        const userId = member.user.id;
         
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to import Safari data.')) return;
         
-        console.log(`📥 DEBUG: Opening Safari import modal for guild ${guildId}`);
+        console.log(`📥 DEBUG: Starting file-based Safari import for guild ${guildId}`);
         
-        // First send a message with instructions
-        return res.send({
+        // Send instructions and set up message collector
+        res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `📥 **Safari Data Import Instructions**\n\n` +
-                    `**How to import:**\n` +
-                    `1. Open your exported Safari JSON file\n` +
-                    `2. Copy ALL the content (Ctrl+A, Ctrl+C)\n` +
-                    `3. Click the "Open Import Modal" button below\n` +
-                    `4. Paste the JSON data into the text field\n\n` +
-                    `**Note:** Due to Discord's 4000 character limit, only small Safari configurations can be imported via modal. ` +
-                    `For larger configurations, please contact the bot administrator.\n\n` +
-                    `**Expected format:** \`{"stores":{...},"items":{...},"safariConfig":{...}}\``,
+            content: `📥 **Safari Data Import - File Upload**\n\n` +
+                    `Please upload your Safari export JSON file now.\n` +
+                    `Simply drag and drop the file into this channel or use the attachment button.\n\n` +
+                    `⏱️ Waiting for your file upload... (60 second timeout)`,
             components: [{
               type: 1,
               components: [{
                 type: 2,
-                style: 1,
-                label: 'Open Import Modal',
-                custom_id: 'safari_open_import_modal',
-                emoji: { name: '📤' }
+                style: 4,
+                label: 'Cancel Import',
+                custom_id: 'safari_import_cancel',
+                emoji: { name: '❌' }
               }]
             }],
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         
+        // Set up message collector to wait for file upload
+        const channel = await client.channels.fetch(channelId);
+        const filter = m => m.author.id === userId && m.attachments.size > 0;
+        
+        const collector = channel.createMessageCollector({ 
+          filter, 
+          time: 60000, // 60 second timeout
+          max: 1 // Only collect one message
+        });
+        
+        collector.on('collect', async (message) => {
+          try {
+            console.log(`📥 DEBUG: File upload detected from user ${userId}`);
+            
+            // Get the first attachment
+            const attachment = message.attachments.first();
+            
+            // Validate it's a JSON file
+            if (!attachment.name.endsWith('.json')) {
+              await message.reply({
+                content: '❌ Please upload a JSON file (`.json` extension required).',
+                ephemeral: true
+              });
+              return;
+            }
+            
+            // Fetch the file content
+            const response = await fetch(attachment.url);
+            const jsonContent = await response.text();
+            
+            console.log(`📥 DEBUG: Downloaded file ${attachment.name}, size: ${jsonContent.length} characters`);
+            
+            // Import the Safari data
+            const { importSafariData, formatImportSummary } = await import('./safariImportExport.js');
+            const summary = await importSafariData(guildId, jsonContent);
+            
+            console.log(`✅ DEBUG: Safari import completed for guild ${guildId}:`, summary);
+            
+            // Send success message
+            await message.reply({
+              content: `✅ **Safari Data Import Successful!**\n\n${formatImportSummary(summary)}`,
+              ephemeral: true
+            });
+            
+            // Delete the uploaded file message for privacy
+            try {
+              await message.delete();
+            } catch (err) {
+              console.log('Could not delete import file message:', err.message);
+            }
+            
+          } catch (error) {
+            console.error('Error processing Safari import file:', error);
+            await message.reply({
+              content: `❌ **Import Failed**\n\nError: ${error.message}\n\nPlease check your JSON file format and try again.`,
+              ephemeral: true
+            });
+          }
+        });
+        
+        collector.on('end', (collected, reason) => {
+          if (reason === 'time' && collected.size === 0) {
+            // Edit the original message to show timeout
+            const token = req.body.token;
+            const editUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${token}/messages/@original`;
+            
+            fetch(editUrl, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                content: '⏱️ **Import Timed Out**\n\nNo file was uploaded within 60 seconds. Please try again.',
+                components: []
+              })
+            }).catch(err => console.error('Error updating timeout message:', err));
+          }
+        });
+        
+        return;
+        
       } catch (error) {
         console.error('Error in safari_import_data:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error opening import interface. Please try again.',
+            content: '❌ Error starting import process. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
       }
+    } else if (custom_id === 'safari_import_cancel') {
+      // Handle import cancellation
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: {
+          content: '❌ Safari import cancelled.',
+          components: []
+        }
+      });
     } else if (custom_id === 'safari_schedule_results') {
       // Handle Safari scheduling interface
       try {
