@@ -7349,26 +7349,24 @@ Your server is now ready for Tycoons gameplay!`;
         
         console.log(`📤 DEBUG: Export data length: ${exportJson.length} characters`);
         
-        // Create export modal with data
-        const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+        // Create file attachment with the export data
+        const { AttachmentBuilder } = await import('discord.js');
         
-        const modal = new ModalBuilder()
-          .setCustomId('safari_export_modal')
-          .setTitle('Safari Data Export');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `safari-export-${guildId}-${timestamp}.json`;
         
-        const exportInput = new TextInputBuilder()
-          .setCustomId('export_data')
-          .setLabel('Copy this data to import elsewhere:')
-          .setStyle(TextInputStyle.Paragraph)
-          .setValue(exportJson)
-          .setMaxLength(4000)
-          .setRequired(false);
-        
-        modal.addComponents(new ActionRowBuilder().addComponents(exportInput));
+        const attachment = new AttachmentBuilder(Buffer.from(exportJson, 'utf8'), {
+          name: filename,
+          description: 'Safari configuration export data'
+        });
         
         return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '📤 **Safari Data Export Complete**\n\nYour Safari configuration has been exported as a JSON file. Download this file and use it with the Import function to restore this configuration elsewhere.',
+            files: [attachment.toJSON()],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
         });
         
       } catch (error) {
