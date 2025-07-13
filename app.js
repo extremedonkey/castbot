@@ -7337,11 +7337,20 @@ Your server is now ready for Tycoons gameplay!`;
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
+        const token = req.body.token;
         
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to export Safari data.')) return;
         
         console.log(`📤 DEBUG: Exporting Safari data for guild ${guildId}`);
+        
+        // Defer the response immediately
+        res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
         
         // Export Safari data
         const { exportSafariData } = await import('./safariImportExport.js');
@@ -7349,69 +7358,40 @@ Your server is now ready for Tycoons gameplay!`;
         
         console.log(`📤 DEBUG: Export data length: ${exportJson.length} characters`);
         
-        // Log export data for manual retrieval if needed
-        if (exportJson.length > 3500) {
-          console.log(`📤 LARGE EXPORT DATA for guild ${guildId}:`);
-          console.log(exportJson);
-          console.log(`📤 END EXPORT DATA for guild ${guildId}`);
-        }
+        // Create the export file attachment
+        const { AttachmentBuilder } = await import('discord.js');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `safari-export-${guildId}-${timestamp}.json`;
         
-        // Since interaction responses can't easily send file attachments,
-        // we'll send the data as compressed chunks in a modal
-        const chunkSize = 3500; // Leave room for modal formatting
-        const chunks = [];
+        const attachment = new AttachmentBuilder(Buffer.from(exportJson, 'utf8'), {
+          name: filename,
+          description: 'Safari configuration export'
+        });
         
-        for (let i = 0; i < exportJson.length; i += chunkSize) {
-          chunks.push(exportJson.slice(i, i + chunkSize));
-        }
+        // Use the Discord client to edit the deferred response with the file
+        const channel = await client.channels.fetch(req.body.channel_id);
+        const webhookClient = await client.fetchWebhook(process.env.APPLICATION_ID, token);
         
-        // If data fits in one chunk, use a simple modal
-        if (chunks.length === 1) {
-          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
-          
-          const modal = new ModalBuilder()
-            .setCustomId('safari_export_modal')
-            .setTitle('Safari Data Export');
-          
-          const exportInput = new TextInputBuilder()
-            .setCustomId('export_data')
-            .setLabel('Copy this data to import elsewhere:')
-            .setStyle(TextInputStyle.Paragraph)
-            .setValue(exportJson)
-            .setRequired(false);
-          
-          modal.addComponents(new ActionRowBuilder().addComponents(exportInput));
-          
-          return res.send({
-            type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
-          });
-        } else {
-          // If data is too large, provide alternative instructions
+        await webhookClient.editReply({
+          content: '📤 **Safari Data Export Complete**\n\nYour Safari configuration has been exported. Download the attached JSON file to save your configuration.',
+          files: [attachment]
+        });
+        
+        return;
+        
+      } catch (error) {
+        console.error('Error in safari_export_data:', error);
+        
+        // If we haven't sent a response yet, send error response
+        if (!res.headersSent) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: `📤 **Safari Data Export Too Large for Modal**\n\n` +
-                      `Your Safari configuration (${exportJson.length} characters) is too large to display in Discord.\n\n` +
-                      `**Alternative Options:**\n` +
-                      `• Use a smaller Safari configuration\n` +
-                      `• Contact the administrator to get the export data from server logs\n` +
-                      `• Export individual components (stores, items, maps) separately\n\n` +
-                      `*Note: Export data has been logged to server for manual retrieval.*`,
+              content: '❌ Error exporting Safari data. Please try again.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
-        
-      } catch (error) {
-        console.error('Error in safari_export_data:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error exporting Safari data. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
       }
     } else if (custom_id === 'safari_import_data') {
       // Handle Safari data import
