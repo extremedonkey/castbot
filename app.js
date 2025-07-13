@@ -7368,13 +7368,29 @@ Your server is now ready for Tycoons gameplay!`;
           description: 'Safari configuration export'
         });
         
-        // Use the Discord client to edit the deferred response with the file
-        const channel = await client.channels.fetch(req.body.channel_id);
-        const webhookClient = await client.fetchWebhook(process.env.APPLICATION_ID, token);
+        // Use Discord API directly to send the follow-up with file
+        const applicationId = req.body.application_id;
+        const followUpUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}`;
         
-        await webhookClient.editReply({
+        // Create FormData with the file
+        const FormData = (await import('form-data')).default;
+        const form = new FormData();
+        
+        form.append('payload_json', JSON.stringify({
           content: '📤 **Safari Data Export Complete**\n\nYour Safari configuration has been exported. Download the attached JSON file to save your configuration.',
-          files: [attachment]
+          flags: InteractionResponseFlags.EPHEMERAL
+        }));
+        
+        form.append('files[0]', Buffer.from(exportJson, 'utf8'), {
+          filename: filename,
+          contentType: 'application/json'
+        });
+        
+        // Send the follow-up message with the file
+        await fetch(followUpUrl, {
+          method: 'POST',
+          headers: form.getHeaders(),
+          body: form
         });
         
         return;
