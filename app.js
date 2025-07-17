@@ -13060,8 +13060,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             const { createCustomActionSelectionUI } = await import('./customActionUI.js');
             const { loadSafariContent } = await import('./safariManager.js');
             
-            const safariData = await loadSafariContent(context.guildId);
-            const activeMapId = safariData.maps?.active;
+            const allSafariData = await loadSafariContent();
+            const guildData = allSafariData[context.guildId] || {};
+            const activeMapId = guildData.maps?.active;
             
             if (!activeMapId) {
               return {

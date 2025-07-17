@@ -15,11 +15,12 @@ import { loadSafariContent } from './safariManager.js';
  */
 export async function createCustomActionSelectionUI({ guildId, coordinate, mapId }) {
   // Load all safari buttons (now custom actions)
-  const safariContent = await loadSafariContent(guildId);
-  const allActions = safariContent.buttons || {};
+  const allSafariContent = await loadSafariContent();
+  const guildData = allSafariContent[guildId] || {};
+  const allActions = guildData.buttons || {};
   
   // Get current map cell data
-  const mapData = safariContent.maps?.[mapId];
+  const mapData = guildData.maps?.[mapId];
   const cellData = mapData?.coordinates?.[coordinate] || {};
   const assignedActionIds = cellData.buttons || [];
   
@@ -103,8 +104,9 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
  * @returns {Object} Discord Components V2 UI
  */
 export async function createCustomActionEditorUI({ guildId, actionId, coordinate }) {
-  const safariContent = await loadSafariContent(guildId);
-  let action = actionId === 'new' ? createDefaultAction() : safariContent.buttons?.[actionId];
+  const allSafariContent = await loadSafariContent();
+  const guildData = allSafariContent[guildId] || {};
+  let action = actionId === 'new' ? createDefaultAction() : guildData.buttons?.[actionId];
   
   if (!action) {
     throw new Error('Action not found');
@@ -307,8 +309,9 @@ function getTriggerDescription(trigger) {
  * Create trigger configuration UI
  */
 export async function createTriggerConfigUI({ guildId, actionId }) {
-  const safariContent = await loadSafariContent(guildId);
-  const action = safariContent.buttons?.[actionId] || createDefaultAction();
+  const allSafariContent = await loadSafariContent();
+  const guildData = allSafariContent[guildId] || {};
+  const action = guildData.buttons?.[actionId] || createDefaultAction();
   
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
@@ -360,8 +363,9 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
  * Create conditions configuration UI
  */
 export async function createConditionsConfigUI({ guildId, actionId }) {
-  const safariContent = await loadSafariContent(guildId);
-  const action = safariContent.buttons?.[actionId] || createDefaultAction();
+  const allSafariContent = await loadSafariContent();
+  const guildData = allSafariContent[guildId] || {};
+  const action = guildData.buttons?.[actionId] || createDefaultAction();
   const conditions = action.conditions || { logic: 'AND', items: [] };
   
   const components = [
