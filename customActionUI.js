@@ -3,7 +3,7 @@
 
 import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { loadEntity, updateEntity } from './entityManager.js';
-import { loadSafariContent } from './storage.js';
+import { loadSafariContent } from './safariManager.js';
 
 /**
  * Create the custom action selection UI for a map coordinate

@@ -13058,7 +13058,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             console.log('🎯 Intercepting Safari Buttons click for Custom Actions UI');
             
             const { createCustomActionSelectionUI } = await import('./customActionUI.js');
-            const { loadSafariContent } = await import('./storage.js');
+            const { loadSafariContent } = await import('./safariManager.js');
             
             const safariData = await loadSafariContent(context.guildId);
             const activeMapId = safariData.maps?.active;
