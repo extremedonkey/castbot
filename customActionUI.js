@@ -50,8 +50,9 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
     if (actionOptions.length >= 25) break; // Discord limit
   }
   
+  // For Components V2, do NOT include flags at top level when updating messages
+  // The ButtonHandlerFactory will handle the proper response structure
   return {
-    flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
       type: 17, // Container
       accent_color: 0x5865f2,
@@ -91,7 +92,8 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
           ]
         }
       ]
-    }]
+    }],
+    flags: (1 << 15) // IS_COMPONENTS_V2 - Include here for ButtonHandlerFactory
   };
 }
 
@@ -121,7 +123,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   const coordinateCount = action.coordinates?.length || 0;
   
   return {
-    flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
       type: 17, // Container
       accent_color: 0x5865f2,
@@ -219,7 +220,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           ]
         }
       ]
-    }]
+    }],
+    flags: (1 << 15) // IS_COMPONENTS_V2
   };
 }
 
@@ -314,7 +316,6 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   const action = guildData.buttons?.[actionId] || createDefaultAction();
   
   return {
-    flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
       type: 17, // Container
       components: [
@@ -355,7 +356,8 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
           }]
         }
       ]
-    }]
+    }],
+    flags: (1 << 15) // IS_COMPONENTS_V2
   };
 }
 
@@ -435,11 +437,11 @@ export async function createConditionsConfigUI({ guildId, actionId }) {
   });
   
   return {
-    flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
       type: 17, // Container
       components
-    }]
+    }],
+    flags: (1 << 15) // IS_COMPONENTS_V2
   };
 }
 
