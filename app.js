@@ -13058,28 +13058,41 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             // Special handling for Safari Buttons -> Custom Actions UI
             console.log('🎯 Intercepting Safari Buttons click for Custom Actions UI');
             
-            const { createCustomActionSelectionUI } = await import('./customActionUI.js');
-            const { loadSafariContent } = await import('./safariManager.js');
-            
-            const allSafariData = await loadSafariContent();
-            const guildData = allSafariData[context.guildId] || {};
-            const activeMapId = guildData.maps?.active;
-            
-            if (!activeMapId) {
+            try {
+              const { createCustomActionSelectionUI } = await import('./customActionUI.js');
+              const { loadSafariContent } = await import('./safariManager.js');
+              
+              console.log('📦 Loading Safari content...');
+              const allSafariData = await loadSafariContent();
+              const guildData = allSafariData[context.guildId] || {};
+              const activeMapId = guildData.maps?.active;
+              
+              console.log(`🗺️ Active map ID: ${activeMapId}`);
+              
+              if (!activeMapId) {
+                return {
+                  content: '❌ No active map found.',
+                  ephemeral: true
+                };
+              }
+              
+              console.log(`📍 Creating UI for coordinate: ${entityId}, map: ${activeMapId}`);
+              // entityId is the coordinate (e.g., "A1")
+              const customActionUI = await createCustomActionSelectionUI({
+                guildId: context.guildId,
+                coordinate: entityId,
+                mapId: activeMapId
+              });
+              
+              console.log('✅ Custom Action UI created successfully');
+              return customActionUI;
+            } catch (error) {
+              console.error('❌ Error creating Custom Action UI:', error);
               return {
-                content: '❌ No active map found.',
+                content: `❌ Error loading custom actions: ${error.message}`,
                 ephemeral: true
               };
             }
-            
-            // entityId is the coordinate (e.g., "A1")
-            const customActionUI = await createCustomActionSelectionUI({
-              guildId: context.guildId,
-              coordinate: entityId,
-              mapId: activeMapId
-            });
-            
-            return customActionUI;
           } else {
             // Open modal directly for field group editing
             try {
