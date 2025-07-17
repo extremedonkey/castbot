@@ -13053,6 +13053,31 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             containerComponents.splice(insertIndex, 0, consumableSelect);
             
             return uiResponse;
+          } else if (entityType === 'map_cell' && fieldGroup === 'interaction') {
+            // Special handling for Safari Buttons -> Custom Actions UI
+            console.log('🎯 Intercepting Safari Buttons click for Custom Actions UI');
+            
+            const { createCustomActionSelectionUI } = await import('./customActionUI.js');
+            const { loadSafariContent } = await import('./storage.js');
+            
+            const safariData = await loadSafariContent(context.guildId);
+            const activeMapId = safariData.maps?.active;
+            
+            if (!activeMapId) {
+              return {
+                content: '❌ No active map found.',
+                ephemeral: true
+              };
+            }
+            
+            // entityId is the coordinate (e.g., "A1")
+            const customActionUI = await createCustomActionSelectionUI({
+              guildId: context.guildId,
+              coordinate: entityId,
+              mapId: activeMapId
+            });
+            
+            return customActionUI;
           } else {
             // Open modal directly for field group editing
             try {
@@ -13080,6 +13105,91 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               throw error;
             }
           }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('entity_custom_action_list_')) {
+      // Handle custom action selection from dropdown
+      return ButtonHandlerFactory.create({
+        id: 'entity_custom_action_list',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: entity_custom_action_list - user ${context.userId}`);
+          
+          const selectedValue = context.values[0];
+          // Parse: entity_custom_action_list_{coordinate}_{mapId}
+          const parts = context.customId.replace('entity_custom_action_list_', '').split('_');
+          const coordinate = parts[0];
+          const mapId = parts[1];
+          
+          if (selectedValue === 'create_new') {
+            // Create new custom action
+            const { createCustomActionEditorUI } = await import('./customActionUI.js');
+            const ui = await createCustomActionEditorUI({
+              guildId: context.guildId,
+              actionId: 'new',
+              coordinate
+            });
+            
+            console.log(`✅ SUCCESS: entity_custom_action_list - showing new action editor`);
+            return ui;
+          } else {
+            // Edit existing action
+            const { createCustomActionEditorUI } = await import('./customActionUI.js');
+            const ui = await createCustomActionEditorUI({
+              guildId: context.guildId,
+              actionId: selectedValue,
+              coordinate
+            });
+            
+            console.log(`✅ SUCCESS: entity_custom_action_list - showing action editor for ${selectedValue}`);
+            return ui;
+          }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('entity_action_trigger_')) {
+      // Handle trigger configuration button
+      return ButtonHandlerFactory.create({
+        id: 'entity_action_trigger',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: entity_action_trigger - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('entity_action_trigger_', '');
+          const { createTriggerConfigUI } = await import('./customActionUI.js');
+          
+          const ui = await createTriggerConfigUI({
+            guildId: context.guildId,
+            actionId
+          });
+          
+          console.log(`✅ SUCCESS: entity_action_trigger - showing trigger config`);
+          return ui;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('entity_action_conditions_')) {
+      // Handle conditions configuration button
+      return ButtonHandlerFactory.create({
+        id: 'entity_action_conditions',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: entity_action_conditions - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('entity_action_conditions_', '');
+          const { createConditionsConfigUI } = await import('./customActionUI.js');
+          
+          const ui = await createConditionsConfigUI({
+            guildId: context.guildId,
+            actionId
+          });
+          
+          console.log(`✅ SUCCESS: entity_action_conditions - showing conditions config`);
+          return ui;
         }
       })(req, res, client);
       

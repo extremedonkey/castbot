@@ -9,11 +9,32 @@ import { SAFARI_LIMITS, EDIT_TYPES, BUTTON_STYLES } from './config/safariLimits.
  */
 export const EDIT_CONFIGS = {
   [EDIT_TYPES.BUTTON]: {
-    displayName: 'Button',
+    displayName: 'Custom Action',
     properties: {
-      label: { type: 'text', maxLength: SAFARI_LIMITS.MAX_BUTTON_LABEL_LENGTH, required: true, label: 'Button Label' },
-      emoji: { type: 'text', maxLength: 10, required: false, label: 'Emoji', placeholder: '🦁' },
-      style: { type: 'select', options: BUTTON_STYLES, required: true, label: 'Button Style' },
+      name: { type: 'text', maxLength: 50, required: true, label: 'Action Name' },
+      description: { type: 'textarea', maxLength: 200, required: false, label: 'Description' },
+      trigger: { 
+        type: 'complex', 
+        label: 'Trigger Configuration',
+        subtype: 'trigger',
+        required: true 
+      },
+      conditions: { 
+        type: 'complex', 
+        label: 'Conditions',
+        subtype: 'conditions',
+        required: false 
+      },
+      coordinates: { 
+        type: 'complex', 
+        label: 'Assigned Coordinates',
+        subtype: 'coordinates',
+        required: false 
+      },
+      // Legacy button fields (hidden in new UI but preserved for compatibility)
+      label: { type: 'text', maxLength: SAFARI_LIMITS.MAX_BUTTON_LABEL_LENGTH, required: false, label: 'Button Label', hidden: true },
+      emoji: { type: 'text', maxLength: 10, required: false, label: 'Emoji', placeholder: '🦁', hidden: true },
+      style: { type: 'select', options: BUTTON_STYLES, required: false, label: 'Button Style', hidden: true },
       tags: { type: 'tags', maxTags: SAFARI_LIMITS.MAX_TAGS_PER_ITEM, label: 'Tags (comma separated)' }
     },
     content: {
@@ -73,11 +94,12 @@ export const EDIT_CONFIGS = {
       cellType: { type: 'text', maxLength: 50, required: false, label: 'Cell Type', placeholder: 'forest, village, dungeon' }
     },
     content: {
-      type: 'buttons',
-      label: 'Safari Buttons',
+      type: 'custom_actions',
+      label: 'Custom Actions',
       maxItems: 10,
-      itemLabel: 'button',
-      itemLabelPlural: 'buttons'
+      itemLabel: 'action',
+      itemLabelPlural: 'actions',
+      useCustomUI: true  // Flag to use our new custom action UI
     },
     operations: ['reorder', 'edit', 'delete', 'add']
   },

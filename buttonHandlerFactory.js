@@ -588,6 +588,88 @@ export const BUTTON_REGISTRY = {
     emoji: '🎯',
     style: 'Success',
     category: 'application_management'
+  },
+
+  // === SAFARI CUSTOM ACTIONS SYSTEM ===
+  'entity_custom_action_select': {
+    label: 'Custom Actions',
+    description: 'Manage custom actions for this location',
+    emoji: '⚡',
+    style: 'Primary',
+    category: 'safari_management'
+  },
+  'entity_custom_action_list_*': {
+    label: 'Custom Action Selection',
+    description: 'Select or create custom action for location',
+    emoji: '⚡',
+    style: 'Primary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
+  'entity_custom_action_create': {
+    label: 'Create New Action',
+    description: 'Create a new custom action',
+    emoji: '➕',
+    style: 'Success',
+    category: 'safari_management'
+  },
+  'entity_action_trigger_*': {
+    label: 'Edit Trigger',
+    description: 'Configure action trigger type and settings',
+    emoji: '🎯',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
+  'entity_action_conditions_*': {
+    label: 'Edit Conditions',
+    description: 'Configure action conditions and logic',
+    emoji: '🔧',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
+  'entity_action_coords_*': {
+    label: 'Manage Coordinates',
+    description: 'Manage coordinate assignments for action',
+    emoji: '📍',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
+  'custom_action_trigger_type_*': {
+    label: 'Trigger Type Select',
+    description: 'Select trigger type for custom action',
+    emoji: '🎯',
+    style: 'Secondary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
+  'custom_action_condition_logic_*': {
+    label: 'Condition Logic',
+    description: 'Select AND/OR logic for conditions',
+    emoji: '🔀',
+    style: 'Secondary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
+  'custom_action_add_condition_*': {
+    label: 'Add Condition',
+    description: 'Add a new condition to action',
+    emoji: '➕',
+    style: 'Primary',
+    category: 'safari_management'
+  },
+  'custom_action_remove_condition_*': {
+    label: 'Remove Condition',
+    description: 'Remove condition from action',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_management'
+  },
+  'custom_action_test_*': {
+    label: 'Test Action',
+    description: 'Test custom action execution',
+    emoji: '🧪',
+    style: 'Success',
+    category: 'safari_management'
   }
 };
 

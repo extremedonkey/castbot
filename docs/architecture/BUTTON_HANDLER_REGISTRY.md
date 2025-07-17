@@ -101,6 +101,21 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `map_currency_remove_*` | 🗑️ Remove Currency | app.js:~14375 | Pattern handler | ✅ Active |
 | `map_currency_reset_*` | 🔃 Reset Currency | app.js:~14415 | Pattern handler | ✅ Active |
 
+### **Safari Custom Actions System Buttons**
+| Custom ID | Label | Location | Handler Function | Status |
+|-----------|-------|----------|------------------|--------|
+| `entity_custom_action_select` | ⚡ Custom Actions | app.js:TBD | ButtonHandlerFactory | 🚧 Implementing |
+| `entity_custom_action_list_*` | Custom Action Selection | app.js:TBD | ButtonHandlerFactory | 🚧 Implementing |
+| `entity_custom_action_create` | ➕ Create New Action | app.js:TBD | ButtonHandlerFactory | 🚧 Implementing |
+| `entity_action_trigger_*` | 🎯 Edit Trigger | app.js:TBD | ButtonHandlerFactory | 🚧 Implementing |
+| `entity_action_conditions_*` | 🔧 Edit Conditions | app.js:TBD | ButtonHandlerFactory | 🚧 Implementing |
+| `entity_action_coords_*` | 📍 Manage Coordinates | app.js:TBD | ButtonHandlerFactory | 🚧 Implementing |
+| `custom_action_trigger_type_*` | Trigger Type Select | app.js:TBD | Select menu handler | 🚧 Implementing |
+| `custom_action_condition_logic_*` | 🔀 Condition Logic | app.js:TBD | Select menu handler | 🚧 Implementing |
+| `custom_action_add_condition_*` | ➕ Add Condition | app.js:TBD | ButtonHandlerFactory | 🚧 Implementing |
+| `custom_action_remove_condition_*` | 🗑️ Remove Condition | app.js:TBD | ButtonHandlerFactory | 🚧 Implementing |
+| `custom_action_test_*` | 🧪 Test Action | app.js:TBD | ButtonHandlerFactory | 🚧 Implementing |
+
 ### **Modal Submission Handlers**
 | Custom ID | Purpose | Location | Handler Type | Status |
 |-----------|---------|----------|--------------|--------|
