@@ -1027,6 +1027,7 @@ export class ButtonHandlerFactory {
         
         // 6. Send response (skip if deferred or handler sent response)
         if (!config.deferred && result && !res.headersSent) {
+          console.log(`🔍 ButtonHandlerFactory sending response for ${config.id}, updateMessage: ${config.updateMessage}`);
           return sendResponse(res, result, config.updateMessage);
         }
         
