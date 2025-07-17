@@ -12890,6 +12890,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'entity_field_group',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context, req, res) => {
           // Parse: entity_field_group_{entityType}_{entityId}_{fieldGroup}
           const withoutPrefix = context.customId.replace('entity_field_group_', '');
