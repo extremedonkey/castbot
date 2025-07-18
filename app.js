@@ -9932,6 +9932,9 @@ Your server is now ready for Tycoons gameplay!`;
           } else if (context.customId.endsWith('_follow_up')) {
             actionType = 'follow_up_button';
             buttonId = context.customId.replace('safari_add_action_', '').replace('_follow_up', '');
+          } else if (context.customId.endsWith('_conditional')) {
+            actionType = 'conditional';
+            buttonId = context.customId.replace('safari_add_action_', '').replace('_conditional', '');
           } else {
             // Fallback to old method for any unknown action types
             const parts = context.customId.split('_');
