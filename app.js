@@ -9923,18 +9923,20 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Match against known action types that may contain underscores
           let actionType, buttonId;
+          const customIdWithoutPrefix = context.customId.replace('safari_add_action_', '');
+          
           if (context.customId.endsWith('_display_text')) {
             actionType = 'display_text';
-            buttonId = context.customId.replace('safari_add_action_', '').replace('_display_text', '');
+            buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_display_text'));
           } else if (context.customId.endsWith('_update_currency')) {
             actionType = 'update_currency';
-            buttonId = context.customId.replace('safari_add_action_', '').replace('_update_currency', '');
+            buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_update_currency'));
           } else if (context.customId.endsWith('_follow_up')) {
             actionType = 'follow_up_button';
-            buttonId = context.customId.replace('safari_add_action_', '').replace('_follow_up', '');
+            buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_follow_up'));
           } else if (context.customId.endsWith('_conditional')) {
             actionType = 'conditional';
-            buttonId = context.customId.replace('safari_add_action_', '').replace('_conditional', '');
+            buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_conditional'));
           } else {
             // Fallback to old method for any unknown action types
             const parts = context.customId.split('_');
@@ -17234,18 +17236,20 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
         // Match against known action types that may contain underscores  
         let actionType, buttonId;
+        const customIdWithoutPrefix = custom_id.replace('safari_action_modal_', '');
+        
         if (custom_id.endsWith('_display_text')) {
           actionType = 'display_text';
-          buttonId = custom_id.replace('safari_action_modal_', '').replace('_display_text', '');
+          buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_display_text'));
         } else if (custom_id.endsWith('_update_currency')) {
           actionType = 'update_currency';
-          buttonId = custom_id.replace('safari_action_modal_', '').replace('_update_currency', '');
+          buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_update_currency'));
         } else if (custom_id.endsWith('_follow_up')) {
           actionType = 'follow_up_button';
-          buttonId = custom_id.replace('safari_action_modal_', '').replace('_follow_up', '');
+          buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_follow_up'));
         } else if (custom_id.endsWith('_conditional')) {
           actionType = 'conditional';
-          buttonId = custom_id.replace('safari_action_modal_', '').replace('_conditional', '');
+          buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_conditional'));
         } else {
           // Fallback to old method for any unknown action types
           const parts = custom_id.split('_');
