@@ -96,6 +96,11 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   // Ensure action has new structure
   action = ensureActionStructure(action);
   
+  // Pre-populate coordinate if provided and not already assigned
+  if (coordinate && actionId === 'new' && !action.coordinates?.includes(coordinate)) {
+    action.coordinates = [coordinate];
+  }
+  
   const triggerType = action.trigger?.type || 'button';
   const conditionLogic = action.conditions?.logic || 'AND';
   const conditionCount = action.conditions?.items?.length || 0;
@@ -169,6 +174,9 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           content: `### Actions (${action.actions?.length || 0}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})`
         },
         
+        // Display existing actions
+        ...getActionListComponents(action.actions || []),
+        
         // Action buttons
         {
           type: 1, // Action Row
@@ -206,6 +214,48 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
 /**
  * Helper functions
  */
+
+function getActionListComponents(actions) {
+  if (!actions || actions.length === 0) {
+    return [];
+  }
+  
+  const components = [];
+  
+  actions.forEach((action, index) => {
+    components.push({
+      type: 9, // Section
+      components: [{
+        type: 10,
+        content: getActionSummary(action, index + 1)
+      }],
+      accessory: {
+        type: 2,
+        custom_id: `safari_remove_action_${index}`,
+        label: "Remove",
+        style: 4, // Danger
+        emoji: { name: "🗑️" }
+      }
+    });
+  });
+  
+  return components;
+}
+
+function getActionSummary(action, number) {
+  switch (action.type) {
+    case 'display_text':
+      return `**${number}. Display Text**\n${action.text?.substring(0, 50)}${action.text?.length > 50 ? '...' : ''}`;
+    case 'give_item':
+      return `**${number}. Give Item**\nItem: ${action.itemId} x${action.quantity || 1}`;
+    case 'give_currency':
+      return `**${number}. Give Currency**\nAmount: ${action.amount}`;
+    case 'create_button':
+      return `**${number}. Create Button**\nLabel: ${action.buttonLabel}`;
+    default:
+      return `**${number}. ${action.type || 'Unknown Action'}**`;
+  }
+}
 
 function createDefaultAction() {
   return {

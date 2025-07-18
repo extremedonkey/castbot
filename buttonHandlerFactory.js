@@ -606,6 +606,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'select_menu'
   },
+  'entity_custom_action_list_*': {
+    label: 'Custom Action List',
+    description: 'Select a custom action to manage or create new',
+    emoji: '⚡',
+    style: 'Primary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
   'entity_custom_action_create': {
     label: 'Create New Action',
     description: 'Create a new custom action',
