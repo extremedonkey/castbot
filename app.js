@@ -9944,12 +9944,14 @@ Your server is now ready for Tycoons gameplay!`;
             buttonId = parts.slice(3, parts.length - 1).join('_');
           }
           
-          console.log(`🔧 DEBUG: Adding ${actionType} action to button ${buttonId}`);
+          // If actionType is numeric, it's likely the button ID suffix
+          const fullButtonId = /^\d+$/.test(actionType) ? `${buttonId}_${actionType}` : buttonId;
+          console.log(`🔧 DEBUG: Adding ${actionType} action to button ${fullButtonId}`);
           
           // Show appropriate modal based on action type
           if (actionType === 'display_text') {
             const modal = new ModalBuilder()
-              .setCustomId(`safari_action_modal_${buttonId}_display_text`)
+              .setCustomId(`safari_action_modal_${fullButtonId}_display_text`)
               .setTitle('Add Text Display Action');
 
             const titleInput = new TextInputBuilder()
@@ -9990,7 +9992,7 @@ Your server is now ready for Tycoons gameplay!`;
             
           } else if (actionType === 'update_currency') {
             const modal = new ModalBuilder()
-              .setCustomId(`safari_action_modal_${buttonId}_update_currency`)
+              .setCustomId(`safari_action_modal_${fullButtonId}_update_currency`)
               .setTitle('Add Currency Change Action');
 
             const amountInput = new TextInputBuilder()
@@ -10033,7 +10035,7 @@ Your server is now ready for Tycoons gameplay!`;
             }
             
             const modal = new ModalBuilder()
-              .setCustomId(`safari_action_modal_${buttonId}_follow_up`)
+              .setCustomId(`safari_action_modal_${fullButtonId}_follow_up`)
               .setTitle('Add Follow-up Button Action');
 
             // Create options for button selection (showing max 25 as per Discord limit)
@@ -10089,7 +10091,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           } else if (actionType === 'conditional') {
             const modal = new ModalBuilder()
-              .setCustomId(`safari_action_modal_${buttonId}_conditional`)
+              .setCustomId(`safari_action_modal_${fullButtonId}_conditional`)
               .setTitle('Add Conditional Action');
 
             const conditionTypeInput = new TextInputBuilder()
@@ -10140,7 +10142,9 @@ Your server is now ready for Tycoons gameplay!`;
             // This might be a request to show the action menu for an existing button
             // Check if this is a numeric action ID (likely a mistake - show action menu instead)
             if (/^\d+$/.test(actionType)) {
-              console.log(`🔧 DEBUG: Showing action menu for button "${buttonId}" (detected numeric suffix "${actionType}")`);
+              // Reconstruct the full button ID including the numeric suffix
+              const fullButtonId = `${buttonId}_${actionType}`;
+              console.log(`🔧 DEBUG: Showing action menu for button "${fullButtonId}" (detected numeric suffix "${actionType}")`);
               
               // Show the action menu for this button
               const actionMenuComponents = [
@@ -10149,28 +10153,28 @@ Your server is now ready for Tycoons gameplay!`;
                   components: [
                     {
                       type: 2, // Button
-                      custom_id: `safari_add_action_${buttonId}_display_text`,
+                      custom_id: `safari_add_action_${fullButtonId}_display_text`,
                       label: 'Add Text Display',
                       style: 1,
                       emoji: { name: '📄' }
                     },
                     {
                       type: 2, // Button
-                      custom_id: `safari_add_action_${buttonId}_update_currency`,
+                      custom_id: `safari_add_action_${fullButtonId}_update_currency`,
                       label: 'Add Currency Change',
                       style: 1,
                       emoji: { name: '💰' }
                     },
                     {
                       type: 2, // Button
-                      custom_id: `safari_add_action_${buttonId}_follow_up`,
+                      custom_id: `safari_add_action_${fullButtonId}_follow_up`,
                       label: 'Add Follow-up Button',
                       style: 1,
                       emoji: { name: '🔗' }
                     },
                     {
                       type: 2, // Button
-                      custom_id: `safari_add_action_${buttonId}_conditional`,
+                      custom_id: `safari_add_action_${fullButtonId}_conditional`,
                       label: 'Add Conditional Action',
                       style: 1,
                       emoji: { name: '🔀' }
@@ -10182,7 +10186,7 @@ Your server is now ready for Tycoons gameplay!`;
                   components: [
                     {
                       type: 2, // Button
-                      custom_id: `safari_finish_button_${buttonId}`,
+                      custom_id: `safari_finish_button_${fullButtonId}`,
                       label: 'Finish & Test Button',
                       style: 3, // Success
                       emoji: { name: '✅' }
