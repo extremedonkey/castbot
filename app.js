@@ -10232,12 +10232,28 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Update map coordinate assignments
+        // Update map coordinate assignments - COMPLETE BIDIRECTIONAL SYNC
+        // First, remove this action from all coordinates across all maps
+        if (guildData.maps) {
+          for (const mapId in guildData.maps) {
+            const map = guildData.maps[mapId];
+            if (map.coordinates) {
+              for (const coord in map.coordinates) {
+                const coordData = map.coordinates[coord];
+                if (coordData.buttons) {
+                  coordData.buttons = coordData.buttons.filter(id => id !== actionId);
+                }
+              }
+            }
+          }
+        }
+        
+        // Then, add this action to the coordinates it's assigned to
         if (action.coordinates && action.coordinates.length > 0) {
           // Ensure maps structure exists
           if (!guildData.maps) guildData.maps = {};
           
-          // Find all maps and update coordinate assignments
+          // Find all maps and add coordinate assignments
           for (const mapId in guildData.maps) {
             const map = guildData.maps[mapId];
             if (!map.coordinates) map.coordinates = {};
@@ -10255,9 +10271,9 @@ Your server is now ready for Tycoons gameplay!`;
               }
             }
           }
-          
-          await saveSafariContent(allSafariContent);
         }
+        
+        await saveSafariContent(allSafariContent);
         
         // Build success message
         const coordCount = action.coordinates?.length || 0;
