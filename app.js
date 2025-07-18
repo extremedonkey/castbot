@@ -10308,10 +10308,7 @@ Your server is now ready for Tycoons gameplay!`;
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            ...updatedUI,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          data: updatedUI
         });
         
       } catch (error) {
@@ -17228,24 +17225,26 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to add actions.')) return;
 
-        // Match against known action types that may contain underscores  
+        // Parse action type and button ID from custom_id
+        // Format: safari_action_modal_{buttonId}_{actionType}
         let actionType, buttonId;
-        const customIdWithoutPrefix = custom_id.replace('safari_action_modal_', '');
         
         if (custom_id.endsWith('_display_text')) {
           actionType = 'display_text';
-          buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_display_text'));
+          // Remove prefix and suffix to get button ID
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_display_text', '');
         } else if (custom_id.endsWith('_update_currency')) {
           actionType = 'update_currency';
-          buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_update_currency'));
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_update_currency', '');
         } else if (custom_id.endsWith('_follow_up')) {
           actionType = 'follow_up_button';
-          buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_follow_up'));
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_follow_up', '');
         } else if (custom_id.endsWith('_conditional')) {
           actionType = 'conditional';
-          buttonId = customIdWithoutPrefix.substring(0, customIdWithoutPrefix.lastIndexOf('_conditional'));
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_conditional', '');
         } else {
-          // Fallback to old method for any unknown action types
+          // Fallback - should not happen with properly formatted custom_ids
+          console.error(`⚠️ WARNING: Unknown action type in custom_id: ${custom_id}`);
           const parts = custom_id.split('_');
           actionType = parts[parts.length - 1];
           buttonId = parts.slice(3, parts.length - 1).join('_');
@@ -17456,10 +17455,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            ...updatedUI,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          data: updatedUI
         });
         
       } catch (error) {
