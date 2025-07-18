@@ -10304,6 +10304,19 @@ Your server is now ready for Tycoons gameplay!`;
         
         await saveSafariContent(allSafariContent);
         
+        // Update anchor messages for all assigned coordinates
+        if (action.coordinates && action.coordinates.length > 0) {
+          const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+          for (const coord of action.coordinates) {
+            try {
+              await updateAnchorMessage(guildId, coord, client);
+              console.log(`📍 Updated anchor message for ${coord}`);
+            } catch (error) {
+              console.error(`Error updating anchor for ${coord}:`, error);
+            }
+          }
+        }
+        
         console.log(`✅ DEBUG: Finished saving custom action ${actionId}, returning to editor`);
         
         // Return to the Custom Action editor instead of just showing success

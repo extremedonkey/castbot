@@ -40,10 +40,32 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
       continue;
     }
     
+    // Determine button label based on display_text action
+    let label = button.label; // Default fallback
+    
+    // Check if button has display_text action
+    if (button.actions && button.actions.length > 0) {
+      const displayTextAction = button.actions.find(action => action.type === 'display_text');
+      if (displayTextAction) {
+        // Use title if available, otherwise truncated content
+        if (displayTextAction.config?.title) {
+          label = displayTextAction.config.title;
+        } else if (displayTextAction.config?.content || displayTextAction.text) {
+          // Support both new format (config.content) and legacy format (text)
+          const textContent = displayTextAction.config?.content || displayTextAction.text || '';
+          // Truncate content to 12 characters
+          label = textContent.substring(0, 12);
+          if (textContent.length > 12) {
+            label += '...';
+          }
+        }
+      }
+    }
+    
     const buttonComponent = {
       type: 2, // Button
       custom_id: `safari_${guildId}_${buttonId}_${Date.now()}`,
-      label: button.label,
+      label: label || 'Action', // Fallback if no label found
       style: getButtonStyle(button.style),
       emoji: button.emoji ? { name: button.emoji } : undefined
     };
