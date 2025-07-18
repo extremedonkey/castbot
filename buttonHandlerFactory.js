@@ -930,7 +930,17 @@ export function sendPermissionDenied(res, permissionName) {
  * @param {boolean} updateMessage - Whether to update existing message
  */
 export function sendResponse(res, data, updateMessage = false) {
-  // Preserve existing flags and add ephemeral if needed
+  // For UPDATE_MESSAGE, Discord doesn't accept flags in the response
+  if (updateMessage) {
+    console.log('📝 Sending UPDATE_MESSAGE response (no flags)');
+    const { flags, ephemeral, ...cleanData } = data; // Remove flags and ephemeral
+    return res.send({
+      type: InteractionResponseType.UPDATE_MESSAGE,
+      data: cleanData
+    });
+  }
+  
+  // For new messages, handle flags normally
   let flags = data.flags || 0;
   if (data.ephemeral) {
     flags |= InteractionResponseFlags.EPHEMERAL;
@@ -943,9 +953,7 @@ export function sendResponse(res, data, updateMessage = false) {
   }
   
   return res.send({
-    type: updateMessage 
-      ? InteractionResponseType.UPDATE_MESSAGE 
-      : InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
     data: {
       ...data,
       flags: flags
