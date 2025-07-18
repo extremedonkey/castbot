@@ -10188,15 +10188,32 @@ Your server is now ready for Tycoons gameplay!`;
 
               console.log(`✅ SUCCESS: safari_add_action - showing action menu`);
               return {
-                content: `🎯 **Add Actions to Button: ${buttonId}**\n\nChoose an action type to add to this button:`,
-                components: actionMenuComponents,
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [{
+                  type: 17, // Container
+                  components: [
+                    {
+                      type: 10, // Text Display
+                      content: `## 🎯 Add Actions to Button: ${buttonId}\n\nChoose an action type to add to this button:`
+                    },
+                    { type: 14 }, // Separator
+                    ...actionMenuComponents
+                  ]
+                }],
                 ephemeral: true
               };
             } else {
               // Unknown action type - send error response
               console.log(`❌ DEBUG: Unknown action type "${actionType}" for button "${buttonId}"`);
               return {
-                content: `❌ **Unknown action type**: \`${actionType}\`\n\nSupported action types:\n• \`display_text\` - Show text message\n• \`update_currency\` - Change player currency\n• \`follow_up_button\` - Chain to another button\n• \`conditional\` - Conditional actions\n\nPlease use one of the supported action buttons.`,
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: [{
+                  type: 17, // Container
+                  components: [{
+                    type: 10, // Text Display
+                    content: `## ❌ Unknown action type: \`${actionType}\`\n\nSupported action types:\n• \`display_text\` - Show text message\n• \`update_currency\` - Change player currency\n• \`follow_up_button\` - Chain to another button\n• \`conditional\` - Conditional actions\n\nPlease use one of the supported action buttons.`
+                  }]
+                }],
                 ephemeral: true
               };
             }
