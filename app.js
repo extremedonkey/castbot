@@ -18058,9 +18058,24 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const itemId = parts.slice(1).join('_');
         const components = req.body.data.components;
         
-        // Extract values
+        console.log('🔍 DEBUG: Modal components:', JSON.stringify(components, null, 2));
+        
+        // Extract values with proper error handling
+        if (!components || !components[0] || !components[0].components || !components[0].components[0]) {
+          console.error('❌ Invalid component structure for modal submission');
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error processing modal submission.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
         const buttonText = components[0].components[0].value;
-        const buttonEmoji = components[1].components[0].value || '📦';
+        const buttonEmoji = (components[1] && components[1].components && components[1].components[0]) 
+          ? components[1].components[0].value || '📦' 
+          : '📦';
         
         console.log(`✏️ Updating drop text for ${coord} item ${itemId}`);
         
