@@ -17684,8 +17684,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Get currency amount from modal
           const currencyAmount = context.components[0].components[0].value?.trim();
           
-          // Validate currency input
-          const amount = parseInt(currencyAmount, 10);
+          // Validate currency input - remove commas and parse
+          const cleanAmount = currencyAmount.replace(/,/g, '');
+          const amount = parseInt(cleanAmount, 10);
           if (isNaN(amount) || amount < 0 || amount > 999999) {
             return {
               content: '❌ **Invalid currency amount**\n\nPlease enter a number between 0 and 999,999.'
