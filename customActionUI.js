@@ -194,7 +194,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         },
         
         // Display existing actions
-        ...getActionListComponents(action.actions || []),
+        ...getActionListComponents(action.actions || [], actionId),
         
         // Action buttons
         {
@@ -274,7 +274,7 @@ function formatCoordinateList(coordinates) {
   return truncated;
 }
 
-function getActionListComponents(actions) {
+function getActionListComponents(actions, actionId) {
   if (!actions || actions.length === 0) {
     return [];
   }
@@ -290,7 +290,7 @@ function getActionListComponents(actions) {
       }],
       accessory: {
         type: 2,
-        custom_id: `safari_remove_action_${index}`,
+        custom_id: `safari_remove_action_${actionId}_${index}`,
         label: "Remove",
         style: 4, // Danger
         emoji: { name: "🗑️" }

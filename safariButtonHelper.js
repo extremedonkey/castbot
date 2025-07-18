@@ -41,7 +41,8 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
     }
     
     // Determine button label based on display_text action
-    let label = button.label; // Default fallback
+    // Support both legacy (button.label) and new structure (button.trigger.button.label)
+    let label = button.label || button.trigger?.button?.label || 'Action'; // Default fallback
     
     // Check if button has display_text action
     if (button.actions && button.actions.length > 0) {

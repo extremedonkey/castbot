@@ -3888,6 +3888,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_confirm_delete_button_') &&
         !custom_id.startsWith('safari_confirm_delete_store_') &&
         !custom_id.startsWith('safari_action_') &&
+        !custom_id.startsWith('safari_remove_action_') &&
         !custom_id.startsWith('safari_config_') &&
         !custom_id.startsWith('safari_move_') &&
         custom_id !== 'safari_map_init_player' &&
@@ -10341,6 +10342,152 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_remove_action_')) {
+      // Handle removing action from button
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to remove actions.')) return;
+        
+        // Parse action ID and index from custom_id
+        const parts = custom_id.replace('safari_remove_action_', '').split('_');
+        const actionIndex = parseInt(parts[parts.length - 1]);
+        const actionId = parts.slice(0, -1).join('_');
+        
+        console.log(`🗑️ Removing action ${actionIndex} from button ${actionId}`);
+        
+        // Load and update button
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const guildData = allSafariContent[guildId] || {};
+        const button = guildData.buttons?.[actionId];
+        
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Button not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Remove action at index
+        if (button.actions && button.actions[actionIndex] !== undefined) {
+          button.actions.splice(actionIndex, 1);
+          
+          // Re-order remaining actions
+          button.actions.forEach((action, idx) => {
+            action.order = idx + 1;
+          });
+          
+          await saveSafariContent(allSafariContent);
+        }
+        
+        // Return to Custom Action editor
+        const { createCustomActionEditorUI } = await import('./customActionUI.js');
+        const updatedUI = await createCustomActionEditorUI({
+          guildId,
+          actionId
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: updatedUI
+        });
+        
+      } catch (error) {
+        console.error('Error removing action:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error removing action.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('custom_action_trigger_type_')) {
+      // Handle trigger type selection
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const selectedValue = req.body.data.values[0];
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to modify actions.')) return;
+        
+        const actionId = custom_id.replace('custom_action_trigger_type_', '');
+        
+        console.log(`🎯 Updating trigger type for ${actionId} to ${selectedValue}`);
+        
+        // Load and update button
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const guildData = allSafariContent[guildId] || {};
+        const button = guildData.buttons?.[actionId];
+        
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update trigger type
+        if (!button.trigger) {
+          button.trigger = {};
+        }
+        button.trigger.type = selectedValue;
+        
+        // Set default configuration for new trigger type
+        switch (selectedValue) {
+          case 'button':
+            button.trigger.button = {
+              label: button.label || 'Click Me',
+              emoji: button.emoji || '⚡',
+              style: button.style || 1
+            };
+            break;
+          case 'modal':
+            button.trigger.modal = {
+              keywords: [],
+              caseSensitive: false
+            };
+            break;
+          case 'select':
+            button.trigger.select = {
+              placeholder: 'Select an option',
+              options: []
+            };
+            break;
+        }
+        
+        await saveSafariContent(allSafariContent);
+        
+        // Show trigger configuration UI
+        const { createTriggerConfigUI } = await import('./customActionUI.js');
+        const configUI = await createTriggerConfigUI({ guildId, actionId });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: configUI
+        });
+        
+      } catch (error) {
+        console.error('Error updating trigger type:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating trigger type.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'prod_player_menu') {
       // My Profile button - available to users with admin permissions
       try {
@@ -13406,12 +13553,53 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           const actionId = context.customId.replace('custom_action_test_', '');
           
-          // TODO: Implement action testing logic
-          console.log(`✅ SUCCESS: custom_action_test - action testing not yet implemented`);
-          return {
-            content: '🚧 **Test Action**\n\nThis feature is coming soon! You\'ll be able to test your custom actions before deploying them.',
-            ephemeral: true
-          };
+          // Load the action/button data
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[actionId];
+          
+          if (!button) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+          
+          if (!button.actions || button.actions.length === 0) {
+            return {
+              content: '❌ This button has no actions configured yet.',
+              ephemeral: true
+            };
+          }
+          
+          // Simulate the safari button click by creating a fake safari button custom_id
+          const simulatedCustomId = `safari_${context.guildId}_${actionId}_${Date.now()}`;
+          
+          console.log(`🧪 Testing action ${actionId} with simulated custom_id: ${simulatedCustomId}`);
+          
+          // Process the safari button actions
+          const { processSafariButton } = await import('./safariButtonProcessor.js');
+          const result = await processSafariButton(
+            context.guildId,
+            context.userId,
+            simulatedCustomId,
+            client
+          );
+          
+          console.log(`✅ SUCCESS: custom_action_test - tested ${actionId}`);
+          
+          // Return the result, ensuring it's ephemeral
+          if (result) {
+            return {
+              ...result,
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          } else {
+            return {
+              content: '✅ Test completed successfully!',
+              ephemeral: true
+            };
+          }
         }
       })(req, res, client);
       
