@@ -598,9 +598,9 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari_management'
   },
-  'entity_custom_action_list_*': {
-    label: 'Custom Action Selection',
-    description: 'Select or create custom action for location',
+  'entity_custom_action_select_*': {
+    label: 'Custom Action Multi-Select',
+    description: 'Select custom actions to assign to location',
     emoji: '⚡',
     style: 'Primary',
     category: 'safari_management',

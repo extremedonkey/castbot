@@ -14,103 +14,65 @@ import { loadSafariContent } from './safariManager.js';
  * @returns {Object} Discord Components V2 UI
  */
 export async function createCustomActionSelectionUI({ guildId, coordinate, mapId }) {
-  // Import Discord.js builders
-  const { StringSelectMenuBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
+  // Import Discord.js builders - matching stores pattern exactly
+  const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
   
   // Load all safari buttons (now custom actions)
   const allSafariContent = await loadSafariContent();
   const guildData = allSafariContent[guildId] || {};
   const allActions = guildData.buttons || {};
-  
-  // Get current map cell data
-  const mapData = guildData.maps?.[mapId];
-  const cellData = mapData?.coordinates?.[coordinate] || {};
-  const assignedActionIds = cellData.buttons || [];
+  const assignedActionIds = guildData.maps?.[mapId]?.coordinates?.[coordinate]?.buttons || [];
   
   // Build select menu using Discord.js builder
   const selectMenu = new StringSelectMenuBuilder()
     .setCustomId(`entity_custom_action_list_${coordinate}_${mapId}`)
-    .setPlaceholder("Select an action to configure");
+    .setPlaceholder("Select an action to manage...")
+    .setMinValues(1)
+    .setMaxValues(1); // Single select for managing actions
   
-  // Add "Create New" option
+  // Add "Create New" option first
   selectMenu.addOptions({
-    label: "Create New Custom Action",
+    label: "➕ Create New Custom Action",
     value: "create_new",
-    description: "Design a new interactive action",
-    emoji: { name: "➕" }
+    description: "Design a new interactive action"
   });
   
   // Add existing actions
-  let optionCount = 1; // Already added "Create New"
+  let optionCount = 1;
   for (const [actionId, action] of Object.entries(allActions)) {
     if (optionCount >= 25) break; // Discord limit
     
-    // Get trigger type for description
-    const triggerType = action.trigger?.type || 'button';
-    const isAssigned = assignedActionIds.includes(actionId);
-    
-    // Build option object
-    const optionData = {
+    const option = {
       label: (action.name || action.label || 'Unnamed Action').substring(0, 100),
       value: actionId,
-      description: `${triggerType} trigger${isAssigned ? ' (assigned here)' : ''}`.substring(0, 100)
+      description: assignedActionIds.includes(actionId) ? "Already assigned here" : "Click to assign/edit",
+      default: assignedActionIds.includes(actionId)
     };
     
-    // Only add emoji if it's valid
-    const emoji = action.trigger?.button?.emoji || action.emoji;
-    if (emoji && typeof emoji === 'string') {
-      // Simple validation - just check if it's not empty after trim
-      const trimmedEmoji = emoji.trim();
-      if (trimmedEmoji && trimmedEmoji.length > 0) {
-        // Skip emojis that are just modifiers or have obvious issues
-        if (!trimmedEmoji.match(/^[\u200D\uFE0F]+$/) && !trimmedEmoji.endsWith('\u200D')) {
-          optionData.emoji = { name: trimmedEmoji };
-        }
-      }
-    }
-    
-    try {
-      selectMenu.addOptions(optionData);
-      optionCount++;
-    } catch (error) {
-      console.warn(`Skipping button ${actionId} due to error:`, error.message);
-    }
+    // Skip emoji entirely to avoid any issues
+    selectMenu.addOptions(option);
+    optionCount++;
   }
   
   const selectRow = new ActionRowBuilder().addComponents(selectMenu);
   
-  // Build back button
-  const backButton = new ButtonBuilder()
-    .setCustomId(`map_location_actions_${coordinate}`)
-    .setLabel("Back to Location")
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji({ name: "⬅" });
-    
-  const buttonRow = new ActionRowBuilder().addComponents(backButton);
+  // Create container like stores handler
+  const container = {
+    type: 17, // Container
+    accent_color: 0x3498db,
+    components: [
+      {
+        type: 10, // Text Display  
+        content: `## ⚡ Custom Actions for ${coordinate}\n\nSelect an action to manage or create a new one.`
+      },
+      { type: 14 }, // Separator
+      selectRow.toJSON() // Convert to JSON
+    ]
+  };
   
-  // Build components using raw structure but with validated components
+  // Return exactly like stores handler
   return {
-    components: [{
-      type: 17, // Container
-      accent_color: 0x5865f2,
-      components: [
-        {
-          type: 10, // Text Display
-          content: `## ⚡ Custom Actions - ${coordinate}\n\nManage actions triggered at this location. Actions can be buttons, text inputs, or select menus that players interact with.`
-        },
-        { type: 14 }, // Separator
-        {
-          type: 9, // Section
-          components: [{
-            type: 10,
-            content: `**Currently Assigned:** ${assignedActionIds.length} action${assignedActionIds.length !== 1 ? 's' : ''}`
-          }]
-        },
-        selectRow.toJSON(), // Convert builder to JSON
-        { type: 14, spacing: 1 }, // Small separator
-        buttonRow.toJSON() // Convert builder to JSON
-      ]
-    }]
+    components: [container]
   };
 }
 

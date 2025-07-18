@@ -13087,8 +13087,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               console.log('✅ Custom Action UI created successfully');
               console.log('📊 UI Response structure:', JSON.stringify(customActionUI, null, 2));
               
-              // Return the customActionUI directly - ButtonHandlerFactory will handle flags
-              return customActionUI;
+              // Return exactly like stores handler
+              return {
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + ephemeral
+                components: customActionUI.components
+              };
             } catch (error) {
               console.error('❌ Error creating Custom Action UI:', error);
               return {
