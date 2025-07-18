@@ -102,6 +102,22 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
       action.coordinates = [];
     }
     action.coordinates.push(coordinate);
+    
+    // Also update the coordinate's buttons array (bidirectional sync)
+    const activeMapId = allSafariContent[guildId]?.maps?.active;
+    if (activeMapId && allSafariContent[guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate]) {
+      const coordData = allSafariContent[guildId].maps[activeMapId].coordinates[coordinate];
+      if (!coordData.buttons) {
+        coordData.buttons = [];
+      }
+      if (!coordData.buttons.includes(actionId)) {
+        coordData.buttons.push(actionId);
+      }
+    }
+    
+    // Save the coordinate assignment immediately
+    const { saveSafariContent } = await import('./safariManager.js');
+    await saveSafariContent(allSafariContent);
   }
   
   const triggerType = action.trigger?.type || 'button';
@@ -203,7 +219,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             {
               type: 2,
               custom_id: `safari_finish_button_${actionId}`,
-              label: "Save & Close",
+              label: "Close",
               style: 3, // Success
               emoji: { name: "✅" }
             }

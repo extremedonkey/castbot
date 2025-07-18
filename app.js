@@ -13210,7 +13210,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             });
             
             console.log(`✅ SUCCESS: entity_custom_action_list - showing new action editor`);
-            return ui;
+            return {
+              ...ui,
+              ephemeral: true
+            };
           } else {
             // Edit existing action
             const { createCustomActionEditorUI } = await import('./customActionUI.js');
@@ -13221,7 +13224,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             });
             
             console.log(`✅ SUCCESS: entity_custom_action_list - showing action editor for ${selectedValue}`);
-            return ui;
+            return {
+              ...ui,
+              ephemeral: true
+            };
           }
         }
       })(req, res, client);
