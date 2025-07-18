@@ -14,6 +14,9 @@ import { loadSafariContent } from './safariManager.js';
  * @returns {Object} Discord Components V2 UI
  */
 export async function createCustomActionSelectionUI({ guildId, coordinate, mapId }) {
+  // Import Discord.js builders
+  const { StringSelectMenuBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
+  
   // Load all safari buttons (now custom actions)
   const allSafariContent = await loadSafariContent();
   const guildData = allSafariContent[guildId] || {};
@@ -24,42 +27,68 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
   const cellData = mapData?.coordinates?.[coordinate] || {};
   const assignedActionIds = cellData.buttons || [];
   
-  // Build action options for select menu
-  const actionOptions = [
-    {
-      label: "Create New Custom Action",
-      value: "create_new",
-      description: "Design a new interactive action",
-      emoji: { name: "➕" }
-    }
-  ];
+  // Build select menu using Discord.js builder
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId(`entity_custom_action_list_${coordinate}_${mapId}`)
+    .setPlaceholder("Select an action to configure");
+  
+  // Add "Create New" option
+  selectMenu.addOptions({
+    label: "Create New Custom Action",
+    value: "create_new",
+    description: "Design a new interactive action",
+    emoji: { name: "➕" }
+  });
   
   // Add existing actions
+  let optionCount = 1; // Already added "Create New"
   for (const [actionId, action] of Object.entries(allActions)) {
+    if (optionCount >= 25) break; // Discord limit
+    
     // Get trigger type for description
     const triggerType = action.trigger?.type || 'button';
     const isAssigned = assignedActionIds.includes(actionId);
     
-    // Sanitize emoji - remove trailing zero-width joiners and ensure valid emoji
-    let emojiName = action.trigger?.button?.emoji || action.emoji || "⚡";
-    // Remove any trailing zero-width joiners or incomplete sequences
-    emojiName = emojiName.replace(/[\u200D\uFE0F]+$/g, '').trim();
-    // If emoji is empty or just joiners, use default
-    if (!emojiName || emojiName.length === 0) {
-      emojiName = "⚡";
+    // Build option object
+    const optionData = {
+      label: (action.name || action.label || 'Unnamed Action').substring(0, 100),
+      value: actionId,
+      description: `${triggerType} trigger${isAssigned ? ' (assigned here)' : ''}`.substring(0, 100)
+    };
+    
+    // Only add emoji if it's valid
+    const emoji = action.trigger?.button?.emoji || action.emoji;
+    if (emoji && typeof emoji === 'string') {
+      // Simple validation - just check if it's not empty after trim
+      const trimmedEmoji = emoji.trim();
+      if (trimmedEmoji && trimmedEmoji.length > 0) {
+        // Skip emojis that are just modifiers or have obvious issues
+        if (!trimmedEmoji.match(/^[\u200D\uFE0F]+$/) && !trimmedEmoji.endsWith('\u200D')) {
+          optionData.emoji = { name: trimmedEmoji };
+        }
+      }
     }
     
-    actionOptions.push({
-      label: action.name || action.label || 'Unnamed Action',
-      value: actionId,
-      description: `${triggerType} trigger${isAssigned ? ' (assigned here)' : ''}`,
-      emoji: { name: emojiName }
-    });
-    
-    if (actionOptions.length >= 25) break; // Discord limit
+    try {
+      selectMenu.addOptions(optionData);
+      optionCount++;
+    } catch (error) {
+      console.warn(`Skipping button ${actionId} due to error:`, error.message);
+    }
   }
   
-  // For message updates, only return components array - ButtonHandlerFactory handles the rest
+  const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+  
+  // Build back button
+  const backButton = new ButtonBuilder()
+    .setCustomId(`map_location_actions_${coordinate}`)
+    .setLabel("Back to Location")
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji({ name: "⬅" });
+    
+  const buttonRow = new ActionRowBuilder().addComponents(backButton);
+  
+  // Build components using raw structure but with validated components
   return {
     components: [{
       type: 17, // Container
@@ -77,28 +106,9 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
             content: `**Currently Assigned:** ${assignedActionIds.length} action${assignedActionIds.length !== 1 ? 's' : ''}`
           }]
         },
-        {
-          type: 1, // Action Row
-          components: [{
-            type: 3, // String Select
-            custom_id: `entity_custom_action_list_${coordinate}_${mapId}`,
-            placeholder: "Select an action to configure",
-            options: actionOptions
-          }]
-        },
+        selectRow.toJSON(), // Convert builder to JSON
         { type: 14, spacing: 1 }, // Small separator
-        {
-          type: 1, // Action Row
-          components: [
-            {
-              type: 2, // Button
-              custom_id: `map_location_actions_${coordinate}`,
-              label: "Back to Location",
-              style: 2,
-              emoji: { name: "⬅" }
-            }
-          ]
-        }
+        buttonRow.toJSON() // Convert builder to JSON
       ]
     }]
   };
