@@ -484,9 +484,82 @@ function getConditionDescription(condition) {
   }
 }
 
+/**
+ * Create coordinate management UI
+ */
+export async function createCoordinateManagementUI({ guildId, actionId }) {
+  const allSafariContent = await loadSafariContent();
+  const guildData = allSafariContent[guildId] || {};
+  const action = guildData.buttons?.[actionId];
+  
+  if (!action) {
+    throw new Error('Action not found');
+  }
+  
+  const coordinates = action.coordinates || [];
+  const components = [
+    {
+      type: 10,
+      content: `## 📍 Coordinate Management\n\n**Action:** ${action.name || 'Unnamed Action'}\n\nManage which map locations can trigger this action:`
+    },
+    { type: 14 }
+  ];
+  
+  // Display current coordinates
+  if (coordinates.length > 0) {
+    components.push({
+      type: 10,
+      content: `### Currently Assigned (${coordinates.length}):`
+    });
+    
+    coordinates.forEach((coord, index) => {
+      components.push({
+        type: 9, // Section
+        components: [{
+          type: 10,
+          content: `**${coord}**`
+        }],
+        accessory: {
+          type: 2,
+          custom_id: `remove_coord_${actionId}_${coord}`,
+          label: "Remove",
+          style: 4, // Danger
+          emoji: { name: "🗑️" }
+        }
+      });
+    });
+  } else {
+    components.push({
+      type: 10,
+      content: `*No coordinates assigned yet*`
+    });
+  }
+  
+  // Add coordinate input
+  components.push({ type: 14, spacing: 1 });
+  components.push({
+    type: 1, // Action Row
+    components: [{
+      type: 2,
+      custom_id: `add_coord_modal_${actionId}`,
+      label: "Add Coordinate",
+      style: 1, // Primary
+      emoji: { name: "➕" }
+    }]
+  });
+  
+  return {
+    components: [{
+      type: 17, // Container
+      components
+    }]
+  };
+}
+
 export default {
   createCustomActionSelectionUI,
   createCustomActionEditorUI,
   createTriggerConfigUI,
-  createConditionsConfigUI
+  createConditionsConfigUI,
+  createCoordinateManagementUI
 };

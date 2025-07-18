@@ -678,6 +678,21 @@ export const BUTTON_REGISTRY = {
     emoji: '🧪',
     style: 'Success',
     category: 'safari_management'
+  },
+  'remove_coord_*': {
+    label: 'Remove Coordinate',
+    description: 'Remove coordinate assignment from action',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_management'
+  },
+  'add_coord_modal_*': {
+    label: 'Add Coordinate',
+    description: 'Add coordinate assignment to action',
+    emoji: '➕',
+    style: 'Primary',
+    category: 'safari_management',
+    requiresModal: true
   }
 };
 

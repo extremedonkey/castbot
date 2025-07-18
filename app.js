@@ -3236,7 +3236,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'safari_add_action',
         'custom_action_add_condition',
         'custom_action_remove_condition',
-        'custom_action_test'
+        'custom_action_test',
+        'remove_coord',
+        'add_coord_modal'
       ];
       
       for (const pattern of dynamicPatterns) {
@@ -10205,28 +10207,87 @@ Your server is now ready for Tycoons gameplay!`;
       // Handle finishing button creation
       try {
         const member = req.body.member;
+        const guildId = req.body.guild_id;
         
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to finish buttons.')) return;
 
-        const buttonId = custom_id.replace('safari_finish_button_', '');
+        const actionId = custom_id.replace('safari_finish_button_', '');
         
-        console.log(`✅ DEBUG: Finishing button ${buttonId}`);
+        console.log(`🔍 DEBUG: Finishing custom action ${actionId}`);
+        
+        // Load Safari data to get action details
+        const { loadSafariContent, updateSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const guildData = allSafariContent[guildId] || {};
+        const action = guildData.buttons?.[actionId];
+        
+        if (!action) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update map coordinate assignments
+        if (action.coordinates && action.coordinates.length > 0) {
+          // Ensure maps structure exists
+          if (!guildData.maps) guildData.maps = {};
+          
+          // Find all maps and update coordinate assignments
+          for (const mapId in guildData.maps) {
+            const map = guildData.maps[mapId];
+            if (!map.coordinates) map.coordinates = {};
+            
+            for (const coord of action.coordinates) {
+              if (!map.coordinates[coord]) {
+                map.coordinates[coord] = {
+                  buttons: []
+                };
+              }
+              
+              // Add action to coordinate if not already there
+              if (!map.coordinates[coord].buttons.includes(actionId)) {
+                map.coordinates[coord].buttons.push(actionId);
+              }
+            }
+          }
+          
+          await updateSafariContent(allSafariContent);
+        }
+        
+        // Build success message
+        const coordCount = action.coordinates?.length || 0;
+        const actionCount = action.actions?.length || 0;
+        
+        let successMessage = `🎉 **Custom Action "${action.name || actionId}" saved successfully!**\n\n`;
+        successMessage += `📊 **Summary:**\n`;
+        successMessage += `• ${actionCount} action${actionCount !== 1 ? 's' : ''} configured\n`;
+        successMessage += `• ${coordCount} coordinate${coordCount !== 1 ? 's' : ''} assigned\n`;
+        
+        if (coordCount > 0) {
+          successMessage += `\n📍 **Assigned to:** ${action.coordinates.join(', ')}`;
+        }
+        
+        console.log(`✅ DEBUG: Finished saving custom action ${actionId}`);
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `🎉 **Button "${buttonId}" created successfully!**\n\nYou can now:\n• View it in **📊 View All Buttons**\n• Post it to a channel with **📤 Post Custom Button**\n• Add more actions anytime`,
+            content: successMessage,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         
       } catch (error) {
-        console.error('Error finishing button:', error);
+        console.error('Error finishing custom action:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error finishing button.',
+            content: '❌ Error saving custom action.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -13216,17 +13277,20 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'entity_action_coords',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           console.log(`🔍 START: entity_action_coords - user ${context.userId}`);
           
           const actionId = context.customId.replace('entity_action_coords_', '');
+          const { createCoordinateManagementUI } = await import('./customActionUI.js');
           
-          // TODO: Implement coordinates management UI
-          console.log(`✅ SUCCESS: entity_action_coords - coordinates management not yet implemented`);
-          return {
-            content: '🚧 **Coordinates Management**\n\nThis feature is coming soon! You\'ll be able to assign this action to multiple map coordinates.',
-            ephemeral: true
-          };
+          const ui = await createCoordinateManagementUI({
+            guildId: context.guildId,
+            actionId
+          });
+          
+          console.log(`✅ SUCCESS: entity_action_coords - showing coordinate management UI`);
+          return ui;
         }
       })(req, res, client);
       
@@ -13286,6 +13350,94 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           return {
             content: '🚧 **Test Action**\n\nThis feature is coming soon! You\'ll be able to test your custom actions before deploying them.',
             ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('remove_coord_')) {
+      // Handle coordinate removal
+      return ButtonHandlerFactory.create({
+        id: 'remove_coord',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: remove_coord - user ${context.userId}`);
+          
+          // Parse: remove_coord_{actionId}_{coordinate}
+          const parts = context.customId.replace('remove_coord_', '').split('_');
+          const actionId = parts[0];
+          const coordinate = parts.slice(1).join('_'); // Handle underscores in coordinates
+          
+          // Load and update safari data
+          const { loadSafariContent, updateSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const guildData = allSafariContent[context.guildId] || {};
+          const action = guildData.buttons?.[actionId];
+          
+          if (!action) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Remove coordinate from action
+          action.coordinates = (action.coordinates || []).filter(c => c !== coordinate);
+          
+          // Also remove from map assignments
+          for (const mapId in guildData.maps || {}) {
+            const map = guildData.maps[mapId];
+            if (map.coordinates?.[coordinate]?.buttons) {
+              map.coordinates[coordinate].buttons = map.coordinates[coordinate].buttons.filter(b => b !== actionId);
+            }
+          }
+          
+          await updateSafariContent(allSafariContent);
+          
+          // Return updated UI
+          const { createCoordinateManagementUI } = await import('./customActionUI.js');
+          const ui = await createCoordinateManagementUI({
+            guildId: context.guildId,
+            actionId
+          });
+          
+          console.log(`✅ SUCCESS: remove_coord - removed ${coordinate} from action ${actionId}`);
+          return ui;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('add_coord_modal_')) {
+      // Handle coordinate addition modal
+      return ButtonHandlerFactory.create({
+        id: 'add_coord_modal',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: add_coord_modal - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('add_coord_modal_', '');
+          
+          // Return modal for coordinate input
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `add_coord_submit_${actionId}`,
+              title: 'Add Coordinate',
+              components: [{
+                type: 1, // Action Row
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'coordinate',
+                  label: 'Coordinate (e.g. A1, B3, D7)',
+                  style: 1, // Short
+                  required: true,
+                  placeholder: 'Enter map coordinate...',
+                  min_length: 2,
+                  max_length: 10
+                }]
+              }]
+            }
           };
         }
       })(req, res, client);
@@ -19474,6 +19626,89 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: `❌ Scheduling failed: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('add_coord_submit_')) {
+      // Handle coordinate addition modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const actionId = custom_id.replace('add_coord_submit_', '');
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage coordinates.')) return;
+        
+        const coordinate = components[0].components[0].value?.trim().toUpperCase();
+        
+        if (!coordinate) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Coordinate is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Validate coordinate format (e.g. A1, B3, D7)
+        if (!/^[A-Z]\d+$/.test(coordinate)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid coordinate format. Use format like A1, B3, D7.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Load and update safari data
+        const { loadSafariContent, updateSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const guildData = allSafariContent[guildId] || {};
+        const action = guildData.buttons?.[actionId];
+        
+        if (!action) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Add coordinate to action
+        if (!action.coordinates) {
+          action.coordinates = [];
+        }
+        if (!action.coordinates.includes(coordinate)) {
+          action.coordinates.push(coordinate);
+        }
+        
+        await updateSafariContent(allSafariContent);
+        
+        // Return updated UI
+        const { createCoordinateManagementUI } = await import('./customActionUI.js');
+        const ui = await createCoordinateManagementUI({
+          guildId: guildId,
+          actionId
+        });
+        
+        console.log(`✅ SUCCESS: add_coord_submit - added ${coordinate} to action ${actionId}`);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+        
+      } catch (error) {
+        console.error('Error adding coordinate:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error adding coordinate. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
