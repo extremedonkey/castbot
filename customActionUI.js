@@ -40,11 +40,20 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
     const triggerType = action.trigger?.type || 'button';
     const isAssigned = assignedActionIds.includes(actionId);
     
+    // Sanitize emoji - remove trailing zero-width joiners and ensure valid emoji
+    let emojiName = action.trigger?.button?.emoji || action.emoji || "⚡";
+    // Remove any trailing zero-width joiners or incomplete sequences
+    emojiName = emojiName.replace(/[\u200D\uFE0F]+$/g, '').trim();
+    // If emoji is empty or just joiners, use default
+    if (!emojiName || emojiName.length === 0) {
+      emojiName = "⚡";
+    }
+    
     actionOptions.push({
       label: action.name || action.label || 'Unnamed Action',
       value: actionId,
       description: `${triggerType} trigger${isAssigned ? ' (assigned here)' : ''}`,
-      emoji: { name: action.trigger?.button?.emoji || action.emoji || "⚡" }
+      emoji: { name: emojiName }
     });
     
     if (actionOptions.length >= 25) break; // Discord limit
@@ -83,7 +92,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
           components: [
             {
               type: 2, // Button
-              custom_id: `entity_field_edit_map_cell_${mapId}_${coordinate}_back`,
+              custom_id: `map_location_actions_${coordinate}`,
               label: "Back to Location",
               style: 2,
               emoji: { name: "⬅" }
