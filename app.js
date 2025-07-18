@@ -10297,25 +10297,19 @@ Your server is now ready for Tycoons gameplay!`;
         
         await saveSafariContent(allSafariContent);
         
-        // Build success message
-        const coordCount = action.coordinates?.length || 0;
-        const actionCount = action.actions?.length || 0;
+        console.log(`✅ DEBUG: Finished saving custom action ${actionId}, returning to editor`);
         
-        let successMessage = `🎉 **Custom Action "${action.name || actionId}" saved successfully!**\n\n`;
-        successMessage += `📊 **Summary:**\n`;
-        successMessage += `• ${actionCount} action${actionCount !== 1 ? 's' : ''} configured\n`;
-        successMessage += `• ${coordCount} coordinate${coordCount !== 1 ? 's' : ''} assigned\n`;
-        
-        if (coordCount > 0) {
-          successMessage += `\n📍 **Assigned to:** ${action.coordinates.join(', ')}`;
-        }
-        
-        console.log(`✅ DEBUG: Finished saving custom action ${actionId}`);
+        // Return to the Custom Action editor instead of just showing success
+        const { createCustomActionEditorUI } = await import('./customActionUI.js');
+        const updatedUI = await createCustomActionEditorUI({
+          guildId,
+          actionId
+        });
         
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: successMessage,
+            ...updatedUI,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -17453,10 +17447,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log(`✅ DEBUG: Added ${actionType} action to button ${buttonId}`);
         
+        // Return to the Custom Action editor with updated action list
+        const { createCustomActionEditorUI } = await import('./customActionUI.js');
+        const updatedUI = await createCustomActionEditorUI({
+          guildId,
+          actionId: buttonId
+        });
+        
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: `✅ **${actionType.replace('_', ' ')} action added!**\n\nAction count: ${button.actions.length}/5\n\nAdd more actions or click **Finish & Save Button** when ready.`,
+            ...updatedUI,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
