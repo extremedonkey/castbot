@@ -10281,6 +10281,9 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Find all maps and add coordinate assignments
           for (const mapId in guildData.maps) {
+            // Skip non-map properties
+            if (mapId === 'active' || typeof guildData.maps[mapId] !== 'object') continue;
+            
             const map = guildData.maps[mapId];
             if (!map.coordinates) map.coordinates = {};
             
@@ -17458,8 +17461,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         });
         
         return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: updatedUI
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            ...updatedUI,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
         });
         
       } catch (error) {
