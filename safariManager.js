@@ -376,8 +376,13 @@ async function createCustomButton(guildId, buttonData, userId) {
  */
 async function getCustomButton(guildId, buttonId) {
     try {
+        console.log(`🔍 DEBUG: Getting button - Guild: ${guildId}, ButtonId: ${buttonId}`);
         const safariData = await loadSafariContent();
-        return safariData[guildId]?.buttons?.[buttonId] || null;
+        const button = safariData[guildId]?.buttons?.[buttonId] || null;
+        if (!button) {
+            console.log(`❌ Button not found. Available buttons:`, Object.keys(safariData[guildId]?.buttons || {}));
+        }
+        return button;
     } catch (error) {
         console.error('Error getting custom button:', error);
         return null;

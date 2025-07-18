@@ -391,9 +391,90 @@ const menuButtons = ButtonRegistry.getMenuButtons('reece_stuff_menu');
 
 ## Common Pitfalls and Solutions
 
-### 🚨 Critical Issues to Avoid
+### 1. Over-Engineering Simple Requests
 
-#### 1. Double-Wrapping UI Responses
+**Pitfall**: User asks for something "like X" but you build a complex framework instead.
+
+**Example from Custom Actions Sprint**:
+```javascript
+// ❌ User said "like stores field group" but we built:
+return {
+  components: [{
+    type: 17,
+    components: [
+      { type: 10, content: "Complex header" },
+      { type: 14 },
+      { type: 9, components: [...] }, // Section
+      { type: 1, components: [...] }, // Buttons
+      { type: 14 },
+      { type: 1, components: [...] }  // More buttons
+    ]
+  }]
+};
+
+// ✅ What "like stores" actually meant:
+return {
+  components: [{
+    type: 17,
+    components: [
+      { type: 10, content: "Simple title" },
+      { type: 14 },
+      selectMenu.toJSON() // Just a select!
+    ]
+  }]
+};
+```
+
+**Solution**: ALWAYS examine referenced patterns first:
+```bash
+grep -B20 -A20 "fieldGroup === 'stores'" app.js
+```
+
+### 2. UPDATE_MESSAGE Response Issues
+**Problem:** Creating complex UI systems when simple patterns would suffice.
+
+```javascript
+// ❌ INCORRECT: Building complex UI for simple select menu request
+return ButtonHandlerFactory.create({
+  id: 'custom_actions_edit',
+  handler: async (context) => {
+    // Complex entity management UI
+    const ui = await createEntityManagementUI({...});
+    return ui;
+  }
+})(req, res, client);
+
+// ✅ CORRECT: Using simple select menu pattern
+return ButtonHandlerFactory.create({
+  id: 'custom_actions_edit',
+  handler: async (context) => {
+    return {
+      flags: (1 << 15),
+      components: [{
+        type: 17,
+        components: [
+          { type: 10, content: "Select an action:" },
+          {
+            type: 1,
+            components: [{
+              type: 3, // String select
+              custom_id: 'action_select',
+              options: actions.map(a => ({
+                label: a.label,
+                value: a.id
+              }))
+            }]
+          }
+        ]
+      }]
+    };
+  }
+})(req, res, client);
+```
+
+**Lesson:** When users reference existing patterns, examine and replicate those patterns first.
+
+#### 2. Double-Wrapping UI Responses
 **Problem:** Wrapping already-formatted UI responses in additional Discord response objects.
 
 ```javascript

@@ -4,6 +4,11 @@ This checklist MUST be completed for every feature, fix, or enhancement before i
 
 ## 🎯 Core Requirements
 
+### 0. Pre-Implementation Checks (NEW)
+- [ ] If user references pattern ("like X"), examined X implementation first
+- [ ] Started with simplest possible implementation
+- [ ] Checked DiscordInteractionPatterns.md for common pitfalls
+
 ### 1. Functionality
 - [ ] Feature works as specified in requirements
 - [ ] All acceptance criteria met
@@ -96,6 +101,9 @@ Every feature MUST include comprehensive logging following our logging standards
   - Network failures
 - [ ] Cross-browser tested (if web UI)
 - [ ] Mobile Discord tested
+- [ ] **For UI implementations**: Test UPDATE_MESSAGE responses work correctly
+- [ ] **For select menus**: Validated no malformed emojis (trailing \u200D)
+- [ ] **For complex features**: Start with simplest implementation first
 
 ### 9. Performance
 - [ ] Response time < 3 seconds

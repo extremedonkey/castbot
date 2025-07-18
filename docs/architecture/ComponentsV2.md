@@ -315,7 +315,39 @@ return res.send({
 
 ## Common Pitfalls
 
-### 1. Mixing Legacy and V2
+### 1. UPDATE_MESSAGE Flag Restrictions
+**❌ WRONG:** Including flags in UPDATE_MESSAGE responses
+```javascript
+// This will cause "interaction failed"
+return res.send({
+  type: InteractionResponseType.UPDATE_MESSAGE,
+  data: {
+    flags: (1 << 15), // This causes Discord to reject the response
+    components: [...]
+  }
+});
+```
+
+**✅ CORRECT:** UPDATE_MESSAGE without flags
+```javascript
+return res.send({
+  type: InteractionResponseType.UPDATE_MESSAGE,
+  data: {
+    components: [...] // No flags in data
+  }
+});
+```
+
+**Exception**: When returning from ButtonHandlerFactory handlers, include flags in the return object - the factory will strip them for UPDATE_MESSAGE:
+```javascript
+// In handler
+return {
+  flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+  components: [...]
+}; // Factory handles flag stripping
+```
+
+### 2. Mixing Legacy and V2
 **❌ WRONG:** Using `content` with V2 flag
 ```javascript
 {
@@ -325,7 +357,8 @@ return res.send({
 }
 ```
 
-### 2. Exceeding Limits
+
+### 3. Exceeding Limits
 **❌ WRONG:** More than 5 buttons in action row
 ```javascript
 {
@@ -336,7 +369,7 @@ return res.send({
 }
 ```
 
-### 3. Incorrect Nesting
+### 4. Incorrect Nesting
 **❌ WRONG:** Components outside container
 ```javascript
 {

@@ -30,6 +30,26 @@ When working on specific features, refer to these dedicated documentation files:
 
 **📝 LOGGING:** Logging standards and utilities → [docs/architecture/LoggingStandards.md](docs/architecture/LoggingStandards.md)
 
+**⚠️ DISCORD PATTERNS:** Common patterns and pitfalls → [docs/architecture/DiscordInteractionPatterns.md](docs/architecture/DiscordInteractionPatterns.md)
+
+## ⚠️ Common Discord Interaction Issues
+
+### "This interaction failed" Errors
+**Symptom**: Immediate failure when clicking buttons, no server logs
+**Common Causes**:
+1. **UPDATE_MESSAGE with flags**: Discord rejects certain flag combinations in message updates
+2. **Malformed emojis**: Trailing zero-width joiners (e.g., `"👨‍👩‍👧‍"`)
+3. **Complex UI in simple contexts**: Using Entity Framework when a select menu is needed
+
+**Solution**: Start with the simplest pattern that works (see [DiscordInteractionPatterns.md](docs/architecture/DiscordInteractionPatterns.md))
+
+### Pattern Matching
+**CRITICAL**: When implementing features "like X", examine X's exact implementation first:
+```bash
+# Find how stores field group works
+grep -B20 -A20 "fieldGroup === 'stores'" app.js
+```
+
 ## 🛠️ Critical Development Information
 
 ### Primary Development Workflow
@@ -225,6 +245,8 @@ Most admin functionality accessed via `/menu` → Production Menu
 - **Missing variables** → Ensure context extraction at handler start
 - **Permission errors** → Use BigInt for permission checks
 - **Menu crashes** → Check 5-button limit per Action Row (see ComponentsV2.md line 61)
+- **"Interaction failed" with UPDATE_MESSAGE** → Check flag compatibility and response format
+- **Complex UI requests** → Start with existing simple patterns before building complex systems
 
 ### Development Best Practices
 1. Follow existing code patterns

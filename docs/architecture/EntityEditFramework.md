@@ -1,8 +1,41 @@
 # Entity Edit Framework
 
+## ⚠️ IMPORTANT: When NOT to Use This Framework
+
+**DO NOT USE** when:
+1. User asks for something "like [existing simple pattern]"
+2. You only need a single select menu
+3. The interaction only has 1-3 components
+4. No field validation is required
+5. No multi-step process is needed
+
+**Example from Custom Actions Sprint**:
+```javascript
+// ❌ WRONG: Using Entity Framework for "like stores"
+if (fieldGroup === 'interaction') {
+  return createEntityManagementUI({...}); // 500+ lines of complex UI
+}
+
+// ✅ RIGHT: Simple pattern matching stores
+if (fieldGroup === 'interaction') {
+  return {
+    components: [{ 
+      type: 17,
+      components: [
+        { type: 10, content: "Select actions" },
+        { type: 14 },
+        selectMenu.toJSON()
+      ]
+    }]
+  };
+}
+```
+
 ## Overview
 
 The Entity Edit Framework is a comprehensive, reusable UI/UX system for managing Safari content in CastBot. It provides a standardized way to create, read, update, and delete (CRUD) various entity types through Discord's interface.
+
+**⚠️ IMPORTANT: This is a complex framework for advanced entity management. For simple UI needs (like select menus or basic forms), use simpler patterns first. Only use this framework when you need full CRUD operations with multiple entity types.**
 
 ## Architecture Components
 
@@ -289,6 +322,59 @@ if (errors.length > 0) {
 - Bulk operations
 - Advanced search/filtering
 - Audit logging
+
+## When to Use This Framework
+
+### ✅ Use Entity Edit Framework For:
+- Managing multiple related entities (items, stores, buttons)
+- Full CRUD operations (Create, Read, Update, Delete)
+- Complex field validation and relationships
+- Multi-step editing workflows
+- Admin interfaces with many options
+
+### ❌ DO NOT Use For:
+- Simple select menus
+- Basic form inputs
+- Single-action buttons
+- Quick configuration changes
+- User-facing simple interactions
+
+### 🎯 Example: Simple Pattern vs Entity Framework
+
+**Simple Pattern (Preferred for basic needs):**
+```javascript
+// User wants to select from a list of actions
+return {
+  flags: (1 << 15),
+  components: [{
+    type: 17,
+    components: [
+      { type: 10, content: "Choose an action:" },
+      {
+        type: 1,
+        components: [{
+          type: 3, // String select
+          custom_id: 'simple_select',
+          options: [
+            { label: 'Action 1', value: 'act1' },
+            { label: 'Action 2', value: 'act2' }
+          ]
+        }]
+      }
+    ]
+  }]
+};
+```
+
+**Entity Framework (For complex management):**
+```javascript
+// Admin needs to manage items with multiple properties
+const ui = await createEntityEditUI({
+  guildId,
+  entityType: 'item',
+  mode: 'edit'
+});
+```
 
 ## Best Practices
 
