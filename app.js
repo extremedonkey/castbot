@@ -17261,6 +17261,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         // Import safari manager to update the button
         const { getCustomButton } = await import('./safariManager.js');
+        const { SAFARI_LIMITS } = await import('./config/safariLimits.js');
         const button = await getCustomButton(guildId, buttonId);
         
         if (!button) {
@@ -17453,17 +17454,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log(`✅ DEBUG: Added ${actionType} action to button ${buttonId}`);
         
-        // Return to the Custom Action editor with updated action list
-        const { createCustomActionEditorUI } = await import('./customActionUI.js');
-        const updatedUI = await createCustomActionEditorUI({
-          guildId,
-          actionId: buttonId
-        });
-        
+        // Send a simple success message for modal submission
+        // Discord doesn't handle complex UI responses well for modal submissions
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            ...updatedUI,
+            content: `✅ **${actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} action added successfully!**\n\nAction count: ${button.actions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
