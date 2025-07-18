@@ -9903,310 +9903,296 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_add_action_')) {
-      // Handle adding actions to safari buttons
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to add actions.')) return;
-
-        // Match against known action types that may contain underscores
-        let actionType, buttonId;
-        if (custom_id.endsWith('_display_text')) {
-          actionType = 'display_text';
-          buttonId = custom_id.replace('safari_add_action_', '').replace('_display_text', '');
-        } else if (custom_id.endsWith('_update_currency')) {
-          actionType = 'update_currency';
-          buttonId = custom_id.replace('safari_add_action_', '').replace('_update_currency', '');
-        } else if (custom_id.endsWith('_follow_up')) {
-          actionType = 'follow_up_button';
-          buttonId = custom_id.replace('safari_add_action_', '').replace('_follow_up', '');
-        } else {
-          // Fallback to old method for any unknown action types
-          const parts = custom_id.split('_');
-          actionType = parts[parts.length - 1];
-          buttonId = parts.slice(3, parts.length - 1).join('_');
-        }
-        
-        console.log(`🔧 DEBUG: Adding ${actionType} action to button ${buttonId}`);
-        
-        // Show appropriate modal based on action type
-        if (actionType === 'display_text') {
-          const modal = new ModalBuilder()
-            .setCustomId(`safari_action_modal_${buttonId}_display_text`)
-            .setTitle('Add Text Display Action');
-
-          const titleInput = new TextInputBuilder()
-            .setCustomId('action_title')
-            .setLabel('Title (optional)')
-            .setPlaceholder('e.g., "Welcome to the Adventure!"')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setMaxLength(100);
-
-          const contentInput = new TextInputBuilder()
-            .setCustomId('action_content')
-            .setLabel('Content')
-            .setPlaceholder('The text to display when the button is clicked...')
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true)
-            .setMaxLength(2000);
-
-          const colorInput = new TextInputBuilder()
-            .setCustomId('action_color')
-            .setLabel('Accent Color (optional)')
-            .setPlaceholder('e.g., #3498db or 3447003')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setMaxLength(10);
-
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(titleInput),
-            new ActionRowBuilder().addComponents(contentInput),
-            new ActionRowBuilder().addComponents(colorInput)
-          );
+      // Handle adding actions to safari buttons (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_add_action',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_add_action - user ${context.userId}`);
           
-          return res.send({
-            type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
-          });
-          
-        } else if (actionType === 'update_currency') {
-          const modal = new ModalBuilder()
-            .setCustomId(`safari_action_modal_${buttonId}_update_currency`)
-            .setTitle('Add Currency Change Action');
-
-          const amountInput = new TextInputBuilder()
-            .setCustomId('action_amount')
-            .setLabel('Currency Amount')
-            .setPlaceholder('e.g., 100 or -50 (positive adds, negative subtracts)')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(10);
-
-          const messageInput = new TextInputBuilder()
-            .setCustomId('action_message')
-            .setLabel('Message to Player')
-            .setPlaceholder('e.g., "You found a treasure chest!"')
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(true)
-            .setMaxLength(200);
-
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(amountInput),
-            new ActionRowBuilder().addComponents(messageInput)
-          );
-          
-          return res.send({
-            type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
-          });
-          
-        } else if (actionType === 'follow_up_button') {
-          // Get existing buttons to show in dropdown
-          const { listCustomButtons } = await import('./safariManager.js');
-          const guildId = req.body.guild_id; // Ensure guildId is defined
-          const existingButtons = await listCustomButtons(guildId);
-          
-          if (existingButtons.length === 0) {
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: {
-                content: '❌ **No other buttons available**\n\nYou need to create at least one other button before adding follow-up actions. Create another button first, then come back to add the follow-up.',
-                flags: InteractionResponseFlags.EPHEMERAL
-              }
-            });
+          // Match against known action types that may contain underscores
+          let actionType, buttonId;
+          if (context.customId.endsWith('_display_text')) {
+            actionType = 'display_text';
+            buttonId = context.customId.replace('safari_add_action_', '').replace('_display_text', '');
+          } else if (context.customId.endsWith('_update_currency')) {
+            actionType = 'update_currency';
+            buttonId = context.customId.replace('safari_add_action_', '').replace('_update_currency', '');
+          } else if (context.customId.endsWith('_follow_up')) {
+            actionType = 'follow_up_button';
+            buttonId = context.customId.replace('safari_add_action_', '').replace('_follow_up', '');
+          } else {
+            // Fallback to old method for any unknown action types
+            const parts = context.customId.split('_');
+            actionType = parts[parts.length - 1];
+            buttonId = parts.slice(3, parts.length - 1).join('_');
           }
           
-          const modal = new ModalBuilder()
-            .setCustomId(`safari_action_modal_${buttonId}_follow_up`)
-            .setTitle('Add Follow-up Button Action');
-
-          // Create options for button selection (showing max 25 as per Discord limit)
-          const buttonOptions = existingButtons
-            .filter(btn => btn.id !== buttonId) // Don't include current button
-            .slice(0, 25)
-            .map(btn => `${btn.id}|${btn.label}`)
-            .join('\n');
-
-          const buttonSelectInput = new TextInputBuilder()
-            .setCustomId('action_button_id')
-            .setLabel('Target Button ID')
-            .setPlaceholder('Enter the exact Button ID to chain to')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(50);
-
-          const delayInput = new TextInputBuilder()
-            .setCustomId('action_delay')
-            .setLabel('Delay (seconds)')
-            .setPlaceholder('0-60 seconds delay before showing button')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setMaxLength(3);
-
-          const replaceInput = new TextInputBuilder()
-            .setCustomId('action_replace')
-            .setLabel('Replace Current Message (true/false)')
-            .setPlaceholder('true = replace message, false = add below')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setMaxLength(5);
-
-          const availableButtonsInput = new TextInputBuilder()
-            .setCustomId('available_buttons')
-            .setLabel('Available Button IDs')
-            .setValue(buttonOptions || 'No other buttons available')
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(false);
-
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(buttonSelectInput),
-            new ActionRowBuilder().addComponents(delayInput),
-            new ActionRowBuilder().addComponents(replaceInput),
-            new ActionRowBuilder().addComponents(availableButtonsInput)
-          );
+          console.log(`🔧 DEBUG: Adding ${actionType} action to button ${buttonId}`);
           
-          return res.send({
-            type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
-          });
-          
-        } else if (actionType === 'conditional') {
-          const modal = new ModalBuilder()
-            .setCustomId(`safari_action_modal_${buttonId}_conditional`)
-            .setTitle('Add Conditional Action');
+          // Show appropriate modal based on action type
+          if (actionType === 'display_text') {
+            const modal = new ModalBuilder()
+              .setCustomId(`safari_action_modal_${buttonId}_display_text`)
+              .setTitle('Add Text Display Action');
 
-          const conditionTypeInput = new TextInputBuilder()
-            .setCustomId('condition_type')
-            .setLabel('Condition Type')
-            .setPlaceholder('currency_gte, currency_lte, has_item, not_has_item')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(20);
+            const titleInput = new TextInputBuilder()
+              .setCustomId('action_title')
+              .setLabel('Title (optional)')
+              .setPlaceholder('e.g., "Welcome to the Adventure!"')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(100);
 
-          const conditionValueInput = new TextInputBuilder()
-            .setCustomId('condition_value')
-            .setLabel('Condition Value')
-            .setPlaceholder('e.g., "100" for currency, "item_id" for items')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(50);
+            const contentInput = new TextInputBuilder()
+              .setCustomId('action_content')
+              .setLabel('Content')
+              .setPlaceholder('The text to display when the button is clicked...')
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(true)
+              .setMaxLength(2000);
 
-          const successActionInput = new TextInputBuilder()
-            .setCustomId('success_action')
-            .setLabel('Success Action Type')
-            .setPlaceholder('display_text, update_currency, follow_up_button')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(20);
+            const colorInput = new TextInputBuilder()
+              .setCustomId('action_color')
+              .setLabel('Accent Color (optional)')
+              .setPlaceholder('e.g., #3498db or 3447003')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(10);
 
-          const failureActionInput = new TextInputBuilder()
-            .setCustomId('failure_action')
-            .setLabel('Failure Action Type (optional)')
-            .setPlaceholder('display_text, update_currency, follow_up_button')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setMaxLength(20);
-
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(conditionTypeInput),
-            new ActionRowBuilder().addComponents(conditionValueInput),
-            new ActionRowBuilder().addComponents(successActionInput),
-            new ActionRowBuilder().addComponents(failureActionInput)
-          );
-          
-          return res.send({
-            type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
-          });
-        } else {
-          // This might be a request to show the action menu for an existing button
-          // Check if this is a numeric action ID (likely a mistake - show action menu instead)
-          if (/^\d+$/.test(actionType)) {
-            console.log(`🔧 DEBUG: Showing action menu for button "${buttonId}" (detected numeric suffix "${actionType}")`);
+            modal.addComponents(
+              new ActionRowBuilder().addComponents(titleInput),
+              new ActionRowBuilder().addComponents(contentInput),
+              new ActionRowBuilder().addComponents(colorInput)
+            );
             
-            // Show the action menu for this button
-            const actionMenuComponents = [
-              {
-                type: 1, // Action Row
-                components: [
-                  {
-                    type: 2, // Button
-                    custom_id: `safari_add_action_${buttonId}_display_text`,
-                    label: 'Add Text Display',
-                    style: 1,
-                    emoji: { name: '📄' }
-                  },
-                  {
-                    type: 2, // Button
-                    custom_id: `safari_add_action_${buttonId}_update_currency`,
-                    label: 'Add Currency Change',
-                    style: 1,
-                    emoji: { name: '💰' }
-                  },
-                  {
-                    type: 2, // Button
-                    custom_id: `safari_add_action_${buttonId}_follow_up`,
-                    label: 'Add Follow-up Button',
-                    style: 1,
-                    emoji: { name: '🔗' }
-                  },
-                  {
-                    type: 2, // Button
-                    custom_id: `safari_add_action_${buttonId}_conditional`,
-                    label: 'Add Conditional Action',
-                    style: 1,
-                    emoji: { name: '🔀' }
-                  }
-                ]
-              },
-              {
-                type: 1, // Action Row
-                components: [
-                  {
-                    type: 2, // Button
-                    custom_id: `safari_finish_button_${buttonId}`,
-                    label: 'Finish & Test Button',
-                    style: 3, // Success
-                    emoji: { name: '✅' }
-                  }
-                ]
-              }
-            ];
+            console.log(`✅ SUCCESS: safari_add_action - showing display_text modal`);
+            return {
+              type: InteractionResponseType.MODAL,
+              data: modal.toJSON()
+            };
+            
+          } else if (actionType === 'update_currency') {
+            const modal = new ModalBuilder()
+              .setCustomId(`safari_action_modal_${buttonId}_update_currency`)
+              .setTitle('Add Currency Change Action');
 
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: {
+            const amountInput = new TextInputBuilder()
+              .setCustomId('action_amount')
+              .setLabel('Currency Amount')
+              .setPlaceholder('e.g., 100 or -50 (positive adds, negative subtracts)')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(10);
+
+            const messageInput = new TextInputBuilder()
+              .setCustomId('action_message')
+              .setLabel('Message to Player')
+              .setPlaceholder('e.g., "You found a treasure chest!"')
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(true)
+              .setMaxLength(200);
+
+            modal.addComponents(
+              new ActionRowBuilder().addComponents(amountInput),
+              new ActionRowBuilder().addComponents(messageInput)
+            );
+            
+            console.log(`✅ SUCCESS: safari_add_action - showing update_currency modal`);
+            return {
+              type: InteractionResponseType.MODAL,
+              data: modal.toJSON()
+            };
+          
+          } else if (actionType === 'follow_up_button') {
+            // Get existing buttons to show in dropdown
+            const { listCustomButtons } = await import('./safariManager.js');
+            const existingButtons = await listCustomButtons(context.guildId);
+            
+            if (existingButtons.length === 0) {
+              return {
+                content: '❌ **No other buttons available**\n\nYou need to create at least one other button before adding follow-up actions. Create another button first, then come back to add the follow-up.',
+                ephemeral: true
+              };
+            }
+            
+            const modal = new ModalBuilder()
+              .setCustomId(`safari_action_modal_${buttonId}_follow_up`)
+              .setTitle('Add Follow-up Button Action');
+
+            // Create options for button selection (showing max 25 as per Discord limit)
+            const buttonOptions = existingButtons
+              .filter(btn => btn.id !== buttonId) // Don't include current button
+              .slice(0, 25)
+              .map(btn => `${btn.id}|${btn.label}`)
+              .join('\n');
+
+            const buttonSelectInput = new TextInputBuilder()
+              .setCustomId('action_button_id')
+              .setLabel('Target Button ID')
+              .setPlaceholder('Enter the exact Button ID to chain to')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(50);
+
+            const delayInput = new TextInputBuilder()
+              .setCustomId('action_delay')
+              .setLabel('Delay (seconds)')
+              .setPlaceholder('0-60 seconds delay before showing button')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(3);
+
+            const replaceInput = new TextInputBuilder()
+              .setCustomId('action_replace')
+              .setLabel('Replace Current Message (true/false)')
+              .setPlaceholder('true = replace message, false = add below')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(5);
+
+            const availableButtonsInput = new TextInputBuilder()
+              .setCustomId('available_buttons')
+              .setLabel('Available Button IDs')
+              .setValue(buttonOptions || 'No other buttons available')
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(false);
+
+            modal.addComponents(
+              new ActionRowBuilder().addComponents(buttonSelectInput),
+              new ActionRowBuilder().addComponents(delayInput),
+              new ActionRowBuilder().addComponents(replaceInput),
+              new ActionRowBuilder().addComponents(availableButtonsInput)
+            );
+            
+            console.log(`✅ SUCCESS: safari_add_action - showing follow_up modal`);
+            return {
+              type: InteractionResponseType.MODAL,
+              data: modal.toJSON()
+            };
+          
+          } else if (actionType === 'conditional') {
+            const modal = new ModalBuilder()
+              .setCustomId(`safari_action_modal_${buttonId}_conditional`)
+              .setTitle('Add Conditional Action');
+
+            const conditionTypeInput = new TextInputBuilder()
+              .setCustomId('condition_type')
+              .setLabel('Condition Type')
+              .setPlaceholder('currency_gte, currency_lte, has_item, not_has_item')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(20);
+
+            const conditionValueInput = new TextInputBuilder()
+              .setCustomId('condition_value')
+              .setLabel('Condition Value')
+              .setPlaceholder('e.g., "100" for currency, "item_id" for items')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(50);
+
+            const successActionInput = new TextInputBuilder()
+              .setCustomId('success_action')
+              .setLabel('Success Action Type')
+              .setPlaceholder('display_text, update_currency, follow_up_button')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(20);
+
+            const failureActionInput = new TextInputBuilder()
+              .setCustomId('failure_action')
+              .setLabel('Failure Action Type (optional)')
+              .setPlaceholder('display_text, update_currency, follow_up_button')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(20);
+
+            modal.addComponents(
+              new ActionRowBuilder().addComponents(conditionTypeInput),
+              new ActionRowBuilder().addComponents(conditionValueInput),
+              new ActionRowBuilder().addComponents(successActionInput),
+              new ActionRowBuilder().addComponents(failureActionInput)
+            );
+            
+            console.log(`✅ SUCCESS: safari_add_action - showing conditional modal`);
+            return {
+              type: InteractionResponseType.MODAL,
+              data: modal.toJSON()
+            };
+          } else {
+            // This might be a request to show the action menu for an existing button
+            // Check if this is a numeric action ID (likely a mistake - show action menu instead)
+            if (/^\d+$/.test(actionType)) {
+              console.log(`🔧 DEBUG: Showing action menu for button "${buttonId}" (detected numeric suffix "${actionType}")`);
+              
+              // Show the action menu for this button
+              const actionMenuComponents = [
+                {
+                  type: 1, // Action Row
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: `safari_add_action_${buttonId}_display_text`,
+                      label: 'Add Text Display',
+                      style: 1,
+                      emoji: { name: '📄' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `safari_add_action_${buttonId}_update_currency`,
+                      label: 'Add Currency Change',
+                      style: 1,
+                      emoji: { name: '💰' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `safari_add_action_${buttonId}_follow_up`,
+                      label: 'Add Follow-up Button',
+                      style: 1,
+                      emoji: { name: '🔗' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `safari_add_action_${buttonId}_conditional`,
+                      label: 'Add Conditional Action',
+                      style: 1,
+                      emoji: { name: '🔀' }
+                    }
+                  ]
+                },
+                {
+                  type: 1, // Action Row
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: `safari_finish_button_${buttonId}`,
+                      label: 'Finish & Test Button',
+                      style: 3, // Success
+                      emoji: { name: '✅' }
+                    }
+                  ]
+                }
+              ];
+
+              console.log(`✅ SUCCESS: safari_add_action - showing action menu`);
+              return {
                 content: `🎯 **Add Actions to Button: ${buttonId}**\n\nChoose an action type to add to this button:`,
                 components: actionMenuComponents,
-                flags: InteractionResponseFlags.EPHEMERAL
-              }
-            });
-          } else {
-            // Unknown action type - send error response
-            console.log(`❌ DEBUG: Unknown action type "${actionType}" for button "${buttonId}"`);
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: {
+                ephemeral: true
+              };
+            } else {
+              // Unknown action type - send error response
+              console.log(`❌ DEBUG: Unknown action type "${actionType}" for button "${buttonId}"`);
+              return {
                 content: `❌ **Unknown action type**: \`${actionType}\`\n\nSupported action types:\n• \`display_text\` - Show text message\n• \`update_currency\` - Change player currency\n• \`follow_up_button\` - Chain to another button\n• \`conditional\` - Conditional actions\n\nPlease use one of the supported action buttons.`,
-                flags: InteractionResponseFlags.EPHEMERAL
-              }
-            });
+                ephemeral: true
+              };
+            }
           }
         }
-        
-      } catch (error) {
-        console.error('Error adding action:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error adding action. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_finish_button_')) {
       // Handle finishing button creation
       try {
