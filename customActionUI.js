@@ -227,7 +227,7 @@ function formatCoordinateList(coordinates) {
   const sortedCoords = [...coordinates].sort();
   
   if (sortedCoords.length === 1) {
-    return `${sortedCoords[0]}*`;
+    return sortedCoords[0];
   }
   
   // Join with commas and truncate if too long
@@ -578,17 +578,26 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
     });
   }
   
-  // Add coordinate input
+  // Add coordinate input with back button
   components.push({ type: 14, spacing: 1 });
   components.push({
     type: 1, // Action Row
-    components: [{
-      type: 2,
-      custom_id: `add_coord_modal_${actionId}`,
-      label: "Add Coordinate",
-      style: 1, // Primary
-      emoji: { name: "➕" }
-    }]
+    components: [
+      {
+        type: 2,
+        custom_id: `custom_action_editor_${actionId}`,
+        label: "← Back",
+        style: 2, // Secondary (grey)
+        emoji: { name: "🔙" }
+      },
+      {
+        type: 2,
+        custom_id: `add_coord_modal_${actionId}`,
+        label: "Add Coordinate",
+        style: 1, // Primary
+        emoji: { name: "➕" }
+      }
+    ]
   });
   
   return {

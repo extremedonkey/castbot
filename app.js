@@ -13190,6 +13190,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'entity_custom_action_list',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        ephemeral: true,
         handler: async (context) => {
           console.log(`🔍 START: entity_custom_action_list - user ${context.userId}`);
           
@@ -13288,6 +13289,29 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
           
           console.log(`✅ SUCCESS: entity_action_coords - showing coordinate management UI`);
+          return ui;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('custom_action_editor_')) {
+      // Handle back button from coordinate management to action editor
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_editor',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: custom_action_editor - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('custom_action_editor_', '');
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          
+          const ui = await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId
+          });
+          
+          console.log(`✅ SUCCESS: custom_action_editor - showing action editor for ${actionId}`);
           return ui;
         }
       })(req, res, client);
