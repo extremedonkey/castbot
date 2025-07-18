@@ -930,6 +930,12 @@ export function sendPermissionDenied(res, permissionName) {
  * @param {boolean} updateMessage - Whether to update existing message
  */
 export function sendResponse(res, data, updateMessage = false) {
+  // If the response already has a type set (like MODAL), send it directly
+  if (data.type) {
+    console.log(`📝 Sending ${data.type} response directly`);
+    return res.send(data);
+  }
+  
   // For UPDATE_MESSAGE, Discord doesn't accept flags in the response
   if (updateMessage) {
     console.log('📝 Sending UPDATE_MESSAGE response (no flags)');
