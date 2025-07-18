@@ -877,7 +877,7 @@ export function extractButtonContext(req) {
     applicationId: req.body.application_id || process.env.APP_ID,
     customId: req.body.data?.custom_id,
     values: req.body.data?.values,
-    components: req.body.message?.components
+    components: req.body.data?.components || req.body.message?.components
   };
 }
 
