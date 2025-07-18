@@ -1047,8 +1047,12 @@ export class ButtonHandlerFactory {
         
         // 6. Send response (skip if deferred or handler sent response)
         if (!config.deferred && result && !res.headersSent) {
-          console.log(`🔍 ButtonHandlerFactory sending response for ${config.id}, updateMessage: ${config.updateMessage}`);
-          return sendResponse(res, result, config.updateMessage);
+          // CRITICAL: Modal responses cannot be sent as UPDATE_MESSAGE
+          const isModal = result.type === InteractionResponseType.MODAL;
+          const shouldUpdateMessage = config.updateMessage && !isModal;
+          
+          console.log(`🔍 ButtonHandlerFactory sending response for ${config.id}, updateMessage: ${shouldUpdateMessage}, isModal: ${isModal}`);
+          return sendResponse(res, result, shouldUpdateMessage);
         }
         
         // 7. Handle deferred response update
