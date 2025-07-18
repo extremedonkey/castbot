@@ -3233,7 +3233,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'entity_action_trigger',
         'entity_action_conditions',
         'entity_action_coords',
-        'safari_add_action'
+        'safari_add_action',
+        'custom_action_add_condition',
+        'custom_action_remove_condition',
+        'custom_action_test'
       ];
       
       for (const pattern of dynamicPatterns) {
@@ -13204,6 +13207,86 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           console.log(`✅ SUCCESS: entity_action_conditions - showing conditions config`);
           return ui;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('entity_action_coords_')) {
+      // Handle coordinates configuration button
+      return ButtonHandlerFactory.create({
+        id: 'entity_action_coords',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: entity_action_coords - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('entity_action_coords_', '');
+          
+          // TODO: Implement coordinates management UI
+          console.log(`✅ SUCCESS: entity_action_coords - coordinates management not yet implemented`);
+          return {
+            content: '🚧 **Coordinates Management**\n\nThis feature is coming soon! You\'ll be able to assign this action to multiple map coordinates.',
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('custom_action_add_condition_')) {
+      // Handle add condition button
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_add_condition',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: custom_action_add_condition - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('custom_action_add_condition_', '');
+          
+          // TODO: Implement add condition modal
+          console.log(`✅ SUCCESS: custom_action_add_condition - condition adding not yet implemented`);
+          return {
+            content: '🚧 **Add Condition**\n\nThis feature is coming soon! You\'ll be able to add conditions like "Has Item", "Has Currency", etc.',
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('custom_action_remove_condition_')) {
+      // Handle remove condition button
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_remove_condition',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: custom_action_remove_condition - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('custom_action_remove_condition_', '');
+          
+          // TODO: Implement remove condition logic
+          console.log(`✅ SUCCESS: custom_action_remove_condition - condition removal not yet implemented`);
+          return {
+            content: '🚧 **Remove Condition**\n\nThis feature is coming soon!',
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('custom_action_test_')) {
+      // Handle test action button
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_test',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: custom_action_test - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('custom_action_test_', '');
+          
+          // TODO: Implement action testing logic
+          console.log(`✅ SUCCESS: custom_action_test - action testing not yet implemented`);
+          return {
+            content: '🚧 **Test Action**\n\nThis feature is coming soon! You\'ll be able to test your custom actions before deploying them.',
+            ephemeral: true
+          };
         }
       })(req, res, client);
       
