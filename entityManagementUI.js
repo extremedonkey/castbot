@@ -241,7 +241,7 @@ function createEntityDisplay(entity, entityType, safariConfig) {
                 lines.push(`**Description**: ${entity.baseContent.description}`);
             }
             if (entity.buttons?.length > 0) {
-                lines.push(`**Safari Buttons**: ${entity.buttons.length} configured`);
+                lines.push(`**Custom Actions**: ${entity.buttons.length} configured`);
             }
             break;
     }
@@ -361,7 +361,7 @@ export function getFieldGroups(entityType) {
             return {
                 info: { label: 'Location Info', emoji: '📝', fields: ['title', 'description'] },
                 media: { label: 'Media', emoji: '🖼️', fields: ['image'] },
-                interaction: { label: 'Location Actions', emoji: '⚡', fields: ['buttons'] },
+                interaction: { label: 'Custom Actions', emoji: '⚡', fields: ['buttons'] },
                 stores: { label: 'Add Store', emoji: '🏪', fields: ['stores'] },
                 items: { label: 'Add Item', emoji: '🧰', fields: ['itemDrops', 'currencyDrops'] }
             };
@@ -486,7 +486,7 @@ function getEntityDescription(entity, entityType) {
                 parts.push(`Title: ${entity.baseContent.title.replace('📍 ', '')}`);
             }
             if (entity.buttons?.length > 0) {
-                parts.push(`${entity.buttons.length} safari buttons`);
+                parts.push(`${entity.buttons.length} custom actions`);
             }
             if (entity.cellType && entity.cellType !== 'unexplored') {
                 parts.push(entity.cellType);

@@ -1922,6 +1922,87 @@ If this conversation gets compacted and you're picking up implementation:
 
 This documentation serves as the complete guide for implementing and extending CastBot's Safari system. Always refer to this document when working with Safari, Idol Hunt, Questions, or dynamic content features.
 
+## Safari Custom Actions System (Location Actions) - CRITICAL CONTEXT
+
+### 🚨 COMPACTION PRESERVATION - CUSTOM ACTIONS FEATURE
+
+**Feature Name**: Safari Custom Actions (formerly "Safari Buttons" in UI, now "Location Actions")
+
+**Core Concept**: A many-to-many relationship system where Custom Actions can be assigned to zero or many map coordinates, and coordinates can have multiple actions assigned.
+
+#### Critical Design Decisions (MUST PRESERVE):
+
+1. **Data Model**: BIDIRECTIONAL many-to-many relationship
+   - Actions store which coordinates they're assigned to (optional)
+   - Coordinates store which actions are assigned to them (required)
+   - Stored in `coordinates[coord].buttons = [actionIds]` in safariContent.json
+
+2. **Trigger Types** (Beyond Buttons):
+   - **Button Click**: Traditional button interaction
+   - **String Select**: Components V2 select menu
+   - **Modal Input**: Text input with keyword matching
+   - **Role Select**: User/role selection
+   - **Channel Select**: Channel selection
+   - Future: Time-based, location-based, item-based triggers
+
+3. **UI Pattern**: Entity Framework with custom field handling
+   - Uses standard entity management pattern
+   - "interaction" field group shows action selection
+   - String select lists all available actions
+   - Selecting action allows editing that applies globally
+
+4. **Auto-Assignment**: When creating new action from location
+   - Coordinate is automatically assigned based on channel context
+   - Actions remain reusable across multiple coordinates
+   - Pre-population happens in action editor
+
+5. **Naming**: "Custom Actions" in UI (not buttons)
+   - Backend still uses "buttons" for compatibility
+   - UI terminology updated for clarity
+
+6. **Integration Flow**:
+   - Click "Location Actions" on map coordinate
+   - See dropdown of existing actions + "Create New"
+   - Select action to edit/assign
+   - Changes apply across all assigned coordinates
+
+#### Data Structure:
+```json
+{
+  "buttons": {
+    "action_id": {
+      "label": "Enter Cave",
+      "trigger": {
+        "type": "button|modal|select",
+        "config": {...}
+      },
+      "conditions": {...},
+      "actions": [...],
+      "coordinates": ["A1", "B2"] // Optional tracking
+    }
+  },
+  "maps": {
+    "map_id": {
+      "coordinates": {
+        "A1": {
+          "buttons": ["action_id_1", "action_id_2"], // Required
+          "channelId": "...",
+          "baseContent": {...}
+        }
+      }
+    }
+  }
+}
+```
+
+#### Implementation Status:
+- ✅ UI framework created (customActionUI.js)
+- ✅ Button registry updated
+- ✅ Handler infrastructure in place
+- ❌ Bidirectional data sync not working
+- ❌ Auto-assignment from channel context missing
+- ❌ Entity Framework integration incomplete
+
 ## Implementation History
 
 ### SAFARI ATTACK SYSTEM ✅ MVP3 COMPLETE

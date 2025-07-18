@@ -10217,7 +10217,7 @@ Your server is now ready for Tycoons gameplay!`;
         console.log(`🔍 DEBUG: Finishing custom action ${actionId}`);
         
         // Load Safari data to get action details
-        const { loadSafariContent, updateSafariContent } = await import('./safariManager.js');
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const allSafariContent = await loadSafariContent();
         const guildData = allSafariContent[guildId] || {};
         const action = guildData.buttons?.[actionId];
@@ -10256,7 +10256,7 @@ Your server is now ready for Tycoons gameplay!`;
             }
           }
           
-          await updateSafariContent(allSafariContent);
+          await saveSafariContent(allSafariContent);
         }
         
         // Build success message
@@ -13110,50 +13110,60 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             
             return uiResponse;
           } else if (entityType === 'map_cell' && fieldGroup === 'interaction') {
-            // Special handling for Safari Buttons -> Custom Actions UI
-            console.log('🎯 Intercepting Safari Buttons click for Custom Actions UI');
+            // Simple Safari button selection like stores - NO ENTITY FRAMEWORK
+            const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const buttons = safariData[context.guildId]?.buttons || {};
+            const activeMapId = safariData[context.guildId]?.maps?.active;
+            const coordButtons = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[entityId]?.buttons || [];
             
-            try {
-              const { createCustomActionSelectionUI } = await import('./customActionUI.js');
-              const { loadSafariContent } = await import('./safariManager.js');
-              
-              console.log('📦 Loading Safari content...');
-              const allSafariData = await loadSafariContent();
-              const guildData = allSafariData[context.guildId] || {};
-              const activeMapId = guildData.maps?.active;
-              
-              console.log(`🗺️ Active map ID: ${activeMapId}`);
-              
-              if (!activeMapId) {
-                return {
-                  content: '❌ No active map found.',
-                  ephemeral: true
-                };
-              }
-              
-              console.log(`📍 Creating UI for coordinate: ${entityId}, map: ${activeMapId}`);
-              // entityId is the coordinate (e.g., "A1")
-              const customActionUI = await createCustomActionSelectionUI({
-                guildId: context.guildId,
-                coordinate: entityId,
-                mapId: activeMapId
-              });
-              
-              console.log('✅ Custom Action UI created successfully');
-              console.log('📊 UI Response structure:', JSON.stringify(customActionUI, null, 2));
-              
-              // Return exactly like stores handler
+            // Create button select menu (simple like stores)
+            const buttonOptions = Object.entries(buttons).map(([buttonId, button]) => ({
+              label: `${button.emoji || '⚡'} ${button.label || button.name || 'Unnamed'}`.substring(0, 100),
+              value: buttonId,
+              description: button.description?.substring(0, 100) || `${button.actions?.length || 0} actions`,
+              default: coordButtons.includes(buttonId)
+            }));
+            
+            if (buttonOptions.length === 0) {
               return {
-                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + ephemeral
-                components: customActionUI.components
-              };
-            } catch (error) {
-              console.error('❌ Error creating Custom Action UI:', error);
-              return {
-                content: `❌ Error loading custom actions: ${error.message}`,
+                content: '❌ No Safari buttons available. Create buttons first using Safari menu.',
                 ephemeral: true
               };
             }
+            
+            // Use proper Components V2 pattern exactly like stores
+            const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+            
+            const selectMenu = new StringSelectMenuBuilder()
+              .setCustomId(`map_buttons_select_${entityId}`)
+              .setPlaceholder('Select Custom Actions...')
+              .setMinValues(0)
+              .setMaxValues(Math.min(buttonOptions.length, 25))
+              .addOptions(buttonOptions.slice(0, 25));
+              
+            const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+            
+            // Create container components
+            const containerComponents = [
+              {
+                type: 10, // Text Display
+                content: `## ⚡ Select Custom Actions for ${entityId}\n\nSelect one or more actions to make available at this location.`
+              },
+              { type: 14 }, // Separator
+              selectRow.toJSON() // Convert to JSON
+            ];
+            
+            const container = {
+              type: 17, // Container
+              accent_color: 0x3498db,
+              components: containerComponents
+            };
+            
+            return {
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + ephemeral
+              components: [container]
+            };
           } else {
             // Open modal directly for field group editing
             try {
@@ -13370,7 +13380,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const coordinate = parts.slice(1).join('_'); // Handle underscores in coordinates
           
           // Load and update safari data
-          const { loadSafariContent, updateSafariContent } = await import('./safariManager.js');
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
           const allSafariContent = await loadSafariContent();
           const guildData = allSafariContent[context.guildId] || {};
           const action = guildData.buttons?.[actionId];
@@ -13393,7 +13403,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             }
           }
           
-          await updateSafariContent(allSafariContent);
+          await saveSafariContent(allSafariContent);
           
           // Return updated UI
           const { createCoordinateManagementUI } = await import('./customActionUI.js');
@@ -13974,6 +13984,80 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
           
           console.log(`✅ SUCCESS: map_stores_select - updated stores for ${coord}`);
+          
+          return {
+            ...ui,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_buttons_select_')) {
+      // Handle button/action selection for map coordinate - SIMPLE LIKE STORES
+      return ButtonHandlerFactory.create({
+        id: 'map_buttons_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_buttons_select_', '');
+          const selectedButtons = context.values || [];
+          
+          console.log(`⚡ START: map_buttons_select - coord ${coord}, buttons: ${selectedButtons.join(', ')}`);
+          
+          // Load and update safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          
+          if (!activeMapId || !safariData[context.guildId].maps[activeMapId].coordinates[coord]) {
+            return {
+              content: '❌ Location data not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Initialize buttons array if it doesn't exist
+          if (!safariData[context.guildId].maps[activeMapId].coordinates[coord].buttons) {
+            safariData[context.guildId].maps[activeMapId].coordinates[coord].buttons = [];
+          }
+          
+          // Update buttons for this coordinate
+          safariData[context.guildId].maps[activeMapId].coordinates[coord].buttons = selectedButtons;
+          
+          // Also update the button's coordinates array (bidirectional sync)
+          const allButtons = safariData[context.guildId].buttons || {};
+          
+          // First remove this coord from all buttons
+          Object.entries(allButtons).forEach(([buttonId, button]) => {
+            if (button.coordinates && button.coordinates.includes(coord)) {
+              button.coordinates = button.coordinates.filter(c => c !== coord);
+            }
+          });
+          
+          // Then add this coord to selected buttons
+          selectedButtons.forEach(buttonId => {
+            if (allButtons[buttonId]) {
+              if (!allButtons[buttonId].coordinates) {
+                allButtons[buttonId].coordinates = [];
+              }
+              if (!allButtons[buttonId].coordinates.includes(coord)) {
+                allButtons[buttonId].coordinates.push(coord);
+              }
+            }
+          });
+          
+          await saveSafariContent(safariData);
+          
+          // Refresh the entity management UI
+          const { createEntityManagementUI } = await import('./entityManagementUI.js');
+          const ui = await createEntityManagementUI({
+            entityType: 'map_cell',
+            guildId: context.guildId,
+            selectedId: coord,
+            mode: 'edit'
+          });
+          
+          console.log(`✅ SUCCESS: map_buttons_select - updated buttons for ${coord}`);
           
           return {
             ...ui,
@@ -19665,7 +19749,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
         
         // Load and update safari data
-        const { loadSafariContent, updateSafariContent } = await import('./safariManager.js');
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const allSafariContent = await loadSafariContent();
         const guildData = allSafariContent[guildId] || {};
         const action = guildData.buttons?.[actionId];
@@ -19688,7 +19772,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           action.coordinates.push(coordinate);
         }
         
-        await updateSafariContent(allSafariContent);
+        await saveSafariContent(allSafariContent);
         
         // Return updated UI
         const { createCoordinateManagementUI } = await import('./customActionUI.js');
