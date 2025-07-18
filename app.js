@@ -3228,7 +3228,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'entity_field_group',
         'entity_delete_mode',
         'entity_confirm_delete',
-        'safari_move'
+        'safari_move',
+        'entity_custom_action_list',
+        'entity_action_trigger',
+        'entity_action_conditions',
+        'entity_action_coords',
+        'safari_add_action'
       ];
       
       for (const pattern of dynamicPatterns) {
