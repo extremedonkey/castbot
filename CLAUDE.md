@@ -78,6 +78,30 @@ grep -B20 -A20 "fieldGroup === 'stores'" app.js
 
 **⚠️ IMPORTANT:** The restart script handles git commits, Discord notifications, and proper app restart
 
+### 🚨 MANDATORY: Button Handler Factory Pattern
+
+**ALL Discord buttons MUST use the ButtonHandlerFactory pattern** - no exceptions. This standard was implemented and is strictly enforced.
+
+**❌ FORBIDDEN**: Legacy button handlers like:
+```javascript
+if (custom_id === 'my_button') {
+  // Direct handler - NOT ALLOWED
+}
+```
+
+**✅ REQUIRED**: ButtonHandlerFactory pattern:
+```javascript
+} else if (custom_id === 'my_button') {
+  return ButtonHandlerFactory.create({
+    id: 'my_button',
+    handler: async (context) => {
+      // Your code here
+    }
+  })(req, res, client);
+```
+
+**Documentation**: [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
+
 ### Production Deployment
 
 ```bash

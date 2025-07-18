@@ -97,8 +97,11 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   action = ensureActionStructure(action);
   
   // Pre-populate coordinate if provided and not already assigned
-  if (coordinate && actionId === 'new' && !action.coordinates?.includes(coordinate)) {
-    action.coordinates = [coordinate];
+  if (coordinate && !action.coordinates?.includes(coordinate)) {
+    if (!action.coordinates) {
+      action.coordinates = [];
+    }
+    action.coordinates.push(coordinate);
   }
   
   const triggerType = action.trigger?.type || 'button';
@@ -155,7 +158,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Assigned Locations:** ${coordinateCount} coordinate${coordinateCount !== 1 ? 's' : ''}`
+            content: `**Assigned Locations:** ${formatCoordinateList(action.coordinates)}`
           }],
           accessory: {
             type: 2,
@@ -214,6 +217,46 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
 /**
  * Helper functions
  */
+
+function formatCoordinateList(coordinates) {
+  if (!coordinates || coordinates.length === 0) {
+    return '0 coordinates';
+  }
+  
+  // Sort coordinates alphabetically
+  const sortedCoords = [...coordinates].sort();
+  
+  if (sortedCoords.length === 1) {
+    return `${sortedCoords[0]}*`;
+  }
+  
+  // Join with commas and truncate if too long
+  const joinedCoords = sortedCoords.join(', ');
+  const maxLength = 50; // Approximate line length before wrapping
+  
+  if (joinedCoords.length <= maxLength) {
+    return joinedCoords;
+  }
+  
+  // Truncate and add ellipsis
+  let truncated = '';
+  let currentLength = 0;
+  
+  for (let i = 0; i < sortedCoords.length; i++) {
+    const coord = sortedCoords[i];
+    const addition = i === 0 ? coord : `, ${coord}`;
+    
+    if (currentLength + addition.length + 3 > maxLength) { // +3 for "..."
+      truncated += '...';
+      break;
+    }
+    
+    truncated += addition;
+    currentLength += addition.length;
+  }
+  
+  return truncated;
+}
 
 function getActionListComponents(actions) {
   if (!actions || actions.length === 0) {
