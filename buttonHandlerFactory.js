@@ -936,6 +936,12 @@ export function sendResponse(res, data, updateMessage = false) {
     flags |= InteractionResponseFlags.EPHEMERAL;
   }
   
+  // CRITICAL: Always add IS_COMPONENTS_V2 flag when components are present
+  if (data.components && data.components.length > 0) {
+    flags |= (1 << 15); // IS_COMPONENTS_V2
+    console.log('🎯 Added IS_COMPONENTS_V2 flag for components response');
+  }
+  
   return res.send({
     type: updateMessage 
       ? InteractionResponseType.UPDATE_MESSAGE 

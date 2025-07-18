@@ -50,8 +50,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
     if (actionOptions.length >= 25) break; // Discord limit
   }
   
-  // For Components V2, do NOT include flags at top level when updating messages
-  // The ButtonHandlerFactory will handle the proper response structure
+  // For message updates, only return components array - ButtonHandlerFactory handles the rest
   return {
     components: [{
       type: 17, // Container
@@ -92,8 +91,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
           ]
         }
       ]
-    }],
-    flags: (1 << 15) // IS_COMPONENTS_V2 - Include here for ButtonHandlerFactory
+    }]
   };
 }
 
@@ -220,8 +218,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           ]
         }
       ]
-    }],
-    flags: (1 << 15) // IS_COMPONENTS_V2
+    }]
   };
 }
 
@@ -356,8 +353,7 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
           }]
         }
       ]
-    }],
-    flags: (1 << 15) // IS_COMPONENTS_V2
+    }]
   };
 }
 
@@ -440,8 +436,7 @@ export async function createConditionsConfigUI({ guildId, actionId }) {
     components: [{
       type: 17, // Container
       components
-    }],
-    flags: (1 << 15) // IS_COMPONENTS_V2
+    }]
   };
 }
 
