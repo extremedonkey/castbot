@@ -13120,9 +13120,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               }
               
               console.log(`✅ DEBUG: Modal created successfully`);
-              // CRITICAL FIX: Don't use res.send() directly, return the modal data
+              // CRITICAL FIX: Return the complete modal response with type
               // The ButtonHandlerFactory will handle sending the response
-              return modalResponse.data || modalResponse;
+              return modalResponse;
             } catch (error) {
               console.error(`🚨 Error in field group handler:`, error);
               throw error;
