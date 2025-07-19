@@ -338,7 +338,7 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
 }
 
 // Get movement display for a coordinate channel (Components V2 format)
-export async function getMovementDisplay(guildId, userId, coordinate, isInteractionResponse = false) {
+export async function getMovementDisplay(guildId, userId, coordinate) {
     const canMove = await canPlayerMove(guildId, userId);
     const entityId = `player_${userId}`;
     const validMoves = getValidMoves(coordinate);

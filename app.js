@@ -3780,7 +3780,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const { getMovementDisplay } = await import('./mapMovement.js');
           
           // Get and return movement display as ephemeral response
-          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate, true);
+          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate);
           
           return {
             ...movementDisplay,
@@ -3841,7 +3841,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
           
           // Get and return movement display as ephemeral response
-          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate, true);
+          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate);
           
           // Store the interaction token for later editing
           // We'll use a simple in-memory cache for this demo
