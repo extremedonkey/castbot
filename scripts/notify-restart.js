@@ -205,8 +205,6 @@ async function sendRestartNotification() {
             messageContent += `\n\n**🤖 Claude Message:** ${customMessage}`;
         }
 
-        messageContent += `\n\n\n>  # \`⚠️ ${environment} Server Restart!                                            \``;
-        
         // Create the notification message with Components V2 structure using direct API
         const messageData = {
             flags: (1 << 15), // IS_COMPONENTS_V2
@@ -232,7 +230,20 @@ async function sendRestartNotification() {
                                 type: 2, // Button
                                 custom_id: "viral_menu",
                                 label: "📋 Open Prod Menu",
-                                style: 1 // Primary
+                                style: 2 // Secondary (grey)
+                            },
+                            {
+                                type: 2, // Button
+                                custom_id: "restart_test_not_tested",
+                                label: "⏳ Not Tested",
+                                style: 2, // Secondary (grey)
+                                disabled: true // Start inactive
+                            },
+                            {
+                                type: 2, // Button
+                                custom_id: "restart_test_tested", 
+                                label: "✅ Tested",
+                                style: 2 // Secondary (grey) - starts active
                             }
                         ]
                     }

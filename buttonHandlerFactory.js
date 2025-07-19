@@ -120,6 +120,22 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'navigation'
   },
+  
+  // === RESTART TESTING TRACKER ===
+  'restart_test_not_tested': {
+    label: '⏳ Not Tested',
+    description: 'Mark restart changes as not tested',
+    emoji: '⏳',
+    style: 'Secondary',
+    category: 'testing'
+  },
+  'restart_test_tested': {
+    label: '✅ Tested',
+    description: 'Mark restart changes as tested',
+    emoji: '✅',
+    style: 'Secondary',
+    category: 'testing'
+  },
 
   // === SAFARI MENU SYSTEM ===
   'prod_safari_menu': {

@@ -4800,6 +4800,76 @@ To fix this:
           }
         }
       })(req, res, client);
+      
+    // ==================== RESTART TESTING TRACKER HANDLERS ====================
+    } else if (custom_id === 'restart_test_not_tested') {
+      return ButtonHandlerFactory.create({
+        id: 'restart_test_not_tested',
+        handler: async (context) => {
+          // Toggle state: activate "Not Tested", deactivate "Tested"
+          const originalMessage = context.message;
+          const components = originalMessage.components;
+          
+          // Find the action row with our buttons and update their states
+          const updatedComponents = components.map(component => {
+            if (component.type === 1) { // Action Row
+              const updatedButtons = component.components.map(button => {
+                if (button.custom_id === 'restart_test_not_tested') {
+                  return { ...button, disabled: false }; // Activate Not Tested
+                } else if (button.custom_id === 'restart_test_tested') {
+                  return { ...button, disabled: true }; // Deactivate Tested
+                } else {
+                  return button;
+                }
+              });
+              return { ...component, components: updatedButtons };
+            }
+            return component;
+          });
+          
+          return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              components: updatedComponents
+            }
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'restart_test_tested') {
+      return ButtonHandlerFactory.create({
+        id: 'restart_test_tested',
+        handler: async (context) => {
+          // Toggle state: activate "Tested", deactivate "Not Tested"
+          const originalMessage = context.message;
+          const components = originalMessage.components;
+          
+          // Find the action row with our buttons and update their states
+          const updatedComponents = components.map(component => {
+            if (component.type === 1) { // Action Row
+              const updatedButtons = component.components.map(button => {
+                if (button.custom_id === 'restart_test_tested') {
+                  return { ...button, disabled: false }; // Activate Tested
+                } else if (button.custom_id === 'restart_test_not_tested') {
+                  return { ...button, disabled: true }; // Deactivate Not Tested
+                } else {
+                  return button;
+                }
+              });
+              return { ...component, components: updatedButtons };
+            }
+            return component;
+          });
+          
+          return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              components: updatedComponents
+            }
+          };
+        }
+      })(req, res, client);
+    
     } else if (custom_id === 'getting_started') {
       // Execute the same logic as the getting_started command
       try {
