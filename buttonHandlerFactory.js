@@ -679,6 +679,27 @@ export const BUTTON_REGISTRY = {
     style: 'Success',
     category: 'safari_management'
   },
+  'custom_action_delete_*': {
+    label: 'Delete Action',
+    description: 'Delete custom action (with confirmation)',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_management'
+  },
+  'custom_action_delete_confirm_*': {
+    label: 'Confirm Delete',
+    description: 'Confirm action deletion',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_management'
+  },
+  'custom_action_delete_cancel_*': {
+    label: 'Cancel Delete',
+    description: 'Cancel action deletion',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
   'remove_coord_*': {
     label: 'Remove Coordinate',
     description: 'Remove coordinate assignment from action',

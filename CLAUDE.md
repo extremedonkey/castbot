@@ -184,11 +184,13 @@ const response = {
 
 ## 🚀 Discord Button Implementation
 
-**🚨 MANDATORY: Use Button Handler Factory System** 
+**🚨 CRITICAL: Button Handler Factory is MANDATORY for ALL buttons** 
 
-**STEP 1:** Read [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md) for complete documentation
+**STEP 1:** **ALWAYS** read [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md) before implementing ANY button
 
-**STEP 2:** Always use the factory pattern for ALL new buttons:
+**STEP 2:** **NO EXCEPTIONS** - Every single button MUST use the Button Handler Factory pattern:
+
+**🚨 IMPORTANT:** If a button shows as [🪨 LEGACY] instead of [✨ FACTORY], it means the button is NOT properly registered in BUTTON_REGISTRY. ALL buttons must be registered first.
 
 ### ✅ New Button Handler Template (MANDATORY)
 ```javascript
