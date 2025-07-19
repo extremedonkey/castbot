@@ -631,8 +631,8 @@ async function sendFollowUpMessages(token, responses) {
                 method: 'POST',
                 body: {
                     ...response,
-                    // Ensure follow-up messages are ephemeral like the main response
-                    flags: response.flags || ((1 << 6) | (1 << 15)) // EPHEMERAL + IS_COMPONENTS_V2
+                    // Ensure follow-up messages are ephemeral
+                    flags: response.flags || (1 << 6) // EPHEMERAL only for follow-up messages
                 }
             });
             
