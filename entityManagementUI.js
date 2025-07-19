@@ -233,7 +233,6 @@ function createEntityDisplay(entity, entityType, safariConfig) {
             break;
             
         case 'map_cell':
-            lines.push(`**Location**: ${entity.id || 'Unknown'}`);
             if (entity.baseContent?.title) {
                 lines.push(`**Title**: ${entity.baseContent.title}`);
             }
