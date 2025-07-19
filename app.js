@@ -13453,9 +13453,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                     style: 1, // Primary
                     emoji: { name: '🪙' }
                   }
-                      ]
-                    }
-                  ]
+                ]
+              });
+              
+              // Build final response
+              return {
+                components: [{
+                  type: 17, // Container
+                  components: components
                 }],
                 flags: (1 << 15), // IS_COMPONENTS_V2
                 ephemeral: true
