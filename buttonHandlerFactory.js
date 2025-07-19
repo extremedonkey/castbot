@@ -295,6 +295,13 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map_admin',
     type: 'select_menu'
   },
+  'map_item_drop_config_*': {
+    label: 'Configure Item Drop',
+    description: 'Configure existing item drop settings',
+    emoji: '⚙️',
+    style: 'Secondary',
+    category: 'safari_map_admin'
+  },
   'map_item_drop_*': {
     label: 'Item Drop',
     description: 'Player collects item drop',

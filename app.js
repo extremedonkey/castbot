@@ -13423,7 +13423,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                       }],
                       accessory: {
                         type: 2, // Button
-                        custom_id: `map_item_drop_select_${entityId}`,
+                        custom_id: `map_item_drop_config_${entityId}_${drop.itemId}`,
                         label: 'Configure',
                         style: 2, // Secondary
                         emoji: { name: '⚙️' }
@@ -15003,8 +15003,151 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('map_item_drop_config_')) {
+      // Handle item drop configuration button
+      return ButtonHandlerFactory.create({
+        id: 'map_item_drop_config',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          try {
+            const parts = context.customId.replace('map_item_drop_config_', '').split('_');
+            const coord = parts[0];
+            const itemId = parts.slice(1).join('_'); // Handle item IDs that might contain underscores
+            
+            console.log(`📦 START: map_item_drop_config - coord ${coord}, item ${itemId}`);
+            
+            // Load current data to check for existing drop
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const activeMapId = safariData[context.guildId]?.maps?.active;
+            const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+            const item = safariData[context.guildId]?.items?.[itemId];
+            
+            if (!coordData || !item) {
+              console.log(`❌ FAILED: map_item_drop_config - location or item not found`);
+              return {
+                content: '❌ Location or item data not found.',
+                ephemeral: true
+              };
+            }
+            
+            // Check if this item already has a drop at this location
+            const existingDropIndex = coordData.itemDrops?.findIndex(drop => drop.itemId === itemId);
+            
+            // Show configuration interface
+            const dropConfig = existingDropIndex >= 0 ? coordData.itemDrops[existingDropIndex] : {
+              itemId: itemId,
+              buttonText: `Open ${item.name}`,
+              buttonEmoji: item.emoji || '📦',
+              buttonStyle: 2,
+              dropType: 'once_per_player',
+              claimedBy: []
+            };
+            
+            console.log(`✅ SUCCESS: map_item_drop_config - showing config for ${itemId} at ${coord}`);
+            
+            return {
+              components: [{
+                type: 17, // Container
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `# Configure ${item.emoji || '📦'} ${item.name} Drop\n\n**Location:** ${coord}`
+                  },
+                  { type: 14 }, // Separator
+                  {
+                    type: 10, // Text Display - Preview
+                    content: `**Button Preview:**\n${dropConfig.buttonEmoji} ${dropConfig.buttonText}\n\n**Current Setting:** ${dropConfig.dropType === 'once_per_player' ? 'One per player' : 'One per entire season'}`
+                  },
+                  { type: 14 }, // Separator
+                  {
+                    type: 1, // Action Row - Button style select
+                    components: [{
+                      type: 3, // String Select
+                      custom_id: `map_drop_style_${coord}_${itemId}`,
+                      placeholder: 'Select button style...',
+                      options: [
+                        { label: 'Primary (Blue)', value: '1', default: dropConfig.buttonStyle === 1 },
+                        { label: 'Secondary (Grey)', value: '2', default: dropConfig.buttonStyle === 2 },
+                        { label: 'Success (Green)', value: '3', default: dropConfig.buttonStyle === 3 },
+                        { label: 'Danger (Red)', value: '4', default: dropConfig.buttonStyle === 4 }
+                      ]
+                    }]
+                  },
+                  {
+                    type: 1, // Action Row - Drop type select
+                    components: [{
+                      type: 3, // String Select
+                      custom_id: `map_drop_type_${coord}_${itemId}`,
+                      placeholder: 'How many are available?',
+                      options: [
+                        { 
+                          label: 'One per player', 
+                          value: 'once_per_player',
+                          description: 'Each player can claim this item once',
+                          default: dropConfig.dropType === 'once_per_player'
+                        },
+                        { 
+                          label: 'One per entire season', 
+                          value: 'once_per_season',
+                          description: 'Only one player can claim this item',
+                          default: dropConfig.dropType === 'once_per_season'
+                        }
+                      ]
+                    }]
+                  },
+                  { type: 14 }, // Separator
+                  {
+                    type: 1, // Action Row - Actions
+                    components: [
+                      {
+                        type: 2, // Button
+                        custom_id: `map_drop_text_${coord}_${itemId}`,
+                        label: 'Set Button Text',
+                        style: 2, // Secondary
+                        emoji: { name: '✏️' }
+                      },
+                      {
+                        type: 2, // Button
+                        custom_id: `map_drop_save_${coord}_${itemId}`,
+                        label: existingDropIndex >= 0 ? 'Update Item' : 'Add Item',
+                        style: 3, // Success
+                        emoji: { name: '✅' }
+                      },
+                      existingDropIndex >= 0 ? {
+                        type: 2, // Button
+                        custom_id: `map_drop_remove_${coord}_${itemId}`,
+                        label: 'Remove Item',
+                        style: 4, // Danger
+                        emoji: { name: '🗑️' }
+                      } : null,
+                      {
+                        type: 2, // Button
+                        custom_id: `map_drop_reset_${coord}_${itemId}`,
+                        label: 'Reset Item',
+                        style: 2, // Secondary
+                        emoji: { name: '🔃' }
+                      }
+                    ].filter(Boolean)
+                  }
+                ]
+              }],
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              ephemeral: true
+            };
+          } catch (error) {
+            console.error(`❌ ERROR: map_item_drop_config - ${error.message}`);
+            return {
+              content: '❌ Error configuring item drop. Please try again.',
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('map_item_drop_select_')) {
-      // Handle item selection for drop configuration
+      // Handle item selection for drop configuration (from select menu)
       return ButtonHandlerFactory.create({
         id: 'map_item_drop_select',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -15650,89 +15793,18 @@ Are you sure you want to continue?`;
             await safeUpdateAnchorMessage(context.guildId, coord, client);
           }
           
-          // Return updated currency configuration interface
-          const drop = coordData.currencyDrops[dropIndex];
+          // Return to drop management interface
+          const { createEntityManagementUI } = await import('./entityManagementUI.js');
+          const ui = await createEntityManagementUI({
+            entityType: 'map_cell',
+            guildId: context.guildId,
+            selectedId: coord,
+            mode: 'edit',
+            activeFieldGroup: 'items'
+          });
+          
           return {
-            components: [{
-              type: 17, // Container
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: `# Configure Currency Drop\n\n**Location:** ${coord}\n**Amount:** ${drop.amount}`
-                },
-                { type: 14 }, // Separator
-                {
-                  type: 10, // Text Display - Preview
-                  content: `**Button Preview:**\n${drop.buttonEmoji} ${drop.buttonText}\n\n**Current Setting:** ${drop.dropType === 'once_per_player' ? 'One per player' : 'One per entire season'}`
-                },
-                { type: 14 }, // Separator
-                {
-                  type: 1, // Action Row - Button style select
-                  components: [{
-                    type: 3, // String Select (Components V2)
-                    custom_id: `map_currency_style_${coord}_${dropIndex}`,
-                    placeholder: 'Select button style...',
-                    options: [
-                      { label: 'Primary (Blue)', value: '1', default: drop.buttonStyle === 1 },
-                      { label: 'Secondary (Grey)', value: '2', default: drop.buttonStyle === 2 },
-                      { label: 'Success (Green)', value: '3', default: drop.buttonStyle === 3 },
-                      { label: 'Danger (Red)', value: '4', default: drop.buttonStyle === 4 }
-                    ]
-                  }]
-                },
-                {
-                  type: 1, // Action Row - Drop type select
-                  components: [{
-                    type: 3, // String Select (Components V2)
-                    custom_id: `map_currency_type_${coord}_${dropIndex}`,
-                    placeholder: 'How many are available?',
-                    options: [
-                      { 
-                        label: 'One per player', 
-                        value: 'once_per_player',
-                        description: 'Each player can collect once',
-                        default: drop.dropType === 'once_per_player'
-                      },
-                      { 
-                        label: 'One per entire season', 
-                        value: 'once_per_season',
-                        description: 'Only one player can collect',
-                        default: drop.dropType === 'once_per_season'
-                      }
-                    ]
-                  }]
-                },
-                { type: 14 }, // Separator
-                {
-                  type: 1, // Action Row - Actions
-                  components: [
-                    {
-                      type: 2, // Button
-                      custom_id: `map_currency_edit_${coord}`,
-                      label: 'Edit Amount/Text',
-                      style: 2, // Secondary
-                      emoji: { name: '✏️' }
-                    },
-                    {
-                      type: 2, // Button
-                      custom_id: `map_currency_remove_${coord}`,
-                      label: 'Remove Currency',
-                      style: 4, // Danger
-                      emoji: { name: '🗑️' }
-                    },
-                    {
-                      type: 2, // Button
-                      custom_id: `map_currency_reset_${coord}`,
-                      label: 'Reset Claims',
-                      style: 2, // Secondary
-                      emoji: { name: '🔃' }
-                    }
-                  ]
-                }
-              ]
-            }],
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            ephemeral: true
+            ...ui
           };
         }
       })(req, res, client);
@@ -15766,46 +15838,18 @@ Are you sure you want to continue?`;
             await safeUpdateAnchorMessage(context.guildId, coord, client);
           }
           
-          // Return to currency drop configuration UI
-          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
-          const modal = new ModalBuilder()
-            .setCustomId(`map_currency_drop_modal_${coord}`)
-            .setTitle(`Configure Currency Drop for ${coord}`);
-            
-          const amountInput = new TextInputBuilder()
-            .setCustomId('amount')
-            .setLabel('Currency Amount')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('100')
-            .setRequired(true)
-            .setMinLength(1)
-            .setMaxLength(10);
-            
-          const buttonTextInput = new TextInputBuilder()
-            .setCustomId('button_text')
-            .setLabel('Button Text')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Collect Coins')
-            .setRequired(true)
-            .setMaxLength(80);
-            
-          const buttonEmojiInput = new TextInputBuilder()
-            .setCustomId('button_emoji')
-            .setLabel('Button Emoji')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('🪙')
-            .setRequired(false)
-            .setMaxLength(10);
-            
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(amountInput),
-            new ActionRowBuilder().addComponents(buttonTextInput),
-            new ActionRowBuilder().addComponents(buttonEmojiInput)
-          );
+          // Return to drop management interface
+          const { createEntityManagementUI } = await import('./entityManagementUI.js');
+          const ui = await createEntityManagementUI({
+            entityType: 'map_cell',
+            guildId: context.guildId,
+            selectedId: coord,
+            mode: 'edit',
+            activeFieldGroup: 'items'
+          });
           
           return {
-            type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
+            ...ui
           };
         }
       })(req, res, client);
@@ -19078,7 +19122,11 @@ Are you sure you want to continue?`;
       // Handle currency drop configuration modal submission
       try {
         const guildId = req.body.guild_id;
-        const coord = custom_id.replace('map_currency_drop_modal_', '');
+        // Parse coord and optional index from custom_id
+        // Format: map_currency_drop_modal_{coord} or map_currency_drop_modal_{coord}_{index}
+        const modalParts = custom_id.replace('map_currency_drop_modal_', '').split('_');
+        const coord = modalParts[0]; // First part is always the coord (e.g., "B1")
+        const editIndex = modalParts.length > 1 && !isNaN(parseInt(modalParts[1])) ? parseInt(modalParts[1]) : -1;
         const components = req.body.data.components;
         
         // Extract values from modal
@@ -19121,21 +19169,10 @@ Are you sure you want to continue?`;
         
         // Check if this is editing an existing drop or creating new
         // The modal can be triggered from either "Add Currency Drop" or "Edit Amount/Text"
-        let dropIndex = -1;
+        let dropIndex = editIndex; // Use the index we parsed earlier
         
-        // For edit operations, we need to identify which drop is being edited
-        // Since we're transitioning from single to multiple drops, check if modal ID contains index
-        const modalParts = custom_id.split('_');
-        if (modalParts.length > 4 && !isNaN(parseInt(modalParts[4]))) {
-          // Format: map_currency_drop_modal_{coord}_{index}
-          dropIndex = parseInt(modalParts[4]);
-        } else if (coordData.currencyDrops.length === 1) {
-          // Legacy support: if only one drop exists and no index specified, assume editing it
-          dropIndex = 0;
-        } else {
-          // Check if a drop with same button text already exists to avoid duplicates
-          dropIndex = coordData.currencyDrops.findIndex(drop => drop.buttonText === buttonText);
-        }
+        // If no index specified (editIndex === -1), this is a new drop - always create new
+        // Don't check for duplicates or assume editing existing drops
         
         if (dropIndex >= 0 && dropIndex < coordData.currencyDrops.length) {
           // Update existing drop
@@ -19166,92 +19203,20 @@ Are you sure you want to continue?`;
         const { safeUpdateAnchorMessage } = await import('./mapCellUpdater.js');
         await safeUpdateAnchorMessage(guildId, coord, client);
         
-        // Show currency drop configuration interface
-        // Use the index of the drop we just created/updated
-        const drop = coordData.currencyDrops[dropIndex];
+        // Return to the drop management interface
+        const { createEntityManagementUI } = await import('./entityManagementUI.js');
+        const ui = await createEntityManagementUI({
+          entityType: 'map_cell',
+          guildId: guildId,
+          selectedId: coord,
+          mode: 'edit',
+          activeFieldGroup: 'items' // Show the drops management tab
+        });
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            components: [{
-              type: 17, // Container
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: `# Configure Currency Drop\n\n**Location:** ${coord}\n**Amount:** ${drop.amount}`
-                },
-                { type: 14 }, // Separator
-                {
-                  type: 10, // Text Display - Preview
-                  content: `**Button Preview:**\n${drop.buttonEmoji} ${drop.buttonText}\n\n**Current Setting:** ${drop.dropType === 'once_per_player' ? 'One per player' : 'One per entire season'}`
-                },
-                { type: 14 }, // Separator
-                {
-                  type: 1, // Action Row - Button style select
-                  components: [{
-                    type: 3, // String Select (Components V2)
-                    custom_id: `map_currency_style_${coord}_${dropIndex}`,
-                    placeholder: 'Select button style...',
-                    options: [
-                      { label: 'Primary (Blue)', value: '1', default: drop.buttonStyle === 1 },
-                      { label: 'Secondary (Grey)', value: '2', default: drop.buttonStyle === 2 },
-                      { label: 'Success (Green)', value: '3', default: drop.buttonStyle === 3 },
-                      { label: 'Danger (Red)', value: '4', default: drop.buttonStyle === 4 }
-                    ]
-                  }]
-                },
-                {
-                  type: 1, // Action Row - Drop type select
-                  components: [{
-                    type: 3, // String Select (Components V2)
-                    custom_id: `map_currency_type_${coord}_${dropIndex}`,
-                    placeholder: 'How many are available?',
-                    options: [
-                      { 
-                        label: 'One per player', 
-                        value: 'once_per_player',
-                        description: 'Each player can collect once',
-                        default: drop.dropType === 'once_per_player'
-                      },
-                      { 
-                        label: 'One per entire season', 
-                        value: 'once_per_season',
-                        description: 'Only one player can collect',
-                        default: drop.dropType === 'once_per_season'
-                      }
-                    ]
-                  }]
-                },
-                { type: 14 }, // Separator
-                {
-                  type: 1, // Action Row - Actions
-                  components: [
-                    {
-                      type: 2, // Button
-                      custom_id: `map_currency_edit_${coord}_${dropIndex}`,
-                      label: 'Edit Amount/Text',
-                      style: 2, // Secondary
-                      emoji: { name: '✏️' }
-                    },
-                    {
-                      type: 2, // Button
-                      custom_id: `map_currency_remove_${coord}_${dropIndex}`,
-                      label: 'Remove Currency',
-                      style: 4, // Danger
-                      emoji: { name: '🗑️' }
-                    },
-                    {
-                      type: 2, // Button
-                      custom_id: `map_currency_reset_${coord}_${dropIndex}`,
-                      label: 'Reset Claims',
-                      style: 2, // Secondary
-                      emoji: { name: '🔃' }
-                    }
-                  ]
-                }
-              ]
-            }],
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + ephemeral
+            ...ui,
             ephemeral: true
           }
         });
