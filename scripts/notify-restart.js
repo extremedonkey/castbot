@@ -235,37 +235,28 @@ async function sendRestartNotification() {
 
         messageContent += `\n\n\n>  # \`⚠️ ${environment} Server Restart!                                            \``;
         
-        // Create the notification message with Components V2 structure
+        // Create the notification message (fallback to legacy format for script compatibility)
         const messageData = {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [{
-                type: 17, // Container
-                accent_color: 0x5865f2, // Discord blurple
-                components: [
-                    {
-                        type: 10, // Text Display
-                        content: messageContent
-                    },
-                    { type: 14 }, // Separator
-                    {
-                        type: 1, // Action Row
-                        components: [
-                            {
-                                type: 2, // Button
-                                label: "🧪 Go to #test",
-                                style: 5, // Link style
-                                url: `https://discord.com/channels/1331657596087566398/1396134920954450074`
-                            },
-                            {
-                                type: 2, // Button
-                                custom_id: "viral_menu",
-                                label: "📋 Open Prod Menu",
-                                style: 1 // Primary
-                            }
-                        ]
-                    }
-                ]
-            }]
+            content: messageContent,
+            components: [
+                {
+                    type: 1, // Action Row
+                    components: [
+                        {
+                            type: 2, // Button
+                            label: "🧪 Go to #test",
+                            style: 5, // Link style
+                            url: `https://discord.com/channels/1331657596087566398/1396134920954450074`
+                        },
+                        {
+                            type: 2, // Button
+                            custom_id: "viral_menu",
+                            label: "📋 Open Prod Menu",
+                            style: 1 // Primary
+                        }
+                    ]
+                }
+            ]
         };
 
         // Send the message
