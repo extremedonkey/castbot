@@ -84,7 +84,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
  * @param {string} params.coordinate - Map coordinate (optional)
  * @returns {Object} Discord Components V2 UI
  */
-export async function createCustomActionEditorUI({ guildId, actionId, coordinate }) {
+export async function createCustomActionEditorUI({ guildId, actionId, coordinate, skipAutoSave = false }) {
   const allSafariContent = await loadSafariContent();
   const guildData = allSafariContent[guildId] || {};
   let action = actionId === 'new' ? createDefaultAction() : guildData.buttons?.[actionId];
@@ -115,11 +115,11 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
       }
     }
     
-    // Save the coordinate assignment immediately
-    const { saveSafariContent } = await import('./safariManager.js');
-    await saveSafariContent(allSafariContent);
-    
-    // Note: Anchor message update happens when closing the editor, not during creation
+    // Only save if not skipping (used during creation flow)
+    if (!skipAutoSave) {
+      const { saveSafariContent } = await import('./safariManager.js');
+      await saveSafariContent(allSafariContent);
+    }
   }
   
   const triggerType = action.trigger?.type || 'button';

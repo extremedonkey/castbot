@@ -10308,12 +10308,20 @@ Your server is now ready for Tycoons gameplay!`;
         // Update anchor messages for all assigned coordinates
         if (action.coordinates && action.coordinates.length > 0) {
           const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+          const activeMapId = allSafariContent[guildId]?.maps?.active;
+          
           for (const coord of action.coordinates) {
-            try {
-              await updateAnchorMessage(guildId, coord, client);
-              console.log(`📍 Updated anchor message for ${coord}`);
-            } catch (error) {
-              console.error(`Error updating anchor for ${coord}:`, error);
+            // Check if coordinate has an anchor message before trying to update
+            const coordData = allSafariContent[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+            if (coordData?.anchorMessageId) {
+              try {
+                await updateAnchorMessage(guildId, coord, client);
+                console.log(`📍 Updated anchor message for ${coord}`);
+              } catch (error) {
+                console.error(`Error updating anchor for ${coord}:`, error);
+              }
+            } else {
+              console.log(`⏭️ Skipping anchor update for ${coord} - no anchor message ID found`);
             }
           }
         }
@@ -17508,8 +17516,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const ui = await createCustomActionEditorUI({
           guildId,
           actionId: buttonId,
-          coordinate
+          coordinate,
+          skipAutoSave: true  // Skip auto-save during creation to avoid errors
         });
+        
+        // Now save the coordinate assignment manually
+        const updatedSafariContent = await loadSafariContent();
+        await saveSafariContent(updatedSafariContent);
         
         // Add a note about the coordinate assignment
         if (ui.components && ui.components[0] && ui.components[0].components) {

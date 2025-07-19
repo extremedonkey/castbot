@@ -20,7 +20,8 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
   
   if (!coordData?.anchorMessageId) {
     console.warn(`⚠️ No anchor message ID found for ${coordinate}. The location may need to be initialized first.`);
-    return false;
+    // This is not an error - some coordinates may not have anchor messages yet
+    return true; // Return true to indicate this is expected behavior
   }
   
   try {
