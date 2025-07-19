@@ -1,6 +1,19 @@
 import { loadSafariContent } from './safariManager.js';
 
 /**
+ * Safely create emoji object for Discord button
+ * @param {string} emoji - Emoji string
+ * @returns {object|undefined} Valid emoji object or undefined
+ */
+function createSafeEmoji(emoji) {
+  // Check if emoji is a valid non-empty string
+  if (typeof emoji === 'string' && emoji.trim().length > 0) {
+    return { name: emoji.trim() };
+  }
+  return undefined;
+}
+
+/**
  * Get button style value based on style string
  * @param {string} style - Button style name
  * @returns {number} Discord button style value
@@ -68,7 +81,7 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
       custom_id: `safari_${guildId}_${buttonId}_${Date.now()}`,
       label: label || 'Action', // Fallback if no label found
       style: getButtonStyle(button.style),
-      emoji: button.emoji ? { name: button.emoji } : undefined
+      emoji: createSafeEmoji(button.emoji)
     };
     
     currentRow.push(buttonComponent);
@@ -152,7 +165,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
           custom_id: `map_coord_store_${coord}_${storeId}`,
           label: store.name,
           style: 2, // Secondary/grey
-          emoji: store.emoji ? { name: store.emoji } : undefined
+          emoji: createSafeEmoji(store.emoji)
         });
       }
     }
@@ -167,7 +180,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
         custom_id: `map_item_drop_${coord}_${index}`,
         label: isExhausted ? `${drop.buttonText} (Taken)` : drop.buttonText,
         style: drop.buttonStyle || 2,
-        emoji: drop.buttonEmoji ? { name: drop.buttonEmoji } : undefined,
+        emoji: createSafeEmoji(drop.buttonEmoji),
         disabled: isExhausted
       });
     }
@@ -182,7 +195,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
         custom_id: `map_currency_drop_${coord}_${index}`,
         label: isExhausted ? `${drop.buttonText} (Taken)` : drop.buttonText,
         style: drop.buttonStyle || 2,
-        emoji: drop.buttonEmoji ? { name: drop.buttonEmoji } : undefined,
+        emoji: createSafeEmoji(drop.buttonEmoji),
         disabled: isExhausted
       });
     }

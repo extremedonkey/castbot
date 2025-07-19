@@ -58,6 +58,8 @@ grep -B20 -A20 "fieldGroup === 'stores'" app.js
 
 **🔧 WSL File Access:** Windows paths (e.g., `C:\Users\...`) should be converted to WSL format (`/mnt/c/Users/...`). Windows drives are mounted under `/mnt/` - so `C:\` becomes `/mnt/c/`, `D:\` becomes `/mnt/d/`, etc.
 
+**📸 Screenshot Access:** When user requests the latest screenshot (phrases like "check the last screenshot", "view recent screenshot", "show latest screen capture", "what's in my newest screenshot"), find the most recent PNG using: `ls -t "/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1"/*.png | head -1`
+
 ```bash
 # Start development session
 ./scripts/dev/dev-start.sh [optional-commit-message]
