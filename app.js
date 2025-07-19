@@ -18900,10 +18900,13 @@ Are you sure you want to continue?`;
         console.log(`✏️ Updating drop text for ${coord} item ${itemId}`);
         
         // Load and update safari data
+        console.log(`🔍 DEBUG: Loading safari data...`);
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
         const activeMapId = safariData[guildId]?.maps?.active;
+        console.log(`🔍 DEBUG: activeMapId=${activeMapId}, coord=${coord}`);
         const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+        console.log(`🔍 DEBUG: coordData exists=${!!coordData}`);
         
         if (!coordData) {
           return res.send({
@@ -18921,7 +18924,9 @@ Are you sure you want to continue?`;
         }
         
         // Find and update the drop
+        console.log(`🔍 DEBUG: itemDrops array:`, coordData.itemDrops);
         const dropIndex = coordData.itemDrops.findIndex(drop => drop.itemId === itemId);
+        console.log(`🔍 DEBUG: dropIndex=${dropIndex} for itemId="${itemId}"`);
         if (dropIndex === -1) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
