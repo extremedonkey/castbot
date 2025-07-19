@@ -62,15 +62,14 @@ async function sendRestartNotification() {
         const isProduction = process.env.PRODUCTION === 'TRUE';
         const environment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
         
-        // Build message content with optional custom message
-        let messageContent = `> \`\`\`⚠️ Alert! \`\`\`
-# ${environment} SERVER RESTARTING NOW...
+        // Build message content with new formatting
+        let messageContent = `> # \`⚠️ ${environment} Server Restart!                                                \`
 
 <@391415444084490240>`;
 
         // Add git commit message if provided
         if (commitMessage) {
-            messageContent += `\n\n## ${commitMessage}`;
+            messageContent += `\n\n\n## :gem: Change\n${commitMessage}`;
         }
 
         // Add custom message if provided
@@ -78,7 +77,7 @@ async function sendRestartNotification() {
             messageContent += `\n\n**🤖 Claude Message:** ${customMessage}`;
         }
 
-        messageContent += `\n\n> \`\`\`⚠️ Alert! \`\`\``;
+        messageContent += `\n\n\n>  # \`⚠️ ${environment} Server Restart!                                            \``;
         
         // Create the notification message with button
         const messageData = {
