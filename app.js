@@ -10384,6 +10384,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: custom_id,
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: false, // Use CHANNEL_MESSAGE_WITH_SOURCE to support Components V2 Container structure
         deferred: true, // Use deferred response for the long anchor message updates
         handler: async (context) => {
           const actionId = custom_id.replace('safari_finish_button_', '');
