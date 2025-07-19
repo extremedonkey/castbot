@@ -13645,26 +13645,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       })(req, res, client);
       
     } else if (custom_id.startsWith('custom_action_delete_confirm_')) {
-      // Handle delete cancellation - return to editor
-      return ButtonHandlerFactory.create({
-        id: 'custom_action_delete_cancel',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const actionId = context.customId.replace('custom_action_delete_cancel_', '');
-          
-          // Return to the Custom Action Editor
-          const { createCustomActionEditorUI } = await import('./customActionUI.js');
-          const ui = await createCustomActionEditorUI({
-            guildId: context.guildId,
-            actionId: actionId
-          });
-          
-          return ui;
-        }
-      })(req, res, client);
-      
-    } else if (custom_id.startsWith('custom_action_delete_confirm_')) {
       // Handle delete confirmation - actually delete the action
       return ButtonHandlerFactory.create({
         id: 'custom_action_delete_confirm',
@@ -13712,7 +13692,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             const { safeUpdateAnchorMessage } = await import('./mapCellUpdater.js');
             for (const coord of coordinates) {
               try {
-                await safeUpdateAnchorMessage(context.guildId, coord, client);
+                await safeUpdateAnchorMessage(context.guildId, coord, context.client);
                 console.log(`📍 Updated anchor message for ${coord} after deleting action`);
               } catch (error) {
                 console.error(`Error updating anchor for ${coord}:`, error);
@@ -13726,6 +13706,26 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             content: `✅ **Action Deleted Successfully!**\n\n**"${actionName}"** has been removed from all locations and deleted permanently.`,
             ephemeral: true
           };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('custom_action_delete_cancel_')) {
+      // Handle delete cancellation - return to editor
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_delete_cancel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const actionId = context.customId.replace('custom_action_delete_cancel_', '');
+          
+          // Return to the Custom Action Editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          const ui = await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId: actionId
+          });
+          
+          return ui;
         }
       })(req, res, client);
       
