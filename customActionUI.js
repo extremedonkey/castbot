@@ -148,7 +148,22 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         // Header
         {
           type: 10,
-          content: `## ⚡ Custom Action Editor\n\n**Name:** ${action.name || 'New Action'}\n**Description:** ${action.description || 'No description'}`
+          content: `## ⚡ Custom Action Editor`
+        },
+        // Action Info Section with Accessory Button
+        {
+          type: 9, // Section
+          components: [{
+            type: 10, // Text Display
+            content: `**Name:** ${action.name || 'New Action'}\n**Description:** ${action.description || 'No description'}`
+          }],
+          accessory: {
+            type: 2, // Button
+            custom_id: `entity_custom_action_edit_info_${actionId}`,
+            label: 'Action Info',
+            style: 2, // Secondary
+            emoji: { name: '📝' }
+          }
         },
         { type: 14 }, // Separator
         

@@ -3230,6 +3230,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'entity_confirm_delete',
         'safari_move',
         'entity_custom_action_list',
+        'entity_custom_action_edit_info',
         'entity_action_trigger',
         'entity_action_conditions',
         'entity_action_coords',

@@ -24,6 +24,57 @@ const customMessage = process.argv[2]; // First argument after script name
 const commitMessage = process.argv[3]; // Second argument - git commit message
 
 /**
+ * Generate test steps based on commit message content
+ */
+function generateTestSteps(commitMessage) {
+    if (!commitMessage) return null;
+    
+    const message = commitMessage.toLowerCase();
+    
+    // Safari-related changes
+    if (message.includes('safari')) {
+        if (message.includes('button') || message.includes('ui')) {
+            return "1. Go to `/menu` → Safari\n2. Test all Safari buttons work correctly\n3. Check mobile Discord compatibility";
+        }
+        if (message.includes('store') || message.includes('shop')) {
+            return "1. Go to `/menu` → Safari → Store\n2. Test purchase functionality\n3. Verify currency calculations";
+        }
+        if (message.includes('map') || message.includes('explore')) {
+            return "1. Go to `/menu` → Safari → Map\n2. Test movement and exploration\n3. Check location updates";
+        }
+        return "1. Go to `/menu` → Safari\n2. Test affected Safari functionality\n3. Verify no regressions";
+    }
+    
+    // Button-related changes
+    if (message.includes('button')) {
+        return "1. Test the affected button(s)\n2. Check for 'This interaction failed' errors\n3. Verify button styling and behavior";
+    }
+    
+    // Menu-related changes
+    if (message.includes('menu')) {
+        return "1. Test `/menu` command\n2. Navigate through affected menu sections\n3. Check all buttons work correctly";
+    }
+    
+    // Database/storage changes
+    if (message.includes('storage') || message.includes('data') || message.includes('json')) {
+        return "1. Test data persistence\n2. Check for any data corruption\n3. Verify backup functionality";
+    }
+    
+    // Command changes
+    if (message.includes('command') || message.includes('slash')) {
+        return "1. Test the affected slash command(s)\n2. Verify command registration\n3. Check parameter handling";
+    }
+    
+    // Fix-related changes
+    if (message.includes('fix') || message.includes('bug')) {
+        return "1. Reproduce the original bug scenario\n2. Verify the fix works as expected\n3. Test edge cases around the fix";
+    }
+    
+    // General fallback
+    return "1. Test the affected functionality\n2. Check for any console errors\n3. Verify no regressions in related features";
+}
+
+/**
  * Send restart notification to Discord
  */
 async function sendRestartNotification() {
@@ -70,6 +121,12 @@ async function sendRestartNotification() {
         // Add git commit message if provided
         if (commitMessage) {
             messageContent += `\n\n\n## :gem: Change\n${commitMessage}`;
+            
+            // Add suggested test steps based on commit message content
+            const testSteps = generateTestSteps(commitMessage);
+            if (testSteps) {
+                messageContent += `\n\n## :test_tube: Test Steps\n${testSteps}`;
+            }
         }
 
         // Add custom message if provided

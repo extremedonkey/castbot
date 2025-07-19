@@ -642,6 +642,13 @@ export const BUTTON_REGISTRY = {
     style: 'Success',
     category: 'safari_management'
   },
+  'entity_custom_action_edit_info_*': {
+    label: 'Action Info',
+    description: 'Edit custom action name and description',
+    emoji: '📝',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
   'entity_action_trigger_*': {
     label: 'Edit Trigger',
     description: 'Configure action trigger type and settings',
