@@ -605,12 +605,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('prod_manage_pronouns_timezones')
       .setLabel('Pronouns & Timezones')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💜'),
-    new ButtonBuilder()
-      .setCustomId('test_button')
-      .setLabel('test')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji({ id: '1396087613815001129', name: 'logotest' })
+      .setEmoji('💜')
   ];
   
   // Live Analytics button moved to Reece Stuff submenu
@@ -5105,14 +5100,6 @@ To fix this:
           }
         });
       }
-    } else if (custom_id === 'test_button') {
-      // Test button - displays "Hello world!" in the channel
-      return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content: 'Hello world!'
-        }
-      });
     } else if (custom_id === 'prod_manage_tribes') {
       // Show tribe management menu
       try {

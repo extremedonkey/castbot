@@ -86,13 +86,24 @@ ButtonRegistry.findByCategory('admin')           // Returns all admin buttons
 
 ```javascript
 // Add to BUTTON_REGISTRY in buttonHandlerFactory.js
+
+// Example with standard Unicode emoji
 'my_new_button': {
   label: 'My Button',
   description: 'What this button does',
-  emoji: '🔥',
+  emoji: '🔥',  // Standard Unicode emoji
   style: 'Primary',
   category: 'feature_name',
   parent: 'parent_menu_id' // Optional
+}
+
+// Example with bot application emoji
+'my_custom_button': {
+  label: 'Custom Button',
+  description: 'Button with custom emoji',
+  emoji: { id: '1396087613815001129', name: 'logotest' },  // Application emoji
+  style: 'Secondary',
+  category: 'feature_name'
 }
 ```
 
@@ -162,11 +173,102 @@ return res.send({
 |----------|------|-------------|----------|
 | `label` | string | Button display text | Yes |
 | `description` | string | What the button does | Yes |
-| `emoji` | string | Button emoji | No |
+| `emoji` | string/object | Button emoji (see Emoji Guide below) | No |
 | `style` | string | Primary/Secondary/Success/Danger | No |
 | `category` | string | Feature group | No |
 | `parent` | string | Parent menu ID | No |
 | `restrictedUser` | string | User ID restriction | No |
+
+## Emoji Usage Guide
+
+CastBot supports two types of emojis in buttons: **Standard Unicode Emojis** and **Bot Application Emojis**.
+
+### Standard Unicode Emojis
+
+Most common use case - standard emojis that work everywhere:
+
+```javascript
+// In BUTTON_REGISTRY
+'my_button': {
+  label: 'Settings',
+  description: 'Open settings menu',
+  emoji: '⚙️',  // Simple string format
+  style: 'Primary',
+  category: 'admin'
+}
+
+// In ButtonBuilder usage
+new ButtonBuilder()
+  .setCustomId('my_button')
+  .setLabel('Settings')
+  .setEmoji('⚙️')  // Simple string format
+```
+
+### Bot Application Emojis
+
+Custom emojis uploaded to the bot via Discord Developer Portal. CastBot can access up to 2000 custom emojis.
+
+**🚨 CRITICAL:** Application emojis require specific object format with both `id` and `name`:
+
+```javascript
+// In BUTTON_REGISTRY  
+'my_custom_button': {
+  label: 'Custom Action',
+  description: 'Perform custom action',
+  emoji: { id: '1234567890123456789', name: 'custom_emoji' },  // Object format required
+  style: 'Primary',
+  category: 'custom'
+}
+
+// In ButtonBuilder usage
+new ButtonBuilder()
+  .setCustomId('my_custom_button')
+  .setLabel('Custom Action')
+  .setEmoji({ id: '1234567890123456789', name: 'custom_emoji' })  // Object format required
+```
+
+### Key Differences
+
+| Type | Format | Source | Availability |
+|------|--------|--------|--------------|
+| **Standard Unicode** | `'🔥'` (string) | Unicode standard | All Discord servers |
+| **Application Emoji** | `{ id: '123...', name: 'emoji_name' }` (object) | Uploaded to bot | Bot can use anywhere |
+
+### Common Mistakes
+
+**❌ WRONG: Using emoji ID as custom_id**
+```javascript
+new ButtonBuilder()
+  .setCustomId('1234567890123456789')  // This breaks the button!
+  .setEmoji({ name: 'custom_emoji' })   // Missing id field
+```
+
+**❌ WRONG: Missing ID field for application emoji**
+```javascript
+new ButtonBuilder()
+  .setEmoji({ name: 'custom_emoji' })   // Will not display
+```
+
+**✅ CORRECT: Proper application emoji usage**
+```javascript
+new ButtonBuilder()
+  .setCustomId('proper_button_id')     // Descriptive custom_id
+  .setEmoji({ id: '1234567890123456789', name: 'custom_emoji' })  // Complete emoji object
+```
+
+### Finding Application Emoji IDs
+
+Application emojis uploaded to CastBot can be found:
+1. **Discord Developer Portal** → Your Application → Bot → Application Emojis
+2. **In Discord**: Right-click emoji → Copy ID (format: `<:name:id>`)
+3. **Extract ID**: From `<:custom_emoji:1234567890123456789>` use `1234567890123456789`
+
+### Best Practices
+
+1. **Use Standard Emojis First**: Only use application emojis when standard ones don't fit the need
+2. **Consistent Naming**: Use descriptive `name` fields for application emojis
+3. **Document Custom Emojis**: Keep track of which custom emojis are used where
+4. **Test Thoroughly**: Application emojis may not render in all contexts during development
 
 ### Handler Factory Configuration
 
