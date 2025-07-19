@@ -15922,7 +15922,10 @@ Are you sure you want to continue?`;
           });
           
           console.log(`✅ SUCCESS: safari_map_admin - showing user selection`);
-          return ui;
+          return {
+            ...ui,
+            ephemeral: true
+          };
         }
       })(req, res, client);
       
@@ -15945,7 +15948,10 @@ Are you sure you want to continue?`;
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: ui
+          data: {
+            ...ui,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
         });
         
       } catch (error) {
@@ -15973,7 +15979,10 @@ Are you sure you want to continue?`;
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: ui
+          data: {
+            ...ui,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
         });
         
       } catch (error) {
