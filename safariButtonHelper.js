@@ -205,7 +205,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
         label: isExhausted ? `${drop.buttonText} (Taken)` : drop.buttonText,
         style: drop.buttonStyle || 2,
         emoji: createSafeEmoji(drop.buttonEmoji),
-        disabled: isExhausted
+        disabled: !!isExhausted // Force boolean conversion
       });
     }
   }
@@ -220,7 +220,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
         label: isExhausted ? `${drop.buttonText} (Taken)` : drop.buttonText,
         style: drop.buttonStyle || 2,
         emoji: createSafeEmoji(drop.buttonEmoji),
-        disabled: isExhausted
+        disabled: !!isExhausted // Force boolean conversion
       });
     }
   }
