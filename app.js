@@ -9330,9 +9330,19 @@ Your server is now ready for Tycoons gameplay!`;
             .setRequired(true)
             .setValue(action.config.content || '');
           
+          const colorInput = new TextInputBuilder()
+            .setCustomId('action_color')
+            .setLabel('Accent Color (optional)')
+            .setPlaceholder('e.g., #3498db or 3447003')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(10)
+            .setValue(action.config.accentColor ? `#${action.config.accentColor.toString(16).padStart(6, '0')}` : '');
+          
           components.push(
             new ActionRowBuilder().addComponents(titleInput),
-            new ActionRowBuilder().addComponents(contentInput)
+            new ActionRowBuilder().addComponents(contentInput),
+            new ActionRowBuilder().addComponents(colorInput)
           );
           
         } else if (action.type === 'update_currency') {
@@ -17905,17 +17915,22 @@ Are you sure you want to continue?`;
             content: content
           };
           
-          // Parse color if provided
+          // Parse color if provided, or set default green
           if (colorStr) {
             let accentColor = null;
             if (colorStr.startsWith('#')) {
               accentColor = parseInt(colorStr.slice(1), 16);
+            } else if (/^[0-9a-fA-F]{6}$/.test(colorStr)) {
+              accentColor = parseInt(colorStr, 16);
             } else if (/^\d+$/.test(colorStr)) {
               accentColor = parseInt(colorStr);
             }
-            if (accentColor !== null && !isNaN(accentColor)) {
+            if (accentColor !== null && !isNaN(accentColor) && accentColor >= 0 && accentColor <= 0xFFFFFF) {
               actionConfig.accentColor = accentColor;
             }
+          } else {
+            // Set default green accent color
+            actionConfig.accentColor = 0x57F287; // Nice green color
           }
           
         } else if (actionType === 'update_currency') {
@@ -19708,6 +19723,7 @@ Are you sure you want to continue?`;
         if (actionType === 'display_text') {
           const title = components[0].components[0].value?.trim() || null;
           const content = components[1].components[0].value?.trim();
+          const colorStr = components[2].components[0].value?.trim();
           
           if (!content) {
             return res.send({
@@ -19719,7 +19735,25 @@ Are you sure you want to continue?`;
             });
           }
           
-          actionConfig = { title, content };
+          actionConfig = {
+            title: title,
+            content: content
+          };
+          
+          // Parse color if provided
+          if (colorStr) {
+            let accentColor = null;
+            if (colorStr.startsWith('#')) {
+              accentColor = parseInt(colorStr.slice(1), 16);
+            } else if (/^[0-9a-fA-F]{6}$/.test(colorStr)) {
+              accentColor = parseInt(colorStr, 16);
+            } else if (/^\d+$/.test(colorStr)) {
+              accentColor = parseInt(colorStr);
+            }
+            if (accentColor !== null && !isNaN(accentColor) && accentColor >= 0 && accentColor <= 0xFFFFFF) {
+              actionConfig.accentColor = accentColor;
+            }
+          }
           
         } else if (actionType === 'update_currency') {
           const amountStr = components[0].components[0].value?.trim();
