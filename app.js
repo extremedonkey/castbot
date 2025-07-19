@@ -4805,10 +4805,9 @@ To fix this:
     } else if (custom_id === 'restart_test_not_tested') {
       return ButtonHandlerFactory.create({
         id: 'restart_test_not_tested',
-        handler: async (context) => {
+        handler: async (context, req) => {
           // Toggle state: activate "Not Tested", deactivate "Tested"
-          const originalMessage = context.message;
-          const components = originalMessage.components;
+          const components = req.body.message?.components;
           
           // Find the action row with our buttons and update their states
           const updatedComponents = components.map(component => {
@@ -4839,10 +4838,9 @@ To fix this:
     } else if (custom_id === 'restart_test_tested') {
       return ButtonHandlerFactory.create({
         id: 'restart_test_tested',
-        handler: async (context) => {
+        handler: async (context, req) => {
           // Toggle state: activate "Tested", deactivate "Not Tested"
-          const originalMessage = context.message;
-          const components = originalMessage.components;
+          const components = req.body.message?.components;
           
           // Find the action row with our buttons and update their states
           const updatedComponents = components.map(component => {
