@@ -14048,46 +14048,64 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         handler: async (context) => {
           console.log(`🔍 START: remove_coord - user ${context.userId}`);
           
-          // Parse: remove_coord_{actionId}_{coordinate}
-          const parts = context.customId.replace('remove_coord_', '').split('_');
-          const actionId = parts[0];
-          const coordinate = parts.slice(1).join('_'); // Handle underscores in coordinates
-          
-          // Load and update safari data
-          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-          const allSafariContent = await loadSafariContent();
-          const guildData = allSafariContent[context.guildId] || {};
-          const action = guildData.buttons?.[actionId];
-          
-          if (!action) {
+          try {
+            // Parse: remove_coord_{actionId}_{coordinate}
+            const parts = context.customId.replace('remove_coord_', '').split('_');
+            const actionId = parts[0];
+            const coordinate = parts.slice(1).join('_'); // Handle underscores in coordinates
+            console.log(`🔍 DEBUG: remove_coord parsing - actionId: ${actionId}, coordinate: ${coordinate}`);
+            
+            // Load and update safari data
+            const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+            const allSafariContent = await loadSafariContent();
+            const guildData = allSafariContent[context.guildId] || {};
+            const action = guildData.buttons?.[actionId];
+            
+            if (!action) {
+              console.log(`❌ ERROR: remove_coord - action ${actionId} not found`);
+              return {
+                content: '❌ Action not found.',
+                ephemeral: true
+              };
+            }
+            
+            console.log(`🔍 DEBUG: remove_coord - action found, current coordinates: ${JSON.stringify(action.coordinates)}`);
+            
+            // Remove coordinate from action
+            action.coordinates = (action.coordinates || []).filter(c => c !== coordinate);
+            console.log(`🔍 DEBUG: remove_coord - after filter, coordinates: ${JSON.stringify(action.coordinates)}`);
+            
+            // Also remove from map assignments
+            for (const mapId in guildData.maps || {}) {
+              const map = guildData.maps[mapId];
+              if (map.coordinates?.[coordinate]?.buttons) {
+                map.coordinates[coordinate].buttons = map.coordinates[coordinate].buttons.filter(b => b !== actionId);
+                console.log(`🔍 DEBUG: remove_coord - removed from map ${mapId} coord ${coordinate}`);
+              }
+            }
+            
+            console.log(`🔍 DEBUG: remove_coord - saving safari content...`);
+            await saveSafariContent(allSafariContent);
+            console.log(`🔍 DEBUG: remove_coord - safari content saved`);
+            
+            // Return updated UI
+            console.log(`🔍 DEBUG: remove_coord - creating UI...`);
+            const { createCoordinateManagementUI } = await import('./customActionUI.js');
+            const ui = await createCoordinateManagementUI({
+              guildId: context.guildId,
+              actionId
+            });
+            console.log(`🔍 DEBUG: remove_coord - UI created successfully`);
+            
+            console.log(`✅ SUCCESS: remove_coord - removed ${coordinate} from action ${actionId}`);
+            return ui;
+          } catch (error) {
+            console.error(`❌ ERROR: remove_coord failed:`, error);
             return {
-              content: '❌ Action not found.',
+              content: `❌ Error removing coordinate: ${error.message}`,
               ephemeral: true
             };
           }
-          
-          // Remove coordinate from action
-          action.coordinates = (action.coordinates || []).filter(c => c !== coordinate);
-          
-          // Also remove from map assignments
-          for (const mapId in guildData.maps || {}) {
-            const map = guildData.maps[mapId];
-            if (map.coordinates?.[coordinate]?.buttons) {
-              map.coordinates[coordinate].buttons = map.coordinates[coordinate].buttons.filter(b => b !== actionId);
-            }
-          }
-          
-          await saveSafariContent(allSafariContent);
-          
-          // Return updated UI
-          const { createCoordinateManagementUI } = await import('./customActionUI.js');
-          const ui = await createCoordinateManagementUI({
-            guildId: context.guildId,
-            actionId
-          });
-          
-          console.log(`✅ SUCCESS: remove_coord - removed ${coordinate} from action ${actionId}`);
-          return ui;
         }
       })(req, res, client);
       
