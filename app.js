@@ -3329,9 +3329,35 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           const originalComponents = req.body.message?.components;
           
-          // Rebuild the entire UI with updated button states
+          // Handle Components V2 structure (Container with nested components)
           const updatedComponents = originalComponents.map(component => {
-            if (component.type === 1) { // Action Row with buttons
+            if (component.type === 17) { // Container
+              // Update nested components within the container
+              const updatedNestedComponents = component.components.map(nestedComponent => {
+                if (nestedComponent.type === 1) { // Action Row with buttons
+                  const updatedButtons = nestedComponent.components.map(button => {
+                    if (button.custom_id === 'restart_test_not_tested') {
+                      return { 
+                        ...button, 
+                        disabled: false, // Activate Not Tested
+                        style: 3 // Success (green)
+                      };
+                    } else if (button.custom_id === 'restart_test_tested') {
+                      return { 
+                        ...button, 
+                        disabled: true, // Deactivate Tested
+                        style: 2 // Secondary (grey)
+                      };
+                    } else {
+                      return button;
+                    }
+                  });
+                  return { ...nestedComponent, components: updatedButtons };
+                }
+                return nestedComponent;
+              });
+              return { ...component, components: updatedNestedComponents };
+            } else if (component.type === 1) { // Direct Action Row (fallback for non-V2)
               const updatedButtons = component.components.map(button => {
                 if (button.custom_id === 'restart_test_not_tested') {
                   return { 
@@ -3370,9 +3396,35 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           const originalComponents = req.body.message?.components;
           
-          // Rebuild the entire UI with updated button states
+          // Handle Components V2 structure (Container with nested components)
           const updatedComponents = originalComponents.map(component => {
-            if (component.type === 1) { // Action Row with buttons
+            if (component.type === 17) { // Container
+              // Update nested components within the container
+              const updatedNestedComponents = component.components.map(nestedComponent => {
+                if (nestedComponent.type === 1) { // Action Row with buttons
+                  const updatedButtons = nestedComponent.components.map(button => {
+                    if (button.custom_id === 'restart_test_tested') {
+                      return { 
+                        ...button, 
+                        disabled: false, // Activate Tested
+                        style: 3 // Success (green)
+                      };
+                    } else if (button.custom_id === 'restart_test_not_tested') {
+                      return { 
+                        ...button, 
+                        disabled: true, // Deactivate Not Tested
+                        style: 2 // Secondary (grey)
+                      };
+                    } else {
+                      return button;
+                    }
+                  });
+                  return { ...nestedComponent, components: updatedButtons };
+                }
+                return nestedComponent;
+              });
+              return { ...component, components: updatedNestedComponents };
+            } else if (component.type === 1) { // Direct Action Row (fallback for non-V2)
               const updatedButtons = component.components.map(button => {
                 if (button.custom_id === 'restart_test_tested') {
                   return { 
