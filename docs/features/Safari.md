@@ -2004,6 +2004,251 @@ This documentation serves as the complete guide for implementing and extending C
 - ❌ Entity Framework integration incomplete
 - ❌ Modal trigger type (text commands) not fully implemented
 
+## Text Command System (Modal Trigger Type) - PLANNED IMPLEMENTATION
+
+### 🎮 Overview
+
+The Text Command System enables text-based RPG interactions within Safari map locations. Players can type commands like "climb vines" or "examine rock" to trigger custom actions, simulating classic text adventure gameplay.
+
+### 📋 Requirements Summary
+
+1. **Player Experience**: 
+   - Non-admin users click "Enter Command" button at any location
+   - Modal popup accepts text commands
+   - Commands trigger associated custom actions if matched
+   - Failure shows "Nothing happened" message
+
+2. **Admin Experience**:
+   - Configure up to 6 command phrases per custom action
+   - Modal trigger type in Custom Action editor
+   - Command phrases shown in editor UI
+   - Automatic anchor message updates when switching trigger types
+
+3. **Technical Requirements**:
+   - Extend existing Custom Action system
+   - Case-insensitive command matching
+   - Location-specific command execution
+   - Integration with existing action execution pipeline
+
+### 🏗️ Architecture & Design
+
+#### Data Structure Enhancement
+
+```json
+{
+  "buttons": {
+    "climb_vines_action": {
+      "label": "Climb the Ancient Vines",
+      "emoji": "🌿",
+      "trigger": {
+        "type": "modal",
+        "phrases": [
+          "climb vines",
+          "climb vine", 
+          "grab vine",
+          "climb up vine",
+          "scale vine",
+          "ascend vines"
+        ]
+      },
+      "actions": [
+        {
+          "type": "display_text",
+          "title": "You climb the vines...",
+          "text": "Ascending the ancient vines, you reach a hidden plateau..."
+        }
+      ],
+      "coordinates": ["A1", "B3"]
+    }
+  }
+}
+```
+
+#### Component Architecture
+
+1. **Player Command Interface**:
+   - Button ID: `player_enter_command_{coordinate}`
+   - Modal ID: `player_command_modal_{coordinate}`
+   - Uses Bot Application Emoji 'command' (dev: 1396095623815495700, prod: 1396098411287285942)
+
+2. **Admin Configuration Interface**:
+   - Modal ID: `configure_modal_trigger_{actionId}`
+   - 6 text input fields (1 required, 5 optional)
+   - Updates trigger.phrases array on submission
+
+3. **Command Matching Engine**:
+   - Case-insensitive phrase matching
+   - Channel-specific execution context
+   - Integration with executeButtonActions()
+
+### 📝 Implementation Plan
+
+#### Phase 1: Fix Existing Modal Trigger Infrastructure
+1. **Identify Current Issues**:
+   - Modal trigger selection crashes grid system
+   - Missing handler implementations
+   - Incomplete data persistence
+
+2. **Core Fixes**:
+   - Add modal trigger handlers in app.js
+   - Fix entity framework modal trigger display
+   - Ensure data persistence for modal configurations
+
+#### Phase 2: Admin UI Implementation
+1. **Custom Action Creation Modal**:
+   - Change "Button Emoji" → "Action Emoji"
+   - Remove 100-character limit on emoji field
+   - Maintain existing modal flow
+
+2. **Trigger Configuration Modal**:
+   - New modal for phrase configuration
+   - Pre-populate existing phrases
+   - Validation for at least one phrase
+
+3. **Editor UI Updates**:
+   - Display command phrases in italics
+   - Update anchor messages on trigger type changes
+   - Handle button removal from locations
+
+#### Phase 3: Player Interface Implementation
+1. **Location Actions Enhancement**:
+   - Detect non-admin users
+   - Show "Enter Command" button
+   - Create command input modal
+
+2. **Command Processing**:
+   - Extract coordinate from interaction context
+   - Search for matching phrases in that location
+   - Execute associated actions or show failure
+
+3. **Player Menu Integration**:
+   - Add command button to player Safari menu
+   - Maintain channel context for execution
+   - Show appropriate error messages
+
+#### Phase 4: Integration & Testing
+1. **Action Execution**:
+   - Integrate with existing executeButtonActions()
+   - Pass modal context to action handlers
+   - Support all existing action types
+
+2. **Edge Cases**:
+   - Multiple actions with same phrase
+   - Phrase conflicts between locations
+   - Permission handling for restricted actions
+
+### 🔧 Technical Implementation Details
+
+#### Button Registry Additions
+```javascript
+'player_enter_command_*': {
+  label: 'Enter Command',
+  description: 'Enter a text command at this location',
+  emoji: '⌨️',
+  style: 'Primary',
+  category: 'safari_player'
+},
+'configure_modal_trigger_*': {
+  label: 'Configure Phrases',
+  description: 'Set command phrases for modal trigger',
+  emoji: '💬',
+  style: 'Secondary',
+  category: 'safari_management'
+}
+```
+
+#### Handler Patterns
+```javascript
+// Player command handler
+} else if (custom_id.startsWith('player_enter_command_')) {
+  const coordinate = custom_id.split('_').pop();
+  // Show modal for command input
+}
+
+// Modal submission handler
+} else if (custom_id.startsWith('player_command_modal_')) {
+  const coordinate = custom_id.split('_').pop();
+  const command = interaction.fields.getTextInputValue('command');
+  // Process command and execute matching actions
+}
+```
+
+#### Command Matching Logic
+```javascript
+function findMatchingAction(command, coordinate, guildId) {
+  const normalizedCommand = command.toLowerCase().trim();
+  const safariData = loadSafariContent();
+  const mapData = safariData[guildId]?.maps?.active;
+  const locationActions = mapData?.coordinates?.[coordinate]?.buttons || [];
+  
+  for (const actionId of locationActions) {
+    const action = safariData[guildId]?.buttons?.[actionId];
+    if (action?.trigger?.type === 'modal') {
+      const phrases = action.trigger.phrases || [];
+      if (phrases.some(phrase => phrase.toLowerCase() === normalizedCommand)) {
+        return action;
+      }
+    }
+  }
+  return null;
+}
+```
+
+### 🧪 Test Cases
+
+1. **Admin Configuration**:
+   - Create action with modal trigger
+   - Configure 6 different phrases
+   - Edit existing phrases
+   - Switch trigger types
+
+2. **Player Interaction**:
+   - Enter valid command
+   - Enter invalid command
+   - Test case sensitivity
+   - Multi-word commands
+
+3. **Location Context**:
+   - Same command different locations
+   - Command only works in assigned locations
+   - Player menu command execution
+
+4. **Edge Cases**:
+   - Empty phrase configuration
+   - Duplicate phrases
+   - Special characters in commands
+   - Very long commands
+
+### ⚠️ Known Issues & Considerations
+
+1. **Current Modal Implementation**: 
+   - Existing modal trigger type appears broken
+   - May need significant refactoring
+   - Grid system crashes need investigation
+
+2. **Performance**:
+   - Command matching efficiency with many actions
+   - Consider caching for frequently used commands
+
+3. **User Experience**:
+   - Clear feedback for unrecognized commands
+   - Helpful error messages
+   - Command discovery mechanism
+
+4. **Future Enhancements**:
+   - Partial phrase matching
+   - Command aliases/synonyms
+   - Context-aware commands
+   - Command history
+
+### 📊 Success Metrics
+
+- Admin can configure text commands without errors
+- Players can execute commands at correct locations
+- No impact on existing button-triggered actions
+- Clean migration path from button to modal triggers
+- Maintains all existing Safari functionality
+
 ## Implementation History
 
 ### SAFARI ATTACK SYSTEM ✅ MVP3 COMPLETE

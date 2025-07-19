@@ -608,7 +608,7 @@ async function executeFollowUpButton(config, guildId, interaction) {
     };
     
     return {
-        flags: (1 << 15), // IS_COMPONENTS_V2
+        flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
         components: [container]
     };
 }
