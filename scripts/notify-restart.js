@@ -22,6 +22,68 @@ const TIMEOUT_MS = 8000; // 8 second timeout
 // Parse command line arguments
 const customMessage = process.argv[2]; // First argument after script name
 const commitMessage = process.argv[3]; // Second argument - git commit message
+const filesChanged = process.argv[4]; // Third argument - files changed
+const gitStats = process.argv[5]; // Fourth argument - git stats
+
+/**
+ * Analyze files changed and provide risk assessment
+ */
+function analyzeChanges(filesChanged, commitMessage) {
+    if (!filesChanged) return null;
+    
+    const files = filesChanged.split(',').filter(f => f.length > 0);
+    const analysis = {
+        riskLevel: 'low',
+        warnings: [],
+        insights: []
+    };
+    
+    // Risk assessment based on files
+    if (files.includes('app.js')) {
+        analysis.riskLevel = 'high';
+        analysis.warnings.push('Core app.js modified - test all interactions');
+    }
+    
+    if (files.some(f => f.includes('safariManager'))) {
+        analysis.riskLevel = 'medium';
+        analysis.insights.push('Safari system changes - check player data');
+    }
+    
+    if (files.some(f => f.includes('.json'))) {
+        analysis.insights.push('Data structure changes detected');
+    }
+    
+    if (files.some(f => f.includes('button') || f.includes('Button'))) {
+        analysis.insights.push('Button system changes - verify handlers');
+    }
+    
+    // Feature detection
+    const features = [];
+    if (files.some(f => f.includes('safari'))) features.push('Safari');
+    if (files.some(f => f.includes('menu'))) features.push('Menu');
+    if (files.some(f => f.includes('command'))) features.push('Commands');
+    
+    if (features.length > 0) {
+        analysis.insights.push(`Affects: ${features.join(', ')}`);
+    }
+    
+    return analysis;
+}
+
+/**
+ * Generate file summary
+ */
+function generateFileSummary(filesChanged, gitStats) {
+    if (!filesChanged) return null;
+    
+    const files = filesChanged.split(',').filter(f => f.length > 0);
+    if (files.length === 0) return null;
+    
+    const summary = files.slice(0, 5).map(f => `\`${f}\``).join(', ');
+    const moreFiles = files.length > 5 ? ` (+${files.length - 5} more)` : '';
+    
+    return summary + moreFiles;
+}
 
 /**
  * Generate test steps based on commit message content
@@ -113,14 +175,51 @@ async function sendRestartNotification() {
         const isProduction = process.env.PRODUCTION === 'TRUE';
         const environment = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
         
+        // Get current time
+        const now = new Date();
+        const timeString = now.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true 
+        });
+
         // Build message content with new formatting
         let messageContent = `> # \`⚠️ ${environment} Server Restart!                                                \`
 
-<@391415444084490240>`;
+<@391415444084490240>
+
+## :clock1: Time
+\`${timeString}\``;
 
         // Add git commit message if provided
         if (commitMessage) {
-            messageContent += `\n\n\n## :gem: Change\n${commitMessage}`;
+            messageContent += `\n\n## :gem: Change\n${commitMessage}`;
+            
+            // Add file summary
+            const fileSummary = generateFileSummary(filesChanged, gitStats);
+            if (fileSummary) {
+                messageContent += `\n\n## :file_folder: Files Changed\n${fileSummary}`;
+                
+                if (gitStats) {
+                    messageContent += `\n*${gitStats}*`;
+                }
+            }
+            
+            // Add risk analysis
+            const analysis = analyzeChanges(filesChanged, commitMessage);
+            if (analysis) {
+                const riskEmoji = analysis.riskLevel === 'high' ? ':red_circle:' : 
+                                analysis.riskLevel === 'medium' ? ':yellow_circle:' : ':green_circle:';
+                messageContent += `\n\n## ${riskEmoji} Risk Level: ${analysis.riskLevel.toUpperCase()}`;
+                
+                if (analysis.warnings.length > 0) {
+                    messageContent += `\n**⚠️ Warnings:**\n${analysis.warnings.map(w => `• ${w}`).join('\n')}`;
+                }
+                
+                if (analysis.insights.length > 0) {
+                    messageContent += `\n**💡 Insights:**\n${analysis.insights.map(i => `• ${i}`).join('\n')}`;
+                }
+            }
             
             // Add suggested test steps based on commit message content
             const testSteps = generateTestSteps(commitMessage);

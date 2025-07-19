@@ -39,15 +39,19 @@ else
     echo "📝 No changes to commit"
 fi
 
+# Collect git information for Discord notification
+GIT_FILES_CHANGED=$(git diff --cached --name-only | tr '\n' ',' | sed 's/,$//')
+GIT_STATS=$(git diff --cached --stat | tail -1 | sed 's/^ *//')
+
 # Send Discord notification
 echo "🔔 Sending restart notification to Discord..."
 # Run notification with background execution and error handling
-# Pass custom message and commit message if provided
+# Pass custom message, commit message, and git info
 if [ -n "$CUSTOM_MESSAGE" ]; then
     echo "📝 Including custom message: $CUSTOM_MESSAGE"
-    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" 2>&1 | head -20) &
+    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" 2>&1 | head -20) &
 else
-    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" 2>&1 | head -20) &
+    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" 2>&1 | head -20) &
 fi
 NOTIFY_PID=$!
 # Give it a few seconds to complete
