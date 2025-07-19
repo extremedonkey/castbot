@@ -3242,7 +3242,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'custom_action_delete_cancel',
         'custom_action_delete',
         'remove_coord',
-        'add_coord_modal'
+        'add_coord_modal',
+        'configure_modal_trigger',
+        'player_enter_command'
       ];
       
       for (const pattern of dynamicPatterns) {
