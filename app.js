@@ -13866,11 +13866,19 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           // Process the safari button actions
           const { executeButtonActions } = await import('./safariManager.js');
+          
+          // Create a proper interaction object with token for follow-up messages
+          const interactionData = {
+            token: context.token,
+            applicationId: context.applicationId,
+            client: client
+          };
+          
           const result = await executeButtonActions(
             context.guildId,
             actionId,
             context.userId,
-            client // Pass client as interaction-like object
+            interactionData // Pass proper interaction data with token
           );
           
           console.log(`✅ SUCCESS: custom_action_test - tested ${actionId}`);
@@ -15512,10 +15520,100 @@ Are you sure you want to continue?`;
             await safeUpdateAnchorMessage(context.guildId, coord, client);
           }
           
-          // Refresh the configuration UI
-          req.body.data.custom_id = `map_item_drop_select_${coord}`;
-          req.body.data.values = [itemId];
-          return req.app._router.handle(req, res, next);
+          // Return to the drop configuration interface
+          const item = safariData[context.guildId]?.items?.[itemId];
+          const updatedDrop = coordData.itemDrops[dropIndex];
+          
+          return {
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `# Configure ${item.emoji || '📦'} ${item.name} Drop\n\n**Location:** ${coord}`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 10, // Text Display - Preview
+                  content: `**Button Preview:**\n${updatedDrop.buttonEmoji} ${updatedDrop.buttonText}\n\n**Current Setting:** ${updatedDrop.dropType === 'once_per_player' ? 'One per player' : 'One per entire season'}`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row - Button style select
+                  components: [{
+                    type: 3, // String Select
+                    custom_id: `map_drop_style_${coord}_${itemId}`,
+                    placeholder: 'Select button style...',
+                    options: [
+                      { label: 'Primary (Blue)', value: '1', default: updatedDrop.buttonStyle === 1 },
+                      { label: 'Secondary (Grey)', value: '2', default: updatedDrop.buttonStyle === 2 },
+                      { label: 'Success (Green)', value: '3', default: updatedDrop.buttonStyle === 3 },
+                      { label: 'Danger (Red)', value: '4', default: updatedDrop.buttonStyle === 4 }
+                    ]
+                  }]
+                },
+                {
+                  type: 1, // Action Row - Drop type select
+                  components: [{
+                    type: 3, // String Select
+                    custom_id: `map_drop_type_${coord}_${itemId}`,
+                    placeholder: 'How many are available?',
+                    options: [
+                      { 
+                        label: 'One per player', 
+                        value: 'once_per_player',
+                        description: 'Each player can claim this item once',
+                        default: updatedDrop.dropType === 'once_per_player'
+                      },
+                      { 
+                        label: 'One per entire season', 
+                        value: 'once_per_season',
+                        description: 'Only one player can claim this item',
+                        default: updatedDrop.dropType === 'once_per_season'
+                      }
+                    ]
+                  }]
+                },
+                {
+                  type: 1, // Action Row - Configuration buttons
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: `map_drop_text_${coord}_${itemId}`,
+                      label: 'Edit Button Text',
+                      style: 2,
+                      emoji: { name: '✏️' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `map_item_drop_save_${coord}_${itemId}`,
+                      label: 'Save Drop',
+                      style: 3,
+                      emoji: { name: '✅' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `map_item_drop_remove_${coord}_${itemId}`,
+                      label: 'Remove Drop',
+                      style: 4,
+                      emoji: { name: '🗑️' }
+                    }
+                  ]
+                },
+                {
+                  type: 1, // Action Row - Back button
+                  components: [{
+                    type: 2, // Button
+                    custom_id: `map_edit_field_${coord}_itemDrops`,
+                    label: 'Back to Drops',
+                    style: 2,
+                    emoji: { name: '⬅️' }
+                  }]
+                }
+              ]
+            }],
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+          };
         }
       })(req, res, client);
       
@@ -15550,10 +15648,100 @@ Are you sure you want to continue?`;
             await safeUpdateAnchorMessage(context.guildId, coord, client);
           }
           
-          // Refresh the configuration UI
-          req.body.data.custom_id = `map_item_drop_select_${coord}`;
-          req.body.data.values = [itemId];
-          return req.app._router.handle(req, res, next);
+          // Return to the drop configuration interface
+          const item = safariData[context.guildId]?.items?.[itemId];
+          const updatedDrop = coordData.itemDrops[dropIndex];
+          
+          return {
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `# Configure ${item.emoji || '📦'} ${item.name} Drop\n\n**Location:** ${coord}`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 10, // Text Display - Preview
+                  content: `**Button Preview:**\n${updatedDrop.buttonEmoji} ${updatedDrop.buttonText}\n\n**Current Setting:** ${updatedDrop.dropType === 'once_per_player' ? 'One per player' : 'One per entire season'}`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row - Button style select
+                  components: [{
+                    type: 3, // String Select
+                    custom_id: `map_drop_style_${coord}_${itemId}`,
+                    placeholder: 'Select button style...',
+                    options: [
+                      { label: 'Primary (Blue)', value: '1', default: updatedDrop.buttonStyle === 1 },
+                      { label: 'Secondary (Grey)', value: '2', default: updatedDrop.buttonStyle === 2 },
+                      { label: 'Success (Green)', value: '3', default: updatedDrop.buttonStyle === 3 },
+                      { label: 'Danger (Red)', value: '4', default: updatedDrop.buttonStyle === 4 }
+                    ]
+                  }]
+                },
+                {
+                  type: 1, // Action Row - Drop type select
+                  components: [{
+                    type: 3, // String Select
+                    custom_id: `map_drop_type_${coord}_${itemId}`,
+                    placeholder: 'How many are available?',
+                    options: [
+                      { 
+                        label: 'One per player', 
+                        value: 'once_per_player',
+                        description: 'Each player can claim this item once',
+                        default: updatedDrop.dropType === 'once_per_player'
+                      },
+                      { 
+                        label: 'One per entire season', 
+                        value: 'once_per_season',
+                        description: 'Only one player can claim this item',
+                        default: updatedDrop.dropType === 'once_per_season'
+                      }
+                    ]
+                  }]
+                },
+                {
+                  type: 1, // Action Row - Configuration buttons
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: `map_drop_text_${coord}_${itemId}`,
+                      label: 'Edit Button Text',
+                      style: 2,
+                      emoji: { name: '✏️' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `map_item_drop_save_${coord}_${itemId}`,
+                      label: 'Save Drop',
+                      style: 3,
+                      emoji: { name: '✅' }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `map_item_drop_remove_${coord}_${itemId}`,
+                      label: 'Remove Drop',
+                      style: 4,
+                      emoji: { name: '🗑️' }
+                    }
+                  ]
+                },
+                {
+                  type: 1, // Action Row - Back button
+                  components: [{
+                    type: 2, // Button
+                    custom_id: `map_edit_field_${coord}_itemDrops`,
+                    label: 'Back to Drops',
+                    style: 2,
+                    emoji: { name: '⬅️' }
+                  }]
+                }
+              ]
+            }],
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+          };
         }
       })(req, res, client);
       

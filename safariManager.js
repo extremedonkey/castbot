@@ -627,7 +627,7 @@ async function sendFollowUpMessages(token, responses) {
             console.log(`📤 DEBUG: Sending follow-up message ${i + 1}/${responses.length}`);
             
             // Send follow-up message
-            await DiscordRequest(`webhooks/${process.env.DISCORD_APPLICATION_ID}/${token}`, {
+            await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
                 method: 'POST',
                 body: {
                     ...response,
