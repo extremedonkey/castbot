@@ -173,7 +173,8 @@
       "Bash(jq:*)",
       "WebFetch(domain:cdn.discordapp.com)",
       "Bash(touch:*)",
-      "WebFetch(domain:i.ibb.co)"
+      "WebFetch(domain:i.ibb.co)",
+      "Bash(/tmp/fix_anchor_calls.sh:*)"
     ],
     "deny": []
   }

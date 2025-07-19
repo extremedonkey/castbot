@@ -80,6 +80,28 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
 }
 
 /**
+ * Safely update anchor message if it exists
+ * @param {string} guildId - Discord guild ID
+ * @param {string} coordinate - Map coordinate
+ * @param {Object} client - Discord client
+ * @returns {boolean} Success status
+ */
+export async function safeUpdateAnchorMessage(guildId, coordinate, client) {
+  const safariData = await loadSafariContent();
+  const activeMapId = safariData[guildId]?.maps?.active;
+  const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate];
+  
+  // Check if coordinate has an anchor message before trying to update
+  if (!coordData?.anchorMessageId) {
+    console.log(`⏭️ Skipping anchor update for ${coordinate} - no anchor message ID found`);
+    return true; // This is expected behavior, not an error
+  }
+  
+  // Delegate to the actual update function
+  return await updateAnchorMessage(guildId, coordinate, client);
+}
+
+/**
  * Update all anchor messages for a guild's active map
  * @param {string} guildId - Discord guild ID
  * @param {Object} client - Discord client
