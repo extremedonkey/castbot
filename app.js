@@ -13601,14 +13601,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               .setRequired(true)
               .setMaxLength(80);
 
-            // Button emoji input
+            // Action emoji input
             const emojiInput = new TextInputBuilder()
               .setCustomId('button_emoji')
-              .setLabel('Button Emoji (optional)')
+              .setLabel('Action Emoji (Optional)')
               .setPlaceholder('e.g., 🗺️')
               .setStyle(TextInputStyle.Short)
               .setRequired(false)
-              .setMaxLength(10);
+              .setMaxLength(100);
 
             // Button description input
             const descInput = new TextInputBuilder()
@@ -14161,6 +14161,113 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('configure_modal_trigger_')) {
+      // Handle modal trigger phrase configuration button
+      return ButtonHandlerFactory.create({
+        id: 'configure_modal_trigger',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: configure_modal_trigger - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('configure_modal_trigger_', '');
+          
+          // Load current action data
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          
+          if (!action) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Get current phrases
+          const phrases = action.trigger?.phrases || [];
+          
+          console.log(`✅ SUCCESS: configure_modal_trigger - showing modal for ${actionId}`);
+          
+          // Return modal for phrase configuration
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `modal_phrases_config_${actionId}`,
+              title: 'Enter Secret Command Phrases',
+              components: [
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 4, // Text Input
+                    custom_id: 'phrase_1',
+                    label: 'Secret Command Phrase',
+                    style: 1, // Short
+                    required: true,
+                    placeholder: 'Command required to activate the custom action',
+                    value: phrases[0] || '',
+                    min_length: 1,
+                    max_length: 100
+                  }]
+                },
+                {
+                  type: 1,
+                  components: [{
+                    type: 4,
+                    custom_id: 'phrase_2',
+                    label: 'Alternative Command Phrase (Optional)',
+                    style: 1,
+                    required: false,
+                    placeholder: 'Optional phrase that also activates the action',
+                    value: phrases[1] || '',
+                    max_length: 100
+                  }]
+                },
+                {
+                  type: 1,
+                  components: [{
+                    type: 4,
+                    custom_id: 'phrase_3',
+                    label: 'Alternate Command Phrase 2 (Optional)',
+                    style: 1,
+                    required: false,
+                    placeholder: 'Optional phrase that also activates the action',
+                    value: phrases[2] || '',
+                    max_length: 100
+                  }]
+                },
+                {
+                  type: 1,
+                  components: [{
+                    type: 4,
+                    custom_id: 'phrase_4',
+                    label: 'Alternate Command Phrase 3 (Optional)',
+                    style: 1,
+                    required: false,
+                    placeholder: 'Optional phrase that also activates the action',
+                    value: phrases[3] || '',
+                    max_length: 100
+                  }]
+                },
+                {
+                  type: 1,
+                  components: [{
+                    type: 4,
+                    custom_id: 'phrase_5',
+                    label: 'Alternate Command Phrase 4 (Optional)',
+                    style: 1,
+                    required: false,
+                    placeholder: 'Optional phrase that also activates the action',
+                    value: phrases[4] || '',
+                    max_length: 100
+                  }]
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('entity_edit_modal_')) {
       // Show modal for editing fields (legacy handler - should not be used)
       try {
@@ -14665,11 +14772,47 @@ Are you sure you want to continue?`;
           
           console.log(`📍 START: map_location_actions - user ${context.userId}, coord ${coord}`);
           
-          // Check admin permissions
+          // Check admin permissions and show appropriate UI
           if (!hasPermission(context.member, PermissionFlagsBits.ManageRoles)) {
-            console.log(`❌ User ${context.userId} lacks permission for location actions`);
+            console.log(`👤 Non-admin user ${context.userId} accessing location actions for ${coord}`);
+            
+            // Show player command interface
+            const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
+            
+            // Get location name
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const activeMapId = safariData[context.guildId]?.maps?.active;
+            const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+            const locationName = coordData?.baseContent?.title || `Location ${coord}`;
+            
+            // Determine if we're in dev or prod environment
+            const isDev = context.guildId === '1331657596087566398'; // Your test server
+            const commandEmojiId = isDev ? '1396095623815495700' : '1396098411287285942';
+            
+            // Create Enter Command button
+            const enterCommandButton = new ButtonBuilder()
+              .setCustomId(`player_enter_command_${coord}`)
+              .setLabel('Enter Command')
+              .setEmoji({ id: commandEmojiId })
+              .setStyle(1); // Primary
+            
+            const buttonRow = new ActionRowBuilder().addComponents([enterCommandButton]);
+            
             return {
-              content: '❌ You need Manage Roles permission to edit location content.',
+              components: [{
+                type: 17, // Container
+                accent_color: 0x5865f2,
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `## ${locationName} Actions\n\nInteract with this location by entering commands.`
+                  },
+                  { type: 14 }, // Separator
+                  buttonRow.toJSON()
+                ]
+              }],
+              flags: (1 << 15), // IS_COMPONENTS_V2
               ephemeral: true
             };
           }
@@ -14702,6 +14845,39 @@ Are you sure you want to continue?`;
           return {
             ...ui,
             ephemeral: true
+          };
+        }
+      })(req, res, client);
+    
+    } else if (custom_id.startsWith('player_enter_command_')) {
+      // Handle player command entry button
+      return ButtonHandlerFactory.create({
+        id: 'player_enter_command',
+        handler: async (context) => {
+          const coord = context.customId.replace('player_enter_command_', '');
+          
+          console.log(`⌨️ START: player_enter_command - user ${context.userId}, coord ${coord}`);
+          
+          // Show modal for command input
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `player_command_modal_${coord}`,
+              title: 'Enter Command',
+              components: [{
+                type: 1, // Action Row
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'command',
+                  label: 'Command',
+                  style: 1, // Short
+                  required: true,
+                  placeholder: 'Enter command you want to try, e.g. climb vines, check rock',
+                  min_length: 1,
+                  max_length: 100
+                }]
+              }]
+            }
           };
         }
       })(req, res, client);
@@ -21158,6 +21334,181 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating action info.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('modal_phrases_config_')) {
+      // Handle modal trigger phrase configuration submission
+      try {
+        const actionId = custom_id.replace('modal_phrases_config_', '');
+        const guildId = req.body.guild_id;
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to configure actions.')) return;
+        
+        console.log(`📝 DEBUG: Modal phrases config submitted for action ${actionId}`);
+        
+        // Extract phrases from modal (up to 5)
+        const phrases = [];
+        for (let i = 1; i <= 5; i++) {
+          const phrase = components.find(row => 
+            row.components[0].custom_id === `phrase_${i}`
+          )?.components[0].value?.trim();
+          
+          if (phrase) {
+            phrases.push(phrase);
+          }
+        }
+        
+        if (phrases.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ At least one command phrase is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Load and update action
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const action = safariData[guildId]?.buttons?.[actionId];
+        
+        if (!action) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update trigger phrases
+        if (!action.trigger) {
+          action.trigger = { type: 'modal' };
+        }
+        action.trigger.phrases = phrases;
+        
+        // Update metadata
+        action.metadata = action.metadata || {};
+        action.metadata.lastModified = Date.now();
+        action.metadata.lastModifiedBy = req.body.member.user.id;
+        
+        await saveSafariContent(safariData);
+        
+        console.log(`✅ DEBUG: Updated phrases for action ${actionId}: ${phrases.join(', ')}`);
+        
+        // Show updated trigger config UI
+        const { createTriggerConfigUI } = await import('./customActionUI.js');
+        const configUI = await createTriggerConfigUI({ guildId, actionId });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: configUI
+        });
+        
+      } catch (error) {
+        console.error('Error in modal_phrases_config handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error saving command phrases.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('player_command_modal_')) {
+      // Handle player command modal submission
+      try {
+        const coord = custom_id.replace('player_command_modal_', '');
+        const guildId = req.body.guild_id;
+        const channelId = req.body.channel_id;
+        const userId = req.body.member.user.id;
+        
+        // Get the command entered by the player
+        const command = components[0].components[0].value?.trim().toLowerCase();
+        
+        console.log(`⌨️ DEBUG: Player command submitted - coord: ${coord}, command: "${command}"`);
+        
+        if (!command) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a command.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Load safari data and find matching action
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const locationActions = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.buttons || [];
+        
+        // Search for a matching action with modal trigger
+        let matchingAction = null;
+        for (const actionId of locationActions) {
+          const action = safariData[guildId]?.buttons?.[actionId];
+          if (action?.trigger?.type === 'modal') {
+            const phrases = action.trigger.phrases || [];
+            if (phrases.some(phrase => phrase.toLowerCase() === command)) {
+              matchingAction = action;
+              break;
+            }
+          }
+        }
+        
+        if (matchingAction) {
+          console.log(`✅ Found matching action for command "${command}"`);
+          
+          // Execute the action
+          const { executeButtonActions } = await import('./safariManager.js');
+          const result = await executeButtonActions(
+            matchingAction.actions || [],
+            userId,
+            guildId,
+            channelId,
+            client
+          );
+          
+          // Return the result
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: result
+          });
+        } else {
+          // No matching command found
+          console.log(`❌ No matching action found for command "${command}" at ${coord}`);
+          
+          const locationName = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.baseContent?.title || `location ${coord}`;
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              components: [{
+                type: 17, // Container
+                accent_color: 0x808080, // Gray
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `## Nothing happened\n\nAttempted to \`${command}\` in ${locationName}. Nothing particularly exciting happened.`
+                  }
+                ]
+              }],
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+            }
+          });
+        }
+        
+      } catch (error) {
+        console.error('Error in player_command_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error processing command.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

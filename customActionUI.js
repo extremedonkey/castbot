@@ -442,8 +442,11 @@ function getTriggerDescription(trigger) {
     case 'button':
       return `Label: "${trigger.button?.label || 'Not set'}"`;
     case 'modal':
-      const keywords = trigger.modal?.keywords?.join(', ') || 'None';
-      return `Keywords: ${keywords}`;
+      const phrases = trigger.phrases || trigger.modal?.keywords || [];
+      if (phrases.length === 0) {
+        return `Command Phrases: None`;
+      }
+      return `Command Phrases: *${phrases.join(', ')}*`;
     case 'select':
       const optionCount = trigger.select?.options?.length || 0;
       return `${optionCount} option${optionCount !== 1 ? 's' : ''}`;
@@ -459,49 +462,102 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   const allSafariContent = await loadSafariContent();
   const guildData = allSafariContent[guildId] || {};
   const action = guildData.buttons?.[actionId] || createDefaultAction();
+  const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
+  
+  // Base components for all trigger types
+  const components = [
+    {
+      type: 10,
+      content: `## 🎯 Trigger Configuration\n\nChoose how players will activate this action:`
+    },
+    { type: 14 },
+    {
+      type: 1, // Action Row
+      components: [{
+        type: 3, // String Select
+        custom_id: `custom_action_trigger_type_${actionId}`,
+        placeholder: "Select trigger type",
+        options: [
+          {
+            label: "Button Click",
+            value: "button",
+            description: "Player clicks a button",
+            emoji: { name: "🔘" },
+            default: action.trigger?.type === 'button'
+          },
+          {
+            label: "Text Input",
+            value: "modal",
+            description: "Player types specific text",
+            emoji: { name: "💬" },
+            default: action.trigger?.type === 'modal'
+          },
+          {
+            label: "Select Menu",
+            value: "select",
+            description: "Player selects from options",
+            emoji: { name: "📋" },
+            default: action.trigger?.type === 'select'
+          }
+        ]
+      }]
+    }
+  ];
+  
+  // Add trigger-specific configuration based on current type
+  if (action.trigger?.type === 'modal') {
+    components.push({ type: 14 }); // Separator
+    
+    // Show current phrases if any
+    const phrases = action.trigger?.phrases || [];
+    if (phrases.length > 0) {
+      components.push({
+        type: 10,
+        content: `### Command Phrases:\n*${phrases.join(', ')}*`
+      });
+    } else {
+      components.push({
+        type: 10,
+        content: `### Command Phrases:\n*No phrases configured yet*`
+      });
+    }
+    
+    // Add configure button
+    const configButton = new ButtonBuilder()
+      .setCustomId(`configure_modal_trigger_${actionId}`)
+      .setLabel('Configure Phrases')
+      .setEmoji('💬')
+      .setStyle(2); // Secondary
+    
+    const backButton = new ButtonBuilder()
+      .setCustomId(`custom_action_editor_${actionId}`)
+      .setLabel('⬅ Back')
+      .setStyle(2);
+    
+    const buttonRow = new ActionRowBuilder().addComponents([configButton, backButton]);
+    
+    components.push({ type: 14 }); // Separator
+    components.push(buttonRow.toJSON());
+  } else if (action.trigger?.type === 'button') {
+    // Show button preview
+    components.push({ type: 14 });
+    components.push({
+      type: 10,
+      content: `### Button Preview:\nLabel: ${action.trigger?.button?.label || action.label || 'Click Me'}\nEmoji: ${action.trigger?.button?.emoji || action.emoji || '⚡'}`
+    });
+  } else if (action.trigger?.type === 'select') {
+    components.push({ type: 14 });
+    components.push({
+      type: 10,
+      content: `### Select Menu Configuration:\n*Not yet implemented*`
+    });
+  }
   
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
       type: 17, // Container
-      components: [
-        {
-          type: 10,
-          content: `## 🎯 Trigger Configuration\n\nChoose how players will activate this action:`
-        },
-        { type: 14 },
-        {
-          type: 1, // Action Row
-          components: [{
-            type: 3, // String Select
-            custom_id: `custom_action_trigger_type_${actionId}`,
-            placeholder: "Select trigger type",
-            options: [
-              {
-                label: "Button Click",
-                value: "button",
-                description: "Player clicks a button",
-                emoji: { name: "🔘" },
-                default: action.trigger?.type === 'button'
-              },
-              {
-                label: "Text Input",
-                value: "modal",
-                description: "Player types specific text",
-                emoji: { name: "💬" },
-                default: action.trigger?.type === 'modal'
-              },
-              {
-                label: "Select Menu",
-                value: "select",
-                description: "Player selects from options",
-                emoji: { name: "📋" },
-                default: action.trigger?.type === 'select'
-              }
-            ]
-          }]
-        }
-      ]
+      components: components
     }]
   };
 }

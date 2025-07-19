@@ -801,6 +801,20 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     requiresModal: true
   },
+  'configure_modal_trigger_*': {
+    label: 'Configure Phrases',
+    description: 'Set command phrases for modal trigger',
+    emoji: '💬',
+    style: 'Secondary',
+    category: 'safari_management'
+  },
+  'player_enter_command_*': {
+    label: 'Enter Command',
+    description: 'Enter a text command at this location',
+    emoji: '⌨️',
+    style: 'Primary',
+    category: 'safari_player'
+  },
 
   // === SAFARI DYNAMIC EXECUTION ===
   'safari_*_*_*': {

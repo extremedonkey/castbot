@@ -78,6 +78,13 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
       continue;
     }
     
+    // Skip non-button triggers (modal, select, etc.)
+    const triggerType = button.trigger?.type || 'button'; // Default to button for legacy
+    if (triggerType !== 'button') {
+      console.log(`🔍 Skipping non-button action ${buttonId} with trigger type: ${triggerType}`);
+      continue;
+    }
+    
     // Use the ORIGINAL button label from safariContent.json - NEVER override with action content
     // Support both legacy (button.label) and new structure (button.trigger.button.label)
     let label = button.label || button.trigger?.button?.label || 'Action'; // Default fallback
