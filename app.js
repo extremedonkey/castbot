@@ -15757,7 +15757,7 @@ Are you sure you want to continue?`;
                   type: 1, // Action Row - Back button
                   components: [{
                     type: 2, // Button
-                    custom_id: `map_edit_field_${coord}_currencyDrops`,
+                    custom_id: `entity_field_group_map_cell_${coord}_items`,
                     label: 'Back to Drops',
                     style: 2,
                     emoji: { name: '⬅️' }
@@ -15887,7 +15887,7 @@ Are you sure you want to continue?`;
                   type: 1, // Action Row - Back button
                   components: [{
                     type: 2, // Button
-                    custom_id: `map_edit_field_${coord}_currencyDrops`,
+                    custom_id: `entity_field_group_map_cell_${coord}_items`,
                     label: 'Back to Drops',
                     style: 2,
                     emoji: { name: '⬅️' }
@@ -16013,7 +16013,7 @@ Are you sure you want to continue?`;
                   type: 1, // Action Row - Back button
                   components: [{
                     type: 2, // Button
-                    custom_id: `map_edit_field_${coord}_itemDrops`,
+                    custom_id: `entity_field_group_map_cell_${coord}_items`,
                     label: 'Back to Drops',
                     style: 2,
                     emoji: { name: '⬅️' }
@@ -16141,7 +16141,7 @@ Are you sure you want to continue?`;
                   type: 1, // Action Row - Back button
                   components: [{
                     type: 2, // Button
-                    custom_id: `map_edit_field_${coord}_itemDrops`,
+                    custom_id: `entity_field_group_map_cell_${coord}_items`,
                     label: 'Back to Drops',
                     style: 2,
                     emoji: { name: '⬅️' }
