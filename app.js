@@ -14050,9 +14050,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           try {
             // Parse: remove_coord_{actionId}_{coordinate}
+            // Note: actionId can contain underscores, coordinate is always last part
             const parts = context.customId.replace('remove_coord_', '').split('_');
-            const actionId = parts[0];
-            const coordinate = parts.slice(1).join('_'); // Handle underscores in coordinates
+            const coordinate = parts[parts.length - 1]; // Last part is always coordinate
+            const actionId = parts.slice(0, -1).join('_'); // Everything except last part is actionId
             console.log(`🔍 DEBUG: remove_coord parsing - actionId: ${actionId}, coordinate: ${coordinate}`);
             
             // Load and update safari data
