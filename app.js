@@ -3900,34 +3900,28 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         custom_id !== 'safari_post_select_button' &&
         custom_id !== 'safari_confirm_reset_game' && 
         !custom_id.startsWith('safari_post_channel_')) {
-      console.log(`🔍 DEBUG: Dynamic Safari handler processing custom_id: ${custom_id}`);
-      try {
-        const parts = custom_id.split('_');
-        const guildId = parts[1];
-        // Button ID is everything between guildId and timestamp (last part)
-        const buttonId = parts.slice(2, -1).join('_');
-        const userId = req.body.member.user.id;
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        handler: async (context) => {
+          console.log(`🔍 START: ${custom_id} - user ${context.userId}`);
           
-          console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${buttonId}, User: ${userId}`);
+          const parts = custom_id.split('_');
+          const guildId = parts[1];
+          const buttonId = parts.slice(2, -1).join('_');
+          
+          console.log(`🦁 DEBUG: Safari button interaction - Guild: ${guildId}, Button: ${buttonId}, User: ${context.userId}`);
           
           // Import safari manager and execute actions
           const { executeButtonActions } = await import('./safariManager.js');
-          const result = await executeButtonActions(guildId, buttonId, userId, req.body);
+          const result = await executeButtonActions(guildId, buttonId, context.userId, context.interaction);
           
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: result
-          });
-      } catch (error) {
-        console.error('Error handling safari button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error executing safari action. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          console.log(`✅ SUCCESS: ${custom_id} - completed`);
+          return {
+            ...result,
+            ephemeral: true // Make all custom action responses ephemeral
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('show_castlist2')) {
       // Extract castlist name from custom_id if present
       const castlistMatch = custom_id.match(/^show_castlist2(?:_(.+))?$/);
@@ -10330,125 +10324,107 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_finish_button_')) {
-      // Handle finishing button creation
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to finish buttons.')) return;
-
-        const actionId = custom_id.replace('safari_finish_button_', '');
-        
-        console.log(`🔍 DEBUG: Finishing custom action ${actionId}`);
-        
-        // Load Safari data to get action details
-        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-        const allSafariContent = await loadSafariContent();
-        const guildData = allSafariContent[guildId] || {};
-        const action = guildData.buttons?.[actionId];
-        
-        if (!action) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true, // Use deferred response for the long anchor message updates
+        handler: async (context) => {
+          const actionId = custom_id.replace('safari_finish_button_', '');
+          console.log(`🔍 START: safari_finish_button_${actionId} - user ${context.userId}`);
+          
+          // Load Safari data to get action details
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const guildData = allSafariContent[context.guildId] || {};
+          const action = guildData.buttons?.[actionId];
+          
+          if (!action) {
+            return {
               content: '❌ Action not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Update map coordinate assignments - COMPLETE BIDIRECTIONAL SYNC
-        // First, remove this action from all coordinates across all maps
-        if (guildData.maps) {
-          for (const mapId in guildData.maps) {
-            const map = guildData.maps[mapId];
-            if (map.coordinates) {
-              for (const coord in map.coordinates) {
-                const coordData = map.coordinates[coord];
-                if (coordData.buttons) {
-                  coordData.buttons = coordData.buttons.filter(id => id !== actionId);
+              ephemeral: true
+            };
+          }
+          
+          // Update map coordinate assignments - COMPLETE BIDIRECTIONAL SYNC
+          // First, remove this action from all coordinates across all maps
+          if (guildData.maps) {
+            for (const mapId in guildData.maps) {
+              const map = guildData.maps[mapId];
+              if (map.coordinates) {
+                for (const coord in map.coordinates) {
+                  const coordData = map.coordinates[coord];
+                  if (coordData.buttons) {
+                    coordData.buttons = coordData.buttons.filter(id => id !== actionId);
+                  }
                 }
               }
             }
           }
-        }
-        
-        // Then, add this action to the coordinates it's assigned to
-        if (action.coordinates && action.coordinates.length > 0) {
-          // Ensure maps structure exists
-          if (!guildData.maps) guildData.maps = {};
           
-          // Find all maps and add coordinate assignments
-          for (const mapId in guildData.maps) {
-            // Skip non-map properties
-            if (mapId === 'active' || typeof guildData.maps[mapId] !== 'object') continue;
+          // Then, add this action to the coordinates it's assigned to
+          if (action.coordinates && action.coordinates.length > 0) {
+            // Ensure maps structure exists
+            if (!guildData.maps) guildData.maps = {};
             
-            const map = guildData.maps[mapId];
-            if (!map.coordinates) map.coordinates = {};
+            // Find all maps and add coordinate assignments
+            for (const mapId in guildData.maps) {
+              // Skip non-map properties
+              if (mapId === 'active' || typeof guildData.maps[mapId] !== 'object') continue;
+              
+              const map = guildData.maps[mapId];
+              if (!map.coordinates) map.coordinates = {};
+              
+              for (const coord of action.coordinates) {
+                if (!map.coordinates[coord]) {
+                  map.coordinates[coord] = {
+                    buttons: []
+                  };
+                }
+                
+                // Add action to coordinate if not already there
+                if (!map.coordinates[coord].buttons.includes(actionId)) {
+                  map.coordinates[coord].buttons.push(actionId);
+                }
+              }
+            }
+          }
+          
+          await saveSafariContent(allSafariContent);
+          
+          // Update anchor messages for all assigned coordinates
+          if (action.coordinates && action.coordinates.length > 0) {
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            const activeMapId = allSafariContent[context.guildId]?.maps?.active;
             
             for (const coord of action.coordinates) {
-              if (!map.coordinates[coord]) {
-                map.coordinates[coord] = {
-                  buttons: []
-                };
-              }
-              
-              // Add action to coordinate if not already there
-              if (!map.coordinates[coord].buttons.includes(actionId)) {
-                map.coordinates[coord].buttons.push(actionId);
+              // Check if coordinate has an anchor message before trying to update
+              const coordData = allSafariContent[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+              if (coordData?.anchorMessageId) {
+                try {
+                  await updateAnchorMessage(context.guildId, coord, context.client);
+                  console.log(`📍 Updated anchor message for ${coord}`);
+                } catch (error) {
+                  console.error(`Error updating anchor for ${coord}:`, error);
+                }
+              } else {
+                console.log(`⏭️ Skipping anchor update for ${coord} - no anchor message ID found`);
               }
             }
           }
-        }
-        
-        await saveSafariContent(allSafariContent);
-        
-        // Update anchor messages for all assigned coordinates
-        if (action.coordinates && action.coordinates.length > 0) {
-          const { updateAnchorMessage } = await import('./mapCellUpdater.js');
-          const activeMapId = allSafariContent[guildId]?.maps?.active;
           
-          for (const coord of action.coordinates) {
-            // Check if coordinate has an anchor message before trying to update
-            const coordData = allSafariContent[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
-            if (coordData?.anchorMessageId) {
-              try {
-                await updateAnchorMessage(guildId, coord, client);
-                console.log(`📍 Updated anchor message for ${coord}`);
-              } catch (error) {
-                console.error(`Error updating anchor for ${coord}:`, error);
-              }
-            } else {
-              console.log(`⏭️ Skipping anchor update for ${coord} - no anchor message ID found`);
-            }
-          }
+          console.log(`✅ SUCCESS: safari_finish_button_${actionId} - completed`);
+          
+          // Return to the Custom Action editor instead of just showing success
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          const updatedUI = await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId
+          });
+          
+          return updatedUI;
         }
-        
-        console.log(`✅ DEBUG: Finished saving custom action ${actionId}, returning to editor`);
-        
-        // Return to the Custom Action editor instead of just showing success
-        const { createCustomActionEditorUI } = await import('./customActionUI.js');
-        const updatedUI = await createCustomActionEditorUI({
-          guildId,
-          actionId
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: updatedUI
-        });
-        
-      } catch (error) {
-        console.error('Error finishing custom action:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error saving custom action.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_remove_action_')) {
       // Handle removing action from button
       try {
