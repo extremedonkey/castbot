@@ -37,21 +37,34 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
     description: "Design a new interactive action"
   });
   
-  // Add existing actions
-  let optionCount = 1;
-  for (const [actionId, action] of Object.entries(allActions)) {
-    if (optionCount >= 25) break; // Discord limit
+  // Add existing actions sorted by lastModified (most recent first)
+  const sortedActions = Object.entries(allActions)
+    .map(([actionId, action]) => ({ actionId, action }))
+    .sort((a, b) => {
+      const aLastModified = a.action.metadata?.lastModified || 0;
+      const bLastModified = b.action.metadata?.lastModified || 0;
+      return bLastModified - aLastModified; // Descending order (newest first)
+    })
+    .slice(0, 24); // Limit to 24 to leave room for "Create New"
+  
+  for (const { actionId, action } of sortedActions) {
+    // Create meaningful description showing action type and status
+    let description = assignedActionIds.includes(actionId) ? "✅ Already assigned here" : "Click to assign/edit";
+    
+    // Add action count info
+    const actionCount = action.actions?.length || 0;
+    if (actionCount > 0) {
+      description += ` • ${actionCount} action${actionCount !== 1 ? 's' : ''}`;
+    }
     
     const option = {
       label: (action.name || action.label || 'Unnamed Action').substring(0, 100),
       value: actionId,
-      description: assignedActionIds.includes(actionId) ? "Already assigned here" : "Click to assign/edit",
+      description: description.substring(0, 100), // Discord limit
       default: assignedActionIds.includes(actionId)
     };
     
-    // Skip emoji entirely to avoid any issues
     selectMenu.addOptions(option);
-    optionCount++;
   }
   
   const selectRow = new ActionRowBuilder().addComponents(selectMenu);
@@ -220,6 +233,13 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             },
             {
               type: 2,
+              custom_id: `custom_action_delete_${actionId}`,
+              label: "Delete Action",
+              style: 4, // Danger
+              emoji: { name: "🗑️" }
+            },
+            {
+              type: 2,
               custom_id: `safari_finish_button_${actionId}`,
               label: "Close",
               style: 3, // Success
@@ -306,7 +326,26 @@ function getActionListComponents(actions, actionId) {
 function getActionSummary(action, number) {
   switch (action.type) {
     case 'display_text':
-      return `**${number}. Display Text**\n${action.text?.substring(0, 50)}${action.text?.length > 50 ? '...' : ''}`;
+      // Handle new format (config.title/content) and legacy format (text)
+      let displayText = '';
+      if (action.config?.title) {
+        // Show title if available
+        displayText = action.config.title;
+      } else if (action.config?.content) {
+        // Show content if no title
+        displayText = action.config.content;
+      } else if (action.text) {
+        // Legacy format fallback
+        displayText = action.text;
+      } else {
+        displayText = 'No text configured';
+      }
+      
+      // Truncate if too long
+      const truncated = displayText.substring(0, 50);
+      const ellipsis = displayText.length > 50 ? '...' : '';
+      return `**${number}. Display Text**\n${truncated}${ellipsis}`;
+      
     case 'give_item':
       return `**${number}. Give Item**\nItem: ${action.itemId} x${action.quantity || 1}`;
     case 'give_currency':

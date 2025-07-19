@@ -3237,6 +3237,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'custom_action_add_condition',
         'custom_action_remove_condition',
         'custom_action_test',
+        'custom_action_delete',
+        'custom_action_delete_cancel',
+        'custom_action_delete_confirm',
         'remove_coord',
         'add_coord_modal'
       ];
@@ -13616,12 +13619,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           console.log(`🧪 Testing action ${actionId} with simulated custom_id: ${simulatedCustomId}`);
           
           // Process the safari button actions
-          const { processSafariButton } = await import('./safariButtonProcessor.js');
-          const result = await processSafariButton(
+          const { executeButtonActions } = await import('./safariManager.js');
+          const result = await executeButtonActions(
             context.guildId,
+            actionId,
             context.userId,
-            simulatedCustomId,
-            client
+            client // Pass client as interaction-like object
           );
           
           console.log(`✅ SUCCESS: custom_action_test - tested ${actionId}`);
@@ -13638,6 +13641,154 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               ephemeral: true
             };
           }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('custom_action_delete_')) {
+      // Handle delete action button with confirmation
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_delete',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: custom_action_delete - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('custom_action_delete_', '');
+          
+          // Load the action data
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          
+          if (!action) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Show confirmation dialog
+          const actionName = action.name || action.label || 'Unnamed Action';
+          const coordinateCount = action.coordinates?.length || 0;
+          const confirmationText = `## ⚠️ Delete Custom Action\n\n**Action:** ${actionName}\n**Currently assigned to:** ${coordinateCount} location${coordinateCount !== 1 ? 's' : ''}\n\n**This action cannot be undone.** The action will be:\n• Removed from all assigned locations\n• Deleted permanently from the system\n• Anchor messages will be updated\n\nAre you sure you want to continue?`;
+          
+          return {
+            components: [{
+              type: 17, // Container
+              accent_color: 0xed4245, // Red for danger
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: confirmationText
+                },
+                {
+                  type: 1, // Action Row
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: `custom_action_delete_cancel_${actionId}`,
+                      label: "Cancel",
+                      style: 2, // Secondary
+                      emoji: { name: "❌" }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `custom_action_delete_confirm_${actionId}`,
+                      label: "Yes, Delete Action",
+                      style: 4, // Danger
+                      emoji: { name: "🗑️" }
+                    }
+                  ]
+                }
+              ]
+            }],
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('custom_action_delete_cancel_')) {
+      // Handle delete cancellation - return to editor
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_delete_cancel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const actionId = context.customId.replace('custom_action_delete_cancel_', '');
+          
+          // Return to the Custom Action Editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          const ui = await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId: actionId
+          });
+          
+          return ui;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('custom_action_delete_confirm_')) {
+      // Handle delete confirmation - actually delete the action
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_delete_confirm',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: custom_action_delete_confirm - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('custom_action_delete_confirm_', '');
+          
+          // Load and modify safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          
+          if (!action) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+          
+          const actionName = action.name || action.label || 'Unnamed Action';
+          const coordinates = action.coordinates || [];
+          
+          // Remove action from all coordinate assignments
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          if (activeMapId && coordinates.length > 0) {
+            for (const coord of coordinates) {
+              const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+              if (coordData && coordData.buttons) {
+                coordData.buttons = coordData.buttons.filter(buttonId => buttonId !== actionId);
+              }
+            }
+          }
+          
+          // Delete the action itself
+          delete safariData[context.guildId].buttons[actionId];
+          
+          // Save changes
+          await saveSafariContent(safariData);
+          
+          // Update anchor messages for affected coordinates
+          if (coordinates.length > 0) {
+            const { safeUpdateAnchorMessage } = await import('./mapCellUpdater.js');
+            for (const coord of coordinates) {
+              try {
+                await safeUpdateAnchorMessage(context.guildId, coord, client);
+                console.log(`📍 Updated anchor message for ${coord} after deleting action`);
+              } catch (error) {
+                console.error(`Error updating anchor for ${coord}:`, error);
+              }
+            }
+          }
+          
+          console.log(`✅ SUCCESS: custom_action_delete_confirm - deleted ${actionId} from ${coordinates.length} coordinates`);
+          
+          return {
+            content: `✅ **Action Deleted Successfully!**\n\n**"${actionName}"** has been removed from all locations and deleted permanently.`,
+            ephemeral: true
+          };
         }
       })(req, res, client);
       
