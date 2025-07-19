@@ -15553,7 +15553,9 @@ Are you sure you want to continue?`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const coord = context.customId.replace('map_currency_style_', '');
+          const parts = context.customId.replace('map_currency_style_', '').split('_');
+          const coord = parts[0];
+          const dropIndex = parts.length > 1 ? parseInt(parts[1]) : 0; // Default to 0 for legacy support
           const selectedStyle = parseInt(context.values[0]);
           
           // Update style
@@ -15562,8 +15564,8 @@ Are you sure you want to continue?`;
           const activeMapId = safariData[context.guildId]?.maps?.active;
           const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
           
-          if (coordData?.currencyDrops?.[0]) {
-            coordData.currencyDrops[0].buttonStyle = selectedStyle;
+          if (coordData?.currencyDrops?.[dropIndex]) {
+            coordData.currencyDrops[dropIndex].buttonStyle = selectedStyle;
             await saveSafariContent(safariData);
             
             // Update anchor message
@@ -15572,7 +15574,7 @@ Are you sure you want to continue?`;
           }
           
           // Return updated currency configuration interface
-          const drop = coordData.currencyDrops[0];
+          const drop = coordData.currencyDrops[dropIndex];
           return {
             components: [{
               type: 17, // Container
@@ -15591,7 +15593,7 @@ Are you sure you want to continue?`;
                   type: 1, // Action Row - Button style select
                   components: [{
                     type: 3, // String Select (Components V2)
-                    custom_id: `map_currency_style_${coord}`,
+                    custom_id: `map_currency_style_${coord}_${dropIndex}`,
                     placeholder: 'Select button style...',
                     options: [
                       { label: 'Primary (Blue)', value: '1', default: drop.buttonStyle === 1 },
@@ -15605,7 +15607,7 @@ Are you sure you want to continue?`;
                   type: 1, // Action Row - Drop type select
                   components: [{
                     type: 3, // String Select (Components V2)
-                    custom_id: `map_currency_type_${coord}`,
+                    custom_id: `map_currency_type_${coord}_${dropIndex}`,
                     placeholder: 'How many are available?',
                     options: [
                       { 
@@ -15666,7 +15668,9 @@ Are you sure you want to continue?`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const coord = context.customId.replace('map_currency_type_', '');
+          const parts = context.customId.replace('map_currency_type_', '').split('_');
+          const coord = parts[0];
+          const dropIndex = parts.length > 1 ? parseInt(parts[1]) : 0; // Default to 0 for legacy support
           const dropType = context.values[0];
           
           // Update type
@@ -15675,9 +15679,9 @@ Are you sure you want to continue?`;
           const activeMapId = safariData[context.guildId]?.maps?.active;
           const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
           
-          if (coordData?.currencyDrops?.[0]) {
-            coordData.currencyDrops[0].dropType = dropType;
-            coordData.currencyDrops[0].claimedBy = dropType === 'once_per_player' ? [] : null;
+          if (coordData?.currencyDrops?.[dropIndex]) {
+            coordData.currencyDrops[dropIndex].dropType = dropType;
+            coordData.currencyDrops[dropIndex].claimedBy = dropType === 'once_per_player' ? [] : null;
             await saveSafariContent(safariData);
             
             // Update anchor message
@@ -15736,19 +15740,29 @@ Are you sure you want to continue?`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          const coord = context.customId.replace('map_currency_edit_', '');
-          console.log(`💰 START: map_currency_edit - coord ${coord}`);
+          const parts = context.customId.replace('map_currency_edit_', '').split('_');
+          const coord = parts[0];
+          const dropIndex = parts.length > 1 ? parseInt(parts[1]) : 0; // Default to 0 for legacy support
+          console.log(`💰 START: map_currency_edit - coord ${coord}, dropIndex ${dropIndex}`);
           
-          // Create currency drop modal (inline - same as add currency drop)
+          // Load current drop data to pre-populate modal
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          const drop = coordData?.currencyDrops?.[dropIndex];
+          
+          // Create currency drop modal with current values
           const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
           const modal = new ModalBuilder()
-            .setCustomId(`map_currency_drop_modal_${coord}`)
+            .setCustomId(`map_currency_drop_modal_${coord}_${dropIndex}`)
             .setTitle(`Edit Currency Drop for ${coord}`);
             
           const amountInput = new TextInputBuilder()
             .setCustomId('amount')
             .setLabel('Currency Amount')
             .setStyle(TextInputStyle.Short)
+            .setValue(drop?.amount?.toString() || '100')
             .setPlaceholder('100')
             .setRequired(true)
             .setMinLength(1)
@@ -15758,6 +15772,7 @@ Are you sure you want to continue?`;
             .setCustomId('button_text')
             .setLabel('Button Text')
             .setStyle(TextInputStyle.Short)
+            .setValue(drop?.buttonText || 'Collect Coins')
             .setPlaceholder('Collect Coins')
             .setRequired(true)
             .setMaxLength(80);
@@ -15766,6 +15781,7 @@ Are you sure you want to continue?`;
             .setCustomId('button_emoji')
             .setLabel('Button Emoji')
             .setStyle(TextInputStyle.Short)
+            .setValue(drop?.buttonEmoji || '🪙')
             .setPlaceholder('🪙')
             .setRequired(false)
             .setMaxLength(10);
@@ -15791,7 +15807,9 @@ Are you sure you want to continue?`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          const coord = context.customId.replace('map_currency_remove_', '');
+          const parts = context.customId.replace('map_currency_remove_', '').split('_');
+          const coord = parts[0];
+          const dropIndex = parts.length > 1 ? parseInt(parts[1]) : 0; // Default to 0 for legacy support
           
           // Remove currency drop
           const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
@@ -15799,8 +15817,9 @@ Are you sure you want to continue?`;
           const activeMapId = safariData[context.guildId]?.maps?.active;
           const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
           
-          if (coordData) {
-            coordData.currencyDrops = [];
+          if (coordData?.currencyDrops) {
+            // Remove specific drop by index
+            coordData.currencyDrops.splice(dropIndex, 1);
             await saveSafariContent(safariData);
             
             // Update anchor message
@@ -15831,7 +15850,9 @@ Are you sure you want to continue?`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          const coord = context.customId.replace('map_currency_reset_', '');
+          const parts = context.customId.replace('map_currency_reset_', '').split('_');
+          const coord = parts[0];
+          const dropIndex = parts.length > 1 ? parseInt(parts[1]) : 0; // Default to 0 for legacy support
           
           // Reset claims
           const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
@@ -15839,8 +15860,8 @@ Are you sure you want to continue?`;
           const activeMapId = safariData[context.guildId]?.maps?.active;
           const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
           
-          if (coordData?.currencyDrops?.[0]) {
-            const drop = coordData.currencyDrops[0];
+          if (coordData?.currencyDrops?.[dropIndex]) {
+            const drop = coordData.currencyDrops[dropIndex];
             drop.claimedBy = drop.dropType === 'once_per_player' ? [] : null;
             await saveSafariContent(safariData);
             
@@ -19021,16 +19042,33 @@ Are you sure you want to continue?`;
           coordData.currencyDrops = [];
         }
         
-        // Check if currency drop already exists (only one per location)
-        if (coordData.currencyDrops.length > 0) {
-          // Update existing
-          coordData.currencyDrops[0] = {
+        // Check if this is editing an existing drop or creating new
+        // The modal can be triggered from either "Add Currency Drop" or "Edit Amount/Text"
+        let dropIndex = -1;
+        
+        // For edit operations, we need to identify which drop is being edited
+        // Since we're transitioning from single to multiple drops, check if modal ID contains index
+        const modalParts = custom_id.split('_');
+        if (modalParts.length > 4 && !isNaN(parseInt(modalParts[4]))) {
+          // Format: map_currency_drop_modal_{coord}_{index}
+          dropIndex = parseInt(modalParts[4]);
+        } else if (coordData.currencyDrops.length === 1) {
+          // Legacy support: if only one drop exists and no index specified, assume editing it
+          dropIndex = 0;
+        } else {
+          // Check if a drop with same button text already exists to avoid duplicates
+          dropIndex = coordData.currencyDrops.findIndex(drop => drop.buttonText === buttonText);
+        }
+        
+        if (dropIndex >= 0 && dropIndex < coordData.currencyDrops.length) {
+          // Update existing drop
+          coordData.currencyDrops[dropIndex] = {
             amount: amount,
             buttonText: buttonText,
             buttonEmoji: buttonEmoji,
-            buttonStyle: coordData.currencyDrops[0].buttonStyle || 2,
-            dropType: coordData.currencyDrops[0].dropType || 'once_per_player',
-            claimedBy: coordData.currencyDrops[0].claimedBy || []
+            buttonStyle: coordData.currencyDrops[dropIndex].buttonStyle || 2,
+            dropType: coordData.currencyDrops[dropIndex].dropType || 'once_per_player',
+            claimedBy: coordData.currencyDrops[dropIndex].claimedBy || []
           };
         } else {
           // Add new currency drop
@@ -19042,6 +19080,7 @@ Are you sure you want to continue?`;
             dropType: 'once_per_player',
             claimedBy: []
           });
+          dropIndex = coordData.currencyDrops.length - 1; // Set index to newly added drop
         }
         
         await saveSafariContent(safariData);
@@ -19051,7 +19090,7 @@ Are you sure you want to continue?`;
         await safeUpdateAnchorMessage(guildId, coord, client);
         
         // Show currency drop configuration interface
-        const dropIndex = 0; // Currency drops only have one per location
+        // Use the index of the drop we just created/updated
         const drop = coordData.currencyDrops[dropIndex];
         
         return res.send({
@@ -19074,7 +19113,7 @@ Are you sure you want to continue?`;
                   type: 1, // Action Row - Button style select
                   components: [{
                     type: 3, // String Select (Components V2)
-                    custom_id: `map_currency_style_${coord}`,
+                    custom_id: `map_currency_style_${coord}_${dropIndex}`,
                     placeholder: 'Select button style...',
                     options: [
                       { label: 'Primary (Blue)', value: '1', default: drop.buttonStyle === 1 },
@@ -19088,7 +19127,7 @@ Are you sure you want to continue?`;
                   type: 1, // Action Row - Drop type select
                   components: [{
                     type: 3, // String Select (Components V2)
-                    custom_id: `map_currency_type_${coord}`,
+                    custom_id: `map_currency_type_${coord}_${dropIndex}`,
                     placeholder: 'How many are available?',
                     options: [
                       { 
@@ -19112,21 +19151,21 @@ Are you sure you want to continue?`;
                   components: [
                     {
                       type: 2, // Button
-                      custom_id: `map_currency_edit_${coord}`,
+                      custom_id: `map_currency_edit_${coord}_${dropIndex}`,
                       label: 'Edit Amount/Text',
                       style: 2, // Secondary
                       emoji: { name: '✏️' }
                     },
                     {
                       type: 2, // Button
-                      custom_id: `map_currency_remove_${coord}`,
+                      custom_id: `map_currency_remove_${coord}_${dropIndex}`,
                       label: 'Remove Currency',
                       style: 4, // Danger
                       emoji: { name: '🗑️' }
                     },
                     {
                       type: 2, // Button
-                      custom_id: `map_currency_reset_${coord}`,
+                      custom_id: `map_currency_reset_${coord}_${dropIndex}`,
                       label: 'Reset Claims',
                       style: 2, // Secondary
                       emoji: { name: '🔃' }

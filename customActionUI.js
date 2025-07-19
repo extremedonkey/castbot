@@ -60,8 +60,8 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
     const option = {
       label: (action.name || action.label || 'Unnamed Action').substring(0, 100),
       value: actionId,
-      description: description.substring(0, 100), // Discord limit
-      default: assignedActionIds.includes(actionId)
+      description: description.substring(0, 100) // Discord limit
+      // Removed default value - don't auto-select assigned actions for better UX
     };
     
     selectMenu.addOptions(option);
@@ -85,6 +85,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
   
   // Return exactly like stores handler
   return {
+    flags: (1 << 15), // IS_COMPONENTS_V2
     components: [container]
   };
 }
@@ -141,6 +142,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   const coordinateCount = action.coordinates?.length || 0;
   
   return {
+    flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
       type: 17, // Container
       accent_color: 0x5865f2,
@@ -459,6 +461,7 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   const action = guildData.buttons?.[actionId] || createDefaultAction();
   
   return {
+    flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
       type: 17, // Container
       components: [
@@ -579,6 +582,7 @@ export async function createConditionsConfigUI({ guildId, actionId }) {
   });
   
   return {
+    flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
       type: 17, // Container
       components
@@ -673,6 +677,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   });
   
   return {
+    flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
       type: 17, // Container
       components
