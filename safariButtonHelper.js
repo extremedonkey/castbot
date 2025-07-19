@@ -8,7 +8,16 @@ import { loadSafariContent } from './safariManager.js';
 function createSafeEmoji(emoji) {
   // Check if emoji is a valid non-empty string
   if (typeof emoji === 'string' && emoji.trim().length > 0) {
-    return { name: emoji.trim() };
+    // Clean emoji string by removing potential zero-width joiners and other problematic characters
+    const cleanEmoji = emoji
+      .trim()
+      .replace(/[\u200D\u200C\uFEFF]/g, '') // Remove zero-width joiner, non-joiner, and BOM
+      .replace(/\s+/g, ''); // Remove any whitespace
+    
+    // Validate that we still have content after cleaning
+    if (cleanEmoji.length > 0) {
+      return { name: cleanEmoji };
+    }
   }
   return undefined;
 }
@@ -76,12 +85,18 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
       }
     }
     
+    // Create emoji safely with logging
+    const safeEmoji = createSafeEmoji(button.emoji);
+    if (button.emoji && !safeEmoji) {
+      console.warn(`⚠️ Rejected invalid emoji for button ${buttonId}: "${button.emoji}"`);
+    }
+    
     const buttonComponent = {
       type: 2, // Button
       custom_id: `safari_${guildId}_${buttonId}_${Date.now()}`,
       label: label || 'Action', // Fallback if no label found
       style: getButtonStyle(button.style),
-      emoji: createSafeEmoji(button.emoji)
+      emoji: safeEmoji
     };
     
     currentRow.push(buttonComponent);
@@ -203,10 +218,21 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
   
   // Safari Buttons (existing functionality)
   if (coordData.buttons?.length > 0) {
-    const safariButtonRows = await createSafariButtonComponents(coordData.buttons, guildId);
-    // Extract buttons from rows
-    for (const row of safariButtonRows) {
-      allButtons.push(...row.components);
+    try {
+      const safariButtonRows = await createSafariButtonComponents(coordData.buttons, guildId);
+      // Extract buttons from rows
+      for (const row of safariButtonRows) {
+        // Validate each button before adding
+        for (const button of row.components) {
+          if (button.emoji && button.emoji.name) {
+            console.log(`🔍 DEBUG: Processing safari button ${button.custom_id} with emoji: "${button.emoji.name}"`);
+          }
+          allButtons.push(button);
+        }
+      }
+    } catch (error) {
+      console.error(`⚠️ Error processing safari buttons for ${coord}:`, error);
+      // Continue without safari buttons rather than failing completely
     }
   }
   
