@@ -431,17 +431,8 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
         description = `*You're too tired to move! Rest for ${timeUntil} before moving again.*\n\n⚡ **Stamina:** ${stamina.current}/${stamina.max}`;
     }
     
-    // For interaction responses, we can't use Container at top level
-    // Discord only allows Action Rows (type 1) at the top level for interactions
-    if (isInteractionResponse) {
-        // Return standard format with content field for interaction responses
-        return {
-            content: `## 🗺️ Current Location: ${coordinate}\n\n${description}`,
-            components: actionRows
-        };
-    }
-    
-    // For channel messages, use full Components V2 format with Container
+    // Always use Components V2 format since ButtonHandlerFactory automatically adds the flag
+    // For both interaction responses and channel messages
     const components = [{
         type: 17, // Container
         accent_color: 0x2ecc71, // Green for movement/exploration
@@ -467,7 +458,6 @@ export async function getMovementDisplay(guildId, userId, coordinate, isInteract
     }];
     
     return {
-        flags: (1 << 15), // IS_COMPONENTS_V2
         components
     };
 }
