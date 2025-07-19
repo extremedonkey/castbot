@@ -15685,9 +15685,47 @@ Are you sure you want to continue?`;
             await safeUpdateAnchorMessage(context.guildId, coord, client);
           }
           
-          // Refresh UI
-          req.body.data.custom_id = `map_add_currency_drop_${coord}`;
-          return req.app._router.handle(req, res, next);
+          // Return to currency drop configuration UI
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+          const modal = new ModalBuilder()
+            .setCustomId(`map_currency_drop_modal_${coord}`)
+            .setTitle(`Configure Currency Drop for ${coord}`);
+            
+          const amountInput = new TextInputBuilder()
+            .setCustomId('amount')
+            .setLabel('Currency Amount')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('100')
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(10);
+            
+          const buttonTextInput = new TextInputBuilder()
+            .setCustomId('button_text')
+            .setLabel('Button Text')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Collect Coins')
+            .setRequired(true)
+            .setMaxLength(80);
+            
+          const buttonEmojiInput = new TextInputBuilder()
+            .setCustomId('button_emoji')
+            .setLabel('Button Emoji')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('🪙')
+            .setRequired(false)
+            .setMaxLength(10);
+            
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(amountInput),
+            new ActionRowBuilder().addComponents(buttonTextInput),
+            new ActionRowBuilder().addComponents(buttonEmojiInput)
+          );
+          
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
         }
       })(req, res, client);
       
@@ -15701,12 +15739,48 @@ Are you sure you want to continue?`;
           const coord = context.customId.replace('map_currency_edit_', '');
           console.log(`💰 START: map_currency_edit - coord ${coord}`);
           
-          // Create currency drop modal (same as add currency drop)
-          const { createCurrencyDropModal } = await import('./mapLocationManager.js');
-          const modal = await createCurrencyDropModal(coord);
+          // Create currency drop modal (inline - same as add currency drop)
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+          const modal = new ModalBuilder()
+            .setCustomId(`map_currency_drop_modal_${coord}`)
+            .setTitle(`Edit Currency Drop for ${coord}`);
+            
+          const amountInput = new TextInputBuilder()
+            .setCustomId('amount')
+            .setLabel('Currency Amount')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('100')
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(10);
+            
+          const buttonTextInput = new TextInputBuilder()
+            .setCustomId('button_text')
+            .setLabel('Button Text')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Collect Coins')
+            .setRequired(true)
+            .setMaxLength(80);
+            
+          const buttonEmojiInput = new TextInputBuilder()
+            .setCustomId('button_emoji')
+            .setLabel('Button Emoji')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('🪙')
+            .setRequired(false)
+            .setMaxLength(10);
+            
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(amountInput),
+            new ActionRowBuilder().addComponents(buttonTextInput),
+            new ActionRowBuilder().addComponents(buttonEmojiInput)
+          );
           
           console.log(`✅ SUCCESS: map_currency_edit - showing modal for ${coord}`);
-          return modal;
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
         }
       })(req, res, client);
       
