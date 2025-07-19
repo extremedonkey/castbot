@@ -13360,46 +13360,99 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               };
               
             } else if (fieldGroup === 'items') {
-              // Show item selection interface for drop configuration
+              // Show drop management interface
               const { loadSafariContent } = await import('./safariManager.js');
               const safariData = await loadSafariContent();
               const items = safariData[context.guildId]?.items || {};
+              const activeMapId = safariData[context.guildId]?.maps?.active;
+              const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[entityId];
               
-              // Check if there are any items
-              if (Object.keys(items).length === 0) {
-                return {
-                  content: '❌ No items available. Create items first using Safari menu.',
-                  ephemeral: true
-                };
+              const components = [
+                {
+                  type: 10, // Text Display
+                  content: `# Drop Management for ${entityId}\n\nManage item and currency drops at this location.`
+                },
+                { type: 14 } // Separator
+              ];
+              
+              // Show existing currency drops
+              if (coordData?.currencyDrops?.length > 0) {
+                components.push({
+                  type: 10, // Text Display
+                  content: `### 🪙 Currency Drops (${coordData.currencyDrops.length})`
+                });
+                
+                coordData.currencyDrops.forEach((drop, index) => {
+                  const config = safariData[context.guildId]?.safariConfig || {};
+                  const currencyEmoji = config.currencyEmoji || '🪙';
+                  const currencyName = config.currencyName || 'coins';
+                  
+                  components.push({
+                    type: 9, // Section
+                    components: [{
+                      type: 10,
+                      content: `**${drop.buttonEmoji} ${drop.buttonText}**\nAmount: ${drop.amount} ${currencyEmoji} ${currencyName}\nType: ${drop.dropType === 'once_per_player' ? 'One per player' : 'One per season'}`
+                    }],
+                    accessory: {
+                      type: 2, // Button
+                      custom_id: `map_currency_edit_${entityId}_${index}`,
+                      label: 'Edit',
+                      style: 2, // Secondary
+                      emoji: { name: '✏️' }
+                    }
+                  });
+                });
+                components.push({ type: 14 }); // Separator after currency drops
               }
               
-              // Show item selection or currency drop option
-              return {
-                components: [{
-                  type: 17, // Container
-                  components: [
-                    {
-                      type: 10, // Text Display
-                      content: `# Add Drop to ${entityId}\n\nSelect what type of drop to add to this location.`
-                    },
-                    { type: 14 }, // Separator
-                    {
-                      type: 1, // Action Row
-                      components: [
-                        {
-                          type: 2, // Button
-                          custom_id: `map_add_item_drop_${entityId}`,
-                          label: 'Add Item Drop',
-                          style: 1, // Primary
-                          emoji: { name: '📦' }
-                        },
-                        {
-                          type: 2, // Button
-                          custom_id: `map_add_currency_drop_${entityId}`,
-                          label: 'Add Currency Drop',
-                          style: 1, // Primary
-                          emoji: { name: '🪙' }
-                        }
+              // Show existing item drops
+              if (coordData?.itemDrops?.length > 0) {
+                components.push({
+                  type: 10, // Text Display
+                  content: `### 📦 Item Drops (${coordData.itemDrops.length})`
+                });
+                
+                coordData.itemDrops.forEach((drop, index) => {
+                  const item = safariData[context.guildId]?.items?.[drop.itemId];
+                  if (item) {
+                    components.push({
+                      type: 9, // Section
+                      components: [{
+                        type: 10,
+                        content: `**${drop.buttonEmoji} ${drop.buttonText}**\nItem: ${item.emoji || '📦'} ${item.name}\nType: ${drop.dropType === 'once_per_player' ? 'One per player' : 'One per season'}`
+                      }],
+                      accessory: {
+                        type: 2, // Button
+                        custom_id: `map_item_drop_select_${entityId}`,
+                        label: 'Configure',
+                        style: 2, // Secondary
+                        emoji: { name: '⚙️' }
+                      }
+                    });
+                  }
+                });
+                components.push({ type: 14 }); // Separator after item drops
+              }
+              
+              // Add buttons for new drops
+              components.push({
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: `map_add_item_drop_${entityId}`,
+                    label: 'Add Item Drop',
+                    style: 1, // Primary
+                    emoji: { name: '📦' },
+                    disabled: Object.keys(items).length === 0
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: `map_add_currency_drop_${entityId}`,
+                    label: 'Add Currency Drop',
+                    style: 1, // Primary
+                    emoji: { name: '🪙' }
+                  }
                       ]
                     }
                   ]
