@@ -118,6 +118,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
     // Save the coordinate assignment immediately
     const { saveSafariContent } = await import('./safariManager.js');
     await saveSafariContent(allSafariContent);
+    
+    // Note: Anchor message update happens when closing the editor, not during creation
   }
   
   const triggerType = action.trigger?.type || 'button';

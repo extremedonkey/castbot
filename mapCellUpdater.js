@@ -13,8 +13,13 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
   const activeMapId = safariData[guildId]?.maps?.active;
   const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate];
   
-  if (!coordData?.anchorMessageId || !coordData?.channelId) {
-    console.error(`No anchor message found for ${coordinate}`);
+  if (!coordData?.channelId) {
+    console.error(`No channel ID found for ${coordinate}`);
+    return false;
+  }
+  
+  if (!coordData?.anchorMessageId) {
+    console.warn(`⚠️ No anchor message ID found for ${coordinate}. The location may need to be initialized first.`);
     return false;
   }
   

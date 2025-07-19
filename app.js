@@ -17511,6 +17511,15 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           coordinate
         });
         
+        // Add a note about the coordinate assignment
+        if (ui.components && ui.components[0] && ui.components[0].components) {
+          // Find the header component and append note
+          const headerComponent = ui.components[0].components.find(c => c.type === 10);
+          if (headerComponent) {
+            headerComponent.content += `\n\n✅ **Auto-assigned to location ${coordinate}**`;
+          }
+        }
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
