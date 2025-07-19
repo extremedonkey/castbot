@@ -19705,9 +19705,18 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         // Parse: entity_create_modal_{entityType}_info[_{coordinate}]
         const withoutPrefix = custom_id.replace('entity_create_modal_', '');
         const parts = withoutPrefix.split('_');
-        const entityType = parts[0];
-        const fieldGroup = parts[parts.length - 2]; // Should be 'info'
-        const coordinate = parts[parts.length - 1]; // Optional coordinate for safari_button
+        
+        // Handle special case for safari_button with coordinate
+        let entityType, fieldGroup, coordinate;
+        if (parts[0] === 'safari' && parts[1] === 'button') {
+          entityType = 'safari_button';
+          fieldGroup = parts[2]; // Should be 'info'
+          coordinate = parts[3]; // Optional coordinate
+        } else {
+          entityType = parts[0];
+          fieldGroup = parts[parts.length - 1]; // Should be 'info'
+          coordinate = null;
+        }
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         
@@ -19731,7 +19740,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
         
         // Special handling for safari_button with coordinate
-        if (entityType === 'safari_button' && coordinate && coordinate !== 'info') {
+        if (entityType === 'safari_button' && coordinate) {
           // Parse fields from custom modal format
           const buttonLabel = components[0].components[0].value?.trim();
           const buttonEmoji = components[1].components[0].value?.trim() || null;
