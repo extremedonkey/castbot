@@ -289,6 +289,35 @@ async function ensureGuildSafariData(guildId, safariData) {
             // Reload the data after initialization
             return await loadSafariContent();
         }
+        
+        // Ensure all required properties exist (in case some were deleted)
+        const requiredProps = {
+            buttons: {},
+            safaris: {},
+            applications: {},
+            stores: {},
+            items: {},
+            safariConfig: {
+                currencyName: "coins",
+                inventoryName: "Inventory",
+                currencyEmoji: "🪙"
+            }
+        };
+        
+        let needsUpdate = false;
+        for (const [prop, defaultValue] of Object.entries(requiredProps)) {
+            if (!safariData[guildId][prop]) {
+                console.log(`🔄 DEBUG: Restoring missing property '${prop}' for guild ${guildId}`);
+                safariData[guildId][prop] = defaultValue;
+                needsUpdate = true;
+            }
+        }
+        
+        // Save if we had to restore any properties
+        if (needsUpdate) {
+            await saveSafariContent(safariData);
+        }
+        
         return safariData;
     } catch (error) {
         console.error(`❌ ERROR: Failed to ensure Safari data for guild ${guildId}:`, error);
