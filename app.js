@@ -20751,7 +20751,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
   try {
     if (user.bot) return;
     
-    console.log(`🔍 DEBUG: Reaction added - Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag}`);
+    console.log(`🔍 DEBUG: Reaction added - Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id}, Bot: ${user.bot}, System: ${user.system || 'false'})`);
 
     // When a reaction is received, check if the structure is partial
     if (reaction.partial) {
@@ -20843,6 +20843,8 @@ client.on('messageReactionAdd', async (reaction, user) => {
 client.on('messageReactionRemove', async (reaction, user) => {
   try {
     if (user.bot) return;
+    
+    console.log(`🔍 DEBUG: Reaction removed - Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id}, Bot: ${user.bot}, System: ${user.system || 'false'})`);
 
     // When a reaction is received, check if the structure is partial
     if (reaction.partial) {
