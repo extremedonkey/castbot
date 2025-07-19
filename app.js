@@ -13381,18 +13381,48 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const mapId = parts[1];
           
           if (selectedValue === 'create_new') {
-            // Create new custom action
-            const { createCustomActionEditorUI } = await import('./customActionUI.js');
-            const ui = await createCustomActionEditorUI({
-              guildId: context.guildId,
-              actionId: 'new',
-              coordinate
-            });
+            // Show creation modal instead of directly creating
+            const modal = new ModalBuilder()
+              .setCustomId(`safari_button_modal_for_coord_${coordinate}`)
+              .setTitle('Create Custom Action');
+
+            // Button label input
+            const labelInput = new TextInputBuilder()
+              .setCustomId('button_label')
+              .setLabel('Action Name')
+              .setPlaceholder('e.g., "Start Adventure"')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(80);
+
+            // Button emoji input
+            const emojiInput = new TextInputBuilder()
+              .setCustomId('button_emoji')
+              .setLabel('Button Emoji (optional)')
+              .setPlaceholder('e.g., 🗺️')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(10);
+
+            // Button description input
+            const descInput = new TextInputBuilder()
+              .setCustomId('button_description')
+              .setLabel('Action Description')
+              .setPlaceholder('e.g., "Starts the jungle adventure safari"')
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(false)
+              .setMaxLength(200);
+
+            const labelRow = new ActionRowBuilder().addComponents(labelInput);
+            const emojiRow = new ActionRowBuilder().addComponents(emojiInput);
+            const descRow = new ActionRowBuilder().addComponents(descInput);
+
+            modal.addComponents(labelRow, emojiRow, descRow);
             
-            console.log(`✅ SUCCESS: entity_custom_action_list - showing new action editor`);
+            console.log(`✅ SUCCESS: entity_custom_action_list - showing creation modal`);
             return {
-              ...ui,
-              ephemeral: true
+              type: InteractionResponseType.MODAL,
+              data: modal.toJSON()
             };
           } else {
             // Edit existing action
@@ -17420,6 +17450,81 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error creating button. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_button_modal_for_coord_')) {
+      // Handle Safari button creation modal for specific coordinate
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const userId = member.user.id;
+        
+        // Extract coordinate from custom_id
+        const coordinate = custom_id.replace('safari_button_modal_for_coord_', '');
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create custom actions.')) return;
+
+        console.log(`📝 DEBUG: Safari button modal submitted for coordinate ${coordinate}`);
+        
+        const buttonLabel = components[0].components[0].value?.trim();
+        const buttonEmoji = components[1].components[0].value?.trim() || null;
+        const buttonDesc = components[2].components[0].value?.trim() || null;
+        
+        if (!buttonLabel) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action name is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Create basic button with no actions yet
+        const { createCustomButton } = await import('./safariManager.js');
+        const buttonId = await createCustomButton(guildId, {
+          label: buttonLabel,
+          emoji: buttonEmoji,
+          style: 'Primary',
+          actions: [],
+          tags: buttonDesc ? [buttonDesc] : []
+        }, userId);
+        
+        // Set name and description
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const button = allSafariContent[guildId].buttons[buttonId];
+        button.name = buttonLabel;
+        button.description = buttonDesc || '';
+        await saveSafariContent(allSafariContent);
+        
+        console.log(`✅ DEBUG: Created button ${buttonId} with name and description`);
+        
+        // Show Custom Action Editor with the new button and pre-assigned coordinate
+        const { createCustomActionEditorUI } = await import('./customActionUI.js');
+        const ui = await createCustomActionEditorUI({
+          guildId,
+          actionId: buttonId,
+          coordinate
+        });
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            ...ui,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error creating custom action:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating custom action. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
