@@ -42,12 +42,12 @@ fi
 # Send Discord notification
 echo "🔔 Sending restart notification to Discord..."
 # Run notification with background execution and error handling
-# Pass custom message if provided
+# Pass custom message and commit message if provided
 if [ -n "$CUSTOM_MESSAGE" ]; then
     echo "📝 Including custom message: $CUSTOM_MESSAGE"
-    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" 2>&1 | head -20) &
+    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" 2>&1 | head -20) &
 else
-    (node scripts/notify-restart.js 2>&1 | head -20) &
+    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" 2>&1 | head -20) &
 fi
 NOTIFY_PID=$!
 # Give it a few seconds to complete

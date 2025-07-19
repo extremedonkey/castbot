@@ -21,6 +21,7 @@ const TIMEOUT_MS = 8000; // 8 second timeout
 
 // Parse command line arguments
 const customMessage = process.argv[2]; // First argument after script name
+const commitMessage = process.argv[3]; // Second argument - git commit message
 
 /**
  * Send restart notification to Discord
@@ -66,6 +67,11 @@ async function sendRestartNotification() {
 # ${environment} SERVER RESTARTING NOW...
 
 <@391415444084490240>`;
+
+        // Add git commit message if provided
+        if (commitMessage) {
+            messageContent += `\n\n## ${commitMessage}`;
+        }
 
         // Add custom message if provided
         if (customMessage) {
