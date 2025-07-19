@@ -15948,10 +15948,7 @@ Are you sure you want to continue?`;
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            ...ui,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          data: ui
         });
         
       } catch (error) {
@@ -15979,10 +15976,7 @@ Are you sure you want to continue?`;
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            ...ui,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          data: ui
         });
         
       } catch (error) {
