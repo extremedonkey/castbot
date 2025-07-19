@@ -13974,6 +13974,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           console.log(`🗑️ DEBUG: Delete mode - Type: ${entityType}, ID: ${entityId}`);
           
+          // Prevent deletion of map_cell entities
+          if (entityType === 'map_cell') {
+            return {
+              content: '❌ Map cells cannot be deleted through this interface as they are tied to the grid system.',
+              ephemeral: true
+            };
+          }
+          
           const uiResponse = await createEntityManagementUI({
             entityType: entityType,
             guildId: context.guildId,

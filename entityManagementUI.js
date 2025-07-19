@@ -297,13 +297,14 @@ function createEditModeUI(entityType, entityId, entity, activeFieldGroup) {
                     custom_id: `safari_item_player_qty_${entityId}`,
                     emoji: { name: '📦' }
                 }] : []),
-                {
+                // Add Delete button for all entity types except map_cell
+                ...(entityType !== 'map_cell' ? [{
                     type: 2, // Button
                     style: 4, // Danger
                     label: 'Delete',
                     custom_id: `entity_delete_mode_${entityType}_${entityId}`,
                     emoji: { name: '🗑️' }
-                }
+                }] : [])
             ]
         }
     ];
