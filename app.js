@@ -13455,6 +13455,65 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('entity_custom_action_edit_info_')) {
+      // Handle edit action info button
+      return ButtonHandlerFactory.create({
+        id: 'entity_custom_action_edit_info',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`📝 START: entity_custom_action_edit_info - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('entity_custom_action_edit_info_', '');
+          
+          // Load action data to pre-fill modal
+          const { loadSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const action = allSafariContent[context.guildId]?.buttons?.[actionId];
+          
+          if (!action) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Create modal with pre-filled values
+          const modal = new ModalBuilder()
+            .setCustomId(`entity_edit_action_info_modal_${actionId}`)
+            .setTitle('Edit Action Info');
+
+          const nameInput = new TextInputBuilder()
+            .setCustomId('action_name')
+            .setLabel('Action Name')
+            .setPlaceholder('e.g., "Start Adventure"')
+            .setStyle(TextInputStyle.Short)
+            .setValue(action.name || '')
+            .setRequired(true)
+            .setMaxLength(80);
+
+          const descInput = new TextInputBuilder()
+            .setCustomId('action_description')
+            .setLabel('Action Description')
+            .setPlaceholder('e.g., "Begin your journey through the forest"')
+            .setStyle(TextInputStyle.Paragraph)
+            .setValue(action.description || '')
+            .setRequired(false)
+            .setMaxLength(200);
+
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(nameInput),
+            new ActionRowBuilder().addComponents(descInput)
+          );
+          
+          console.log(`✅ SUCCESS: entity_custom_action_edit_info - showing edit modal for ${actionId}`);
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('entity_action_trigger_')) {
       // Handle trigger configuration button
       return ButtonHandlerFactory.create({
@@ -20055,6 +20114,61 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error creating entity. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('entity_edit_action_info_modal_')) {
+      // Handle action info edit modal submission
+      try {
+        const actionId = custom_id.replace('entity_edit_action_info_modal_', '');
+        const guildId = req.body.guild_id;
+        const actionName = components[0].components[0].value?.trim();
+        const actionDescription = components[1].components[0].value?.trim() || '';
+        
+        console.log(`📝 Updating action ${actionId} with name: "${actionName}", description: "${actionDescription}"`);
+        
+        // Load and update safari content
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        
+        if (!allSafariContent[guildId]?.buttons?.[actionId]) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update action info
+        allSafariContent[guildId].buttons[actionId].name = actionName;
+        allSafariContent[guildId].buttons[actionId].description = actionDescription;
+        
+        await saveSafariContent(allSafariContent);
+        
+        // Return to action editor
+        const { createCustomActionEditorUI } = await import('./customActionUI.js');
+        const ui = await createCustomActionEditorUI({
+          guildId: guildId,
+          actionId: actionId
+        });
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            ...ui,
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in entity_edit_action_info_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating action info.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
