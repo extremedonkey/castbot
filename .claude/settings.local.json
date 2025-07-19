@@ -174,7 +174,8 @@
       "WebFetch(domain:cdn.discordapp.com)",
       "Bash(touch:*)",
       "WebFetch(domain:i.ibb.co)",
-      "Bash(/tmp/fix_anchor_calls.sh:*)"
+      "Bash(/tmp/fix_anchor_calls.sh:*)",
+      "Bash(env)"
     ],
     "deny": []
   }

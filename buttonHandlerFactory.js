@@ -758,6 +758,22 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari_management',
     requiresModal: true
+  },
+
+  // === SAFARI DYNAMIC EXECUTION ===
+  'safari_*_*_*': {
+    label: 'Safari Custom Action',
+    description: 'Execute custom action on map location',
+    emoji: '⚡',
+    style: 'Primary',
+    category: 'safari_execution'
+  },
+  'safari_finish_button_*': {
+    label: 'Close & Save',
+    description: 'Close action editor and update anchor messages',
+    emoji: '✅',
+    style: 'Success',
+    category: 'safari_management'
   }
 };
 

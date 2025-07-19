@@ -4814,9 +4814,17 @@ To fix this:
             if (component.type === 1) { // Action Row
               const updatedButtons = component.components.map(button => {
                 if (button.custom_id === 'restart_test_not_tested') {
-                  return { ...button, disabled: false }; // Activate Not Tested
+                  return { 
+                    ...button, 
+                    disabled: false, // Activate Not Tested
+                    style: 3 // Success (green)
+                  };
                 } else if (button.custom_id === 'restart_test_tested') {
-                  return { ...button, disabled: true }; // Deactivate Tested
+                  return { 
+                    ...button, 
+                    disabled: true, // Deactivate Tested
+                    style: 2 // Secondary (grey)
+                  };
                 } else {
                   return button;
                 }
@@ -4847,9 +4855,17 @@ To fix this:
             if (component.type === 1) { // Action Row
               const updatedButtons = component.components.map(button => {
                 if (button.custom_id === 'restart_test_tested') {
-                  return { ...button, disabled: false }; // Activate Tested
+                  return { 
+                    ...button, 
+                    disabled: false, // Activate Tested
+                    style: 3 // Success (green)
+                  };
                 } else if (button.custom_id === 'restart_test_not_tested') {
-                  return { ...button, disabled: true }; // Deactivate Not Tested
+                  return { 
+                    ...button, 
+                    disabled: true, // Deactivate Not Tested
+                    style: 2 // Secondary (grey)
+                  };
                 } else {
                   return button;
                 }
