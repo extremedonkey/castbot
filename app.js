@@ -4797,86 +4797,100 @@ To fix this:
       
     // ==================== RESTART TESTING TRACKER HANDLERS ====================
     } else if (custom_id === 'restart_test_not_tested') {
-      return ButtonHandlerFactory.create({
-        id: 'restart_test_not_tested',
-        handler: async (context, req) => {
-          // Toggle state: activate "Not Tested", deactivate "Tested"
-          const components = req.body.message?.components;
-          
-          // Find the action row with our buttons and update their states
-          const updatedComponents = components.map(component => {
-            if (component.type === 1) { // Action Row
-              const updatedButtons = component.components.map(button => {
-                if (button.custom_id === 'restart_test_not_tested') {
-                  return { 
-                    ...button, 
-                    disabled: false, // Activate Not Tested
-                    style: 3 // Success (green)
-                  };
-                } else if (button.custom_id === 'restart_test_tested') {
-                  return { 
-                    ...button, 
-                    disabled: true, // Deactivate Tested
-                    style: 2 // Secondary (grey)
-                  };
-                } else {
-                  return button;
-                }
-              });
-              return { ...component, components: updatedButtons };
-            }
-            return component;
-          });
-          
-          return {
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              components: updatedComponents
-            }
-          };
-        }
-      })(req, res, client);
+      // Handle restart testing state toggle - using direct pattern like admin_player_select_update
+      try {
+        const originalComponents = req.body.message?.components;
+        
+        // Rebuild the entire UI with updated button states
+        const updatedComponents = originalComponents.map(component => {
+          if (component.type === 1) { // Action Row with buttons
+            const updatedButtons = component.components.map(button => {
+              if (button.custom_id === 'restart_test_not_tested') {
+                return { 
+                  ...button, 
+                  disabled: false, // Activate Not Tested
+                  style: 3 // Success (green)
+                };
+              } else if (button.custom_id === 'restart_test_tested') {
+                return { 
+                  ...button, 
+                  disabled: true, // Deactivate Tested
+                  style: 2 // Secondary (grey)
+                };
+              } else {
+                return button;
+              }
+            });
+            return { ...component, components: updatedButtons };
+          }
+          return component;
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: updatedComponents
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in restart_test_not_tested handler:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
       
     } else if (custom_id === 'restart_test_tested') {
-      return ButtonHandlerFactory.create({
-        id: 'restart_test_tested',
-        handler: async (context, req) => {
-          // Toggle state: activate "Tested", deactivate "Not Tested"
-          const components = req.body.message?.components;
-          
-          // Find the action row with our buttons and update their states
-          const updatedComponents = components.map(component => {
-            if (component.type === 1) { // Action Row
-              const updatedButtons = component.components.map(button => {
-                if (button.custom_id === 'restart_test_tested') {
-                  return { 
-                    ...button, 
-                    disabled: false, // Activate Tested
-                    style: 3 // Success (green)
-                  };
-                } else if (button.custom_id === 'restart_test_not_tested') {
-                  return { 
-                    ...button, 
-                    disabled: true, // Deactivate Not Tested
-                    style: 2 // Secondary (grey)
-                  };
-                } else {
-                  return button;
-                }
-              });
-              return { ...component, components: updatedButtons };
-            }
-            return component;
-          });
-          
-          return {
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              components: updatedComponents
-            }
-          };
-        }
-      })(req, res, client);
+      // Handle restart testing state toggle - using direct pattern like admin_player_select_update
+      try {
+        const originalComponents = req.body.message?.components;
+        
+        // Rebuild the entire UI with updated button states
+        const updatedComponents = originalComponents.map(component => {
+          if (component.type === 1) { // Action Row with buttons
+            const updatedButtons = component.components.map(button => {
+              if (button.custom_id === 'restart_test_tested') {
+                return { 
+                  ...button, 
+                  disabled: false, // Activate Tested
+                  style: 3 // Success (green)
+                };
+              } else if (button.custom_id === 'restart_test_not_tested') {
+                return { 
+                  ...button, 
+                  disabled: true, // Deactivate Not Tested
+                  style: 2 // Secondary (grey)
+                };
+              } else {
+                return button;
+              }
+            });
+            return { ...component, components: updatedButtons };
+          }
+          return component;
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: updatedComponents
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in restart_test_tested handler:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     
     } else if (custom_id === 'getting_started') {
       // Execute the same logic as the getting_started command
