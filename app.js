@@ -3237,9 +3237,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'custom_action_add_condition',
         'custom_action_remove_condition',
         'custom_action_test',
-        'custom_action_delete',
-        'custom_action_delete_cancel',
         'custom_action_delete_confirm',
+        'custom_action_delete_cancel',
+        'custom_action_delete',
         'remove_coord',
         'add_coord_modal'
       ];
