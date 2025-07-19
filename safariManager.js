@@ -614,6 +614,41 @@ async function executeFollowUpButton(config, guildId, interaction) {
 }
 
 /**
+ * Send follow-up messages for additional display text actions
+ * @param {string} token - Interaction token
+ * @param {Array} responses - Array of additional responses to send
+ */
+async function sendFollowUpMessages(token, responses) {
+    try {
+        const { DiscordRequest } = await import('./utils.js');
+        
+        for (let i = 0; i < responses.length; i++) {
+            const response = responses[i];
+            console.log(`📤 DEBUG: Sending follow-up message ${i + 1}/${responses.length}`);
+            
+            // Send follow-up message
+            await DiscordRequest(`webhooks/${process.env.DISCORD_APPLICATION_ID}/${token}`, {
+                method: 'POST',
+                body: {
+                    ...response,
+                    // Ensure follow-up messages are ephemeral like the main response
+                    flags: response.flags || ((1 << 6) | (1 << 15)) // EPHEMERAL + IS_COMPONENTS_V2
+                }
+            });
+            
+            // Small delay between messages to avoid rate limiting
+            if (i < responses.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        }
+        
+        console.log(`✅ DEBUG: Successfully sent ${responses.length} follow-up messages`);
+    } catch (error) {
+        console.error('Error sending follow-up messages:', error);
+    }
+}
+
+/**
  * Execute all actions for a button
  */
 async function executeButtonActions(guildId, buttonId, userId, interaction) {
@@ -698,13 +733,30 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
             }
         }
         
+        // Handle multiple display_text actions with follow-up messages
+        const displayResponses = responses.filter(r => r.components || r.content);
+        const otherResponses = responses.filter(r => !r.components && !r.content);
+        
+        console.log(`📊 DEBUG: Found ${displayResponses.length} display responses, ${otherResponses.length} other responses`);
+        
         // Return the first display_text response as main response
-        // Other actions (currency, follow-ups) execute as side effects
-        const displayResponse = responses.find(r => r.components) || responses[0];
-        const mainResponse = displayResponse || {
+        const mainResponse = displayResponses[0] || {
             content: '✅ Button action completed successfully!',
             flags: InteractionResponseFlags.EPHEMERAL
         };
+        
+        // Send additional display_text actions as follow-up messages
+        if (displayResponses.length > 1) {
+            console.log(`📤 DEBUG: Sending ${displayResponses.length - 1} follow-up messages`);
+            // Extract token from interaction object (handles different interaction formats)
+            const token = interaction?.token || interaction?.data?.token || interaction?.body?.token;
+            if (token) {
+                // Schedule follow-up messages (don't await to avoid blocking main response)
+                sendFollowUpMessages(token, displayResponses.slice(1));
+            } else {
+                console.warn('⚠️ No interaction token available for follow-up messages');
+            }
+        }
         
         console.log(`✅ DEBUG: Button actions executed successfully, returning response`);
         return mainResponse;

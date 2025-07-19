@@ -2,6 +2,82 @@ import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { createAnchorMessageComponents } from './safariButtonHelper.js';
 
 /**
+ * Validate component structure for Discord API compatibility
+ * @param {Array} components - Array of components to validate
+ * @returns {Array|null} Validated components or null if invalid
+ */
+function validateComponents(components) {
+  if (!Array.isArray(components)) {
+    console.error('Components must be an array');
+    return null;
+  }
+  
+  try {
+    for (const component of components) {
+      // Check if it's a valid container (type 17)
+      if (component.type !== 17) {
+        console.error(`Invalid top-level component type: ${component.type}, expected 17 (Container)`);
+        return null;
+      }
+      
+      if (!Array.isArray(component.components)) {
+        console.error('Container must have components array');
+        return null;
+      }
+      
+      // Validate nested components
+      for (const nestedComponent of component.components) {
+        if (!validateNestedComponent(nestedComponent)) {
+          return null;
+        }
+      }
+    }
+    
+    console.log(`✅ Component validation passed for ${components.length} components`);
+    return components;
+  } catch (error) {
+    console.error('Error validating components:', error);
+    return null;
+  }
+}
+
+/**
+ * Validate individual nested component
+ * @param {Object} component - Component to validate
+ * @returns {boolean} True if valid
+ */
+function validateNestedComponent(component) {
+  const validTypes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+  
+  if (!validTypes.includes(component.type)) {
+    console.error(`Invalid component type: ${component.type}, valid types: ${validTypes.join(', ')}`);
+    return false;
+  }
+  
+  // Special validation for Action Rows (type 1)
+  if (component.type === 1) {
+    if (!Array.isArray(component.components)) {
+      console.error('Action Row must have components array');
+      return false;
+    }
+    
+    if (component.components.length > 5) {
+      console.error(`Action Row has ${component.components.length} components, maximum is 5`);
+      return false;
+    }
+    
+    // Validate nested components in action row
+    for (const nestedComponent of component.components) {
+      if (!validateNestedComponent(nestedComponent)) {
+        return false;
+      }
+    }
+  }
+  
+  return true;
+}
+
+/**
  * Update anchor message for a map cell when content changes
  * @param {string} guildId - Discord guild ID
  * @param {string} coordinate - Map coordinate (e.g., "C3")
@@ -61,13 +137,20 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
     // Reconstruct the message with updated content
     const updatedComponents = await createAnchorMessageComponents(coordData, guildId, coordinate, fogMapUrl);
     
+    // Validate components before sending to Discord
+    const validatedComponents = validateComponents(updatedComponents);
+    if (!validatedComponents) {
+      console.error(`❌ Invalid components structure for ${coordinate}, skipping update`);
+      return false;
+    }
+    
     // Use DiscordRequest for Components V2 editing
     const { DiscordRequest } = await import('./utils.js');
     await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
       method: 'PATCH',
       body: {
         flags: (1 << 15), // IS_COMPONENTS_V2
-        components: updatedComponents
+        components: validatedComponents
       }
     });
     
