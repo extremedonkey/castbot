@@ -390,6 +390,27 @@ export const BUTTON_REGISTRY = {
     category: 'safari',
     requiresPermission: 'ManageRoles'
   },
+  'map_delete': {
+    label: 'Delete Map',
+    description: 'Delete entire map with confirmation',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_map_admin'
+  },
+  'map_delete_confirm': {
+    label: 'Confirm Map Deletion',
+    description: 'Confirm permanent map deletion',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_map_admin'
+  },
+  'map_delete_cancel': {
+    label: 'Cancel Map Deletion',
+    description: 'Cancel map deletion and return to menu',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'safari_map_admin'
+  },
   'map_admin_user_select': {
     label: 'User Select',
     description: 'Select player for map administration',

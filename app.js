@@ -14252,63 +14252,120 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       }
       
     } else if (custom_id === 'map_delete') {
-      // Handle Map Deletion
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to delete maps.')) return;
-        
-        console.log(`🗑️ DEBUG: Deleting map for guild ${guildId}`);
-        
-        // Defer response for long operation
-        await res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: InteractionResponseFlags.EPHEMERAL
+      // Handle Map Deletion - Show confirmation first
+      return ButtonHandlerFactory.create({
+        id: 'map_delete',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🗑️ START: map_delete - user ${context.userId}`);
+          
+          // Load map data to show what will be deleted
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const mapData = safariData[context.guildId]?.maps?.[activeMapId];
+          
+          if (!mapData) {
+            return {
+              content: '❌ No active map found to delete.',
+              ephemeral: true
+            };
           }
-        });
-        
-        // Get guild and delete map
-        const guild = await client.guilds.fetch(guildId);
-        const { deleteMapGrid } = await import('./mapExplorer.js');
-        const result = await deleteMapGrid(guild);
-        
-        // Send followup with result
-        const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        
-        await fetch(followupUrl, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            content: result.message,
-            flags: InteractionResponseFlags.EPHEMERAL
-          })
-        });
-        
-      } catch (error) {
-        console.error('Error in map_delete handler:', error);
-        
-        // Try to send error as followup
-        try {
-          const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-          await fetch(followupUrl, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              content: `❌ Error deleting map: ${error.message}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            })
-          });
-        } catch (followupError) {
-          console.error('Error sending followup:', followupError);
+          
+          // Count what will be deleted
+          const coordinateCount = Object.keys(mapData.coordinates || {}).length;
+          const actionCount = Object.keys(safariData[context.guildId]?.buttons || {}).length;
+          
+          const confirmationText = `## ⚠️ Delete Entire Map
+          
+**Map:** ${mapData.name || 'Adventure Map'}
+**Grid Size:** ${mapData.gridSize}x${mapData.gridSize}
+**Coordinates:** ${coordinateCount} locations
+**Custom Actions:** ${actionCount} actions
+
+**This action cannot be undone.** The following will be permanently deleted:
+• All map coordinates and Discord channels
+• All custom actions for this guild
+• All location content (stores, drops, etc.)
+• Map category and images
+
+Are you sure you want to continue?`;
+          
+          return {
+            components: [{
+              type: 17, // Container
+              accent_color: 0xed4245, // Red for danger
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: confirmationText
+                },
+                {
+                  type: 1, // Action Row
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: 'map_delete_cancel',
+                      label: "Cancel",
+                      style: 2, // Secondary
+                      emoji: { name: "❌" }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: 'map_delete_confirm',
+                      label: "Yes, Delete Everything",
+                      style: 4, // Danger
+                      emoji: { name: "🗑️" }
+                    }
+                  ]
+                }
+              ]
+            }],
+            ephemeral: true
+          };
         }
-      }
+      })(req, res, client);
+      
+    } else if (custom_id === 'map_delete_confirm') {
+      // Handle confirmed map deletion - the actual deletion
+      return ButtonHandlerFactory.create({
+        id: 'map_delete_confirm',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true, // Long operation
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`🗑️ START: map_delete_confirm - user ${context.userId}`);
+          
+          // Get guild and delete map (this now includes action cleanup)
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const { deleteMapGrid } = await import('./mapExplorer.js');
+          const result = await deleteMapGrid(guild);
+          
+          console.log(`✅ SUCCESS: map_delete_confirm - deletion completed`);
+          
+          return {
+            content: result.message,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'map_delete_cancel') {
+      // Handle cancelled map deletion - return to map explorer
+      return ButtonHandlerFactory.create({
+        id: 'map_delete_cancel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          // Return to the Map Explorer menu
+          const { createMapExplorerMenu } = await import('./mapExplorer.js');
+          const ui = await createMapExplorerMenu(context.guildId);
+          
+          return ui;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('map_location_actions_')) {
       // Handle Location Actions button
       return ButtonHandlerFactory.create({

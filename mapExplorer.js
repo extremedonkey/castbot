@@ -567,6 +567,16 @@ async function deleteMapGrid(guild) {
       }
     }
     
+    // Clear custom actions for this guild
+    let deletedActionCount = 0;
+    if (safariData[guild.id].buttons) {
+      deletedActionCount = Object.keys(safariData[guild.id].buttons).length;
+      delete safariData[guild.id].buttons;
+      if (deletedActionCount > 0) {
+        progressMessages.push(`✅ Deleted ${deletedActionCount} custom actions`);
+      }
+    }
+    
     // Clear map data from storage
     delete safariData[guild.id].maps[activeMapId];
     delete safariData[guild.id].maps.active;
