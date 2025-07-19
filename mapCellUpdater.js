@@ -144,29 +144,41 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
       return false;
     }
     
-    // Extract components from Container for message updates (Discord expects Action Rows, not Containers)
-    const messageComponents = [];
-    for (const container of validatedComponents) {
-      if (container.type === 17) { // Container
-        for (const component of container.components) {
-          if (component.type === 1) { // Action Row
-            messageComponents.push(component);
-          }
-        }
-      }
+    // ❌ ISSUE IDENTIFIED: Message PATCH updates only support Action Rows, not Container components
+    // This strips away all text displays, media galleries, etc. - destroying the anchor message content!
+    // 
+    // SOLUTION: Instead of updating the message, repost it to preserve all Components V2 content
+    
+    try {
+      // Delete the old anchor message
+      const { DiscordRequest } = await import('./utils.js');
+      await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+        method: 'DELETE'
+      });
+      console.log(`🗑️ Deleted old anchor message for ${coordinate}`);
+    } catch (error) {
+      console.warn(`⚠️ Could not delete old anchor message for ${coordinate}:`, error.message);
+      // Continue anyway - we'll post a new one
     }
     
-    console.log(`🔍 Extracted ${messageComponents.length} action rows from ${validatedComponents.length} containers`);
-    
-    // Use DiscordRequest for Components V2 editing
+    // Post new anchor message with full Components V2 support
     const { DiscordRequest } = await import('./utils.js');
-    await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
-      method: 'PATCH',
+    const newMessage = await DiscordRequest(`channels/${coordData.channelId}/messages`, {
+      method: 'POST',
       body: {
         flags: (1 << 15), // IS_COMPONENTS_V2
-        components: messageComponents
+        components: validatedComponents
       }
     });
+    
+    // Update the stored anchor message ID
+    const updatedSafariData = await loadSafariContent();
+    const activeMapId = updatedSafariData[guildId]?.maps?.active;
+    if (updatedSafariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate]) {
+      updatedSafariData[guildId].maps[activeMapId].coordinates[coordinate].anchorMessageId = newMessage.id;
+      await saveSafariContent(updatedSafariData);
+      console.log(`🔄 Updated anchor message ID for ${coordinate}: ${newMessage.id}`);
+    }
     
     console.log(`✅ Updated anchor message for ${coordinate}`);
     return true;

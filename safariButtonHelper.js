@@ -17,14 +17,20 @@ function createSafeEmoji(emoji) {
     
     // Additional validation for complex emojis
     if (cleanEmoji.length > 0) {
-      // Check if emoji contains only valid Unicode ranges for emojis
-      const emojiRegex = /^[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{238C}\u{2194}-\u{21AA}\u{23CF}\u{23E9}-\u{23F3}\u{23F8}-\u{23FA}\u{24C2}\u{25AA}-\u{25AB}\u{25B6}\u{25C0}\u{25FB}-\u{25FE}\u{2934}-\u{2935}\u{2B05}-\u{2B07}\u{2B1B}-\u{2B1C}\u{2B50}\u{2B55}\u{3030}\u{303D}\u{3297}\u{3299}\u{1F004}\u{1F0CF}\u{1F170}-\u{1F171}\u{1F17E}-\u{1F17F}\u{1F18E}\u{1F191}-\u{1F19A}\u{1F1E6}-\u{1F1FF}\u{1F201}-\u{1F202}\u{1F21A}\u{1F22F}\u{1F232}-\u{1F23A}\u{1F250}-\u{1F251}\u{1F300}-\u{1F5FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}]+$/u;
-      
-      if (emojiRegex.test(cleanEmoji)) {
-        console.log(`✅ Valid emoji: "${cleanEmoji}" (${cleanEmoji.codePointAt(0)})`);
+      // Use a more permissive approach - try to use the emoji and let Discord reject it if invalid
+      // The car emoji 🏎️ (U+1F3CE) should be valid but complex regex might miss some edge cases
+      try {
+        // Check for basic emoji patterns and common characters that break Discord
+        if (cleanEmoji.includes('\n') || cleanEmoji.includes('\r') || cleanEmoji.includes('\t')) {
+          console.warn(`⚠️ Emoji contains line breaks: "${emoji}"`);
+          return undefined;
+        }
+        
+        // Allow most Unicode emojis but log for debugging
+        console.log(`✅ Using emoji: "${cleanEmoji}" (codepoint: ${cleanEmoji.codePointAt(0)?.toString(16)})`);
         return { name: cleanEmoji };
-      } else {
-        console.warn(`⚠️ Invalid emoji rejected: "${emoji}" -> "${cleanEmoji}"`);
+      } catch (error) {
+        console.warn(`⚠️ Error processing emoji "${emoji}":`, error);
         return undefined;
       }
     }
@@ -72,28 +78,21 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
       continue;
     }
     
-    // Determine button label based on display_text action
+    // Use the ORIGINAL button label from safariContent.json - NEVER override with action content
     // Support both legacy (button.label) and new structure (button.trigger.button.label)
     let label = button.label || button.trigger?.button?.label || 'Action'; // Default fallback
     
-    // Check if button has display_text action
-    if (button.actions && button.actions.length > 0) {
-      const displayTextAction = button.actions.find(action => action.type === 'display_text');
-      if (displayTextAction) {
-        // Use title if available, otherwise truncated content
-        if (displayTextAction.config?.title) {
-          label = displayTextAction.config.title;
-        } else if (displayTextAction.config?.content || displayTextAction.text) {
-          // Support both new format (config.content) and legacy format (text)
-          const textContent = displayTextAction.config?.content || displayTextAction.text || '';
-          // Truncate content to 12 characters
-          label = textContent.substring(0, 12);
-          if (textContent.length > 12) {
-            label += '...';
-          }
-        }
-      }
-    }
+    // ❌ REMOVED: The following logic was WRONG - it was overriding the button label
+    //     with display_text action titles, causing "Fresh Meat" to become "Text Display One"
+    // 
+    // The button label should ALWAYS be the original action name from the Custom Action editor,
+    // NOT the content of individual display_text actions within that button.
+    //
+    // Each button represents a SINGLE custom action that can have MULTIPLE display_text responses.
+    // The button label = action name (e.g. "Fresh Meat")
+    // The responses = multiple display_text titles/content (e.g. "Text Display One", "Text Display Two")
+    
+    console.log(`🏷️ Using original button label for ${buttonId}: "${label}"`);
     
     // Create emoji safely with logging
     const safeEmoji = createSafeEmoji(button.emoji);
