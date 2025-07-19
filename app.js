@@ -15911,6 +15911,7 @@ Are you sure you want to continue?`;
         id: 'safari_map_admin',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        deferred: true, // Prevent rapid-click issues and give more processing time
         handler: async (context) => {
           console.log(`🛡️ START: safari_map_admin - user ${context.userId}`);
           
