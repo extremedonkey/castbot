@@ -397,17 +397,8 @@ export async function createPlayerManagementUI(options) {
               .setStyle(ButtonStyle.Primary)
               .setEmoji('🦕'); // Dinosaur emoji
             
-            // Create Start Exploring button for map testing (far left)
-            const startExploringButton = new ButtonBuilder()
-              .setCustomId('safari_map_init_player')
-              .setLabel('Start Exploring')
-              .setStyle(ButtonStyle.Success)
-              .setEmoji('🚶');
-            
             // Create Navigate button (check if player is initialized on map)
-            const { loadPlayerData } = await import('./storage.js');
             const { loadSafariContent } = await import('./safariManager.js');
-            const playerData = await loadPlayerData();
             const safariData = await loadSafariContent();
             const activeMapId = safariData[guildId]?.maps?.active;
             const playerMapData = playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId];
@@ -419,8 +410,8 @@ export async function createPlayerManagementUI(options) {
               .setEmoji('🗺️')
               .setDisabled(!playerMapData); // Disabled if not initialized
             
-            // Create inventory row with Start Exploring first, Navigate, then inventory, then store buttons
-            const inventoryComponents = [startExploringButton, navigateButton, inventoryButton];
+            // Create inventory row with Navigate, then inventory, then store buttons
+            const inventoryComponents = [navigateButton, inventoryButton];
             
             // Add store browse buttons (max 2 to stay within 5-button limit due to Navigate)
             for (let i = 0; i < Math.min(storeBrowseButtons.length, 2); i++) {
