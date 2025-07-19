@@ -13644,70 +13644,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
-    } else if (custom_id.startsWith('custom_action_delete_')) {
-      // Handle delete action button with confirmation
-      return ButtonHandlerFactory.create({
-        id: 'custom_action_delete',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          console.log(`🔍 START: custom_action_delete - user ${context.userId}`);
-          
-          const actionId = context.customId.replace('custom_action_delete_', '');
-          
-          // Load the action data
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const action = safariData[context.guildId]?.buttons?.[actionId];
-          
-          if (!action) {
-            return {
-              content: '❌ Action not found.',
-              ephemeral: true
-            };
-          }
-          
-          // Show confirmation dialog
-          const actionName = action.name || action.label || 'Unnamed Action';
-          const coordinateCount = action.coordinates?.length || 0;
-          const confirmationText = `## ⚠️ Delete Custom Action\n\n**Action:** ${actionName}\n**Currently assigned to:** ${coordinateCount} location${coordinateCount !== 1 ? 's' : ''}\n\n**This action cannot be undone.** The action will be:\n• Removed from all assigned locations\n• Deleted permanently from the system\n• Anchor messages will be updated\n\nAre you sure you want to continue?`;
-          
-          return {
-            components: [{
-              type: 17, // Container
-              accent_color: 0xed4245, // Red for danger
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: confirmationText
-                },
-                {
-                  type: 1, // Action Row
-                  components: [
-                    {
-                      type: 2, // Button
-                      custom_id: `custom_action_delete_cancel_${actionId}`,
-                      label: "Cancel",
-                      style: 2, // Secondary
-                      emoji: { name: "❌" }
-                    },
-                    {
-                      type: 2, // Button
-                      custom_id: `custom_action_delete_confirm_${actionId}`,
-                      label: "Yes, Delete Action",
-                      style: 4, // Danger
-                      emoji: { name: "🗑️" }
-                    }
-                  ]
-                }
-              ]
-            }],
-            ephemeral: true
-          };
-        }
-      })(req, res, client);
-      
-    } else if (custom_id.startsWith('custom_action_delete_cancel_')) {
+    } else if (custom_id.startsWith('custom_action_delete_confirm_')) {
       // Handle delete cancellation - return to editor
       return ButtonHandlerFactory.create({
         id: 'custom_action_delete_cancel',
@@ -13787,6 +13724,69 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           return {
             content: `✅ **Action Deleted Successfully!**\n\n**"${actionName}"** has been removed from all locations and deleted permanently.`,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('custom_action_delete_')) {
+      // Handle delete action button with confirmation (MOST GENERAL - MUST BE LAST)
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_delete',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: custom_action_delete - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('custom_action_delete_', '');
+          
+          // Load the action data
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const action = safariData[context.guildId]?.buttons?.[actionId];
+          
+          if (!action) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Show confirmation dialog
+          const actionName = action.name || action.label || 'Unnamed Action';
+          const coordinateCount = action.coordinates?.length || 0;
+          const confirmationText = `## ⚠️ Delete Custom Action\n\n**Action:** ${actionName}\n**Currently assigned to:** ${coordinateCount} location${coordinateCount !== 1 ? 's' : ''}\n\n**This action cannot be undone.** The action will be:\n• Removed from all assigned locations\n• Deleted permanently from the system\n• Anchor messages will be updated\n\nAre you sure you want to continue?`;
+          
+          return {
+            components: [{
+              type: 17, // Container
+              accent_color: 0xed4245, // Red for danger
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: confirmationText
+                },
+                {
+                  type: 1, // Action Row
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: `custom_action_delete_cancel_${actionId}`,
+                      label: "Cancel",
+                      style: 2, // Secondary
+                      emoji: { name: "❌" }
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `custom_action_delete_confirm_${actionId}`,
+                      label: "Yes, Delete Action",
+                      style: 4, // Danger
+                      emoji: { name: "🗑️" }
+                    }
+                  ]
+                }
+              ]
+            }],
             ephemeral: true
           };
         }

@@ -56,6 +56,8 @@ grep -B20 -A20 "fieldGroup === 'stores'" app.js
 
 **Environment:** Solo development on main branch, VS Code with WSL terminal
 
+**🔧 WSL File Access:** Windows paths (e.g., `C:\Users\...`) should be converted to WSL format (`/mnt/c/Users/...`). Windows drives are mounted under `/mnt/` - so `C:\` becomes `/mnt/c/`, `D:\` becomes `/mnt/d/`, etc.
+
 ```bash
 # Start development session
 ./scripts/dev/dev-start.sh [optional-commit-message]
