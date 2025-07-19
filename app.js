@@ -3319,6 +3319,90 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       );
     }
     
+    // ==================== RESTART TESTING TRACKER HANDLERS ====================
+    if (custom_id === 'restart_test_not_tested') {
+      return ButtonHandlerFactory.create({
+        id: 'restart_test_not_tested',
+        updateMessage: true,
+        handler: async (context, req) => {
+          console.log(`🔍 START: restart_test_not_tested - user ${context.userId}`);
+          
+          const originalComponents = req.body.message?.components;
+          
+          // Rebuild the entire UI with updated button states
+          const updatedComponents = originalComponents.map(component => {
+            if (component.type === 1) { // Action Row with buttons
+              const updatedButtons = component.components.map(button => {
+                if (button.custom_id === 'restart_test_not_tested') {
+                  return { 
+                    ...button, 
+                    disabled: false, // Activate Not Tested
+                    style: 3 // Success (green)
+                  };
+                } else if (button.custom_id === 'restart_test_tested') {
+                  return { 
+                    ...button, 
+                    disabled: true, // Deactivate Tested
+                    style: 2 // Secondary (grey)
+                  };
+                } else {
+                  return button;
+                }
+              });
+              return { ...component, components: updatedButtons };
+            }
+            return component;
+          });
+          
+          console.log(`✅ SUCCESS: restart_test_not_tested - toggled to active`);
+          return {
+            components: updatedComponents
+          };
+        }
+      })(req, res, client);
+    
+    } else if (custom_id === 'restart_test_tested') {
+      return ButtonHandlerFactory.create({
+        id: 'restart_test_tested',
+        updateMessage: true,
+        handler: async (context, req) => {
+          console.log(`🔍 START: restart_test_tested - user ${context.userId}`);
+          
+          const originalComponents = req.body.message?.components;
+          
+          // Rebuild the entire UI with updated button states
+          const updatedComponents = originalComponents.map(component => {
+            if (component.type === 1) { // Action Row with buttons
+              const updatedButtons = component.components.map(button => {
+                if (button.custom_id === 'restart_test_tested') {
+                  return { 
+                    ...button, 
+                    disabled: false, // Activate Tested
+                    style: 3 // Success (green)
+                  };
+                } else if (button.custom_id === 'restart_test_not_tested') {
+                  return { 
+                    ...button, 
+                    disabled: true, // Deactivate Not Tested
+                    style: 2 // Secondary (grey)
+                  };
+                } else {
+                  return button;
+                }
+              });
+              return { ...component, components: updatedButtons };
+            }
+            return component;
+          });
+          
+          console.log(`✅ SUCCESS: restart_test_tested - toggled to active`);
+          return {
+            components: updatedComponents
+          };
+        }
+      })(req, res, client);
+    }
+    
     // Handle store browse buttons (format: safari_store_browse_guildId_storeId)
     if (custom_id.startsWith('safari_store_browse_')) {
       try {
@@ -4795,102 +4879,6 @@ To fix this:
         }
       })(req, res, client);
       
-    // ==================== RESTART TESTING TRACKER HANDLERS ====================
-    } else if (custom_id === 'restart_test_not_tested') {
-      // Handle restart testing state toggle - using direct pattern like admin_player_select_update
-      try {
-        const originalComponents = req.body.message?.components;
-        
-        // Rebuild the entire UI with updated button states
-        const updatedComponents = originalComponents.map(component => {
-          if (component.type === 1) { // Action Row with buttons
-            const updatedButtons = component.components.map(button => {
-              if (button.custom_id === 'restart_test_not_tested') {
-                return { 
-                  ...button, 
-                  disabled: false, // Activate Not Tested
-                  style: 3 // Success (green)
-                };
-              } else if (button.custom_id === 'restart_test_tested') {
-                return { 
-                  ...button, 
-                  disabled: true, // Deactivate Tested
-                  style: 2 // Secondary (grey)
-                };
-              } else {
-                return button;
-              }
-            });
-            return { ...component, components: updatedButtons };
-          }
-          return component;
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            components: updatedComponents
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in restart_test_not_tested handler:', error);
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            content: '❌ An error occurred. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-      
-    } else if (custom_id === 'restart_test_tested') {
-      // Handle restart testing state toggle - using direct pattern like admin_player_select_update
-      try {
-        const originalComponents = req.body.message?.components;
-        
-        // Rebuild the entire UI with updated button states
-        const updatedComponents = originalComponents.map(component => {
-          if (component.type === 1) { // Action Row with buttons
-            const updatedButtons = component.components.map(button => {
-              if (button.custom_id === 'restart_test_tested') {
-                return { 
-                  ...button, 
-                  disabled: false, // Activate Tested
-                  style: 3 // Success (green)
-                };
-              } else if (button.custom_id === 'restart_test_not_tested') {
-                return { 
-                  ...button, 
-                  disabled: true, // Deactivate Not Tested
-                  style: 2 // Secondary (grey)
-                };
-              } else {
-                return button;
-              }
-            });
-            return { ...component, components: updatedButtons };
-          }
-          return component;
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            components: updatedComponents
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in restart_test_tested handler:', error);
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            content: '❌ An error occurred. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
     
     } else if (custom_id === 'getting_started') {
       // Execute the same logic as the getting_started command
