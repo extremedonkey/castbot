@@ -18900,13 +18900,10 @@ Are you sure you want to continue?`;
         console.log(`✏️ Updating drop text for ${coord} item ${itemId}`);
         
         // Load and update safari data
-        console.log(`🔍 DEBUG: Loading safari data...`);
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
         const activeMapId = safariData[guildId]?.maps?.active;
-        console.log(`🔍 DEBUG: activeMapId=${activeMapId}, coord=${coord}`);
         const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
-        console.log(`🔍 DEBUG: coordData exists=${!!coordData}`);
         
         if (!coordData) {
           return res.send({
@@ -18923,22 +18920,25 @@ Are you sure you want to continue?`;
           coordData.itemDrops = [];
         }
         
-        // Find and update the drop
-        console.log(`🔍 DEBUG: itemDrops array:`, coordData.itemDrops);
-        const dropIndex = coordData.itemDrops.findIndex(drop => drop.itemId === itemId);
-        console.log(`🔍 DEBUG: dropIndex=${dropIndex} for itemId="${itemId}"`);
-        if (dropIndex === -1) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Item drop not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+        // Find and update the drop, or create if it doesn't exist
+        let dropIndex = coordData.itemDrops.findIndex(drop => drop.itemId === itemId);
         
-        coordData.itemDrops[dropIndex].buttonText = buttonText;
-        coordData.itemDrops[dropIndex].buttonEmoji = buttonEmoji;
+        if (dropIndex === -1) {
+          // Create new item drop if it doesn't exist
+          console.log(`✨ Creating new item drop for ${itemId}`);
+          coordData.itemDrops.push({
+            itemId: itemId,
+            buttonText: buttonText,
+            buttonEmoji: buttonEmoji,
+            buttonStyle: 2, // Secondary
+            dropType: 'once_per_player',
+            claimedBy: []
+          });
+        } else {
+          // Update existing item drop
+          coordData.itemDrops[dropIndex].buttonText = buttonText;
+          coordData.itemDrops[dropIndex].buttonEmoji = buttonEmoji;
+        }
         
         await saveSafariContent(safariData);
         
