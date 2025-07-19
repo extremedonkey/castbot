@@ -3601,7 +3601,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙 ${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${finalQuantity}`,
-            components: [inventoryRow]
+            components: [inventoryRow],
+            flags: InteractionResponseFlags.EPHEMERAL
           }
         });
         
