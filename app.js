@@ -18897,6 +18897,7 @@ Are you sure you want to continue?`;
           : '📦';
         
         console.log(`✏️ Updating drop text for ${coord} item ${itemId}`);
+        console.log(`🔍 DEBUG: Parsed coord="${coord}", itemId="${itemId}" from custom_id="${custom_id}"`);
         
         // Load and update safari data
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
@@ -18915,8 +18916,10 @@ Are you sure you want to continue?`;
         }
         
         // Find and update the drop
+        console.log(`🔍 DEBUG: Looking for itemId "${itemId}" in coordData.itemDrops:`, coordData.itemDrops);
         const dropIndex = coordData.itemDrops?.findIndex(drop => drop.itemId === itemId);
-        if (dropIndex === -1) {
+        console.log(`🔍 DEBUG: dropIndex found: ${dropIndex}`);
+        if (dropIndex === -1 || dropIndex === undefined) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
