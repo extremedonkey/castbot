@@ -13389,9 +13389,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const mapId = parts[1];
           
           if (selectedValue === 'create_new') {
-            // Show creation modal instead of directly creating
+            // Show creation modal using standard factory pattern
             const modal = new ModalBuilder()
-              .setCustomId(`safari_button_modal_for_coord_${coordinate}`)
+              .setCustomId(`entity_create_modal_safari_button_info_${coordinate}`)
               .setTitle('Create Custom Action');
 
             // Button label input
@@ -17462,7 +17462,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
-    } else if (custom_id.startsWith('safari_button_modal_for_coord_')) {
+    // Legacy handler removed - now using entity_create_modal_ factory pattern
+    } else if (false && custom_id.startsWith('safari_button_modal_for_coord_')) {
       // Handle Safari button creation modal for specific coordinate
       try {
         const member = req.body.member;
@@ -19701,11 +19702,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id.startsWith('entity_create_modal_')) {
       // Handle modal submission for entity creation
       try {
-        // Parse: entity_create_modal_{entityType}_info
+        // Parse: entity_create_modal_{entityType}_info[_{coordinate}]
         const withoutPrefix = custom_id.replace('entity_create_modal_', '');
         const parts = withoutPrefix.split('_');
         const entityType = parts[0];
-        const fieldGroup = parts[parts.length - 1]; // Should be 'info'
+        const fieldGroup = parts[parts.length - 2]; // Should be 'info'
+        const coordinate = parts[parts.length - 1]; // Optional coordinate for safari_button
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         
@@ -19728,7 +19730,67 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
         }
         
-        // Create the entity using entity manager
+        // Special handling for safari_button with coordinate
+        if (entityType === 'safari_button' && coordinate && coordinate !== 'info') {
+          // Parse fields from custom modal format
+          const buttonLabel = components[0].components[0].value?.trim();
+          const buttonEmoji = components[1].components[0].value?.trim() || null;
+          const buttonDesc = components[2].components[0].value?.trim() || null;
+          
+          if (!buttonLabel) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Action name is required.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          // Create custom action using safariManager
+          const { createCustomButton } = await import('./safariManager.js');
+          const buttonId = await createCustomButton(guildId, {
+            label: buttonLabel,
+            emoji: buttonEmoji,
+            style: 'Primary',
+            actions: [],
+            tags: buttonDesc ? [buttonDesc] : []
+          }, userId);
+          
+          // Set name and description
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const button = allSafariContent[guildId].buttons[buttonId];
+          button.name = buttonLabel;
+          button.description = buttonDesc || '';
+          await saveSafariContent(allSafariContent);
+          
+          console.log(`✅ DEBUG: Created custom action ${buttonId} for coordinate ${coordinate}`);
+          
+          // Show Custom Action Editor with the new button and pre-assigned coordinate
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          const ui = await createCustomActionEditorUI({
+            guildId,
+            actionId: buttonId,
+            coordinate,
+            skipAutoSave: false  // Allow auto-save to assign coordinate
+          });
+          
+          // Add success note to the UI
+          if (ui.components && ui.components[0] && ui.components[0].components) {
+            const headerComponent = ui.components[0].components.find(c => c.type === 10);
+            if (headerComponent) {
+              headerComponent.content += `\n\n✅ **Auto-assigned to location ${coordinate}**`;
+            }
+          }
+          
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: ui
+          });
+        }
+        
+        // Standard entity creation flow
         const { createEntity } = await import('./entityManager.js');
         const createdEntity = await createEntity(guildId, entityType, fields, userId);
         
