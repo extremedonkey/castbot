@@ -3382,6 +3382,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           console.log(`✅ SUCCESS: restart_test_not_tested - toggled to active`);
           return {
+            flags: (1 << 15), // IS_COMPONENTS_V2 - factory will strip for UPDATE_MESSAGE
             components: updatedComponents
           };
         }
@@ -3449,6 +3450,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           console.log(`✅ SUCCESS: restart_test_tested - toggled to active`);
           return {
+            flags: (1 << 15), // IS_COMPONENTS_V2 - factory will strip for UPDATE_MESSAGE
             components: updatedComponents
           };
         }
