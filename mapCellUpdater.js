@@ -144,13 +144,27 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
       return false;
     }
     
+    // Extract components from Container for message updates (Discord expects Action Rows, not Containers)
+    const messageComponents = [];
+    for (const container of validatedComponents) {
+      if (container.type === 17) { // Container
+        for (const component of container.components) {
+          if (component.type === 1) { // Action Row
+            messageComponents.push(component);
+          }
+        }
+      }
+    }
+    
+    console.log(`🔍 Extracted ${messageComponents.length} action rows from ${validatedComponents.length} containers`);
+    
     // Use DiscordRequest for Components V2 editing
     const { DiscordRequest } = await import('./utils.js');
     await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
       method: 'PATCH',
       body: {
         flags: (1 << 15), // IS_COMPONENTS_V2
-        components: validatedComponents
+        components: messageComponents
       }
     });
     
