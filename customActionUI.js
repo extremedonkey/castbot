@@ -359,14 +359,14 @@ function getActionSummary(action, number) {
       // Truncate if too long
       const truncated = displayText.substring(0, 50);
       const ellipsis = displayText.length > 50 ? '...' : '';
-      return `**${number}.** Display Text | ${truncated}${ellipsis}`;
+      return `**\`${number}. Display Text\`** ${truncated}${ellipsis}`;
       
     case 'give_item':
-      return `**${number}.** Give Item | ${action.itemId} x${action.quantity || 1}`;
+      return `**\`${number}. Give Item\`** ${action.itemId} x${action.quantity || 1}`;
     case 'give_currency':
-      return `**${number}.** Give Currency | Amount: ${action.amount}`;
+      return `**\`${number}. Give Currency\`** Amount: ${action.amount}`;
     case 'create_button':
-      return `**${number}.** Create Button | ${action.buttonLabel}`;
+      return `**\`${number}. Create Button\`** ${action.buttonLabel}`;
     default:
       return `**${number}. ${action.type || 'Unknown Action'}**`;
   }
