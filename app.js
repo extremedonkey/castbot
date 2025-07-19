@@ -10385,7 +10385,7 @@ Your server is now ready for Tycoons gameplay!`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         updateMessage: false, // Use CHANNEL_MESSAGE_WITH_SOURCE to support Components V2 Container structure
-        deferred: true, // Use deferred response for the long anchor message updates
+        // Removed deferred: true - webhook updates cannot use Container structure, and we're already using new message
         handler: async (context) => {
           const actionId = custom_id.replace('safari_finish_button_', '');
           console.log(`🔍 START: safari_finish_button_${actionId} - user ${context.userId}`);
@@ -15699,10 +15699,14 @@ Are you sure you want to continue?`;
         permissionName: 'Manage Roles',
         handler: async (context) => {
           const coord = context.customId.replace('map_currency_edit_', '');
+          console.log(`💰 START: map_currency_edit - coord ${coord}`);
           
-          // Reuse the currency drop modal
-          req.body.data.custom_id = `map_add_currency_drop_${coord}`;
-          return req.app._router.handle(req, res, next);
+          // Create currency drop modal (same as add currency drop)
+          const { createCurrencyDropModal } = await import('./mapLocationManager.js');
+          const modal = await createCurrencyDropModal(coord);
+          
+          console.log(`✅ SUCCESS: map_currency_edit - showing modal for ${coord}`);
+          return modal;
         }
       })(req, res, client);
       
