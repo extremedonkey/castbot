@@ -15547,7 +15547,13 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
       
-    } else if (custom_id.startsWith('map_currency_drop_') && !custom_id.includes('_modal_')) {
+    } else if (custom_id.startsWith('map_currency_drop_') && 
+                !custom_id.includes('_modal_') && 
+                !custom_id.startsWith('map_currency_drop_config_') &&
+                !custom_id.startsWith('map_currency_drop_style_') &&
+                !custom_id.startsWith('map_currency_drop_type_') &&
+                !custom_id.startsWith('map_currency_drop_save_') &&
+                !custom_id.startsWith('map_currency_drop_remove_')) {
       // Handle currency drop button click from players
       return ButtonHandlerFactory.create({
         id: 'map_currency_drop_player',

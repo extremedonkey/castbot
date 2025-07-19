@@ -2002,6 +2002,7 @@ This documentation serves as the complete guide for implementing and extending C
 - ❌ Bidirectional data sync not working
 - ❌ Auto-assignment from channel context missing
 - ❌ Entity Framework integration incomplete
+- ❌ Modal trigger type (text commands) not fully implemented
 
 ## Implementation History
 

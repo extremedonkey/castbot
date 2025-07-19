@@ -533,7 +533,7 @@ async function executeDisplayText(config, interaction) {
     }
     
     return {
-        flags: (1 << 15), // IS_COMPONENTS_V2
+        flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
         components: [container]
     };
 }
@@ -631,8 +631,8 @@ async function sendFollowUpMessages(token, responses) {
                 method: 'POST',
                 body: {
                     ...response,
-                    // Ensure follow-up messages are ephemeral
-                    flags: response.flags || (1 << 6) // EPHEMERAL only for follow-up messages
+                    // Preserve original flags (should include IS_COMPONENTS_V2 | EPHEMERAL)
+                    flags: response.flags || ((1 << 15) | (1 << 6)) // Default to IS_COMPONENTS_V2 | EPHEMERAL
                 }
             });
             

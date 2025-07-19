@@ -309,6 +309,41 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_map'
   },
+  'map_currency_drop_config_*': {
+    label: 'Configure Currency Drop',
+    description: 'Configure currency drop settings',
+    emoji: '⚙️',
+    style: 'Secondary',
+    category: 'safari_map'
+  },
+  'map_currency_drop_style_*': {
+    label: 'Currency Drop Style',
+    description: 'Select currency drop button style',
+    emoji: '🎨',
+    style: 'Secondary',
+    category: 'safari_map'
+  },
+  'map_currency_drop_type_*': {
+    label: 'Currency Drop Type',
+    description: 'Select currency drop type',
+    emoji: '🔢',
+    style: 'Secondary',
+    category: 'safari_map'
+  },
+  'map_currency_drop_save_*': {
+    label: 'Save Currency Drop',
+    description: 'Save currency drop configuration',
+    emoji: '✅',
+    style: 'Success',
+    category: 'safari_map'
+  },
+  'map_currency_drop_remove_*': {
+    label: 'Remove Currency Drop',
+    description: 'Remove currency drop from location',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_map'
+  },
   'map_currency_drop_*': {
     label: 'Currency Drop',
     description: 'Player collects currency drop',
