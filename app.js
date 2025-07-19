@@ -607,10 +607,10 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💜'),
     new ButtonBuilder()
-      .setCustomId('1396087613815001129')
+      .setCustomId('test_button')
       .setLabel('test')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji({ name: 'logotest' })
+      .setEmoji({ id: '1396087613815001129', name: 'logotest' })
   ];
   
   // Live Analytics button moved to Reece Stuff submenu
@@ -5105,7 +5105,7 @@ To fix this:
           }
         });
       }
-    } else if (custom_id === '1396087613815001129') {
+    } else if (custom_id === 'test_button') {
       // Test button - displays "Hello world!" in the channel
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
