@@ -10497,16 +10497,16 @@ Your server is now ready for Tycoons gameplay!`;
           
           console.log(`✅ SUCCESS: safari_finish_button_${actionId} - completed`);
           
-          // Return to the Custom Action editor instead of just showing success
-          const { createCustomActionEditorUI } = await import('./customActionUI.js');
-          const updatedUI = await createCustomActionEditorUI({
-            guildId: context.guildId,
-            actionId
-          });
-          
-          // Make the Custom Action Editor ephemeral
+          // Simply dismiss the action menu with a success message
           return {
-            ...updatedUI,
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [{
+              type: 17, // Container
+              components: [{
+                type: 10, // Text Display
+                content: `✅ **Action Setup Complete!**\n\nYour custom action has been updated successfully. The button is now live on the map.`
+              }]
+            }],
             ephemeral: true
           };
         }
