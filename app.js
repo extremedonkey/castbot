@@ -10316,7 +10316,8 @@ Your server is now ready for Tycoons gameplay!`;
               console.log(`🔧 DEBUG: Showing action menu for button "${fullButtonId}" (detected numeric suffix "${actionType}")`);
               
               // Get button info for better labeling
-              const safariContent = getSafariContent();
+              const { loadSafariContent } = await import('./safariManager.js');
+              const safariContent = await loadSafariContent();
               const buttonInfo = safariContent[context.guildId]?.buttons?.[fullButtonId];
               const buttonLabel = buttonInfo?.label || fullButtonId;
               
