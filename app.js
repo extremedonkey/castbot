@@ -14165,113 +14165,123 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       
     } else if (custom_id.startsWith('configure_modal_trigger_')) {
       // Handle modal trigger phrase configuration button
-      return ButtonHandlerFactory.create({
-        id: 'configure_modal_trigger',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          console.log(`🔍 START: configure_modal_trigger - user ${context.userId}`);
-          
-          const actionId = context.customId.replace('configure_modal_trigger_', '');
-          
-          // Load current action data
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const action = safariData[context.guildId]?.buttons?.[actionId];
-          
-          if (!action) {
-            return {
-              content: '❌ Action not found.',
-              ephemeral: true
-            };
-          }
-          
-          // Get current phrases
-          const phrases = action.trigger?.phrases || [];
-          
-          console.log(`✅ SUCCESS: configure_modal_trigger - showing modal for ${actionId}`);
-          
-          // Return modal response with proper type
-          const modalResponse = {
-            type: InteractionResponseType.MODAL,
+      try {
+        const guildId = req.body.guild_id;
+        const member = req.body.member;
+        const actionId = custom_id.replace('configure_modal_trigger_', '');
+        
+        console.log(`🔍 START: configure_modal_trigger - user ${member.user.id}`);
+        
+        // Check permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to configure actions.')) return;
+        
+        // Load current action data
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const action = safariData[guildId]?.buttons?.[actionId];
+        
+        if (!action) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              custom_id: `modal_phrases_config_${actionId}`,
-              title: 'Enter Secret Command Phrases',
-              components: [
-                {
-                  type: 1, // Action Row
-                  components: [{
-                    type: 4, // Text Input
-                    custom_id: 'phrase_1',
-                    label: 'Secret Command Phrase',
-                    style: 1, // Short
-                    required: true,
-                    placeholder: 'Command required to activate the custom action',
-                    value: phrases[0] || '',
-                    min_length: 1,
-                    max_length: 100
-                  }]
-                },
-                {
-                  type: 1,
-                  components: [{
-                    type: 4,
-                    custom_id: 'phrase_2',
-                    label: 'Alternative Command Phrase (Optional)',
-                    style: 1,
-                    required: false,
-                    placeholder: 'Optional phrase that also activates the action',
-                    value: phrases[1] || '',
-                    max_length: 100
-                  }]
-                },
-                {
-                  type: 1,
-                  components: [{
-                    type: 4,
-                    custom_id: 'phrase_3',
-                    label: 'Alternate Command Phrase 2 (Optional)',
-                    style: 1,
-                    required: false,
-                    placeholder: 'Optional phrase that also activates the action',
-                    value: phrases[2] || '',
-                    max_length: 100
-                  }]
-                },
-                {
-                  type: 1,
-                  components: [{
-                    type: 4,
-                    custom_id: 'phrase_4',
-                    label: 'Alternate Command Phrase 3 (Optional)',
-                    style: 1,
-                    required: false,
-                    placeholder: 'Optional phrase that also activates the action',
-                    value: phrases[3] || '',
-                    max_length: 100
-                  }]
-                },
-                {
-                  type: 1,
-                  components: [{
-                    type: 4,
-                    custom_id: 'phrase_5',
-                    label: 'Alternate Command Phrase 4 (Optional)',
-                    style: 1,
-                    required: false,
-                    placeholder: 'Optional phrase that also activates the action',
-                    value: phrases[4] || '',
-                    max_length: 100
-                  }]
-                }
-              ]
+              content: '❌ Action not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
             }
-          };
-          
-          console.log('📝 Modal response structure:', JSON.stringify(modalResponse, null, 2));
-          return modalResponse;
+          });
         }
-      })(req, res, client);
+        
+        // Get current phrases
+        const phrases = action.trigger?.phrases || [];
+        
+        console.log(`✅ SUCCESS: configure_modal_trigger - showing modal for ${actionId}`);
+        
+        // Send modal response directly
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: {
+            custom_id: `modal_phrases_config_${actionId}`,
+            title: 'Enter Secret Command Phrases',
+            components: [
+              {
+                type: 1, // Action Row
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'phrase_1',
+                  label: 'Secret Command Phrase',
+                  style: 1, // Short
+                  required: true,
+                  placeholder: 'Command required to activate the custom action',
+                  value: phrases[0] || '',
+                  min_length: 1,
+                  max_length: 100
+                }]
+              },
+              {
+                type: 1,
+                components: [{
+                  type: 4,
+                  custom_id: 'phrase_2',
+                  label: 'Alternative Command Phrase (Optional)',
+                  style: 1,
+                  required: false,
+                  placeholder: 'Optional phrase that also activates the action',
+                  value: phrases[1] || '',
+                  max_length: 100
+                }]
+              },
+              {
+                type: 1,
+                components: [{
+                  type: 4,
+                  custom_id: 'phrase_3',
+                  label: 'Alternate Command Phrase 2 (Optional)',
+                  style: 1,
+                  required: false,
+                  placeholder: 'Optional phrase that also activates the action',
+                  value: phrases[2] || '',
+                  max_length: 100
+                }]
+              },
+              {
+                type: 1,
+                components: [{
+                  type: 4,
+                  custom_id: 'phrase_4',
+                  label: 'Alternate Command Phrase 3 (Optional)',
+                  style: 1,
+                  required: false,
+                  placeholder: 'Optional phrase that also activates the action',
+                  value: phrases[3] || '',
+                  max_length: 100
+                }]
+              },
+              {
+                type: 1,
+                components: [{
+                  type: 4,
+                  custom_id: 'phrase_5',
+                  label: 'Alternate Command Phrase 4 (Optional)',
+                  style: 1,
+                  required: false,
+                  placeholder: 'Optional phrase that also activates the action',
+                  value: phrases[4] || '',
+                  max_length: 100
+                }]
+              }
+            ]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in configure_modal_trigger handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error showing configuration modal.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
       
     } else if (custom_id.startsWith('entity_edit_modal_')) {
       // Show modal for editing fields (legacy handler - should not be used)
