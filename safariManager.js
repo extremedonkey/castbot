@@ -521,6 +521,17 @@ async function executeDisplayText(config, interaction) {
         content: config.content
     });
     
+    // Add Media Gallery if imageUrl is provided
+    if (config.imageUrl) {
+        components.push({
+            type: 12, // Media Gallery
+            items: [{
+                media: { url: config.imageUrl },
+                description: config.title || 'Image'
+            }]
+        });
+    }
+    
     // Create container component
     const container = {
         type: 17, // Container

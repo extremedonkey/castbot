@@ -10138,10 +10138,19 @@ Your server is now ready for Tycoons gameplay!`;
               .setRequired(false)
               .setMaxLength(10);
 
+            const imageInput = new TextInputBuilder()
+              .setCustomId('action_image')
+              .setLabel('Image URL (Optional)')
+              .setPlaceholder('Enter link of an image you have uploaded to Discord.')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(500);
+
             modal.addComponents(
               new ActionRowBuilder().addComponents(titleInput),
               new ActionRowBuilder().addComponents(contentInput),
-              new ActionRowBuilder().addComponents(colorInput)
+              new ActionRowBuilder().addComponents(colorInput),
+              new ActionRowBuilder().addComponents(imageInput)
             );
             
             console.log(`✅ SUCCESS: safari_add_action - showing display_text modal`);
@@ -19110,6 +19119,7 @@ Are you sure you want to continue?`;
           const title = components[0].components[0].value?.trim() || null;
           const content = components[1].components[0].value?.trim();
           const colorStr = components[2].components[0].value?.trim();
+          const imageUrl = components[3].components[0].value?.trim() || null;
           
           if (!content) {
             return res.send({
@@ -19125,6 +19135,11 @@ Are you sure you want to continue?`;
             title: title,
             content: content
           };
+          
+          // Add imageUrl if provided
+          if (imageUrl) {
+            actionConfig.imageUrl = imageUrl;
+          }
           
           // Parse color if provided, or set default green
           if (colorStr) {
@@ -20874,6 +20889,7 @@ Are you sure you want to continue?`;
           const title = components[0].components[0].value?.trim() || null;
           const content = components[1].components[0].value?.trim();
           const colorStr = components[2].components[0].value?.trim();
+          const imageUrl = components[3].components[0].value?.trim() || null;
           
           if (!content) {
             return res.send({
@@ -20889,6 +20905,11 @@ Are you sure you want to continue?`;
             title: title,
             content: content
           };
+          
+          // Add imageUrl if provided
+          if (imageUrl) {
+            actionConfig.imageUrl = imageUrl;
+          }
           
           // Parse color if provided
           if (colorStr) {
