@@ -21488,12 +21488,18 @@ Are you sure you want to continue?`;
           
           // Execute the action
           const { executeButtonActions } = await import('./safariManager.js');
+          
+          // Create proper interaction object for the execution
+          const interactionData = {
+            token: req.body.token,
+            applicationId: req.body.application_id
+          };
+          
           const result = await executeButtonActions(
-            matchingAction.actions || [],
-            userId,
             guildId,
-            channelId,
-            client
+            matchingAction.id,  // Use the button ID, not the actions array
+            userId,
+            interactionData
           );
           
           // Return the result
