@@ -686,13 +686,50 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
         
         const responses = [];
         
-        for (const action of sortedActions) {
+        for (let i = 0; i < sortedActions.length; i++) {
+            const action = sortedActions[i];
             let result;
             
             switch (action.type) {
                 case ACTION_TYPES.DISPLAY_TEXT:
                 case 'display_text': // Legacy support
                     result = await executeDisplayText(action.config, interaction);
+                    
+                    // Check if next action is a follow_up_button and bundle it
+                    if (i + 1 < sortedActions.length) {
+                        const nextAction = sortedActions[i + 1];
+                        if (nextAction.type === ACTION_TYPES.FOLLOW_UP_BUTTON || 
+                            nextAction.type === 'follow_up_button' || 
+                            nextAction.type === 'follow_up') {
+                            
+                            console.log('📎 DEBUG: Bundling follow_up_button with display_text');
+                            
+                            // Get the follow-up button components
+                            const followUpResult = await executeFollowUpButton(nextAction.config, guildId, interaction);
+                            
+                            // Extract the button from the follow-up result
+                            if (followUpResult.components?.[0]?.components) {
+                                const followUpComponents = followUpResult.components[0].components;
+                                
+                                // Find the action row with the button (skip text displays and separators)
+                                const buttonRow = followUpComponents.find(comp => comp.type === 1);
+                                
+                                if (buttonRow && result.components?.[0]?.components) {
+                                    // Add separator before button
+                                    result.components[0].components.push({
+                                        type: 14 // Separator
+                                    });
+                                    
+                                    // Add the button action row to the display_text container
+                                    result.components[0].components.push(buttonRow);
+                                }
+                            }
+                            
+                            // Skip the next action since we bundled it
+                            i++;
+                        }
+                    }
+                    
                     responses.push(result);
                     break;
                     
@@ -705,6 +742,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
                 case ACTION_TYPES.FOLLOW_UP_BUTTON:
                 case 'follow_up_button': // Legacy support
                 case 'follow_up': // Legacy support for old buttons
+                    // Only execute as standalone if not bundled with previous display_text
                     result = await executeFollowUpButton(action.config, guildId, interaction);
                     responses.push(result);
                     break;
