@@ -10356,18 +10356,6 @@ Your server is now ready for Tycoons gameplay!`;
                       emoji: { name: '🔀' }
                     }
                   ]
-                },
-                {
-                  type: 1, // Action Row
-                  components: [
-                    {
-                      type: 2, // Button
-                      custom_id: `safari_finish_button_${fullButtonId}`,
-                      label: 'Finish & Test Action',
-                      style: 1, // Primary (blue)
-                      emoji: { name: '⚡' }
-                    }
-                  ]
                 }
               ];
 
@@ -19310,12 +19298,77 @@ Are you sure you want to continue?`;
         
         console.log(`✅ DEBUG: Added ${actionType} action to button ${buttonId}`);
         
-        // Send a simple success message for modal submission
-        // Discord doesn't handle complex UI responses well for modal submissions
+        // Execute finish button tasks automatically after modal submission
+        // Update map coordinate assignments - COMPLETE BIDIRECTIONAL SYNC
+        if (safariData[guildId].maps) {
+          for (const mapId in safariData[guildId].maps) {
+            const map = safariData[guildId].maps[mapId];
+            if (map.coordinates) {
+              for (const coord in map.coordinates) {
+                const coordData = map.coordinates[coord];
+                if (coordData.buttons) {
+                  coordData.buttons = coordData.buttons.filter(id => id !== buttonId);
+                }
+              }
+            }
+          }
+        }
+
+        // Add action to assigned coordinates
+        if (button.coordinates && button.coordinates.length > 0) {
+          // Ensure maps structure exists
+          if (!safariData[guildId].maps) safariData[guildId].maps = {};
+          
+          // Find all maps and add coordinate assignments
+          for (const mapId in safariData[guildId].maps) {
+            if (mapId === 'active' || typeof safariData[guildId].maps[mapId] !== 'object') continue;
+            
+            const map = safariData[guildId].maps[mapId];
+            if (!map.coordinates) map.coordinates = {};
+            
+            for (const coord of button.coordinates) {
+              if (!map.coordinates[coord]) {
+                map.coordinates[coord] = { buttons: [] };
+              }
+              
+              if (!map.coordinates[coord].buttons.includes(buttonId)) {
+                map.coordinates[coord].buttons.push(buttonId);
+              }
+            }
+          }
+        }
+
+        await saveSafariContent(safariData);
+
+        // Update anchor messages
+        if (button.coordinates && button.coordinates.length > 0) {
+          const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+          const activeMapId = safariData[guildId]?.maps?.active;
+          
+          for (const coord of button.coordinates) {
+            const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+            if (coordData?.anchorMessageId) {
+              try {
+                await updateAnchorMessage(guildId, coord, client);
+                console.log(`📍 Updated anchor message for ${coord}`);
+              } catch (error) {
+                console.error(`Error updating anchor for ${coord}:`, error);
+              }
+            }
+          }
+        }
+
+        // Show Custom Action Editor with new action visible
+        const { createCustomActionEditorUI } = await import('./customActionUI.js');
+        const updatedUI = await createCustomActionEditorUI({
+          guildId,
+          actionId: buttonId
+        });
+
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **${actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} action added successfully!**\n\nAction count: ${button.actions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON}`,
+            ...updatedUI,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
