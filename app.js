@@ -14191,7 +14191,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           console.log(`✅ SUCCESS: configure_modal_trigger - showing modal for ${actionId}`);
           
-          // Return modal for phrase configuration
+          // Return modal response with proper type
           return {
             type: InteractionResponseType.MODAL,
             data: {
@@ -14263,7 +14263,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                     value: phrases[4] || '',
                     max_length: 100
                   }]
-                }
               ]
             }
           };
