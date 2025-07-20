@@ -10078,6 +10078,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_add_action',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           console.log(`🔍 START: safari_add_action - user ${context.userId}`);
           
@@ -10409,8 +10410,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: custom_id,
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        updateMessage: false, // Use CHANNEL_MESSAGE_WITH_SOURCE to support Components V2 Container structure
-        // Removed deferred: true - webhook updates cannot use Container structure, and we're already using new message
+        updateMessage: true, // Replace action menu with new ephemeral Custom Action Editor
         handler: async (context) => {
           const actionId = custom_id.replace('safari_finish_button_', '');
           console.log(`🔍 START: safari_finish_button_${actionId} - user ${context.userId}`);
