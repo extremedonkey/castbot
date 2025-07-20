@@ -14263,6 +14263,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                     value: phrases[4] || '',
                     max_length: 100
                   }]
+                }
               ]
             }
           };
