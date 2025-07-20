@@ -10091,13 +10091,13 @@ Your server is now ready for Tycoons gameplay!`;
           const { loadSafariContent } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
           
-          // Custom actions are stored under guild > customActions
-          const customActions = safariData[context.guildId]?.customActions || {};
-          const button = customActions[buttonId];
+          // Custom actions are stored under guild > buttons
+          const buttons = safariData[context.guildId]?.buttons || {};
+          const button = buttons[buttonId];
           
           if (!button) {
             console.error(`Button not found: ${buttonId} in guild ${context.guildId}`);
-            console.log('Available custom actions:', Object.keys(customActions));
+            console.log('Available buttons:', Object.keys(buttons).slice(0, 10));
             return {
               content: '❌ Custom action not found.',
               ephemeral: true
