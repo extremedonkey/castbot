@@ -14195,6 +14195,23 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         console.log(`✅ SUCCESS: configure_modal_trigger - showing modal for ${actionId}`);
         
+        // Build first text input
+        const firstInput = {
+          type: 4, // Text Input
+          custom_id: 'phrase_1',
+          label: 'Secret Command Phrase',
+          style: 1, // Short
+          required: true,
+          placeholder: 'Command required to activate the custom action',
+          min_length: 1,
+          max_length: 100
+        };
+        
+        // Only add value if it exists
+        if (phrases[0]) {
+          firstInput.value = phrases[0];
+        }
+        
         // Send modal response directly
         return res.send({
           type: InteractionResponseType.MODAL,
@@ -14204,17 +14221,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             components: [
               {
                 type: 1, // Action Row
-                components: [{
-                  type: 4, // Text Input
-                  custom_id: 'phrase_1',
-                  label: 'Secret Command Phrase',
-                  style: 1, // Short
-                  required: true,
-                  placeholder: 'Command required to activate the custom action',
-                  value: phrases[0] || '',
-                  min_length: 1,
-                  max_length: 100
-                }]
+                components: [firstInput]
               },
               {
                 type: 1,
@@ -14225,7 +14232,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                   style: 1,
                   required: false,
                   placeholder: 'Optional phrase that also activates the action',
-                  value: phrases[1] || '',
+                  ...(phrases[1] && { value: phrases[1] }),
                   max_length: 100
                 }]
               },
@@ -14238,7 +14245,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                   style: 1,
                   required: false,
                   placeholder: 'Optional phrase that also activates the action',
-                  value: phrases[2] || '',
+                  ...(phrases[2] && { value: phrases[2] }),
                   max_length: 100
                 }]
               },
@@ -14251,7 +14258,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                   style: 1,
                   required: false,
                   placeholder: 'Optional phrase that also activates the action',
-                  value: phrases[3] || '',
+                  ...(phrases[3] && { value: phrases[3] }),
                   max_length: 100
                 }]
               },
@@ -14264,7 +14271,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                   style: 1,
                   required: false,
                   placeholder: 'Optional phrase that also activates the action',
-                  value: phrases[4] || '',
+                  ...(phrases[4] && { value: phrases[4] }),
                   max_length: 100
                 }]
               }
