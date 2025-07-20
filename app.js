@@ -19196,9 +19196,9 @@ Are you sure you want to continue?`;
         } else if (custom_id.endsWith('_update_currency')) {
           actionType = 'update_currency';
           buttonId = custom_id.replace('safari_action_modal_', '').replace('_update_currency', '');
-        } else if (custom_id.endsWith('_follow_up')) {
+        } else if (custom_id.endsWith('_follow_up_button')) {
           actionType = 'follow_up_button';
-          buttonId = custom_id.replace('safari_action_modal_', '').replace('_follow_up', '');
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_follow_up_button', '');
         } else if (custom_id.endsWith('_conditional')) {
           actionType = 'conditional';
           buttonId = custom_id.replace('safari_action_modal_', '').replace('_conditional', '');
