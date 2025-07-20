@@ -10072,6 +10072,120 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('safari_action_type_select_')) {
+      // Handle string select for action types
+      return ButtonHandlerFactory.create({
+        id: 'safari_action_type_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_action_type_select - user ${context.userId}`);
+          
+          // Extract button ID and action type
+          const buttonId = context.customId.replace('safari_action_type_select_', '');
+          const actionType = req.body.data.values[0];
+          
+          console.log(`Selected action type: ${actionType} for button: ${buttonId}`);
+          
+          // Load safari content
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.customActions?.[buttonId];
+          
+          if (!button) {
+            console.error(`Button not found: ${buttonId}`);
+            return {
+              content: '❌ Custom action not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Show modal based on action type
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+          const modal = new ModalBuilder()
+            .setCustomId(`safari_action_modal_${buttonId}_${actionType}`)
+            .setTitle(`Add ${getActionTypeName(actionType)}`);
+          
+          // Build modal fields based on action type
+          switch (actionType) {
+            case 'display_text':
+              modal.addComponents(
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('title')
+                    .setLabel('Title (Optional)')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false)
+                    .setMaxLength(100)
+                ),
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('content')
+                    .setLabel('Content')
+                    .setStyle(TextInputStyle.Paragraph)
+                    .setRequired(true)
+                    .setMaxLength(1000)
+                ),
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('accent_color')
+                    .setLabel('Accent Color (Optional)')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false)
+                    .setPlaceholder('e.g., #3498db or 3447003')
+                ),
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('image_url')
+                    .setLabel('Image URL (Optional)')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false)
+                    .setPlaceholder('Enter link of an image you have uploaded to Discord')
+                )
+              );
+              break;
+              
+            case 'update_currency':
+              modal.addComponents(
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('amount')
+                    .setLabel('Amount to add or remove')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true)
+                    .setPlaceholder('e.g., 100 or -50')
+                )
+              );
+              break;
+              
+            case 'follow_up_button':
+              modal.addComponents(
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('button_id')
+                    .setLabel('Custom Action ID to trigger')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true)
+                    .setPlaceholder('e.g., my_action_id')
+                )
+              );
+              break;
+              
+            default:
+              console.error(`Unknown action type: ${actionType}`);
+              return {
+                content: '❌ Unknown action type.',
+                ephemeral: true
+              };
+          }
+          
+          console.log(`✅ SUCCESS: safari_action_type_select - showing modal for ${actionType}`);
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal
+          });
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_add_action_')) {
       // Handle adding actions to safari buttons (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
@@ -22302,6 +22416,18 @@ function getGroupDisplayName(groupKey) {
     rounds: 'Round Probability Settings'
   };
   return names[groupKey] || 'Safari Settings';
+}
+
+// Helper function to get action type display names
+function getActionTypeName(actionType) {
+  const actionTypeNames = {
+    'display_text': 'Text Display Action',
+    'update_currency': 'Update Currency Action',
+    'follow_up_button': 'Follow-up Action',
+    'conditional': 'Conditional Action',
+    'random_outcome': 'Random Outcome Action'
+  };
+  return actionTypeNames[actionType] || 'Action';
 }
 
 function getFieldDisplayName(fieldKey) {

@@ -830,6 +830,14 @@ export const BUTTON_REGISTRY = {
     emoji: '✅',
     style: 'Success',
     category: 'safari_management'
+  },
+  'safari_action_type_select': {
+    label: 'Select Action Type',
+    description: 'String select menu for choosing action type to add',
+    emoji: '🎯',
+    style: 'Primary',
+    category: 'safari_management',
+    type: 'select_menu'
   }
 };
 

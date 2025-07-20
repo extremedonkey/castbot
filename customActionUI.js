@@ -228,18 +228,27 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         // Display existing actions
         ...getActionListComponents(action.actions || [], actionId),
         
+        // Add Action Select Menu (if not at max)
+        ...((action.actions?.length || 0) < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON ? [{
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_action_type_select_${actionId}`,
+            placeholder: 'Select action type to add...',
+            options: [
+              { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
+              { label: 'Update Currency', value: 'update_currency', emoji: { name: '💰' } },
+              { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
+              { label: 'Conditional Action', value: 'conditional', emoji: { name: '🔀' } },
+              { label: 'Random Outcome', value: 'random_outcome', emoji: { name: '🎲' } }
+            ]
+          }]
+        }] : []),
+        
         // Action buttons
         {
           type: 1, // Action Row
           components: [
-            {
-              type: 2,
-              custom_id: `safari_add_action_${actionId}`,
-              label: "Add Action",
-              style: 3, // Success
-              emoji: { name: "➕" },
-              disabled: (action.actions?.length || 0) >= SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON
-            },
             {
               type: 2,
               custom_id: `custom_action_test_${actionId}`,
