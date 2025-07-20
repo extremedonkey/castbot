@@ -13490,7 +13490,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             const entity = await loadEntity(context.guildId, entityType, entityId);
             if (!entity) throw new Error('Entity not found');
             
-            const { createEntityManagementUI } = await import('./entityManager.js');
+            const { createEntityManagementUI } = await import('./entityManagementUI.js');
             const { createConsumableSelect } = await import('./fieldEditors.js');
             
             const uiResponse = await createEntityManagementUI({
