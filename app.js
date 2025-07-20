@@ -10315,6 +10315,11 @@ Your server is now ready for Tycoons gameplay!`;
               const fullButtonId = `${buttonId}_${actionType}`;
               console.log(`🔧 DEBUG: Showing action menu for button "${fullButtonId}" (detected numeric suffix "${actionType}")`);
               
+              // Get button info for better labeling
+              const safariContent = getSafariContent();
+              const buttonInfo = safariContent[context.guildId]?.buttons?.[fullButtonId];
+              const buttonLabel = buttonInfo?.label || fullButtonId;
+              
               // Show the action menu for this button
               const actionMenuComponents = [
                 {
@@ -10323,29 +10328,29 @@ Your server is now ready for Tycoons gameplay!`;
                     {
                       type: 2, // Button
                       custom_id: `safari_add_action_${fullButtonId}_display_text`,
-                      label: 'Add Text Display',
-                      style: 1,
+                      label: 'Show Text',
+                      style: 2, // Secondary (grey)
                       emoji: { name: '📄' }
                     },
                     {
                       type: 2, // Button
                       custom_id: `safari_add_action_${fullButtonId}_update_currency`,
-                      label: 'Add Currency Change',
-                      style: 1,
+                      label: 'Change Currency',
+                      style: 2, // Secondary (grey)
                       emoji: { name: '💰' }
                     },
                     {
                       type: 2, // Button
                       custom_id: `safari_add_action_${fullButtonId}_follow_up`,
-                      label: 'Add Follow-up Button',
-                      style: 1,
+                      label: 'Show Follow-Up Action',
+                      style: 2, // Secondary (grey)
                       emoji: { name: '🔗' }
                     },
                     {
                       type: 2, // Button
                       custom_id: `safari_add_action_${fullButtonId}_conditional`,
                       label: 'Add Conditional Action',
-                      style: 1,
+                      style: 2, // Secondary (grey)
                       emoji: { name: '🔀' }
                     }
                   ]
@@ -10356,8 +10361,8 @@ Your server is now ready for Tycoons gameplay!`;
                     {
                       type: 2, // Button
                       custom_id: `safari_finish_button_${fullButtonId}`,
-                      label: 'Finish & Test Button',
-                      style: 3, // Success
+                      label: '⚡ Finish & Test Action',
+                      style: 1, // Primary (blue)
                       emoji: { name: '✅' }
                     }
                   ]
@@ -10372,7 +10377,7 @@ Your server is now ready for Tycoons gameplay!`;
                   components: [
                     {
                       type: 10, // Text Display
-                      content: `## 🎯 Add Actions to Button: ${buttonId}\n\nChoose an action type to add to this button:`
+                      content: `## 🎯 Add Actions to ${buttonLabel}\n\nChoose what happens when the **⚡ Custom Action** is triggered.`
                     },
                     { type: 14 }, // Separator
                     ...actionMenuComponents
@@ -10498,7 +10503,11 @@ Your server is now ready for Tycoons gameplay!`;
             actionId
           });
           
-          return updatedUI;
+          // Make the Custom Action Editor ephemeral
+          return {
+            ...updatedUI,
+            ephemeral: true
+          };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_remove_action_')) {
@@ -18904,29 +18913,29 @@ Are you sure you want to continue?`;
                   {
                     type: 2, // Button
                     custom_id: `safari_add_action_${buttonId}_display_text`,
-                    label: 'Add Text Display',
-                    style: 1,
+                    label: 'Show Text',
+                    style: 2, // Secondary (grey)
                     emoji: { name: '📄' }
                   },
                   {
                     type: 2, // Button
                     custom_id: `safari_add_action_${buttonId}_update_currency`,
-                    label: 'Add Currency Change',
-                    style: 1,
+                    label: 'Change Currency',
+                    style: 2, // Secondary (grey)
                     emoji: { name: '💰' }
                   },
                   {
                     type: 2, // Button
                     custom_id: `safari_add_action_${buttonId}_follow_up`,
-                    label: 'Add Follow-up Button',
-                    style: 1,
+                    label: 'Show Follow-Up Action',
+                    style: 2, // Secondary (grey)
                     emoji: { name: '🔗' }
                   },
                   {
                     type: 2, // Button
                     custom_id: `safari_add_action_${buttonId}_conditional`,
                     label: 'Add Conditional Action',
-                    style: 1,
+                    style: 2, // Secondary (grey)
                     emoji: { name: '🔀' }
                   }
                 ]
@@ -18940,8 +18949,8 @@ Are you sure you want to continue?`;
                   {
                     type: 2, // Button
                     custom_id: `safari_finish_button_${buttonId}`,
-                    label: 'Finish & Save Button',
-                    style: 3,
+                    label: '⚡ Finish & Test Action',
+                    style: 1, // Primary (blue)
                     emoji: { name: '✅' }
                   },
                   {
