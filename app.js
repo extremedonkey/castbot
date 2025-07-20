@@ -14192,7 +14192,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           console.log(`✅ SUCCESS: configure_modal_trigger - showing modal for ${actionId}`);
           
           // Return modal response with proper type
-          return {
+          const modalResponse = {
             type: InteractionResponseType.MODAL,
             data: {
               custom_id: `modal_phrases_config_${actionId}`,
@@ -14267,6 +14267,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               ]
             }
           };
+          
+          console.log('📝 Modal response structure:', JSON.stringify(modalResponse, null, 2));
+          return modalResponse;
         }
       })(req, res, client);
       
