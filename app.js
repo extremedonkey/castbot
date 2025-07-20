@@ -19478,20 +19478,17 @@ Are you sure you want to continue?`;
           }
         }
 
-        // Send response with updated Custom Action Editor UI
+        // Update the original message with the refreshed Custom Action Editor UI
         const { createCustomActionEditorUI } = await import('./customActionUI.js');
         const updatedUI = await createCustomActionEditorUI({
           guildId,
           actionId: buttonId
         });
         
-        // Send the updated UI as the modal response
+        // Send UPDATE_MESSAGE response to refresh the UI
         res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            ...updatedUI,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: updatedUI
         });
         
         return;
