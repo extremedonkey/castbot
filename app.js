@@ -19473,14 +19473,14 @@ Are you sure you want to continue?`;
           }
         }
 
-        // Update the original message with the refreshed Custom Action Editor UI
+        // Send UPDATE_MESSAGE response to refresh the UI immediately
         const { createCustomActionEditorUI } = await import('./customActionUI.js');
         const updatedUI = await createCustomActionEditorUI({
           guildId,
           actionId: buttonId
         });
         
-        // Send UPDATE_MESSAGE response to refresh the UI
+        console.log(`✅ DEBUG: Sending Custom Action Editor update for button ${buttonId}`);
         res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: updatedUI
