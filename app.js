@@ -19358,20 +19358,38 @@ Are you sure you want to continue?`;
           }
         }
 
-        // Show Custom Action Editor with new action visible
-        const { createCustomActionEditorUI } = await import('./customActionUI.js');
-        const updatedUI = await createCustomActionEditorUI({
-          guildId,
-          actionId: buttonId
-        });
-
-        return res.send({
+        // Send simple success response for modal, then follow up with Custom Action Editor
+        const actionTypeName = actionType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            ...updatedUI,
+            content: `✅ **${actionTypeName} action added successfully!**\n\nAction count: ${button.actions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
+
+        // Follow up with Custom Action Editor as a new ephemeral message
+        setTimeout(async () => {
+          try {
+            const { createCustomActionEditorUI } = await import('./customActionUI.js');
+            const updatedUI = await createCustomActionEditorUI({
+              guildId,
+              actionId: buttonId
+            });
+
+            // Send follow-up message
+            await client.rest.post(`/webhooks/${client.user.id}/${req.body.token}`, {
+              body: {
+                ...updatedUI,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          } catch (error) {
+            console.error('Error sending follow-up Custom Action Editor:', error);
+          }
+        }, 500); // Small delay to ensure modal response processes first
+        
+        return;
         
       } catch (error) {
         console.error('Error processing action modal:', error);
