@@ -10362,9 +10362,9 @@ Your server is now ready for Tycoons gameplay!`;
                     {
                       type: 2, // Button
                       custom_id: `safari_finish_button_${fullButtonId}`,
-                      label: '⚡ Finish & Test Action',
+                      label: 'Finish & Test Action',
                       style: 1, // Primary (blue)
-                      emoji: { name: '✅' }
+                      emoji: { name: '⚡' }
                     }
                   ]
                 }
@@ -10497,16 +10497,15 @@ Your server is now ready for Tycoons gameplay!`;
           
           console.log(`✅ SUCCESS: safari_finish_button_${actionId} - completed`);
           
-          // Simply dismiss the action menu with a success message
+          // Dismiss action menu and show new ephemeral Custom Action Editor  
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          const updatedUI = await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId
+          });
+          
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [{
-              type: 17, // Container
-              components: [{
-                type: 10, // Text Display
-                content: `✅ **Action Setup Complete!**\n\nYour custom action has been updated successfully. The button is now live on the map.`
-              }]
-            }],
+            ...updatedUI,
             ephemeral: true
           };
         }
@@ -13597,7 +13596,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'entity_custom_action_list',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        ephemeral: true,
+        updateMessage: true,
         handler: async (context) => {
           console.log(`🔍 START: entity_custom_action_list - user ${context.userId}`);
           
@@ -13661,10 +13660,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             });
             
             console.log(`✅ SUCCESS: entity_custom_action_list - showing action editor for ${selectedValue}`);
-            return {
-              ...ui,
-              ephemeral: true
-            };
+            return ui;
           }
         }
       })(req, res, client);
@@ -18950,9 +18946,9 @@ Are you sure you want to continue?`;
                   {
                     type: 2, // Button
                     custom_id: `safari_finish_button_${buttonId}`,
-                    label: '⚡ Finish & Test Action',
+                    label: 'Finish & Test Action',
                     style: 1, // Primary (blue)
-                    emoji: { name: '✅' }
+                    emoji: { name: '⚡' }
                   },
                   {
                     type: 2, // Button
