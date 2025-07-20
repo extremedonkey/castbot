@@ -10090,10 +10090,14 @@ Your server is now ready for Tycoons gameplay!`;
           // Load safari content
           const { loadSafariContent } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
-          const button = safariData[context.guildId]?.customActions?.[buttonId];
+          
+          // Custom actions are stored under guild > customActions
+          const customActions = safariData[context.guildId]?.customActions || {};
+          const button = customActions[buttonId];
           
           if (!button) {
-            console.error(`Button not found: ${buttonId}`);
+            console.error(`Button not found: ${buttonId} in guild ${context.guildId}`);
+            console.log('Available custom actions:', Object.keys(customActions));
             return {
               content: '❌ Custom action not found.',
               ephemeral: true
@@ -10180,6 +10184,8 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           console.log(`✅ SUCCESS: safari_action_type_select - showing modal for ${actionType}`);
+          
+          // Return modal response directly (not through ButtonHandlerFactory)
           return res.send({
             type: InteractionResponseType.MODAL,
             data: modal

@@ -239,8 +239,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
               { label: 'Update Currency', value: 'update_currency', emoji: { name: '💰' } },
               { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
-              { label: 'Conditional Action', value: 'conditional', emoji: { name: '🔀' } },
-              { label: 'Random Outcome', value: 'random_outcome', emoji: { name: '🎲' } }
+              { label: 'Conditional Action', value: 'conditional', emoji: { name: '🔀' } }
             ]
           }]
         }] : []),
