@@ -19304,8 +19304,6 @@ Are you sure you want to continue?`;
           };
         } else if (actionType === 'follow_up_button') {
           const buttonId = components[0].components[0].value?.trim();
-          const delayStr = components[1].components[0].value?.trim() || '0';
-          const replaceStr = components[2].components[0].value?.trim() || 'false';
           
           if (!buttonId) {
             return res.send({
@@ -19331,12 +19329,9 @@ Are you sure you want to continue?`;
             });
           }
           
-          // Parse delay (default 0, max 60)
-          let delay = parseInt(delayStr) || 0;
-          delay = Math.max(0, Math.min(60, delay));
-          
-          // Parse replace message option
-          const replaceMessage = replaceStr.toLowerCase() === 'true';
+          // Set default values for delay and replace message
+          const delay = 0; // Default: no delay
+          const replaceMessage = false; // Default: don't replace message
           
           actionConfig = {
             buttonId: buttonId,
