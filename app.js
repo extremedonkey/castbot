@@ -10470,8 +10470,8 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`✅ SUCCESS: safari_follow_up_select - added follow-up ${followUpButtonId} to ${buttonId}`);
           
           // Return to the button's action configuration UI
-          const { showCustomActionUI } = await import('./customActionUI.js');
-          return await showCustomActionUI(context.guildId, buttonId);
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          return await createCustomActionEditorUI({ guildId: context.guildId, actionId: buttonId });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_item_limit_')) {
