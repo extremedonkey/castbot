@@ -10183,6 +10183,57 @@ Your server is now ready for Tycoons gameplay!`;
             const tempActionIndex = button.actions?.length || 0;
             
             return await showGiveCurrencyConfig(context.guildId, buttonId, tempActionIndex, customTerms);
+          } else if (actionType === 'follow_up_button') {
+            // Get existing buttons to show in dropdown
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const buttons = safariData[context.guildId]?.buttons || {};
+            
+            // Filter out current button to avoid circular references
+            const availableButtons = Object.entries(buttons)
+              .filter(([id, btn]) => id !== buttonId)
+              .slice(0, 25); // Discord limit
+            
+            if (availableButtons.length === 0) {
+              return {
+                content: '❌ **No other buttons available**\n\nYou need to create at least one other button before adding follow-up actions. Create another button first, then come back to add the follow-up.',
+                ephemeral: true
+              };
+            }
+            
+            // Create options for button selection
+            const buttonOptions = availableButtons.map(([id, btn]) => ({
+              label: (btn.name || btn.label || id).substring(0, 100),
+              value: id,
+              description: (`ID: ${id}` + (btn.actions?.length ? ` • ${btn.actions.length} actions` : '')).substring(0, 100),
+              emoji: { name: '🔗' }
+            }));
+            
+            console.log(`✅ SUCCESS: safari_action_type_select - showing button selection for follow_up_button`);
+            
+            return {
+              components: [{
+                type: 17, // Container
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `# Select Follow-up Button for ${button.name || 'Custom Action'}\n\nChoose which button should be triggered after this action completes.`
+                  },
+                  { type: 14 }, // Separator
+                  {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 3, // String Select
+                      custom_id: `safari_follow_up_select_${buttonId}`,
+                      placeholder: 'Select a button to chain to...',
+                      options: buttonOptions
+                    }]
+                  }
+                ]
+              }],
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              ephemeral: true
+            };
           }
           
           // Show modal for other action types
@@ -11109,55 +11160,6 @@ Your server is now ready for Tycoons gameplay!`;
             return {
               type: InteractionResponseType.MODAL,
               data: modal.toJSON()
-            };
-          
-          } else if (actionType === 'follow_up_button') {
-            // Get existing buttons to show in dropdown
-            const { listCustomButtons } = await import('./safariManager.js');
-            const existingButtons = await listCustomButtons(context.guildId);
-            
-            if (existingButtons.length === 0) {
-              return {
-                content: '❌ **No other buttons available**\n\nYou need to create at least one other button before adding follow-up actions. Create another button first, then come back to add the follow-up.',
-                ephemeral: true
-              };
-            }
-            
-            // Create options for button selection (showing max 25 as per Discord limit)
-            const buttonOptions = existingButtons
-              .filter(btn => btn.id !== buttonId) // Don't include current button
-              .slice(0, 25)
-              .map(btn => ({
-                label: btn.name || btn.label || btn.id,
-                value: btn.id,
-                description: `ID: ${btn.id}` + (btn.actions?.length ? ` • ${btn.actions.length} actions` : ''),
-                emoji: btn.emoji ? { name: btn.emoji } : { name: '🔗' }
-              }));
-            
-            console.log(`✅ SUCCESS: safari_action_type_select - showing button selection for follow_up_button`);
-            
-            return {
-              components: [{
-                type: 17, // Container
-                components: [
-                  {
-                    type: 10, // Text Display
-                    content: `# Select Follow-up Button for ${button.name || 'Custom Action'}\n\nChoose which button should be triggered after this action completes.`
-                  },
-                  { type: 14 }, // Separator
-                  {
-                    type: 1, // Action Row
-                    components: [{
-                      type: 3, // String Select
-                      custom_id: `safari_follow_up_select_${buttonId}`,
-                      placeholder: 'Select a button to chain to...',
-                      options: buttonOptions
-                    }]
-                  }
-                ]
-              }],
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              ephemeral: true
             };
           
           } else if (actionType === 'conditional') {
