@@ -10295,17 +10295,11 @@ Your server is now ready for Tycoons gameplay!`;
               break;
               
             case 'follow_up_button':
-              modal.addComponents(
-                new ActionRowBuilder().addComponents(
-                  new TextInputBuilder()
-                    .setCustomId('button_id')
-                    .setLabel('Custom Action ID to trigger')
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true)
-                    .setPlaceholder('e.g., my_action_id')
-                )
-              );
-              break;
+              console.error(`❌ ERROR: follow_up_button reached modal code - this should be handled by select interface above!`);
+              return {
+                content: '❌ **Configuration Error**\n\nThe follow-up action interface has a configuration issue. Please report this to the administrator.',
+                ephemeral: true
+              };
               
             case 'give_currency':
               modal.addComponents(
@@ -23112,7 +23106,7 @@ Are you sure you want to continue?`;
                 member: req.body.member
               };
               
-              const results = await executeButtonActions(buttonId, userId, guildId, interaction);
+              const results = await executeButtonActions(guildId, buttonId, userId, interaction);
               
               // Send the first result back to admin (ephemeral)
               if (results && results.length > 0) {
