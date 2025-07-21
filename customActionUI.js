@@ -238,7 +238,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             placeholder: 'Select action type to add...',
             options: [
               { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
-              { label: 'Update Currency', value: 'update_currency', emoji: { name: '💰' } },
               { label: 'Give Currency', value: 'give_currency', emoji: { name: '🪙' } },
               { label: 'Give Item', value: 'give_item', emoji: { name: '🎁' } },
               { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
@@ -384,7 +383,8 @@ function getActionSummary(action, number, guildItems = {}) {
     case 'give_currency':
       const amount = action.config?.amount || action.amount || 0;
       const currencyLimitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
-      return `**\`${number}. Give Currency\`** Amount: ${amount}${currencyLimitText}`;
+      const displayAmount = amount > 0 ? `+${amount}` : `${amount}`;
+      return `**\`${number}. Give Currency\`** Amount: ${displayAmount}${currencyLimitText}`;
     case 'update_currency':
       return `**\`${number}. Update Currency\`** Amount: ${action.amount || 0}`;
     case 'follow_up_button':

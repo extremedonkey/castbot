@@ -10714,9 +10714,9 @@ Your server is now ready for Tycoons gameplay!`;
           
           const amountInput = new TextInputBuilder()
             .setCustomId('amount')
-            .setLabel('Amount to give')
+            .setLabel('Amount to give (negative values subtract)')
             .setStyle(TextInputStyle.Short)
-            .setPlaceholder('100')
+            .setPlaceholder('100 or -55 to subtract')
             .setRequired(true)
             .setMinLength(1)
             .setMaxLength(10);
@@ -20233,11 +20233,11 @@ Are you sure you want to continue?`;
         // Get amount from modal
         const amount = parseInt(components[0].components[0].value);
         
-        if (isNaN(amount) || amount < 0) {
+        if (isNaN(amount) || amount < -999999 || amount > 999999) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Please enter a valid non-negative number (0 to remove this action).',
+              content: '❌ Please enter a valid number between -999999 and 999999 (0 to remove this action).',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -23954,7 +23954,7 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
           type: 9, // Section
           components: [{
             type: 10, // Text Display
-            content: `**Amount:** ${state.amount !== null ? state.amount : 'Not set'}`
+            content: `**Amount:** ${state.amount !== null ? (state.amount > 0 ? `+${state.amount}` : `${state.amount}`) : 'Not set'}`
           }],
           accessory: {
             type: 2, // Button
