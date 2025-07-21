@@ -553,8 +553,40 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
         }
     }
     
-    // Combine results into single response
+    // Combine results into single response with button bundling
     return combineActionResults(results);
+}
+```
+
+#### Button Bundling Logic (January 2025)
+The action execution pipeline now includes intelligent button bundling to create cleaner UI:
+
+```javascript
+// Button bundling occurs in combineActionResults()
+// When a follow_up_button action immediately follows a display_text action:
+// 1. The button is added to the display_text container
+// 2. Both actions are rendered in a single message
+// 3. This reduces message clutter and improves user experience
+
+// Example bundled output:
+{
+    components: [{
+        type: 17, // Container
+        components: [
+            {
+                type: 10, // Text Display
+                content: "Welcome to the mysterious cave..."
+            },
+            {
+                type: 1, // Action Row
+                components: [{
+                    type: 2, // Button (bundled follow-up)
+                    custom_id: "safari_explore_cave",
+                    label: "Enter the Cave"
+                }]
+            }
+        ]
+    }]
 }
 ```
 
@@ -1323,6 +1355,13 @@ The Round Results V2 System provides a complete, scalable foundation for complex
 
 ## MVP2 Implementation Summary (June 2025)
 
+### 🎨 Custom Actions Editor UI (January 2025)
+**Architecture:**
+- **String Select for Action Types**: Replaced button grid with cleaner dropdown interface
+- **Action Type Options**: Display Text, Update Currency, Follow-up Action, Conditional Action
+- **UPDATE_MESSAGE Pattern**: Modal submissions refresh the editor without full recreation
+- **Button Bundling**: Automatic UI optimization when follow-up buttons follow display_text
+
 ### 🏪 Enhanced Shop System
 **Architecture:**
 - **Multi-Shop Support**: Multiple stores per server with unique configurations
@@ -1965,6 +2004,25 @@ This documentation serves as the complete guide for implementing and extending C
    - See dropdown of existing actions + "Create New"
    - Select action to edit/assign
    - Changes apply across all assigned coordinates
+
+7. **Custom Actions String Select Update** (January 2025):
+   - Custom Actions now use a string select dropdown instead of buttons for adding action types
+   - Options: Display Text, Update Currency, Follow-up Action, Conditional Action
+   - Provides cleaner UI and better scalability for future action types
+   - String select component replaces the previous button grid layout
+
+8. **Button Bundling Feature** (January 2025):
+   - Follow-up buttons are automatically bundled with preceding display_text actions
+   - Creates cleaner UI by combining text and button in a single message
+   - Single message contains both text display and follow-up button when bundled
+   - Standalone follow-up buttons still work independently when not preceded by display_text
+   - Improves user experience by reducing message clutter
+
+9. **Modal Response Pattern** (January 2025):
+   - Action modals now use UPDATE_MESSAGE to refresh the Custom Action Editor
+   - Maintains context and reduces UI flicker when adding/editing actions
+   - Provides seamless experience when configuring multiple actions
+   - Ensures action list stays up-to-date without full message recreation
 
 #### Data Structure:
 ```json
