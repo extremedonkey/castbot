@@ -935,7 +935,7 @@ async function createSafariMenu(guildId, userId, member) {
   const containerComponents = [
     {
       type: 10, // Text Display component
-      content: `## 🦁 Safari - Dynamic Content Manager\n\nCreate interactive experiences with custom buttons, currency systems, stores, and chained actions.`
+      content: `## 🦁 Safari | Idol Hunts, Challenges & More\n\nCreate engaging ORG experiences with interactive stores, items, currencies, and custom actions!`
     },
     {
       type: 14 // Separator
