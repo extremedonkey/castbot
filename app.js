@@ -10173,7 +10173,7 @@ Your server is now ready for Tycoons gameplay!`;
             // Create a temporary action config to show the configuration UI
             const tempActionIndex = button.actions?.length || 0;
             
-            return showGiveCurrencyConfig(context.guildId, buttonId, tempActionIndex, customTerms);
+            return await showGiveCurrencyConfig(context.guildId, buttonId, tempActionIndex, customTerms);
           }
           
           // Show modal for other action types
@@ -10345,7 +10345,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           console.log(`✅ SUCCESS: safari_give_item_select - showing config for ${item.name}`);
           
-          return showGiveItemConfig(context.guildId, buttonId, itemId, item, tempActionIndex);
+          return await showGiveItemConfig(context.guildId, buttonId, itemId, item, tempActionIndex);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_item_limit_')) {
@@ -10398,7 +10398,7 @@ Your server is now ready for Tycoons gameplay!`;
           dropConfigState.set(stateKey, state);
           
           // Return updated configuration UI
-          return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
+          return await showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_item_style_')) {
@@ -10451,7 +10451,7 @@ Your server is now ready for Tycoons gameplay!`;
           dropConfigState.set(stateKey, state);
           
           // Return updated configuration UI
-          return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
+          return await showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_item_quantity_')) {
@@ -10504,7 +10504,70 @@ Your server is now ready for Tycoons gameplay!`;
           dropConfigState.set(stateKey, state);
           
           // Return updated configuration UI
-          return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
+          return await showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_item_reset_')) {
+      // Handle reset claims for give_item
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_reset',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          // Parse the custom_id: safari_item_reset_buttonId_itemId_actionIndex
+          const fullString = context.customId.replace('safari_item_reset_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const beforeActionIndex = fullString.substring(0, lastUnderscoreIndex);
+          
+          // Find itemId by checking which part exists in items
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const items = safariData[context.guildId]?.items || {};
+          
+          let buttonId, itemId, item;
+          
+          // Try different split points to find valid itemId
+          const parts = beforeActionIndex.split('_');
+          for (let i = 1; i < parts.length; i++) {
+            const possibleItemId = parts.slice(i).join('_');
+            if (items[possibleItemId]) {
+              itemId = possibleItemId;
+              buttonId = parts.slice(0, i).join('_');
+              item = items[possibleItemId];
+              break;
+            }
+          }
+          
+          if (!item) {
+            return {
+              content: '❌ Item not found.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`🔄 RESET: safari_item_reset - resetting claims for ${buttonId}[${actionIndex}]`);
+          
+          // Find and reset the specific action's claims
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          if (button && button.actions && button.actions[actionIndex]) {
+            const action = button.actions[actionIndex];
+            if (action.type === 'give_item' && action.config?.limit) {
+              // Clear claims
+              if (action.config.limit.type === 'once_per_player') {
+                action.config.limit.claimedBy = [];
+              } else if (action.config.limit.type === 'once_globally') {
+                action.config.limit.claimedBy = null;
+              }
+              
+              await saveSafariContent(safariData);
+              console.log(`✅ Claims reset for give_item action ${actionIndex}`);
+            }
+          }
+          
+          // Return updated configuration UI
+          return await showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_item_save_')) {
@@ -10685,7 +10748,7 @@ Your server is now ready for Tycoons gameplay!`;
           const customTerms = await getCustomTerms(context.guildId);
           
           // Return updated configuration UI
-          return showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
+          return await showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_currency_style_')) {
@@ -10714,7 +10777,46 @@ Your server is now ready for Tycoons gameplay!`;
           const customTerms = await getCustomTerms(context.guildId);
           
           // Return updated configuration UI
-          return showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
+          return await showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_currency_reset_')) {
+      // Handle reset claims for give_currency
+      return ButtonHandlerFactory.create({
+        id: 'safari_currency_reset',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_currency_reset_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          
+          console.log(`🔄 RESET: safari_currency_reset - resetting claims for ${buttonId}[${actionIndex}]`);
+          
+          // Load safari data and reset claims
+          const { loadSafariContent, saveSafariContent, getCustomTerms } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          
+          if (button && button.actions && button.actions[actionIndex]) {
+            const action = button.actions[actionIndex];
+            if (action.type === 'give_currency' && action.config?.limit) {
+              // Clear claims
+              if (action.config.limit.type === 'once_per_player') {
+                action.config.limit.claimedBy = [];
+              } else if (action.config.limit.type === 'once_globally') {
+                action.config.limit.claimedBy = null;
+              }
+              
+              await saveSafariContent(safariData);
+              console.log(`✅ Claims reset for give_currency action ${actionIndex}`);
+            }
+          }
+          
+          // Return updated configuration UI
+          const customTerms = await getCustomTerms(context.guildId);
+          return await showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_currency_save_')) {
@@ -20138,7 +20240,7 @@ Are you sure you want to continue?`;
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: showGiveCurrencyConfig(req.body.guild_id, buttonId, actionIndex, customTerms)
+          data: await showGiveCurrencyConfig(req.body.guild_id, buttonId, actionIndex, customTerms)
         });
         
       } catch (error) {
@@ -23649,7 +23751,7 @@ const dropConfigState = new Map();
 /**
  * Show configuration UI for give_item action
  */
-function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
+async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
   // Get or create state for this configuration
   const stateKey = `${guildId}_${buttonId}_${itemId}_${actionIndex}`;
   const state = dropConfigState.get(stateKey) || {
@@ -23657,6 +23759,27 @@ function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
     style: null,
     quantity: null
   };
+
+  // Check if there are existing claims to enable/disable reset button
+  let claimsExist = false;
+  try {
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const button = safariData[guildId]?.buttons?.[buttonId];
+    if (button && button.actions && button.actions[actionIndex]) {
+      const action = button.actions[actionIndex];
+      if (action.type === 'give_item' && action.config?.limit) {
+        const claimedBy = action.config.limit.claimedBy;
+        if (action.config.limit.type === 'once_per_player') {
+          claimsExist = Array.isArray(claimedBy) && claimedBy.length > 0;
+        } else if (action.config.limit.type === 'once_globally') {
+          claimsExist = claimedBy !== null && claimedBy !== undefined;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error checking claims:', error);
+  }
   // Create quantity options (0-24, with state-based default)
   const quantityOptions = [];
   for (let i = 0; i <= 24; i++) {
@@ -23750,7 +23873,7 @@ function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
               label: 'Reset Claims',
               style: 4, // Danger
               emoji: { name: '🔄' },
-              disabled: true // Will be enabled when claims exist
+              disabled: !claimsExist // Enable when claims exist
             },
             {
               type: 2, // Button
@@ -23771,7 +23894,7 @@ function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
 /**
  * Show configuration UI for give_currency action
  */
-function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
+async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
   // Get or create state for this configuration
   const stateKey = `${guildId}_${buttonId}_currency_${actionIndex}`;
   const state = dropConfigState.get(stateKey) || {
@@ -23779,6 +23902,27 @@ function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
     style: null,
     amount: null
   };
+
+  // Check if there are existing claims to enable/disable reset button
+  let claimsExist = false;
+  try {
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const button = safariData[guildId]?.buttons?.[buttonId];
+    if (button && button.actions && button.actions[actionIndex]) {
+      const action = button.actions[actionIndex];
+      if (action.type === 'give_currency' && action.config?.limit) {
+        const claimedBy = action.config.limit.claimedBy;
+        if (action.config.limit.type === 'once_per_player') {
+          claimsExist = Array.isArray(claimedBy) && claimedBy.length > 0;
+        } else if (action.config.limit.type === 'once_globally') {
+          claimsExist = claimedBy !== null && claimedBy !== undefined;
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error checking claims:', error);
+  }
   
   return {
     components: [{
@@ -23867,7 +24011,7 @@ function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
               label: 'Reset Claims',
               style: 4, // Danger
               emoji: { name: '🔄' },
-              disabled: true // Will be enabled when claims exist
+              disabled: !claimsExist // Enable when claims exist
             },
             {
               type: 2, // Button
