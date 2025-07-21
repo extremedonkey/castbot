@@ -23118,11 +23118,12 @@ Are you sure you want to continue?`;
               // Send the first result back to admin (ephemeral)
               if (results && results.length > 0) {
                 const response = results[0];
+                // Return the actual Components V2 response but make it ephemeral
                 return res.send({
                   type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                   data: {
-                    content: `🔧 **Admin Test Result:** Command executed successfully!`,
-                    flags: InteractionResponseFlags.EPHEMERAL
+                    ...response,
+                    flags: (response.flags || 0) | InteractionResponseFlags.EPHEMERAL
                   }
                 });
               }
