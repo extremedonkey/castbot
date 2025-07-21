@@ -238,6 +238,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             options: [
               { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
               { label: 'Update Currency', value: 'update_currency', emoji: { name: '💰' } },
+              { label: 'Give Currency', value: 'give_currency', emoji: { name: '🪙' } },
+              { label: 'Give Item', value: 'give_item', emoji: { name: '🎁' } },
               { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
               { label: 'Conditional Action', value: 'conditional', emoji: { name: '🔀' } }
             ]
@@ -372,9 +374,21 @@ function getActionSummary(action, number) {
       return `**\`${number}. Display Text\`** ${truncated}${ellipsis}`;
       
     case 'give_item':
-      return `**\`${number}. Give Item\`** ${action.itemId} x${action.quantity || 1}`;
+      const itemName = action.config?.itemId || action.itemId || 'Unknown Item';
+      const quantity = action.config?.quantity || action.quantity || 1;
+      const limitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
+      return `**\`${number}. Give Item\`** ${itemName} x${quantity}${limitText}`;
     case 'give_currency':
-      return `**\`${number}. Give Currency\`** Amount: ${action.amount}`;
+      const amount = action.config?.amount || action.amount || 0;
+      const currencyLimitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
+      return `**\`${number}. Give Currency\`** Amount: ${amount}${currencyLimitText}`;
+    case 'update_currency':
+      return `**\`${number}. Update Currency\`** Amount: ${action.amount || 0}`;
+    case 'follow_up_button':
+    case 'follow_up':
+      return `**\`${number}. Follow-up Action\`** ${action.buttonId || 'Not configured'}`;
+    case 'conditional':
+      return `**\`${number}. Conditional\`** ${action.condition?.type || 'Not configured'}`;
     case 'create_button':
       return `**\`${number}. Create Button\`** ${action.buttonLabel}`;
     default:

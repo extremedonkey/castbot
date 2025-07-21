@@ -10175,6 +10175,50 @@ Your server is now ready for Tycoons gameplay!`;
               );
               break;
               
+            case 'give_currency':
+              modal.addComponents(
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('amount')
+                    .setLabel('Currency Amount')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true)
+                    .setPlaceholder('e.g., 100')
+                ),
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('message')
+                    .setLabel('Success Message (Optional)')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(false)
+                    .setPlaceholder('e.g., You found treasure!')
+                    .setMaxLength(100)
+                )
+              );
+              break;
+              
+            case 'give_item':
+              modal.addComponents(
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('item_id')
+                    .setLabel('Item ID')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true)
+                    .setPlaceholder('e.g., gold_coin')
+                ),
+                new ActionRowBuilder().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId('quantity')
+                    .setLabel('Quantity')
+                    .setStyle(TextInputStyle.Short)
+                    .setRequired(true)
+                    .setPlaceholder('e.g., 1')
+                    .setValue('1')
+                )
+              );
+              break;
+              
             default:
               console.error(`Unknown action type: ${actionType}`);
               return {
@@ -19202,6 +19246,12 @@ Are you sure you want to continue?`;
         } else if (custom_id.endsWith('_conditional')) {
           actionType = 'conditional';
           buttonId = custom_id.replace('safari_action_modal_', '').replace('_conditional', '');
+        } else if (custom_id.endsWith('_give_currency')) {
+          actionType = 'give_currency';
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_give_currency', '');
+        } else if (custom_id.endsWith('_give_item')) {
+          actionType = 'give_item';
+          buttonId = custom_id.replace('safari_action_modal_', '').replace('_give_item', '');
         } else {
           // Fallback - should not happen with properly formatted custom_ids
           console.error(`⚠️ WARNING: Unknown action type in custom_id: ${custom_id}`);
@@ -19393,6 +19443,62 @@ Are you sure you want to continue?`;
             conditionValue: conditionValue,
             successAction: successAction,
             failureAction: failureAction
+          };
+        } else if (actionType === 'give_currency') {
+          const amountStr = components[0].components[0].value?.trim();
+          const message = components[1].components[0].value?.trim() || null;
+          
+          const amount = parseInt(amountStr);
+          if (isNaN(amount) || amount <= 0) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Currency amount must be a positive number.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          actionConfig = {
+            amount: amount,
+            message: message,
+            limit: {
+              type: 'unlimited' // Default to unlimited, will be configured later
+            }
+          };
+        } else if (actionType === 'give_item') {
+          const itemId = components[0].components[0].value?.trim();
+          const quantityStr = components[1].components[0].value?.trim();
+          
+          if (!itemId) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Item ID is required.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          const quantity = parseInt(quantityStr);
+          if (isNaN(quantity) || quantity <= 0) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Quantity must be a positive number.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          // TODO: Validate item exists when we have item system
+          
+          actionConfig = {
+            itemId: itemId,
+            quantity: quantity,
+            limit: {
+              type: 'unlimited' // Default to unlimited, will be configured later
+            }
           };
         }
         
@@ -22406,6 +22512,8 @@ function getActionTypeName(actionType) {
   const actionTypeNames = {
     'display_text': 'Text Display Action',
     'update_currency': 'Update Currency Action',
+    'give_currency': 'Give Currency Action',
+    'give_item': 'Give Item Action',
     'follow_up_button': 'Follow-up Action',
     'conditional': 'Conditional Action',
     'random_outcome': 'Random Outcome Action'
