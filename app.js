@@ -10393,7 +10393,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Store in temporary state
           const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', quantity: 1 };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, quantity: null };
           state.limit = limitType;
           dropConfigState.set(stateKey, state);
           
@@ -10446,7 +10446,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Store in temporary state
           const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', quantity: 1 };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, quantity: null };
           state.style = style;
           dropConfigState.set(stateKey, state);
           
@@ -10499,7 +10499,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Store in temporary state
           const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', quantity: 1 };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, quantity: null };
           state.quantity = quantity;
           dropConfigState.set(stateKey, state);
           
@@ -10557,7 +10557,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Get state from temporary storage
           const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', quantity: 1 };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, quantity: null };
           
           // Handle quantity 0 - don't add the action
           if (state.quantity === 0) {
@@ -10574,22 +10574,22 @@ Your server is now ready for Tycoons gameplay!`;
             });
           }
           
-          // Create the give_item action with state values
+          // Create the give_item action with state values (with defaults)
           const action = {
             type: 'give_item',
             order: button.actions.length,
             config: {
               itemId: itemId,
-              quantity: state.quantity,
+              quantity: state.quantity || 1,  // Default to 1 if not set
               limit: {
-                type: state.limit,
-                claimedBy: state.limit === 'unlimited' ? undefined : []
+                type: state.limit || 'unlimited',  // Default to unlimited
+                claimedBy: (state.limit || 'unlimited') === 'unlimited' ? undefined : []
               }
             }
           };
           
           // Also save button style if not default
-          if (state.style !== '2') {
+          if (state.style && state.style !== '2') {
             button.style = parseInt(state.style);
           }
           
@@ -10676,7 +10676,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Store in temporary state
           const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', amount: 0 };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null };
           state.limit = limitType;
           dropConfigState.set(stateKey, state);
           
@@ -10705,7 +10705,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Store in temporary state
           const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', amount: 0 };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null };
           state.style = style;
           dropConfigState.set(stateKey, state);
           
@@ -10749,7 +10749,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Get state from temporary storage
           const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', amount: 0 };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null };
           
           // Handle amount 0 - don't add the action
           if (state.amount === 0) {
@@ -10766,21 +10766,21 @@ Your server is now ready for Tycoons gameplay!`;
             });
           }
           
-          // Create the give_currency action with state values
+          // Create the give_currency action with state values (with defaults)
           const action = {
             type: 'give_currency',
             order: button.actions.length,
             config: {
-              amount: state.amount,
+              amount: state.amount || 100,  // Default to 100 if not set
               limit: {
-                type: state.limit,
-                claimedBy: state.limit === 'unlimited' ? undefined : []
+                type: state.limit || 'unlimited',  // Default to unlimited
+                claimedBy: (state.limit || 'unlimited') === 'unlimited' ? undefined : []
               }
             }
           };
           
           // Also save button style if not default
-          if (state.style !== '2') {
+          if (state.style && state.style !== '2') {
             button.style = parseInt(state.style);
           }
           
@@ -20128,7 +20128,7 @@ Are you sure you want to continue?`;
         
         // Store in temporary state
         const stateKey = `${req.body.guild_id}_${buttonId}_currency_${actionIndex}`;
-        const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', amount: 0 };
+        const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null };
         state.amount = amount;
         dropConfigState.set(stateKey, state);
         
@@ -23653,9 +23653,9 @@ function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
   // Get or create state for this configuration
   const stateKey = `${guildId}_${buttonId}_${itemId}_${actionIndex}`;
   const state = dropConfigState.get(stateKey) || {
-    limit: 'unlimited',
-    style: '2',
-    quantity: 1
+    limit: null,   // null means no selection made yet
+    style: null,
+    quantity: null
   };
   // Create quantity options (0-24, with state-based default)
   const quantityOptions = [];
@@ -23775,9 +23775,9 @@ function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
   // Get or create state for this configuration
   const stateKey = `${guildId}_${buttonId}_currency_${actionIndex}`;
   const state = dropConfigState.get(stateKey) || {
-    limit: 'unlimited',
-    style: '2',
-    amount: 0
+    limit: null,   // null means no selection made yet
+    style: null,
+    amount: null
   };
   
   return {
@@ -23795,7 +23795,7 @@ function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
           type: 9, // Section
           components: [{
             type: 10, // Text Display
-            content: `**Amount:** ${state.amount || 'Not set'}`
+            content: `**Amount:** ${state.amount !== null ? state.amount : 'Not set'}`
           }],
           accessory: {
             type: 2, // Button
