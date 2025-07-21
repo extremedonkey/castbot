@@ -10356,18 +10356,40 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const parts = context.customId.replace('safari_item_limit_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const itemId = parts[parts.length - 2];
-          const buttonId = parts.slice(0, -2).join('_');
-          const limitType = context.values[0];
+          // Parse the custom_id: safari_item_limit_buttonId_itemId_actionIndex
+          const fullString = context.customId.replace('safari_item_limit_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const beforeActionIndex = fullString.substring(0, lastUnderscoreIndex);
           
-          console.log(`🎯 LIMIT: safari_item_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
-          
-          // Update temporary state (will be saved when Save & Finish is clicked)
+          // Find itemId by checking which part exists in items
           const { loadSafariContent } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
-          const item = safariData[context.guildId]?.items?.[itemId];
+          const items = safariData[context.guildId]?.items || {};
+          
+          let buttonId, itemId, item;
+          
+          // Try different split points to find valid itemId
+          const parts = beforeActionIndex.split('_');
+          for (let i = 1; i < parts.length; i++) {
+            const possibleItemId = parts.slice(i).join('_');
+            if (items[possibleItemId]) {
+              itemId = possibleItemId;
+              buttonId = parts.slice(0, i).join('_');
+              item = items[possibleItemId];
+              break;
+            }
+          }
+          
+          if (!item) {
+            return {
+              content: '❌ Item not found.',
+              ephemeral: true
+            };
+          }
+          
+          const limitType = context.values[0];
+          console.log(`🎯 LIMIT: safari_item_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
           
           // Return updated configuration UI
           return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
@@ -10381,18 +10403,40 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const parts = context.customId.replace('safari_item_style_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const itemId = parts[parts.length - 2];
-          const buttonId = parts.slice(0, -2).join('_');
-          const style = context.values[0];
+          // Parse the custom_id: safari_item_style_buttonId_itemId_actionIndex
+          const fullString = context.customId.replace('safari_item_style_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const beforeActionIndex = fullString.substring(0, lastUnderscoreIndex);
           
-          console.log(`🎨 STYLE: safari_item_style - style ${style} for ${buttonId}[${actionIndex}]`);
-          
-          // Update temporary state
+          // Find itemId by checking which part exists in items
           const { loadSafariContent } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
-          const item = safariData[context.guildId]?.items?.[itemId];
+          const items = safariData[context.guildId]?.items || {};
+          
+          let buttonId, itemId, item;
+          
+          // Try different split points to find valid itemId
+          const parts = beforeActionIndex.split('_');
+          for (let i = 1; i < parts.length; i++) {
+            const possibleItemId = parts.slice(i).join('_');
+            if (items[possibleItemId]) {
+              itemId = possibleItemId;
+              buttonId = parts.slice(0, i).join('_');
+              item = items[possibleItemId];
+              break;
+            }
+          }
+          
+          if (!item) {
+            return {
+              content: '❌ Item not found.',
+              ephemeral: true
+            };
+          }
+          
+          const style = context.values[0];
+          console.log(`🎨 STYLE: safari_item_style - style ${style} for ${buttonId}[${actionIndex}]`);
           
           // Return updated configuration UI
           return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
@@ -10406,18 +10450,40 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const parts = context.customId.replace('safari_item_quantity_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const itemId = parts[parts.length - 2];
-          const buttonId = parts.slice(0, -2).join('_');
-          const quantity = parseInt(context.values[0]);
+          // Parse the custom_id: safari_item_quantity_buttonId_itemId_actionIndex
+          const fullString = context.customId.replace('safari_item_quantity_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const beforeActionIndex = fullString.substring(0, lastUnderscoreIndex);
           
-          console.log(`📦 QUANTITY: safari_item_quantity - ${quantity} for ${buttonId}[${actionIndex}]`);
-          
-          // Update temporary state
+          // Find itemId by checking which part exists in items
           const { loadSafariContent } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
-          const item = safariData[context.guildId]?.items?.[itemId];
+          const items = safariData[context.guildId]?.items || {};
+          
+          let buttonId, itemId, item;
+          
+          // Try different split points to find valid itemId
+          const parts = beforeActionIndex.split('_');
+          for (let i = 1; i < parts.length; i++) {
+            const possibleItemId = parts.slice(i).join('_');
+            if (items[possibleItemId]) {
+              itemId = possibleItemId;
+              buttonId = parts.slice(0, i).join('_');
+              item = items[possibleItemId];
+              break;
+            }
+          }
+          
+          if (!item) {
+            return {
+              content: '❌ Item not found.',
+              ephemeral: true
+            };
+          }
+          
+          const quantity = parseInt(context.values[0]);
+          console.log(`📦 QUANTITY: safari_item_quantity - ${quantity} for ${buttonId}[${actionIndex}]`);
           
           // Return updated configuration UI
           return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
@@ -10430,10 +10496,30 @@ Your server is now ready for Tycoons gameplay!`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          const parts = context.customId.replace('safari_item_save_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const itemId = parts[parts.length - 2];
-          const buttonId = parts.slice(0, -2).join('_');
+          // Parse the custom_id: safari_item_save_buttonId_itemId_actionIndex
+          const fullString = context.customId.replace('safari_item_save_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const beforeActionIndex = fullString.substring(0, lastUnderscoreIndex);
+          
+          // Find itemId by checking which part exists in items
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const items = safariData[context.guildId]?.items || {};
+          
+          let buttonId, itemId, item;
+          
+          // Try different split points to find valid itemId
+          const parts = beforeActionIndex.split('_');
+          for (let i = 1; i < parts.length; i++) {
+            const possibleItemId = parts.slice(i).join('_');
+            if (items[possibleItemId]) {
+              itemId = possibleItemId;
+              buttonId = parts.slice(0, i).join('_');
+              item = items[possibleItemId];
+              break;
+            }
+          }
           
           console.log(`✅ SAVE: safari_item_save - saving give_item for ${buttonId}`);
           
@@ -23486,13 +23572,13 @@ async function showDropConfiguration(guildId, buttonId, actionIndex) {
  * Show configuration UI for give_item action
  */
 function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
-  // Create quantity options (1-24, defaulting to 1)
+  // Create quantity options (0-24, no default)
   const quantityOptions = [];
-  for (let i = 1; i <= 24; i++) {
+  for (let i = 0; i <= 24; i++) {
     quantityOptions.push({
       label: i.toString(),
       value: i.toString(),
-      default: i === 1
+      description: i === 0 ? 'Remove this action' : undefined
     });
   }
   
@@ -23518,8 +23604,7 @@ function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
                 label: 'Unlimited',
                 value: 'unlimited',
                 description: 'Can be claimed infinite times',
-                emoji: { name: '♾️' },
-                default: true
+                emoji: { name: '♾️' }
               },
               {
                 label: 'Once Per Player',
@@ -23546,7 +23631,7 @@ function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
             placeholder: 'Select button style...',
             options: [
               { label: 'Primary (Blue)', value: '1', emoji: { name: '🔵' } },
-              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' }, default: true },
+              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' } },
               { label: 'Success (Green)', value: '3', emoji: { name: '🟢' } },
               { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' } }
             ]
@@ -23636,8 +23721,7 @@ function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
                 label: 'Unlimited',
                 value: 'unlimited',
                 description: 'Can be claimed infinite times',
-                emoji: { name: '♾️' },
-                default: true
+                emoji: { name: '♾️' }
               },
               {
                 label: 'Once Per Player',
@@ -23664,7 +23748,7 @@ function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
             placeholder: 'Select button style...',
             options: [
               { label: 'Primary (Blue)', value: '1', emoji: { name: '🔵' } },
-              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' }, default: true },
+              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' } },
               { label: 'Success (Green)', value: '3', emoji: { name: '🟢' } },
               { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' } }
             ]
