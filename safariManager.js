@@ -574,6 +574,120 @@ async function executeUpdateCurrency(config, userId, guildId, interaction) {
 }
 
 /**
+ * Execute give currency action
+ */
+async function executeGiveCurrency(config, userId, guildId, interaction) {
+    // Get custom terms for this guild
+    const customTerms = await getCustomTerms(guildId);
+    
+    console.log(`💰 DEBUG: Executing give currency: ${config.amount} for user ${userId}`);
+    
+    // Check usage limits
+    if (config.limit && config.limit.type !== 'unlimited') {
+        const safariData = await loadSafariContent();
+        const claimedBy = config.limit.claimedBy || [];
+        
+        if (config.limit.type === 'once_per_player' && claimedBy.includes(userId)) {
+            return {
+                content: `❌ You have already claimed this ${customTerms.currencyName} reward!`,
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+        
+        if (config.limit.type === 'once_globally' && claimedBy) {
+            return {
+                content: `❌ This ${customTerms.currencyName} reward has already been claimed!`,
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+    }
+    
+    // Give the currency
+    const newBalance = await updateCurrency(guildId, userId, config.amount);
+    
+    // Update claim tracking
+    if (config.limit && config.limit.type !== 'unlimited') {
+        // Note: This is a simplified tracking - in production, we'd need to update the action's config in safariContent
+        // For now, we'll just track it in memory (will be lost on restart)
+        if (config.limit.type === 'once_per_player') {
+            if (!config.limit.claimedBy) config.limit.claimedBy = [];
+            config.limit.claimedBy.push(userId);
+        } else if (config.limit.type === 'once_globally') {
+            config.limit.claimedBy = userId;
+        }
+    }
+    
+    let message = config.message || `You received ${customTerms.currencyName}!`;
+    message += `\n\n${customTerms.currencyEmoji} **+${config.amount} ${customTerms.currencyName}**`;
+    message += `\nYour balance: **${newBalance} ${customTerms.currencyName}**`;
+    
+    return {
+        content: message,
+        flags: InteractionResponseFlags.EPHEMERAL
+    };
+}
+
+/**
+ * Execute give item action
+ */
+async function executeGiveItem(config, userId, guildId, interaction) {
+    console.log(`🎁 DEBUG: Executing give item: ${config.itemId} x${config.quantity} for user ${userId}`);
+    
+    // Check usage limits
+    if (config.limit && config.limit.type !== 'unlimited') {
+        const safariData = await loadSafariContent();
+        const claimedBy = config.limit.claimedBy || [];
+        
+        if (config.limit.type === 'once_per_player' && claimedBy.includes(userId)) {
+            return {
+                content: '❌ You have already claimed this item!',
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+        
+        if (config.limit.type === 'once_globally' && claimedBy) {
+            return {
+                content: '❌ This item has already been claimed!',
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+    }
+    
+    // Give the item
+    const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity);
+    
+    if (!success) {
+        return {
+            content: '❌ Failed to add item to inventory. Item may not exist.',
+            flags: InteractionResponseFlags.EPHEMERAL
+        };
+    }
+    
+    // Update claim tracking (simplified - in production would persist to safariContent)
+    if (config.limit && config.limit.type !== 'unlimited') {
+        if (config.limit.type === 'once_per_player') {
+            if (!config.limit.claimedBy) config.limit.claimedBy = [];
+            config.limit.claimedBy.push(userId);
+        } else if (config.limit.type === 'once_globally') {
+            config.limit.claimedBy = userId;
+        }
+    }
+    
+    // Get item details
+    const safariData = await loadSafariContent();
+    const item = safariData[guildId]?.items?.[config.itemId];
+    const itemName = item?.name || config.itemId;
+    const itemEmoji = item?.emoji || '🎁';
+    
+    const message = `${itemEmoji} You received **${config.quantity}x ${itemName}**!`;
+    
+    return {
+        content: message,
+        flags: InteractionResponseFlags.EPHEMERAL
+    };
+}
+
+/**
  * Execute follow-up button action
  */
 async function executeFollowUpButton(config, guildId, interaction) {
@@ -774,6 +888,16 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
                     
                 case ACTION_TYPES.MOVE_PLAYER:
                     result = await executeMovePlayer(action.config, guildId, userId, interaction);
+                    responses.push(result);
+                    break;
+                    
+                case 'give_currency':
+                    result = await executeGiveCurrency(action.config, userId, guildId, interaction);
+                    responses.push(result);
+                    break;
+                    
+                case 'give_item':
+                    result = await executeGiveItem(action.config, userId, guildId, interaction);
                     responses.push(result);
                     break;
                     
@@ -5252,6 +5376,8 @@ export {
     executeConditionalAction,
     executeStoreDisplay,
     executeRandomOutcome,
+    executeGiveCurrency,
+    executeGiveItem,
     ACTION_TYPES,
     CONDITION_TYPES,
     // Edit Framework exports
