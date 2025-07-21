@@ -146,6 +146,55 @@ npm run logs-prod -- --feature BUTTON --level debug
 - **MANDATORY: Discord Components V2** - ALL UI must use Components V2 pattern (see architecture docs)
 - Centralized error handling via errorHandler.js
 
+## 📐 app.js Organization Rules
+
+### **🎯 The Golden Rule: app.js should be a ROUTER, not a PROCESSOR**
+
+### **❌ SHOULD NOT go in app.js:**
+
+1. **Complete feature implementations** - Like Safari system logic, castlist processing, player management
+2. **Data processing utilities** - Emoji handling, role calculations, member field processing
+3. **Reusable UI components** - Button builders, modal creators, complex response formatters
+4. **Business logic** - Entity management, field validation, content transformations
+5. **Helper functions >20 lines** - Complex calculations, data transformations
+6. **Static configuration** - Button registries, menu definitions, style constants
+
+### **✅ SHOULD go in app.js:**
+
+1. **Express server setup** - App initialization, middleware, port configuration
+2. **Discord client initialization** - Client setup, basic event handlers
+3. **Route handlers** - `/interactions` endpoint, verification handlers
+4. **Button handler routing** - The `if (custom_id === 'button')` routing logic only
+5. **Top-level interaction dispatch** - Slash command routing, component type routing
+6. **Error handling wrappers** - Top-level try/catch for interactions
+7. **Permission checks** - Basic authorization before routing to handlers
+
+### **📏 Size Guidelines:**
+
+- **Functions**: Max 30 lines in app.js
+- **Handler blocks**: Max 10 lines (should call external functions)
+- **Total file**: Target <5,000 lines (currently 21,000+)
+
+### **✅ Good Pattern:**
+```javascript
+} else if (custom_id === 'safari_button') {
+  return ButtonHandlerFactory.create({
+    id: 'safari_button',
+    handler: safariHandlers.handleButton
+  })(req, res, client);
+}
+```
+
+### **❌ Bad Pattern:**
+```javascript
+} else if (custom_id === 'safari_button') {
+  const safariContent = await loadSafariContent();
+  const processedData = transformSafariData(safariContent);
+  const uiComponents = buildSafariUI(processedData);
+  // ... 50 more lines of processing
+}
+```
+
 ## 🎨 Discord Components V2 (MANDATORY)
 
 **🚨 CRITICAL: ALL Discord UI must use Components V2 pattern**

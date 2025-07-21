@@ -4040,6 +4040,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_drop_reset_') &&
         !custom_id.startsWith('safari_drop_save_') &&
         !custom_id.startsWith('safari_drop_type_') &&
+        !custom_id.startsWith('safari_give_item_select_') &&
+        !custom_id.startsWith('safari_item_limit_') &&
+        !custom_id.startsWith('safari_item_style_') &&
+        !custom_id.startsWith('safari_item_quantity_') &&
+        !custom_id.startsWith('safari_item_save_') &&
+        !custom_id.startsWith('safari_item_reset_') &&
+        !custom_id.startsWith('safari_currency_amount_') &&
+        !custom_id.startsWith('safari_currency_limit_') &&
+        !custom_id.startsWith('safari_currency_style_') &&
+        !custom_id.startsWith('safari_currency_save_') &&
+        !custom_id.startsWith('safari_currency_reset_') &&
         custom_id !== 'safari_map_init_player' &&
         custom_id !== 'safari_post_select_button' &&
         custom_id !== 'safari_confirm_reset_game' && 
@@ -10108,7 +10119,64 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Show modal based on action type
+          // Handle give_item and give_currency differently - show select interface instead of modal
+          if (actionType === 'give_item') {
+            // Load items
+            const items = safariData[context.guildId]?.items || {};
+            
+            if (Object.keys(items).length === 0) {
+              return {
+                content: '❌ No items available. Create items first using Safari menu.',
+                ephemeral: true
+              };
+            }
+            
+            // Create item select menu
+            const itemOptions = Object.entries(items).slice(0, 25).map(([itemId, item]) => ({
+              label: `${item.emoji || '📦'} ${item.name}`.substring(0, 100),
+              value: itemId,
+              description: item.description?.substring(0, 100)
+            }));
+            
+            console.log(`✅ SUCCESS: safari_action_type_select - showing item selection for give_item`);
+            
+            return {
+              components: [{
+                type: 17, // Container
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `# Select Item for ${button.name || 'Custom Action'}\n\nChoose an item to give when this action is triggered.`
+                  },
+                  { type: 14 }, // Separator
+                  {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 3, // String Select
+                      custom_id: `safari_give_item_select_${buttonId}`,
+                      placeholder: 'Select an item...',
+                      options: itemOptions
+                    }]
+                  }
+                ]
+              }],
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              ephemeral: true
+            };
+          } else if (actionType === 'give_currency') {
+            // Show currency configuration directly (no item selection needed)
+            const { getCustomTerms } = await import('./safariManager.js');
+            const customTerms = await getCustomTerms(context.guildId);
+            
+            console.log(`✅ SUCCESS: safari_action_type_select - showing currency config`);
+            
+            // Create a temporary action config to show the configuration UI
+            const tempActionIndex = button.actions?.length || 0;
+            
+            return showGiveCurrencyConfig(context.guildId, buttonId, tempActionIndex, customTerms);
+          }
+          
+          // Show modal for other action types
           const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
           const modal = new ModalBuilder()
             .setCustomId(`safari_action_modal_${buttonId}_${actionType}`)
@@ -10237,6 +10305,346 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.MODAL,
             data: modal
+          });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_give_item_select_')) {
+      // Handle item selection for give_item action
+      return ButtonHandlerFactory.create({
+        id: 'safari_give_item_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const buttonId = context.customId.replace('safari_give_item_select_', '');
+          const itemId = context.values?.[0];
+          
+          if (!itemId) {
+            return {
+              content: '❌ No item selected.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`🎁 START: safari_give_item_select - button ${buttonId}, item ${itemId}`);
+          
+          // Load safari data to get item details
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const item = safariData[context.guildId]?.items?.[itemId];
+          
+          if (!item) {
+            return {
+              content: '❌ Item not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Show configuration UI for the item drop
+          const tempActionIndex = safariData[context.guildId]?.buttons?.[buttonId]?.actions?.length || 0;
+          
+          console.log(`✅ SUCCESS: safari_give_item_select - showing config for ${item.name}`);
+          
+          return showGiveItemConfig(context.guildId, buttonId, itemId, item, tempActionIndex);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_item_limit_')) {
+      // Handle item drop usage limit change
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_limit',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_item_limit_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const itemId = parts[parts.length - 2];
+          const buttonId = parts.slice(0, -2).join('_');
+          const limitType = context.values[0];
+          
+          console.log(`🎯 LIMIT: safari_item_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
+          
+          // Update temporary state (will be saved when Save & Finish is clicked)
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const item = safariData[context.guildId]?.items?.[itemId];
+          
+          // Return updated configuration UI
+          return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_item_style_')) {
+      // Handle item drop button style change
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_style',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_item_style_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const itemId = parts[parts.length - 2];
+          const buttonId = parts.slice(0, -2).join('_');
+          const style = context.values[0];
+          
+          console.log(`🎨 STYLE: safari_item_style - style ${style} for ${buttonId}[${actionIndex}]`);
+          
+          // Update temporary state
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const item = safariData[context.guildId]?.items?.[itemId];
+          
+          // Return updated configuration UI
+          return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_item_quantity_')) {
+      // Handle item quantity change
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_quantity',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_item_quantity_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const itemId = parts[parts.length - 2];
+          const buttonId = parts.slice(0, -2).join('_');
+          const quantity = parseInt(context.values[0]);
+          
+          console.log(`📦 QUANTITY: safari_item_quantity - ${quantity} for ${buttonId}[${actionIndex}]`);
+          
+          // Update temporary state
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const item = safariData[context.guildId]?.items?.[itemId];
+          
+          // Return updated configuration UI
+          return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_item_save_')) {
+      // Handle save and finish for give_item
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_save',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_item_save_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const itemId = parts[parts.length - 2];
+          const buttonId = parts.slice(0, -2).join('_');
+          
+          console.log(`✅ SAVE: safari_item_save - saving give_item for ${buttonId}`);
+          
+          // Load safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          const item = safariData[context.guildId]?.items?.[itemId];
+          
+          if (!button || !item) {
+            return {
+              content: '❌ Button or item not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+          
+          // Create the give_item action with defaults
+          const action = {
+            type: 'give_item',
+            order: button.actions.length,
+            config: {
+              itemId: itemId,
+              quantity: 1, // Default, will be updated by selects
+              limit: {
+                type: 'unlimited',
+                claimedBy: []
+              }
+            }
+          };
+          
+          // Add the action
+          button.actions.push(action);
+          
+          // Update metadata
+          if (!button.metadata) {
+            button.metadata = {
+              createdAt: Date.now(),
+              lastModified: Date.now(),
+              usageCount: 0
+            };
+          } else {
+            button.metadata.lastModified = Date.now();
+          }
+          
+          // Save safari data
+          await saveSafariContent(safariData);
+          
+          console.log(`✅ Added give_item action to button ${buttonId}`);
+          
+          // Return to custom action editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          return await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId: buttonId
+          });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_currency_amount_')) {
+      // Handle currency amount button (shows modal)
+      return ButtonHandlerFactory.create({
+        id: 'safari_currency_amount',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_currency_amount_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          
+          console.log(`💰 AMOUNT: safari_currency_amount - showing modal for ${buttonId}[${actionIndex}]`);
+          
+          // Show modal for amount input
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+          const modal = new ModalBuilder()
+            .setCustomId(`safari_currency_modal_${buttonId}_${actionIndex}`)
+            .setTitle('Set Currency Amount');
+          
+          const amountInput = new TextInputBuilder()
+            .setCustomId('amount')
+            .setLabel('Amount to give')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('100')
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(10);
+          
+          modal.addComponents(new ActionRowBuilder().addComponents(amountInput));
+          
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal
+          });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_currency_limit_')) {
+      // Handle currency usage limit change
+      return ButtonHandlerFactory.create({
+        id: 'safari_currency_limit',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_currency_limit_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const limitType = context.values[0];
+          
+          console.log(`🎯 LIMIT: safari_currency_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
+          
+          // Update temporary state
+          const { getCustomTerms } = await import('./safariManager.js');
+          const customTerms = await getCustomTerms(context.guildId);
+          
+          // Return updated configuration UI
+          return showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_currency_style_')) {
+      // Handle currency button style change
+      return ButtonHandlerFactory.create({
+        id: 'safari_currency_style',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_currency_style_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const style = context.values[0];
+          
+          console.log(`🎨 STYLE: safari_currency_style - style ${style} for ${buttonId}[${actionIndex}]`);
+          
+          // Update temporary state
+          const { getCustomTerms } = await import('./safariManager.js');
+          const customTerms = await getCustomTerms(context.guildId);
+          
+          // Return updated configuration UI
+          return showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_currency_save_')) {
+      // Handle save and finish for give_currency
+      return ButtonHandlerFactory.create({
+        id: 'safari_currency_save',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_currency_save_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          
+          console.log(`✅ SAVE: safari_currency_save - saving give_currency for ${buttonId}`);
+          
+          // Load safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          
+          if (!button) {
+            return {
+              content: '❌ Button not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+          
+          // Create the give_currency action with defaults
+          const action = {
+            type: 'give_currency',
+            order: button.actions.length,
+            config: {
+              amount: 100, // Default
+              limit: {
+                type: 'unlimited',
+                claimedBy: []
+              }
+            }
+          };
+          
+          // Add the action
+          button.actions.push(action);
+          
+          // Update metadata
+          if (!button.metadata) {
+            button.metadata = {
+              createdAt: Date.now(),
+              lastModified: Date.now(),
+              usageCount: 0
+            };
+          } else {
+            button.metadata.lastModified = Date.now();
+          }
+          
+          // Save safari data
+          await saveSafariContent(safariData);
+          
+          console.log(`✅ Added give_currency action to button ${buttonId}`);
+          
+          // Return to custom action editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          return await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId: buttonId
           });
         }
       })(req, res, client);
@@ -19530,6 +19938,58 @@ Are you sure you want to continue?`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_currency_modal_') && custom_id.split('_').length > 4) {
+      // Handle currency amount modal for give_currency action (format: safari_currency_modal_buttonId_actionIndex)
+      try {
+        const parts = custom_id.replace('safari_currency_modal_', '').split('_');
+        const actionIndex = parseInt(parts[parts.length - 1]);
+        const buttonId = parts.slice(0, -1).join('_');
+        
+        console.log(`💰 MODAL: safari_currency_modal - processing amount for ${buttonId}[${actionIndex}]`);
+        
+        // Get amount from modal
+        const amount = parseInt(components[0].components[0].value);
+        
+        if (isNaN(amount) || amount <= 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a valid positive number.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Show updated configuration UI with amount
+        const { getCustomTerms } = await import('./safariManager.js');
+        const customTerms = await getCustomTerms(req.body.guild_id);
+        
+        // Update the UI to show the amount
+        const configUI = showGiveCurrencyConfig(req.body.guild_id, buttonId, actionIndex, customTerms);
+        
+        // Find the amount section and update it
+        const amountSection = configUI.components[0].components.find(c => 
+          c.type === 9 && c.components?.[0]?.content?.includes('**Amount:**')
+        );
+        if (amountSection) {
+          amountSection.components[0].content = `**Amount:** ${amount} ${customTerms.currencyName}`;
+        }
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: configUI
+        });
+        
+      } catch (error) {
+        console.error('Error processing currency modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error processing currency amount.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('safari_action_modal_')) {
       // Handle Safari action modal submissions
       try {
@@ -23009,6 +23469,225 @@ async function showDropConfiguration(guildId, buttonId, actionIndex) {
             {
               type: 2, // Button
               custom_id: `safari_drop_save_${buttonId}_${actionIndex}`,
+              label: 'Save & Finish',
+              style: 3, // Success
+              emoji: { name: '✅' }
+            }
+          ]
+        }
+      ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
+  };
+}
+
+/**
+ * Show configuration UI for give_item action
+ */
+function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
+  // Create quantity options (1-24, defaulting to 1)
+  const quantityOptions = [];
+  for (let i = 1; i <= 24; i++) {
+    quantityOptions.push({
+      label: i.toString(),
+      value: i.toString(),
+      default: i === 1
+    });
+  }
+  
+  return {
+    components: [{
+      type: 17, // Container
+      components: [
+        {
+          type: 10, // Text Display
+          content: `# Configure ${item.emoji || '📦'} ${item.name} Drop\n\nSet how this item will be given when the action is triggered.`
+        },
+        { type: 14 }, // Separator
+        
+        // Usage Limit Select
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_item_limit_${buttonId}_${itemId}_${actionIndex}`,
+            placeholder: 'Select usage limit...',
+            options: [
+              {
+                label: 'Unlimited',
+                value: 'unlimited',
+                description: 'Can be claimed infinite times',
+                emoji: { name: '♾️' },
+                default: true
+              },
+              {
+                label: 'Once Per Player',
+                value: 'once_per_player',
+                description: 'Each player can claim once',
+                emoji: { name: '👤' }
+              },
+              {
+                label: 'Once Globally',
+                value: 'once_globally',
+                description: 'Only one player can claim',
+                emoji: { name: '🌍' }
+              }
+            ]
+          }]
+        },
+        
+        // Button Style Select
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_item_style_${buttonId}_${itemId}_${actionIndex}`,
+            placeholder: 'Select button style...',
+            options: [
+              { label: 'Primary (Blue)', value: '1', emoji: { name: '🔵' } },
+              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' }, default: true },
+              { label: 'Success (Green)', value: '3', emoji: { name: '🟢' } },
+              { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' } }
+            ]
+          }]
+        },
+        
+        // Quantity Select
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_item_quantity_${buttonId}_${itemId}_${actionIndex}`,
+            placeholder: 'Select quantity...',
+            options: quantityOptions.slice(0, 25) // Discord limit
+          }]
+        },
+        
+        { type: 14 }, // Separator
+        
+        // Action buttons
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `safari_item_reset_${buttonId}_${itemId}_${actionIndex}`,
+              label: 'Reset Claims',
+              style: 4, // Danger
+              emoji: { name: '🔄' },
+              disabled: true // Will be enabled when claims exist
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_item_save_${buttonId}_${itemId}_${actionIndex}`,
+              label: 'Save & Finish',
+              style: 3, // Success
+              emoji: { name: '✅' }
+            }
+          ]
+        }
+      ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
+  };
+}
+
+/**
+ * Show configuration UI for give_currency action
+ */
+function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
+  return {
+    components: [{
+      type: 17, // Container
+      components: [
+        {
+          type: 10, // Text Display
+          content: `# Configure ${customTerms.currencyEmoji} ${customTerms.currencyName} Drop\n\nSet how ${customTerms.currencyName} will be given when the action is triggered.`
+        },
+        { type: 14 }, // Separator
+        
+        // Currency Amount (via modal button)
+        {
+          type: 9, // Section
+          components: [{
+            type: 10, // Text Display
+            content: `**Amount:** Not set`
+          }],
+          accessory: {
+            type: 2, // Button
+            custom_id: `safari_currency_amount_${buttonId}_${actionIndex}`,
+            label: 'Set Amount',
+            style: 1, // Primary
+            emoji: { name: '💰' }
+          }
+        },
+        
+        // Usage Limit Select
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_currency_limit_${buttonId}_${actionIndex}`,
+            placeholder: 'Select usage limit...',
+            options: [
+              {
+                label: 'Unlimited',
+                value: 'unlimited',
+                description: 'Can be claimed infinite times',
+                emoji: { name: '♾️' },
+                default: true
+              },
+              {
+                label: 'Once Per Player',
+                value: 'once_per_player',
+                description: 'Each player can claim once',
+                emoji: { name: '👤' }
+              },
+              {
+                label: 'Once Globally',
+                value: 'once_globally',
+                description: 'Only one player can claim',
+                emoji: { name: '🌍' }
+              }
+            ]
+          }]
+        },
+        
+        // Button Style Select
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_currency_style_${buttonId}_${actionIndex}`,
+            placeholder: 'Select button style...',
+            options: [
+              { label: 'Primary (Blue)', value: '1', emoji: { name: '🔵' } },
+              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' }, default: true },
+              { label: 'Success (Green)', value: '3', emoji: { name: '🟢' } },
+              { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' } }
+            ]
+          }]
+        },
+        
+        { type: 14 }, // Separator
+        
+        // Action buttons
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `safari_currency_reset_${buttonId}_${actionIndex}`,
+              label: 'Reset Claims',
+              style: 4, // Danger
+              emoji: { name: '🔄' },
+              disabled: true // Will be enabled when claims exist
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_currency_save_${buttonId}_${actionIndex}`,
               label: 'Save & Finish',
               style: 3, // Success
               emoji: { name: '✅' }

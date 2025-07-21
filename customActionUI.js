@@ -101,6 +101,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
 export async function createCustomActionEditorUI({ guildId, actionId, coordinate, skipAutoSave = false }) {
   const allSafariContent = await loadSafariContent();
   const guildData = allSafariContent[guildId] || {};
+  const guildItems = guildData.items || {};
   let action = actionId === 'new' ? createDefaultAction() : guildData.buttons?.[actionId];
   
   if (!action) {
@@ -226,7 +227,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         },
         
         // Display existing actions
-        ...getActionListComponents(action.actions || [], actionId),
+        ...getActionListComponents(action.actions || [], actionId, guildItems),
         
         // Add Action Select Menu (if not at max)
         ...((action.actions?.length || 0) < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON ? [{
@@ -323,7 +324,7 @@ function formatCoordinateList(coordinates) {
   return truncated;
 }
 
-function getActionListComponents(actions, actionId) {
+function getActionListComponents(actions, actionId, guildItems = {}) {
   if (!actions || actions.length === 0) {
     return [];
   }
@@ -335,7 +336,7 @@ function getActionListComponents(actions, actionId) {
       type: 9, // Section
       components: [{
         type: 10,
-        content: getActionSummary(action, index + 1)
+        content: getActionSummary(action, index + 1, guildItems)
       }],
       accessory: {
         type: 2,
@@ -350,7 +351,7 @@ function getActionListComponents(actions, actionId) {
   return components;
 }
 
-function getActionSummary(action, number) {
+function getActionSummary(action, number, guildItems = {}) {
   switch (action.type) {
     case 'display_text':
       // Handle new format (config.title/content) and legacy format (text)
@@ -374,7 +375,9 @@ function getActionSummary(action, number) {
       return `**\`${number}. Display Text\`** ${truncated}${ellipsis}`;
       
     case 'give_item':
-      const itemName = action.config?.itemId || action.itemId || 'Unknown Item';
+      const itemId = action.config?.itemId || action.itemId;
+      const item = guildItems[itemId];
+      const itemName = item?.name || itemId || 'Unknown Item';
       const quantity = action.config?.quantity || action.quantity || 1;
       const limitText = action.config?.limit?.type ? ` (${action.config.limit.type.replace(/_/g, ' ')})` : '';
       return `**\`${number}. Give Item\`** ${itemName} x${quantity}${limitText}`;
