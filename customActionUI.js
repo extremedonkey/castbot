@@ -102,6 +102,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   const allSafariContent = await loadSafariContent();
   const guildData = allSafariContent[guildId] || {};
   const guildItems = guildData.items || {};
+  const guildButtons = guildData.buttons || {};
   let action = actionId === 'new' ? createDefaultAction() : guildData.buttons?.[actionId];
   
   if (!action) {
@@ -227,7 +228,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         },
         
         // Display existing actions
-        ...getActionListComponents(action.actions || [], actionId, guildItems),
+        ...getActionListComponents(action.actions || [], actionId, guildItems, guildButtons),
         
         // Add Action Select Menu (if not at max)
         ...((action.actions?.length || 0) < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON ? [{
@@ -323,7 +324,7 @@ function formatCoordinateList(coordinates) {
   return truncated;
 }
 
-function getActionListComponents(actions, actionId, guildItems = {}) {
+function getActionListComponents(actions, actionId, guildItems = {}, guildButtons = {}) {
   if (!actions || actions.length === 0) {
     return [];
   }
@@ -335,7 +336,7 @@ function getActionListComponents(actions, actionId, guildItems = {}) {
       type: 9, // Section
       components: [{
         type: 10,
-        content: getActionSummary(action, index + 1, guildItems)
+        content: getActionSummary(action, index + 1, guildItems, guildButtons)
       }],
       accessory: {
         type: 2,
@@ -350,7 +351,7 @@ function getActionListComponents(actions, actionId, guildItems = {}) {
   return components;
 }
 
-function getActionSummary(action, number, guildItems = {}) {
+function getActionSummary(action, number, guildItems = {}, guildButtons = {}) {
   switch (action.type) {
     case 'display_text':
       // Handle new format (config.title/content) and legacy format (text)
@@ -389,7 +390,14 @@ function getActionSummary(action, number, guildItems = {}) {
       return `**\`${number}. Update Currency\`** Amount: ${action.amount || 0}`;
     case 'follow_up_button':
     case 'follow_up':
-      return `**\`${number}. Follow-up Action\`** ${action.buttonId || 'Not configured'}`;
+      const followUpButtonId = action.config?.buttonId || action.buttonId;
+      if (!followUpButtonId) {
+        return `**\`${number}. Follow-up Action\`** Not configured`;
+      }
+      // Try to get button name from guildButtons 
+      const followUpButton = guildButtons[followUpButtonId];
+      const followUpButtonName = followUpButton?.name || followUpButton?.label || followUpButtonId;
+      return `**\`${number}. Follow-up Action\`** ${followUpButtonName}`;
     case 'conditional':
       return `**\`${number}. Conditional\`** ${action.condition?.type || 'Not configured'}`;
     case 'create_button':

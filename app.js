@@ -10189,9 +10189,14 @@ Your server is now ready for Tycoons gameplay!`;
             const safariData = await loadSafariContent();
             const buttons = safariData[context.guildId]?.buttons || {};
             
-            // Filter out current button to avoid circular references
+            // Filter out current button and sort chronologically (most recent first)
             const availableButtons = Object.entries(buttons)
               .filter(([id, btn]) => id !== buttonId)
+              .sort((a, b) => {
+                const aLastModified = a[1].metadata?.lastModified || 0;
+                const bLastModified = b[1].metadata?.lastModified || 0;
+                return bLastModified - aLastModified; // Descending order (newest first)
+              })
               .slice(0, 25); // Discord limit
             
             if (availableButtons.length === 0) {
