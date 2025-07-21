@@ -23121,8 +23121,7 @@ Are you sure you want to continue?`;
                 return res.send({
                   type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                   data: {
-                    ...response,
-                    content: `🔧 **Admin Test Result:**\n\n${response.content || ''}`,
+                    content: `🔧 **Admin Test Result:** Command executed successfully!`,
                     flags: InteractionResponseFlags.EPHEMERAL
                   }
                 });
