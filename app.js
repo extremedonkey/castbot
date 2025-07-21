@@ -10523,11 +10523,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           console.log(`✅ SAVE: safari_item_save - saving give_item for ${buttonId}`);
           
-          // Load safari data
-          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
           const button = safariData[context.guildId]?.buttons?.[buttonId];
-          const item = safariData[context.guildId]?.items?.[itemId];
           
           if (!button || !item) {
             return {
