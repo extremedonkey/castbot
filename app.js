@@ -10674,6 +10674,12 @@ Your server is now ready for Tycoons gameplay!`;
           
           console.log(`🎯 LIMIT: safari_currency_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
           
+          // Store in temporary state
+          const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', amount: 0 };
+          state.limit = limitType;
+          dropConfigState.set(stateKey, state);
+          
           // Update temporary state
           const { getCustomTerms } = await import('./safariManager.js');
           const customTerms = await getCustomTerms(context.guildId);
@@ -10696,6 +10702,12 @@ Your server is now ready for Tycoons gameplay!`;
           const style = context.values[0];
           
           console.log(`🎨 STYLE: safari_currency_style - style ${style} for ${buttonId}[${actionIndex}]`);
+          
+          // Store in temporary state
+          const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', amount: 0 };
+          state.style = style;
+          dropConfigState.set(stateKey, state);
           
           // Update temporary state
           const { getCustomTerms } = await import('./safariManager.js');
@@ -10735,18 +10747,42 @@ Your server is now ready for Tycoons gameplay!`;
             button.actions = [];
           }
           
-          // Create the give_currency action with defaults
+          // Get state from temporary storage
+          const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', amount: 0 };
+          
+          // Handle amount 0 - don't add the action
+          if (state.amount === 0) {
+            console.log(`🗑️ Not adding give_currency action due to amount 0`);
+            
+            // Clean up state
+            dropConfigState.delete(stateKey);
+            
+            // Return to custom action editor
+            const { createCustomActionEditorUI } = await import('./customActionUI.js');
+            return await createCustomActionEditorUI({
+              guildId: context.guildId,
+              actionId: buttonId
+            });
+          }
+          
+          // Create the give_currency action with state values
           const action = {
             type: 'give_currency',
             order: button.actions.length,
             config: {
-              amount: 100, // Default
+              amount: state.amount,
               limit: {
-                type: 'unlimited',
-                claimedBy: []
+                type: state.limit,
+                claimedBy: state.limit === 'unlimited' ? undefined : []
               }
             }
           };
+          
+          // Also save button style if not default
+          if (state.style !== '2') {
+            button.style = parseInt(state.style);
+          }
           
           // Add the action
           button.actions.push(action);
@@ -10766,6 +10802,9 @@ Your server is now ready for Tycoons gameplay!`;
           await saveSafariContent(safariData);
           
           console.log(`✅ Added give_currency action to button ${buttonId}`);
+          
+          // Clean up state
+          dropConfigState.delete(stateKey);
           
           // Return to custom action editor
           const { createCustomActionEditorUI } = await import('./customActionUI.js');
@@ -20077,34 +20116,29 @@ Are you sure you want to continue?`;
         // Get amount from modal
         const amount = parseInt(components[0].components[0].value);
         
-        if (isNaN(amount) || amount <= 0) {
+        if (isNaN(amount) || amount < 0) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Please enter a valid positive number.',
+              content: '❌ Please enter a valid non-negative number (0 to remove this action).',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
+        // Store in temporary state
+        const stateKey = `${req.body.guild_id}_${buttonId}_currency_${actionIndex}`;
+        const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', amount: 0 };
+        state.amount = amount;
+        dropConfigState.set(stateKey, state);
+        
         // Show updated configuration UI with amount
         const { getCustomTerms } = await import('./safariManager.js');
         const customTerms = await getCustomTerms(req.body.guild_id);
         
-        // Update the UI to show the amount
-        const configUI = showGiveCurrencyConfig(req.body.guild_id, buttonId, actionIndex, customTerms);
-        
-        // Find the amount section and update it
-        const amountSection = configUI.components[0].components.find(c => 
-          c.type === 9 && c.components?.[0]?.content?.includes('**Amount:**')
-        );
-        if (amountSection) {
-          amountSection.components[0].content = `**Amount:** ${amount} ${customTerms.currencyName}`;
-        }
-        
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: configUI
+          data: showGiveCurrencyConfig(req.body.guild_id, buttonId, actionIndex, customTerms)
         });
         
       } catch (error) {
@@ -23623,13 +23657,14 @@ function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
     style: '2',
     quantity: 1
   };
-  // Create quantity options (0-24, no default)
+  // Create quantity options (0-24, with state-based default)
   const quantityOptions = [];
   for (let i = 0; i <= 24; i++) {
     quantityOptions.push({
       label: i.toString(),
       value: i.toString(),
-      description: i === 0 ? 'Remove this action' : undefined
+      description: i === 0 ? 'Remove this action' : undefined,
+      default: state.quantity === i
     });
   }
   
@@ -23655,19 +23690,22 @@ function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
                 label: 'Unlimited',
                 value: 'unlimited',
                 description: 'Can be claimed infinite times',
-                emoji: { name: '♾️' }
+                emoji: { name: '♾️' },
+                default: state.limit === 'unlimited'
               },
               {
                 label: 'Once Per Player',
                 value: 'once_per_player',
                 description: 'Each player can claim once',
-                emoji: { name: '👤' }
+                emoji: { name: '👤' },
+                default: state.limit === 'once_per_player'
               },
               {
                 label: 'Once Globally',
                 value: 'once_globally',
                 description: 'Only one player can claim',
-                emoji: { name: '🌍' }
+                emoji: { name: '🌍' },
+                default: state.limit === 'once_globally'
               }
             ]
           }]
@@ -23681,10 +23719,10 @@ function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
             custom_id: `safari_item_style_${buttonId}_${itemId}_${actionIndex}`,
             placeholder: 'Select button style...',
             options: [
-              { label: 'Primary (Blue)', value: '1', emoji: { name: '🔵' } },
-              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' } },
-              { label: 'Success (Green)', value: '3', emoji: { name: '🟢' } },
-              { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' } }
+              { label: 'Primary (Blue)', value: '1', emoji: { name: '🔵' }, default: state.style === '1' },
+              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' }, default: state.style === '2' },
+              { label: 'Success (Green)', value: '3', emoji: { name: '🟢' }, default: state.style === '3' },
+              { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' }, default: state.style === '4' }
             ]
           }]
         },
@@ -23734,6 +23772,14 @@ function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
  * Show configuration UI for give_currency action
  */
 function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
+  // Get or create state for this configuration
+  const stateKey = `${guildId}_${buttonId}_currency_${actionIndex}`;
+  const state = dropConfigState.get(stateKey) || {
+    limit: 'unlimited',
+    style: '2',
+    amount: 0
+  };
+  
   return {
     components: [{
       type: 17, // Container
@@ -23749,7 +23795,7 @@ function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
           type: 9, // Section
           components: [{
             type: 10, // Text Display
-            content: `**Amount:** Not set`
+            content: `**Amount:** ${state.amount || 'Not set'}`
           }],
           accessory: {
             type: 2, // Button
@@ -23772,19 +23818,22 @@ function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
                 label: 'Unlimited',
                 value: 'unlimited',
                 description: 'Can be claimed infinite times',
-                emoji: { name: '♾️' }
+                emoji: { name: '♾️' },
+                default: state.limit === 'unlimited'
               },
               {
                 label: 'Once Per Player',
                 value: 'once_per_player',
                 description: 'Each player can claim once',
-                emoji: { name: '👤' }
+                emoji: { name: '👤' },
+                default: state.limit === 'once_per_player'
               },
               {
                 label: 'Once Globally',
                 value: 'once_globally',
                 description: 'Only one player can claim',
-                emoji: { name: '🌍' }
+                emoji: { name: '🌍' },
+                default: state.limit === 'once_globally'
               }
             ]
           }]
@@ -23798,10 +23847,10 @@ function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerms) {
             custom_id: `safari_currency_style_${buttonId}_${actionIndex}`,
             placeholder: 'Select button style...',
             options: [
-              { label: 'Primary (Blue)', value: '1', emoji: { name: '🔵' } },
-              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' } },
-              { label: 'Success (Green)', value: '3', emoji: { name: '🟢' } },
-              { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' } }
+              { label: 'Primary (Blue)', value: '1', emoji: { name: '🔵' }, default: state.style === '1' },
+              { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' }, default: state.style === '2' },
+              { label: 'Success (Green)', value: '3', emoji: { name: '🟢' }, default: state.style === '3' },
+              { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' }, default: state.style === '4' }
             ]
           }]
         },

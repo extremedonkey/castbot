@@ -81,7 +81,7 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
                     value: currentValues.emoji || '',
                     placeholder: 'Enter an emoji for the item',
                     required: false,
-                    max_length: 10
+                    max_length: 100
                 }]
             });
             
