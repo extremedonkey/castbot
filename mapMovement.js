@@ -96,7 +96,7 @@ export async function setPlayerLocation(guildId, userId, coordinate, mapId = nul
 }
 
 // Get valid moves from current position based on movement schema
-export function getValidMoves(currentCoordinate, movementSchema = 'adjacent_8') {
+export async function getValidMoves(currentCoordinate, movementSchema = 'adjacent_8', guildId = null) {
     const col = currentCoordinate.charCodeAt(0) - 65; // A=0, B=1, etc.
     const row = parseInt(currentCoordinate.substring(1)) - 1; // 1-based to 0-based
     
@@ -111,6 +111,9 @@ export function getValidMoves(currentCoordinate, movementSchema = 'adjacent_8') 
         southeast: { col: col + 1, row: row + 1, direction: '↘️ Southeast' }
     };
     
+    // Get the actual grid size for this guild's map
+    const gridSize = guildId ? await getMapGridSize(guildId) : 7; // Default to 7x7 if no guildId provided
+    
     const validMoves = [];
     const directionsToCheck = movementSchema === 'cardinal_4' 
         ? ['north', 'east', 'south', 'west']
@@ -119,8 +122,8 @@ export function getValidMoves(currentCoordinate, movementSchema = 'adjacent_8') 
     for (const direction of directionsToCheck) {
         const move = moves[direction];
         
-        // Check if move is within grid bounds (assumes 5x5 for MVP)
-        if (move.col >= 0 && move.col < 5 && move.row >= 0 && move.row < 5) {
+        // Check if move is within grid bounds using dynamic grid size
+        if (move.col >= 0 && move.col < gridSize && move.row >= 0 && move.row < gridSize) {
             const coordinate = String.fromCharCode(65 + move.col) + (move.row + 1);
             validMoves.push({
                 direction: move.direction,
@@ -176,7 +179,7 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
     
     // Validate move is allowed (unless admin move)
     if (!adminMove) {
-        const validMoves = getValidMoves(oldCoordinate);
+        const validMoves = await getValidMoves(oldCoordinate, 'adjacent_8', guildId);
         const isValidMove = validMoves.some(move => move.coordinate === newCoordinate);
         
         if (!isValidMove) {
@@ -341,7 +344,7 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
 export async function getMovementDisplay(guildId, userId, coordinate) {
     const canMove = await canPlayerMove(guildId, userId);
     const entityId = `player_${userId}`;
-    const validMoves = getValidMoves(coordinate);
+    const validMoves = await getValidMoves(coordinate, 'adjacent_8', guildId);
     
     let description = '';
     let actionRows = [];
@@ -503,7 +506,7 @@ export async function getMapGridSize(guildId) {
     const safariData = await loadSafariContent();
     const activeMap = safariData[guildId]?.maps?.active;
     
-    if (!activeMap) return 5; // Default to 5x5
+    if (!activeMap) return 7; // Default to 7x7
     
-    return safariData[guildId].maps[activeMap]?.gridSize || 5;
+    return safariData[guildId].maps[activeMap]?.gridSize || 7;
 }
