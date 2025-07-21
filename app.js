@@ -4036,6 +4036,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_remove_action_') &&
         !custom_id.startsWith('safari_config_') &&
         !custom_id.startsWith('safari_move_') &&
+        !custom_id.startsWith('safari_drop_style_') &&
+        !custom_id.startsWith('safari_drop_reset_') &&
+        !custom_id.startsWith('safari_drop_save_') &&
+        !custom_id.startsWith('safari_drop_type_') &&
         custom_id !== 'safari_map_init_player' &&
         custom_id !== 'safari_post_select_button' &&
         custom_id !== 'safari_confirm_reset_game' && 
