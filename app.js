@@ -942,7 +942,7 @@ async function createSafariMenu(guildId, userId, member) {
     },
     {
       type: 10, // Text Display component
-      content: `### 🦁 Safari Details`
+      content: `> \`🦁 Safari Details\``
     },
     safariDetailsRow.toJSON(),
     {
@@ -950,7 +950,7 @@ async function createSafariMenu(guildId, userId, member) {
     },
     {
       type: 10, // Text Display component
-      content: `### 🗺️ Map Administration`
+      content: `> \`🗺️ Map Administration\``
     },
     mapAdminRow.toJSON(),
     {
@@ -958,7 +958,7 @@ async function createSafariMenu(guildId, userId, member) {
     },
     {
       type: 10, // Text Display component
-      content: `### 🕰️ Legacy`
+      content: `> \`🕰️ Legacy\``
     },
     legacyRow.toJSON(),
     {
