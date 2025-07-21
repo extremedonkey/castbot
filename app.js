@@ -11249,7 +11249,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: custom_id,
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        updateMessage: true, // Replace action menu with new ephemeral Custom Action Editor
+        updateMessage: false, // Cannot use UPDATE_MESSAGE with Components V2 flag
         handler: async (context) => {
           const actionId = custom_id.replace('safari_finish_button_', '');
           console.log(`🔍 START: safari_finish_button_${actionId} - user ${context.userId}`);
