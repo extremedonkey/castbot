@@ -605,15 +605,37 @@ async function executeGiveCurrency(config, userId, guildId, interaction) {
     // Give the currency
     const newBalance = await updateCurrency(guildId, userId, config.amount);
     
-    // Update claim tracking
+    // Update claim tracking persistently
     if (config.limit && config.limit.type !== 'unlimited') {
-        // Note: This is a simplified tracking - in production, we'd need to update the action's config in safariContent
-        // For now, we'll just track it in memory (will be lost on restart)
-        if (config.limit.type === 'once_per_player') {
-            if (!config.limit.claimedBy) config.limit.claimedBy = [];
-            config.limit.claimedBy.push(userId);
-        } else if (config.limit.type === 'once_globally') {
-            config.limit.claimedBy = userId;
+        const safariData = await loadSafariContent();
+        
+        // Find the button and action to update
+        for (const buttonId in safariData[guildId]?.buttons || {}) {
+            const button = safariData[guildId].buttons[buttonId];
+            if (button.actions) {
+                for (let i = 0; i < button.actions.length; i++) {
+                    const action = button.actions[i];
+                    // Match by type and amount to find the right action
+                    if (action.type === 'give_currency' && 
+                        action.config?.amount === config.amount &&
+                        action.config?.limit?.type === config.limit.type) {
+                        
+                        if (config.limit.type === 'once_per_player') {
+                            if (!action.config.limit.claimedBy) {
+                                action.config.limit.claimedBy = [];
+                            }
+                            if (!action.config.limit.claimedBy.includes(userId)) {
+                                action.config.limit.claimedBy.push(userId);
+                            }
+                        } else if (config.limit.type === 'once_globally') {
+                            action.config.limit.claimedBy = userId;
+                        }
+                        
+                        await saveSafariContent(safariData);
+                        break;
+                    }
+                }
+            }
         }
     }
     
@@ -663,13 +685,40 @@ async function executeGiveItem(config, userId, guildId, interaction) {
         };
     }
     
-    // Update claim tracking (simplified - in production would persist to safariContent)
+    // Update claim tracking persistently
     if (config.limit && config.limit.type !== 'unlimited') {
-        if (config.limit.type === 'once_per_player') {
-            if (!config.limit.claimedBy) config.limit.claimedBy = [];
-            config.limit.claimedBy.push(userId);
-        } else if (config.limit.type === 'once_globally') {
-            config.limit.claimedBy = userId;
+        const safariData = await loadSafariContent();
+        
+        // Find the button and action to update
+        for (const buttonId in safariData[guildId]?.buttons || {}) {
+            const button = safariData[guildId].buttons[buttonId];
+            if (button.actions) {
+                for (let i = 0; i < button.actions.length; i++) {
+                    const action = button.actions[i];
+                    // Match by type, itemId and quantity to find the right action
+                    if (action.type === 'give_item' && 
+                        action.config?.itemId === config.itemId &&
+                        action.config?.quantity === config.quantity &&
+                        action.config?.limit?.type === config.limit.type) {
+                        
+                        if (config.limit.type === 'once_per_player') {
+                            if (!action.config.limit.claimedBy) {
+                                action.config.limit.claimedBy = [];
+                            }
+                            if (!action.config.limit.claimedBy.includes(userId)) {
+                                action.config.limit.claimedBy.push(userId);
+                            }
+                        } else if (config.limit.type === 'once_globally') {
+                            action.config.limit.claimedBy = userId;
+                        }
+                        
+                        // Save the updated data
+                        await saveSafariContent(safariData);
+                        console.log(`✅ Updated claim tracking for give_item action`);
+                        break;
+                    }
+                }
+            }
         }
     }
     

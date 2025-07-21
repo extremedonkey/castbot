@@ -10728,6 +10728,312 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_drop_type_')) {
+      // Handle drop type selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_drop_type',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_drop_type_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          
+          console.log(`🔄 START: safari_drop_type - button ${buttonId}, action ${actionIndex}`);
+          
+          // Show drop type selection
+          return {
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: '## Select Usage Limit\n\nChoose how often this reward can be claimed:'
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 3, // String Select
+                    custom_id: `safari_drop_type_select_${buttonId}_${actionIndex}`,
+                    placeholder: 'Select usage limit...',
+                    options: [
+                      {
+                        label: 'Unlimited',
+                        value: 'unlimited',
+                        description: 'Players can claim repeatedly',
+                        emoji: { name: '♾️' }
+                      },
+                      {
+                        label: 'Once per Player',
+                        value: 'once_per_player',
+                        description: 'Each player can claim once',
+                        emoji: { name: '👤' }
+                      },
+                      {
+                        label: 'Once Globally',
+                        value: 'once_globally',
+                        description: 'First player to claim gets it',
+                        emoji: { name: '🌍' }
+                      }
+                    ]
+                  }]
+                }
+              ]
+            }],
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_drop_type_select_')) {
+      // Handle drop type selection from dropdown
+      return ButtonHandlerFactory.create({
+        id: 'safari_drop_type_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_drop_type_select_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const dropType = context.values?.[0];
+          
+          console.log(`🎯 SELECTED: safari_drop_type_select - ${dropType} for ${buttonId}[${actionIndex}]`);
+          
+          // Update the action's drop type
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          
+          if (button && button.actions[actionIndex]) {
+            button.actions[actionIndex].config.limit = {
+              type: dropType,
+              claimedBy: dropType === 'unlimited' ? undefined : []
+            };
+            await saveSafariContent(safariData);
+          }
+          
+          // Return to drop configuration
+          return showDropConfiguration(context.guildId, buttonId, actionIndex);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_drop_style_')) {
+      // Handle button style selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_drop_style',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_drop_style_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          
+          console.log(`🎨 START: safari_drop_style - button ${buttonId}, action ${actionIndex}`);
+          
+          // Show style selection
+          return {
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: '## Select Button Style\n\nChoose how the action button will appear:'
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row
+                  components: [
+                    {
+                      type: 2, // Button
+                      custom_id: `safari_drop_style_select_${buttonId}_${actionIndex}_1`,
+                      label: 'Primary',
+                      style: 1 // Blue
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `safari_drop_style_select_${buttonId}_${actionIndex}_2`,
+                      label: 'Secondary',
+                      style: 2 // Grey
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `safari_drop_style_select_${buttonId}_${actionIndex}_3`,
+                      label: 'Success',
+                      style: 3 // Green
+                    },
+                    {
+                      type: 2, // Button
+                      custom_id: `safari_drop_style_select_${buttonId}_${actionIndex}_4`,
+                      label: 'Danger',
+                      style: 4 // Red
+                    }
+                  ]
+                }
+              ]
+            }],
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_drop_style_select_')) {
+      // Handle style selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_drop_style_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_drop_style_select_', '').split('_');
+          const style = parseInt(parts[parts.length - 1]);
+          const actionIndex = parseInt(parts[parts.length - 2]);
+          const buttonId = parts.slice(0, -2).join('_');
+          
+          console.log(`🎨 SELECTED: safari_drop_style_select - style ${style} for ${buttonId}[${actionIndex}]`);
+          
+          // Update the button's style
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          
+          if (button) {
+            button.style = style;
+            await saveSafariContent(safariData);
+          }
+          
+          // Return to drop configuration
+          return showDropConfiguration(context.guildId, buttonId, actionIndex);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_drop_reset_')) {
+      // Handle claims reset
+      return ButtonHandlerFactory.create({
+        id: 'safari_drop_reset',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_drop_reset_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          
+          console.log(`🔄 RESET: safari_drop_reset - button ${buttonId}, action ${actionIndex}`);
+          
+          // Reset claims for this action
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          
+          if (button && button.actions[actionIndex]) {
+            if (button.actions[actionIndex].config.limit) {
+              button.actions[actionIndex].config.limit.claimedBy = 
+                button.actions[actionIndex].config.limit.type === 'unlimited' ? undefined : [];
+            }
+            await saveSafariContent(safariData);
+          }
+          
+          // Return to drop configuration
+          return showDropConfiguration(context.guildId, buttonId, actionIndex);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_drop_save_')) {
+      // Handle save and finish
+      return ButtonHandlerFactory.create({
+        id: 'safari_drop_save',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_drop_save_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          
+          console.log(`✅ SAVE: safari_drop_save - button ${buttonId}, action ${actionIndex}`);
+          
+          // Load Safari data to trigger the finish button logic
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const guildData = allSafariContent[context.guildId] || {};
+          const action = guildData.buttons?.[buttonId];
+          
+          if (!action) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Update map coordinate assignments - COMPLETE BIDIRECTIONAL SYNC
+          // (reusing finish button logic)
+          if (guildData.maps) {
+            for (const mapId in guildData.maps) {
+              const map = guildData.maps[mapId];
+              if (map.coordinates) {
+                for (const coord in map.coordinates) {
+                  const coordData = map.coordinates[coord];
+                  if (coordData.buttons) {
+                    coordData.buttons = coordData.buttons.filter(id => id !== buttonId);
+                  }
+                }
+              }
+            }
+          }
+          
+          if (action.coordinates && action.coordinates.length > 0) {
+            if (!guildData.maps) guildData.maps = {};
+            
+            for (const mapId in guildData.maps) {
+              if (mapId === 'active' || typeof guildData.maps[mapId] !== 'object') continue;
+              
+              const map = guildData.maps[mapId];
+              if (!map.coordinates) map.coordinates = {};
+              
+              for (const coord of action.coordinates) {
+                if (!map.coordinates[coord]) {
+                  map.coordinates[coord] = {
+                    buttons: []
+                  };
+                }
+                
+                if (!map.coordinates[coord].buttons.includes(buttonId)) {
+                  map.coordinates[coord].buttons.push(buttonId);
+                }
+              }
+            }
+          }
+          
+          await saveSafariContent(allSafariContent);
+          
+          // Update anchor messages
+          if (action.coordinates && action.coordinates.length > 0) {
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            const activeMapId = allSafariContent[context.guildId]?.maps?.active;
+            
+            for (const coord of action.coordinates) {
+              const coordData = allSafariContent[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+              if (coordData?.anchorMessageId) {
+                try {
+                  await updateAnchorMessage(context.guildId, coord, context.client);
+                  console.log(`📍 Updated anchor message for ${coord}`);
+                } catch (error) {
+                  console.error(`Error updating anchor for ${coord}:`, error);
+                }
+              }
+            }
+          }
+          
+          // Show updated Custom Action Editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          const updatedUI = await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId: buttonId
+          });
+          
+          return {
+            ...updatedUI,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('custom_action_trigger_type_')) {
       // Handle trigger type selection
       try {
@@ -19519,6 +19825,80 @@ Are you sure you want to continue?`;
         
         console.log(`✅ DEBUG: Added ${actionType} action to button ${buttonId}`);
         
+        // For give_currency and give_item, show configuration UI instead of finishing
+        if (actionType === 'give_currency' || actionType === 'give_item') {
+            const actionIndex = button.actions.length - 1; // The action we just added
+            
+            // Show drop configuration UI
+            return res.send({
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                    components: [{
+                        type: 17, // Container
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: `# Configure ${actionType === 'give_currency' ? 'Currency' : 'Item'} Drop\n\n**Action:** ${button.name || buttonId}\n\n*Configure usage limits and button appearance.*`
+                            },
+                            { type: 14 }, // Separator
+                            // Usage limit configuration
+                            {
+                                type: 9, // Section
+                                components: [{
+                                    type: 10,
+                                    content: `**Usage Limit:** ${newAction.config.limit?.type === 'once_per_player' ? 'Once per player' : newAction.config.limit?.type === 'once_globally' ? 'Once globally' : 'Unlimited'}`
+                                }],
+                                accessory: {
+                                    type: 2, // Button
+                                    custom_id: `safari_drop_type_${buttonId}_${actionIndex}`,
+                                    label: 'Change',
+                                    style: 2, // Secondary
+                                    emoji: { name: '🔄' }
+                                }
+                            },
+                            // Button style configuration (for button triggers)
+                            {
+                                type: 9, // Section
+                                components: [{
+                                    type: 10,
+                                    content: `**Button Style:** ${getButtonStyleName(button.style || 1)}`
+                                }],
+                                accessory: {
+                                    type: 2, // Button
+                                    custom_id: `safari_drop_style_${buttonId}_${actionIndex}`,
+                                    label: 'Change',
+                                    style: 2,
+                                    emoji: { name: '🎨' }
+                                }
+                            },
+                            { type: 14 }, // Separator
+                            // Action buttons
+                            {
+                                type: 1, // Action Row
+                                components: [
+                                    {
+                                        type: 2, // Button
+                                        custom_id: `safari_drop_reset_${buttonId}_${actionIndex}`,
+                                        label: 'Reset Claims',
+                                        style: 4, // Danger
+                                        emoji: { name: '🔄' }
+                                    },
+                                    {
+                                        type: 2, // Button
+                                        custom_id: `safari_drop_save_${buttonId}_${actionIndex}`,
+                                        label: 'Save & Finish',
+                                        style: 3, // Success
+                                        emoji: { name: '✅' }
+                                    }
+                                ]
+                            }
+                        ]
+                    }],
+                    flags: (1 << 15) // IS_COMPONENTS_V2
+                }
+            });
+        }
+        
         // Execute finish button tasks automatically after modal submission
         // Update map coordinate assignments - COMPLETE BIDIRECTIONAL SYNC
         if (safariData[guildId].maps) {
@@ -22521,6 +22901,16 @@ function getActionTypeName(actionType) {
   return actionTypeNames[actionType] || 'Action';
 }
 
+function getButtonStyleName(style) {
+  const styles = {
+    1: 'Primary (Blue)',
+    2: 'Secondary (Grey)',
+    3: 'Success (Green)',
+    4: 'Danger (Red)'
+  };
+  return styles[style] || 'Primary';
+}
+
 function getFieldDisplayName(fieldKey) {
   const labels = {
     currencyName: 'Currency Name',
@@ -22539,3 +22929,91 @@ function getFieldDisplayName(fieldKey) {
 
 // Add this helper function at the end of the file before the last closing bracket
 // handleSetupTycoons function moved to utils/roleUtils.js (Phase 1A refactoring)
+
+// Helper function to show drop configuration UI
+async function showDropConfiguration(guildId, buttonId, actionIndex) {
+  const { loadSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  const action = button?.actions?.[actionIndex];
+  
+  if (!button || !action) {
+    return {
+      content: '❌ Action not found.',
+      ephemeral: true
+    };
+  }
+  
+  const actionType = action.type;
+  const dropType = action.config?.limit?.type || 'unlimited';
+  const claimedCount = Array.isArray(action.config?.limit?.claimedBy) ? 
+    action.config.limit.claimedBy.length : 
+    (action.config?.limit?.claimedBy ? 1 : 0);
+  
+  return {
+    components: [{
+      type: 17, // Container
+      components: [
+        {
+          type: 10, // Text Display
+          content: `# Configure ${actionType === 'give_currency' ? 'Currency' : 'Item'} Drop\n\n**Action:** ${button.name || buttonId}\n**${actionType === 'give_currency' ? 'Amount' : 'Item'}: ${actionType === 'give_currency' ? action.config.amount : action.config.itemId} ${actionType === 'give_item' ? `x${action.config.quantity}` : ''}`
+        },
+        { type: 14 }, // Separator
+        // Usage limit configuration
+        {
+          type: 9, // Section
+          components: [{
+            type: 10,
+            content: `**Usage Limit:** ${dropType === 'once_per_player' ? 'Once per player' : dropType === 'once_globally' ? 'Once globally' : 'Unlimited'}\n*Claims: ${claimedCount}*`
+          }],
+          accessory: {
+            type: 2, // Button
+            custom_id: `safari_drop_type_${buttonId}_${actionIndex}`,
+            label: 'Change',
+            style: 2, // Secondary
+            emoji: { name: '🔄' }
+          }
+        },
+        // Button style configuration
+        {
+          type: 9, // Section
+          components: [{
+            type: 10,
+            content: `**Button Style:** ${getButtonStyleName(button.style || 1)}`
+          }],
+          accessory: {
+            type: 2, // Button
+            custom_id: `safari_drop_style_${buttonId}_${actionIndex}`,
+            label: 'Change',
+            style: 2,
+            emoji: { name: '🎨' }
+          }
+        },
+        { type: 14 }, // Separator
+        // Action buttons
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `safari_drop_reset_${buttonId}_${actionIndex}`,
+              label: 'Reset Claims',
+              style: 4, // Danger
+              emoji: { name: '🔄' },
+              disabled: claimedCount === 0
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_drop_save_${buttonId}_${actionIndex}`,
+              label: 'Save & Finish',
+              style: 3, // Success
+              emoji: { name: '✅' }
+            }
+          ]
+        }
+      ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
+  };
+}
