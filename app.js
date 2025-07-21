@@ -10391,6 +10391,12 @@ Your server is now ready for Tycoons gameplay!`;
           const limitType = context.values[0];
           console.log(`🎯 LIMIT: safari_item_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
           
+          // Store in temporary state
+          const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', quantity: 1 };
+          state.limit = limitType;
+          dropConfigState.set(stateKey, state);
+          
           // Return updated configuration UI
           return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
         }
@@ -10438,6 +10444,12 @@ Your server is now ready for Tycoons gameplay!`;
           const style = context.values[0];
           console.log(`🎨 STYLE: safari_item_style - style ${style} for ${buttonId}[${actionIndex}]`);
           
+          // Store in temporary state
+          const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', quantity: 1 };
+          state.style = style;
+          dropConfigState.set(stateKey, state);
+          
           // Return updated configuration UI
           return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
         }
@@ -10484,6 +10496,12 @@ Your server is now ready for Tycoons gameplay!`;
           
           const quantity = parseInt(context.values[0]);
           console.log(`📦 QUANTITY: safari_item_quantity - ${quantity} for ${buttonId}[${actionIndex}]`);
+          
+          // Store in temporary state
+          const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', quantity: 1 };
+          state.quantity = quantity;
+          dropConfigState.set(stateKey, state);
           
           // Return updated configuration UI
           return showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
@@ -10537,19 +10555,43 @@ Your server is now ready for Tycoons gameplay!`;
             button.actions = [];
           }
           
-          // Create the give_item action with defaults
+          // Get state from temporary storage
+          const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { limit: 'unlimited', style: '2', quantity: 1 };
+          
+          // Handle quantity 0 - don't add the action
+          if (state.quantity === 0) {
+            console.log(`🗑️ Not adding give_item action due to quantity 0`);
+            
+            // Clean up state
+            dropConfigState.delete(stateKey);
+            
+            // Return to custom action editor
+            const { createCustomActionEditorUI } = await import('./customActionUI.js');
+            return await createCustomActionEditorUI({
+              guildId: context.guildId,
+              actionId: buttonId
+            });
+          }
+          
+          // Create the give_item action with state values
           const action = {
             type: 'give_item',
             order: button.actions.length,
             config: {
               itemId: itemId,
-              quantity: 1, // Default, will be updated by selects
+              quantity: state.quantity,
               limit: {
-                type: 'unlimited',
-                claimedBy: []
+                type: state.limit,
+                claimedBy: state.limit === 'unlimited' ? undefined : []
               }
             }
           };
+          
+          // Also save button style if not default
+          if (state.style !== '2') {
+            button.style = parseInt(state.style);
+          }
           
           // Add the action
           button.actions.push(action);
@@ -10569,6 +10611,9 @@ Your server is now ready for Tycoons gameplay!`;
           await saveSafariContent(safariData);
           
           console.log(`✅ Added give_item action to button ${buttonId}`);
+          
+          // Clean up state
+          dropConfigState.delete(stateKey);
           
           // Return to custom action editor
           const { createCustomActionEditorUI } = await import('./customActionUI.js');
@@ -23564,10 +23609,20 @@ async function showDropConfiguration(guildId, buttonId, actionIndex) {
   };
 }
 
+// Temporary state storage for give_item/give_currency configuration
+const dropConfigState = new Map();
+
 /**
  * Show configuration UI for give_item action
  */
 function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) {
+  // Get or create state for this configuration
+  const stateKey = `${guildId}_${buttonId}_${itemId}_${actionIndex}`;
+  const state = dropConfigState.get(stateKey) || {
+    limit: 'unlimited',
+    style: '2',
+    quantity: 1
+  };
   // Create quantity options (0-24, no default)
   const quantityOptions = [];
   for (let i = 0; i <= 24; i++) {
