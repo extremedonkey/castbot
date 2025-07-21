@@ -4042,6 +4042,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_drop_save_') &&
         !custom_id.startsWith('safari_drop_type_') &&
         !custom_id.startsWith('safari_give_item_select_') &&
+        !custom_id.startsWith('safari_follow_up_select_') &&
         !custom_id.startsWith('safari_item_limit_') &&
         !custom_id.startsWith('safari_item_style_') &&
         !custom_id.startsWith('safari_item_quantity_') &&
@@ -10355,6 +10356,72 @@ Your server is now ready for Tycoons gameplay!`;
           return await showGiveItemConfig(context.guildId, buttonId, itemId, item, tempActionIndex);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('safari_follow_up_select_')) {
+      // Handle follow-up button selection for follow_up_button action
+      return ButtonHandlerFactory.create({
+        id: 'safari_follow_up_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const buttonId = context.customId.replace('safari_follow_up_select_', '');
+          const followUpButtonId = context.values?.[0];
+          
+          if (!followUpButtonId) {
+            return {
+              content: '❌ No follow-up button selected.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`🔗 START: safari_follow_up_select - button ${buttonId}, follow-up ${followUpButtonId}`);
+          
+          // Load safari data to validate target button exists
+          const { loadSafariContent, saveSafariContent, getCustomButton } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const targetButton = await getCustomButton(context.guildId, followUpButtonId);
+          
+          if (!targetButton) {
+            return {
+              content: '❌ Target follow-up button not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Get current button
+          const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
+          if (!currentButton) {
+            return {
+              content: '❌ Current button not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Add the follow-up action to the current button
+          if (!currentButton.actions) {
+            currentButton.actions = [];
+          }
+          
+          const newAction = {
+            type: 'follow_up_button',
+            config: {
+              buttonId: followUpButtonId
+            },
+            order: currentButton.actions.length
+          };
+          
+          currentButton.actions.push(newAction);
+          
+          // Save the updated button
+          await saveSafariContent(safariData);
+          
+          console.log(`✅ SUCCESS: safari_follow_up_select - added follow-up ${followUpButtonId} to ${buttonId}`);
+          
+          // Return to the button's action configuration UI
+          const { showCustomActionUI } = await import('./customActionUI.js');
+          return await showCustomActionUI(context.guildId, buttonId);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_item_limit_')) {
       // Handle item drop usage limit change
       return ButtonHandlerFactory.create({
@@ -11055,59 +11122,41 @@ Your server is now ready for Tycoons gameplay!`;
               };
             }
             
-            const modal = new ModalBuilder()
-              .setCustomId(`safari_action_modal_${fullButtonId}_follow_up`)
-              .setTitle('Add Follow-up Button Action');
-
             // Create options for button selection (showing max 25 as per Discord limit)
             const buttonOptions = existingButtons
               .filter(btn => btn.id !== buttonId) // Don't include current button
               .slice(0, 25)
-              .map(btn => `${btn.id}|${btn.label}`)
-              .join('\n');
-
-            const buttonSelectInput = new TextInputBuilder()
-              .setCustomId('action_button_id')
-              .setLabel('Target Button ID')
-              .setPlaceholder('Enter the exact Button ID to chain to')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-              .setMaxLength(50);
-
-            const delayInput = new TextInputBuilder()
-              .setCustomId('action_delay')
-              .setLabel('Delay (seconds)')
-              .setPlaceholder('0-60 seconds delay before showing button')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(false)
-              .setMaxLength(3);
-
-            const replaceInput = new TextInputBuilder()
-              .setCustomId('action_replace')
-              .setLabel('Replace Current Message (true/false)')
-              .setPlaceholder('true = replace message, false = add below')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(false)
-              .setMaxLength(5);
-
-            const availableButtonsInput = new TextInputBuilder()
-              .setCustomId('available_buttons')
-              .setLabel('Available Button IDs')
-              .setValue(buttonOptions || 'No other buttons available')
-              .setStyle(TextInputStyle.Paragraph)
-              .setRequired(false);
-
-            modal.addComponents(
-              new ActionRowBuilder().addComponents(buttonSelectInput),
-              new ActionRowBuilder().addComponents(delayInput),
-              new ActionRowBuilder().addComponents(replaceInput),
-              new ActionRowBuilder().addComponents(availableButtonsInput)
-            );
+              .map(btn => ({
+                label: btn.name || btn.label || btn.id,
+                value: btn.id,
+                description: `ID: ${btn.id}` + (btn.actions?.length ? ` • ${btn.actions.length} actions` : ''),
+                emoji: btn.emoji ? { name: btn.emoji } : { name: '🔗' }
+              }));
             
-            console.log(`✅ SUCCESS: safari_add_action - showing follow_up modal`);
+            console.log(`✅ SUCCESS: safari_action_type_select - showing button selection for follow_up_button`);
+            
             return {
-              type: InteractionResponseType.MODAL,
-              data: modal.toJSON()
+              components: [{
+                type: 17, // Container
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `# Select Follow-up Button for ${button.name || 'Custom Action'}\n\nChoose which button should be triggered after this action completes.`
+                  },
+                  { type: 14 }, // Separator
+                  {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 3, // String Select
+                      custom_id: `safari_follow_up_select_${buttonId}`,
+                      placeholder: 'Select a button to chain to...',
+                      options: buttonOptions
+                    }]
+                  }
+                ]
+              }],
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              ephemeral: true
             };
           
           } else if (actionType === 'conditional') {

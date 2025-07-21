@@ -838,6 +838,14 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari_management',
     type: 'select_menu'
+  },
+  'safari_follow_up_select': {
+    label: 'Select Follow-up Button',
+    description: 'String select menu for choosing follow-up button to chain',
+    emoji: '🔗',
+    style: 'Primary',
+    category: 'safari_management',
+    type: 'select_menu'
   }
 };
 
