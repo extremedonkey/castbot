@@ -397,6 +397,7 @@ import {
 import {
   createEmojiForUser,
   parseEmojiCode,
+  parseTextEmoji,
   sanitizeEmojiName,
   checkRoleHasEmojis,
   clearEmojisForRole
@@ -8218,10 +8219,12 @@ Your server is now ready for Tycoons gameplay!`;
         // Create store selection dropdown
         const storeOptions = Object.entries(stores).slice(0, 25).map(([storeId, store]) => {
           const itemCount = store.items?.length || 0;
+          const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
           return {
-            label: `${store.emoji || '🏪'} ${store.name}`.slice(0, 100),
+            label: cleanText.slice(0, 100),
             value: storeId,
-            description: `${itemCount} item${itemCount !== 1 ? 's' : ''} currently in stock`.slice(0, 100)
+            description: `${itemCount} item${itemCount !== 1 ? 's' : ''} currently in stock`.slice(0, 100),
+            emoji: emoji
           };
         });
         
@@ -10131,12 +10134,16 @@ Your server is now ready for Tycoons gameplay!`;
               };
             }
             
-            // Create item select menu
-            const itemOptions = Object.entries(items).slice(0, 25).map(([itemId, item]) => ({
-              label: `${item.emoji || '📦'} ${item.name}`.substring(0, 100),
-              value: itemId,
-              description: item.description?.substring(0, 100)
-            }));
+            // Create item select menu with proper emoji parsing
+            const itemOptions = Object.entries(items).slice(0, 25).map(([itemId, item]) => {
+              const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+              return {
+                label: cleanText.substring(0, 100),
+                value: itemId,
+                description: item.description?.substring(0, 100),
+                emoji: emoji
+              };
+            });
             
             console.log(`✅ SUCCESS: safari_action_type_select - showing item selection for give_item`);
             
@@ -14477,13 +14484,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               const activeMapId = safariData[context.guildId]?.maps?.active;
               const coordStores = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[entityId]?.stores || [];
               
-              // Create store select menu
-              const storeOptions = Object.entries(stores).map(([storeId, store]) => ({
-                label: `${store.emoji || '🏪'} ${store.name}`.substring(0, 100),
-                value: storeId,
-                description: store.description?.substring(0, 100),
-                default: coordStores.includes(storeId)
-              }));
+              // Create store select menu with proper emoji parsing
+              const storeOptions = Object.entries(stores).map(([storeId, store]) => {
+                const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
+                return {
+                  label: cleanText.substring(0, 100),
+                  value: storeId,
+                  description: store.description?.substring(0, 100),
+                  emoji: emoji,
+                  default: coordStores.includes(storeId)
+                };
+              });
               
               if (storeOptions.length === 0) {
                 return {
@@ -16279,12 +16290,16 @@ Are you sure you want to continue?`;
             };
           }
           
-          // Create item select menu
-          const itemOptions = Object.entries(items).slice(0, 25).map(([itemId, item]) => ({
-            label: `${item.emoji || '📦'} ${item.name}`.substring(0, 100),
-            value: itemId,
-            description: item.description?.substring(0, 100)
-          }));
+          // Create item select menu with proper emoji parsing
+          const itemOptions = Object.entries(items).slice(0, 25).map(([itemId, item]) => {
+            const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+            return {
+              label: cleanText.substring(0, 100),
+              value: itemId,
+              description: item.description?.substring(0, 100),
+              emoji: emoji
+            };
+          });
           
           console.log(`✅ SUCCESS: map_add_item_drop - showing item selection for ${coord}`);
           

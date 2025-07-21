@@ -11,6 +11,7 @@ import {
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { EDIT_CONFIGS } from './editFramework.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
+import { parseTextEmoji } from './utils/emojiUtils.js';
 
 /**
  * Create the main entity management UI
@@ -149,10 +150,12 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
             emoji = entity.emoji || getDefaultEmoji(entityType);
         }
         
+        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(`${emoji} ${name}`, getDefaultEmoji(entityType));
         options.push({
-            label: `${emoji} ${name}`.substring(0, 100),
+            label: cleanText.substring(0, 100),
             value: id,
             description: getEntityDescription(entity, entityType),
+            emoji: parsedEmoji,
             default: id === selectedId
         });
     });

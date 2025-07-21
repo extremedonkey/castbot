@@ -25,6 +25,45 @@ export function parseEmojiCode(emojiCode) {
 }
 
 /**
+ * Parse Discord emoji from text and create select option with proper emoji field
+ * @param {string} text - Text that may contain Discord emoji codes
+ * @param {string} fallbackEmoji - Fallback emoji if no Discord emoji found
+ * @returns {Object} - {cleanText: string, emoji: object|null}
+ */
+export function parseTextEmoji(text, fallbackEmoji = '📦') {
+    if (!text) return { cleanText: '', emoji: { name: fallbackEmoji } };
+    
+    // Look for Discord emoji pattern in text
+    const emojiMatch = text.match(/<a?:(\w+):(\d+)>/);
+    
+    if (emojiMatch) {
+        // Found Discord emoji - parse it and remove from text
+        const parsed = parseEmojiCode(emojiMatch[0]);
+        const cleanText = text.replace(emojiMatch[0], '').trim();
+        return {
+            cleanText,
+            emoji: parsed
+        };
+    } else {
+        // No Discord emoji found - check if text starts with a regular emoji
+        const regularEmojiMatch = text.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])/u);
+        if (regularEmojiMatch) {
+            const cleanText = text.replace(regularEmojiMatch[0], '').trim();
+            return {
+                cleanText,
+                emoji: { name: regularEmojiMatch[0] }
+            };
+        } else {
+            // No emoji found - use fallback
+            return {
+                cleanText: text,
+                emoji: { name: fallbackEmoji }
+            };
+        }
+    }
+}
+
+/**
  * Sanitize username for emoji naming (Discord requirements: 2-32 chars, alphanumeric + underscores only)
  * @param {string} username - Username to sanitize
  * @returns {string} Sanitized emoji name
