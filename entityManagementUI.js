@@ -65,7 +65,7 @@ export async function createEntityManagementUI(options) {
             ] : []),
             
             // Mode-specific UI
-            ...(selectedEntity ? createModeSpecificUI(mode, entityType, selectedId, selectedEntity, activeFieldGroup) : [])
+            ...(selectedEntity ? await createModeSpecificUI(mode, entityType, selectedId, selectedEntity, activeFieldGroup, guildId) : [])
         ]
     }];
     
@@ -262,14 +262,14 @@ function createEntityDisplay(entity, entityType, safariConfig) {
 /**
  * Create mode-specific UI elements
  */
-function createModeSpecificUI(mode, entityType, entityId, entity, activeFieldGroup) {
+async function createModeSpecificUI(mode, entityType, entityId, entity, activeFieldGroup, guildId) {
     switch (mode) {
         case 'delete_confirm':
             return createDeleteConfirmUI(entityType, entityId, entity);
         case 'edit':
         default:
             // Always default to edit mode - no separate view mode
-            return createEditModeUI(entityType, entityId, entity, activeFieldGroup);
+            return await createEditModeUI(entityType, entityId, entity, activeFieldGroup, guildId);
     }
 }
 
@@ -277,40 +277,85 @@ function createModeSpecificUI(mode, entityType, entityId, entity, activeFieldGro
 /**
  * Create edit mode UI
  */
-function createEditModeUI(entityType, entityId, entity, activeFieldGroup) {
+async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, guildId) {
     const components = [
         { type: 14 }, // Separator
         ...createFieldGroupButtons(entityType, entityId, activeFieldGroup),
         { type: 14 }, // Separator
+    ];
+    
+    // Check for modal trigger actions if this is a map cell
+    let hasModalTriggers = false;
+    if (entityType === 'map_cell' && guildId) {
+        try {
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const activeMapId = safariData[guildId]?.maps?.active;
+            const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[entityId];
+            const buttonIds = coordData?.buttons || [];
+            const buttons = safariData[guildId]?.buttons || {};
+            
+            // Check if any assigned buttons have modal triggers
+            for (const buttonId of buttonIds) {
+                const button = buttons[buttonId];
+                if (button?.trigger?.type === 'modal') {
+                    hasModalTriggers = true;
+                    break;
+                }
+            }
+        } catch (error) {
+            console.error('Error checking for modal triggers:', error);
+        }
+    }
+    
+    // Create action row with conditional admin test button
+    const actionRowComponents = [
         {
-            type: 1, // ActionRow
-            components: [
-                {
-                    type: 2, // Button
-                    style: 2, // Secondary
-                    label: '← Back to Safari',
-                    custom_id: 'prod_safari_menu',
-                    emoji: { name: '🦁' }
-                },
-                // Add Player Qty button only for items
-                ...(entityType === 'item' ? [{
-                    type: 2, // Button
-                    style: 2, // Secondary (grey)
-                    label: 'Player Qty',
-                    custom_id: `safari_item_player_qty_${entityId}`,
-                    emoji: { name: '📦' }
-                }] : []),
-                // Add Delete button for all entity types except map_cell
-                ...(entityType !== 'map_cell' ? [{
-                    type: 2, // Button
-                    style: 4, // Danger
-                    label: 'Delete',
-                    custom_id: `entity_delete_mode_${entityType}_${entityId}`,
-                    emoji: { name: '🗑️' }
-                }] : [])
-            ]
+            type: 2, // Button
+            style: 2, // Secondary
+            label: '← Back to Safari',
+            custom_id: 'prod_safari_menu',
+            emoji: { name: '🦁' }
         }
     ];
+    
+    // Add admin test command button if there are modal triggers
+    if (hasModalTriggers) {
+        actionRowComponents.push({
+            type: 2, // Button
+            style: 1, // Primary
+            label: 'Test Command',
+            custom_id: `admin_test_command_${entityId}`,
+            emoji: { name: '⌨️' }
+        });
+    }
+    
+    // Add Player Qty button only for items
+    if (entityType === 'item') {
+        actionRowComponents.push({
+            type: 2, // Button
+            style: 2, // Secondary (grey)
+            label: 'Player Qty',
+            custom_id: `safari_item_player_qty_${entityId}`,
+            emoji: { name: '📦' }
+        });
+    }
+    
+    // Add Delete button for all entity types except map_cell
+    if (entityType !== 'map_cell') {
+        actionRowComponents.push({
+            type: 2, // Button
+            style: 4, // Danger
+            label: 'Delete',
+            custom_id: `entity_delete_mode_${entityType}_${entityId}`,
+            emoji: { name: '🗑️' }
+        });
+    }
+    
+    components.push({
+        type: 1, // ActionRow
+        components: actionRowComponents
+    });
     
     return components;
 }

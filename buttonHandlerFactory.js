@@ -815,6 +815,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari_player'
   },
+  'admin_test_command_*': {
+    label: 'Test Command',
+    description: 'Admin test command triggers at this location',
+    emoji: '⌨️',
+    style: 'Primary',
+    category: 'safari_admin'
+  },
 
   // === SAFARI DYNAMIC EXECUTION ===
   'safari_*_*_*': {

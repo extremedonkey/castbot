@@ -3245,7 +3245,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'remove_coord',
         'add_coord_modal',
         'configure_modal_trigger',
-        'player_enter_command'
+        'player_enter_command',
+        'admin_test_command'
       ];
       
       for (const pattern of dynamicPatterns) {
@@ -16117,6 +16118,48 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
     
+    } else if (custom_id.startsWith('admin_test_command_')) {
+      // Handle admin command testing button
+      return ButtonHandlerFactory.create({
+        id: 'admin_test_command',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('admin_test_command_', '');
+          
+          console.log(`🔧 START: admin_test_command - user ${context.userId}, coord ${coord}`);
+          
+          // Get location name
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          const locationName = coordData?.baseContent?.title || `Location ${coord}`;
+          
+          // Show modal for command input (identical to player modal)
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `admin_command_modal_${coord}`,
+              title: 'Test Command (Admin)',
+              components: [{
+                type: 1, // Action Row
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'command',
+                  label: 'Command',
+                  style: 1, // Short
+                  required: true,
+                  placeholder: 'Enter command you want to test, e.g. climb vines, check rock',
+                  min_length: 1,
+                  max_length: 100
+                }]
+              }]
+            }
+          };
+        }
+      })(req, res, client);
+    
     } else if (custom_id.startsWith('map_stores_select_')) {
       // Handle store selection for map coordinate
       return ButtonHandlerFactory.create({
@@ -23009,6 +23052,97 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error processing command.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('admin_command_modal_')) {
+      // Handle admin command modal submission (identical to player handler but for admins)
+      try {
+        const coord = custom_id.replace('admin_command_modal_', '');
+        const guildId = req.body.guild_id;
+        const channelId = req.body.channel_id;
+        const userId = req.body.member.user.id;
+        
+        // Get the command entered by the admin
+        const command = components[0].components[0].value?.trim().toLowerCase();
+        
+        console.log(`🔧 DEBUG: Admin command submitted - coord: ${coord}, command: "${command}"`);
+        
+        if (!command) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a command to test.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Load safari data
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        
+        // Find matching actions at this coordinate
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+        const buttonIds = coordData?.buttons || [];
+        const buttons = safariData[guildId]?.buttons || {};
+        
+        // Check each button for modal triggers that match the command
+        for (const buttonId of buttonIds) {
+          const button = buttons[buttonId];
+          if (button?.trigger?.type === 'modal' && button.trigger.phrases) {
+            // Check if any phrase matches the entered command
+            const matchingPhrase = button.trigger.phrases.find(phrase => 
+              command.includes(phrase.toLowerCase())
+            );
+            
+            if (matchingPhrase) {
+              console.log(`🎯 MATCH: Admin command "${command}" matched phrase "${matchingPhrase}" for action ${button.name || buttonId}`);
+              
+              // Execute the button actions (same as player execution)
+              const { executeButtonActions } = await import('./safariManager.js');
+              const interaction = {
+                guildId,
+                channelId,
+                user: { id: userId },
+                member: req.body.member
+              };
+              
+              const results = await executeButtonActions(buttonId, userId, guildId, interaction);
+              
+              // Send the first result back to admin (ephemeral)
+              if (results && results.length > 0) {
+                const response = results[0];
+                return res.send({
+                  type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                  data: {
+                    ...response,
+                    content: `🔧 **Admin Test Result:**\n\n${response.content || ''}`,
+                    flags: InteractionResponseFlags.EPHEMERAL
+                  }
+                });
+              }
+            }
+          }
+        }
+        
+        // No matching commands found
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `🔧 **Admin Test Result:**\n\n❌ No actions found matching command "${command}" at location ${coord}.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in admin_command_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error testing command.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
