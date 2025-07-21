@@ -19,6 +19,15 @@ This is a living requirements backlog for CastBot features and improvements, ord
 
 ## HIGH Priority
 
+### Safari Menu Cleanup - Handler Review
+**Description:** Review and potentially remove obsolete Safari button handlers after menu reorganization
+**Tasks:**
+- Check if `safari_manage_safari_buttons` handler is still needed (superseded by Custom Actions)
+- Review `safari_navigate` handlers and map movement dependencies for cleanup
+- Verify if Manage Safari Buttons UI components are still in use elsewhere
+- Check Navigate button dependencies in map system
+**Context:** Safari menu was reorganized to remove obsolete buttons and improve UI consistency
+
 ### Enhanced Pronoun Role Origin Tracking System
 **Description:** Add metadata tracking to distinguish between CastBot-created and pre-existing pronoun roles for smarter management and safer operations
 **Current Structure:** `pronounRoleIDs` is a simple array of role ID strings

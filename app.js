@@ -851,97 +851,75 @@ async function createSafariMenu(guildId, userId, member) {
   
   // Create dynamic round results button labels
   let roundResultsLabel;
-  let roundResultsV2Label;
   if (currentRound >= 1 && currentRound <= 3) {
     roundResultsLabel = `Round ${currentRound} Results`;
-    roundResultsV2Label = `Round ${currentRound} Results V2`;
   } else if (currentRound === 4) {
     roundResultsLabel = 'Reset Game';
-    roundResultsV2Label = 'Reset Game V2';
   } else {
-    roundResultsLabel = 'Round Results'; // Fallback
-    roundResultsV2Label = 'Round Results V2'; // Fallback
+    roundResultsLabel = 'Results'; // Fallback
   }
   
-  // Create safari management buttons - Row 1: Core Functions (5 buttons max)
-  const safariButtonsRow1 = [
+  // Safari Details section buttons
+  const safariDetailsButtons = [
     new ButtonBuilder()
-      .setCustomId('safari_manage_safari_buttons')
-      .setLabel('Manage Safari Buttons')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('📌'),
+      .setCustomId('safari_manage_stores')
+      .setLabel('Stores')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏪'),
     new ButtonBuilder()
-      .setCustomId('safari_player_inventory')
-      .setLabel(inventoryLabel)
-      .setStyle(ButtonStyle.Success)
-      .setEmoji(inventoryEmoji),
+      .setCustomId('safari_manage_items')
+      .setLabel('Items')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📦'),
+    new ButtonBuilder()
+      .setCustomId('safari_view_player_inventory')
+      .setLabel('Player Inventory')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🔎'),
+    new ButtonBuilder()
+      .setCustomId('safari_customize_terms')
+      .setLabel('Safari Settings')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⚙️')
+  ];
+  
+  // Map Administration section buttons
+  const mapAdminButtons = [
+    new ButtonBuilder()
+      .setCustomId('safari_map_explorer')
+      .setLabel('🗺️ Map Setup')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('safari_map_admin')
+      .setLabel('🧭 Player Setup')
+      .setStyle(ButtonStyle.Secondary)
+  ];
+  
+  // Legacy section buttons
+  const legacyButtons = [
     new ButtonBuilder()
       .setCustomId('safari_manage_currency')
       .setLabel('Manage Currency')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💰'),
     new ButtonBuilder()
-      .setCustomId('safari_view_player_inventory')
-      .setLabel('Player Inventory')
+      .setCustomId('safari_player_inventory')
+      .setLabel(inventoryLabel)
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('👀'),
+      .setEmoji('🧺'),
     new ButtonBuilder()
       .setCustomId('safari_round_results')
       .setLabel(roundResultsLabel)
-      .setStyle(ButtonStyle.Primary)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('🎨')
   ];
   
-  // Row 2: Admin & Management Functions (3 buttons max)
-  const safariButtonsRow2 = [
-    new ButtonBuilder()
-      .setCustomId('safari_manage_stores')
-      .setLabel('Manage Stores')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🏪'),
-    new ButtonBuilder()
-      .setCustomId('safari_manage_items')
-      .setLabel('Manage Items')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📦'),
-    new ButtonBuilder()
-      .setCustomId('safari_customize_terms')
-      .setLabel('Customize Safari')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️')
-  ];
+  // TODO: Flag for deletion - Check if safari_manage_safari_buttons handler is still needed
+  // TODO: Flag for deletion - Check if safari_navigate handlers and dependencies can be removed
   
-  // Row 3: Map Explorer (new feature)
-  // Check if player is initialized on map for Navigate button
-  const { loadPlayerData } = await import('./storage.js');
-  const { loadSafariContent } = await import('./safariManager.js');
-  const playerData = await loadPlayerData();
-  const safariData = await loadSafariContent();
-  const activeMapId = safariData[guildId]?.maps?.active;
-  const playerMapData = playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId];
-  
-  const safariButtonsRow3 = [
-    new ButtonBuilder()
-      .setCustomId('safari_map_explorer')
-      .setLabel('Map Explorer')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🗺️'),
-    new ButtonBuilder()
-      .setCustomId(`safari_navigate_${userId}_${playerMapData?.currentLocation || 'none'}`)
-      .setLabel('Navigate')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('🗺️')
-      .setDisabled(!playerMapData), // Disabled if not initialized
-    new ButtonBuilder()
-      .setCustomId('safari_map_admin')
-      .setLabel('Map Admin')
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('🛡️')
-  ];
-  
-  const safariRow1 = new ActionRowBuilder().addComponents(safariButtonsRow1);
-  const safariRow2 = new ActionRowBuilder().addComponents(safariButtonsRow2);
-  const safariRow3 = new ActionRowBuilder().addComponents(safariButtonsRow3);
+  const safariDetailsRow = new ActionRowBuilder().addComponents(safariDetailsButtons);
+  const mapAdminRow = new ActionRowBuilder().addComponents(mapAdminButtons);
+  const legacyRow = new ActionRowBuilder().addComponents(legacyButtons);
   
   // Create back button
   const backButton = [
@@ -953,15 +931,36 @@ async function createSafariMenu(guildId, userId, member) {
   
   const backRow = new ActionRowBuilder().addComponents(backButton);
   
-  // Build container components
+  // Build container components with section headers
   const containerComponents = [
     {
       type: 10, // Text Display component
       content: `## 🦁 Safari - Dynamic Content Manager\n\nCreate interactive experiences with custom buttons, currency systems, stores, and chained actions.`
     },
-    safariRow1.toJSON(), // Core safari buttons
-    safariRow2.toJSON(), // Admin management buttons
-    safariRow3.toJSON(), // Map Explorer button
+    {
+      type: 14 // Separator
+    },
+    {
+      type: 10, // Text Display component
+      content: `### 🦁 Safari Details`
+    },
+    safariDetailsRow.toJSON(),
+    {
+      type: 14 // Separator
+    },
+    {
+      type: 10, // Text Display component
+      content: `### 🗺️ Map Administration`
+    },
+    mapAdminRow.toJSON(),
+    {
+      type: 14 // Separator
+    },
+    {
+      type: 10, // Text Display component
+      content: `### 🕰️ Legacy`
+    },
+    legacyRow.toJSON(),
     {
       type: 14 // Separator
     },
