@@ -23113,6 +23113,8 @@ Are you sure you want to continue?`;
               
               const results = await executeButtonActions(guildId, buttonId, userId, interaction);
               
+              console.log(`🔧 DEBUG: Admin command results:`, results);
+              
               // Send the first result back to admin (ephemeral)
               if (results && results.length > 0) {
                 const response = results[0];
