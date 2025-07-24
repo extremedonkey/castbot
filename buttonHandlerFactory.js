@@ -661,6 +661,13 @@ export const BUTTON_REGISTRY = {
   },
 
   // === APPLICATION MANAGEMENT SYSTEM ===
+  'season_management_menu': {
+    label: 'Season Applications',
+    description: 'Comprehensive season-based application management system',
+    emoji: '📝',
+    style: 'Primary',
+    category: 'application_management'
+  },
   'create_app_button_*': {
     label: 'Create App Button',
     description: 'Creates and posts the configured application button to the selected channel',

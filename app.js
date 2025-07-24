@@ -5340,139 +5340,130 @@ To fix this:
         });
       }
     } else if (custom_id === 'season_management_menu') {
-      // Show Season Management interface using Safari-style entity management
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const userId = req.body.member.user.id;
-        const channelId = req.body.channel_id;
-
-        // Check admin permissions
-        const member = await guild.members.fetch(userId);
-        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'season_management_menu',
+        handler: async (context) => {
+          console.log(`🔍 START: season_management_menu - user ${context.userId}`);
+          
+          const { guildId, userId, channelId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          
+          // Check admin permissions
+          const member = await guild.members.fetch(userId);
+          if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+              !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+              !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+            return {
               content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-
-        // Load existing application configs and migrate them
-        const playerData = await loadPlayerData();
-        const guildData = playerData[guildId] || {};
-        const applicationConfigs = guildData.applicationConfigs || {};
-        
-        // Migrate configs without seasonId/seasonName
-        for (const [configId, config] of Object.entries(applicationConfigs)) {
-          if (!config.seasonId || !config.seasonName) {
-            // Generate UUID-based season ID
-            const seasonId = `season_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
-            const seasonName = config.buttonText || `Season ${Object.keys(applicationConfigs).length}`;
-            
-            config.seasonId = seasonId;
-            config.seasonName = seasonName;
-            config.questions = config.questions || [];
+              ephemeral: true
+            };
           }
-        }
-        
-        // Save migrated data
-        if (Object.keys(applicationConfigs).length > 0) {
-          await savePlayerData(playerData);
-        }
 
-        // Create season options for dropdown
-        const seasonOptions = [];
-        
-        // Add "Create New Season" option first
-        seasonOptions.push({
-          label: '➕ Create New Season',
-          value: 'create_new_season',
-          emoji: { name: '✨' },
-          description: 'Start a new application season'
-        });
+          // Load existing application configs and migrate them
+          const playerData = await loadPlayerData();
+          const guildData = playerData[guildId] || {};
+          const applicationConfigs = guildData.applicationConfigs || {};
+          
+          // Migrate configs without seasonId/seasonName
+          for (const [configId, config] of Object.entries(applicationConfigs)) {
+            if (!config.seasonId || !config.seasonName) {
+              // Generate UUID-based season ID
+              const seasonId = `season_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
+              const seasonName = config.buttonText || `Season ${Object.keys(applicationConfigs).length}`;
+              
+              config.seasonId = seasonId;
+              config.seasonName = seasonName;
+              config.questions = config.questions || [];
+            }
+          }
+          
+          // Save migrated data
+          if (Object.keys(applicationConfigs).length > 0) {
+            await savePlayerData(playerData);
+          }
 
-        // Add existing seasons
-        Object.entries(applicationConfigs).forEach(([configId, config]) => {
+          // Create season options for dropdown
+          const seasonOptions = [];
+          
+          // Add "Create New Season" option first
           seasonOptions.push({
-            label: `📝 ${config.seasonName}`,
-            value: configId,
-            description: `Created: ${new Date(config.createdAt).toLocaleDateString()}`
+            label: '➕ Create New Season',
+            value: 'create_new_season',
+            emoji: { name: '✨' },
+            description: 'Start a new application season'
           });
-        });
 
-        // Limit to Discord's 25 option max
-        if (seasonOptions.length > 25) {
-          seasonOptions.splice(25);
-        }
+          // Add existing seasons
+          Object.entries(applicationConfigs).forEach(([configId, config]) => {
+            seasonOptions.push({
+              label: `📝 ${config.seasonName}`,
+              value: configId,
+              description: `Created: ${new Date(config.createdAt).toLocaleDateString()}`
+            });
+          });
 
-        // Create Safari-style management interface
-        const seasonSelectDropdown = new StringSelectMenuBuilder()
-          .setCustomId('entity_select_seasons')
-          .setPlaceholder('Select a season to manage applications for...')
-          .addOptions(seasonOptions);
+          // Limit to Discord's 25 option max
+          if (seasonOptions.length > 25) {
+            seasonOptions.splice(25);
+          }
 
-        const selectRow = new ActionRowBuilder().addComponents(seasonSelectDropdown);
+          // Create Safari-style management interface
+          const seasonSelectDropdown = new StringSelectMenuBuilder()
+            .setCustomId('entity_select_seasons')
+            .setPlaceholder('Select a season to manage applications for...')
+            .addOptions(seasonOptions);
 
-        // Create Components V2 interface following Safari pattern
-        const seasonManagementComponents = [
-          {
-            type: 10, // Text Display
-            content: `## Manage Season Applications | ${guild.name}`
-          },
-          {
-            type: 14 // Separator
-          },
-          selectRow.toJSON()
-        ];
+          const selectRow = new ActionRowBuilder().addComponents(seasonSelectDropdown);
 
-        // Add Back to Main Menu button
-        const backRow = new ActionRowBuilder()
-          .addComponents(
-            new ButtonBuilder()
-              .setCustomId('prod_menu_back')
-              .setLabel('← Back to Main Menu')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('⬅️')
+          // Create Components V2 interface following Safari pattern
+          const seasonManagementComponents = [
+            {
+              type: 10, // Text Display
+              content: `## Manage Season Applications | ${guild.name}`
+            },
+            {
+              type: 14 // Separator
+            },
+            selectRow.toJSON()
+          ];
+
+          // Add Back to Main Menu button
+          const backRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_menu_back')
+                .setLabel('← Back to Main Menu')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⬅️')
+            );
+
+          seasonManagementComponents.push(
+            { type: 14 }, // Separator
+            backRow.toJSON()
           );
 
-        seasonManagementComponents.push(
-          { type: 14 }, // Separator
-          backRow.toJSON()
-        );
+          const seasonManagementContainer = {
+            type: 17, // Container
+            accent_color: 0xf39c12, // Orange like Safari
+            components: seasonManagementComponents
+          };
 
-        const seasonManagementContainer = {
-          type: 17, // Container
-          accent_color: 0xf39c12, // Orange like Safari
-          components: seasonManagementComponents
-        };
-
-        // For submenu navigation, always update if it's a CastBot message with components
-        const channel = await client.channels.fetch(channelId);
-        const lastMessages = await channel.messages.fetch({ limit: 1 });
-        const lastMessage = lastMessages.first();
-        
-        const shouldUpdateMessage = lastMessage && 
-          lastMessage.author.id === client.user.id && 
-          lastMessage.components && 
-          lastMessage.components.length > 0;
+          // For submenu navigation, always update if it's a CastBot message with components
+          const channel = await client.channels.fetch(channelId);
+          const lastMessages = await channel.messages.fetch({ limit: 1 });
+          const lastMessage = lastMessages.first();
           
-        console.log(`🔍 DEBUG: Season submenu - shouldUpdate: ${shouldUpdateMessage}`);
-        return await sendProductionSubmenuResponse(res, channelId, [seasonManagementContainer], shouldUpdateMessage);
-
-      } catch (error) {
-        console.error('Error handling season_management_menu button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error loading Season Management interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          const shouldUpdateMessage = lastMessage && 
+            lastMessage.author.id === client.user.id && 
+            lastMessage.components && 
+            lastMessage.components.length > 0;
+            
+          console.log(`🔍 DEBUG: Season submenu - shouldUpdate: ${shouldUpdateMessage}`);
+          console.log(`✅ SUCCESS: season_management_menu - completed`);
+          
+          return await sendProductionSubmenuResponse(res, channelId, [seasonManagementContainer], shouldUpdateMessage);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('season_question_up_')) {
       // Handle question reorder up
       try {
