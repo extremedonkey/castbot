@@ -3245,7 +3245,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'add_coord_modal',
         'configure_modal_trigger',
         'player_enter_command',
-        'admin_test_command'
+        'admin_test_command',
+        'season_new_question',
+        'season_post_button',
+        'season_question_edit',
+        'season_question_up',
+        'season_question_down',
+        'season_question_delete'
       ];
       
       for (const pattern of dynamicPatterns) {
