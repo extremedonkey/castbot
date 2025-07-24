@@ -140,7 +140,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   
   const triggerType = action.trigger?.type || 'button';
   const conditionLogic = action.conditions?.logic || 'AND';
-  const conditionCount = action.conditions?.items?.length || 0;
+  const conditionCount = Array.isArray(action.conditions) ? action.conditions.length : 0;
   const coordinateCount = action.coordinates?.length || 0;
   
   return {
