@@ -668,6 +668,55 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'application_management'
   },
+  'season_new_question_*': {
+    label: 'New Question',
+    description: 'Create a new application question in season management',
+    emoji: '✨',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'season_post_button_*': {
+    label: 'Post Apps Button',
+    description: 'Post the application button to a channel',
+    emoji: '✅',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'season_app_ranking': {
+    label: 'Cast Ranking',
+    description: 'Comprehensive applicant ranking and evaluation system',
+    emoji: '🏆',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'season_question_edit_*': {
+    label: 'Edit Question',
+    description: 'Edit application question details',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'season_question_up_*': {
+    label: 'Move Question Up',
+    description: 'Move question higher in the order',
+    emoji: '⬆️',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'season_question_down_*': {
+    label: 'Move Question Down',
+    description: 'Move question lower in the order',
+    emoji: '⬇️',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  'season_question_delete_*': {
+    label: 'Delete Question',
+    description: 'Delete application question',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'application_management'
+  },
   'create_app_button_*': {
     label: 'Create App Button',
     description: 'Creates and posts the configured application button to the selected channel',

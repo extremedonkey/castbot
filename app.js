@@ -5465,237 +5465,215 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_question_up_')) {
-      // Handle question reorder up
-      try {
-        // Extract configId, index, and currentPage: season_question_up_{configId}_{index}_{currentPage}
-        const prefix = 'season_question_up_';
-        const remaining = custom_id.replace(prefix, '');
-        const parts = remaining.split('_');
-        const currentPage = parseInt(parts.pop()); // Get page from end
-        const questionIndex = parseInt(parts.pop()); // Get index 
-        const configId = parts.join('_'); // Join remaining parts as configId
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        
-        console.log(`🔍 DEBUG: Reordering question up - Config: ${configId}, Index: ${questionIndex}`);
-        
-        // Load player data
-        const playerData = await loadPlayerData();
-        const config = playerData[guildId]?.applicationConfigs?.[configId];
-        
-        if (!config || !config.questions || questionIndex <= 0 || questionIndex >= config.questions.length) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'season_question_up',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: season_question_up - user ${context.userId}`);
+          const { guildId, userId } = context;
+          
+          // Extract configId, index, and currentPage: season_question_up_{configId}_{index}_{currentPage}
+          const prefix = 'season_question_up_';
+          const remaining = context.customId.replace(prefix, '');
+          const parts = remaining.split('_');
+          const currentPage = parseInt(parts.pop()); // Get page from end
+          const questionIndex = parseInt(parts.pop()); // Get index 
+          const configId = parts.join('_'); // Join remaining parts as configId
+          
+          console.log(`🔍 DEBUG: Reordering question up - Config: ${configId}, Index: ${questionIndex}`);
+          
+          // Load player data
+          const playerData = await loadPlayerData();
+          const config = playerData[guildId]?.applicationConfigs?.[configId];
+          
+          if (!config || !config.questions || questionIndex <= 0 || questionIndex >= config.questions.length) {
+            return {
               content: '❌ Unable to reorder question.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Swap questions
-        const temp = config.questions[questionIndex];
-        config.questions[questionIndex] = config.questions[questionIndex - 1];
-        config.questions[questionIndex - 1] = temp;
-        
-        // Update order properties
-        config.questions[questionIndex].order = questionIndex + 1;
-        config.questions[questionIndex - 1].order = questionIndex;
-        
-        await savePlayerData(playerData);
-        
-        // Refresh the UI
-        return refreshQuestionManagementUI(res, config, configId, currentPage);
-        
-      } catch (error) {
-        console.error('Error reordering question up:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error reordering question.',
-            flags: InteractionResponseFlags.EPHEMERAL
+              ephemeral: true
+            };
           }
-        });
-      }
+          
+          // Swap questions
+          const temp = config.questions[questionIndex];
+          config.questions[questionIndex] = config.questions[questionIndex - 1];
+          config.questions[questionIndex - 1] = temp;
+          
+          // Update order properties
+          config.questions[questionIndex].order = questionIndex + 1;
+          config.questions[questionIndex - 1].order = questionIndex;
+          
+          await savePlayerData(playerData);
+          
+          console.log(`✅ SUCCESS: season_question_up - question reordered`);
+          // Refresh the UI
+          return refreshQuestionManagementUI(res, config, configId, currentPage);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('season_question_down_')) {
-      // Handle question reorder down
-      try {
-        // Extract configId, index, and currentPage: season_question_down_{configId}_{index}_{currentPage}
-        const prefix = 'season_question_down_';
-        const remaining = custom_id.replace(prefix, '');
-        const parts = remaining.split('_');
-        const currentPage = parseInt(parts.pop()); // Get page from end
-        const questionIndex = parseInt(parts.pop()); // Get index 
-        const configId = parts.join('_'); // Join remaining parts as configId
-        const guildId = req.body.guild_id;
-        
-        console.log(`🔍 DEBUG: Reordering question down - Config: ${configId}, Index: ${questionIndex}`);
-        
-        // Load player data
-        const playerData = await loadPlayerData();
-        const config = playerData[guildId]?.applicationConfigs?.[configId];
-        
-        if (!config || !config.questions || questionIndex < 0 || questionIndex >= config.questions.length - 1) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'season_question_down',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: season_question_down - user ${context.userId}`);
+          const { guildId } = context;
+          
+          // Extract configId, index, and currentPage: season_question_down_{configId}_{index}_{currentPage}
+          const prefix = 'season_question_down_';
+          const remaining = context.customId.replace(prefix, '');
+          const parts = remaining.split('_');
+          const currentPage = parseInt(parts.pop()); // Get page from end
+          const questionIndex = parseInt(parts.pop()); // Get index 
+          const configId = parts.join('_'); // Join remaining parts as configId
+          
+          console.log(`🔍 DEBUG: Reordering question down - Config: ${configId}, Index: ${questionIndex}`);
+          
+          // Load player data
+          const playerData = await loadPlayerData();
+          const config = playerData[guildId]?.applicationConfigs?.[configId];
+          
+          if (!config || !config.questions || questionIndex < 0 || questionIndex >= config.questions.length - 1) {
+            return {
               content: '❌ Unable to reorder question.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Swap questions
-        const temp = config.questions[questionIndex];
-        config.questions[questionIndex] = config.questions[questionIndex + 1];
-        config.questions[questionIndex + 1] = temp;
-        
-        // Update order properties
-        config.questions[questionIndex].order = questionIndex + 1;
-        config.questions[questionIndex + 1].order = questionIndex + 2;
-        
-        await savePlayerData(playerData);
-        
-        // Refresh the UI
-        return refreshQuestionManagementUI(res, config, configId, currentPage);
-        
-      } catch (error) {
-        console.error('Error reordering question down:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error reordering question.',
-            flags: InteractionResponseFlags.EPHEMERAL
+              ephemeral: true
+            };
           }
-        });
-      }
+          
+          // Swap questions
+          const temp = config.questions[questionIndex];
+          config.questions[questionIndex] = config.questions[questionIndex + 1];
+          config.questions[questionIndex + 1] = temp;
+          
+          // Update order properties
+          config.questions[questionIndex].order = questionIndex + 1;
+          config.questions[questionIndex + 1].order = questionIndex + 2;
+          
+          await savePlayerData(playerData);
+          
+          console.log(`✅ SUCCESS: season_question_down - question reordered`);
+          // Refresh the UI
+          return refreshQuestionManagementUI(res, config, configId, currentPage);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('season_question_edit_')) {
-      // Handle question edit modal
-      try {
-        // Extract configId, index, and currentPage: season_question_edit_{configId}_{index}_{currentPage}
-        const prefix = 'season_question_edit_';
-        const remaining = custom_id.replace(prefix, '');
-        const parts = remaining.split('_');
-        const currentPage = parseInt(parts.pop()); // Get page from end
-        const questionIndex = parseInt(parts.pop()); // Get index 
-        const configId = parts.join('_'); // Join remaining parts as configId
-        const guildId = req.body.guild_id;
-        
-        // Load player data
-        const playerData = await loadPlayerData();
-        const config = playerData[guildId]?.applicationConfigs?.[configId];
-        const question = config?.questions?.[questionIndex];
-        
-        if (!question) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'season_question_edit',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: season_question_edit - user ${context.userId}`);
+          const { guildId } = context;
+          
+          // Extract configId, index, and currentPage: season_question_edit_{configId}_{index}_{currentPage}
+          const prefix = 'season_question_edit_';
+          const remaining = context.customId.replace(prefix, '');
+          const parts = remaining.split('_');
+          const currentPage = parseInt(parts.pop()); // Get page from end
+          const questionIndex = parseInt(parts.pop()); // Get index 
+          const configId = parts.join('_'); // Join remaining parts as configId
+          
+          // Load player data
+          const playerData = await loadPlayerData();
+          const config = playerData[guildId]?.applicationConfigs?.[configId];
+          const question = config?.questions?.[questionIndex];
+          
+          if (!question) {
+            return {
               content: '❌ Question not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Show edit modal
-        const modal = new ModalBuilder()
-          .setCustomId(`season_edit_question_modal_${configId}_${questionIndex}`)
-          .setTitle('Edit Question');
-          
-        const titleInput = new TextInputBuilder()
-          .setCustomId('questionTitle')
-          .setLabel('Question Title')
-          .setStyle(TextInputStyle.Short)
-          .setValue(question.questionTitle || '')
-          .setRequired(true)
-          .setMaxLength(100);
-          
-        const textInput = new TextInputBuilder()
-          .setCustomId('questionText')
-          .setLabel('Enter your application question')
-          .setStyle(TextInputStyle.Paragraph)
-          .setValue(question.questionText || '')
-          .setRequired(true)
-          .setMaxLength(1000);
-          
-        const imageInput = new TextInputBuilder()
-          .setCustomId('imageURL')
-          .setLabel('Image URL')
-          .setPlaceholder('Enter the url of an image hosted on discord (https://cdn.discor..) to include.')
-          .setStyle(TextInputStyle.Short)
-          .setValue(question.imageURL || '')
-          .setRequired(false)
-          .setMaxLength(500);
-          
-        modal.addComponents(
-          new ActionRowBuilder().addComponents(titleInput),
-          new ActionRowBuilder().addComponents(textInput),
-          new ActionRowBuilder().addComponents(imageInput)
-        );
-        
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-        
-      } catch (error) {
-        console.error('Error showing question edit modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error editing question.',
-            flags: InteractionResponseFlags.EPHEMERAL
+              ephemeral: true
+            };
           }
-        });
-      }
+          
+          // Show edit modal
+          const modal = new ModalBuilder()
+            .setCustomId(`season_edit_question_modal_${configId}_${questionIndex}`)
+            .setTitle('Edit Question');
+            
+          const titleInput = new TextInputBuilder()
+            .setCustomId('questionTitle')
+            .setLabel('Question Title')
+            .setStyle(TextInputStyle.Short)
+            .setValue(question.questionTitle || '')
+            .setRequired(true)
+            .setMaxLength(100);
+            
+          const textInput = new TextInputBuilder()
+            .setCustomId('questionText')
+            .setLabel('Enter your application question')
+            .setStyle(TextInputStyle.Paragraph)
+            .setValue(question.questionText || '')
+            .setRequired(true)
+            .setMaxLength(1000);
+            
+          const imageInput = new TextInputBuilder()
+            .setCustomId('imageURL')
+            .setLabel('Image URL')
+            .setPlaceholder('Enter the url of an image hosted on discord (https://cdn.discor..) to include.')
+            .setStyle(TextInputStyle.Short)
+            .setValue(question.imageURL || '')
+            .setRequired(false)
+            .setMaxLength(500);
+            
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(titleInput),
+            new ActionRowBuilder().addComponents(textInput),
+            new ActionRowBuilder().addComponents(imageInput)
+          );
+          
+          console.log(`✅ SUCCESS: season_question_edit - modal created`);
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('season_question_delete_')) {
-      // Handle question deletion
-      try {
-        // Extract configId, index, and currentPage: season_question_delete_{configId}_{index}_{currentPage}
-        const prefix = 'season_question_delete_';
-        const remaining = custom_id.replace(prefix, '');
-        const parts = remaining.split('_');
-        const currentPage = parseInt(parts.pop()); // Get page from end
-        const questionIndex = parseInt(parts.pop()); // Get index 
-        const configId = parts.join('_'); // Join remaining parts as configId
-        const guildId = req.body.guild_id;
-        
-        // Load player data
-        const playerData = await loadPlayerData();
-        const config = playerData[guildId]?.applicationConfigs?.[configId];
-        
-        if (!config || !config.questions || questionIndex < 0 || questionIndex >= config.questions.length) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'season_question_delete',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: season_question_delete - user ${context.userId}`);
+          const { guildId } = context;
+          
+          // Extract configId, index, and currentPage: season_question_delete_{configId}_{index}_{currentPage}
+          const prefix = 'season_question_delete_';
+          const remaining = context.customId.replace(prefix, '');
+          const parts = remaining.split('_');
+          const currentPage = parseInt(parts.pop()); // Get page from end
+          const questionIndex = parseInt(parts.pop()); // Get index 
+          const configId = parts.join('_'); // Join remaining parts as configId
+          
+          // Load player data
+          const playerData = await loadPlayerData();
+          const config = playerData[guildId]?.applicationConfigs?.[configId];
+          
+          if (!config || !config.questions || questionIndex < 0 || questionIndex >= config.questions.length) {
+            return {
               content: '❌ Unable to delete question.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Remove the question
-        config.questions.splice(questionIndex, 1);
-        
-        // Re-index remaining questions
-        config.questions.forEach((q, idx) => {
-          q.order = idx + 1;
-        });
-        
-        await savePlayerData(playerData);
-        
-        // Refresh the UI
-        return refreshQuestionManagementUI(res, config, configId, currentPage);
-        
-      } catch (error) {
-        console.error('Error deleting question:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error deleting question.',
-            flags: InteractionResponseFlags.EPHEMERAL
+              ephemeral: true
+            };
           }
-        });
-      }
+          
+          // Remove the question
+          config.questions.splice(questionIndex, 1);
+          
+          // Re-index remaining questions
+          config.questions.forEach((q, idx) => {
+            q.order = idx + 1;
+          });
+          
+          await savePlayerData(playerData);
+          
+          console.log(`✅ SUCCESS: season_question_delete - question deleted`);
+          // Refresh the UI
+          return refreshQuestionManagementUI(res, config, configId, currentPage);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('season_nav_prev_')) {
       // Handle previous page navigation
       try {
@@ -5775,121 +5753,112 @@ To fix this:
         });
       }
     } else if (custom_id.startsWith('season_new_question_')) {
-      // Handle new question modal
-      try {
-        // Extract configId and currentPage: season_new_question_{configId}_{currentPage}
-        const prefix = 'season_new_question_';
-        const remaining = custom_id.replace(prefix, '');
-        const parts = remaining.split('_');
-        const currentPage = parseInt(parts.pop()); // Get page from end
-        const configId = parts.join('_'); // Join remaining parts as configId
-        
-        // Show new question modal
-        const modal = new ModalBuilder()
-          .setCustomId(`season_new_question_modal_${configId}_${currentPage}`)
-          .setTitle('Create New Question');
+      return ButtonHandlerFactory.create({
+        id: 'season_new_question_config',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: season_new_question_config - user ${context.userId}`);
           
-        const titleInput = new TextInputBuilder()
-          .setCustomId('questionTitle')
-          .setLabel('Question Title')
-          .setStyle(TextInputStyle.Short)
-          .setPlaceholder('Why do you want to join our season?')
-          .setRequired(true)
-          .setMaxLength(100);
+          // Extract configId and currentPage: season_new_question_{configId}_{currentPage}
+          const prefix = 'season_new_question_';
+          const remaining = context.customId.replace(prefix, '');
+          const parts = remaining.split('_');
+          const currentPage = parseInt(parts.pop()); // Get page from end
+          const configId = parts.join('_'); // Join remaining parts as configId
           
-        const textInput = new TextInputBuilder()
-          .setCustomId('questionText')
-          .setLabel('Enter your application question')
-          .setStyle(TextInputStyle.Paragraph)
-          .setPlaceholder('Please provide a detailed explanation about...')
-          .setRequired(true)
-          .setMaxLength(1000);
+          // Show new question modal
+          const modal = new ModalBuilder()
+            .setCustomId(`season_new_question_modal_${configId}_${currentPage}`)
+            .setTitle('Create New Question');
+            
+          const titleInput = new TextInputBuilder()
+            .setCustomId('questionTitle')
+            .setLabel('Question Title')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Why do you want to join our season?')
+            .setRequired(true)
+            .setMaxLength(100);
+            
+          const textInput = new TextInputBuilder()
+            .setCustomId('questionText')
+            .setLabel('Enter your application question')
+            .setStyle(TextInputStyle.Paragraph)
+            .setPlaceholder('Please provide a detailed explanation about...')
+            .setRequired(true)
+            .setMaxLength(1000);
+            
+          const imageInput = new TextInputBuilder()
+            .setCustomId('imageURL')
+            .setLabel('Image URL')
+            .setPlaceholder('Enter the url of an image hosted on discord (https://cdn.discor..) to include.')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(500);
+            
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(titleInput),
+            new ActionRowBuilder().addComponents(textInput),
+            new ActionRowBuilder().addComponents(imageInput)
+          );
           
-        const imageInput = new TextInputBuilder()
-          .setCustomId('imageURL')
-          .setLabel('Image URL')
-          .setPlaceholder('Enter the url of an image hosted on discord (https://cdn.discor..) to include.')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(false)
-          .setMaxLength(500);
-          
-        modal.addComponents(
-          new ActionRowBuilder().addComponents(titleInput),
-          new ActionRowBuilder().addComponents(textInput),
-          new ActionRowBuilder().addComponents(imageInput)
-        );
-        
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-        
-      } catch (error) {
-        console.error('Error showing new question modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error creating new question.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id.startsWith('season_post_button_')) {
-      // Handle post button to channel - reuse existing season_app_creation flow
-      try {
-        // Extract configId and currentPage: season_post_button_{configId}_{currentPage}
-        const prefix = 'season_post_button_';
-        const remaining = custom_id.replace(prefix, '');
-        const parts = remaining.split('_');
-        const currentPage = parseInt(parts.pop()); // Get page from end
-        const configId = parts.join('_'); // Join remaining parts as configId
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const userId = req.body.member.user.id;
-        
-        // Load existing config
-        const playerData = await loadPlayerData();
-        const existingConfig = playerData[guildId]?.applicationConfigs?.[configId];
-        
-        if (!existingConfig) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Season configuration not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+          console.log(`✅ SUCCESS: season_new_question_config - modal created`);
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
         }
-        
-        // Store the configId in a temporary location for the modal handler to use
-        if (!req.body.guild_state) req.body.guild_state = {};
-        req.body.guild_state.applicationConfigId = configId;
-        
-        // Show the standard application button modal
-        const modal = createApplicationButtonModal();
-        
-        // Pre-fill the modal with existing values if available
-        modal.components[0].components[0].setValue(existingConfig.buttonText || '');
-        modal.components[1].components[0].setValue(existingConfig.explanatoryText || '');
-        
-        // Modify the custom_id to indicate this is for an existing config
-        modal.setCustomId(`application_button_modal_${configId}`);
-        
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-        
-      } catch (error) {
-        console.error('Error showing post button modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error posting button.',
-            flags: InteractionResponseFlags.EPHEMERAL
+      })(req, res, client);
+    } else if (custom_id.startsWith('season_post_button_')) {
+      return ButtonHandlerFactory.create({
+        id: 'season_post_button_config',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: season_post_button_config - user ${context.userId}`);
+          const { guildId, client } = context;
+          
+          // Extract configId and currentPage: season_post_button_{configId}_{currentPage}
+          const prefix = 'season_post_button_';
+          const remaining = context.customId.replace(prefix, '');
+          const parts = remaining.split('_');
+          const currentPage = parseInt(parts.pop()); // Get page from end
+          const configId = parts.join('_'); // Join remaining parts as configId
+          
+          const guild = await client.guilds.fetch(guildId);
+          
+          // Load existing config
+          const playerData = await loadPlayerData();
+          const existingConfig = playerData[guildId]?.applicationConfigs?.[configId];
+          
+          if (!existingConfig) {
+            return {
+              content: '❌ Season configuration not found.',
+              ephemeral: true
+            };
           }
-        });
-      }
+          
+          // Store the configId in a temporary location for the modal handler to use
+          if (!req.body.guild_state) req.body.guild_state = {};
+          req.body.guild_state.applicationConfigId = configId;
+          
+          // Show the standard application button modal
+          const modal = createApplicationButtonModal();
+          
+          // Pre-fill the modal with existing values if available
+          modal.components[0].components[0].setValue(existingConfig.buttonText || '');
+          modal.components[1].components[0].setValue(existingConfig.explanatoryText || '');
+          
+          // Modify the custom_id to indicate this is for an existing config
+          modal.setCustomId(`application_button_modal_${configId}`);
+          
+          console.log(`✅ SUCCESS: season_post_button_config - modal created`);
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'emergency_app_reinit') {
       // Emergency re-initialization of application questions (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
@@ -6120,203 +6089,188 @@ To fix this:
         });
       }
     } else if (custom_id === 'season_app_ranking') {
-      // Handle Cast Ranking - show gallery with ranking system
-      try {
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const userId = req.body.member.user.id;
-
-        // Check admin permissions
-        const member = await guild.members.fetch(userId);
-        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'season_app_ranking',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: season_app_ranking - user ${context.userId}`);
+          const { guildId, userId, client } = context;
+          
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          
+          // Check additional admin permissions
+          if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+              !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+              !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+            return {
               content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+              ephemeral: true
+            };
+          }
 
-        // Load applications data - Use helper function to get all applications from stored data
-        const allApplications = await getAllApplicationsFromData(guildId);
-        
-        console.log(`Found ${allApplications.length} applications for ranking`);
-        console.log('Debug - Guild ID:', guildId);
-        
-        // Debug: Check what's actually in playerData
-        const playerData = await loadPlayerData();
-        console.log('Debug - Guild exists in playerData:', !!playerData[guildId]);
-        console.log('Debug - Applications section exists:', !!playerData[guildId]?.applications);
-        if (playerData[guildId]?.applications) {
-          console.log('Debug - Application keys:', Object.keys(playerData[guildId].applications));
-          console.log('Debug - Application data:', JSON.stringify(playerData[guildId].applications, null, 2));
-        }
-        
-        if (allApplications.length > 0) {
-          console.log('Applications:', allApplications.map(app => `${app.displayName} (${app.channelName})`).join(', '));
-        }
+          // Load applications data - Use helper function to get all applications from stored data
+          const allApplications = await getAllApplicationsFromData(guildId);
+          
+          console.log(`Found ${allApplications.length} applications for ranking`);
+          console.log('Debug - Guild ID:', guildId);
+          
+          // Debug: Check what's actually in playerData
+          const playerData = await loadPlayerData();
+          console.log('Debug - Guild exists in playerData:', !!playerData[guildId]);
+          console.log('Debug - Applications section exists:', !!playerData[guildId]?.applications);
+          if (playerData[guildId]?.applications) {
+            console.log('Debug - Application keys:', Object.keys(playerData[guildId].applications));
+            console.log('Debug - Application data:', JSON.stringify(playerData[guildId].applications, null, 2));
+          }
+          
+          if (allApplications.length > 0) {
+            console.log('Applications:', allApplications.map(app => `${app.displayName} (${app.channelName})`).join(', '));
+          }
 
-        if (allApplications.length === 0) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+          if (allApplications.length === 0) {
+            return {
               content: '📝 No applications found for this server. Create application buttons first using "Creation Application Process".',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+              ephemeral: true
+            };
+          }
 
-        // Get first application for initial display (we'll implement pagination later)
-        const currentApp = allApplications[0];
-        const appIndex = 0;
-        
-        // Fetch the applicant as a guild member to get their current avatar
-        let applicantMember;
-        try {
-          applicantMember = await guild.members.fetch(currentApp.userId);
-          console.log('🔍 DEBUG: Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
-        } catch (error) {
-          console.log('🔍 DEBUG: Could not fetch applicant member, using fallback:', error.message);
-          // Fallback: create a basic user object for avatar URL generation
-          applicantMember = {
-            displayName: currentApp.displayName,
-            user: { username: currentApp.username },
-            displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+          // Get first application for initial display (we'll implement pagination later)
+          const currentApp = allApplications[0];
+          const appIndex = 0;
+          
+          // Fetch the applicant as a guild member to get their current avatar
+          let applicantMember;
+          try {
+            applicantMember = await guild.members.fetch(currentApp.userId);
+            console.log('🔍 DEBUG: Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
+          } catch (error) {
+            console.log('🔍 DEBUG: Could not fetch applicant member, using fallback:', error.message);
+            // Fallback: create a basic user object for avatar URL generation
+            applicantMember = {
+              displayName: currentApp.displayName,
+              user: { username: currentApp.username },
+              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+            };
+          }
+          
+          // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
+          const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
+          console.log('🔍 DEBUG: Applicant avatar URL:', applicantAvatarURL);
+          
+          // Pre-fetch avatar to warm up Discord CDN cache
+          try {
+            console.log('🔍 DEBUG: Pre-fetching applicant avatar to warm CDN cache...');
+            const prefetchStart = Date.now();
+            await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
+            const prefetchTime = Date.now() - prefetchStart;
+            console.log(`🔍 DEBUG: Applicant avatar pre-fetch completed in ${prefetchTime}ms`);
+          } catch (error) {
+            console.log('🔍 DEBUG: Applicant avatar pre-fetch failed (non-critical):', error.message);
+          }
+          
+          // Create Media Gallery component for displaying applicant avatar
+          const avatarDisplayComponent = {
+            type: 12, // Media Gallery component
+            items: [
+              {
+                media: {
+                  url: applicantAvatarURL
+                },
+                description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
+              }
+            ]
           };
-        }
-        
-        // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
-        const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
-        console.log('🔍 DEBUG: Applicant avatar URL:', applicantAvatarURL);
-        
-        // Pre-fetch avatar to warm up Discord CDN cache
-        try {
-          console.log('🔍 DEBUG: Pre-fetching applicant avatar to warm CDN cache...');
-          const prefetchStart = Date.now();
-          await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
-          const prefetchTime = Date.now() - prefetchStart;
-          console.log(`🔍 DEBUG: Applicant avatar pre-fetch completed in ${prefetchTime}ms`);
-        } catch (error) {
-          console.log('🔍 DEBUG: Applicant avatar pre-fetch failed (non-critical):', error.message);
-        }
-        
-        // Create Media Gallery component for displaying applicant avatar
-        const avatarDisplayComponent = {
-          type: 12, // Media Gallery component
-          items: [
-            {
-              media: {
-                url: applicantAvatarURL
-              },
-              description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
-            }
-          ]
-        };
 
-        // Create ranking buttons (1-5)
-        const rankingButtons = [];
-        const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
-        
-        for (let i = 1; i <= 5; i++) {
-          const isSelected = userRanking === i;
-          rankingButtons.push(
-            new ButtonBuilder()
-              .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
-              .setLabel(i.toString())
-              .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
-              .setDisabled(isSelected)
-          );
-        }
-        
-        const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
-        
-        // Create navigation buttons if there are multiple applications
-        const navButtons = [];
-        if (allApplications.length > 1) {
+          // Create ranking buttons (1-5)
+          const rankingButtons = [];
+          const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+          
+          for (let i = 1; i <= 5; i++) {
+            const isSelected = userRanking === i;
+            rankingButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
+                .setLabel(i.toString())
+                .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+                .setDisabled(isSelected)
+            );
+          }
+          
+          const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
+          
+          // Create navigation buttons if there are multiple applications
+          const navButtons = [];
+          if (allApplications.length > 1) {
+            navButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`ranking_prev_${appIndex}`)
+                .setLabel('◀ Previous')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(appIndex === 0),
+              new ButtonBuilder()
+                .setCustomId(`ranking_next_${appIndex}`)
+                .setLabel('Next ▶')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(appIndex === allApplications.length - 1)
+            );
+          }
+          
+          // Add View All Scores button
           navButtons.push(
             new ButtonBuilder()
-              .setCustomId(`ranking_prev_${appIndex}`)
-              .setLabel('◀ Previous')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(appIndex === 0),
-            new ButtonBuilder()
-              .setCustomId(`ranking_next_${appIndex}`)
-              .setLabel('Next ▶')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(appIndex === allApplications.length - 1)
+              .setCustomId('ranking_view_all_scores')
+              .setLabel('📊 View All Scores')
+              .setStyle(ButtonStyle.Primary)
           );
-        }
-        
-        // Add View All Scores button
-        navButtons.push(
-          new ButtonBuilder()
-            .setCustomId('ranking_view_all_scores')
-            .setLabel('📊 View All Scores')
-            .setStyle(ButtonStyle.Primary)
-        );
-        
-        const navRow = new ActionRowBuilder().addComponents(navButtons);
-        
-        // Calculate average score for current applicant
-        const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
-        const rankings = Object.values(allRankings).filter(r => r !== undefined);
-        const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
-        
-        // Create Components V2 Container for Cast Ranking interface
-        const castRankingContainer = {
-          type: 17, // Container component
-          accent_color: 0x9B59B6, // Purple accent color
-          components: [
-            {
-              type: 10, // Text Display component
-              content: `## Cast Ranking | ${guild.name}`
-            },
-            {
-              type: 14 // Separator
-            },
-            {
-              type: 10, // Text Display component
-              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**App:** <#${currentApp.channelId}>`
-            },
-            avatarDisplayComponent, // Applicant avatar display
-            {
-              type: 10, // Text Display component  
-              content: `> **Rate this applicant (1-5):**`
-            },
-            rankingRow.toJSON(), // Ranking buttons
-            {
-              type: 14 // Separator
-            },
-            navRow.toJSON() // Navigation and view all scores
-          ]
-        };
-        
-        console.log('Sending cast ranking interface...');
-        console.log('Container component count:', castRankingContainer.components.length);
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+          
+          const navRow = new ActionRowBuilder().addComponents(navButtons);
+          
+          // Calculate average score for current applicant
+          const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+          const rankings = Object.values(allRankings).filter(r => r !== undefined);
+          const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
+          
+          // Create Components V2 Container for Cast Ranking interface
+          const castRankingContainer = {
+            type: 17, // Container component
+            accent_color: 0x9B59B6, // Purple accent color
+            components: [
+              {
+                type: 10, // Text Display component
+                content: `## Cast Ranking | ${guild.name}`
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 10, // Text Display component
+                content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**App:** <#${currentApp.channelId}>`
+              },
+              avatarDisplayComponent, // Applicant avatar display
+              {
+                type: 10, // Text Display component  
+                content: `> **Rate this applicant (1-5):**`
+              },
+              rankingRow.toJSON(), // Ranking buttons
+              {
+                type: 14 // Separator
+              },
+              navRow.toJSON() // Navigation and view all scores
+            ]
+          };
+          
+          console.log('Sending cast ranking interface...');
+          console.log('Container component count:', castRankingContainer.components.length);
+          console.log(`✅ SUCCESS: season_app_ranking - interface created`);
+          
+          return {
             flags: (1 << 15), // IS_COMPONENTS_V2 flag
             components: [castRankingContainer]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error handling season_app_ranking button:', error);
-        console.error('Error stack:', error.stack);
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `❌ Error loading cast ranking interface: ${error.message}`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_setup_tycoons') {
       // Execute same logic as setup_tycoons slash command
       try {
