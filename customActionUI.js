@@ -794,8 +794,8 @@ export async function refreshConditionManagerUI({ res, actionId, guildId, curren
     throw new Error('Action not found');
   }
   
-  // Ensure conditions array exists
-  if (!action.conditions) {
+  // Ensure conditions is an array (legacy actions might have old structure)
+  if (!Array.isArray(action.conditions)) {
     action.conditions = [];
   }
   
