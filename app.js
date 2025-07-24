@@ -15295,6 +15295,98 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('condition_item_select_')) {
+      // Handle item selection for condition
+      const selectedItemId = data.values[0];
+      
+      // Parse custom_id: condition_item_select_actionId_conditionIndex_currentPage
+      const customIdParts = custom_id.split('_');
+      customIdParts.shift(); // Remove 'condition'
+      customIdParts.shift(); // Remove 'item'
+      customIdParts.shift(); // Remove 'select'
+      const currentPage = parseInt(customIdParts.pop() || '0');
+      const conditionIndex = parseInt(customIdParts.pop() || '0');
+      const actionId = customIdParts.join('_');
+      
+      // Load and update condition
+      const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+      const allSafariContent = await loadSafariContent();
+      const condition = allSafariContent[req.body.guild_id]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+      
+      if (!condition) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Condition not found.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+      // Update item ID
+      condition.itemId = selectedItemId;
+      
+      // Save changes
+      await saveSafariContent(allSafariContent);
+      
+      console.log(`✅ SUCCESS: condition_item_select - selected item ${selectedItemId}`);
+      
+      // Refresh condition editor
+      const { showConditionEditor } = await import('./customActionUI.js');
+      await showConditionEditor({
+        res,
+        actionId,
+        conditionIndex,
+        guildId: req.body.guild_id,
+        currentPage
+      });
+      
+    } else if (custom_id.startsWith('condition_role_select_')) {
+      // Handle role selection for condition
+      const selectedRoleId = data.values[0];
+      
+      // Parse custom_id: condition_role_select_actionId_conditionIndex_currentPage
+      const customIdParts = custom_id.split('_');
+      customIdParts.shift(); // Remove 'condition'
+      customIdParts.shift(); // Remove 'role'
+      customIdParts.shift(); // Remove 'select'
+      const currentPage = parseInt(customIdParts.pop() || '0');
+      const conditionIndex = parseInt(customIdParts.pop() || '0');
+      const actionId = customIdParts.join('_');
+      
+      // Load and update condition
+      const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+      const allSafariContent = await loadSafariContent();
+      const condition = allSafariContent[req.body.guild_id]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+      
+      if (!condition) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Condition not found.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+      // Update role ID
+      condition.roleId = selectedRoleId;
+      
+      // Save changes
+      await saveSafariContent(allSafariContent);
+      
+      console.log(`✅ SUCCESS: condition_role_select - selected role ${selectedRoleId}`);
+      
+      // Refresh condition editor
+      const { showConditionEditor } = await import('./customActionUI.js');
+      await showConditionEditor({
+        res,
+        actionId,
+        conditionIndex,
+        guildId: req.body.guild_id,
+        currentPage
+      });
+      
     } else if (custom_id.startsWith('entity_action_coords_')) {
       // Handle coordinates configuration button
       return ButtonHandlerFactory.create({
