@@ -3251,7 +3251,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'season_question_edit',
         'season_question_up',
         'season_question_down',
-        'season_question_delete'
+        'season_question_delete',
+        'season_nav_prev',
+        'season_nav_next'
       ];
       
       for (const pattern of dynamicPatterns) {
@@ -5681,83 +5683,73 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_nav_prev_')) {
-      // Handle previous page navigation
-      try {
-        // Extract configId and currentPage: season_nav_prev_{configId}_{currentPage}
-        const prefix = 'season_nav_prev_';
-        const remaining = custom_id.replace(prefix, '');
-        const lastUnderscoreIndex = remaining.lastIndexOf('_');
-        const configId = remaining.substring(0, lastUnderscoreIndex);
-        const currentPage = parseInt(remaining.substring(lastUnderscoreIndex + 1));
-        const guildId = req.body.guild_id;
-        
-        // Load player data
-        const playerData = await loadPlayerData();
-        const config = playerData[guildId]?.applicationConfigs?.[configId];
-        
-        if (!config) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'season_nav_prev',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: season_nav_prev - user ${context.userId}`);
+          const { guildId } = context;
+          
+          // Extract configId and currentPage: season_nav_prev_{configId}_{currentPage}
+          const prefix = 'season_nav_prev_';
+          const remaining = context.customId.replace(prefix, '');
+          const lastUnderscoreIndex = remaining.lastIndexOf('_');
+          const configId = remaining.substring(0, lastUnderscoreIndex);
+          const currentPage = parseInt(remaining.substring(lastUnderscoreIndex + 1));
+          
+          // Load player data
+          const playerData = await loadPlayerData();
+          const config = playerData[guildId]?.applicationConfigs?.[configId];
+          
+          if (!config) {
+            return {
               content: '❌ Season configuration not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        const newPage = Math.max(0, currentPage - 1);
-        return refreshQuestionManagementUI(res, config, configId, newPage);
-        
-      } catch (error) {
-        console.error('Error navigating to previous page:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error navigating to previous page.',
-            flags: InteractionResponseFlags.EPHEMERAL
+              ephemeral: true
+            };
           }
-        });
-      }
+          
+          const newPage = Math.max(0, currentPage - 1);
+          console.log(`✅ SUCCESS: season_nav_prev - navigated to page ${newPage}`);
+          return refreshQuestionManagementUI(res, config, configId, newPage);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('season_nav_next_')) {
-      // Handle next page navigation
-      try {
-        // Extract configId and currentPage: season_nav_next_{configId}_{currentPage}
-        const prefix = 'season_nav_next_';
-        const remaining = custom_id.replace(prefix, '');
-        const lastUnderscoreIndex = remaining.lastIndexOf('_');
-        const configId = remaining.substring(0, lastUnderscoreIndex);
-        const currentPage = parseInt(remaining.substring(lastUnderscoreIndex + 1));
-        const guildId = req.body.guild_id;
-        
-        // Load player data
-        const playerData = await loadPlayerData();
-        const config = playerData[guildId]?.applicationConfigs?.[configId];
-        
-        if (!config) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'season_nav_next',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: season_nav_next - user ${context.userId}`);
+          const { guildId } = context;
+          
+          // Extract configId and currentPage: season_nav_next_{configId}_{currentPage}
+          const prefix = 'season_nav_next_';
+          const remaining = context.customId.replace(prefix, '');
+          const lastUnderscoreIndex = remaining.lastIndexOf('_');
+          const configId = remaining.substring(0, lastUnderscoreIndex);
+          const currentPage = parseInt(remaining.substring(lastUnderscoreIndex + 1));
+          
+          // Load player data
+          const playerData = await loadPlayerData();
+          const config = playerData[guildId]?.applicationConfigs?.[configId];
+          
+          if (!config) {
+            return {
               content: '❌ Season configuration not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        const questionsPerPage = 5;
-        const totalPages = Math.ceil(config.questions.length / questionsPerPage);
-        const newPage = Math.min(totalPages - 1, currentPage + 1);
-        return refreshQuestionManagementUI(res, config, configId, newPage);
-        
-      } catch (error) {
-        console.error('Error navigating to next page:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error navigating to next page.',
-            flags: InteractionResponseFlags.EPHEMERAL
+              ephemeral: true
+            };
           }
-        });
-      }
+          
+          const questionsPerPage = 5;
+          const totalPages = Math.ceil(config.questions.length / questionsPerPage);
+          const newPage = Math.min(totalPages - 1, currentPage + 1);
+          console.log(`✅ SUCCESS: season_nav_next - navigated to page ${newPage}`);
+          return refreshQuestionManagementUI(res, config, configId, newPage);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('season_new_question_')) {
       return ButtonHandlerFactory.create({
         id: 'season_new_question_config',

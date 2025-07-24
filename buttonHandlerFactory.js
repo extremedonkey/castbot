@@ -717,6 +717,22 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'application_management'
   },
+  
+  'season_nav_prev_*': {
+    label: 'Previous Page',
+    description: 'Navigate to previous page in season management',
+    emoji: '◀',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+  
+  'season_nav_next_*': {
+    label: 'Next Page', 
+    description: 'Navigate to next page in season management',
+    emoji: '▶',
+    style: 'Secondary',
+    category: 'application_management'
+  },
   'create_app_button_*': {
     label: 'Create App Button',
     description: 'Creates and posts the configured application button to the selected channel',
