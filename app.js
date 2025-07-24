@@ -3253,7 +3253,26 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'season_question_down',
         'season_question_delete',
         'season_nav_prev',
-        'season_nav_next'
+        'season_nav_next',
+        // Conditional logic system
+        'condition_manager',
+        'condition_edit',
+        'condition_up',
+        'condition_down',
+        'condition_delete',
+        'condition_logic',
+        'condition_add',
+        'condition_nav_prev',
+        'condition_nav_next',
+        'condition_type_select',
+        'condition_currency_gte',
+        'condition_currency_lte',
+        'condition_currency_zero',
+        'condition_set_currency',
+        'condition_has',
+        'condition_not_has',
+        'condition_item_select',
+        'condition_role_select'
       ];
       
       for (const pattern of dynamicPatterns) {
@@ -14920,9 +14939,21 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           console.log(`🔍 START: condition_manager - user ${context.userId}`);
           
           // Parse custom_id: condition_manager_actionId_currentPage
-          const parts = context.customId.split('_');
-          const actionId = parts[2];
-          const currentPage = parseInt(parts[3] || '0');
+          // The format is: condition_manager_<actionId>_<currentPage>
+          // Where actionId might contain underscores, so we need to be careful
+          const customIdParts = context.customId.split('_');
+          
+          // Remove 'condition' and 'manager' prefix
+          customIdParts.shift(); // Remove 'condition'
+          customIdParts.shift(); // Remove 'manager'
+          
+          // The last part is the page number
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          
+          // Everything else is the actionId (rejoin with underscores)
+          const actionId = customIdParts.join('_');
+          
+          console.log(`📝 Parsed condition_manager: actionId="${actionId}", page=${currentPage}`);
           
           const { refreshConditionManagerUI } = await import('./customActionUI.js');
           
@@ -14934,6 +14965,74 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
           
           console.log(`✅ SUCCESS: condition_manager - displayed for action ${actionId} page ${currentPage}`);
+          // Return undefined as response already sent
+          return;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('condition_add_')) {
+      // Add new condition handler
+      return ButtonHandlerFactory.create({
+        id: 'condition_add',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_add - user ${context.userId}`);
+          
+          // Parse custom_id: condition_add_actionId_currentPage
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // Remove 'condition'
+          customIdParts.shift(); // Remove 'add'
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          
+          // Load action data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const action = allSafariContent[context.guildId]?.buttons?.[actionId];
+          
+          if (!action) {
+            throw new Error('Action not found');
+          }
+          
+          // Ensure conditions array exists
+          if (!action.conditions) {
+            action.conditions = [];
+          }
+          
+          // Create new condition with default values
+          const newCondition = {
+            id: `cond_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+            type: 'currency', // Default type
+            operator: 'gte',  // Default operator
+            value: 0,         // Default value
+            logic: 'AND'      // Default logic for next condition
+          };
+          
+          // Add to conditions array
+          action.conditions.push(newCondition);
+          
+          // Save updated action
+          await saveSafariContent(allSafariContent);
+          
+          console.log(`✅ SUCCESS: condition_add - added new condition to action ${actionId}`);
+          
+          // For now, redirect back to condition manager
+          // TODO: Show condition editor for the new condition
+          const { refreshConditionManagerUI } = await import('./customActionUI.js');
+          
+          // Calculate which page the new condition will be on
+          const conditionsPerPage = 3;
+          const newConditionPage = Math.floor((action.conditions.length - 1) / conditionsPerPage);
+          
+          await refreshConditionManagerUI({
+            res,
+            actionId,
+            guildId: context.guildId,
+            currentPage: newConditionPage
+          });
+          
           // Return undefined as response already sent
           return;
         }
