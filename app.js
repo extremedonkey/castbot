@@ -15038,6 +15038,42 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('condition_edit_')) {
+      // Edit condition handler
+      return ButtonHandlerFactory.create({
+        id: 'condition_edit',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_edit - user ${context.userId}`);
+          
+          // Parse custom_id: condition_edit_actionId_conditionIndex_currentPage
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // Remove 'condition'
+          customIdParts.shift(); // Remove 'edit'
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          
+          console.log(`📝 Parsed condition_edit: actionId="${actionId}", conditionIndex=${conditionIndex}, page=${currentPage}`);
+          
+          const { showConditionEditor } = await import('./customActionUI.js');
+          
+          await showConditionEditor({
+            res,
+            actionId,
+            conditionIndex,
+            guildId: context.guildId,
+            currentPage
+          });
+          
+          console.log(`✅ SUCCESS: condition_edit - showing editor for condition ${conditionIndex}`);
+          // Return undefined as response already sent
+          return;
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('entity_action_coords_')) {
       // Handle coordinates configuration button
       return ButtonHandlerFactory.create({

@@ -986,11 +986,290 @@ function getConditionSummary(condition) {
   }
 }
 
+/**
+ * Show condition editor UI
+ * @param {Object} params
+ * @param {Object} params.res - Express response object
+ * @param {string} params.actionId - Action ID
+ * @param {number} params.conditionIndex - Index of condition to edit
+ * @param {string} params.guildId - Guild ID
+ * @param {number} params.currentPage - Current page in condition manager
+ * @returns {Object} Discord response
+ */
+export async function showConditionEditor({ res, actionId, conditionIndex, guildId, currentPage = 0 }) {
+  const { InteractionResponseType } = await import('discord-interactions');
+  
+  const allSafariContent = await loadSafariContent();
+  const action = allSafariContent[guildId]?.buttons?.[actionId];
+  const condition = action?.conditions?.[conditionIndex];
+  
+  if (!action || !condition) {
+    throw new Error('Action or condition not found');
+  }
+  
+  const components = [
+    {
+      type: 10,
+      content: '## ➕ Condition Editor\nWhen...'
+    },
+    {
+      type: 1, // Action Row - Type selector
+      components: [{
+        type: 3, // String Select
+        custom_id: `condition_type_select_${actionId}_${conditionIndex}_${currentPage}`,
+        placeholder: 'Select Condition Type...',
+        options: [
+          {
+            label: 'Currency',
+            value: 'currency',
+            description: "User's currency is greater/less than or equal to a value",
+            emoji: { name: '🪙' },
+            default: condition.type === 'currency'
+          },
+          {
+            label: 'Item',
+            value: 'item',
+            description: "User has/doesn't have item",
+            emoji: { name: '📦' },
+            default: condition.type === 'item'
+          },
+          {
+            label: 'Role',
+            value: 'role',
+            description: "User has/doesn't have role",
+            emoji: { name: '👑' },
+            default: condition.type === 'role'
+          }
+        ]
+      }]
+    }
+  ];
+  
+  // Add separator if type selected
+  if (condition.type) {
+    components.push({ type: 14 }); // Separator
+    
+    // Type-specific UI
+    switch (condition.type) {
+      case 'currency':
+        components.push(...createCurrencyConditionUI(condition, actionId, conditionIndex, currentPage));
+        break;
+      case 'item':
+        components.push(...await createItemConditionUI(condition, actionId, conditionIndex, currentPage, guildId));
+        break;
+      case 'role':
+        components.push(...createRoleConditionUI(condition, actionId, conditionIndex, currentPage));
+        break;
+    }
+  }
+  
+  // Back button
+  components.push({
+    type: 1, // Action Row
+    components: [{
+      type: 2,
+      custom_id: `condition_manager_${actionId}_${currentPage}`,
+      label: '← Back',
+      style: 2,
+      emoji: { name: '🧩' }
+    }]
+  });
+  
+  const container = {
+    type: 17,
+    accent_color: 0x5865f2,
+    components: components
+  };
+  
+  return res.send({
+    type: InteractionResponseType.UPDATE_MESSAGE,
+    data: {
+      flags: (1 << 15),
+      components: [container]
+    }
+  });
+}
+
+/**
+ * Create currency condition UI components
+ */
+function createCurrencyConditionUI(condition, actionId, conditionIndex, currentPage) {
+  const components = [
+    {
+      type: 10,
+      content: '### Currency Details\nWhen user\'s currency is...'
+    },
+    {
+      type: 1, // Action Row - Operator buttons
+      components: [
+        {
+          type: 2,
+          custom_id: `condition_currency_gte_${actionId}_${conditionIndex}_${currentPage}`,
+          label: '≥ Greater than or equal to',
+          style: condition.operator === 'gte' ? 1 : 2, // Primary if active
+          emoji: { name: '🔢' }
+        },
+        {
+          type: 2,
+          custom_id: `condition_currency_lte_${actionId}_${conditionIndex}_${currentPage}`,
+          label: '≤ Less than or equal to',
+          style: condition.operator === 'lte' ? 1 : 2,
+          emoji: { name: '🔢' }
+        },
+        {
+          type: 2,
+          custom_id: `condition_currency_zero_${actionId}_${conditionIndex}_${currentPage}`,
+          label: '= Exactly zero',
+          style: condition.operator === 'eq_zero' ? 1 : 2,
+          emoji: { name: '0️⃣' }
+        }
+      ]
+    }
+  ];
+  
+  // Show current value if not zero check
+  if (condition.operator !== 'eq_zero') {
+    components.push({
+      type: 10,
+      content: `**Current Value:** ${condition.value || 0} 🪙`
+    });
+    
+    components.push({
+      type: 1, // Action Row
+      components: [{
+        type: 2,
+        custom_id: `condition_set_currency_${actionId}_${conditionIndex}_${currentPage}`,
+        label: 'Set Currency Amount',
+        style: 1, // Primary
+        emoji: { name: '🪙' }
+      }]
+    });
+  }
+  
+  return components;
+}
+
+/**
+ * Create item condition UI components
+ */
+async function createItemConditionUI(condition, actionId, conditionIndex, currentPage, guildId) {
+  const allSafariContent = await loadSafariContent();
+  const items = allSafariContent[guildId]?.items || {};
+  
+  const components = [
+    {
+      type: 10,
+      content: '### Item Details\nWhen user...'
+    },
+    {
+      type: 1, // Action Row - Operator buttons
+      components: [
+        {
+          type: 2,
+          custom_id: `condition_has_${actionId}_${conditionIndex}_${currentPage}_item`,
+          label: 'Has',
+          style: condition.operator === 'has' ? 1 : 2,
+          emoji: { name: '✅' }
+        },
+        {
+          type: 2,
+          custom_id: `condition_not_has_${actionId}_${conditionIndex}_${currentPage}_item`,
+          label: 'Does not have',
+          style: condition.operator === 'not_has' ? 1 : 2,
+          emoji: { name: '❌' }
+        }
+      ]
+    },
+    {
+      type: 10,
+      content: 'the following item...'
+    }
+  ];
+  
+  // Item selector
+  const itemOptions = Object.entries(items).map(([itemId, item]) => ({
+    label: item.name || 'Unnamed Item',
+    value: itemId,
+    description: item.description?.substring(0, 100) || 'No description',
+    emoji: item.emoji ? { name: item.emoji } : { name: '📦' },
+    default: condition.itemId === itemId
+  })).slice(0, 25); // Discord limit
+  
+  if (itemOptions.length > 0) {
+    components.push({
+      type: 1, // Action Row
+      components: [{
+        type: 3, // String Select
+        custom_id: `condition_item_select_${actionId}_${conditionIndex}_${currentPage}`,
+        placeholder: 'Select an item...',
+        options: itemOptions
+      }]
+    });
+  } else {
+    components.push({
+      type: 10,
+      content: '*No items available. Create items in Safari menu first.*'
+    });
+  }
+  
+  return components;
+}
+
+/**
+ * Create role condition UI components
+ */
+function createRoleConditionUI(condition, actionId, conditionIndex, currentPage) {
+  const components = [
+    {
+      type: 10,
+      content: '### Role Details\nWhen user...'
+    },
+    {
+      type: 1, // Action Row - Operator buttons
+      components: [
+        {
+          type: 2,
+          custom_id: `condition_has_${actionId}_${conditionIndex}_${currentPage}_role`,
+          label: 'Has',
+          style: condition.operator === 'has' ? 1 : 2,
+          emoji: { name: '✅' }
+        },
+        {
+          type: 2,
+          custom_id: `condition_not_has_${actionId}_${conditionIndex}_${currentPage}_role`,
+          label: 'Does not have',
+          style: condition.operator === 'not_has' ? 1 : 2,
+          emoji: { name: '❌' }
+        }
+      ]
+    },
+    {
+      type: 10,
+      content: 'the following role...'
+    },
+    {
+      type: 1, // Action Row
+      components: [{
+        type: 8, // Role Select (Discord native)
+        custom_id: `condition_role_select_${actionId}_${conditionIndex}_${currentPage}`,
+        placeholder: 'Select a role...',
+        default_values: condition.roleId ? [{
+          id: condition.roleId,
+          type: 'role'
+        }] : []
+      }]
+    }
+  ];
+  
+  return components;
+}
+
 export default {
   createCustomActionSelectionUI,
   createCustomActionEditorUI,
   createTriggerConfigUI,
   createConditionsConfigUI,
   createCoordinateManagementUI,
-  refreshConditionManagerUI
+  refreshConditionManagerUI,
+  showConditionEditor
 };
