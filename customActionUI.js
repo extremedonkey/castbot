@@ -823,6 +823,9 @@ export async function refreshConditionManagerUI({ res, actionId, guildId, curren
       content: '*No conditions defined yet*'
     });
   } else {
+    // Load items for name lookup
+    const items = allSafariContent[guildId]?.items || {};
+    
     for (let i = startIndex; i < endIndex; i++) {
       const condition = conditions[i];
       const isLast = i === conditions.length - 1;
@@ -830,7 +833,7 @@ export async function refreshConditionManagerUI({ res, actionId, guildId, curren
       // Condition summary
       components.push({
         type: 10,
-        content: `**${i + 1}.** ${getConditionSummary(condition)}`
+        content: `**${i + 1}.** ${getConditionSummary(condition, items)}`
       });
       
       // Action buttons row
@@ -952,8 +955,10 @@ export async function refreshConditionManagerUI({ res, actionId, guildId, curren
 
 /**
  * Get human-readable summary of a condition
+ * @param {Object} condition - The condition object
+ * @param {Object} items - Optional items object for name lookup
  */
-function getConditionSummary(condition) {
+function getConditionSummary(condition, items = {}) {
   if (!condition || !condition.type) {
     return 'Invalid condition';
   }
@@ -969,7 +974,9 @@ function getConditionSummary(condition) {
       return `Currency ${currencyOp} ${currencyValue} 🪙`;
       
     case 'item':
-      const itemName = condition.itemId || 'Unknown Item';
+      // Look up item name from items object, fallback to ID
+      const item = items[condition.itemId];
+      const itemName = item?.name || condition.itemId || 'Unknown Item';
       return condition.operator === 'has' 
         ? `Has item: ${itemName}` 
         : `Does not have: ${itemName}`;
@@ -1269,7 +1276,7 @@ function createRoleConditionUI(condition, actionId, conditionIndex, currentPage)
     {
       type: 1, // Action Row
       components: [{
-        type: 8, // Role Select (Discord native)
+        type: 6, // Role Select (Discord native) - type 6, not 8!
         custom_id: `condition_role_select_${actionId}_${conditionIndex}_${currentPage}`,
         placeholder: 'Select a role...',
         default_values: condition.roleId ? [{
