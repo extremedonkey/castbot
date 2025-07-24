@@ -884,6 +884,27 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
             };
         }
         
+        // Check conditions if they exist
+        if (button.conditions && button.conditions.length > 0) {
+            const playerData = await loadPlayerData();
+            const conditionsPass = await evaluateConditions(button.conditions, {
+                playerData,
+                guildId,
+                userId,
+                member: interaction.member
+            });
+            
+            if (!conditionsPass) {
+                console.log(`❌ Conditions not met for button ${buttonId}`);
+                return {
+                    content: '❌ You do not meet the requirements for this action.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                };
+            }
+            
+            console.log(`✅ All conditions passed for button ${buttonId}`);
+        }
+        
         // Update usage count
         const safariData = await loadSafariContent();
         if (safariData[guildId]?.buttons?.[buttonId]) {
@@ -5556,3 +5577,118 @@ export {
     formatCombatResults,
     getPlayerEmoji
 };
+
+/**
+ * Evaluate conditions for a button
+ * @param {Array} conditions - Array of condition objects
+ * @param {Object} context - Evaluation context with playerData, guildId, userId, member
+ * @returns {boolean} - True if all conditions pass
+ */
+async function evaluateConditions(conditions, context) {
+    if (!conditions || conditions.length === 0) {
+        return true; // No conditions = always pass
+    }
+    
+    const { playerData, guildId, userId } = context;
+    const player = playerData[guildId]?.players?.[userId];
+    
+    if (!player) {
+        console.error(`Player ${userId} not found for condition evaluation`);
+        return false;
+    }
+    
+    let accumulator = null;
+    
+    for (let i = 0; i < conditions.length; i++) {
+        const condition = conditions[i];
+        const result = await evaluateSingleCondition(condition, player, context);
+        
+        console.log(`Condition ${i + 1}: ${getConditionSummary(condition)} = ${result}`);
+        
+        if (i === 0) {
+            accumulator = result;
+            continue;
+        }
+        
+        // Apply previous condition's logic operator
+        const prevLogic = conditions[i - 1].logic || 'AND';
+        
+        // Short-circuit evaluation
+        if (prevLogic === 'AND' && !accumulator) {
+            console.log('Short-circuit: AND with false accumulator');
+            return false;
+        }
+        if (prevLogic === 'OR' && accumulator) {
+            console.log('Short-circuit: OR with true accumulator');
+            return true;
+        }
+        
+        // Apply logic
+        if (prevLogic === 'AND') {
+            accumulator = accumulator && result;
+        } else if (prevLogic === 'OR') {
+            accumulator = accumulator || result;
+        }
+        
+        console.log(`After ${prevLogic}: accumulator = ${accumulator}`);
+    }
+    
+    return accumulator;
+}
+
+/**
+ * Evaluate a single condition
+ */
+async function evaluateSingleCondition(condition, player, context) {
+    switch (condition.type) {
+        case 'currency':
+            const currency = player.safari?.currency || 0;
+            switch (condition.operator) {
+                case 'gte':
+                    return currency >= condition.value;
+                case 'lte':
+                    return currency <= condition.value;
+                case 'eq_zero':
+                    return currency === 0;
+                default:
+                    return false;
+            }
+            
+        case 'item':
+            const itemQuantity = player.safari?.inventory?.[condition.itemId]?.quantity || 0;
+            const hasItem = itemQuantity > 0;
+            return condition.operator === 'has' ? hasItem : !hasItem;
+            
+        case 'role':
+            const member = context.member;
+            const hasRole = member?.roles?.includes(condition.roleId);
+            return condition.operator === 'has' ? hasRole : !hasRole;
+            
+        default:
+            console.error(`Unknown condition type: ${condition.type}`);
+            return false;
+    }
+}
+
+/**
+ * Get human-readable summary of a condition
+ */
+function getConditionSummary(condition) {
+    switch (condition.type) {
+        case 'currency':
+            if (condition.operator === 'gte') {
+                return `Currency ≥ ${condition.value}`;
+            } else if (condition.operator === 'lte') {
+                return `Currency ≤ ${condition.value}`;
+            } else if (condition.operator === 'eq_zero') {
+                return `Currency = 0`;
+            }
+            break;
+        case 'item':
+            return `${condition.operator === 'has' ? 'Has' : 'Does not have'} item ${condition.itemId}`;
+        case 'role':
+            return `${condition.operator === 'has' ? 'Has' : 'Does not have'} role ${condition.roleId}`;
+        default:
+            return 'Unknown condition';
+    }
+}
