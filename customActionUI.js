@@ -945,7 +945,6 @@ export async function refreshConditionManagerUI({ res, actionId, guildId, curren
   return res.send({
     type: InteractionResponseType.UPDATE_MESSAGE,
     data: {
-      flags: (1 << 15), // IS_COMPONENTS_V2
       components: [container, ...navComponents]
     }
   });
@@ -1084,7 +1083,6 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
   return res.send({
     type: InteractionResponseType.UPDATE_MESSAGE,
     data: {
-      flags: (1 << 15),
       components: [container]
     }
   });
