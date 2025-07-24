@@ -14889,7 +14889,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       })(req, res, client);
       
     } else if (custom_id.startsWith('entity_action_conditions_')) {
-      // Handle conditions configuration button
+      // Legacy conditions handler - kept for backward compatibility
       return ButtonHandlerFactory.create({
         id: 'entity_action_conditions',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -14907,6 +14907,35 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           console.log(`✅ SUCCESS: entity_action_conditions - showing conditions config`);
           return ui;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('condition_manager_')) {
+      // New condition manager using Question Builder pattern
+      return ButtonHandlerFactory.create({
+        id: 'condition_manager',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_manager - user ${context.userId}`);
+          
+          // Parse custom_id: condition_manager_actionId_currentPage
+          const parts = context.customId.split('_');
+          const actionId = parts[2];
+          const currentPage = parseInt(parts[3] || '0');
+          
+          const { refreshConditionManagerUI } = await import('./customActionUI.js');
+          
+          await refreshConditionManagerUI({
+            res,
+            actionId,
+            guildId: context.guildId,
+            currentPage
+          });
+          
+          console.log(`✅ SUCCESS: condition_manager - displayed for action ${actionId} page ${currentPage}`);
+          // Return undefined as response already sent
+          return;
         }
       })(req, res, client);
       

@@ -1,8 +1,8 @@
-# Safari Conditional Logic System - Comprehensive Improvement Plan
+# Safari Conditional Logic System - Implementation Plan v2
 
 ## Executive Summary
 
-The current Safari conditional logic system is severely limited and broken. It only supports single conditions with basic success/failure paths, uses clunky modal-based UI, and cannot handle complex logical operations like AND/OR combinations. This document outlines a complete redesign to support sophisticated conditional logic that matches modern interactive fiction and game design standards.
+The current Safari conditional logic system is broken and limited to single conditions. This document outlines a complete redesign using the proven Question Builder UI pattern, providing a paginated condition manager with inline AND/OR logic operators. The new system will support multiple conditions with clear evaluation paths while maintaining Discord's component limits.
 
 ## Current State Analysis
 
@@ -46,13 +46,9 @@ The current Safari conditional logic system is severely limited and broken. It o
 
 ## Proposed System Design
 
-### Core Concept: Logic Trees
+### Core Concept: Linear Conditions with Logic Operators
 
-Transform from linear actions to a proper logic tree structure that supports:
-- Multiple conditions with AND/OR/NOT operators
-- Nested condition groups
-- Multiple execution paths
-- Visual representation of logic flow
+Instead of complex nested trees, we'll use a linear list of conditions where each condition specifies how it relates to the next one. This simplifies both the UI and evaluation logic while supporting complex expressions.
 
 ### New Data Structure
 
@@ -65,434 +61,349 @@ Transform from linear actions to a proper logic tree structure that supports:
     "label": "Enter the Chamber",
     "emoji": "🚪"
   },
-  "logic": {
-    "type": "condition_group",
-    "operator": "AND", // AND, OR, NOT
-    "conditions": [
+  "conditions": [
+    {
+      "id": "cond_1",
+      "type": "currency",
+      "operator": "gte", // gte, lte, eq_zero
+      "value": 80,
+      "logic": "AND" // How this relates to the NEXT condition
+    },
+    {
+      "id": "cond_2",
+      "type": "item",
+      "operator": "has", // has, not_has
+      "itemId": "golden_key",
+      "logic": "OR" // How this relates to the NEXT condition
+    },
+    {
+      "id": "cond_3",
+      "type": "role",
+      "operator": "has",
+      "roleId": "123456789"
+      // No logic on last condition
+    }
+  ],
+  "actions": {
+    "true": [
       {
-        "type": "comparison",
-        "left": {
-          "type": "player_attribute",
-          "attribute": "currency"
-        },
-        "operator": ">=",
-        "right": {
-          "type": "value",
-          "value": 80
+        "type": "display_text",
+        "config": {
+          "content": "The door opens with a satisfying click!",
+          "imageUrl": "treasure_room.png"
         }
-      },
-      {
-        "type": "condition_group",
-        "operator": "OR",
-        "conditions": [
-          {
-            "type": "comparison",
-            "left": {
-              "type": "player_inventory",
-              "itemId": "golden_key"
-            },
-            "operator": "has",
-            "right": {
-              "type": "value",
-              "value": 1
-            }
-          },
-          {
-            "type": "comparison",
-            "left": {
-              "type": "player_role",
-              "roleId": "123456789"
-            },
-            "operator": "has"
-          }
-        ]
       }
     ],
-    "true_path": {
-      "actions": [
-        {
-          "type": "display_text",
-          "config": {
-            "content": "The door opens with a satisfying click!",
-            "imageUrl": "treasure_room.png"
-          }
-        },
-        {
-          "type": "move_player",
-          "config": {
-            "coordinate": "B3"
-          }
+    "false": [
+      {
+        "type": "display_text",
+        "config": {
+          "content": "The door remains locked. You need 80 coins AND either a golden key OR special access."
         }
-      ]
-    },
-    "false_path": {
-      "actions": [
-        {
-          "type": "display_text",
-          "config": {
-            "content": "The door remains locked. You need 80 coins AND either a golden key OR special access."
-          }
-        }
-      ]
-    }
+      }
+    ]
   }
 }
 ```
 
+This evaluates as: `(currency >= 80) AND ((has golden_key) OR (has role 123456789))`
+
 ### Condition Types
 
-#### Player Attributes
-- `currency`: Player's current currency
-- `stamina`: Current stamina points
-- `hp`: Health points
-- `custom_points`: Any custom point type
+Based on user requirements, we'll support three core condition types:
 
-#### Inventory
-- `has_item`: Check if player has specific item
-- `item_quantity`: Check exact quantity
-- `total_items`: Total number of items
+#### 1. Currency Condition
+- **Type**: `currency`
+- **Operators**: 
+  - `gte` - Greater than or equal to
+  - `lte` - Less than or equal to  
+  - `eq_zero` - Exactly zero
+- **Value**: Number to compare against
 
-#### Location
-- `at_location`: Player at specific coordinate
-- `visited_location`: Has visited before
-- `locations_explored`: Number of locations explored
+#### 2. Item Condition
+- **Type**: `item`
+- **Operators**:
+  - `has` - Has item in inventory
+  - `not_has` - Does not have item
+- **ItemId**: ID of the item to check
 
-#### Roles & Permissions
-- `has_role`: Player has Discord role
-- `in_channel`: Player in specific channel
-- `permission`: Has Discord permission
-
-#### Time-Based
-- `time_of_day`: Current server time
-- `day_of_week`: Current day
-- `elapsed_time`: Time since action/event
-- `cooldown`: Action-specific cooldown
-
-#### Safari State
-- `button_used`: Times button has been used
-- `quest_complete`: Specific quest finished
-- `variable_value`: Custom variable state
-
-#### Text Matching (for modals)
-- `exact_match`: Exact text match
-- `contains`: Contains substring
-- `regex_match`: Regular expression
-- `word_count`: Number of words
-
-### Comparison Operators
-- `==` Equal to
-- `!=` Not equal to
-- `>` Greater than
-- `<` Less than
-- `>=` Greater than or equal
-- `<=` Less than or equal
-- `has` Has item/role
-- `!has` Doesn't have
-- `contains` Text contains
-- `matches` Regex match
+#### 3. Role Condition
+- **Type**: `role`
+- **Operators**:
+  - `has` - Has Discord role
+  - `not_has` - Does not have role
+- **RoleId**: Discord role ID to check
 
 ## UI/UX Design
 
-### Visual Logic Builder
+### Overview
 
-Replace the current modal system with a visual builder:
+The new UI leverages the proven Question Builder pattern to create two main interfaces:
+1. **Condition Manager** - High-level view for managing multiple conditions
+2. **Condition Editor** - Detailed view for configuring individual conditions
+
+### 1.0 Condition Manager
+
+Displays all conditions with pagination (3 per page) and inline logic operators.
 
 ```
 ┌─────────────────────────────────────────────┐
-│ ⚡ Custom Action: Treasure Room Entry       │
+│ ## 🧩 Condition Manager                     │
+│ If the following is true...                 │
 ├─────────────────────────────────────────────┤
-│ Trigger: 🚪 Button "Enter the Chamber"      │
+│ **1.** Currency >= 80                       │
+│ [✏️ Edit] [⬆️] [⬇️] [🗑️] [AND]            │
 ├─────────────────────────────────────────────┤
-│ When triggered, check:                      │
-│                                             │
-│ ┌─[AND]─────────────────────────────────┐   │
-│ │ ├─ 💰 Currency >= 80                  │   │
-│ │ └─[OR]────────────────────────────┐   │   │
-│ │   ├─ 🔑 Has golden_key (1)        │   │   │
-│ │   └─ 👑 Has role "VIP Access"     │   │   │
-│ └────────────────────────────────────┘   │   │
-│                                             │
-│ ✅ If TRUE:                                 │
-│ ├─ 📄 Show "Door opens..." message         │
-│ └─ 🗺️ Move to B3                           │
-│                                             │
-│ ❌ If FALSE:                                │
-│ └─ 📄 Show "Door locked..." message        │
+│ **2.** Has golden_key                       │
+│ [✏️ Edit] [⬆️] [⬇️] [🗑️] [OR]             │
+├─────────────────────────────────────────────┤
+│ **3.** Has role VIP Access                  │
+│ [✏️ Edit] [⬆️] [⬇️] [🗑️]                  │
+├─────────────────────────────────────────────┤
+│ [⚡ ← Back] [➕ Add Condition]               │
 └─────────────────────────────────────────────┘
 ```
 
-### Interactive Components
+**Key Features:**
+- Each condition shows its summary text
+- Boolean button (AND/OR) shows active logic and toggles when clicked
+- Edit/Up/Down/Delete buttons match Question Builder pattern
+- Pagination controls appear when >3 conditions
+- All changes auto-save to underlying JSON
 
-1. **Condition Builder**
-   - Dropdown for condition type
-   - Dynamic fields based on type
-   - Add/Remove condition buttons
-   - AND/OR toggle buttons
-   - Drag to reorder/nest
+### 2.0 Condition Editor
 
-2. **Action Builder**
-   - Action type dropdown
-   - Configuration based on type
-   - Reorder actions
-   - Test individual actions
+Detailed configuration for a single condition with type-specific UI.
 
-3. **Live Preview**
-   - Visual representation of logic
-   - Highlight evaluation path
-   - Show example outcomes
+#### Base Structure
+```
+┌─────────────────────────────────────────────┐
+│ ## ➕ Condition Editor                       │
+│ When...                                     │
+├─────────────────────────────────────────────┤
+│ [Select Condition Type...         ▼]        │
+│   • Currency - User's currency comparison   │
+│   • Item - User has/doesn't have item      │
+│   • Role - User has/doesn't have role      │
+├═════════════════════════════════════════════┤
+│ [Type-specific UI appears below]            │
+└─────────────────────────────────────────────┘
+```
 
-### Implementation Using Components V2
+#### Currency Condition UI
+```
+├═════════════════════════════════════════════┤
+│ ## Currency Details                         │
+│ When user's currency is...                  │
+├─────────────────────────────────────────────┤
+│ [≥ Greater than or equal to] [≤] [= Zero]  │
+├─────────────────────────────────────────────┤
+│ 100 🪙 Coins                                │
+├─────────────────────────────────────────────┤
+│ [🪙 Set Currency]                           │
+└─────────────────────────────────────────────┘
+```
 
-```javascript
-// Main editor container
-{
-  type: 17, // Container
-  components: [
-    // Header section
-    {
-      type: 10, // Text Display
-      content: "## ⚡ Logic Editor"
-    },
-    
-    // Condition builder section
-    {
-      type: 9, // Section
-      components: [{
-        type: 10,
-        content: "**Conditions:** Click to add"
-      }],
-      accessory: {
-        type: 2, // Button
-        custom_id: "add_condition_group",
-        label: "Add Group",
-        emoji: { name: "➕" }
-      }
-    },
-    
-    // Visual logic tree (simplified for Discord)
-    {
-      type: 10,
-      content: "```\n[AND]\n├─ Currency >= 80\n└─ [OR]\n   ├─ Has golden_key\n   └─ Has VIP role\n```"
-    },
-    
-    // Action configuration
-    {
-      type: 1, // Action Row
-      components: [
-        {
-          type: 3, // String Select
-          custom_id: "logic_operator",
-          options: [
-            { label: "AND - All must be true", value: "AND" },
-            { label: "OR - Any can be true", value: "OR" },
-            { label: "NOT - Invert result", value: "NOT" }
-          ]
-        }
-      ]
-    }
-  ]
-}
+#### Item Condition UI
+```
+├═════════════════════════════════════════════┤
+│ ## Item Details                             │
+│ When user...                                │
+├─────────────────────────────────────────────┤
+│ [Has] [Does not have]                      │
+├─────────────────────────────────────────────┤
+│ the following item...                       │
+├─────────────────────────────────────────────┤
+│ [Select an item...                ▼]        │
+└─────────────────────────────────────────────┘
+```
+
+#### Role Condition UI
+```
+├═════════════════════════════════════════════┤
+│ ## Role Details                             │
+│ When user...                                │
+├─────────────────────────────────────────────┤
+│ [Has] [Does not have]                      │
+├─────────────────────────────────────────────┤
+│ the following role...                       │
+├─────────────────────────────────────────────┤
+│ [Select a role...                 ▼]        │
+└─────────────────────────────────────────────┘
 ```
 
 ## Implementation Plan
 
-### Phase 1: Data Model & Core Logic (1 week)
+### Phase 1: Core Implementation (3-4 days)
 
-1. **Create new data structures**
-   - Logic tree model
-   - Condition evaluator engine
-   - Action executor improvements
-
-2. **Backward compatibility layer**
-   - Convert old format to new
-   - Migration utilities
-
-3. **Core evaluation engine**
+1. **Update Data Model**
    ```javascript
-   async function evaluateLogicTree(logic, context) {
-     switch (logic.type) {
-       case 'condition_group':
-         return evaluateConditionGroup(logic, context);
-       case 'comparison':
-         return evaluateComparison(logic, context);
+   // customActionUI.js - Update action structure
+   action.conditions = [
+     {
+       id: generateConditionId(),
+       type: 'currency',
+       operator: 'gte',
+       value: 100,
+       logic: 'AND' // Relates to next condition
      }
+   ];
+   ```
+
+2. **Create Condition Manager**
+   - Adapt `refreshQuestionManagementUI` pattern
+   - 3 conditions per page
+   - Boolean toggle buttons for AND/OR
+   - Standard CRUD operations
+
+3. **Create Condition Editor**
+   - Type selector with 3 options
+   - Dynamic UI based on type
+   - Auto-save on changes
+   - Modal for currency input
+
+4. **Evaluation Engine**
+   ```javascript
+   async function evaluateConditions(conditions, playerData) {
+     if (!conditions || conditions.length === 0) return true;
+     
+     let result = await evaluateCondition(conditions[0], playerData);
+     
+     for (let i = 1; i < conditions.length; i++) {
+       const prevLogic = conditions[i-1].logic;
+       const condResult = await evaluateCondition(conditions[i], playerData);
+       
+       if (prevLogic === 'AND') {
+         result = result && condResult;
+       } else if (prevLogic === 'OR') {
+         result = result || condResult;
+       }
+     }
+     
+     return result;
    }
    ```
 
-### Phase 2: Basic UI (1 week)
+### Phase 2: UI Polish (2 days)
 
-1. **Condition type selector**
-   - String select with all condition types
-   - Dynamic configuration UI
+1. **Condition Summary Display**
+   - Clear text representation
+   - Proper emoji usage
+   - Truncation for long values
 
-2. **Simple logic builder**
-   - Add/remove conditions
-   - AND/OR selection
-   - Basic nesting (1 level)
-
-3. **Action configuration**
-   - Improved action UI
-   - Path selection (true/false)
-
-### Phase 3: Visual Builder (2 weeks)
-
-1. **Logic tree visualization**
-   - Text-based tree view
-   - Collapsible groups
-   - Evaluation preview
-
-2. **Drag and drop**
-   - Reorder conditions
-   - Nest condition groups
-   - Move between paths
-
-3. **Testing interface**
-   - Mock player state
-   - Step through evaluation
-   - See results
-
-### Phase 4: Advanced Features (2 weeks)
-
-1. **Template system**
-   - Save logic templates
-   - Import/export
-   - Share between guilds
-
-2. **Variables system**
-   - Custom variables
-   - Variable manipulation
-   - Cross-action state
-
-3. **Advanced triggers**
-   - Time-based
-   - Multi-trigger
-   - Event listeners
-
-## Migration Strategy
-
-### Automatic Migration
-
-Convert existing conditional actions:
-
-```javascript
-// Old format
-{
-  "type": "conditional",
-  "config": {
-    "condition": {"type": "currency_gte", "value": 50},
-    "successActions": [...],
-    "failureMessage": "Need 50 coins!"
-  }
-}
-
-// Migrates to:
-{
-  "type": "logic_action",
-  "logic": {
-    "type": "comparison",
-    "left": {"type": "player_attribute", "attribute": "currency"},
-    "operator": ">=",
-    "right": {"type": "value", "value": 50},
-    "true_path": {"actions": [...]},
-    "false_path": {"actions": [{
-      "type": "display_text",
-      "config": {"content": "Need 50 coins!"}
-    }]}
-  }
-}
-```
-
-### UI Transition
-
-1. Keep "Add Conditional Action" button
-2. Open new UI instead of modal
-3. Provide "Simple Mode" for basic conditions
-4. "Advanced Mode" for full logic trees
-
-## Performance Considerations
-
-### Caching
-- Cache evaluated conditions
-- Invalidate on state change
-- Batch evaluations
-
-### Optimization
-- Short-circuit evaluation
-- Lazy loading of conditions
-- Minimize Discord API calls
-
-### Limits
-- Max depth: 5 levels
-- Max conditions: 50 per action
-- Max actions: 20 per path
-
-## Security Considerations
-
-1. **Input Validation**
-   - Sanitize all text inputs
-   - Validate role/channel IDs
-   - Prevent circular references
-
-2. **Permission Checks**
-   - Admin-only configuration
-   - Player state isolation
-   - Rate limiting
+2. **Button States**
+   - Active/Inactive toggle styling
+   - Disabled states for navigation
+   - Proper button grouping
 
 3. **Error Handling**
-   - Graceful fallbacks
+   - Invalid configurations
+   - Missing data gracefully
    - Clear error messages
-   - Audit logging
 
-## Questions for Clarification
+### Phase 3: Testing & Migration (1 day)
 
-1. **Complexity Level**: How complex should the logic trees be? Should we support:
-   - Unlimited nesting depth?
-   - Cross-references between actions?
-   - Global variables that persist between actions?
+1. **Migration Script**
+   - Force upgrade existing actions
+   - Clean up old condition data
+   - Preserve action configurations
 
-2. **UI Preferences**: 
-   - Should we keep ANY modal-based configuration?
-   - Is text-based tree visualization sufficient or do you want graphical?
-   - Should players see the logic tree or just results?
+2. **Test Cases**
+   - Single conditions
+   - Multiple AND conditions
+   - Mixed AND/OR logic
+   - Edge cases (empty, invalid)
 
-3. **Trigger Expansion**:
-   - Priority for trigger types? (modal text, role select, time-based)
-   - Should triggers have their own conditions?
-   - Multiple triggers per action?
+## Key Implementation Details
 
-4. **Performance**:
-   - Expected number of conditions per action?
-   - How many custom actions per guild?
-   - Real-time evaluation or cached?
+### Button Handler Registration
 
-5. **Migration**:
-   - Force migrate all existing actions?
-   - Maintain backward compatibility how long?
-   - Beta test with specific guilds?
+All new buttons must be registered in `buttonHandlerFactory.js`:
 
-6. **Integration**:
-   - Should conditions be reusable across actions?
-   - Global condition library?
-   - Integration with other CastBot features?
+```javascript
+// Condition Manager buttons
+'condition_edit': { label: 'Edit', emoji: '✏️', style: 'Secondary' },
+'condition_up': { label: ' ', emoji: '⬆️', style: 'Secondary' },
+'condition_down': { label: ' ', emoji: '⬇️', style: 'Secondary' },
+'condition_delete': { label: 'Delete', emoji: '🗑️', style: 'Danger' },
+'condition_logic_toggle': { label: 'AND/OR', emoji: '🔀', style: 'Primary' },
+'condition_add': { label: 'Add Condition', emoji: '➕', style: 'Primary' },
+'condition_back': { label: '← Back', emoji: '⚡', style: 'Secondary' },
 
-## Next Steps
+// Condition Editor buttons
+'condition_type_currency': { label: 'Currency', emoji: '🪙', style: 'Secondary' },
+'condition_type_item': { label: 'Item', emoji: '📦', style: 'Secondary' },
+'condition_type_role': { label: 'Role', emoji: '👑', style: 'Secondary' },
+'condition_currency_gte': { label: '≥', style: 'Primary' },
+'condition_currency_lte': { label: '≤', style: 'Secondary' },
+'condition_currency_zero': { label: '= 0', style: 'Secondary' },
+'condition_has': { label: 'Has', style: 'Primary' },
+'condition_not_has': { label: 'Does not have', style: 'Secondary' },
+```
 
-1. Review and approve this plan
-2. Answer clarification questions
-3. Create detailed technical specifications
-4. Build proof of concept for core logic engine
-5. Iterate on UI mockups
-6. Begin phased implementation
+### Custom ID Patterns
+
+Following the Question Builder pattern:
+- `condition_edit_{actionId}_{conditionIndex}_{currentPage}`
+- `condition_logic_{actionId}_{conditionIndex}_{currentPage}`
+- `condition_nav_prev_{actionId}_{currentPage}`
+- `condition_nav_next_{actionId}_{currentPage}`
+
+### State Management
+
+Conditions are stored directly in the action:
+```javascript
+action.conditions = [
+  { id, type, operator, value/itemId/roleId, logic }
+];
+```
+
+### Evaluation Order
+
+Conditions evaluate left to right with logic operators:
+1. Evaluate first condition
+2. For each subsequent condition:
+   - Check previous condition's logic operator
+   - Apply AND/OR operation
+3. Return final boolean result
+
+## Summary of Key Changes
+
+### From Complex Trees to Linear Logic
+- **Old**: Nested condition groups with complex tree structures
+- **New**: Linear list of conditions with inline AND/OR operators
+- **Benefit**: Simpler to understand, implement, and maintain
+
+### From Modal Hell to Visual UI
+- **Old**: Text modals requiring exact string matches
+- **New**: Button-based UI with dropdowns and toggles
+- **Benefit**: No typing errors, immediate visual feedback
+
+### Leveraging Proven Patterns
+- **Reusing**: Question Builder pagination and navigation
+- **Adapting**: Edit/Up/Down/Delete button patterns
+- **Adding**: Boolean toggle buttons for AND/OR logic
+
+### Clear Evaluation Path
+```
+Example: (Currency >= 80) AND (Has golden_key OR Has VIP role)
+
+Conditions:
+1. Currency >= 80 [AND]
+2. Has golden_key [OR] 
+3. Has VIP role
+
+Evaluates: true AND (false OR true) = true AND true = true
+```
 
 ## Success Metrics
 
-- Complex logic trees execute correctly
-- UI intuitive enough for non-programmers
-- Performance: <100ms evaluation time
-- Zero data loss during migration
-- 90% reduction in "interaction failed" errors
-- Support for all example use cases provided
+- Support complex conditions without nesting complexity
+- Zero modal interactions for condition setup
+- Maintain all state within Discord's 40-component limit
+- Force upgrade with no backward compatibility needed
+- Clear visual representation of logic flow
 
 ---
 
-This plan transforms Safari's conditional logic from a basic single-condition system to a powerful, visual logic builder that rivals professional game development tools while remaining accessible to Discord server admins.
+This implementation transforms Safari's broken conditional logic into a clean, visual system that's both powerful and user-friendly, leveraging existing UI patterns for consistency.

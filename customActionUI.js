@@ -192,14 +192,14 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Conditions (${conditionLogic}):** ${conditionCount} condition${conditionCount !== 1 ? 's' : ''}`
+            content: `**Conditions:** ${conditionCount} condition${conditionCount !== 1 ? 's' : ''}`
           }],
           accessory: {
             type: 2,
-            custom_id: `entity_action_conditions_${actionId}`,
-            label: "Edit",
+            custom_id: `condition_manager_${actionId}_0`, // Start at page 0
+            label: "Manage",
             style: 2,
-            emoji: { name: "🔧" }
+            emoji: { name: "🧩" }
           }
         },
         
@@ -774,10 +774,223 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
   };
 }
 
+/**
+ * Create condition manager UI using Question Builder pattern
+ * @param {Object} params
+ * @param {Object} params.res - Express response object
+ * @param {string} params.actionId - Action ID
+ * @param {string} params.guildId - Guild ID
+ * @param {number} params.currentPage - Current page number
+ * @returns {Object} Discord response
+ */
+export async function refreshConditionManagerUI({ res, actionId, guildId, currentPage = 0 }) {
+  const { InteractionResponseType } = await import('discord-interactions');
+  const conditionsPerPage = 3;
+  
+  const allSafariContent = await loadSafariContent();
+  const action = allSafariContent[guildId]?.buttons?.[actionId];
+  
+  if (!action) {
+    throw new Error('Action not found');
+  }
+  
+  // Ensure conditions array exists
+  if (!action.conditions) {
+    action.conditions = [];
+  }
+  
+  const conditions = action.conditions;
+  const totalPages = Math.max(1, Math.ceil(conditions.length / conditionsPerPage));
+  const startIndex = currentPage * conditionsPerPage;
+  const endIndex = Math.min(startIndex + conditionsPerPage, conditions.length);
+  
+  const components = [];
+  
+  // Header with pagination info
+  const pageInfo = conditions.length <= conditionsPerPage 
+    ? '' 
+    : ` (Page ${currentPage + 1}/${totalPages})`;
+    
+  components.push({
+    type: 10, // Text Display
+    content: `## 🧩 Condition Manager${pageInfo}\nIf the following is true...`
+  });
+  
+  // Show conditions for current page
+  if (conditions.length === 0) {
+    components.push({
+      type: 10,
+      content: '*No conditions defined yet*'
+    });
+  } else {
+    for (let i = startIndex; i < endIndex; i++) {
+      const condition = conditions[i];
+      const isLast = i === conditions.length - 1;
+      
+      // Condition summary
+      components.push({
+        type: 10,
+        content: `**${i + 1}.** ${getConditionSummary(condition)}`
+      });
+      
+      // Action buttons row
+      const rowComponents = [
+        {
+          type: 2, // Edit button
+          custom_id: `condition_edit_${actionId}_${i}_${currentPage}`,
+          label: 'Edit',
+          style: 2,
+          emoji: { name: '✏️' }
+        },
+        {
+          type: 2, // Up button
+          custom_id: `condition_up_${actionId}_${i}_${currentPage}`,
+          label: '',
+          style: 2,
+          emoji: { name: '⬆️' },
+          disabled: i === 0
+        },
+        {
+          type: 2, // Down button
+          custom_id: `condition_down_${actionId}_${i}_${currentPage}`,
+          label: '',
+          style: 2,
+          emoji: { name: '⬇️' },
+          disabled: i === conditions.length - 1
+        },
+        {
+          type: 2, // Delete button
+          custom_id: `condition_delete_${actionId}_${i}_${currentPage}`,
+          label: 'Delete',
+          style: 4,
+          emoji: { name: '🗑️' }
+        }
+      ];
+      
+      // Add logic toggle if not last condition
+      if (!isLast) {
+        rowComponents.push({
+          type: 2, // Logic toggle
+          custom_id: `condition_logic_${actionId}_${i}_${currentPage}`,
+          label: condition.logic || 'AND',
+          style: condition.logic === 'OR' ? 2 : 1,
+          emoji: { name: condition.logic === 'OR' ? '🔁' : '🔀' }
+        });
+      }
+      
+      components.push({
+        type: 1, // Action Row
+        components: rowComponents
+      });
+    }
+  }
+  
+  // Add separator before management buttons
+  components.push({ type: 14 }); // Separator
+  
+  // Management buttons
+  const managementRow = {
+    type: 1, // Action Row
+    components: [
+      {
+        type: 2,
+        custom_id: `custom_action_editor_${actionId}`,
+        label: '← Back',
+        style: 2,
+        emoji: { name: '⚡' }
+      },
+      {
+        type: 2,
+        custom_id: `condition_add_${actionId}_${currentPage}`,
+        label: 'Add Condition',
+        style: 1,
+        emoji: { name: '➕' }
+      }
+    ]
+  };
+  
+  components.push(managementRow);
+  
+  // Create container with Components V2
+  const container = {
+    type: 17, // Container
+    accent_color: 0x5865f2,
+    components: components
+  };
+  
+  // Navigation if needed
+  const navComponents = [];
+  if (conditions.length > conditionsPerPage) {
+    navComponents.push({
+      type: 1, // Action Row
+      components: [
+        {
+          type: 2,
+          custom_id: `condition_nav_prev_${actionId}_${currentPage}`,
+          label: '◀',
+          style: currentPage === 0 ? 2 : 1,
+          disabled: currentPage === 0
+        },
+        {
+          type: 2,
+          custom_id: `condition_nav_next_${actionId}_${currentPage}`,
+          label: '▶',
+          style: currentPage === totalPages - 1 ? 2 : 1,
+          disabled: currentPage === totalPages - 1
+        }
+      ]
+    });
+  }
+  
+  return res.send({
+    type: InteractionResponseType.UPDATE_MESSAGE,
+    data: {
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      components: [container, ...navComponents]
+    }
+  });
+}
+
+/**
+ * Get human-readable summary of a condition
+ */
+function getConditionSummary(condition) {
+  if (!condition || !condition.type) {
+    return 'Invalid condition';
+  }
+  
+  switch (condition.type) {
+    case 'currency':
+      const currencyOp = {
+        'gte': '≥',
+        'lte': '≤',
+        'eq_zero': '='
+      }[condition.operator] || '?';
+      const currencyValue = condition.operator === 'eq_zero' ? '0' : (condition.value || '?');
+      return `Currency ${currencyOp} ${currencyValue} 🪙`;
+      
+    case 'item':
+      const itemName = condition.itemId || 'Unknown Item';
+      return condition.operator === 'has' 
+        ? `Has item: ${itemName}` 
+        : `Does not have: ${itemName}`;
+        
+    case 'role':
+      const roleName = condition.roleId ? `<@&${condition.roleId}>` : 'Unknown Role';
+      return condition.operator === 'has'
+        ? `Has role: ${roleName}`
+        : `Does not have: ${roleName}`;
+        
+    default:
+      return `Unknown condition type: ${condition.type}`;
+  }
+}
+
 export default {
   createCustomActionSelectionUI,
   createCustomActionEditorUI,
   createTriggerConfigUI,
   createConditionsConfigUI,
-  createCoordinateManagementUI
+  createCoordinateManagementUI,
+  refreshConditionManagerUI
 };

@@ -32,7 +32,7 @@ When working on specific features, refer to these dedicated documentation files:
 
 **⚠️ DISCORD PATTERNS:** Common patterns and pitfalls → [docs/architecture/DiscordInteractionPatterns.md](docs/architecture/DiscordInteractionPatterns.md)
 
-**🔀 CONDITIONAL LOGIC PLAN:** Safari conditional logic system redesign → [docs/implementation/SafariConditionalLogicPlan.md](docs/implementation/SafariConditionalLogicPlan.md)
+**🔀 CONDITIONAL LOGIC:** Complete system redesign with visual UI → [docs/implementation/SafariConditionalLogicPlan.md](docs/implementation/SafariConditionalLogicPlan.md) | [Implementation Guide](docs/implementation/ConditionalLogicImplementation.md)
 
 ## ⚠️ Common Discord Interaction Issues
 

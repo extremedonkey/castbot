@@ -925,6 +925,141 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari_management',
     type: 'select_menu'
+  },
+
+  // === CONDITIONAL LOGIC SYSTEM ===
+  // Condition Manager buttons
+  'condition_manager_*': {
+    label: 'Condition Manager',
+    description: 'Access condition management for custom action',
+    emoji: '🧩',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_edit_*': {
+    label: 'Edit',
+    description: 'Edit condition configuration',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_up_*': {
+    label: '',
+    description: 'Move condition up in evaluation order',
+    emoji: '⬆️',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_down_*': {
+    label: '',
+    description: 'Move condition down in evaluation order',
+    emoji: '⬇️',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_delete_*': {
+    label: 'Delete',
+    description: 'Delete this condition',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'conditional_logic'
+  },
+  'condition_logic_*': {
+    label: 'AND/OR',
+    description: 'Toggle logic operator (AND/OR)',
+    emoji: '🔀',
+    style: 'Primary',
+    category: 'conditional_logic'
+  },
+  'condition_add_*': {
+    label: 'Add Condition',
+    description: 'Add a new condition',
+    emoji: '➕',
+    style: 'Primary',
+    category: 'conditional_logic'
+  },
+  'condition_nav_prev_*': {
+    label: '◀',
+    description: 'Previous page of conditions',
+    emoji: '◀',
+    style: 'Primary',
+    category: 'conditional_logic'
+  },
+  'condition_nav_next_*': {
+    label: '▶',
+    description: 'Next page of conditions',
+    emoji: '▶',
+    style: 'Primary',
+    category: 'conditional_logic'
+  },
+
+  // Condition Editor buttons
+  'condition_type_select_*': {
+    label: 'Condition Type',
+    description: 'Select type of condition',
+    emoji: '🎯',
+    style: 'Secondary',
+    category: 'conditional_logic',
+    type: 'select_menu'
+  },
+  'condition_currency_gte_*': {
+    label: '≥',
+    description: 'Greater than or equal to',
+    emoji: '🔢',
+    style: 'Primary',
+    category: 'conditional_logic'
+  },
+  'condition_currency_lte_*': {
+    label: '≤',
+    description: 'Less than or equal to',
+    emoji: '🔢',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_currency_zero_*': {
+    label: '= 0',
+    description: 'Exactly zero',
+    emoji: '0️⃣',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_set_currency_*': {
+    label: 'Set Currency',
+    description: 'Set currency amount to check',
+    emoji: '🪙',
+    style: 'Primary',
+    category: 'conditional_logic',
+    requiresModal: true
+  },
+  'condition_has_*': {
+    label: 'Has',
+    description: 'Has item/role',
+    emoji: '✅',
+    style: 'Primary',
+    category: 'conditional_logic'
+  },
+  'condition_not_has_*': {
+    label: 'Does not have',
+    description: 'Does not have item/role',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'conditional_logic'
+  },
+  'condition_item_select_*': {
+    label: 'Select Item',
+    description: 'Select item for condition',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'conditional_logic',
+    type: 'select_menu'
+  },
+  'condition_role_select_*': {
+    label: 'Select Role',
+    description: 'Select role for condition',
+    emoji: '👑',
+    style: 'Secondary',
+    category: 'conditional_logic',
+    type: 'role_select'
   }
 };
 
