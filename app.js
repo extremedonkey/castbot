@@ -14261,6 +14261,80 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     // ==================== ENTITY MANAGEMENT HANDLERS ====================
     // New entity management system for Safari items, stores, and buttons
     
+    } else if (custom_id.startsWith('condition_type_select_')) {
+      // Handle condition type selector
+      return ButtonHandlerFactory.create({
+        id: 'condition_type_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_type_select - user ${context.userId}`);
+          
+          // Parse custom_id: condition_type_select_actionId_conditionIndex_currentPage
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // Remove 'condition'
+          customIdParts.shift(); // Remove 'type'
+          customIdParts.shift(); // Remove 'select'
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          
+          const newType = context.values[0];
+          
+          // Load and update condition
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          
+          if (!condition) {
+            throw new Error('Condition not found');
+          }
+          
+          // Update condition type and reset type-specific fields
+          condition.type = newType;
+          
+          // Reset fields based on new type
+          switch (newType) {
+            case 'currency':
+              condition.operator = 'gte';
+              condition.value = 0;
+              delete condition.itemId;
+              delete condition.roleId;
+              break;
+            case 'item':
+              condition.operator = 'has';
+              delete condition.value;
+              delete condition.roleId;
+              condition.itemId = null;
+              break;
+            case 'role':
+              condition.operator = 'has';
+              delete condition.value;
+              delete condition.itemId;
+              condition.roleId = null;
+              break;
+          }
+          
+          // Save changes
+          await saveSafariContent(allSafariContent);
+          
+          console.log(`✅ SUCCESS: condition_type_select - changed to ${newType}`);
+          
+          // Refresh condition editor
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({
+            res,
+            actionId,
+            conditionIndex,
+            guildId: context.guildId,
+            currentPage
+          });
+          
+          return;
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('entity_select_')) {
       // Handle entity selection from dropdown (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
@@ -15070,6 +15144,153 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           console.log(`✅ SUCCESS: condition_edit - showing editor for condition ${conditionIndex}`);
           // Return undefined as response already sent
+          return;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('condition_currency_')) {
+      // Handle currency operator toggle buttons
+      return ButtonHandlerFactory.create({
+        id: 'condition_currency_operator',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_currency_operator - user ${context.userId}`);
+          
+          // Parse custom_id: condition_currency_OPERATOR_actionId_conditionIndex_currentPage
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // Remove 'condition'
+          customIdParts.shift(); // Remove 'currency'
+          const operator = customIdParts.shift(); // Get operator (gte, lte, zero)
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          
+          // Load and update condition
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          
+          if (!condition) {
+            throw new Error('Condition not found');
+          }
+          
+          // Update operator
+          condition.operator = operator === 'zero' ? 'eq_zero' : operator;
+          
+          // Save changes
+          await saveSafariContent(allSafariContent);
+          
+          console.log(`✅ SUCCESS: condition_currency_operator - changed to ${condition.operator}`);
+          
+          // Refresh condition editor
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({
+            res,
+            actionId,
+            conditionIndex,
+            guildId: context.guildId,
+            currentPage
+          });
+          
+          return;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('condition_set_currency_')) {
+      // Handle currency amount setter modal
+      return ButtonHandlerFactory.create({
+        id: 'condition_set_currency',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: condition_set_currency - user ${context.userId}`);
+          
+          // Parse custom_id: condition_set_currency_actionId_conditionIndex_currentPage
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // Remove 'condition'
+          customIdParts.shift(); // Remove 'set'
+          customIdParts.shift(); // Remove 'currency'
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          
+          // Show modal for currency amount
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+          
+          const modal = new ModalBuilder()
+            .setCustomId(`condition_currency_modal_${actionId}_${conditionIndex}_${currentPage}`)
+            .setTitle('Set Currency Amount');
+            
+          const amountInput = new TextInputBuilder()
+            .setCustomId('currency_amount')
+            .setLabel('Currency Amount')
+            .setPlaceholder('Enter the amount to check against (e.g., 100)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setValue('0');
+            
+          const actionRow = new ActionRowBuilder().addComponents(amountInput);
+          modal.addComponents(actionRow);
+          
+          console.log(`✅ SUCCESS: condition_set_currency - showing modal`);
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('condition_has_') || custom_id.startsWith('condition_not_has_')) {
+      // Handle has/not_has operator toggles for items and roles
+      return ButtonHandlerFactory.create({
+        id: 'condition_has_toggle',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_has_toggle - user ${context.userId}`);
+          
+          // Parse custom_id: condition_[has|not_has]_actionId_conditionIndex_currentPage_[item|role]
+          const isHas = context.customId.startsWith('condition_has_');
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // Remove 'condition'
+          customIdParts.shift(); // Remove 'has' or 'not'
+          if (!isHas) customIdParts.shift(); // Remove 'has' from 'not_has'
+          
+          const conditionType = customIdParts.pop(); // Get 'item' or 'role'
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          
+          // Load and update condition
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const condition = allSafariContent[context.guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+          
+          if (!condition) {
+            throw new Error('Condition not found');
+          }
+          
+          // Update operator
+          condition.operator = isHas ? 'has' : 'not_has';
+          
+          // Save changes
+          await saveSafariContent(allSafariContent);
+          
+          console.log(`✅ SUCCESS: condition_has_toggle - changed to ${condition.operator}`);
+          
+          // Refresh condition editor
+          const { showConditionEditor } = await import('./customActionUI.js');
+          await showConditionEditor({
+            res,
+            actionId,
+            conditionIndex,
+            guildId: context.guildId,
+            currentPage
+          });
+          
           return;
         }
       })(req, res, client);
@@ -20207,7 +20428,69 @@ Are you sure you want to continue?`;
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
     
-    if (custom_id === 'safari_button_modal') {
+    if (custom_id.startsWith('condition_currency_modal_')) {
+      // Handle currency amount modal submission
+      try {
+        // Parse custom_id: condition_currency_modal_actionId_conditionIndex_currentPage
+        const customIdParts = custom_id.split('_');
+        customIdParts.shift(); // Remove 'condition'
+        customIdParts.shift(); // Remove 'currency'
+        customIdParts.shift(); // Remove 'modal'
+        const currentPage = parseInt(customIdParts.pop() || '0');
+        const conditionIndex = parseInt(customIdParts.pop() || '0');
+        const actionId = customIdParts.join('_');
+        
+        const amount = parseInt(components[0].components[0].value);
+        
+        if (isNaN(amount) || amount < 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a valid positive number.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Load and update condition
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const condition = allSafariContent[req.body.guild_id]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+        
+        if (!condition) {
+          throw new Error('Condition not found');
+        }
+        
+        // Update value
+        condition.value = amount;
+        
+        // Save changes
+        await saveSafariContent(allSafariContent);
+        
+        console.log(`✅ SUCCESS: condition_currency_modal - set amount to ${amount}`);
+        
+        // Refresh condition editor
+        const { showConditionEditor } = await import('./customActionUI.js');
+        await showConditionEditor({
+          res,
+          actionId,
+          conditionIndex,
+          guildId: req.body.guild_id,
+          currentPage
+        });
+        
+      } catch (error) {
+        console.error('Error in condition_currency_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id === 'safari_button_modal') {
       // Handle Safari button creation modal submission
       try {
         const member = req.body.member;
