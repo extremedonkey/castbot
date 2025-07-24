@@ -1054,11 +1054,7 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
         components.push(...createCurrencyConditionUI(condition, actionId, conditionIndex, currentPage));
         break;
       case 'item':
-        const itemComponents = await createItemConditionUI(condition, actionId, conditionIndex, currentPage, guildId);
-        console.log('🔍 DEBUG: Item components:', JSON.stringify(itemComponents, null, 2));
-        console.log('🔍 DEBUG: Total components before adding item:', components.length);
-        components.push(...itemComponents);
-        console.log('🔍 DEBUG: Total components after adding item:', components.length);
+        components.push(...await createItemConditionUI(condition, actionId, conditionIndex, currentPage, guildId));
         break;
       case 'role':
         components.push(...createRoleConditionUI(condition, actionId, conditionIndex, currentPage));
@@ -1078,16 +1074,11 @@ export async function showConditionEditor({ res, actionId, conditionIndex, guild
     }]
   });
   
-  console.log('🔍 DEBUG: Total components before container:', components.length);
-  console.log('🔍 DEBUG: Component types:', components.map(c => `Type ${c.type}`).join(', '));
-  
   const container = {
     type: 17,
     accent_color: 0x5865f2,
     components: components
   };
-  
-  console.log('🔍 DEBUG: Final container:', JSON.stringify(container, null, 2).substring(0, 500) + '...');
   
   return res.send({
     type: InteractionResponseType.UPDATE_MESSAGE,
@@ -1195,11 +1186,21 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
   
   // Item selector
   const itemOptions = Object.entries(items).map(([itemId, item]) => {
-    // Clean emoji to ensure no trailing zero-width joiners
+    // Parse emoji - handle both unicode and custom Discord emojis
     let emojiObj;
     if (item.emoji) {
-      const cleanEmoji = item.emoji.replace(/\u200D$/, '').trim();
-      emojiObj = { name: cleanEmoji };
+      // Check if it's a custom Discord emoji format <:name:id>
+      const customEmojiMatch = item.emoji.match(/^<:(\w+):(\d+)>$/);
+      if (customEmojiMatch) {
+        emojiObj = {
+          id: customEmojiMatch[2],
+          name: customEmojiMatch[1]
+        };
+      } else {
+        // Regular unicode emoji - clean any trailing zero-width joiners
+        const cleanEmoji = item.emoji.replace(/\u200D$/, '').trim();
+        emojiObj = { name: cleanEmoji };
+      }
     } else {
       emojiObj = { name: '📦' };
     }
@@ -1212,8 +1213,6 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
       default: condition.itemId === itemId
     };
   }).slice(0, 25); // Discord limit
-  
-  console.log('🔍 DEBUG: Item options:', JSON.stringify(itemOptions, null, 2));
   
   if (itemOptions.length > 0) {
     components.push({
