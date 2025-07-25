@@ -12889,6 +12889,24 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const freshPlayerData = await loadPlayerData();
         const activeButton = actionType === 'vanity' ? 'vanity' : actionType;
         
+        // Check if this is an application channel context for player mode
+        let isApplicationChannel = false;
+        let customTitle = '';
+        let hideBottomButtons = false;
+        
+        if (mode === 'player') {
+          const channelId = req.body.channel_id;
+          isApplicationChannel = freshPlayerData[guildId]?.applications && 
+            Object.values(freshPlayerData[guildId].applications).some(app => app.channelId === channelId);
+          
+          if (isApplicationChannel) {
+            customTitle = 'Set your age, pronouns and timezone.';
+            hideBottomButtons = true;
+          } else {
+            customTitle = 'CastBot | Player Menu';
+          }
+        }
+        
         const updatedUI = await createPlayerManagementUI({
           mode: mode === 'admin' ? PlayerManagementMode.ADMIN : PlayerManagementMode.PLAYER,
           targetMember,
@@ -12899,8 +12917,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           showVanityRoles: mode === 'admin',
           title: mode === 'admin' ? 
             `Player Management | ${targetMember.displayName}` : 
-            'CastBot | Player Menu',
+            customTitle,
           activeButton,
+          hideBottomButtons: mode === 'player' ? hideBottomButtons : false,
+          isApplicationContext: mode === 'player' ? isApplicationChannel : false,
           client
         });
 
