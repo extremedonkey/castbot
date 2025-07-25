@@ -4070,6 +4070,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_drop_type_') &&
         !custom_id.startsWith('safari_give_item_select_') &&
         !custom_id.startsWith('safari_follow_up_select_') &&
+        !custom_id.startsWith('safari_followup_execute_on_') &&
+        !custom_id.startsWith('safari_followup_save_') &&
         !custom_id.startsWith('safari_item_limit_') &&
         !custom_id.startsWith('safari_item_style_') &&
         !custom_id.startsWith('safari_item_quantity_') &&
@@ -4080,6 +4082,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_currency_style_') &&
         !custom_id.startsWith('safari_currency_save_') &&
         !custom_id.startsWith('safari_currency_reset_') &&
+        !custom_id.startsWith('safari_currency_execute_on_') &&
+        !custom_id.startsWith('safari_item_execute_on_') &&
         custom_id !== 'safari_map_init_player' &&
         custom_id !== 'safari_post_select_button' &&
         custom_id !== 'safari_confirm_reset_game' && 
@@ -10401,7 +10405,7 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Get current button
+          // Get current button to determine action index
           const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
           if (!currentButton) {
             return {
@@ -10410,29 +10414,114 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Add the follow-up action to the current button
-          if (!currentButton.actions) {
-            currentButton.actions = [];
+          // Determine the action index (for new action)
+          const actionIndex = currentButton.actions?.length || 0;
+          
+          console.log(`✅ SUCCESS: safari_follow_up_select - showing config for follow-up ${followUpButtonId} on ${buttonId}`);
+          
+          // Show the follow-up configuration UI instead of immediately adding
+          return await showFollowUpConfig(context.guildId, buttonId, followUpButtonId, actionIndex);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_followup_execute_on_')) {
+      // Handle executeOn change for follow_up_button
+      return ButtonHandlerFactory.create({
+        id: 'safari_followup_execute_on',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_followup_execute_on_', '').split('_');
+          const executeOnValue = context.values?.[0]; // From string select
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const targetButtonId = parts[parts.length - 2];
+          const buttonId = parts.slice(0, -2).join('_');
+          
+          console.log(`🎯 EXECUTE ON: safari_followup_execute_on - setting to ${executeOnValue} for ${buttonId} follow-up ${targetButtonId}`);
+          
+          // Update state
+          const stateKey = `${context.guildId}_${buttonId}_followup_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { targetButtonId: targetButtonId, executeOn: 'true' };
+          state.executeOn = executeOnValue;
+          dropConfigState.set(stateKey, state);
+          
+          // Return updated configuration UI
+          return await showFollowUpConfig(context.guildId, buttonId, targetButtonId, actionIndex);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_followup_save_')) {
+      // Handle save for follow_up_button
+      return ButtonHandlerFactory.create({
+        id: 'safari_followup_save',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_followup_save_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const targetButtonId = parts[parts.length - 2];
+          const buttonId = parts.slice(0, -2).join('_');
+          
+          console.log(`✅ SAVE: safari_followup_save - saving follow-up ${targetButtonId} for ${buttonId}`);
+          
+          // Get state
+          const stateKey = `${context.guildId}_${buttonId}_followup_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { targetButtonId: targetButtonId, executeOn: 'true' };
+          
+          // Load safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          
+          if (!button) {
+            return {
+              content: '❌ Button not found.',
+              ephemeral: true
+            };
           }
           
-          const newAction = {
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+          
+          // Create the follow-up action
+          const action = {
             type: 'follow_up_button',
+            order: button.actions.length,
             config: {
-              buttonId: followUpButtonId
+              buttonId: state.targetButtonId
             },
-            order: currentButton.actions.length
+            executeOn: state.executeOn || 'true'  // Default to 'true' for backwards compatibility
           };
           
-          currentButton.actions.push(newAction);
+          // Add the action
+          button.actions.push(action);
           
-          // Save the updated button
+          // Update metadata
+          if (!button.metadata) {
+            button.metadata = {
+              createdAt: Date.now(),
+              lastModified: Date.now(),
+              usageCount: 0
+            };
+          } else {
+            button.metadata.lastModified = Date.now();
+          }
+          
+          // Save safari data
           await saveSafariContent(safariData);
           
-          console.log(`✅ SUCCESS: safari_follow_up_select - added follow-up ${followUpButtonId} to ${buttonId}`);
+          console.log(`✅ Added follow_up_button action to button ${buttonId}`);
           
-          // Return to the button's action configuration UI
+          // Clean up state
+          dropConfigState.delete(stateKey);
+          
+          // Return to custom action editor
           const { createCustomActionEditorUI } = await import('./customActionUI.js');
-          return await createCustomActionEditorUI({ guildId: context.guildId, actionId: buttonId });
+          return await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId: buttonId
+          });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_item_limit_')) {
@@ -10735,7 +10824,8 @@ Your server is now ready for Tycoons gameplay!`;
                 type: state.limit || 'unlimited',  // Default to unlimited
                 claimedBy: (state.limit || 'unlimited') === 'unlimited' ? undefined : []
               }
-            }
+            },
+            executeOn: state.executeOn || 'true'  // Default to 'true' for backwards compatibility
           };
           
           // Also save button style if not default
@@ -10826,7 +10916,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Store in temporary state
           const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null, executeOn: 'true' };
           state.limit = limitType;
           dropConfigState.set(stateKey, state);
           
@@ -10855,7 +10945,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Store in temporary state
           const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null, executeOn: 'true' };
           state.style = style;
           dropConfigState.set(stateKey, state);
           
@@ -10938,7 +11028,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Get state from temporary storage
           const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null, executeOn: 'true' };
           
           // Handle amount 0 - don't add the action
           if (state.amount === 0) {
@@ -10965,7 +11055,8 @@ Your server is now ready for Tycoons gameplay!`;
                 type: state.limit || 'unlimited',  // Default to unlimited
                 claimedBy: (state.limit || 'unlimited') === 'unlimited' ? undefined : []
               }
-            }
+            },
+            executeOn: state.executeOn || 'true'  // Default to 'true' for backwards compatibility
           };
           
           // Also save button style if not default
@@ -11001,6 +11092,84 @@ Your server is now ready for Tycoons gameplay!`;
             guildId: context.guildId,
             actionId: buttonId
           });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_currency_execute_on_')) {
+      // Handle executeOn change for give_currency
+      return ButtonHandlerFactory.create({
+        id: 'safari_currency_execute_on',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const parts = context.customId.replace('safari_currency_execute_on_', '').split('_');
+          const executeOnValue = parts[parts.length - 1]; // 'true' or 'false'
+          const actionIndex = parseInt(parts[parts.length - 2]);
+          const buttonId = parts.slice(0, -2).join('_');
+          
+          console.log(`🎯 EXECUTE ON: safari_currency_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}]`);
+          
+          // Update state
+          const stateKey = `${context.guildId}_${buttonId}_currency_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null, executeOn: 'true' };
+          state.executeOn = executeOnValue;
+          dropConfigState.set(stateKey, state);
+          
+          // Return updated configuration UI
+          const { getCustomTerms } = await import('./safariManager.js');
+          const customTerms = await getCustomTerms(context.guildId);
+          return await showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_item_execute_on_')) {
+      // Handle executeOn change for give_item
+      return ButtonHandlerFactory.create({
+        id: 'safari_item_execute_on',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          // Parse the custom_id: safari_item_execute_on_buttonId_itemId_actionIndex_value
+          const fullString = context.customId.replace('safari_item_execute_on_', '');
+          const parts = fullString.split('_');
+          const executeOnValue = parts[parts.length - 1]; // 'true' or 'false'
+          const actionIndex = parseInt(parts[parts.length - 2]);
+          
+          // Find itemId by checking which part exists in items
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const items = safariData[context.guildId]?.items || {};
+          
+          let buttonId, itemId;
+          
+          // Try different split points to find valid itemId
+          for (let i = 1; i < parts.length - 2; i++) {
+            const possibleItemId = parts.slice(i, -2).join('_');
+            if (items[possibleItemId]) {
+              itemId = possibleItemId;
+              buttonId = parts.slice(0, i).join('_');
+              break;
+            }
+          }
+          
+          if (!itemId) {
+            console.error(`❌ Could not parse item ID from custom_id: ${context.customId}`);
+            return {
+              content: '❌ Error parsing item configuration.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`🎯 EXECUTE ON: safari_item_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}] with item ${itemId}`);
+          
+          // Update state
+          const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
+          const state = dropConfigState.get(stateKey) || { quantity: 1, limit: null, style: null, executeOn: 'true' };
+          state.executeOn = executeOnValue;
+          dropConfigState.set(stateKey, state);
+          
+          // Return updated configuration UI
+          return await showGiveItemConfig(context.guildId, buttonId, itemId, actionIndex);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_add_action_')) {
@@ -11078,9 +11247,19 @@ Your server is now ready for Tycoons gameplay!`;
               .setRequired(false)
               .setMaxLength(500);
 
+            const executeOnInput = new TextInputBuilder()
+              .setCustomId('action_execute_on')
+              .setLabel('Show Display Text if conditions are.. (type true / false)')
+              .setPlaceholder('Type true to execute if all conditions are met, type false to execute if conditions are not met')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(10)
+              .setValue('true'); // Pre-populate with 'true'
+
             modal.addComponents(
               new ActionRowBuilder().addComponents(titleInput),
               new ActionRowBuilder().addComponents(contentInput),
+              new ActionRowBuilder().addComponents(executeOnInput),
               new ActionRowBuilder().addComponents(colorInput),
               new ActionRowBuilder().addComponents(imageInput)
             );
@@ -20884,7 +21063,7 @@ Are you sure you want to continue?`;
         
         // Store in temporary state
         const stateKey = `${req.body.guild_id}_${buttonId}_currency_${actionIndex}`;
-        const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null };
+        const state = dropConfigState.get(stateKey) || { limit: null, style: null, amount: null, executeOn: 'true' };
         state.amount = amount;
         dropConfigState.set(stateKey, state);
         
@@ -20965,12 +21144,18 @@ Are you sure you want to continue?`;
         }
         
         let actionConfig = {};
+        let executeOn = 'true'; // Default to true for backwards compatibility
         
         if (actionType === 'display_text') {
           const title = components[0].components[0].value?.trim() || null;
           const content = components[1].components[0].value?.trim();
-          const colorStr = components[2].components[0].value?.trim();
-          const imageUrl = components[3].components[0].value?.trim() || null;
+          const executeOnStr = components[2].components[0].value?.trim() || 'true';
+          const colorStr = components[3].components[0].value?.trim();
+          const imageUrl = components[4].components[0].value?.trim() || null;
+          
+          // Parse executeOn value - accept true/TRUE/1 for true, false/FALSE/0 for false
+          executeOn = (['true', 'TRUE', '1'].includes(executeOnStr)) ? 'true' : 
+                     (['false', 'FALSE', '0'].includes(executeOnStr)) ? 'false' : 'true';
           
           if (!content) {
             return res.send({
@@ -21193,7 +21378,8 @@ Are you sure you want to continue?`;
         const newAction = {
           type: actionType,
           order: button.actions.length + 1,
-          config: actionConfig
+          config: actionConfig,
+          executeOn: executeOn // Add executeOn property
         };
         
         button.actions.push(newAction);
@@ -24510,7 +24696,8 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
   const state = dropConfigState.get(stateKey) || {
     limit: null,   // null means no selection made yet
     style: null,
-    quantity: null
+    quantity: null,
+    executeOn: 'true' // Default to true
   };
 
   // Check if there are existing claims to enable/disable reset button
@@ -24599,6 +24786,30 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
               { label: 'Secondary (Grey)', value: '2', emoji: { name: '⚪' }, default: state.style === '2' },
               { label: 'Success (Green)', value: '3', emoji: { name: '🟢' }, default: state.style === '3' },
               { label: 'Danger (Red)', value: '4', emoji: { name: '🔴' }, default: state.style === '4' }
+            ]
+          }]
+        },
+        
+        // Execute On Condition Select
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_item_execute_on_${buttonId}_${itemId}_${actionIndex}`,
+            placeholder: 'When to execute this action...',
+            options: [
+              { 
+                label: 'Execute if all conditions are true', 
+                value: 'true', 
+                emoji: { name: '✅' }, 
+                default: state.executeOn !== 'false' // Default to true
+              },
+              { 
+                label: 'Execute if all conditions are false', 
+                value: 'false', 
+                emoji: { name: '❌' }, 
+                default: state.executeOn === 'false' 
+              }
             ]
           }]
         },
@@ -24752,6 +24963,30 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
           }]
         },
         
+        // Execute On Condition Select
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_currency_execute_on_${buttonId}_${actionIndex}`,
+            placeholder: 'When to execute this action...',
+            options: [
+              { 
+                label: 'Execute if all conditions are true', 
+                value: 'true', 
+                emoji: { name: '✅' }, 
+                default: state.executeOn !== 'false' // Default to true
+              },
+              { 
+                label: 'Execute if all conditions are false', 
+                value: 'false', 
+                emoji: { name: '❌' }, 
+                default: state.executeOn === 'false' 
+              }
+            ]
+          }]
+        },
+        
         { type: 14 }, // Separator
         
         // Action buttons
@@ -24779,5 +25014,114 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
     }],
     flags: (1 << 15), // IS_COMPONENTS_V2
     ephemeral: true
+  };
+}
+
+/**
+ * Show configuration UI for follow_up_button action
+ */
+async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex) {
+  // Get or create state for this configuration
+  const stateKey = `${guildId}_${buttonId}_followup_${actionIndex}`;
+  const state = dropConfigState.get(stateKey) || {
+    targetButtonId: targetButtonId,
+    executeOn: 'true'  // Default to 'true' for backwards compatibility
+  };
+  
+  // Load safari data to get button information
+  const { loadSafariContent, getCustomButton } = await import('./safariManager.js');
+  const targetButton = await getCustomButton(guildId, targetButtonId);
+  
+  if (!targetButton) {
+    return {
+      type: InteractionResponseType.UPDATE_MESSAGE,
+      data: {
+        content: '❌ Target button not found.',
+        components: [],
+        flags: InteractionResponseFlags.EPHEMERAL
+      }
+    };
+  }
+  
+  // Build the configuration UI
+  return {
+    type: InteractionResponseType.UPDATE_MESSAGE,
+    data: {
+      components: [{
+        type: 17, // Container
+        accent_color: 0x5865f2,
+        components: [
+          {
+            type: 10, // Text Display
+            content: `## 🔗 Follow-up Button Configuration\nConfiguring follow-up action for **${targetButton.name}**`
+          },
+          
+          { type: 14 }, // Separator
+          
+          // Selected button display
+          {
+            type: 10,
+            content: `### Selected Button\n${targetButton.emoji || '📌'} **${targetButton.name}**\n*${targetButton.description || 'No description'}*`
+          },
+          
+          { type: 14 }, // Separator
+          
+          // Execute on selector
+          {
+            type: 10,
+            content: '### Execution Condition\nWhen should this follow-up button be triggered?'
+          },
+          {
+            type: 1, // Action Row
+            components: [{
+              type: 3, // String Select
+              custom_id: `safari_followup_execute_on_${buttonId}_${targetButtonId}_${actionIndex}`,
+              placeholder: 'Select when to execute...',
+              options: [
+                {
+                  label: 'Execute if conditions are TRUE',
+                  value: 'true',
+                  description: 'Only show follow-up when conditions are met',
+                  emoji: { name: '✅' },
+                  default: state.executeOn === 'true'
+                },
+                {
+                  label: 'Execute if conditions are FALSE',
+                  value: 'false',
+                  description: 'Only show follow-up when conditions are NOT met',
+                  emoji: { name: '❌' },
+                  default: state.executeOn === 'false'
+                }
+              ]
+            }]
+          },
+          
+          { type: 14 }, // Separator
+          
+          // Action buttons
+          {
+            type: 1, // Action Row
+            components: [
+              {
+                type: 2, // Button
+                custom_id: `custom_action_editor_${buttonId}`,
+                label: 'Cancel',
+                style: 2, // Secondary
+                emoji: { name: '↩️' }
+              },
+              {
+                type: 2, // Button
+                custom_id: `safari_followup_save_${buttonId}_${targetButtonId}_${actionIndex}`,
+                label: 'Save & Finish',
+                style: 3, // Success
+                emoji: { name: '✅' }
+              }
+            ]
+          }
+        ]
+      }],
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      ephemeral: true
+    }
   };
 }

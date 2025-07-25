@@ -221,31 +221,64 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
         
         { type: 14 }, // Separator
         
-        // Actions Configuration (existing functionality)
-        {
-          type: 10,
-          content: `### Actions (${action.actions?.length || 0}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})`
-        },
-        
-        // Display existing actions
-        ...getActionListComponents(action.actions || [], actionId, guildItems, guildButtons),
-        
-        // Add Action Select Menu (if not at max)
-        ...((action.actions?.length || 0) < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON ? [{
-          type: 1, // Action Row
-          components: [{
-            type: 3, // String Select
-            custom_id: `safari_action_type_select_${actionId}`,
-            placeholder: 'Select action type to add...',
-            options: [
-              { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
-              { label: 'Give Currency', value: 'give_currency', emoji: { name: '🪙' } },
-              { label: 'Give Item', value: 'give_item', emoji: { name: '🎁' } },
-              { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
-              { label: 'Conditional Action', value: 'conditional', emoji: { name: '🔀' } }
-            ]
-          }]
-        }] : []),
+        // Split actions into TRUE and FALSE arrays
+        ...(() => {
+          const allActions = action.actions || [];
+          const trueActions = allActions.filter(a => !a.executeOn || a.executeOn === 'true');
+          const falseActions = allActions.filter(a => a.executeOn === 'false');
+          
+          const components = [];
+          
+          // TRUE Actions Section
+          components.push({
+            type: 10,
+            content: `### ✅ Actions executed if Conditions Met (${trueActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})`
+          });
+          
+          // Display TRUE actions
+          components.push(...getActionListComponents(trueActions, actionId, guildItems, guildButtons, 'true', allActions));
+          
+          // Divider between TRUE and FALSE sections
+          components.push({ type: 14 }); // Separator
+          
+          // FALSE Actions Section
+          components.push({
+            type: 10,
+            content: `### ❌ Actions executed if Conditions Not Met (${falseActions.length}/${SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON})`
+          });
+          
+          // Display FALSE actions or placeholder message
+          if (falseActions.length === 0) {
+            components.push({
+              type: 10,
+              content: '*No False conditions configured - display generic error message*'
+            });
+          } else {
+            components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
+          }
+          
+          // Add Action Select Menu (if not at max)
+          if (allActions.length < SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON) {
+            components.push({ type: 14 }); // Separator before select menu
+            components.push({
+              type: 1, // Action Row
+              components: [{
+                type: 3, // String Select
+                custom_id: `safari_action_type_select_${actionId}`,
+                placeholder: 'Select action type to add...',
+                options: [
+                  { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
+                  { label: 'Give Currency', value: 'give_currency', emoji: { name: '🪙' } },
+                  { label: 'Give Item', value: 'give_item', emoji: { name: '🎁' } },
+                  { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
+                  { label: 'Conditional Action', value: 'conditional', emoji: { name: '🔀' } }
+                ]
+              }]
+            });
+          }
+          
+          return components;
+        })(),
         
         // Action buttons
         {
@@ -324,7 +357,7 @@ function formatCoordinateList(coordinates) {
   return truncated;
 }
 
-function getActionListComponents(actions, actionId, guildItems = {}, guildButtons = {}) {
+function getActionListComponents(actions, actionId, guildItems = {}, guildButtons = {}, executeOn = 'true', allActions = null) {
   if (!actions || actions.length === 0) {
     return [];
   }
@@ -332,6 +365,9 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
   const components = [];
   
   actions.forEach((action, index) => {
+    // Find the actual index in the full actions array for proper removal
+    const actualIndex = allActions ? allActions.findIndex(a => a === action) : index;
+    
     components.push({
       type: 9, // Section
       components: [{
@@ -340,7 +376,7 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
       }],
       accessory: {
         type: 2,
-        custom_id: `safari_remove_action_${actionId}_${index}`,
+        custom_id: `safari_remove_action_${actionId}_${actualIndex}`,
         label: "Remove",
         style: 4, // Danger
         emoji: { name: "🗑️" }

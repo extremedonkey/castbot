@@ -885,24 +885,18 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
         }
         
         // Check conditions if they exist
+        let conditionsResult = true; // Default to true if no conditions
+        
         if (button.conditions && button.conditions.length > 0) {
             const playerData = await loadPlayerData();
-            const conditionsPass = await evaluateConditions(button.conditions, {
+            conditionsResult = await evaluateConditions(button.conditions, {
                 playerData,
                 guildId,
                 userId,
                 member: interaction.member
             });
             
-            if (!conditionsPass) {
-                console.log(`❌ Conditions not met for button ${buttonId}`);
-                return {
-                    content: '❌ You do not meet the requirements for this action.',
-                    flags: InteractionResponseFlags.EPHEMERAL
-                };
-            }
-            
-            console.log(`✅ All conditions passed for button ${buttonId}`);
+            console.log(`📊 Conditions evaluated to: ${conditionsResult} for button ${buttonId}`);
         }
         
         // Update usage count
@@ -912,8 +906,33 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
             await saveSafariContent(safariData);
         }
         
+        // Filter actions based on executeOn property and conditions result
+        const conditionsResultString = conditionsResult ? 'true' : 'false';
+        const actionsToExecute = button.actions.filter(action => {
+            // Default executeOn to 'true' for backwards compatibility
+            const executeOn = action.executeOn || 'true';
+            return executeOn === conditionsResultString;
+        });
+        
+        console.log(`🎯 Executing ${actionsToExecute.length} actions where executeOn='${conditionsResultString}'`);
+        
+        // If no actions match the condition result, return a message
+        if (actionsToExecute.length === 0) {
+            if (!conditionsResult) {
+                return {
+                    content: '❌ You do not meet the requirements for this action.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                };
+            } else {
+                return {
+                    content: '✅ Conditions met, but no actions are configured for this state.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                };
+            }
+        }
+        
         // Sort actions by order
-        const sortedActions = button.actions.sort((a, b) => (a.order || 0) - (b.order || 0));
+        const sortedActions = actionsToExecute.sort((a, b) => (a.order || 0) - (b.order || 0));
         
         const responses = [];
         
