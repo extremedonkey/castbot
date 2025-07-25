@@ -10207,130 +10207,131 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Show modal for other action types
-          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
-          const modal = new ModalBuilder()
-            .setCustomId(`safari_action_modal_${buttonId}_${actionType}`)
-            .setTitle(`Add ${getActionTypeName(actionType)}`);
-          
-          // Build modal fields based on action type
-          switch (actionType) {
-            case 'display_text':
+          // For display_text and update_currency, delegate to safari_add_action handler
+          if (actionType === 'display_text' || actionType === 'update_currency') {
+            // Simulate the safari_add_action custom_id and call its handler
+            const simulatedCustomId = `safari_add_action_${buttonId}_${actionType}`;
+            req.body.data.custom_id = simulatedCustomId;
+            
+            // Find and execute the safari_add_action handler
+            const addActionHandler = client._events.interactionCreate?.find(h => 
+              h.toString().includes('safari_add_action_')
+            );
+            
+            // Actually, let's just return the response that would trigger the correct handler
+            // The front-end will re-submit with the correct custom_id
+            console.log(`✅ SUCCESS: safari_action_type_select - delegating to safari_add_action for ${actionType}`);
+            
+            // Close the current interaction and trigger the add action handler
+            // by simulating a button click on the add action button
+            const virtualButton = {
+              custom_id: `safari_add_action_${buttonId}_${actionType}`,
+              type: 2
+            };
+            
+            // Actually, we need to just create the modal here with the correct format
+            const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+            
+            if (actionType === 'display_text') {
+              const modal = new ModalBuilder()
+                .setCustomId(`safari_action_modal_${buttonId}_display_text`)
+                .setTitle('Add Text Display Action');
+
+              const titleInput = new TextInputBuilder()
+                .setCustomId('action_title')
+                .setLabel('Title (optional)')
+                .setPlaceholder('e.g., "Welcome to the Adventure!"')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(100);
+
+              const contentInput = new TextInputBuilder()
+                .setCustomId('action_content')
+                .setLabel('Content')
+                .setPlaceholder('The text to display when the button is clicked...')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
+                .setMaxLength(2000);
+
+              const colorInput = new TextInputBuilder()
+                .setCustomId('action_color')
+                .setLabel('Accent Color (optional)')
+                .setPlaceholder('e.g., #3498db or 3447003')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(10);
+
+              const imageInput = new TextInputBuilder()
+                .setCustomId('action_image')
+                .setLabel('Image URL (Optional)')
+                .setPlaceholder('Enter link of an image you have uploaded to Discord.')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(500);
+
+              const executeOnInput = new TextInputBuilder()
+                .setCustomId('action_execute_on')
+                .setLabel('Show Display Text if conditions are.. (type true / false)')
+                .setPlaceholder('Type true to execute if all conditions are met, type false to execute if conditions are not met')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(false)
+                .setMaxLength(10)
+                .setValue('true'); // Pre-populate with 'true'
+
               modal.addComponents(
-                new ActionRowBuilder().addComponents(
-                  new TextInputBuilder()
-                    .setCustomId('title')
-                    .setLabel('Title (Optional)')
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(false)
-                    .setMaxLength(100)
-                ),
-                new ActionRowBuilder().addComponents(
-                  new TextInputBuilder()
-                    .setCustomId('content')
-                    .setLabel('Content')
-                    .setStyle(TextInputStyle.Paragraph)
-                    .setRequired(true)
-                    .setMaxLength(1000)
-                ),
-                new ActionRowBuilder().addComponents(
-                  new TextInputBuilder()
-                    .setCustomId('accent_color')
-                    .setLabel('Accent Color (Optional)')
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(false)
-                    .setPlaceholder('e.g., #3498db or 3447003')
-                ),
-                new ActionRowBuilder().addComponents(
-                  new TextInputBuilder()
-                    .setCustomId('image_url')
-                    .setLabel('Image URL (Optional)')
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(false)
-                    .setPlaceholder('Enter link of an image you have uploaded to Discord')
-                )
+                new ActionRowBuilder().addComponents(titleInput),
+                new ActionRowBuilder().addComponents(contentInput),
+                new ActionRowBuilder().addComponents(executeOnInput),
+                new ActionRowBuilder().addComponents(colorInput),
+                new ActionRowBuilder().addComponents(imageInput)
               );
-              break;
               
-            case 'update_currency':
-              modal.addComponents(
-                new ActionRowBuilder().addComponents(
-                  new TextInputBuilder()
-                    .setCustomId('amount')
-                    .setLabel('Amount to add or remove')
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true)
-                    .setPlaceholder('e.g., 100 or -50')
-                )
-              );
-              break;
-              
-            case 'follow_up_button':
-              console.error(`❌ ERROR: follow_up_button reached modal code - this should be handled by select interface above!`);
+              console.log(`✅ SUCCESS: safari_action_type_select - showing display_text modal`);
               return {
-                content: '❌ **Configuration Error**\n\nThe follow-up action interface has a configuration issue. Please report this to the administrator.',
-                ephemeral: true
+                type: InteractionResponseType.MODAL,
+                data: modal.toJSON()
               };
               
-            case 'give_currency':
+            } else if (actionType === 'update_currency') {
+              const modal = new ModalBuilder()
+                .setCustomId(`safari_action_modal_${buttonId}_update_currency`)
+                .setTitle('Add Currency Change Action');
+
+              const amountInput = new TextInputBuilder()
+                .setCustomId('action_amount')
+                .setLabel('Currency Amount')
+                .setPlaceholder('e.g., 100 or -50 (positive adds, negative subtracts)')
+                .setStyle(TextInputStyle.Short)
+                .setRequired(true)
+                .setMaxLength(10);
+
+              const messageInput = new TextInputBuilder()
+                .setCustomId('action_message')
+                .setLabel('Message to Player')
+                .setPlaceholder('e.g., "You found a treasure chest!"')
+                .setStyle(TextInputStyle.Paragraph)
+                .setRequired(true)
+                .setMaxLength(200);
+
               modal.addComponents(
-                new ActionRowBuilder().addComponents(
-                  new TextInputBuilder()
-                    .setCustomId('amount')
-                    .setLabel('Currency Amount')
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true)
-                    .setPlaceholder('e.g., 100')
-                ),
-                new ActionRowBuilder().addComponents(
-                  new TextInputBuilder()
-                    .setCustomId('message')
-                    .setLabel('Success Message (Optional)')
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(false)
-                    .setPlaceholder('e.g., You found treasure!')
-                    .setMaxLength(100)
-                )
+                new ActionRowBuilder().addComponents(amountInput),
+                new ActionRowBuilder().addComponents(messageInput)
               );
-              break;
               
-            case 'give_item':
-              modal.addComponents(
-                new ActionRowBuilder().addComponents(
-                  new TextInputBuilder()
-                    .setCustomId('item_id')
-                    .setLabel('Item ID')
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true)
-                    .setPlaceholder('e.g., gold_coin')
-                ),
-                new ActionRowBuilder().addComponents(
-                  new TextInputBuilder()
-                    .setCustomId('quantity')
-                    .setLabel('Quantity')
-                    .setStyle(TextInputStyle.Short)
-                    .setRequired(true)
-                    .setPlaceholder('e.g., 1')
-                    .setValue('1')
-                )
-              );
-              break;
-              
-            default:
-              console.error(`Unknown action type: ${actionType}`);
+              console.log(`✅ SUCCESS: safari_action_type_select - showing update_currency modal`);
               return {
-                content: '❌ Unknown action type.',
-                ephemeral: true
+                type: InteractionResponseType.MODAL,
+                data: modal.toJSON()
               };
+            }
           }
           
-          console.log(`✅ SUCCESS: safari_action_type_select - showing modal for ${actionType}`);
-          
-          // Return modal response directly (not through ButtonHandlerFactory)
-          return res.send({
-            type: InteractionResponseType.MODAL,
-            data: modal
-          });
+          // Should not reach here for display_text or update_currency
+          console.error(`Unknown action type: ${actionType}`);
+          return {
+            content: '❌ Unknown action type.',
+            ephemeral: true
+          };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_give_item_select_')) {
