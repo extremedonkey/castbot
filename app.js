@@ -10271,7 +10271,7 @@ Your server is now ready for Tycoons gameplay!`;
 
               const executeOnInput = new TextInputBuilder()
                 .setCustomId('action_execute_on')
-                .setLabel('Show Display Text if conditions are.. (type true / false)')
+                .setLabel('Execute when conditions are (true/false)')
                 .setPlaceholder('Type true to execute if all conditions are met, type false to execute if conditions are not met')
                 .setStyle(TextInputStyle.Short)
                 .setRequired(false)
@@ -11250,7 +11250,7 @@ Your server is now ready for Tycoons gameplay!`;
 
             const executeOnInput = new TextInputBuilder()
               .setCustomId('action_execute_on')
-              .setLabel('Show Display Text if conditions are.. (type true / false)')
+              .setLabel('Execute when conditions are (true/false)')
               .setPlaceholder('Type true to execute if all conditions are met, type false to execute if conditions are not met')
               .setStyle(TextInputStyle.Short)
               .setRequired(false)
