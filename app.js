@@ -10432,13 +10432,44 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const parts = context.customId.replace('safari_followup_execute_on_', '').split('_');
-          const executeOnValue = context.values?.[0]; // From string select
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const targetButtonId = parts[parts.length - 2];
-          const buttonId = parts.slice(0, -2).join('_');
+          // Get the selected value from the dropdown
+          const executeOnValue = context.values[0]; // 'true' or 'false' from dropdown selection
           
-          console.log(`🎯 EXECUTE ON: safari_followup_execute_on - setting to ${executeOnValue} for ${buttonId} follow-up ${targetButtonId}`);
+          // Parse the custom_id: safari_followup_execute_on_buttonId_targetButtonId_actionIndex
+          // More robust parsing to handle button IDs with underscores
+          const fullString = context.customId.replace('safari_followup_execute_on_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const remainingString = fullString.substring(0, lastUnderscoreIndex);
+          
+          // Find targetButtonId by checking which part exists in buttons
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const buttons = safariData[context.guildId]?.buttons || {};
+          
+          let buttonId, targetButtonId;
+          
+          // Try different split points to find valid targetButtonId
+          const parts = remainingString.split('_');
+          for (let i = 1; i < parts.length; i++) {
+            const possibleButtonId = parts.slice(0, i).join('_');
+            const possibleTargetButtonId = parts.slice(i).join('_');
+            if (buttons[possibleTargetButtonId]) {
+              buttonId = possibleButtonId;
+              targetButtonId = possibleTargetButtonId;
+              break;
+            }
+          }
+          
+          if (!targetButtonId) {
+            console.error(`❌ Could not parse target button ID from custom_id: ${context.customId}`);
+            return {
+              content: '❌ Error parsing follow-up configuration.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`🎯 EXECUTE ON: safari_followup_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}] follow-up ${targetButtonId}`);
           
           // Update state
           const stateKey = `${context.guildId}_${buttonId}_followup_${actionIndex}`;
