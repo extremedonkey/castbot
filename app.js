@@ -20056,18 +20056,30 @@ Are you sure you want to continue?`;
         
         // Get selected value from Components v2
         let selectedValue;
+        
+        // Check if this is a role selection - role selections can be empty (cleared)
+        const isRoleSelection = custom_id === 'select_production_role' || custom_id.startsWith('select_production_role_');
+        
         if (!data.values || data.values.length === 0) {
-          console.error('No values found in component data');
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: 'Error: No selection received. Please try again.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+          if (isRoleSelection) {
+            // For role selection, empty values means the user cleared the selection - this is valid
+            selectedValue = null;
+            console.log('Role selection cleared (empty values array)');
+          } else {
+            // For other selections, empty values is an error
+            console.error('No values found in component data');
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: 'Error: No selection received. Please try again.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+        } else {
+          selectedValue = data.values[0];
         }
         
-        selectedValue = data.values[0];
         console.log('Selected value:', selectedValue);
         
         // Find the temporary config for this user
