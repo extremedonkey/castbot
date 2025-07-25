@@ -11148,9 +11148,11 @@ Your server is now ready for Tycoons gameplay!`;
           const executeOnValue = context.values[0]; // 'true' or 'false' from dropdown selection
           
           // Parse the custom_id: safari_item_execute_on_buttonId_itemId_actionIndex
+          // More robust parsing to handle button IDs and item IDs with underscores
           const fullString = context.customId.replace('safari_item_execute_on_', '');
           const lastUnderscoreIndex = fullString.lastIndexOf('_');
           const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const remainingString = fullString.substring(0, lastUnderscoreIndex);
           
           // Find itemId by checking which part exists in items
           const { loadSafariContent } = await import('./safariManager.js');
@@ -11160,11 +11162,13 @@ Your server is now ready for Tycoons gameplay!`;
           let buttonId, itemId;
           
           // Try different split points to find valid itemId
-          for (let i = 1; i < parts.length - 2; i++) {
-            const possibleItemId = parts.slice(i, -2).join('_');
+          const parts = remainingString.split('_');
+          for (let i = 1; i < parts.length; i++) {
+            const possibleButtonId = parts.slice(0, i).join('_');
+            const possibleItemId = parts.slice(i).join('_');
             if (items[possibleItemId]) {
+              buttonId = possibleButtonId;
               itemId = possibleItemId;
-              buttonId = parts.slice(0, i).join('_');
               break;
             }
           }
