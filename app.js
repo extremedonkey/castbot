@@ -23860,24 +23860,78 @@ Are you sure you want to continue?`;
           // No matching command found
           console.log(`❌ No matching action found for command "${command}" at ${coord}`);
           
-          const locationName = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.baseContent?.title || `location ${coord}`;
-          
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              components: [{
-                type: 17, // Container
-                accent_color: 0x808080, // Gray
-                components: [
-                  {
-                    type: 10, // Text Display
-                    content: `## Nothing happened\n\nAttempted to \`${command}\` in ${locationName}. Nothing particularly exciting happened.`
-                  }
-                ]
-              }],
-              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+          // Check for actions with executeOn: "false" to execute when no match is found
+          let falseActions = [];
+          for (const actionId of locationActions) {
+            const action = safariData[guildId]?.buttons?.[actionId];
+            if (action?.trigger?.type === 'modal' && action.actions) {
+              // Collect all actions with executeOn: "false"
+              const actionsToExecute = action.actions.filter(act => act.executeOn === 'false');
+              if (actionsToExecute.length > 0) {
+                falseActions.push({ actionId: action.id, actions: actionsToExecute });
+              }
             }
-          });
+          }
+          
+          if (falseActions.length > 0) {
+            console.log(`🎯 Found ${falseActions.length} actions with executeOn:'false' to execute`);
+            
+            // Execute the false actions from the first modal action that has them
+            const { executeButtonActions } = await import('./safariManager.js');
+            const firstFalseAction = falseActions[0];
+            
+            // Create proper interaction object for the execution
+            const interactionData = {
+              token: req.body.token,
+              applicationId: req.body.application_id
+            };
+            
+            // Create a temporary button object with only the false actions
+            const tempButton = {
+              ...safariData[guildId].buttons[firstFalseAction.actionId],
+              actions: firstFalseAction.actions
+            };
+            
+            // Save the temporary button to execute only false actions
+            const originalButton = safariData[guildId].buttons[firstFalseAction.actionId];
+            safariData[guildId].buttons[firstFalseAction.actionId] = tempButton;
+            
+            const result = await executeButtonActions(
+              guildId,
+              firstFalseAction.actionId,
+              userId,
+              interactionData
+            );
+            
+            // Restore the original button
+            safariData[guildId].buttons[firstFalseAction.actionId] = originalButton;
+            
+            // Return the result
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: result
+            });
+          } else {
+            // No false actions found, show default message
+            const locationName = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.baseContent?.title || `location ${coord}`;
+            
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                components: [{
+                  type: 17, // Container
+                  accent_color: 0x808080, // Gray
+                  components: [
+                    {
+                      type: 10, // Text Display
+                      content: `## Nothing happened\n\nAttempted to \`${command}\` in ${locationName}. Nothing particularly exciting happened.`
+                    }
+                  ]
+                }],
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+              }
+            });
+          }
         }
         
       } catch (error) {
