@@ -23886,25 +23886,14 @@ Are you sure you want to continue?`;
               applicationId: req.body.application_id
             };
             
-            // Create a temporary button object with only the false actions
-            const tempButton = {
-              ...safariData[guildId].buttons[firstFalseAction.actionId],
-              actions: firstFalseAction.actions
-            };
-            
-            // Save the temporary button to execute only false actions
-            const originalButton = safariData[guildId].buttons[firstFalseAction.actionId];
-            safariData[guildId].buttons[firstFalseAction.actionId] = tempButton;
-            
+            // Execute with forceConditionsFail=true to trigger FALSE actions
             const result = await executeButtonActions(
               guildId,
               firstFalseAction.actionId,
               userId,
-              interactionData
+              interactionData,
+              true // forceConditionsFail - treat as if conditions failed
             );
-            
-            // Restore the original button
-            safariData[guildId].buttons[firstFalseAction.actionId] = originalButton;
             
             // Return the result
             return res.send({

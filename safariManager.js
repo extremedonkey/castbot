@@ -872,7 +872,7 @@ async function sendFollowUpMessages(token, responses) {
 /**
  * Execute all actions for a button
  */
-async function executeButtonActions(guildId, buttonId, userId, interaction) {
+async function executeButtonActions(guildId, buttonId, userId, interaction, forceConditionsFail = false) {
     try {
         console.log(`🚀 DEBUG: Executing button actions for ${buttonId} by user ${userId}`);
         
@@ -887,7 +887,11 @@ async function executeButtonActions(guildId, buttonId, userId, interaction) {
         // Check conditions if they exist
         let conditionsResult = true; // Default to true if no conditions
         
-        if (button.conditions && button.conditions.length > 0) {
+        // For modal triggers with wrong input, force conditions to fail
+        if (forceConditionsFail) {
+            conditionsResult = false;
+            console.log(`🎯 Modal input mismatch - forcing conditions to fail for button ${buttonId}`);
+        } else if (button.conditions && button.conditions.length > 0) {
             const playerData = await loadPlayerData();
             conditionsResult = await evaluateConditions(button.conditions, {
                 playerData,
