@@ -15149,6 +15149,70 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('condition_delete_')) {
+      // Delete condition handler
+      return ButtonHandlerFactory.create({
+        id: 'condition_delete',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_delete - user ${context.userId}`);
+          
+          // Parse custom_id: condition_delete_actionId_conditionIndex_currentPage
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // Remove 'condition'
+          customIdParts.shift(); // Remove 'delete'
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const conditionIndex = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          
+          console.log(`📝 Parsed condition_delete: actionId="${actionId}", conditionIndex=${conditionIndex}, page=${currentPage}`);
+          
+          // Load action and validate
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const action = allSafariContent[context.guildId]?.buttons?.[actionId];
+          
+          if (!action || !action.conditions || conditionIndex < 0 || conditionIndex >= action.conditions.length) {
+            console.error(`❌ Invalid condition delete: actionId=${actionId}, conditionIndex=${conditionIndex}`);
+            return {
+              content: '❌ Condition not found or invalid index.',
+              ephemeral: true,
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+          
+          // Remove the condition from the array
+          const deletedCondition = action.conditions[conditionIndex];
+          action.conditions.splice(conditionIndex, 1);
+          
+          // Save changes
+          await saveSafariContent(allSafariContent);
+          
+          console.log(`✅ SUCCESS: condition_delete - removed condition ${conditionIndex}: ${deletedCondition.type}`);
+          
+          // Calculate which page to show after deletion
+          const conditionsPerPage = 3;
+          const totalConditions = action.conditions.length;
+          const maxPage = Math.max(0, Math.ceil(totalConditions / conditionsPerPage) - 1);
+          const targetPage = Math.min(currentPage, maxPage);
+          
+          // Refresh condition manager UI
+          const { refreshConditionManagerUI } = await import('./customActionUI.js');
+          await refreshConditionManagerUI({
+            res,
+            actionId,
+            guildId: context.guildId,
+            currentPage: targetPage
+          });
+          
+          console.log(`✅ SUCCESS: condition_delete - refreshed UI on page ${targetPage}`);
+          // Return undefined as response already sent
+          return;
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('condition_currency_')) {
       // Handle currency operator toggle buttons
       return ButtonHandlerFactory.create({
