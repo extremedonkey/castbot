@@ -11159,7 +11159,7 @@ Your server is now ready for Tycoons gameplay!`;
           const safariData = await loadSafariContent();
           const items = safariData[context.guildId]?.items || {};
           
-          let buttonId, itemId;
+          let buttonId, itemId, item;
           
           // Try different split points to find valid itemId
           const parts = remainingString.split('_');
@@ -11169,11 +11169,12 @@ Your server is now ready for Tycoons gameplay!`;
             if (items[possibleItemId]) {
               buttonId = possibleButtonId;
               itemId = possibleItemId;
+              item = items[possibleItemId];
               break;
             }
           }
           
-          if (!itemId) {
+          if (!itemId || !item) {
             console.error(`❌ Could not parse item ID from custom_id: ${context.customId}`);
             return {
               content: '❌ Error parsing item configuration.',
@@ -11185,12 +11186,12 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Update state
           const stateKey = `${context.guildId}_${buttonId}_${itemId}_${actionIndex}`;
-          const state = dropConfigState.get(stateKey) || { quantity: 1, limit: null, style: null, executeOn: 'true' };
+          const state = dropConfigState.get(stateKey) || { limit: null, style: null, quantity: null, executeOn: 'true' };
           state.executeOn = executeOnValue;
           dropConfigState.set(stateKey, state);
           
           // Return updated configuration UI
-          return await showGiveItemConfig(context.guildId, buttonId, itemId, actionIndex);
+          return await showGiveItemConfig(context.guildId, buttonId, itemId, item, actionIndex);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_add_action_')) {
