@@ -10871,9 +10871,11 @@ Your server is now ready for Tycoons gameplay!`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          const parts = context.customId.replace('safari_currency_amount_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const buttonId = parts.slice(0, -1).join('_');
+          // More robust parsing to handle button IDs with underscores
+          const fullString = context.customId.replace('safari_currency_amount_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const buttonId = fullString.substring(0, lastUnderscoreIndex);
           
           console.log(`💰 AMOUNT: safari_currency_amount - showing modal for ${buttonId}[${actionIndex}]`);
           
@@ -10908,9 +10910,11 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const parts = context.customId.replace('safari_currency_limit_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const buttonId = parts.slice(0, -1).join('_');
+          // More robust parsing to handle button IDs with underscores
+          const fullString = context.customId.replace('safari_currency_limit_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const buttonId = fullString.substring(0, lastUnderscoreIndex);
           const limitType = context.values[0];
           
           console.log(`🎯 LIMIT: safari_currency_limit - ${limitType} for ${buttonId}[${actionIndex}]`);
@@ -10937,9 +10941,11 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const parts = context.customId.replace('safari_currency_style_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const buttonId = parts.slice(0, -1).join('_');
+          // More robust parsing to handle button IDs with underscores
+          const fullString = context.customId.replace('safari_currency_style_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const buttonId = fullString.substring(0, lastUnderscoreIndex);
           const style = context.values[0];
           
           console.log(`🎨 STYLE: safari_currency_style - style ${style} for ${buttonId}[${actionIndex}]`);
@@ -10966,9 +10972,11 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const parts = context.customId.replace('safari_currency_reset_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const buttonId = parts.slice(0, -1).join('_');
+          // More robust parsing to handle button IDs with underscores
+          const fullString = context.customId.replace('safari_currency_reset_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const buttonId = fullString.substring(0, lastUnderscoreIndex);
           
           console.log(`🔄 RESET: safari_currency_reset - resetting claims for ${buttonId}[${actionIndex}]`);
           
@@ -11004,9 +11012,11 @@ Your server is now ready for Tycoons gameplay!`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          const parts = context.customId.replace('safari_currency_save_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const buttonId = parts.slice(0, -1).join('_');
+          // More robust parsing to handle button IDs with underscores
+          const fullString = context.customId.replace('safari_currency_save_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const buttonId = fullString.substring(0, lastUnderscoreIndex);
           
           console.log(`✅ SAVE: safari_currency_save - saving give_currency for ${buttonId}`);
           
@@ -11103,9 +11113,12 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const parts = context.customId.replace('safari_currency_execute_on_', '').split('_');
+          // More robust parsing to handle button IDs with underscores
+          const fullString = context.customId.replace('safari_currency_execute_on_', '');
+          const parts = fullString.split('_');
           const executeOnValue = parts[parts.length - 1]; // 'true' or 'false'
           const actionIndex = parseInt(parts[parts.length - 2]);
+          // Everything before the last two parts is the button ID
           const buttonId = parts.slice(0, -2).join('_');
           
           console.log(`🎯 EXECUTE ON: safari_currency_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}]`);
