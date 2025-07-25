@@ -23954,28 +23954,168 @@ Are you sure you want to continue?`;
         });
       }
     } else if (custom_id.startsWith('admin_command_modal_')) {
-      // Handle admin command modal submission - reuse player logic exactly
-      try {
-        console.log(`🔧 DEBUG: Admin test command - reusing player logic`);
+      // Handle admin command modal submission - delegate to player logic
+      const coord = custom_id.replace('admin_command_modal_', '');
+      const modifiedCustomId = `player_command_modal_${coord}`;
+      
+      // Update the data object to use player custom_id
+      req.body.data.custom_id = modifiedCustomId;
+      
+      // Now process as if it were a player command
+      const processAsPlayer = async () => {
+        const custom_id = modifiedCustomId; // Local variable that can be used
         
-        // Transform the custom_id to use player handler
-        const playerCustomId = custom_id.replace('admin_command_modal_', 'player_command_modal_');
-        data.custom_id = playerCustomId;
-        
-        // Temporarily override the custom_id to reuse player handler
-        custom_id = playerCustomId;
-        
-        // Fall through to player handler below
-      } catch (error) {
-        console.error('Error transforming admin command modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error processing admin test command.',
-            flags: InteractionResponseFlags.EPHEMERAL
+        // This is the exact same logic as player_command_modal handler
+        try {
+          const coord = custom_id.replace('player_command_modal_', '');
+          const guildId = req.body.guild_id;
+          const channelId = req.body.channel_id;
+          const userId = req.body.member.user.id;
+          
+          // Get the command entered by the admin
+          const command = components[0].components[0].value?.trim().toLowerCase();
+          
+          console.log(`🔧 DEBUG: Admin command submitted (via player logic) - coord: ${coord}, command: "${command}"`);
+          
+          if (!command) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Please enter a command.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
           }
-        });
-      }
+          
+          // Load safari data and find matching action
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[guildId]?.maps?.active;
+          const locationActions = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.buttons || [];
+          
+          // Search for a matching action with modal trigger
+          let matchingAction = null;
+          for (const actionId of locationActions) {
+            const action = safariData[guildId]?.buttons?.[actionId];
+            if (action?.trigger?.type === 'modal') {
+              const phrases = action.trigger.phrases || [];
+              if (phrases.some(phrase => phrase.toLowerCase() === command)) {
+                matchingAction = action;
+                break;
+              }
+            }
+          }
+          
+          if (matchingAction) {
+            console.log(`✅ Found matching action for command "${command}"`);
+            
+            // Execute the action
+            const { executeButtonActions } = await import('./safariManager.js');
+            
+            // Create proper interaction object for the execution
+            const interactionData = {
+              token: req.body.token,
+              applicationId: req.body.application_id
+            };
+            
+            const result = await executeButtonActions(
+              guildId,
+              matchingAction.id,  // Use the button ID, not the actions array
+              userId,
+              interactionData
+            );
+            
+            // Return the result but make it ephemeral for admin
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                ...result,
+                flags: (result.flags || 0) | InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          } else {
+            // No matching command found
+            console.log(`❌ No matching action found for command "${command}" at ${coord}`);
+            
+            // Check for actions with executeOn: "false" to execute when no match is found
+            let falseActions = [];
+            for (const actionId of locationActions) {
+              const action = safariData[guildId]?.buttons?.[actionId];
+              if (action?.trigger?.type === 'modal' && action.actions) {
+                // Collect all actions with executeOn: "false"
+                const actionsToExecute = action.actions.filter(act => act.executeOn === 'false');
+                if (actionsToExecute.length > 0) {
+                  falseActions.push({ actionId: action.id, actions: actionsToExecute });
+                }
+              }
+            }
+            
+            if (falseActions.length > 0) {
+              console.log(`🎯 Found ${falseActions.length} actions with executeOn:'false' to execute`);
+              
+              // Execute the false actions from the first modal action that has them
+              const { executeButtonActions } = await import('./safariManager.js');
+              const firstFalseAction = falseActions[0];
+              
+              // Create proper interaction object for the execution
+              const interactionData = {
+                token: req.body.token,
+                applicationId: req.body.application_id
+              };
+              
+              // Execute with forceConditionsFail=true to trigger FALSE actions
+              const result = await executeButtonActions(
+                guildId,
+                firstFalseAction.actionId,
+                userId,
+                interactionData,
+                true // forceConditionsFail - treat as if conditions failed
+              );
+              
+              // Return the result but make it ephemeral for admin
+              return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                  ...result,
+                  flags: (result.flags || 0) | InteractionResponseFlags.EPHEMERAL
+                }
+              });
+            } else {
+              // No false actions found, show default message
+              const locationName = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.baseContent?.title || `location ${coord}`;
+              
+              return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                  components: [{
+                    type: 17, // Container
+                    accent_color: 0x808080, // Gray
+                    components: [
+                      {
+                        type: 10, // Text Display
+                        content: `## Nothing happened\n\nAttempted to \`${command}\` in ${locationName}. Nothing particularly exciting happened.`
+                      }
+                    ]
+                  }],
+                  flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+                }
+              });
+            }
+          }
+          
+        } catch (error) {
+          console.error('Error in admin command handler:', error);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error processing command.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+      };
+      
+      return processAsPlayer();
     } else if (custom_id.startsWith('entity_modal_submit_')) {
       // Handle modal submission for field editing
       try {
