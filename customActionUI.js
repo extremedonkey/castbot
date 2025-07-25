@@ -270,8 +270,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
                   { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
                   { label: 'Give Currency', value: 'give_currency', emoji: { name: '🪙' } },
                   { label: 'Give Item', value: 'give_item', emoji: { name: '🎁' } },
-                  { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
-                  { label: 'Conditional Action', value: 'conditional', emoji: { name: '🔀' } }
+                  { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } }
                 ]
               }]
             });
@@ -434,8 +433,6 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}) {
       const followUpButton = guildButtons[followUpButtonId];
       const followUpButtonName = followUpButton?.name || followUpButton?.label || followUpButtonId;
       return `**\`${number}. Follow-up Action\`** ${followUpButtonName}`;
-    case 'conditional':
-      return `**\`${number}. Conditional\`** ${action.condition?.type || 'Not configured'}`;
     case 'create_button':
       return `**\`${number}. Create Button\`** ${action.buttonLabel}`;
     default:
