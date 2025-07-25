@@ -11113,13 +11113,14 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          // More robust parsing to handle button IDs with underscores
+          // Get the selected value from the dropdown
+          const executeOnValue = context.values[0]; // 'true' or 'false' from dropdown selection
+          
+          // Parse custom_id to get button ID and action index
           const fullString = context.customId.replace('safari_currency_execute_on_', '');
-          const parts = fullString.split('_');
-          const executeOnValue = parts[parts.length - 1]; // 'true' or 'false'
-          const actionIndex = parseInt(parts[parts.length - 2]);
-          // Everything before the last two parts is the button ID
-          const buttonId = parts.slice(0, -2).join('_');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const buttonId = fullString.substring(0, lastUnderscoreIndex);
           
           console.log(`🎯 EXECUTE ON: safari_currency_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}]`);
           
@@ -11143,11 +11144,13 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          // Parse the custom_id: safari_item_execute_on_buttonId_itemId_actionIndex_value
+          // Get the selected value from the dropdown
+          const executeOnValue = context.values[0]; // 'true' or 'false' from dropdown selection
+          
+          // Parse the custom_id: safari_item_execute_on_buttonId_itemId_actionIndex
           const fullString = context.customId.replace('safari_item_execute_on_', '');
-          const parts = fullString.split('_');
-          const executeOnValue = parts[parts.length - 1]; // 'true' or 'false'
-          const actionIndex = parseInt(parts[parts.length - 2]);
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
           
           // Find itemId by checking which part exists in items
           const { loadSafariContent } = await import('./safariManager.js');
