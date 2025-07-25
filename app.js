@@ -21322,25 +21322,7 @@ Are you sure you want to continue?`;
 
         await saveSafariContent(safariData);
 
-        // Update anchor messages
-        if (button.coordinates && button.coordinates.length > 0) {
-          const { updateAnchorMessage } = await import('./mapCellUpdater.js');
-          const activeMapId = safariData[guildId]?.maps?.active;
-          
-          for (const coord of button.coordinates) {
-            const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
-            if (coordData?.anchorMessageId) {
-              try {
-                await updateAnchorMessage(guildId, coord, client);
-                console.log(`📍 Updated anchor message for ${coord}`);
-              } catch (error) {
-                console.error(`Error updating anchor for ${coord}:`, error);
-              }
-            }
-          }
-        }
-
-        // Send UPDATE_MESSAGE response to refresh the UI immediately
+        // Send immediate response to avoid timeout
         const { createCustomActionEditorUI } = await import('./customActionUI.js');
         const updatedUI = await createCustomActionEditorUI({
           guildId,
@@ -21352,6 +21334,30 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: updatedUI
         });
+        
+        // Update anchor messages asynchronously after response is sent
+        if (button.coordinates && button.coordinates.length > 0) {
+          setImmediate(async () => {
+            try {
+              const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+              const activeMapId = safariData[guildId]?.maps?.active;
+              
+              for (const coord of button.coordinates) {
+                const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+                if (coordData?.anchorMessageId) {
+                  try {
+                    await updateAnchorMessage(guildId, coord, client);
+                    console.log(`📍 Updated anchor message for ${coord}`);
+                  } catch (error) {
+                    console.error(`Error updating anchor for ${coord}:`, error);
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error in async anchor updates:', error);
+            }
+          });
+        }
         
         return;
         
