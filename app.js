@@ -21146,6 +21146,9 @@ Are you sure you want to continue?`;
         let actionConfig = {};
         let executeOn = 'true'; // Default to true for backwards compatibility
         
+        // Get components from modal submission
+        const components = req.body.data.components;
+        
         if (actionType === 'display_text') {
           const title = components[0].components[0].value?.trim() || null;
           const content = components[1].components[0].value?.trim();
