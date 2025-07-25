@@ -10488,20 +10488,47 @@ Your server is now ready for Tycoons gameplay!`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          const parts = context.customId.replace('safari_followup_save_', '').split('_');
-          const actionIndex = parseInt(parts[parts.length - 1]);
-          const targetButtonId = parts[parts.length - 2];
-          const buttonId = parts.slice(0, -2).join('_');
+          // Parse the custom_id: safari_followup_save_buttonId_targetButtonId_actionIndex
+          // More robust parsing to handle button IDs with underscores
+          const fullString = context.customId.replace('safari_followup_save_', '');
+          const lastUnderscoreIndex = fullString.lastIndexOf('_');
+          const actionIndex = parseInt(fullString.substring(lastUnderscoreIndex + 1));
+          const remainingString = fullString.substring(0, lastUnderscoreIndex);
           
-          console.log(`✅ SAVE: safari_followup_save - saving follow-up ${targetButtonId} for ${buttonId}`);
+          // Find targetButtonId by checking which part exists in buttons
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const buttons = safariData[context.guildId]?.buttons || {};
+          
+          let buttonId, targetButtonId;
+          
+          // Try different split points to find valid targetButtonId
+          const parts = remainingString.split('_');
+          for (let i = 1; i < parts.length; i++) {
+            const possibleButtonId = parts.slice(0, i).join('_');
+            const possibleTargetButtonId = parts.slice(i).join('_');
+            if (buttons[possibleTargetButtonId]) {
+              buttonId = possibleButtonId;
+              targetButtonId = possibleTargetButtonId;
+              break;
+            }
+          }
+          
+          if (!targetButtonId) {
+            console.error(`❌ Could not parse target button ID from custom_id: ${context.customId}`);
+            return {
+              content: '❌ Error parsing follow-up configuration.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`✅ SAVE: safari_followup_save - saving follow-up ${targetButtonId} for ${buttonId}[${actionIndex}]`);
           
           // Get state
           const stateKey = `${context.guildId}_${buttonId}_followup_${actionIndex}`;
           const state = dropConfigState.get(stateKey) || { targetButtonId: targetButtonId, executeOn: 'true' };
           
-          // Load safari data
-          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
+          // Get button (safariData already loaded above)
           const button = safariData[context.guildId]?.buttons?.[buttonId];
           
           if (!button) {
