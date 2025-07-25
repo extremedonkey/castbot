@@ -801,7 +801,7 @@ async function executeFollowUpButton(config, guildId, interaction) {
     const button = new ButtonBuilder()
         .setCustomId(generateCustomId(guildId, followUpButton.id))
         .setLabel(followUpButton.label)
-        .setStyle(BUTTON_STYLES[followUpButton.style]);
+        .setStyle(BUTTON_STYLES[followUpButton.style] || ButtonStyle.Secondary);
     
     if (followUpButton.emoji) {
         button.setEmoji(followUpButton.emoji);
