@@ -14835,6 +14835,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               mode: 'edit'
             });
             
+            // For map_cell selections, use UPDATE_MESSAGE to dismiss the picker
+            if (entityType === 'map_cell') {
+              return res.send({
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                  ...uiResponse,
+                  ephemeral: true
+                }
+              });
+            }
+            
             return uiResponse;
           }
         }
