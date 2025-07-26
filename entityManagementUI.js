@@ -313,7 +313,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
         {
             type: 2, // Button
             style: 2, // Secondary
-            label: '← Back to Safari',
+            label: '← Safari',
             custom_id: 'prod_safari_menu',
             emoji: { name: '🦁' }
         }
