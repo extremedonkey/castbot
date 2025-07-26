@@ -166,9 +166,10 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
         ? question.questionTitle.substring(0, maxTitleLength) + '...'
         : question.questionTitle;
       
+      const isLastQuestionInEditor = i === config.questions.length - 1;
       refreshedComponents.push({
         type: 10, // Text Display
-        content: `**Q${i + 1}.** ${displayTitle}`
+        content: `**${isLastQuestionInEditor ? 'Last Question' : `Q${i + 1}.`}** ${displayTitle}`
       });
       
       const questionRow = {
@@ -341,17 +342,16 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
     });
   }
   
-  questionComponents.push({
-    type: 14 // Separator
-  });
-  
   // Add navigation button(s) - but not for the last question
   if (!isLastQuestion) {
+    questionComponents.push({
+      type: 14 // Separator
+    });
     // Regular navigation button
     const navButton = new ButtonBuilder()
       .setCustomId(`app_next_question_${channelId}_${questionIndex}`)
       .setLabel(isSecondToLast ? 'Complete Application' : `Next`)
-      .setStyle(isSecondToLast ? ButtonStyle.Success : ButtonStyle.Primary) // Green for second-to-last
+      .setStyle(isSecondToLast ? ButtonStyle.Success : ButtonStyle.Secondary) // Green for Complete Application, grey for Next
       .setEmoji(isSecondToLast ? '✅' : '➡️');
     
     const navRow = new ActionRowBuilder().addComponents(navButton);
