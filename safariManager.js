@@ -539,8 +539,17 @@ async function executeDisplayText(config, interaction) {
     };
     
     // Add accent color if provided
-    if (config.accentColor) {
-        container.accent_color = config.accentColor;
+    if (config.color) {
+        try {
+            // Parse color from various formats (#3498db, 3498db, 3447003)
+            let colorStr = config.color.toString().replace('#', '');
+            // If it's a valid hex color, parse it
+            if (/^[0-9A-Fa-f]{6}$/.test(colorStr)) {
+                container.accent_color = parseInt(colorStr, 16);
+            }
+        } catch (error) {
+            console.log(`⚠️ Invalid display text color format: ${config.color}, ignoring`);
+        }
     }
     
     return {

@@ -22039,7 +22039,7 @@ Are you sure you want to continue?`;
         const result = await handleDisplayTextSave(guildId, custom_id, req.body.data);
         
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
             ...result,
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
