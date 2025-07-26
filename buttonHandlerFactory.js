@@ -914,7 +914,7 @@ export const BUTTON_REGISTRY = {
     label: 'Test Command',
     description: 'Admin test command triggers at this location',
     emoji: '⌨️',
-    style: 'Primary',
+    style: 'Secondary',
     category: 'safari_admin'
   },
 

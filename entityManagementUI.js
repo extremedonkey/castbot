@@ -323,7 +323,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
     if (hasModalTriggers) {
         actionRowComponents.push({
             type: 2, // Button
-            style: 1, // Primary
+            style: 2, // Secondary (grey)
             label: 'Test Command',
             custom_id: `admin_test_command_${entityId}`,
             emoji: { name: '⌨️' }
