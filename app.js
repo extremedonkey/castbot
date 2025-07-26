@@ -350,7 +350,7 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
     // Regular navigation button
     const navButton = new ButtonBuilder()
       .setCustomId(`app_next_question_${channelId}_${questionIndex}`)
-      .setLabel(isSecondToLast ? 'Complete Application' : `Next`)
+      .setLabel(isSecondToLast ? 'Complete Application' : `Next Question`)
       .setStyle(isSecondToLast ? ButtonStyle.Success : ButtonStyle.Secondary) // Green for Complete Application, grey for Next
       .setEmoji(isSecondToLast ? '✅' : '➡️');
     
