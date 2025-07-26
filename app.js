@@ -10543,15 +10543,23 @@ Your server is now ready for Tycoons gameplay!`;
           // Create the follow-up action
           const action = {
             type: 'follow_up_button',
-            order: button.actions.length,
+            order: actionIndex,
             config: {
               buttonId: state.targetButtonId
             },
             executeOn: state.executeOn || 'true'  // Default to 'true' for backwards compatibility
           };
           
-          // Add the action
-          button.actions.push(action);
+          // Add or update the action
+          if (actionIndex < button.actions.length) {
+            // Edit mode: Replace existing action
+            console.log(`✏️ Updating existing action at index ${actionIndex}`);
+            button.actions[actionIndex] = action;
+          } else {
+            // Create mode: Add new action
+            console.log(`➕ Adding new action at index ${actionIndex}`);
+            button.actions.push(action);
+          }
           
           // Update metadata
           if (!button.metadata) {
@@ -10872,7 +10880,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Create the give_item action with state values (with defaults)
           const action = {
             type: 'give_item',
-            order: button.actions.length,
+            order: actionIndex,
             config: {
               itemId: itemId,
               quantity: state.quantity || 1,  // Default to 1 if not set
@@ -10889,8 +10897,16 @@ Your server is now ready for Tycoons gameplay!`;
             button.style = parseInt(state.style);
           }
           
-          // Add the action
-          button.actions.push(action);
+          // Add or update the action
+          if (actionIndex < button.actions.length) {
+            // Edit mode: Replace existing action
+            console.log(`✏️ Updating existing action at index ${actionIndex}`);
+            button.actions[actionIndex] = action;
+          } else {
+            // Create mode: Add new action
+            console.log(`➕ Adding new action at index ${actionIndex}`);
+            button.actions.push(action);
+          }
           
           // Update metadata
           if (!button.metadata) {
@@ -11114,7 +11130,7 @@ Your server is now ready for Tycoons gameplay!`;
           // Create the give_currency action with state values (with defaults)
           const action = {
             type: 'give_currency',
-            order: button.actions.length,
+            order: actionIndex,
             config: {
               amount: state.amount || 100,  // Default to 100 if not set
               limit: {
@@ -11130,8 +11146,16 @@ Your server is now ready for Tycoons gameplay!`;
             button.style = parseInt(state.style);
           }
           
-          // Add the action
-          button.actions.push(action);
+          // Add or update the action
+          if (actionIndex < button.actions.length) {
+            // Edit mode: Replace existing action
+            console.log(`✏️ Updating existing action at index ${actionIndex}`);
+            button.actions[actionIndex] = action;
+          } else {
+            // Create mode: Add new action
+            console.log(`➕ Adding new action at index ${actionIndex}`);
+            button.actions.push(action);
+          }
           
           // Update metadata
           if (!button.metadata) {
@@ -19234,6 +19258,7 @@ Are you sure you want to continue?`;
         id: 'safari_location_editor',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        ephemeral: true,
         handler: async (context) => {
           console.log(`🔍 START: safari_location_editor - user ${context.userId}`);
           
