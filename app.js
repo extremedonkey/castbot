@@ -24452,6 +24452,149 @@ Are you sure you want to continue?`;
         });
       }
       
+    } else if (custom_id.startsWith('entity_search_modal_')) {
+      // Handle entity search modal submission
+      console.log(`🔍 DEBUG: Entity search modal - custom_id: ${custom_id}`);
+      
+      try {
+        // Parse entity type from custom_id: entity_search_modal_{entityType}
+        const entityType = custom_id.replace('entity_search_modal_', '');
+        
+        // Get search term from modal
+        const searchTerm = components[0]?.components[0]?.value?.toLowerCase().trim();
+        
+        if (!searchTerm) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a search term.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🔍 DEBUG: Searching ${entityType}s for term: "${searchTerm}"`);
+        
+        // Import required modules
+        const { loadSafariContent } = await import('./safariManager.js');
+        const { createEntitySelectUI } = await import('./entityUI.js');
+        
+        // Load safari content
+        const allSafariContent = await loadSafariContent();
+        const guildData = allSafariContent[req.body.guild_id] || {};
+        
+        // Get entities based on type
+        let entities = [];
+        switch (entityType) {
+          case 'map_cell':
+            // For map cells, search through buttons that have coordinates
+            if (guildData.buttons) {
+              entities = Object.entries(guildData.buttons)
+                .filter(([id, button]) => button.coordinates && button.coordinates.length > 0)
+                .filter(([id, button]) => {
+                  // Search by button name, description, or coordinates
+                  const searchableText = [
+                    button.label?.toLowerCase() || '',
+                    button.description?.toLowerCase() || '',
+                    ...(button.coordinates || []).map(c => c.toLowerCase())
+                  ].join(' ');
+                  return searchableText.includes(searchTerm);
+                })
+                .flatMap(([id, button]) => 
+                  button.coordinates.map(coord => ({
+                    value: coord,
+                    label: coord,
+                    description: button.label || 'Map Location',
+                    emoji: button.emoji
+                  }))
+                );
+            }
+            break;
+            
+          case 'safari_button':
+            // Search safari buttons
+            if (guildData.buttons) {
+              entities = Object.entries(guildData.buttons)
+                .filter(([id, button]) => {
+                  const searchableText = [
+                    button.label?.toLowerCase() || '',
+                    button.description?.toLowerCase() || '',
+                    id.toLowerCase()
+                  ].join(' ');
+                  return searchableText.includes(searchTerm);
+                })
+                .map(([id, button]) => ({
+                  value: id,
+                  label: button.label || id,
+                  description: button.description,
+                  emoji: button.emoji
+                }));
+            }
+            break;
+            
+          case 'safari_item':
+            // Search safari items
+            if (guildData.items) {
+              entities = Object.entries(guildData.items)
+                .filter(([id, item]) => {
+                  const searchableText = [
+                    item.name?.toLowerCase() || '',
+                    item.description?.toLowerCase() || '',
+                    id.toLowerCase()
+                  ].join(' ');
+                  return searchableText.includes(searchTerm);
+                })
+                .map(([id, item]) => ({
+                  value: id,
+                  label: item.name || id,
+                  description: item.description,
+                  emoji: item.emoji
+                }));
+            }
+            break;
+        }
+        
+        console.log(`🔍 DEBUG: Found ${entities.length} matching ${entityType}s`);
+        
+        if (entities.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ No ${entityType}s found matching "${searchTerm}".`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Sort results and limit to 25 for Discord select menu
+        entities = entities
+          .sort((a, b) => a.label.localeCompare(b.label))
+          .slice(0, 25);
+        
+        // Create select UI with search results
+        const ui = await createEntitySelectUI({
+          entityType,
+          entities,
+          placeholder: `${entities.length} result${entities.length !== 1 ? 's' : ''} for "${searchTerm}"`,
+          includeManagementOptions: true
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+        
+      } catch (error) {
+        console.error('Error handling entity search:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error searching entities. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
     } else {
       console.log(`⚠️ DEBUG: Unhandled MODAL_SUBMIT custom_id: ${custom_id}`);
     }
