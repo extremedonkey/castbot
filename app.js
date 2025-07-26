@@ -5698,9 +5698,16 @@ To fix this:
           
           await savePlayerData(playerData);
           
-          console.log(`✅ SUCCESS: season_question_delete - question deleted`);
-          // Refresh the UI
-          return refreshQuestionManagementUI(res, config, configId, currentPage);
+          // Calculate the correct page to show after deletion
+          const questionsPerPage = 5;
+          const totalPages = Math.max(1, Math.ceil(config.questions.length / questionsPerPage));
+          
+          // If we're on a page that no longer exists, go to the last valid page
+          const validPage = Math.min(currentPage, totalPages - 1);
+          
+          console.log(`✅ SUCCESS: season_question_delete - question deleted, navigating to page ${validPage}`);
+          // Refresh the UI with the correct page
+          return refreshQuestionManagementUI(res, config, configId, validPage);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_nav_prev_')) {
