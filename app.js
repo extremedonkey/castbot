@@ -428,6 +428,36 @@ async function getAllApplicationsFromData(guildId) {
 }
 
 /**
+ * Helper function to create casting status buttons
+ * @param {string} channelId - Application channel ID
+ * @param {number} appIndex - Application index for navigation
+ * @param {Object} playerData - Player data object
+ * @param {string} guildId - Guild ID
+ * @returns {Object} ActionRow with casting buttons
+ */
+function createCastingButtons(channelId, appIndex, playerData, guildId) {
+  // Get current casting status
+  const castingStatus = playerData[guildId]?.applications?.[channelId]?.castingStatus;
+  
+  const castButtons = [
+    new ButtonBuilder()
+      .setCustomId(`cast_player_${channelId}_${appIndex}`)
+      .setLabel('🎬 Cast Player')
+      .setStyle(castingStatus === 'cast' ? ButtonStyle.Success : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`cast_tentative_${channelId}_${appIndex}`)
+      .setLabel('❓ Tentative')
+      .setStyle(castingStatus === 'tentative' ? ButtonStyle.Primary : ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`cast_reject_${channelId}_${appIndex}`)
+      .setLabel('🗑️ Don\'t Cast')
+      .setStyle(castingStatus === 'reject' ? ButtonStyle.Danger : ButtonStyle.Secondary)
+  ];
+  
+  return new ActionRowBuilder().addComponents(castButtons);
+}
+
+/**
  * Check if user has admin permissions (any of: Manage Channels, Manage Guild, Manage Roles, Administrator)
  * @param {Object} member - Discord member object from interaction
  * @returns {boolean} True if user has admin permissions
@@ -3260,6 +3290,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'season_question_delete',
         'season_nav_prev',
         'season_nav_next',
+        'cast_player',
+        'cast_tentative',
+        'cast_reject',
         // Conditional logic system
         'condition_manager',
         'condition_edit',
@@ -4690,6 +4723,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               {
                 type: 14
               },
+              createCastingButtons(currentApp.channelId, newIndex, playerData, guildId).toJSON(), // Casting buttons
+              {
+                type: 14
+              },
               navRow.toJSON()
             ]
           };
@@ -4713,6 +4750,170 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         });
       }
+    } else if (custom_id.startsWith('cast_player_') || custom_id.startsWith('cast_tentative_') || custom_id.startsWith('cast_reject_')) {
+      // Handle casting status buttons
+      return ButtonHandlerFactory.create({
+        id: custom_id.split('_').slice(0, 2).join('_'), // cast_player, cast_tentative, or cast_reject
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🎬 START: casting status - user ${context.userId}, button ${context.customId}`);
+          const { guildId, userId, client } = context;
+          
+          // Parse button ID: cast_[status]_[channelId]_[appIndex]
+          const parts = context.customId.split('_');
+          const status = parts[1]; // player, tentative, or reject
+          const channelId = parts[2];
+          const appIndex = parseInt(parts[3]);
+          
+          // Map button status to database status
+          const statusMap = {
+            'player': 'cast',
+            'tentative': 'tentative', 
+            'reject': 'reject'
+          };
+          const castingStatus = statusMap[status];
+          
+          console.log(`🎬 Setting casting status to ${castingStatus} for channel ${channelId}`);
+          
+          // Load and update player data
+          const playerData = await loadPlayerData();
+          
+          // Ensure application exists
+          if (!playerData[guildId]?.applications?.[channelId]) {
+            return {
+              content: '❌ Application not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Update casting status
+          playerData[guildId].applications[channelId].castingStatus = castingStatus;
+          await savePlayerData(playerData);
+          
+          console.log(`✅ SUCCESS: casting status updated to ${castingStatus}`);
+          
+          // Regenerate the ranking interface with updated button states
+          const guild = await client.guilds.fetch(guildId);
+          const allApplications = await getAllApplicationsFromData(guildId);
+          const currentApp = allApplications[appIndex];
+          
+          if (!currentApp) {
+            return {
+              content: '❌ Application not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Fetch the applicant member for avatar
+          let applicantMember;
+          try {
+            applicantMember = await guild.members.fetch(currentApp.userId);
+          } catch (error) {
+            applicantMember = {
+              displayName: currentApp.displayName,
+              user: { username: currentApp.username },
+              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+            };
+          }
+          
+          const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
+          
+          const galleryComponent = {
+            type: 12,
+            items: [{
+              media: { url: applicantAvatarURL },
+              description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
+            }]
+          };
+          
+          // Create ranking buttons
+          const rankingButtons = [];
+          const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+          
+          for (let i = 1; i <= 5; i++) {
+            const isSelected = userRanking === i;
+            rankingButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
+                .setLabel(i.toString())
+                .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+                .setDisabled(isSelected)
+            );
+          }
+          
+          const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
+          
+          // Create navigation buttons
+          const navButtons = [];
+          if (allApplications.length > 1) {
+            navButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`ranking_prev_${appIndex}`)
+                .setLabel('◀ Previous')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(appIndex === 0),
+              new ButtonBuilder()
+                .setCustomId(`ranking_next_${appIndex}`)
+                .setLabel('Next ▶')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(appIndex === allApplications.length - 1)
+            );
+          }
+          
+          navButtons.push(
+            new ButtonBuilder()
+              .setCustomId('ranking_view_all_scores')
+              .setLabel('📊 View All Scores')
+              .setStyle(ButtonStyle.Primary)
+          );
+          
+          const navRow = new ActionRowBuilder().addComponents(navButtons);
+          
+          // Calculate average score
+          const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+          const rankings = Object.values(allRankings).filter(r => r !== undefined);
+          const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
+          
+          const castRankingContainer = {
+            type: 17,
+            accent_color: 0x9B59B6,
+            components: [
+              {
+                type: 10,
+                content: `## Cast Ranking | ${guild.name}`
+              },
+              {
+                type: 14
+              },
+              {
+                type: 10,
+                content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**App:** <#${currentApp.channelId}>`
+              },
+              galleryComponent,
+              {
+                type: 10,
+                content: `> **Rate this applicant (1-5):**`
+              },
+              rankingRow.toJSON(),
+              {
+                type: 14
+              },
+              createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Updated casting buttons
+              {
+                type: 14
+              },
+              navRow.toJSON()
+            ]
+          };
+          
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [castRankingContainer]
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('show_castlist')) {
       // Extract castlist name from custom_id if present
       const castlistMatch = custom_id.match(/^show_castlist(?:_(.+))?$/);
@@ -6280,6 +6481,10 @@ To fix this:
                 content: `> **Rate this applicant (1-5):**`
               },
               rankingRow.toJSON(), // Ranking buttons
+              {
+                type: 14 // Separator
+              },
+              createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
               {
                 type: 14 // Separator
               },

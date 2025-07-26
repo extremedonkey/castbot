@@ -759,6 +759,27 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'application_management'
   },
+  'cast_player_*': {
+    label: 'Cast Player',
+    description: 'Mark applicant as cast',
+    emoji: '🎬',
+    style: 'Secondary',
+    category: 'casting_management'
+  },
+  'cast_tentative_*': {
+    label: 'Tentative',
+    description: 'Mark applicant as tentative',
+    emoji: '❓',
+    style: 'Secondary',
+    category: 'casting_management'
+  },
+  'cast_reject_*': {
+    label: 'Don\'t Cast',
+    description: 'Mark applicant as not cast',
+    emoji: '🗑️',
+    style: 'Secondary',
+    category: 'casting_management'
+  },
   'season_question_edit_*': {
     label: 'Edit Question',
     description: 'Edit application question details',
