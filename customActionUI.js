@@ -1420,6 +1420,33 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
           content: `### Preview\n${previewText}`
         },
         
+        // Image preview (if image URL is configured)
+        ...(() => {
+          const imageUrl = action?.config?.image || action?.image;
+          if (imageUrl && imageUrl.trim() !== '') {
+            try {
+              // Basic URL validation - check if it looks like a URL
+              new URL(imageUrl);
+              
+              return [{
+                type: 12, // Media Gallery
+                items: [{
+                  media: { url: imageUrl },
+                  description: action?.config?.title || action?.title || 'Display Text Image',
+                  spoiler: false
+                }]
+              }];
+            } catch (error) {
+              // Invalid URL - show error message instead
+              return [{
+                type: 10, // Text Display
+                content: `⚠️ **Invalid Image URL**: ${imageUrl.substring(0, 50)}${imageUrl.length > 50 ? '...' : ''}`
+              }];
+            }
+          }
+          return [];
+        })(),
+        
         { type: 14 }, // Separator
         
         // Execution Condition section
