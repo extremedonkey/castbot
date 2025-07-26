@@ -24499,27 +24499,27 @@ Are you sure you want to continue?`;
         let entities = [];
         switch (entityType) {
           case 'map_cell':
-            // For map cells, search through buttons that have coordinates
-            if (guildData.buttons) {
-              entities = Object.entries(guildData.buttons)
-                .filter(([id, button]) => button.coordinates && button.coordinates.length > 0)
-                .filter(([id, button]) => {
-                  // Search by button name, description, or coordinates
+            // For map cells, search through the actual map coordinates
+            const activeMapId = guildData.maps?.active;
+            if (activeMapId && guildData.maps?.[activeMapId]?.coordinates) {
+              const mapCoordinates = guildData.maps[activeMapId].coordinates;
+              
+              entities = Object.entries(mapCoordinates)
+                .filter(([coord, cellData]) => {
+                  // Search by coordinate name or cell content
                   const searchableText = [
-                    button.label?.toLowerCase() || '',
-                    button.description?.toLowerCase() || '',
-                    ...(button.coordinates || []).map(c => c.toLowerCase())
+                    coord.toLowerCase(),
+                    cellData.baseContent?.title?.toLowerCase() || '',
+                    cellData.baseContent?.description?.toLowerCase() || ''
                   ].join(' ');
                   return searchableText.includes(searchTerm);
                 })
-                .flatMap(([id, button]) => 
-                  button.coordinates.map(coord => ({
-                    value: coord,
-                    label: coord,
-                    description: button.label || 'Map Location',
-                    emoji: button.emoji
-                  }))
-                );
+                .map(([coord, cellData]) => ({
+                  value: coord,
+                  label: coord,
+                  description: cellData.baseContent?.title || `Location ${coord}`,
+                  emoji: cellData.baseContent?.title?.match(/^(.*?) /)?.[1] || '📍'
+                }));
             }
             break;
             
