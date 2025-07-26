@@ -24474,7 +24474,7 @@ Are you sure you want to continue?`;
         const entityType = custom_id.replace('entity_search_modal_', '');
         
         // Get search term from modal
-        const searchTerm = components[0]?.components[0]?.value?.toLowerCase().trim();
+        const searchTerm = data.components[0]?.components[0]?.value?.toLowerCase().trim();
         
         if (!searchTerm) {
           return res.send({
@@ -24606,7 +24606,7 @@ Are you sure you want to continue?`;
         };
         
         // Create UI with Components V2
-        const components = [
+        const uiComponents = [
           {
             type: 17, // Container
             accent_color: 0x5865f2,
@@ -24627,7 +24627,7 @@ Are you sure you want to continue?`;
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            components: components,
+            components: uiComponents,
             flags: (1 << 15) // IS_COMPONENTS_V2
           }
         });
