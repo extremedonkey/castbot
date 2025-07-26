@@ -10575,6 +10575,14 @@ Your server is now ready for Tycoons gameplay!`;
           // Save safari data
           await saveSafariContent(safariData);
           
+          // Update anchor messages for all coordinates using this action
+          try {
+            const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+            await queueActionCoordinateUpdates(context.guildId, buttonId, 'followup_action_saved');
+          } catch (error) {
+            console.error('Error queueing anchor updates:', error);
+          }
+          
           console.log(`✅ Added follow_up_button action to button ${buttonId}`);
           
           // Clean up state
@@ -10922,6 +10930,14 @@ Your server is now ready for Tycoons gameplay!`;
           // Save safari data
           await saveSafariContent(safariData);
           
+          // Update anchor messages for all coordinates using this action
+          try {
+            const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+            await queueActionCoordinateUpdates(context.guildId, buttonId, 'item_action_saved');
+          } catch (error) {
+            console.error('Error queueing anchor updates:', error);
+          }
+          
           console.log(`✅ Added give_item action to button ${buttonId}`);
           
           // Clean up state
@@ -11170,6 +11186,14 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Save safari data
           await saveSafariContent(safariData);
+          
+          // Update anchor messages for all coordinates using this action
+          try {
+            const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+            await queueActionCoordinateUpdates(context.guildId, buttonId, 'currency_action_saved');
+          } catch (error) {
+            console.error('Error queueing anchor updates:', error);
+          }
           
           console.log(`✅ Added give_currency action to button ${buttonId}`);
           
@@ -11629,6 +11653,14 @@ Your server is now ready for Tycoons gameplay!`;
             
             await saveSafariContent(allSafariContent);
             console.log(`✅ Safari content saved successfully`);
+            
+            // Update anchor messages for all coordinates using this action
+            try {
+              const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+              await queueActionCoordinateUpdates(context.guildId, actionId, 'action_removed');
+            } catch (error) {
+              console.error('Error queueing anchor updates:', error);
+            }
           }
           
           // Return to Custom Action editor
@@ -12129,6 +12161,14 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           await saveSafariContent(allSafariContent);
+          
+          // Update anchor messages for all coordinates using this action
+          try {
+            const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+            await queueActionCoordinateUpdates(context.guildId, actionId, 'trigger_type_updated');
+          } catch (error) {
+            console.error('Error queueing anchor updates:', error);
+          }
           
           // Show trigger configuration UI
           const { createTriggerConfigUI } = await import('./customActionUI.js');
@@ -23819,6 +23859,14 @@ Are you sure you want to continue?`;
         
         await saveSafariContent(allSafariContent);
         
+        // Update anchor messages for all coordinates using this action
+        try {
+          const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+          await queueActionCoordinateUpdates(guildId, actionId, 'action_info_updated');
+        } catch (error) {
+          console.error('Error queueing anchor updates:', error);
+        }
+        
         // Return to action editor
         const { createCustomActionEditorUI } = await import('./customActionUI.js');
         const ui = await createCustomActionEditorUI({
@@ -23903,6 +23951,14 @@ Are you sure you want to continue?`;
         action.metadata.lastModifiedBy = req.body.member.user.id;
         
         await saveSafariContent(safariData);
+        
+        // Update anchor messages for all coordinates using this action
+        try {
+          const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+          await queueActionCoordinateUpdates(guildId, actionId, 'modal_phrases_updated');
+        } catch (error) {
+          console.error('Error queueing anchor updates:', error);
+        }
         
         console.log(`✅ DEBUG: Updated phrases for action ${actionId}: ${phrases.join(', ')}`);
         
