@@ -21717,8 +21717,15 @@ Are you sure you want to continue?`;
                                         type: 2, // Button
                                         custom_id: `safari_drop_reset_${buttonId}_${actionIndex}`,
                                         label: 'Reset Claims',
-                                        style: 4, // Danger
+                                        style: 2, // Secondary (grey)
                                         emoji: { name: '🔄' }
+                                    },
+                                    {
+                                        type: 2, // Button
+                                        custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+                                        label: 'Delete Action',
+                                        style: 4, // Danger (red)
+                                        emoji: { name: '🗑️' }
                                     },
                                     {
                                         type: 2, // Button
@@ -25412,9 +25419,16 @@ async function showGiveItemConfig(guildId, buttonId, itemId, item, actionIndex) 
               type: 2, // Button
               custom_id: `safari_item_reset_${buttonId}_${itemId}_${actionIndex}`,
               label: 'Reset Claims',
-              style: 4, // Danger
+              style: 2, // Secondary (grey)
               emoji: { name: '🔄' },
               disabled: !claimsExist // Enable when claims exist
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+              label: 'Delete Action',
+              style: 4, // Danger (red)
+              emoji: { name: '🗑️' }
             },
             {
               type: 2, // Button
@@ -25574,9 +25588,16 @@ async function showGiveCurrencyConfig(guildId, buttonId, actionIndex, customTerm
               type: 2, // Button
               custom_id: `safari_currency_reset_${buttonId}_${actionIndex}`,
               label: 'Reset Claims',
-              style: 4, // Danger
+              style: 2, // Secondary (grey)
               emoji: { name: '🔄' },
               disabled: !claimsExist // Enable when claims exist
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+              label: 'Delete Action',
+              style: 4, // Danger (red)
+              emoji: { name: '🗑️' }
             },
             {
               type: 2, // Button
@@ -25685,6 +25706,13 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
                 label: 'Cancel',
                 style: 2, // Secondary
                 emoji: { name: '↩️' }
+              },
+              {
+                type: 2, // Button
+                custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+                label: 'Delete Action',
+                style: 4, // Danger (red)
+                emoji: { name: '🗑️' }
               },
               {
                 type: 2, // Button
