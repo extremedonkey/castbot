@@ -11137,6 +11137,8 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_currency_save',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
+        ephemeral: true,
         handler: async (context) => {
           // More robust parsing to handle button IDs with underscores
           const fullString = context.customId.replace('safari_currency_save_', '');
