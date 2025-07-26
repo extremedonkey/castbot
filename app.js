@@ -15258,8 +15258,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
-    } else if (custom_id.startsWith('entity_custom_action_list_')) {
-      // Handle custom action selection from dropdown
+    } else if (custom_id.startsWith('entity_custom_action_list_') || custom_id === 'entity_custom_action_list_global') {
+      // Handle custom action selection from dropdown (coordinate-specific or global)
       return ButtonHandlerFactory.create({
         id: 'entity_custom_action_list',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -15269,15 +15269,24 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           console.log(`🔍 START: entity_custom_action_list - user ${context.userId}`);
           
           const selectedValue = context.values[0];
-          // Parse: entity_custom_action_list_{coordinate}_{mapId}
-          const parts = context.customId.replace('entity_custom_action_list_', '').split('_');
-          const coordinate = parts[0];
-          const mapId = parts[1];
+          
+          // Parse coordinate and mapId if present
+          let coordinate = null;
+          let mapId = null;
+          if (context.customId !== 'entity_custom_action_list_global') {
+            // Parse: entity_custom_action_list_{coordinate}_{mapId}
+            const parts = context.customId.replace('entity_custom_action_list_', '').split('_');
+            coordinate = parts[0];
+            mapId = parts[1];
+          }
           
           if (selectedValue === 'create_new') {
             // Show creation modal using standard factory pattern
+            const modalCustomId = coordinate ? 
+              `entity_create_modal_safari_button_info_${coordinate}` : 
+              'global_create_modal_safari_button_info';
             const modal = new ModalBuilder()
-              .setCustomId(`entity_create_modal_safari_button_info_${coordinate}`)
+              .setCustomId(modalCustomId)
               .setTitle('Create Custom Action');
 
             // Button label input
@@ -15324,87 +15333,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             const ui = await createCustomActionEditorUI({
               guildId: context.guildId,
               actionId: selectedValue,
-              coordinate
+              coordinate // will be null for global mode
             });
             
             console.log(`✅ SUCCESS: entity_custom_action_list - showing action editor for ${selectedValue}`);
-            return ui;
-          }
-        }
-      })(req, res, client);
-      
-    } else if (custom_id === 'global_custom_action_list') {
-      // Handle global custom action selection from dropdown (no coordinate)
-      return ButtonHandlerFactory.create({
-        id: 'global_custom_action_list',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: true,
-        handler: async (context) => {
-          console.log(`🔍 START: global_custom_action_list - user ${context.userId}`);
-          
-          const selectedValue = context.values[0];
-          
-          if (selectedValue === 'create_new') {
-            // Show creation modal using standard factory pattern
-            const modal = new ModalBuilder()
-              .setCustomId(`global_create_modal_safari_button_info`)
-              .setTitle('Create Custom Action');
-
-            // Button label input
-            const labelInput = new TextInputBuilder()
-              .setCustomId('button_label')
-              .setLabel('Action Name')
-              .setPlaceholder('e.g., "Start Adventure"')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(true)
-              .setMaxLength(80);
-
-            // Action emoji input
-            const emojiInput = new TextInputBuilder()
-              .setCustomId('button_emoji')
-              .setLabel('Action Emoji (Optional)')
-              .setPlaceholder('e.g., 🗺️')
-              .setStyle(TextInputStyle.Short)
-              .setRequired(false)
-              .setMaxLength(100);
-
-            // Button description input
-            const descInput = new TextInputBuilder()
-              .setCustomId('button_description')
-              .setLabel('Action Description (Optional)')
-              .setPlaceholder('e.g., "Begin your journey through the forest"')
-              .setStyle(TextInputStyle.Paragraph)
-              .setRequired(false)
-              .setMaxLength(200);
-
-            modal.addComponents(
-              new ActionRowBuilder().addComponents(labelInput),
-              new ActionRowBuilder().addComponents(emojiInput),
-              new ActionRowBuilder().addComponents(descInput)
-            );
-            
-            console.log(`✅ SUCCESS: global_custom_action_list - showing creation modal`);
-            return {
-              type: InteractionResponseType.MODAL,
-              data: modal.toJSON()
-            };
-          } else if (selectedValue === 'no_actions') {
-            // Handle disabled state - shouldn't happen but just in case
-            return {
-              content: '❌ No actions available to manage.',
-              ephemeral: true
-            };
-          } else {
-            // Edit existing action
-            const { createCustomActionEditorUI } = await import('./customActionUI.js');
-            const ui = await createCustomActionEditorUI({
-              guildId: context.guildId,
-              actionId: selectedValue
-              // No coordinate specified for global editor
-            });
-            
-            console.log(`✅ SUCCESS: global_custom_action_list - showing action editor for ${selectedValue}`);
             return ui;
           }
         }
