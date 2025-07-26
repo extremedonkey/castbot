@@ -154,6 +154,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'safari_remove_action': {
+    label: 'Remove Action',
+    description: 'Remove an action from a custom Safari button',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari'
+  },
   'map_location_actions': {
     label: 'Location Actions',
     description: 'View and manage actions for a map location',

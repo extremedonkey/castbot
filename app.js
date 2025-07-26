@@ -11568,71 +11568,60 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_remove_action_')) {
-      // Handle removing action from button
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to remove actions.')) return;
-        
-        // Parse action ID and index from custom_id
-        const parts = custom_id.replace('safari_remove_action_', '').split('_');
-        const actionIndex = parseInt(parts[parts.length - 1]);
-        const actionId = parts.slice(0, -1).join('_');
-        
-        console.log(`🗑️ Removing action ${actionIndex} from button ${actionId}`);
-        
-        // Load and update button
-        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-        const allSafariContent = await loadSafariContent();
-        const guildData = allSafariContent[guildId] || {};
-        const button = guildData.buttons?.[actionId];
-        
-        if (!button) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'safari_remove_action',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_remove_action - user ${context.userId}`);
+          
+          // Parse action ID and index from custom_id
+          const parts = context.customId.replace('safari_remove_action_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const actionId = parts.slice(0, -1).join('_');
+          
+          console.log(`🗑️ Removing action ${actionIndex} from button ${actionId}`);
+          
+          // Load and update button
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const guildData = allSafariContent[context.guildId] || {};
+          const button = guildData.buttons?.[actionId];
+          
+          if (!button) {
+            console.log(`❌ FAILURE: safari_remove_action - button ${actionId} not found`);
+            return {
               content: '❌ Button not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Remove action at index
-        if (button.actions && button.actions[actionIndex] !== undefined) {
-          button.actions.splice(actionIndex, 1);
-          
-          // Re-order remaining actions
-          button.actions.forEach((action, idx) => {
-            action.order = idx + 1;
-          });
-          
-          await saveSafariContent(allSafariContent);
-        }
-        
-        // Return to Custom Action editor
-        const { createCustomActionEditorUI } = await import('./customActionUI.js');
-        const updatedUI = await createCustomActionEditorUI({
-          guildId,
-          actionId
-        });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: updatedUI
-        });
-        
-      } catch (error) {
-        console.error('Error removing action:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error removing action.',
-            flags: InteractionResponseFlags.EPHEMERAL
+              ephemeral: true
+            };
           }
-        });
-      }
+          
+          // Remove action at index
+          if (button.actions && button.actions[actionIndex] !== undefined) {
+            button.actions.splice(actionIndex, 1);
+            
+            // Re-order remaining actions
+            button.actions.forEach((action, idx) => {
+              action.order = idx + 1;
+            });
+            
+            await saveSafariContent(allSafariContent);
+            console.log(`✅ Safari content saved successfully`);
+          }
+          
+          // Return to Custom Action editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          const updatedUI = await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId
+          });
+          
+          console.log(`✅ SUCCESS: safari_remove_action - action ${actionIndex} removed from ${actionId}`);
+          
+          return updatedUI;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_drop_type_')) {
       // Handle drop type selection
       return ButtonHandlerFactory.create({
