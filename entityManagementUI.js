@@ -341,7 +341,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
         });
     }
     
-    // Add Delete button for all entity types except map_cell
+    // Add Delete button for all entity types except map_cell (moved to far right)
     if (entityType !== 'map_cell') {
         actionRowComponents.push({
             type: 2, // Button
