@@ -10220,6 +10220,7 @@ Your server is now ready for Tycoons gameplay!`;
             const actionIndex = currentButton?.actions?.length || 0;
             
             console.log(`✅ SUCCESS: safari_action_type_select - showing display_text entity for ${buttonId}[${actionIndex}]`);
+            const { showDisplayTextConfig } = await import('./customActionUI.js');
             return await showDisplayTextConfig(context.guildId, buttonId, actionIndex);
             
           // For update_currency, delegate to safari_add_action handler  
@@ -11769,6 +11770,7 @@ Your server is now ready for Tycoons gameplay!`;
           } else if (action.type === 'display_text') {
             // Show display text configuration entity
             console.log(`✅ SUCCESS: safari_edit_action - showing display_text config for ${actionId}[${actionIndex}]`);
+            const { showDisplayTextConfig } = await import('./customActionUI.js');
             return await showDisplayTextConfig(context.guildId, actionId, actionIndex);
             
           } else {
@@ -26049,98 +26051,3 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
   };
 }
 
-/**
- * Show configuration UI for display_text action
- */
-async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
-  // Load safari data to get existing action information
-  const { loadSafariContent } = await import('./safariManager.js');
-  const safariData = await loadSafariContent();
-  const button = safariData[guildId]?.buttons?.[buttonId];
-  
-  let action = null;
-  let isEdit = false;
-  
-  if (button && button.actions && button.actions[actionIndex]) {
-    action = button.actions[actionIndex];
-    isEdit = true;
-  }
-  
-  // Build preview text for existing action
-  let previewText = "No content configured yet";
-  if (action && action.type === 'display_text') {
-    const title = action.config?.title || action.title || '';
-    const content = action.config?.content || action.content || '';
-    
-    if (title && content) {
-      previewText = `**${title}**\n${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`;
-    } else if (content) {
-      previewText = content.substring(0, 150) + (content.length > 150 ? '...' : '');
-    } else if (title) {
-      previewText = `**${title}**\n*No content*`;
-    }
-  }
-  
-  // Build the configuration UI
-  return {
-    components: [{
-      type: 17, // Container
-      accent_color: 0x3498db, // Blue accent for text actions
-      components: [
-        {
-          type: 10, // Text Display
-          content: `## 📝 Display Text Configuration\n${isEdit ? 'Editing' : 'Creating'} text display action`
-        },
-        
-        { type: 14 }, // Separator
-        
-        // Text preview
-        {
-          type: 10,
-          content: `### Preview\n${previewText}`
-        },
-        
-        { type: 14 }, // Separator
-        
-        // Action buttons
-        {
-          type: 1, // Action Row
-          components: [
-            {
-              type: 2, // Button
-              custom_id: `safari_display_text_edit_${buttonId}_${actionIndex}`,
-              label: 'Edit Text',
-              style: 2, // Secondary
-              emoji: { name: '✏️' }
-            },
-            {
-              type: 2, // Button
-              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
-              label: 'Delete Action',
-              style: 4, // Danger (red)
-              emoji: { name: '🗑️' }
-            }
-          ]
-        },
-        
-        { type: 14 }, // Separator
-        
-        // Back button
-        {
-          type: 1, // Action Row
-          components: [
-            {
-              type: 2, // Button
-              custom_id: `custom_action_editor_${buttonId}`,
-              label: 'Back',
-              style: 2, // Secondary
-              emoji: { name: '⚡' }
-            }
-          ]
-        }
-      ]
-    }],
-    flags: (1 << 15), // IS_COMPONENTS_V2
-    ephemeral: true
-  };
-}

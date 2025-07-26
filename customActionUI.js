@@ -614,6 +614,7 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
     const backButton = new ButtonBuilder()
       .setCustomId(`custom_action_editor_${actionId}`)
       .setLabel('⬅ Back')
+      .setEmoji('⚡')
       .setStyle(2);
     
     const buttonRow = new ActionRowBuilder().addComponents([backButton, configButton]);
@@ -640,6 +641,7 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
     const backButton = new ButtonBuilder()
       .setCustomId(`custom_action_editor_${actionId}`)
       .setLabel('⬅ Back')
+      .setEmoji('⚡')
       .setStyle(2); // Secondary
     
     const backButtonRow = new ActionRowBuilder().addComponents([backButton]);
@@ -816,14 +818,14 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
         custom_id: `custom_action_editor_${actionId}`,
         label: "← Back",
         style: 2, // Secondary (grey)
-        emoji: { name: "🔙" }
+        emoji: { name: "⚡" }
       },
       {
         type: 2,
         custom_id: `add_coord_modal_${actionId}`,
         label: "Add Coordinate",
         style: 1, // Primary
-        emoji: { name: "➕" }
+        emoji: { name: "⚡" }
       }
     ]
   });
@@ -1353,6 +1355,101 @@ function createRoleConditionUI(condition, actionId, conditionIndex, currentPage)
   return components;
 }
 
+/**
+ * Show configuration UI for display_text action
+ */
+export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
+  // Load safari data to get existing action information
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  
+  let action = null;
+  let isEdit = false;
+  
+  if (button && button.actions && button.actions[actionIndex]) {
+    action = button.actions[actionIndex];
+    isEdit = true;
+  }
+  
+  // Build preview text for existing action
+  let previewText = "No content configured yet";
+  if (action && action.type === 'display_text') {
+    const title = action.config?.title || action.title || '';
+    const content = action.config?.content || action.content || '';
+    
+    if (title && content) {
+      previewText = `**${title}**\n${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`;
+    } else if (content) {
+      previewText = content.substring(0, 150) + (content.length > 150 ? '...' : '');
+    } else if (title) {
+      previewText = `**${title}**\n*No content*`;
+    }
+  }
+  
+  // Build the configuration UI
+  return {
+    components: [{
+      type: 17, // Container
+      accent_color: 0x3498db, // Blue accent for text actions
+      components: [
+        {
+          type: 10, // Text Display
+          content: `## 📝 Display Text Configuration\n${isEdit ? 'Editing' : 'Creating'} text display action`
+        },
+        
+        { type: 14 }, // Separator
+        
+        // Text preview
+        {
+          type: 10,
+          content: `### Preview\n${previewText}`
+        },
+        
+        { type: 14 }, // Separator
+        
+        // Action buttons
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `safari_display_text_edit_${buttonId}_${actionIndex}`,
+              label: 'Edit Text',
+              style: 2, // Secondary
+              emoji: { name: '✏️' }
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+              label: 'Delete Action',
+              style: 4, // Danger (red)
+              emoji: { name: '🗑️' }
+            }
+          ]
+        },
+        
+        { type: 14 }, // Separator
+        
+        // Back button
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `custom_action_editor_${buttonId}`,
+              label: 'Back',
+              style: 2, // Secondary
+              emoji: { name: '⚡' }
+            }
+          ]
+        }
+      ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
+  };
+}
+
 export default {
   createCustomActionSelectionUI,
   createCustomActionEditorUI,
@@ -1360,5 +1457,6 @@ export default {
   createConditionsConfigUI,
   createCoordinateManagementUI,
   refreshConditionManagerUI,
-  showConditionEditor
+  showConditionEditor,
+  showDisplayTextConfig
 };
