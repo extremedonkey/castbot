@@ -14689,7 +14689,20 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
           
           // Handle special actions for other entity types
-          if (selectedValue === 'search_entities') {
+          if (selectedValue === 'back_to_all') {
+            // Return to full entity list
+            const { createEntityManagementUI } = await import('./entityManagementUI.js');
+            const ui = await createEntityManagementUI({
+              entityType: entityType,
+              guildId: context.guildId,
+              mode: 'list'
+            });
+            
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: ui
+            });
+          } else if (selectedValue === 'search_entities') {
             // Show search modal
             return res.send({
               type: InteractionResponseType.MODAL,
@@ -24477,7 +24490,6 @@ Are you sure you want to continue?`;
         
         // Import required modules
         const { loadSafariContent } = await import('./safariManager.js');
-        const { createEntitySelectUI } = await import('./entityUI.js');
         
         // Load safari content
         const allSafariContent = await loadSafariContent();
@@ -24571,17 +24583,53 @@ Are you sure you want to continue?`;
           .sort((a, b) => a.label.localeCompare(b.label))
           .slice(0, 25);
         
-        // Create select UI with search results
-        const ui = await createEntitySelectUI({
-          entityType,
-          entities,
-          placeholder: `${entities.length} result${entities.length !== 1 ? 's' : ''} for "${searchTerm}"`,
-          includeManagementOptions: true
+        // Create select menu with search results
+        const options = entities.map(entity => ({
+          label: entity.label,
+          value: entity.value,
+          description: entity.description,
+          emoji: entity.emoji ? { name: entity.emoji } : undefined
+        }));
+        
+        // Add back/management option
+        options.unshift({
+          label: '🔙 Back to all',
+          value: 'back_to_all',
+          description: 'Return to full list'
         });
+        
+        const selectMenu = {
+          type: 3, // String Select
+          custom_id: `entity_select_${entityType}`,
+          placeholder: `${entities.length} result${entities.length !== 1 ? 's' : ''} for "${searchTerm}"`,
+          options: options
+        };
+        
+        // Create UI with Components V2
+        const components = [
+          {
+            type: 17, // Container
+            accent_color: 0x5865f2,
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## Search Results: ${entityType}\nFound ${entities.length} matching "${searchTerm}"`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [selectMenu]
+              }
+            ]
+          }
+        ];
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: ui
+          data: {
+            components: components,
+            flags: (1 << 15) // IS_COMPONENTS_V2
+          }
         });
         
       } catch (error) {
