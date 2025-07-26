@@ -170,6 +170,13 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'safari'
   },
+  'safari_edit_action': {
+    label: 'Edit Action',
+    description: 'Edit an existing action in a custom Safari button',
+    emoji: '📝',
+    style: 'Secondary',
+    category: 'safari'
+  },
   'map_location_actions': {
     label: 'Location Actions',
     description: 'View and manage actions for a map location',

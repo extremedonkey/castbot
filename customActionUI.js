@@ -295,18 +295,18 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             },
             {
               type: 2,
+              custom_id: `custom_action_delete_${actionId}`,
+              label: "Delete Action",
+              style: 4, // Danger
+              emoji: { name: "🗑️" }
+            },
+            {
+              type: 2,
               custom_id: `custom_action_test_${actionId}`,
               label: triggerType === 'modal' ? "Test Command" : "Test Action",
               style: 2, // Secondary (grey)
               emoji: { name: triggerType === 'modal' ? "💬" : "🧪" },
               disabled: !action.actions?.length
-            },
-            {
-              type: 2,
-              custom_id: `custom_action_delete_${actionId}`,
-              label: "Delete Action",
-              style: 4, // Danger
-              emoji: { name: "🗑️" }
             }
           ]
         }
@@ -378,10 +378,10 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
       }],
       accessory: {
         type: 2,
-        custom_id: `safari_remove_action_${actionId}_${actualIndex}`,
-        label: "Remove",
-        style: 4, // Danger
-        emoji: { name: "🗑️" }
+        custom_id: `safari_edit_action_${actionId}_${actualIndex}`,
+        label: "Edit",
+        style: 2, // Secondary (grey)
+        emoji: { name: "📝" }
       }
     });
   });

@@ -4065,6 +4065,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_confirm_delete_store_') &&
         !custom_id.startsWith('safari_action_') &&
         !custom_id.startsWith('safari_remove_action_') &&
+        !custom_id.startsWith('safari_edit_action_') &&
         !custom_id.startsWith('safari_config_') &&
         !custom_id.startsWith('safari_move_') &&
         !custom_id.startsWith('safari_drop_style_') &&
@@ -11611,6 +11612,128 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`✅ SUCCESS: safari_remove_action - action ${actionIndex} removed from ${actionId}`);
           
           return updatedUI;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_edit_action_')) {
+      return ButtonHandlerFactory.create({
+        id: 'safari_edit_action',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_edit_action - user ${context.userId}`);
+          
+          // Parse action ID and index from custom_id
+          const parts = context.customId.replace('safari_edit_action_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const actionId = parts.slice(0, -1).join('_');
+          
+          console.log(`📝 Editing action ${actionIndex} from button ${actionId}`);
+          
+          // Load button and get action
+          const { loadSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const guildData = allSafariContent[context.guildId] || {};
+          const button = guildData.buttons?.[actionId];
+          
+          if (!button) {
+            console.log(`❌ FAILURE: safari_edit_action - button ${actionId} not found`);
+            return {
+              content: '❌ Button not found.',
+              ephemeral: true
+            };
+          }
+          
+          const action = button.actions?.[actionIndex];
+          if (!action) {
+            console.log(`❌ FAILURE: safari_edit_action - action ${actionIndex} not found`);
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Pre-load the configuration state with existing values
+          const stateKey = `${context.guildId}_${actionId}_${actionIndex}`;
+          
+          if (action.type === 'give_item') {
+            // Pre-load item configuration state
+            const itemStateKey = `${context.guildId}_${actionId}_${action.config?.itemId || action.itemId}_${actionIndex}`;
+            dropConfigState.set(itemStateKey, {
+              limit: action.config?.limit?.type || null,
+              style: action.config?.style || null,
+              quantity: action.config?.quantity || action.quantity || 1,
+              executeOn: action.executeOn || 'true'
+            });
+            
+            // Get item details and show config
+            const itemId = action.config?.itemId || action.itemId;
+            const item = guildData.items?.[itemId];
+            
+            console.log(`✅ SUCCESS: safari_edit_action - showing item config for ${item?.name || itemId}`);
+            return await showGiveItemConfig(context.guildId, actionId, itemId, item, actionIndex);
+            
+          } else if (action.type === 'give_currency') {
+            // Pre-load currency configuration state
+            const currencyStateKey = `${context.guildId}_${actionId}_currency_${actionIndex}`;
+            dropConfigState.set(currencyStateKey, {
+              limit: action.config?.limit?.type || null,
+              style: action.config?.style || null,
+              amount: action.config?.amount || action.amount || 0,
+              executeOn: action.executeOn || 'true'
+            });
+            
+            // Get custom terms and show config
+            const { getCustomTerms } = await import('./safariManager.js');
+            const customTerms = await getCustomTerms(context.guildId);
+            
+            console.log(`✅ SUCCESS: safari_edit_action - showing currency config`);
+            return await showGiveCurrencyConfig(context.guildId, actionId, actionIndex, customTerms);
+            
+          } else if (action.type === 'follow_up_button') {
+            // Get existing buttons to show in dropdown
+            const buttons = guildData.buttons || {};
+            const buttonOptions = Object.entries(buttons)
+              .filter(([id, btn]) => id !== actionId) // Don't include self
+              .map(([id, btn]) => ({
+                label: btn.name || btn.label || 'Unnamed',
+                value: id,
+                description: (`ID: ${id}` + (btn.actions?.length ? ` • ${btn.actions.length} actions` : '')).substring(0, 100),
+                emoji: { name: '🔗' },
+                default: (action.config?.buttonId || action.buttonId) === id
+              }));
+            
+            console.log(`✅ SUCCESS: safari_edit_action - showing follow-up selection`);
+            return {
+              components: [{
+                type: 17, // Container
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `# Edit Follow-up Button for ${button.name || 'Custom Action'}\n\nChoose which button should be triggered after this action completes.`
+                  },
+                  { type: 14 }, // Separator
+                  {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 3, // String Select
+                      custom_id: `safari_follow_up_select_${actionId}_${actionIndex}`,
+                      placeholder: 'Select follow-up button...',
+                      options: buttonOptions
+                    }]
+                  }
+                ]
+              }],
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              ephemeral: true
+            };
+          } else {
+            console.log(`❌ FAILURE: safari_edit_action - unsupported action type ${action.type}`);
+            return {
+              content: `❌ Editing ${action.type} actions is not yet supported.`,
+              ephemeral: true
+            };
+          }
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_drop_type_')) {
