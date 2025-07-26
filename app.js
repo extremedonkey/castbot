@@ -4552,37 +4552,69 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log('🔍 DEBUG: Navigation found', allApplications.length, 'applications');
 
         if (custom_id === 'ranking_view_all_scores') {
-          // Generate comprehensive score summary
-          let scoreSummary = `## All Cast Rankings | ${guild.name}\n\n`;
+          // Generate comprehensive score and casting summary
+          let scoreSummary = `## Cast Ranking & Status Summary | ${guild.name}\n\n`;
           
-          // Calculate scores for each applicant
-          const applicantScores = allApplications.map((app, index) => {
+          // Calculate scores and casting status for each applicant
+          const applicantData = allApplications.map((app, index) => {
             const rankings = playerData[guildId]?.rankings?.[app.channelId] || {};
             const scores = Object.values(rankings).filter(r => r !== undefined);
             const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+            const castingStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus || 'undecided';
             
             return {
               name: app.displayName || app.username,
               avgScore,
               voteCount: scores.length,
+              castingStatus,
               index: index + 1
             };
           });
           
-          // Sort by average score (highest first)
-          applicantScores.sort((a, b) => b.avgScore - a.avgScore);
+          // Group by casting status
+          const castGroups = {
+            cast: applicantData.filter(app => app.castingStatus === 'cast'),
+            tentative: applicantData.filter(app => app.castingStatus === 'tentative'), 
+            reject: applicantData.filter(app => app.castingStatus === 'reject'),
+            undecided: applicantData.filter(app => app.castingStatus === 'undecided')
+          };
           
-          // Build ranking display
-          scoreSummary += '> **Ranked by Average Score:**\n\n';
-          applicantScores.forEach((applicant, rank) => {
-            const medal = rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
-            const scoreDisplay = applicant.avgScore > 0 ? applicant.avgScore.toFixed(1) : 'Unrated';
-            scoreSummary += `${medal} **${applicant.name}** - ${scoreDisplay}/5.0 (${applicant.voteCount} vote${applicant.voteCount !== 1 ? 's' : ''})\n`;
+          // Sort each group by average score (highest first)
+          Object.values(castGroups).forEach(group => {
+            group.sort((a, b) => b.avgScore - a.avgScore);
           });
+          
+          // Build status sections
+          const statusSections = [
+            { key: 'cast', title: '✅ **CAST PLAYERS**', color: '🟢', group: castGroups.cast },
+            { key: 'tentative', title: '❓ **TENTATIVE**', color: '🔵', group: castGroups.tentative },
+            { key: 'reject', title: '🗑️ **DON\'T CAST**', color: '🔴', group: castGroups.reject },
+            { key: 'undecided', title: '⚪ **UNDECIDED**', color: '⚫', group: castGroups.undecided }
+          ];
+          
+          statusSections.forEach(section => {
+            if (section.group.length > 0) {
+              scoreSummary += `### ${section.title} (${section.group.length})\n`;
+              section.group.forEach((applicant, index) => {
+                const ranking = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
+                const scoreDisplay = applicant.avgScore > 0 ? applicant.avgScore.toFixed(1) : 'Unrated';
+                scoreSummary += `${ranking} **${applicant.name}** - ${scoreDisplay}/5.0 (${applicant.voteCount} vote${applicant.voteCount !== 1 ? 's' : ''})\n`;
+              });
+              scoreSummary += '\n';
+            }
+          });
+          
+          // Add overall statistics
+          scoreSummary += `---\n### 📊 **SUMMARY**\n`;
+          scoreSummary += `> **Total Applicants:** ${allApplications.length}\n`;
+          scoreSummary += `> **Cast:** ${castGroups.cast.length} | **Tentative:** ${castGroups.tentative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length}\n`;
+          
+          const totalScored = applicantData.filter(app => app.voteCount > 0).length;
+          scoreSummary += `> **Scored:** ${totalScored}/${allApplications.length} applicants\n`;
           
           const summaryContainer = {
             type: 17,
-            accent_color: 0xF39C12,
+            accent_color: 0x9B59B6, // Purple to match ranking interface
             components: [
               {
                 type: 10,
@@ -4906,6 +4938,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const rankings = Object.values(allRankings).filter(r => r !== undefined);
           const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
           
+          // Get casting status for display
+          const updatedCastingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
+          let castingStatusText = '';
+          if (updatedCastingStatus === 'cast') {
+            castingStatusText = '✅ Cast';
+          } else if (updatedCastingStatus === 'tentative') {
+            castingStatusText = '❓ Tentative';
+          } else if (updatedCastingStatus === 'reject') {
+            castingStatusText = '🗑️ Don\'t Cast';
+          } else {
+            castingStatusText = '⚪ Undecided';
+          }
+          
           const castRankingContainer = {
             type: 17,
             accent_color: 0x9B59B6,
@@ -4919,7 +4964,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               },
               {
                 type: 10,
-                content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**App:** <#${currentApp.channelId}>`
+                content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
               },
               galleryComponent,
               {
