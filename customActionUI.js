@@ -603,7 +603,7 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
       .setLabel('⬅ Back')
       .setStyle(2);
     
-    const buttonRow = new ActionRowBuilder().addComponents([configButton, backButton]);
+    const buttonRow = new ActionRowBuilder().addComponents([backButton, configButton]);
     
     components.push({ type: 14 }); // Separator
     components.push(buttonRow.toJSON());

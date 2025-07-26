@@ -11933,84 +11933,71 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
     } else if (custom_id.startsWith('custom_action_trigger_type_')) {
       // Handle trigger type selection
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        const selectedValue = req.body.data.values[0];
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to modify actions.')) return;
-        
-        const actionId = custom_id.replace('custom_action_trigger_type_', '');
-        
-        console.log(`🎯 Updating trigger type for ${actionId} to ${selectedValue}`);
-        
-        // Load and update button
-        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-        const allSafariContent = await loadSafariContent();
-        const guildData = allSafariContent[guildId] || {};
-        const button = guildData.buttons?.[actionId];
-        
-        if (!button) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_trigger_type',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: custom_action_trigger_type - user ${context.userId}`);
+          
+          const selectedValue = context.values[0];
+          const actionId = context.customId.replace('custom_action_trigger_type_', '');
+          
+          console.log(`🎯 Updating trigger type for ${actionId} to ${selectedValue}`);
+          
+          // Load and update button
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const guildData = allSafariContent[context.guildId] || {};
+          const button = guildData.buttons?.[actionId];
+          
+          if (!button) {
+            return {
               content: '❌ Action not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Update trigger type
-        if (!button.trigger) {
-          button.trigger = {};
-        }
-        button.trigger.type = selectedValue;
-        
-        // Set default configuration for new trigger type
-        switch (selectedValue) {
-          case 'button':
-            button.trigger.button = {
-              label: button.label || 'Click Me',
-              emoji: button.emoji || '⚡',
-              style: button.style || 1
+              ephemeral: true
             };
-            break;
-          case 'modal':
-            button.trigger.modal = {
-              keywords: [],
-              caseSensitive: false
-            };
-            break;
-          case 'select':
-            button.trigger.select = {
-              placeholder: 'Select an option',
-              options: []
-            };
-            break;
-        }
-        
-        await saveSafariContent(allSafariContent);
-        
-        // Show trigger configuration UI
-        const { createTriggerConfigUI } = await import('./customActionUI.js');
-        const configUI = await createTriggerConfigUI({ guildId, actionId });
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: configUI
-        });
-        
-      } catch (error) {
-        console.error('Error updating trigger type:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error updating trigger type.',
-            flags: InteractionResponseFlags.EPHEMERAL
           }
-        });
-      }
+          
+          // Update trigger type
+          if (!button.trigger) {
+            button.trigger = {};
+          }
+          button.trigger.type = selectedValue;
+          
+          // Set default configuration for new trigger type
+          switch (selectedValue) {
+            case 'button':
+              button.trigger.button = {
+                label: button.label || 'Click Me',
+                emoji: button.emoji || '⚡',
+                style: button.style || 1
+              };
+              break;
+            case 'modal':
+              button.trigger.modal = {
+                keywords: [],
+                caseSensitive: false
+              };
+              break;
+            case 'select':
+              button.trigger.select = {
+                placeholder: 'Select an option',
+                options: []
+              };
+              break;
+          }
+          
+          await saveSafariContent(allSafariContent);
+          
+          // Show trigger configuration UI
+          const { createTriggerConfigUI } = await import('./customActionUI.js');
+          const configUI = await createTriggerConfigUI({ guildId: context.guildId, actionId });
+          
+          console.log(`✅ SUCCESS: custom_action_trigger_type - updated to ${selectedValue}`);
+          return configUI;
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_player_menu') {
       // My Profile button - available to users with admin permissions
       try {
