@@ -285,6 +285,13 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           components: [
             {
               type: 2,
+              custom_id: `safari_finish_button_${actionId}`,
+              label: "⬅ Back to Location Manager",
+              style: 2, // Secondary (grey)
+              emoji: { name: "📍" }
+            },
+            {
+              type: 2,
               custom_id: `custom_action_test_${actionId}`,
               label: triggerType === 'modal' ? "Test Command" : "Test Action",
               style: 1, // Primary
@@ -297,13 +304,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               label: "Delete Action",
               style: 4, // Danger
               emoji: { name: "🗑️" }
-            },
-            {
-              type: 2,
-              custom_id: `safari_finish_button_${actionId}`,
-              label: "Close",
-              style: 3, // Success
-              emoji: { name: "✅" }
             }
           ]
         }

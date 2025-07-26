@@ -11521,13 +11521,13 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_finish_button',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        updateMessage: true, // Update the message to dismiss it
+        ephemeral: true,
         handler: async (context) => {
           const actionId = custom_id.replace('safari_finish_button_', '');
           console.log(`🔍 START: safari_finish_button_${actionId} - user ${context.userId}`);
           
-          // Load Safari data to get action details
-          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          // Load Safari data to get action details and find the coordinate
+          const { loadSafariContent } = await import('./safariManager.js');
           const allSafariContent = await loadSafariContent();
           const guildData = allSafariContent[context.guildId] || {};
           const action = guildData.buttons?.[actionId];
@@ -11539,79 +11539,30 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Update map coordinate assignments - COMPLETE BIDIRECTIONAL SYNC
-          // First, remove this action from all coordinates across all maps
-          if (guildData.maps) {
-            for (const mapId in guildData.maps) {
-              const map = guildData.maps[mapId];
-              if (map.coordinates) {
-                for (const coord in map.coordinates) {
-                  const coordData = map.coordinates[coord];
-                  if (coordData.buttons) {
-                    coordData.buttons = coordData.buttons.filter(id => id !== actionId);
-                  }
-                }
-              }
-            }
+          // Get the first coordinate assigned to this action (if any)
+          const coordinate = action.coordinates?.[0];
+          
+          if (!coordinate) {
+            // No coordinate assigned, go to Safari menu
+            return {
+              content: '❌ No location assigned to this action. Returning to Safari menu.',
+              ephemeral: true
+            };
           }
           
-          // Then, add this action to the coordinates it's assigned to
-          if (action.coordinates && action.coordinates.length > 0) {
-            // Ensure maps structure exists
-            if (!guildData.maps) guildData.maps = {};
-            
-            // Find all maps and add coordinate assignments
-            for (const mapId in guildData.maps) {
-              // Skip non-map properties
-              if (mapId === 'active' || typeof guildData.maps[mapId] !== 'object') continue;
-              
-              const map = guildData.maps[mapId];
-              if (!map.coordinates) map.coordinates = {};
-              
-              for (const coord of action.coordinates) {
-                if (!map.coordinates[coord]) {
-                  map.coordinates[coord] = {
-                    buttons: []
-                  };
-                }
-                
-                // Add action to coordinate if not already there
-                if (!map.coordinates[coord].buttons.includes(actionId)) {
-                  map.coordinates[coord].buttons.push(actionId);
-                }
-              }
-            }
-          }
+          console.log(`✅ SUCCESS: safari_finish_button_${actionId} - navigating back to location ${coordinate}`);
           
-          await saveSafariContent(allSafariContent);
+          // Show the Map Location Manager for this coordinate
+          const { createEntityManagementUI } = await import('./entityManagementUI.js');
+          const ui = await createEntityManagementUI({
+            entityType: 'map_cell',
+            guildId: context.guildId,
+            selectedId: coordinate,
+            mode: 'edit'
+          });
           
-          // Update anchor messages for all assigned coordinates
-          if (action.coordinates && action.coordinates.length > 0) {
-            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
-            const activeMapId = allSafariContent[context.guildId]?.maps?.active;
-            
-            for (const coord of action.coordinates) {
-              // Check if coordinate has an anchor message before trying to update
-              const coordData = allSafariContent[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
-              if (coordData?.anchorMessageId) {
-                try {
-                  await updateAnchorMessage(context.guildId, coord, context.client);
-                  console.log(`📍 Updated anchor message for ${coord}`);
-                } catch (error) {
-                  console.error(`Error updating anchor for ${coord}:`, error);
-                }
-              } else {
-                console.log(`⏭️ Skipping anchor update for ${coord} - no anchor message ID found`);
-              }
-            }
-          }
-          
-          console.log(`✅ SUCCESS: safari_finish_button_${actionId} - completed`);
-          
-          // Return a simple acknowledgment that will dismiss the ephemeral message
           return {
-            content: `✅ Custom Action "${action.label || actionId}" has been updated!`,
-            components: [], // Empty components to clear the UI
+            ...ui,
             ephemeral: true
           };
         }

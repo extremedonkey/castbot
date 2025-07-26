@@ -148,10 +148,17 @@ export const BUTTON_REGISTRY = {
 
   // Safari Button Management
   'safari_finish_button': {
-    label: '✅ Close',
-    description: 'Close the Custom Action Editor and dismiss the message',
-    emoji: '✅',
-    style: 'Success',
+    label: '⬅ Back to Location Manager',
+    description: 'Navigate back to the Map Location Manager',
+    emoji: '📍',
+    style: 'Secondary',
+    category: 'safari'
+  },
+  'map_location_actions': {
+    label: 'Location Actions',
+    description: 'View and manage actions for a map location',
+    emoji: '📍',
+    style: 'Primary',
     category: 'safari'
   },
 
@@ -911,13 +918,6 @@ export const BUTTON_REGISTRY = {
     emoji: '⚡',
     style: 'Primary',
     category: 'safari_execution'
-  },
-  'safari_finish_button_*': {
-    label: 'Close & Save',
-    description: 'Close action editor and update anchor messages',
-    emoji: '✅',
-    style: 'Success',
-    category: 'safari_management'
   },
   'safari_action_type_select': {
     label: 'Select Action Type',
