@@ -23875,7 +23875,7 @@ Are you sure you want to continue?`;
         });
         
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
             ...ui,
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
