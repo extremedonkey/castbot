@@ -485,6 +485,23 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map_admin'
   },
 
+  // Safari Currency Configuration (Custom Actions)
+  'safari_currency_style_*': {
+    label: 'Currency Style',
+    description: 'Configure currency button style for custom actions',
+    emoji: '🎨',
+    style: 'Secondary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
+  'safari_currency_save_*': {
+    label: 'Save Currency',
+    description: 'Save currency action configuration',
+    emoji: '✅',
+    style: 'Success',
+    category: 'safari_management'
+  },
+
   // Safari Map Admin
   'safari_map_admin': {
     label: 'Map Admin',
