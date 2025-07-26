@@ -619,8 +619,22 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
     });
   }
   
+  // Add back button for all trigger types (except modal which already has one)
+  if (action.trigger?.type !== 'modal') {
+    const backButton = new ButtonBuilder()
+      .setCustomId(`custom_action_editor_${actionId}`)
+      .setLabel('⬅ Back')
+      .setStyle(2); // Secondary
+    
+    const backButtonRow = new ActionRowBuilder().addComponents([backButton]);
+    
+    components.push({ type: 14 }); // Separator
+    components.push(backButtonRow.toJSON());
+  }
+  
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true, // Admin-only trigger configuration - hidden from players
     components: [{
       type: 17, // Container
       components: components
