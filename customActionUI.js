@@ -1463,9 +1463,19 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
   const button = safariData[guildId]?.buttons?.[buttonId];
   const action = button?.actions?.[actionIndex];
   
-  if (!action || action.type !== 'display_text') {
+  // If no action exists at this index, or it's not a display_text action, we're creating a new one
+  // Only error if the button itself doesn't exist
+  if (!button) {
     return {
-      content: '❌ Display text action not found.',
+      content: '❌ Button not found.',
+      ephemeral: true
+    };
+  }
+  
+  // For existing actions, validate they are display_text type
+  if (action && action.type !== 'display_text') {
+    return {
+      content: '❌ Action exists but is not a display text action.',
       ephemeral: true
     };
   }
@@ -1475,7 +1485,7 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
   
   const modal = new ModalBuilder()
     .setCustomId(`safari_display_text_save_${buttonId}_${actionIndex}`)
-    .setTitle('Edit Text Display Action');
+    .setTitle(action ? 'Edit Text Display Action' : 'Create Text Display Action');
 
   const titleInput = new TextInputBuilder()
     .setCustomId('action_title')
@@ -1484,7 +1494,7 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
     .setMaxLength(100)
-    .setValue(action.config?.title || action.title || '');
+    .setValue(action?.config?.title || action?.title || '');
 
   const contentInput = new TextInputBuilder()
     .setCustomId('action_content')
@@ -1493,7 +1503,7 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
     .setStyle(TextInputStyle.Paragraph)
     .setRequired(true)
     .setMaxLength(2000)
-    .setValue(action.config?.content || action.content || '');
+    .setValue(action?.config?.content || action?.content || '');
 
   const colorInput = new TextInputBuilder()
     .setCustomId('action_color')
@@ -1502,7 +1512,7 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
     .setMaxLength(10)
-    .setValue(action.config?.color || action.color || '');
+    .setValue(action?.config?.color || action?.color || '');
 
   const imageInput = new TextInputBuilder()
     .setCustomId('action_image')
@@ -1511,7 +1521,7 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
     .setMaxLength(500)
-    .setValue(action.config?.image || action.image || '');
+    .setValue(action?.config?.image || action?.image || '');
 
   const executeOnInput = new TextInputBuilder()
     .setCustomId('action_execute_on')
@@ -1520,7 +1530,7 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
     .setMaxLength(10)
-    .setValue(action.executeOn || 'true');
+    .setValue(action?.executeOn || 'true');
 
   modal.addComponents(
     new ActionRowBuilder().addComponents(titleInput),
