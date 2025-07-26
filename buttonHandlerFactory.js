@@ -913,7 +913,7 @@ export const BUTTON_REGISTRY = {
   'admin_test_command_*': {
     label: 'Test Command',
     description: 'Admin test command triggers at this location',
-    emoji: '⌨️',
+    emoji: '🧪',
     style: 'Secondary',
     category: 'safari_admin'
   },

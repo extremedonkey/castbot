@@ -326,7 +326,7 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
             style: 2, // Secondary (grey)
             label: 'Test Command',
             custom_id: `admin_test_command_${entityId}`,
-            emoji: { name: '⌨️' }
+            emoji: { name: '🧪' }
         });
     }
     
