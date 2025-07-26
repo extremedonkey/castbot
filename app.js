@@ -10383,15 +10383,29 @@ Your server is now ready for Tycoons gameplay!`;
           const customIdWithoutPrefix = context.customId.replace('safari_follow_up_select_', '');
           let buttonId, actionIndex;
           
-          // Check if this is an edit case (has actionIndex at the end)
+          // Load safari data to check if this is edit mode by checking button existence
+          const { loadSafariContent, saveSafariContent, getCustomButton } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const buttons = safariData[context.guildId]?.buttons || {};
+          
+          // Check if this is edit mode: safari_follow_up_select_${actionId}_${actionIndex}
+          // vs new mode: safari_follow_up_select_${buttonId}
           const parts = customIdWithoutPrefix.split('_');
           const lastPart = parts[parts.length - 1];
           
+          // If last part is a number AND the remaining parts form a valid button ID, it's edit mode
           if (!isNaN(parseInt(lastPart))) {
-            // Edit case: safari_follow_up_select_${actionId}_${actionIndex}
-            actionIndex = parseInt(lastPart);
-            buttonId = parts.slice(0, -1).join('_');
-            console.log(`🔗 EDIT MODE: safari_follow_up_select - editing action ${actionIndex} for button ${buttonId}`);
+            const possibleButtonId = parts.slice(0, -1).join('_');
+            if (buttons[possibleButtonId]) {
+              // Edit case: safari_follow_up_select_${actionId}_${actionIndex}
+              actionIndex = parseInt(lastPart);
+              buttonId = possibleButtonId;
+              console.log(`🔗 EDIT MODE: safari_follow_up_select - editing action ${actionIndex} for button ${buttonId}`);
+            } else {
+              // New case where button ID happens to end with a number
+              buttonId = customIdWithoutPrefix;
+              console.log(`🔗 NEW MODE: safari_follow_up_select - adding new action for button ${buttonId} (ends with number)`);
+            }
           } else {
             // New case: safari_follow_up_select_${buttonId}
             buttonId = customIdWithoutPrefix;
@@ -10409,9 +10423,7 @@ Your server is now ready for Tycoons gameplay!`;
           
           console.log(`🔗 START: safari_follow_up_select - button ${buttonId}, follow-up ${followUpButtonId}, actionIndex: ${actionIndex}`);
           
-          // Load safari data to validate target button exists
-          const { loadSafariContent, saveSafariContent, getCustomButton } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
+          // Validate target button exists (reuse already loaded data)
           const targetButton = await getCustomButton(context.guildId, followUpButtonId);
           
           if (!targetButton) {
