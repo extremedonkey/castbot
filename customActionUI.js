@@ -1422,6 +1422,38 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
         
         { type: 14 }, // Separator
         
+        // Execution Condition section
+        {
+          type: 10,
+          content: '### Execution Condition\nWhen should this action be triggered?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_display_text_execute_on_${buttonId}_${actionIndex}`,
+            placeholder: 'Select when to execute...',
+            options: [
+              {
+                label: 'Execute if conditions are TRUE',
+                value: 'true',
+                description: 'Only execute when conditions are met',
+                emoji: { name: '✅' },
+                default: (action?.executeOn || 'true') === 'true'
+              },
+              {
+                label: 'Execute if conditions are FALSE',
+                value: 'false',
+                description: 'Only execute when conditions are NOT met',
+                emoji: { name: '❌' },
+                default: (action?.executeOn || 'true') === 'false'
+              }
+            ]
+          }]
+        },
+        
+        { type: 14 }, // Separator
+        
         // Action buttons
         {
           type: 1, // Action Row
@@ -1538,19 +1570,9 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
     .setMaxLength(500)
     .setValue(action?.config?.image || action?.image || '');
 
-  const executeOnInput = new TextInputBuilder()
-    .setCustomId('action_execute_on')
-    .setLabel('Execute when conditions are (true/false)')
-    .setPlaceholder('Type true to execute if all conditions are met, type false to execute if conditions are not met')
-    .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setMaxLength(10)
-    .setValue(action?.executeOn || 'true');
-
   modal.addComponents(
     new ActionRowBuilder().addComponents(titleInput),
     new ActionRowBuilder().addComponents(contentInput),
-    new ActionRowBuilder().addComponents(executeOnInput),
     new ActionRowBuilder().addComponents(colorInput),
     new ActionRowBuilder().addComponents(imageInput)
   );
@@ -1570,13 +1592,12 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
   
   console.log(`💾 SAVE: safari_display_text_save - saving display_text for ${buttonId}[${actionIndex}]`);
   
-  // Extract form data
+  // Extract form data (executeOn now handled by entity string select)
   const components = formData.components;
   const title = components[0].components[0].value?.trim() || '';
   const content = components[1].components[0].value?.trim();
-  const executeOn = components[2].components[0].value?.trim() || 'true';
-  const color = components[3].components[0].value?.trim() || '';
-  const image = components[4].components[0].value?.trim() || '';
+  const color = components[2].components[0].value?.trim() || '';
+  const image = components[3].components[0].value?.trim() || '';
   
   if (!content) {
     return {
@@ -1609,11 +1630,15 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
     actionConfig.color = color;
   }
   
+  // Preserve existing executeOn value or default to 'true'
+  const existingAction = button.actions?.[actionIndex];
+  const executeOnValue = existingAction?.executeOn || 'true';
+  
   const action = {
     type: 'display_text',
     order: actionIndex,
     config: actionConfig,
-    executeOn: executeOn
+    executeOn: executeOnValue
   };
   
   // Initialize actions array if needed
@@ -1662,6 +1687,52 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
   };
 }
 
+export async function handleDisplayTextExecuteOn(guildId, customId, executeOnValue) {
+  // Parse buttonId and actionIndex from custom_id: safari_display_text_execute_on_buttonId_actionIndex
+  const parts = customId.replace('safari_display_text_execute_on_', '').split('_');
+  const actionIndex = parseInt(parts[parts.length - 1]);
+  const buttonId = parts.slice(0, -1).join('_');
+  
+  console.log(`🎯 EXECUTE ON: safari_display_text_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}]`);
+  
+  // Load and update safari data
+  const { saveSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  
+  if (!button || !button.actions?.[actionIndex]) {
+    return {
+      content: '❌ Display text action not found.',
+      ephemeral: true
+    };
+  }
+  
+  // Update the executeOn value
+  button.actions[actionIndex].executeOn = executeOnValue;
+  
+  // Update metadata
+  if (!button.metadata) {
+    button.metadata = {
+      createdAt: Date.now(),
+      lastModified: Date.now(),
+      usageCount: 0
+    };
+  } else {
+    button.metadata.lastModified = Date.now();
+  }
+  
+  await saveSafariContent(safariData);
+  
+  // Return updated Display Text Configuration entity
+  const updatedConfig = await showDisplayTextConfig(guildId, buttonId, actionIndex);
+  
+  console.log(`✅ SUCCESS: safari_display_text_execute_on - updated to ${executeOnValue}`);
+  return {
+    ...updatedConfig,
+    ephemeral: true
+  };
+}
+
 export default {
   createCustomActionSelectionUI,
   createCustomActionEditorUI,
@@ -1672,5 +1743,6 @@ export default {
   showConditionEditor,
   showDisplayTextConfig,
   handleDisplayTextEdit,
-  handleDisplayTextSave
+  handleDisplayTextSave,
+  handleDisplayTextExecuteOn
 };

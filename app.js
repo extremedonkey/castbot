@@ -4099,6 +4099,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_currency_execute_on_') &&
         !custom_id.startsWith('safari_item_execute_on_') &&
         !custom_id.startsWith('safari_display_text_edit_') &&
+        !custom_id.startsWith('safari_display_text_execute_on_') &&
         custom_id !== 'safari_map_init_player' &&
         custom_id !== 'safari_post_select_button' &&
         custom_id !== 'safari_confirm_reset_game' && 
@@ -11794,6 +11795,21 @@ Your server is now ready for Tycoons gameplay!`;
           
           const { handleDisplayTextEdit } = await import('./customActionUI.js');
           const result = await handleDisplayTextEdit(context.guildId, context.userId, context.customId);
+          
+          return result;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_display_text_execute_on_')) {
+      // Handle display text execute on condition changes
+      return ButtonHandlerFactory.create({
+        id: 'safari_display_text_execute_on',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_display_text_execute_on - user ${context.userId}`);
+          
+          const { handleDisplayTextExecuteOn } = await import('./customActionUI.js');
+          const result = await handleDisplayTextExecuteOn(context.guildId, context.customId, context.values[0]);
           
           return result;
         }
