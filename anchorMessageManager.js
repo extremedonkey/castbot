@@ -136,9 +136,29 @@ async function updateSingleAnchor(guildId, coordinate) {
       return true;
     }
     
-    // Get fog map URL from existing implementation
+    // Get fog map URL from existing message
     let fogMapUrl = null;
-    // TODO: Implement fog map URL recovery logic
+    try {
+      const { DiscordRequest } = await import('./utils.js');
+      const message = await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+        method: 'GET'
+      });
+      
+      // Check all components for media gallery
+      for (const container of message.components || []) {
+        for (const component of container.components || []) {
+          if (component.type === 12) { // Media gallery
+            fogMapUrl = component.items?.[0]?.media?.url;
+            if (fogMapUrl) break;
+          }
+        }
+        if (fogMapUrl) break;
+      }
+      
+      console.log(`🔍 Found fog map URL for ${coordinate}: ${fogMapUrl}`);
+    } catch (error) {
+      console.log(`⚠️ Could not retrieve existing message for ${coordinate}: ${error.message}`);
+    }
     
     // Create updated components
     const components = await createAnchorMessageComponents(coordData, guildId, coordinate, fogMapUrl);

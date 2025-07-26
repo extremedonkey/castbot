@@ -86,8 +86,8 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
     }
     
     // Use the ORIGINAL button label from safariContent.json - NEVER override with action content
-    // Support both legacy (button.label) and new structure (button.trigger.button.label)
-    let label = button.label || button.trigger?.button?.label || 'Action'; // Default fallback
+    // Support current (button.name), legacy (button.label) and new structure (button.trigger.button.label)
+    let label = button.name || button.label || button.trigger?.button?.label || 'Action'; // Default fallback
     
     // ❌ REMOVED: The following logic was WRONG - it was overriding the button label
     //     with display_text action titles, causing "Fresh Meat" to become "Text Display One"
