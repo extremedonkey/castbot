@@ -4098,6 +4098,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_currency_reset_') &&
         !custom_id.startsWith('safari_currency_execute_on_') &&
         !custom_id.startsWith('safari_item_execute_on_') &&
+        !custom_id.startsWith('safari_display_text_edit_') &&
         custom_id !== 'safari_map_init_player' &&
         custom_id !== 'safari_post_select_button' &&
         custom_id !== 'safari_confirm_reset_game' && 
