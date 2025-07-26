@@ -10182,10 +10182,11 @@ Your server is now ready for Tycoons gameplay!`;
             return {
               components: [{
                 type: 17, // Container
+                accent_color: 0x8B5CF6, // Purple accent for follow-up actions
                 components: [
                   {
                     type: 10, // Text Display
-                    content: `# Select Follow-up Button for ${button.name || 'Custom Action'}\n\nChoose which button should be triggered after this action completes.`
+                    content: `# Select Follow-up Action for ${button.name || 'Custom Action'}\n\nChoose which action should be triggered after this action completes.`
                   },
                   { type: 14 }, // Separator
                   {
@@ -10193,7 +10194,7 @@ Your server is now ready for Tycoons gameplay!`;
                     components: [{
                       type: 3, // String Select
                       custom_id: `safari_follow_up_select_${buttonId}`,
-                      placeholder: 'Select a button to chain to...',
+                      placeholder: 'Select action to chain to...',
                       options: buttonOptions
                     }]
                   }
@@ -10379,17 +10380,34 @@ Your server is now ready for Tycoons gameplay!`;
         permissionName: 'Manage Roles',
         updateMessage: true,
         handler: async (context) => {
-          const buttonId = context.customId.replace('safari_follow_up_select_', '');
+          const customIdWithoutPrefix = context.customId.replace('safari_follow_up_select_', '');
+          let buttonId, actionIndex;
+          
+          // Check if this is an edit case (has actionIndex at the end)
+          const parts = customIdWithoutPrefix.split('_');
+          const lastPart = parts[parts.length - 1];
+          
+          if (!isNaN(parseInt(lastPart))) {
+            // Edit case: safari_follow_up_select_${actionId}_${actionIndex}
+            actionIndex = parseInt(lastPart);
+            buttonId = parts.slice(0, -1).join('_');
+            console.log(`🔗 EDIT MODE: safari_follow_up_select - editing action ${actionIndex} for button ${buttonId}`);
+          } else {
+            // New case: safari_follow_up_select_${buttonId}
+            buttonId = customIdWithoutPrefix;
+            console.log(`🔗 NEW MODE: safari_follow_up_select - adding new action for button ${buttonId}`);
+          }
+          
           const followUpButtonId = context.values?.[0];
           
           if (!followUpButtonId) {
             return {
-              content: '❌ No follow-up button selected.',
+              content: '❌ No follow-up action selected.',
               ephemeral: true
             };
           }
           
-          console.log(`🔗 START: safari_follow_up_select - button ${buttonId}, follow-up ${followUpButtonId}`);
+          console.log(`🔗 START: safari_follow_up_select - button ${buttonId}, follow-up ${followUpButtonId}, actionIndex: ${actionIndex}`);
           
           // Load safari data to validate target button exists
           const { loadSafariContent, saveSafariContent, getCustomButton } = await import('./safariManager.js');
@@ -10398,12 +10416,12 @@ Your server is now ready for Tycoons gameplay!`;
           
           if (!targetButton) {
             return {
-              content: '❌ Target follow-up button not found.',
+              content: '❌ Target follow-up action not found.',
               ephemeral: true
             };
           }
           
-          // Get current button to determine action index
+          // Get current button to determine action index for new actions
           const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
           if (!currentButton) {
             return {
@@ -10412,10 +10430,12 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Determine the action index (for new action)
-          const actionIndex = currentButton.actions?.length || 0;
+          // For new actions, determine the action index
+          if (actionIndex === undefined) {
+            actionIndex = currentButton.actions?.length || 0;
+          }
           
-          console.log(`✅ SUCCESS: safari_follow_up_select - showing config for follow-up ${followUpButtonId} on ${buttonId}`);
+          console.log(`✅ SUCCESS: safari_follow_up_select - showing config for follow-up ${followUpButtonId} on ${buttonId}[${actionIndex}]`);
           
           // Show the follow-up configuration UI instead of immediately adding
           return await showFollowUpConfig(context.guildId, buttonId, followUpButtonId, actionIndex);
@@ -11752,42 +11772,27 @@ Your server is now ready for Tycoons gameplay!`;
             return await showGiveCurrencyConfig(context.guildId, actionId, actionIndex, customTerms);
             
           } else if (action.type === 'follow_up_button') {
-            // Get existing buttons to show in dropdown
-            const buttons = guildData.buttons || {};
-            const buttonOptions = Object.entries(buttons)
-              .filter(([id, btn]) => id !== actionId) // Don't include self
-              .map(([id, btn]) => ({
-                label: btn.name || btn.label || 'Unnamed',
-                value: id,
-                description: (`ID: ${id}` + (btn.actions?.length ? ` • ${btn.actions.length} actions` : '')).substring(0, 100),
-                emoji: { name: '🔗' },
-                default: (action.config?.buttonId || action.buttonId) === id
-              }));
+            // Get the target button ID from existing action
+            const targetButtonId = action.config?.buttonId || action.buttonId;
             
-            console.log(`✅ SUCCESS: safari_edit_action - showing follow-up selection`);
-            return {
-              components: [{
-                type: 17, // Container
-                components: [
-                  {
-                    type: 10, // Text Display
-                    content: `# Edit Follow-up Button for ${button.name || 'Custom Action'}\n\nChoose which button should be triggered after this action completes.`
-                  },
-                  { type: 14 }, // Separator
-                  {
-                    type: 1, // Action Row
-                    components: [{
-                      type: 3, // String Select
-                      custom_id: `safari_follow_up_select_${actionId}_${actionIndex}`,
-                      placeholder: 'Select follow-up button...',
-                      options: buttonOptions
-                    }]
-                  }
-                ]
-              }],
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              ephemeral: true
-            };
+            if (!targetButtonId) {
+              return {
+                content: '❌ Follow-up action missing target button configuration.',
+                ephemeral: true
+              };
+            }
+            
+            console.log(`✅ SUCCESS: safari_edit_action - bypassing selection, going direct to config for follow-up ${targetButtonId}`);
+            
+            // Pre-load the existing action configuration into state
+            const stateKey = `${context.guildId}_${actionId}_followup_${actionIndex}`;
+            dropConfigState.set(stateKey, {
+              targetButtonId: targetButtonId,
+              executeOn: action.executeOn || 'true'
+            });
+            
+            // Go directly to the configuration UI with pre-loaded values
+            return await showFollowUpConfig(context.guildId, actionId, targetButtonId, actionIndex);
           } else {
             console.log(`❌ FAILURE: safari_edit_action - unsupported action type ${action.type}`);
             return {
@@ -25651,7 +25656,7 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
         components: [
           {
             type: 10, // Text Display
-            content: `## 🔗 Follow-up Button Configuration\nConfiguring follow-up action for **${targetButton.name}**`
+            content: `## 🔗 Follow-up Action Configuration\nConfiguring follow-up action for **${targetButton.name}**`
           },
           
           { type: 14 }, // Separator
@@ -25667,7 +25672,7 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
           // Execute on selector
           {
             type: 10,
-            content: '### Execution Condition\nWhen should this follow-up button be triggered?'
+            content: '### Execution Condition\nWhen should this follow-up action be triggered?'
           },
           {
             type: 1, // Action Row

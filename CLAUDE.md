@@ -235,6 +235,7 @@ const response = {
 - NEVER use `content` field with `IS_COMPONENTS_V2` flag
 - ALWAYS use Container (type 17) for visual grouping
 - Use Text Display (type 10) instead of content field
+- **ALWAYS set `ephemeral: true`** - ALL Discord responses should be ephemeral unless explicitly stated otherwise
 - Reference: [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
 
 ## 🚀 Discord Button Implementation
