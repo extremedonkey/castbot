@@ -1437,7 +1437,7 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
             {
               type: 2, // Button
               custom_id: `custom_action_editor_${buttonId}`,
-              label: 'Back',
+              label: '← Back',
               style: 2, // Secondary
               emoji: { name: '⚡' }
             }
