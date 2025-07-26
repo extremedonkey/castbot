@@ -1555,7 +1555,7 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
   const colorInput = new TextInputBuilder()
     .setCustomId('action_color')
     .setLabel('Accent Color (optional)')
-    .setPlaceholder('e.g., #3498db or 3447003')
+    .setPlaceholder('e.g., #3498db or ff5722')
     .setStyle(TextInputStyle.Short)
     .setRequired(false)
     .setMaxLength(10)
@@ -1700,10 +1700,29 @@ export async function handleDisplayTextExecuteOn(guildId, customId, executeOnVal
   const safariData = await loadSafariContent();
   const button = safariData[guildId]?.buttons?.[buttonId];
   
-  if (!button || !button.actions?.[actionIndex]) {
+  if (!button) {
     return {
-      content: '❌ Display text action not found.',
+      content: '❌ Button not found.',
       ephemeral: true
+    };
+  }
+  
+  // Initialize actions array if needed
+  if (!button.actions) {
+    button.actions = [];
+  }
+  
+  // Create action if it doesn't exist (for new actions)
+  if (!button.actions[actionIndex]) {
+    button.actions[actionIndex] = {
+      type: 'display_text',
+      order: actionIndex,
+      config: {
+        title: '',
+        content: '',
+        image: ''
+      },
+      executeOn: 'true'
     };
   }
   
