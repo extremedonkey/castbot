@@ -10211,8 +10211,19 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // For display_text and update_currency, delegate to safari_add_action handler
-          if (actionType === 'display_text' || actionType === 'update_currency') {
+          // For display_text, show new entity interface
+          if (actionType === 'display_text') {
+            // Determine the action index for new action
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
+            const actionIndex = currentButton?.actions?.length || 0;
+            
+            console.log(`✅ SUCCESS: safari_action_type_select - showing display_text entity for ${buttonId}[${actionIndex}]`);
+            return await showDisplayTextConfig(context.guildId, buttonId, actionIndex);
+            
+          // For update_currency, delegate to safari_add_action handler  
+          } else if (actionType === 'update_currency') {
             // Simulate the safari_add_action custom_id and call its handler
             const simulatedCustomId = `safari_add_action_${buttonId}_${actionType}`;
             req.body.data.custom_id = simulatedCustomId;
@@ -10233,70 +10244,10 @@ Your server is now ready for Tycoons gameplay!`;
               type: 2
             };
             
-            // Actually, we need to just create the modal here with the correct format
+            // Create the modal for update_currency
             const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
             
-            if (actionType === 'display_text') {
-              const modal = new ModalBuilder()
-                .setCustomId(`safari_action_modal_${buttonId}_display_text`)
-                .setTitle('Add Text Display Action');
-
-              const titleInput = new TextInputBuilder()
-                .setCustomId('action_title')
-                .setLabel('Title (optional)')
-                .setPlaceholder('e.g., "Welcome to the Adventure!"')
-                .setStyle(TextInputStyle.Short)
-                .setRequired(false)
-                .setMaxLength(100);
-
-              const contentInput = new TextInputBuilder()
-                .setCustomId('action_content')
-                .setLabel('Content')
-                .setPlaceholder('The text to display when the button is clicked...')
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(true)
-                .setMaxLength(2000);
-
-              const colorInput = new TextInputBuilder()
-                .setCustomId('action_color')
-                .setLabel('Accent Color (optional)')
-                .setPlaceholder('e.g., #3498db or 3447003')
-                .setStyle(TextInputStyle.Short)
-                .setRequired(false)
-                .setMaxLength(10);
-
-              const imageInput = new TextInputBuilder()
-                .setCustomId('action_image')
-                .setLabel('Image URL (Optional)')
-                .setPlaceholder('Enter link of an image you have uploaded to Discord.')
-                .setStyle(TextInputStyle.Short)
-                .setRequired(false)
-                .setMaxLength(500);
-
-              const executeOnInput = new TextInputBuilder()
-                .setCustomId('action_execute_on')
-                .setLabel('Execute when conditions are (true/false)')
-                .setPlaceholder('Type true to execute if all conditions are met, type false to execute if conditions are not met')
-                .setStyle(TextInputStyle.Short)
-                .setRequired(false)
-                .setMaxLength(10)
-                .setValue('true'); // Pre-populate with 'true'
-
-              modal.addComponents(
-                new ActionRowBuilder().addComponents(titleInput),
-                new ActionRowBuilder().addComponents(contentInput),
-                new ActionRowBuilder().addComponents(executeOnInput),
-                new ActionRowBuilder().addComponents(colorInput),
-                new ActionRowBuilder().addComponents(imageInput)
-              );
-              
-              console.log(`✅ SUCCESS: safari_action_type_select - showing display_text modal`);
-              return {
-                type: InteractionResponseType.MODAL,
-                data: modal.toJSON()
-              };
-              
-            } else if (actionType === 'update_currency') {
+            if (actionType === 'update_currency') {
               const modal = new ModalBuilder()
                 .setCustomId(`safari_action_modal_${buttonId}_update_currency`)
                 .setTitle('Add Currency Change Action');
@@ -11814,6 +11765,12 @@ Your server is now ready for Tycoons gameplay!`;
             
             // Go directly to the configuration UI with pre-loaded values
             return await showFollowUpConfig(context.guildId, actionId, targetButtonId, actionIndex);
+            
+          } else if (action.type === 'display_text') {
+            // Show display text configuration entity
+            console.log(`✅ SUCCESS: safari_edit_action - showing display_text config for ${actionId}[${actionIndex}]`);
+            return await showDisplayTextConfig(context.guildId, actionId, actionIndex);
+            
           } else {
             console.log(`❌ FAILURE: safari_edit_action - unsupported action type ${action.type}`);
             return {
@@ -11821,6 +11778,102 @@ Your server is now ready for Tycoons gameplay!`;
               ephemeral: true
             };
           }
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_display_text_edit_')) {
+      // Handle Edit Text button for display_text actions
+      return ButtonHandlerFactory.create({
+        id: 'safari_display_text_edit',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_display_text_edit - user ${context.userId}`);
+          
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_display_text_edit_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          
+          console.log(`✏️ Editing display_text action ${actionIndex} for button ${buttonId}`);
+          
+          // Load existing action data
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          const action = button?.actions?.[actionIndex];
+          
+          if (!action || action.type !== 'display_text') {
+            return {
+              content: '❌ Display text action not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Create modal with pre-filled values from existing action
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+          
+          const modal = new ModalBuilder()
+            .setCustomId(`safari_display_text_save_${buttonId}_${actionIndex}`)
+            .setTitle('Edit Text Display Action');
+
+          const titleInput = new TextInputBuilder()
+            .setCustomId('action_title')
+            .setLabel('Title (optional)')
+            .setPlaceholder('e.g., "Welcome to the Adventure!"')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(100)
+            .setValue(action.config?.title || action.title || '');
+
+          const contentInput = new TextInputBuilder()
+            .setCustomId('action_content')
+            .setLabel('Content')
+            .setPlaceholder('The text to display when the button is clicked...')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setMaxLength(2000)
+            .setValue(action.config?.content || action.content || '');
+
+          const colorInput = new TextInputBuilder()
+            .setCustomId('action_color')
+            .setLabel('Accent Color (optional)')
+            .setPlaceholder('e.g., #3498db or 3447003')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(10)
+            .setValue(action.config?.color || action.color || '');
+
+          const imageInput = new TextInputBuilder()
+            .setCustomId('action_image')
+            .setLabel('Image URL (Optional)')
+            .setPlaceholder('Enter link of an image you have uploaded to Discord.')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(500)
+            .setValue(action.config?.image || action.image || '');
+
+          const executeOnInput = new TextInputBuilder()
+            .setCustomId('action_execute_on')
+            .setLabel('Execute when conditions are (true/false)')
+            .setPlaceholder('Type true to execute if all conditions are met, type false to execute if conditions are not met')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(10)
+            .setValue(action.executeOn || 'true');
+
+          modal.addComponents(
+            new ActionRowBuilder().addComponents(titleInput),
+            new ActionRowBuilder().addComponents(contentInput),
+            new ActionRowBuilder().addComponents(executeOnInput),
+            new ActionRowBuilder().addComponents(colorInput),
+            new ActionRowBuilder().addComponents(imageInput)
+          );
+          
+          console.log(`✅ SUCCESS: safari_display_text_edit - showing edit modal for ${buttonId}[${actionIndex}]`);
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_drop_type_')) {
@@ -15421,7 +15474,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           });
           
           console.log(`✅ SUCCESS: entity_action_trigger - showing trigger config`);
-          return ui;
+          return {
+            ...ui,
+            ephemeral: true // This will dismiss the Custom Action Editor and show trigger config privately
+          };
         }
       })(req, res, client);
       
@@ -22049,6 +22105,125 @@ Are you sure you want to continue?`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_display_text_save_')) {
+      // Handle display text edit/save modal submissions
+      try {
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to edit actions.')) return;
+
+        // Parse buttonId and actionIndex from custom_id: safari_display_text_save_buttonId_actionIndex
+        const parts = custom_id.replace('safari_display_text_save_', '').split('_');
+        const actionIndex = parseInt(parts[parts.length - 1]);
+        const buttonId = parts.slice(0, -1).join('_');
+        
+        console.log(`💾 SAVE: safari_display_text_save - saving display_text for ${buttonId}[${actionIndex}]`);
+        
+        // Extract form data
+        const components = req.body.data.components;
+        const title = components[0].components[0].value?.trim() || '';
+        const content = components[1].components[0].value?.trim();
+        const executeOn = components[2].components[0].value?.trim() || 'true';
+        const color = components[3].components[0].value?.trim() || '';
+        const image = components[4].components[0].value?.trim() || '';
+        
+        if (!content) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Content is required for display text actions.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Load and update safari data
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const button = safariData[guildId]?.buttons?.[buttonId];
+        
+        if (!button) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Button not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create or update the action
+        const action = {
+          type: 'display_text',
+          order: actionIndex,
+          config: {
+            title: title,
+            content: content,
+            color: color,
+            image: image
+          },
+          executeOn: executeOn
+        };
+        
+        // Initialize actions array if needed
+        if (!button.actions) {
+          button.actions = [];
+        }
+        
+        // Add or update the action (same logic as other save handlers)
+        if (actionIndex < button.actions.length) {
+          console.log(`✏️ Updating existing display_text action at index ${actionIndex}`);
+          button.actions[actionIndex] = action;
+        } else {
+          console.log(`➕ Adding new display_text action at index ${actionIndex}`);
+          button.actions.push(action);
+        }
+        
+        // Update metadata
+        if (!button.metadata) {
+          button.metadata = {
+            createdAt: Date.now(),
+            lastModified: Date.now(),
+            usageCount: 0
+          };
+        } else {
+          button.metadata.lastModified = Date.now();
+        }
+        
+        await saveSafariContent(safariData);
+        console.log(`✅ Safari content saved successfully`);
+        
+        // Update anchor messages for all coordinates using this action
+        try {
+          const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+          await queueActionCoordinateUpdates(guildId, buttonId, 'display_text_saved');
+        } catch (error) {
+          console.error('Error queueing anchor updates:', error);
+        }
+        
+        console.log(`✅ SUCCESS: safari_display_text_save - saved display_text for ${buttonId}[${actionIndex}]`);
+        
+        // Return to the display text configuration entity
+        const updatedConfig = await showDisplayTextConfig(guildId, buttonId, actionIndex);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            ...updatedConfig,
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_display_text_save handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error saving display text action.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id === 'create_season_modal') {
       try {
         console.log('Processing create_season_modal submission');
@@ -25871,5 +26046,101 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
       }],
       flags: (1 << 15), // IS_COMPONENTS_V2
       ephemeral: true
+  };
+}
+
+/**
+ * Show configuration UI for display_text action
+ */
+async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
+  // Load safari data to get existing action information
+  const { loadSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  
+  let action = null;
+  let isEdit = false;
+  
+  if (button && button.actions && button.actions[actionIndex]) {
+    action = button.actions[actionIndex];
+    isEdit = true;
+  }
+  
+  // Build preview text for existing action
+  let previewText = "No content configured yet";
+  if (action && action.type === 'display_text') {
+    const title = action.config?.title || action.title || '';
+    const content = action.config?.content || action.content || '';
+    
+    if (title && content) {
+      previewText = `**${title}**\n${content.substring(0, 100)}${content.length > 100 ? '...' : ''}`;
+    } else if (content) {
+      previewText = content.substring(0, 150) + (content.length > 150 ? '...' : '');
+    } else if (title) {
+      previewText = `**${title}**\n*No content*`;
+    }
+  }
+  
+  // Build the configuration UI
+  return {
+    components: [{
+      type: 17, // Container
+      accent_color: 0x3498db, // Blue accent for text actions
+      components: [
+        {
+          type: 10, // Text Display
+          content: `## 📝 Display Text Configuration\n${isEdit ? 'Editing' : 'Creating'} text display action`
+        },
+        
+        { type: 14 }, // Separator
+        
+        // Text preview
+        {
+          type: 10,
+          content: `### Preview\n${previewText}`
+        },
+        
+        { type: 14 }, // Separator
+        
+        // Action buttons
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `safari_display_text_edit_${buttonId}_${actionIndex}`,
+              label: 'Edit Text',
+              style: 2, // Secondary
+              emoji: { name: '✏️' }
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+              label: 'Delete Action',
+              style: 4, // Danger (red)
+              emoji: { name: '🗑️' }
+            }
+          ]
+        },
+        
+        { type: 14 }, // Separator
+        
+        // Back button
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `custom_action_editor_${buttonId}`,
+              label: 'Back',
+              style: 2, // Secondary
+              emoji: { name: '⚡' }
+            }
+          ]
+        }
+      ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
   };
 }

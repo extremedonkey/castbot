@@ -189,12 +189,12 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Trigger Type:** ${getTriggerTypeLabel(triggerType)}\n${getTriggerDescription(action.trigger)}`
+            content: `**Trigger Type:** ${getTriggerTypeLabel(triggerType)}`
           }],
           accessory: {
             type: 2, // Button
             custom_id: `entity_action_trigger_${actionId}`,
-            label: "Configure",
+            label: "Manage",
             style: 2,
             emoji: { name: "🎯" }
           }
