@@ -1450,6 +1450,187 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
   };
 }
 
+export async function handleDisplayTextEdit(guildId, userId, customId) {
+  // Parse buttonId and actionIndex from custom_id
+  const parts = customId.replace('safari_display_text_edit_', '').split('_');
+  const actionIndex = parseInt(parts[parts.length - 1]);
+  const buttonId = parts.slice(0, -1).join('_');
+  
+  console.log(`✏️ Editing display_text action ${actionIndex} for button ${buttonId}`);
+  
+  // Load existing action data
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  const action = button?.actions?.[actionIndex];
+  
+  if (!action || action.type !== 'display_text') {
+    return {
+      content: '❌ Display text action not found.',
+      ephemeral: true
+    };
+  }
+  
+  // Create modal with pre-filled values from existing action
+  const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+  
+  const modal = new ModalBuilder()
+    .setCustomId(`safari_display_text_save_${buttonId}_${actionIndex}`)
+    .setTitle('Edit Text Display Action');
+
+  const titleInput = new TextInputBuilder()
+    .setCustomId('action_title')
+    .setLabel('Title (optional)')
+    .setPlaceholder('e.g., "Welcome to the Adventure!"')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setMaxLength(100)
+    .setValue(action.config?.title || action.title || '');
+
+  const contentInput = new TextInputBuilder()
+    .setCustomId('action_content')
+    .setLabel('Content')
+    .setPlaceholder('The text to display when the button is clicked...')
+    .setStyle(TextInputStyle.Paragraph)
+    .setRequired(true)
+    .setMaxLength(2000)
+    .setValue(action.config?.content || action.content || '');
+
+  const colorInput = new TextInputBuilder()
+    .setCustomId('action_color')
+    .setLabel('Accent Color (optional)')
+    .setPlaceholder('e.g., #3498db or 3447003')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setMaxLength(10)
+    .setValue(action.config?.color || action.color || '');
+
+  const imageInput = new TextInputBuilder()
+    .setCustomId('action_image')
+    .setLabel('Image URL (Optional)')
+    .setPlaceholder('Enter link of an image you have uploaded to Discord.')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setMaxLength(500)
+    .setValue(action.config?.image || action.image || '');
+
+  const executeOnInput = new TextInputBuilder()
+    .setCustomId('action_execute_on')
+    .setLabel('Execute when conditions are (true/false)')
+    .setPlaceholder('Type true to execute if all conditions are met, type false to execute if conditions are not met')
+    .setStyle(TextInputStyle.Short)
+    .setRequired(false)
+    .setMaxLength(10)
+    .setValue(action.executeOn || 'true');
+
+  modal.addComponents(
+    new ActionRowBuilder().addComponents(titleInput),
+    new ActionRowBuilder().addComponents(contentInput),
+    new ActionRowBuilder().addComponents(executeOnInput),
+    new ActionRowBuilder().addComponents(colorInput),
+    new ActionRowBuilder().addComponents(imageInput)
+  );
+  
+  console.log(`✅ SUCCESS: safari_display_text_edit - showing edit modal for ${buttonId}[${actionIndex}]`);
+  return {
+    type: 9, // MODAL
+    data: modal.toJSON()
+  };
+}
+
+export async function handleDisplayTextSave(guildId, customId, formData) {
+  // Parse buttonId and actionIndex from custom_id: safari_display_text_save_buttonId_actionIndex
+  const parts = customId.replace('safari_display_text_save_', '').split('_');
+  const actionIndex = parseInt(parts[parts.length - 1]);
+  const buttonId = parts.slice(0, -1).join('_');
+  
+  console.log(`💾 SAVE: safari_display_text_save - saving display_text for ${buttonId}[${actionIndex}]`);
+  
+  // Extract form data
+  const components = formData.components;
+  const title = components[0].components[0].value?.trim() || '';
+  const content = components[1].components[0].value?.trim();
+  const executeOn = components[2].components[0].value?.trim() || 'true';
+  const color = components[3].components[0].value?.trim() || '';
+  const image = components[4].components[0].value?.trim() || '';
+  
+  if (!content) {
+    return {
+      content: '❌ Content is required for display text actions.',
+      ephemeral: true
+    };
+  }
+  
+  // Load and update safari data
+  const { saveSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+  
+  if (!button) {
+    return {
+      content: '❌ Button not found.',
+      ephemeral: true
+    };
+  }
+  
+  // Create or update the action
+  const action = {
+    type: 'display_text',
+    order: actionIndex,
+    config: {
+      title: title,
+      content: content,
+      color: color,
+      image: image
+    },
+    executeOn: executeOn
+  };
+  
+  // Initialize actions array if needed
+  if (!button.actions) {
+    button.actions = [];
+  }
+  
+  // Add or update the action (same logic as other save handlers)
+  if (actionIndex < button.actions.length) {
+    console.log(`✏️ Updating existing display_text action at index ${actionIndex}`);
+    button.actions[actionIndex] = action;
+  } else {
+    console.log(`➕ Adding new display_text action at index ${actionIndex}`);
+    button.actions.push(action);
+  }
+  
+  // Update metadata
+  if (!button.metadata) {
+    button.metadata = {
+      createdAt: Date.now(),
+      lastModified: Date.now(),
+      usageCount: 0
+    };
+  } else {
+    button.metadata.lastModified = Date.now();
+  }
+  
+  await saveSafariContent(safariData);
+  console.log(`✅ Safari content saved successfully`);
+  
+  // Update anchor messages for all coordinates using this action
+  try {
+    const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+    await queueActionCoordinateUpdates(guildId, buttonId, 'display_text_saved');
+  } catch (error) {
+    console.error('Error queueing anchor updates:', error);
+  }
+  
+  console.log(`✅ SUCCESS: safari_display_text_save - saved display_text for ${buttonId}[${actionIndex}]`);
+  
+  // Return to the display text configuration entity
+  const updatedConfig = await showDisplayTextConfig(guildId, buttonId, actionIndex);
+  return {
+    ...updatedConfig,
+    ephemeral: true
+  };
+}
+
 export default {
   createCustomActionSelectionUI,
   createCustomActionEditorUI,
@@ -1458,5 +1639,7 @@ export default {
   createCoordinateManagementUI,
   refreshConditionManagerUI,
   showConditionEditor,
-  showDisplayTextConfig
+  showDisplayTextConfig,
+  handleDisplayTextEdit,
+  handleDisplayTextSave
 };
