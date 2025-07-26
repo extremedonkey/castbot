@@ -235,8 +235,28 @@ const response = {
 - NEVER use `content` field with `IS_COMPONENTS_V2` flag
 - ALWAYS use Container (type 17) for visual grouping
 - Use Text Display (type 10) instead of content field
-- **ALWAYS set `ephemeral: true`** - ALL Discord responses should be ephemeral unless explicitly stated otherwise
 - Reference: [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
+
+## 🎨 UI/UX Standards (MANDATORY)
+
+**🚨 CRITICAL: Follow these UI/UX standards for all Discord interactions**
+
+### ✅ Ephemeral Message Requirements
+- **ALWAYS set `ephemeral: true`** - ALL Discord responses should be ephemeral unless explicitly stated otherwise
+- **Prevents channel clutter** - Admin interfaces should not be visible to regular users
+- **Privacy protection** - Configuration interfaces contain sensitive information
+
+### ✅ Menu Dismissal Standards  
+- **ALWAYS dismiss previous menus** when opening new entities/interfaces
+- **Example**: When clicking a button that opens a new entity, dismiss the current ephemeral message
+- **Prevents UI clutter** - Users should only see the current active interface
+- **Implementation**: Use `UPDATE_MESSAGE` with minimal content or component removal
+
+### ✅ Navigation Flow Standards
+- **Forward navigation**: Dismiss previous → Show new interface
+- **Backward navigation**: Return to parent interface (dismiss current)
+- **Save/Complete actions**: Dismiss current → Return to parent interface
+- **Cancel actions**: Dismiss current → Return to parent interface
 
 ## 🚀 Discord Button Implementation
 

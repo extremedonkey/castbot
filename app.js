@@ -10066,6 +10066,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_action_type_select',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true, // Dismiss previous entity when showing new interface
         handler: async (context) => {
           console.log(`🔍 START: safari_action_type_select - user ${context.userId}`);
           
@@ -10521,6 +10522,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_followup_save',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true, // Dismiss config panel and show Custom Action Editor
         handler: async (context) => {
           // Parse the custom_id: safari_followup_save_buttonId_targetButtonId_actionIndex
           // More robust parsing to handle button IDs with underscores
