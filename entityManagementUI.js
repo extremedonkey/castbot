@@ -52,7 +52,7 @@ export async function createEntityManagementUI(options) {
             // Title
             {
                 type: 10, // Text Display
-                content: `## ${config.displayName} Management`
+                content: `## ${config.displayName}`
             },
             
             // Entity selector
