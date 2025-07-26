@@ -294,7 +294,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
               type: 2,
               custom_id: `custom_action_test_${actionId}`,
               label: triggerType === 'modal' ? "Test Command" : "Test Action",
-              style: 1, // Primary
+              style: 2, // Secondary (grey)
               emoji: { name: triggerType === 'modal' ? "💬" : "🧪" },
               disabled: !action.actions?.length
             },

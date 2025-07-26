@@ -15851,6 +15851,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'custom_action_delete_confirm',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        deferred: true, // Long-running operation with anchor updates
         handler: async (context) => {
           console.log(`🔍 START: custom_action_delete_confirm - user ${context.userId}`);
           
