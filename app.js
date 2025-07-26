@@ -5169,19 +5169,18 @@ To fix this:
       }
     } else if (custom_id === 'prod_setup') {
       // Setup - always show setup interface (no "subsequent run" detection)
-      try {
-        await res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-
-        // Always show setup button - removed first run vs subsequent run detection
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
+      return ButtonHandlerFactory.create({
+        id: 'prod_setup',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`🔍 START: prod_setup - user ${context.userId}`);
+          
+          // Always show setup button - removed first run vs subsequent run detection
+          console.log(`✅ SUCCESS: prod_setup - showing setup interface`);
+          return {
             content: '# Setup\n\nClick the Setup button to create/configure pronoun and timezone roles for your server.\n\n💡 This setup can be run multiple times safely - existing roles will be detected and added to CastBot.',
             components: [
               new ActionRowBuilder()
@@ -5193,20 +5192,9 @@ To fix this:
                     .setEmoji('⚙️')
                 )
             ]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error handling prod_setup button:', error);
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            content: 'Error during setup.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_manage_pronouns_timezones') {
       // Show pronouns/timezones management menu
       try {

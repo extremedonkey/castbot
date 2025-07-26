@@ -121,6 +121,15 @@ export const BUTTON_REGISTRY = {
     category: 'navigation'
   },
   
+  // === PRODUCTION SETUP ===
+  'prod_setup': {
+    label: 'Setup',
+    description: 'Setup CastBot pronoun and timezone roles for server',
+    emoji: '⚙️',
+    style: 'Primary',
+    category: 'admin'
+  },
+  
   // === RESTART TESTING TRACKER ===
   'restart_test_not_tested': {
     label: '⏳ Not Tested',
