@@ -1386,11 +1386,26 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
     }
   }
   
+  // Get accent color from action config (if configured)
+  let accentColor = 0x3498db; // Default blue for text actions
+  if (action?.config?.color) {
+    try {
+      // Parse color from various formats (#3498db, 3498db, 3447003)
+      let colorStr = action.config.color.toString().replace('#', '');
+      // If it's a valid hex color, parse it
+      if (/^[0-9A-Fa-f]{6}$/.test(colorStr)) {
+        accentColor = parseInt(colorStr, 16);
+      }
+    } catch (error) {
+      console.log(`⚠️ Invalid color format: ${action.config.color}, using default`);
+    }
+  }
+
   // Build the configuration UI
   return {
     components: [{
       type: 17, // Container
-      accent_color: 0x3498db, // Blue accent for text actions
+      accent_color: accentColor,
       components: [
         {
           type: 10, // Text Display
@@ -1583,15 +1598,21 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
   }
   
   // Create or update the action
+  const actionConfig = {
+    title: title,
+    content: content,
+    image: image
+  };
+  
+  // Only include color if it's not empty
+  if (color && color.trim() !== '') {
+    actionConfig.color = color;
+  }
+  
   const action = {
     type: 'display_text',
     order: actionIndex,
-    config: {
-      title: title,
-      content: content,
-      color: color,
-      image: image
-    },
+    config: actionConfig,
     executeOn: executeOn
   };
   
