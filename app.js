@@ -892,7 +892,12 @@ async function createSafariMenu(guildId, userId, member) {
     new ButtonBuilder()
       .setCustomId('safari_map_admin')
       .setLabel('🧭 Player Setup')
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId('safari_location_editor')
+      .setLabel('Location Editor')
       .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📍')
   ];
   
   // Legacy section buttons
@@ -19217,6 +19222,30 @@ Are you sure you want to continue?`;
           });
           
           console.log(`✅ SUCCESS: safari_map_admin - showing user selection`);
+          return {
+            ...ui,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'safari_location_editor') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_location_editor',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_location_editor - user ${context.userId}`);
+          
+          const { createEntityManagementUI } = await import('./entityManagementUI.js');
+          
+          const ui = await createEntityManagementUI({
+            entityType: 'map_cell',
+            guildId: context.guildId,
+            mode: 'edit'
+          });
+          
+          console.log(`✅ SUCCESS: safari_location_editor - opened map location actions`);
           return {
             ...ui,
             ephemeral: true

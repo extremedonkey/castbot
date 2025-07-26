@@ -184,6 +184,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'safari_location_editor': {
+    label: 'Location Editor',
+    description: 'Open map location editor interface',
+    emoji: '📍',
+    style: 'Secondary',
+    category: 'safari'
+  },
 
   // Safari Main Menu Buttons
   'safari_manage_safari_buttons': {
