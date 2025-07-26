@@ -19439,10 +19439,11 @@ Are you sure you want to continue?`;
         handler: async (context) => {
           console.log(`🔍 START: safari_action_editor - user ${context.userId}`);
           
-          const { createGlobalCustomActionSelectionUI } = await import('./customActionUI.js');
+          const { createCustomActionSelectionUI } = await import('./customActionUI.js');
           
-          const ui = await createGlobalCustomActionSelectionUI({
+          const ui = await createCustomActionSelectionUI({
             guildId: context.guildId
+            // No coordinate or mapId - this will trigger global mode
           });
           
           console.log(`✅ SUCCESS: safari_action_editor - opened global action editor`);
@@ -25846,23 +25847,18 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
   
   if (!targetButton) {
     return {
-      type: InteractionResponseType.UPDATE_MESSAGE,
-      data: {
-        content: '❌ Target button not found.',
-        components: [],
-        flags: InteractionResponseFlags.EPHEMERAL
-      }
+      content: '❌ Target button not found.',
+      components: [],
+      ephemeral: true
     };
   }
   
   // Build the configuration UI
   return {
-    type: InteractionResponseType.UPDATE_MESSAGE,
-    data: {
-      components: [{
-        type: 17, // Container
-        accent_color: 0x5865f2,
-        components: [
+    components: [{
+      type: 17, // Container
+      accent_color: 0x5865f2,
+      components: [
           {
             type: 10, // Text Display
             content: `## 🔗 Follow-up Action Configuration\nConfiguring follow-up action for **${targetButton.name}**`
@@ -25941,6 +25937,5 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
       }],
       flags: (1 << 15), // IS_COMPONENTS_V2
       ephemeral: true
-    }
   };
 }
