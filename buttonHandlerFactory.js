@@ -146,6 +146,15 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
 
+  // Safari Button Management
+  'safari_finish_button': {
+    label: '✅ Close',
+    description: 'Close the Custom Action Editor and dismiss the message',
+    emoji: '✅',
+    style: 'Success',
+    category: 'safari'
+  },
+
   // Safari Main Menu Buttons
   'safari_manage_safari_buttons': {
     label: '📌 Manage Safari Buttons',

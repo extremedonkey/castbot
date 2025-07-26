@@ -11518,10 +11518,10 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
     } else if (custom_id.startsWith('safari_finish_button_')) {
       return ButtonHandlerFactory.create({
-        id: custom_id,
+        id: 'safari_finish_button',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        updateMessage: false, // Cannot use UPDATE_MESSAGE with Components V2 flag
+        updateMessage: true, // Update the message to dismiss it
         handler: async (context) => {
           const actionId = custom_id.replace('safari_finish_button_', '');
           console.log(`🔍 START: safari_finish_button_${actionId} - user ${context.userId}`);
@@ -11608,15 +11608,10 @@ Your server is now ready for Tycoons gameplay!`;
           
           console.log(`✅ SUCCESS: safari_finish_button_${actionId} - completed`);
           
-          // Dismiss action menu and show new ephemeral Custom Action Editor  
-          const { createCustomActionEditorUI } = await import('./customActionUI.js');
-          const updatedUI = await createCustomActionEditorUI({
-            guildId: context.guildId,
-            actionId
-          });
-          
+          // Return a simple acknowledgment that will dismiss the ephemeral message
           return {
-            ...updatedUI,
+            content: `✅ Custom Action "${action.label || actionId}" has been updated!`,
+            components: [], // Empty components to clear the UI
             ephemeral: true
           };
         }
