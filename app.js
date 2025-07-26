@@ -358,13 +358,6 @@ async function showApplicationQuestion(res, config, channelId, questionIndex) {
     questionComponents.push(navRow.toJSON());
   }
   
-  // Add thank you message for last question
-  if (isLastQuestion) {
-    questionComponents.push({
-      type: 10, // Text Display
-      content: `> **✅ Thank you for completing your application!**\n> Your application has been submitted successfully.\n> \n> ${config.productionRole ? `The <@&${config.productionRole}> team has been notified and will review your application soon.` : 'A host will review your application soon.'}`
-    });
-  }
   
   const questionContainer = {
     type: 17, // Container
