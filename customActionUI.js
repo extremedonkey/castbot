@@ -196,7 +196,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             custom_id: `entity_action_trigger_${actionId}`,
             label: "Manage",
             style: 2,
-            emoji: { name: "🎯" }
+            emoji: { name: "⚡" }
           }
         },
         
@@ -228,7 +228,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             custom_id: `entity_action_coords_${actionId}`,
             label: "Manage",
             style: 2,
-            emoji: { name: "📍" }
+            emoji: { name: "⚡" }
           }
         },
         
