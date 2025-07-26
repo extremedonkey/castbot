@@ -4448,6 +4448,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const rankings = Object.values(allRankings).filter(r => r !== undefined);
         const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
         
+        // Get casting status for display
+        const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
+        let castingStatusText = '';
+        if (castingStatus === 'cast') {
+          castingStatusText = '✅ Cast';
+        } else if (castingStatus === 'tentative') {
+          castingStatusText = '❓ Tentative';
+        } else if (castingStatus === 'reject') {
+          castingStatusText = '🗑️ Don\'t Cast';
+        } else {
+          castingStatusText = '⚪ Undecided';
+        }
+        
         // Create updated container
         const castRankingContainer = {
           type: 17,
@@ -4462,7 +4475,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             },
             {
               type: 10,
-              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**App:** <#${currentApp.channelId}>`
+              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
             },
             galleryComponent,
             {
@@ -4470,6 +4483,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               content: `> **Rate this applicant (1-5):**`
             },
             rankingRow.toJSON(),
+            {
+              type: 14
+            },
+            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
             {
               type: 14
             },
@@ -4699,6 +4716,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const rankings = Object.values(allRankings).filter(r => r !== undefined);
           const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
           
+          // Get casting status for display
+          const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
+          let castingStatusText = '';
+          if (castingStatus === 'cast') {
+            castingStatusText = '✅ Cast';
+          } else if (castingStatus === 'tentative') {
+            castingStatusText = '❓ Tentative';
+          } else if (castingStatus === 'reject') {
+            castingStatusText = '🗑️ Don\'t Cast';
+          } else {
+            castingStatusText = '⚪ Undecided';
+          }
+          
           const castRankingContainer = {
             type: 17,
             accent_color: 0x9B59B6,
@@ -4712,7 +4742,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               },
               {
                 type: 10,
-                content: `> **Applicant ${newIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**App:** <#${currentApp.channelId}>`
+                content: `> **Applicant ${newIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
               },
               galleryComponent,
               {
@@ -6459,6 +6489,19 @@ To fix this:
           const rankings = Object.values(allRankings).filter(r => r !== undefined);
           const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
           
+          // Get casting status for display
+          const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
+          let castingStatusText = '';
+          if (castingStatus === 'cast') {
+            castingStatusText = '✅ Cast';
+          } else if (castingStatus === 'tentative') {
+            castingStatusText = '❓ Tentative';
+          } else if (castingStatus === 'reject') {
+            castingStatusText = '🗑️ Don\'t Cast';
+          } else {
+            castingStatusText = '⚪ Undecided';
+          }
+          
           // Create Components V2 Container for Cast Ranking interface
           const castRankingContainer = {
             type: 17, // Container component
@@ -6473,7 +6516,7 @@ To fix this:
               },
               {
                 type: 10, // Text Display component
-                content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**App:** <#${currentApp.channelId}>`
+                content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
               },
               avatarDisplayComponent, // Applicant avatar display
               {
