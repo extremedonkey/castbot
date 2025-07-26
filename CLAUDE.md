@@ -152,6 +152,8 @@ npm run logs-prod -- --feature BUTTON --level debug
 
 ### **🎯 The Golden Rule: app.js should be a ROUTER, not a PROCESSOR**
 
+### **♻️ Code Reusability Rule: Make things as reusable as possible whilst considering prompts, aim to put minimal code in app.js**
+
 ### **❌ SHOULD NOT go in app.js:**
 
 1. **Complete feature implementations** - Like Safari system logic, castlist processing, player management
