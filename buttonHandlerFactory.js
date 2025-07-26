@@ -148,7 +148,7 @@ export const BUTTON_REGISTRY = {
 
   // Safari Button Management
   'safari_finish_button': {
-    label: '⬅ Back to Location Manager',
+    label: '← Location Manager',
     description: 'Navigate back to the Map Location Manager',
     emoji: '📍',
     style: 'Secondary',

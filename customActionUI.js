@@ -279,6 +279,9 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           return components;
         })(),
         
+        // Divider above action buttons
+        { type: 14 },
+        
         // Action buttons
         {
           type: 1, // Action Row
@@ -286,7 +289,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             {
               type: 2,
               custom_id: `safari_finish_button_${actionId}`,
-              label: "⬅ Back to Location Manager",
+              label: "← Location Manager",
               style: 2, // Secondary (grey)
               emoji: { name: "📍" }
             },
