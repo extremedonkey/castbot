@@ -228,7 +228,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             custom_id: `entity_action_coords_${actionId}`,
             label: "Manage",
             style: 2,
-            emoji: { name: "⚡" }
+            emoji: { name: "📍" }
           }
         },
         
@@ -825,7 +825,7 @@ export async function createCoordinateManagementUI({ guildId, actionId }) {
         custom_id: `add_coord_modal_${actionId}`,
         label: "Add Coordinate",
         style: 1, // Primary
-        emoji: { name: "⚡" }
+        emoji: { name: "📍" }
       }
     ]
   });

@@ -60,7 +60,21 @@ grep -B20 -A20 "fieldGroup === 'stores'" app.js
 
 **🔧 WSL File Access:** Windows paths (e.g., `C:\Users\...`) should be converted to WSL format (`/mnt/c/Users/...`). Windows drives are mounted under `/mnt/` - so `C:\` becomes `/mnt/c/`, `D:\` becomes `/mnt/d/`, etc.
 
-**📸 Screenshot Access:** When user requests the latest screenshot (phrases like "check the last screenshot", "view recent screenshot", "show latest screen capture", "what's in my newest screenshot"), find the most recent PNG using: `ls -t "/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1"/*.png | head -1`
+**📸 Screenshot Access Protocol:** When user requests the latest screenshot (phrases like "check the last screenshot", "view recent screenshot", "show latest screen capture", "what's in my newest screenshot"):
+
+**🚨 CRITICAL - ALWAYS follow this exact sequence:**
+1. **NEVER guess filenames** - Don't assume screenshot names or try to access them directly
+2. **Use LS tool FIRST** - Always use `LS` tool to list the screenshot directory: `/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1`
+3. **Identify latest screenshot** - Screenshots are named with timestamps, find the most recent one from the LS output
+4. **Read with Read tool** - Use the Read tool with the exact filename found
+
+**❌ DO NOT use bash commands like:** `ls -t "/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1"/*.png | head -1` (WSL glob pattern issues)
+
+**✅ CORRECT pattern:**
+```
+1. LS path: /mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1
+2. Read file: /mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1/Screenshot 2025-07-27 061441.png
+```
 
 ```bash
 # Start development session
