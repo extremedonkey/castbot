@@ -191,6 +191,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'safari_action_editor': {
+    label: 'Action Editor',
+    description: 'Manage custom actions across all locations',
+    emoji: '⚡',
+    style: 'Secondary',
+    category: 'safari'
+  },
 
   // Safari Main Menu Buttons
   'safari_manage_safari_buttons': {

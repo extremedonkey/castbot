@@ -897,7 +897,12 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_location_editor')
       .setLabel('Location Editor')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📍')
+      .setEmoji('📍'),
+    new ButtonBuilder()
+      .setCustomId('safari_action_editor')
+      .setLabel('Action Editor')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⚡')
   ];
   
   // Legacy section buttons
@@ -15326,6 +15331,83 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id === 'global_custom_action_list') {
+      // Handle global custom action selection from dropdown (no coordinate)
+      return ButtonHandlerFactory.create({
+        id: 'global_custom_action_list',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: global_custom_action_list - user ${context.userId}`);
+          
+          const selectedValue = context.values[0];
+          
+          if (selectedValue === 'create_new') {
+            // Show creation modal using standard factory pattern
+            const modal = new ModalBuilder()
+              .setCustomId(`global_create_modal_safari_button_info`)
+              .setTitle('Create Custom Action');
+
+            // Button label input
+            const labelInput = new TextInputBuilder()
+              .setCustomId('button_label')
+              .setLabel('Action Name')
+              .setPlaceholder('e.g., "Start Adventure"')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(true)
+              .setMaxLength(80);
+
+            // Action emoji input
+            const emojiInput = new TextInputBuilder()
+              .setCustomId('button_emoji')
+              .setLabel('Action Emoji (Optional)')
+              .setPlaceholder('e.g., 🗺️')
+              .setStyle(TextInputStyle.Short)
+              .setRequired(false)
+              .setMaxLength(100);
+
+            // Button description input
+            const descInput = new TextInputBuilder()
+              .setCustomId('button_description')
+              .setLabel('Action Description (Optional)')
+              .setPlaceholder('e.g., "Begin your journey through the forest"')
+              .setStyle(TextInputStyle.Paragraph)
+              .setRequired(false)
+              .setMaxLength(200);
+
+            modal.addComponents(
+              new ActionRowBuilder().addComponents(labelInput),
+              new ActionRowBuilder().addComponents(emojiInput),
+              new ActionRowBuilder().addComponents(descInput)
+            );
+            
+            console.log(`✅ SUCCESS: global_custom_action_list - showing creation modal`);
+            return {
+              type: InteractionResponseType.MODAL,
+              data: modal.toJSON()
+            };
+          } else if (selectedValue === 'no_actions') {
+            // Handle disabled state - shouldn't happen but just in case
+            return {
+              content: '❌ No actions available to manage.',
+              ephemeral: true
+            };
+          } else {
+            // Edit existing action
+            const { createCustomActionEditorUI } = await import('./customActionUI.js');
+            const ui = await createCustomActionEditorUI({
+              guildId: context.guildId,
+              actionId: selectedValue
+              // No coordinate specified for global editor
+            });
+            
+            console.log(`✅ SUCCESS: global_custom_action_list - showing action editor for ${selectedValue}`);
+            return ui;
+          }
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('entity_custom_action_edit_info_')) {
       // Handle edit action info button
       return ButtonHandlerFactory.create({
@@ -19339,6 +19421,29 @@ Are you sure you want to continue?`;
           });
           
           console.log(`✅ SUCCESS: safari_location_editor - opened map location actions`);
+          return {
+            ...ui,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'safari_action_editor') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_action_editor',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_action_editor - user ${context.userId}`);
+          
+          const { createGlobalCustomActionSelectionUI } = await import('./customActionUI.js');
+          
+          const ui = await createGlobalCustomActionSelectionUI({
+            guildId: context.guildId
+          });
+          
+          console.log(`✅ SUCCESS: safari_action_editor - opened global action editor`);
           return {
             ...ui,
             ephemeral: true
@@ -23717,6 +23822,96 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating Safari settings. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'global_create_modal_safari_button_info') {
+      // Handle global custom action creation modal (no coordinate)
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        
+        console.log(`📝 DEBUG: Global custom action creation modal submit - User: ${userId}`);
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        // Parse fields from modal
+        const buttonLabel = components[0].components[0].value?.trim();
+        const buttonEmoji = components[1].components[0].value?.trim() || null;
+        const buttonDesc = components[2].components[0].value?.trim() || null;
+        
+        if (!buttonLabel) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Action name is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create button using existing button creation logic
+        const { createButton, loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        
+        // Generate unique ID using existing pattern
+        const timestamp = Date.now();
+        const buttonId = `${buttonLabel.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')}_${timestamp}`;
+        
+        const button = {
+          name: buttonLabel,
+          label: buttonLabel,
+          description: buttonDesc || '',
+          emoji: buttonEmoji || '⚡',
+          style: 1, // Primary
+          coordinates: [], // No coordinates initially
+          actions: [],
+          trigger: {
+            type: 'button'
+          },
+          metadata: {
+            createdBy: userId,
+            lastModified: timestamp,
+            usageCount: 0
+          }
+        };
+        
+        // Save the new button
+        const allSafariContent = await loadSafariContent();
+        if (!allSafariContent[guildId]) {
+          allSafariContent[guildId] = { buttons: {} };
+        }
+        if (!allSafariContent[guildId].buttons) {
+          allSafariContent[guildId].buttons = {};
+        }
+        
+        allSafariContent[guildId].buttons[buttonId] = button;
+        await saveSafariContent(allSafariContent);
+        
+        console.log(`✅ DEBUG: Created global custom action ${buttonId}`);
+        
+        // Show Custom Action Editor for the new button
+        const { createCustomActionEditorUI } = await import('./customActionUI.js');
+        const ui = await createCustomActionEditorUI({
+          guildId,
+          actionId: buttonId
+          // No coordinate for global editor
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            ...ui,
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in global_create_modal_safari_button_info handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating custom action.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

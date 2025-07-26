@@ -91,6 +91,91 @@ export async function createCustomActionSelectionUI({ guildId, coordinate, mapId
 }
 
 /**
+ * Create the global custom action selection UI (no coordinate required)
+ * @param {Object} params
+ * @param {string} params.guildId - Guild ID
+ * @returns {Object} Discord Components V2 UI
+ */
+export async function createGlobalCustomActionSelectionUI({ guildId }) {
+  // Import Discord.js builders - matching stores pattern exactly
+  const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+  
+  // Load all safari buttons (now custom actions)
+  const allSafariContent = await loadSafariContent();
+  const guildData = allSafariContent[guildId] || {};
+  const allActions = guildData.buttons || {};
+  
+  // Build select menu using Discord.js builder
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId(`global_custom_action_list`)
+    .setPlaceholder("Select an action to manage...")
+    .setMinValues(1)
+    .setMaxValues(1); // Single select for managing actions
+  
+  // Add "Create New" option first
+  selectMenu.addOptions({
+    label: "➕ Create New Custom Action",
+    value: "create_new",
+    description: "Design a new interactive action"
+  });
+  
+  // Add existing actions sorted by lastModified (most recent first)
+  const sortedActions = Object.entries(allActions)
+    .map(([actionId, action]) => ({ actionId, action }))
+    .sort((a, b) => {
+      const aLastModified = a.action.metadata?.lastModified || 0;
+      const bLastModified = b.action.metadata?.lastModified || 0;
+      return bLastModified - aLastModified; // Descending order (newest first)
+    })
+    .slice(0, 24); // Limit to 24 to leave room for "Create New"
+  
+  for (const { actionId, action } of sortedActions) {
+    // Build option description with coordinate info
+    let description = action.description || 'No description';
+    if (action.coordinates && action.coordinates.length > 0) {
+      description += ` • Locations: ${action.coordinates.slice(0, 3).join(', ')}${action.coordinates.length > 3 ? '...' : ''}`;
+    }
+    
+    selectMenu.addOptions({
+      label: (action.name || actionId).substring(0, 100),
+      value: actionId,
+      description: description.substring(0, 100),
+      emoji: action.emoji ? { name: action.emoji } : { name: '⚡' }
+    });
+  }
+  
+  if (sortedActions.length === 0) {
+    selectMenu.addOptions({
+      label: "No actions found",
+      value: "no_actions",
+      description: "Create your first custom action to get started",
+      emoji: { name: '📝' }
+    });
+    selectMenu.setDisabled(true);
+  }
+  
+  // Build Discord Components V2 structure
+  const components = [{
+    type: 17, // Container
+    components: [
+      {
+        type: 10, // Text Display
+        content: `# Custom Actions\n\nManage interactive actions that can be triggered across your server. Actions can be assigned to map locations or triggered through other means.`
+      },
+      { type: 14 }, // Separator
+      {
+        type: 1, // Action Row
+        components: [selectMenu.toJSON()]
+      }
+    ]
+  }];
+  
+  return {
+    components
+  };
+}
+
+/**
  * Create the custom action editor UI
  * @param {Object} params
  * @param {string} params.guildId - Guild ID
@@ -1342,6 +1427,7 @@ function createRoleConditionUI(condition, actionId, conditionIndex, currentPage)
 
 export default {
   createCustomActionSelectionUI,
+  createGlobalCustomActionSelectionUI,
   createCustomActionEditorUI,
   createTriggerConfigUI,
   createConditionsConfigUI,
