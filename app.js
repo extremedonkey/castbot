@@ -6708,8 +6708,18 @@ To fix this:
           // Extract configId: season_delete_confirm_{configId}
           const configId = context.customId.replace('season_delete_confirm_', '');
           
-          // Load player data
-          const playerData = await loadPlayerData();
+          // Load player data with error handling
+          let playerData;
+          try {
+            playerData = await loadPlayerData();
+          } catch (error) {
+            console.error(`❌ Error loading player data in season_delete_confirm:`, error);
+            return {
+              content: `❌ **Error loading data**\n\nThere was an error accessing the player data file. This might be due to file corruption or concurrent access.\n\nError: ${error.message}\n\nPlease try again in a moment.`,
+              ephemeral: true
+            };
+          }
+          
           const config = playerData[context.guildId]?.applicationConfigs?.[configId];
           
           if (!config) {
