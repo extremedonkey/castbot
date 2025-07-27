@@ -4408,6 +4408,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         id: 'rank_applicant',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true, // Update existing message instead of creating new one
         handler: async (context) => {
           console.log(`🔍 START: rank_applicant - user ${context.userId}, button ${context.customId}`);
           
@@ -5171,10 +5172,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const playerData = await loadPlayerData();
           const existingNotes = playerData[context.guildId]?.applications?.[channelId]?.playerNotes || '';
           
-          // Create modal with configId if available
-          const modalCustomId = configId 
-            ? `save_player_notes_${channelId}_${appIndex}_${configId}`
-            : `save_player_notes_${channelId}_${appIndex}`;
+          // Create modal with shortened custom_id to avoid Discord's 100 char limit
+          // We'll use a shorter format and store the full data in the modal interaction
+          const modalCustomId = `save_notes_${channelId}_${appIndex}`;
             
           const modal = new ModalBuilder()
             .setCustomId(modalCustomId)
@@ -23212,18 +23212,29 @@ Are you sure you want to continue?`;
           }
         });
       }
-    } else if (custom_id.startsWith('save_player_notes_')) {
+    } else if (custom_id.startsWith('save_player_notes_') || custom_id.startsWith('save_notes_')) {
       // Handle player notes modal submission - converted to Button Handler Factory
       return ButtonHandlerFactory.create({
         id: 'save_player_notes',
+        updateMessage: true, // Update existing message with new notes
         handler: async (context) => {
           console.log(`✏️ START: save_player_notes modal - custom_id: ${context.customId}`);
           
-          // Parse custom_id: save_player_notes_[channelId]_[appIndex]_[configId] (new) or save_player_notes_[channelId]_[appIndex] (legacy)
+          // Parse custom_id - handle both old and new formats
           const parts = context.customId.split('_');
-          const channelId = parts[3];
-          const appIndex = parseInt(parts[4]);
-          const configId = parts[5]; // May be undefined for legacy modals
+          let channelId, appIndex, configId;
+          
+          if (context.customId.startsWith('save_notes_')) {
+            // New shortened format: save_notes_[channelId]_[appIndex]
+            channelId = parts[2];
+            appIndex = parseInt(parts[3]);
+            // ConfigId will need to be retrieved from current app data
+          } else {
+            // Legacy format: save_player_notes_[channelId]_[appIndex]_[configId]
+            channelId = parts[3];
+            appIndex = parseInt(parts[4]);
+            configId = parts[5]; // May be undefined
+          }
           
           const { guildId, userId, client } = context;
           
@@ -23254,6 +23265,17 @@ Are you sure you want to continue?`;
           
           // Regenerate the ranking interface with updated notes
           const guild = await client.guilds.fetch(guildId);
+          
+          // If we don't have configId (new shortened format), we need to find it
+          if (!configId) {
+            // Get the current application to find its configId
+            const app = playerData[guildId]?.applications?.[channelId];
+            if (app?.configId) {
+              configId = app.configId;
+              console.log(`✏️ Retrieved configId from application: ${configId}`);
+            }
+          }
+          
           const allApplications = configId 
             ? await getApplicationsForSeason(guildId, configId)
             : await getAllApplicationsFromData(guildId);
