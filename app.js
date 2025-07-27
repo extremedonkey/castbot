@@ -4557,7 +4557,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             {
               type: 14
             },
-            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
+            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON(), // Casting buttons
             {
               type: 14
             },
@@ -4864,7 +4864,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             {
               type: 14
             },
-            createCastingButtons(currentApp.channelId, newIndex, playerData, guildId).toJSON(), // Casting buttons
+            createCastingButtons(currentApp.channelId, newIndex, playerData, guildId, configId).toJSON(), // Casting buttons
             {
               type: 14
             },
@@ -5090,7 +5090,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             {
               type: 14
             },
-            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Updated casting buttons
+            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON(), // Updated casting buttons
             {
               type: 14
             },
@@ -7216,7 +7216,7 @@ To fix this:
             {
               type: 14 // Separator
             },
-            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
+            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON(), // Casting buttons
             {
               type: 14 // Separator
             },
@@ -23371,7 +23371,7 @@ Are you sure you want to continue?`;
           {
             type: 14 // Separator
           },
-          createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
+          createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON(), // Casting buttons
           {
             type: 14 // Separator
           },
