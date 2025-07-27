@@ -787,6 +787,27 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'casting_management'
   },
+  'delete_application_mode_*': {
+    label: 'Delete Application',
+    description: 'Delete application and channel with confirmation',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'casting_management'
+  },
+  'delete_application_confirm_*': {
+    label: 'Yes, Delete Application',
+    description: 'Confirm application deletion',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'casting_management'
+  },
+  'cancel_delete_application_*': {
+    label: 'Cancel',
+    description: 'Cancel application deletion',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'casting_management'
+  },
   'season_question_edit_*': {
     label: 'Edit Question',
     description: 'Edit application question details',

@@ -527,7 +527,13 @@ function createPlayerNotesSection(channelId, appIndex, playerData, guildId) {
     .setLabel('✏️ Edit Player Notes')
     .setStyle(ButtonStyle.Primary);
   
-  const editButtonRow = new ActionRowBuilder().addComponents(editButton);
+  // Create delete application button
+  const deleteButton = new ButtonBuilder()
+    .setCustomId(`delete_application_mode_${channelId}_${appIndex}`)
+    .setLabel('🗑️ Delete Application')
+    .setStyle(ButtonStyle.Danger);
+  
+  const editButtonRow = new ActionRowBuilder().addComponents(editButton, deleteButton);
   
   return [notesDisplay, editButtonRow.toJSON()];
 }
@@ -5248,6 +5254,405 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         });
       }
+    } else if (custom_id.startsWith('delete_application_mode_')) {
+      // Handle delete application button clicks - show confirmation using Entity Framework pattern
+      return ButtonHandlerFactory.create({
+        id: 'delete_application_mode',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🗑️ START: delete_application_mode - user ${context.userId}`);
+          
+          // Parse button ID: delete_application_mode_[channelId]_[appIndex]
+          const parts = context.customId.split('_');
+          const channelId = parts[3];
+          const appIndex = parseInt(parts[4]);
+          
+          console.log(`🗑️ Delete mode for channel ${channelId}, app index ${appIndex}`);
+          
+          // Load application data to get applicant info
+          const playerData = await loadPlayerData();
+          const application = playerData[context.guildId]?.applications?.[channelId];
+          
+          if (!application) {
+            return {
+              content: '❌ Application not found.',
+              ephemeral: true
+            };
+          }
+          
+          const applicantName = application.displayName || application.username || 'Unknown Applicant';
+          
+          // Create confirmation UI using Entity Framework pattern
+          const components = [{
+            type: 17, // Container
+            accent_color: 0xe74c3c, // Red for danger
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## ⚠️ Delete Application\n\n**Applicant:** ${applicantName}\n**Channel:** <#${channelId}>\n\n⚠️ **This action cannot be undone and will:**\n• Delete the application channel (if it exists)\n• Remove all application data, votes, and notes\n• Preserve the applicant's player profile data\n\nAre you sure you want to proceed?`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    style: 4, // Danger
+                    label: 'Yes, Delete Application',
+                    custom_id: `delete_application_confirm_${channelId}_${appIndex}`,
+                    emoji: { name: '⚠️' }
+                  },
+                  {
+                    type: 2, // Button
+                    style: 2, // Secondary
+                    label: 'Cancel',
+                    custom_id: `cancel_delete_application_${channelId}_${appIndex}`,
+                    emoji: { name: '❌' }
+                  }
+                ]
+              }
+            ]
+          }];
+          
+          console.log(`✅ SUCCESS: delete_application_mode - confirmation shown`);
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('delete_application_confirm_')) {
+      // Handle confirmed application deletion
+      return ButtonHandlerFactory.create({
+        id: 'delete_application_confirm',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true, // This might take time with channel deletion
+        handler: async (context) => {
+          console.log(`💥 START: delete_application_confirm - user ${context.userId}`);
+          
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          
+          // Parse button ID: delete_application_confirm_[channelId]_[appIndex]
+          const parts = context.customId.split('_');
+          const channelId = parts[3];
+          const appIndex = parseInt(parts[4]);
+          
+          console.log(`💥 Confirming deletion for channel ${channelId}, app index ${appIndex}`);
+          
+          // Load application data
+          const playerData = await loadPlayerData();
+          const application = playerData[guildId]?.applications?.[channelId];
+          
+          if (!application) {
+            return {
+              content: '❌ Application not found.',
+              ephemeral: true
+            };
+          }
+          
+          const applicantName = application.displayName || application.username || 'Unknown Applicant';
+          const applicantUserId = application.userId;
+          
+          // Step 1: Try to delete the channel (silently handle if it doesn't exist)
+          let channelDeletedMessage = '';
+          try {
+            const channel = await guild.channels.fetch(channelId);
+            if (channel) {
+              await channel.delete('Application deleted by admin');
+              channelDeletedMessage = '✅ Application channel deleted';
+              console.log(`🗑️ Channel ${channelId} deleted successfully`);
+            }
+          } catch (error) {
+            if (error.code === 10003) { // Unknown Channel
+              channelDeletedMessage = '✅ Channel already deleted';
+              console.log(`🗑️ Channel ${channelId} was already deleted`);
+            } else if (error.code === 50013) { // Missing Permissions
+              console.error(`❌ No permission to delete channel ${channelId}:`, error);
+              return {
+                content: '❌ Missing permissions to delete the application channel. Please check bot permissions.',
+                ephemeral: true
+              };
+            } else {
+              console.error(`❌ Error deleting channel ${channelId}:`, error);
+              channelDeletedMessage = '⚠️ Channel deletion failed, but data will be cleaned';
+            }
+          }
+          
+          // Step 2: Clean application data while preserving player data
+          try {
+            // Remove from applications
+            if (playerData[guildId]?.applications?.[channelId]) {
+              delete playerData[guildId].applications[channelId];
+              console.log(`🗑️ Removed application data for channel ${channelId}`);
+            }
+            
+            // Remove from rankings
+            if (playerData[guildId]?.rankings?.[channelId]) {
+              delete playerData[guildId].rankings[channelId];
+              console.log(`🗑️ Removed ranking data for channel ${channelId}`);
+            }
+            
+            // NOTE: We preserve playerData[guildId].players[applicantUserId] and timezones as requested
+            
+            await savePlayerData(playerData);
+            console.log(`✅ Application data cleaned for ${applicantName}`);
+            
+          } catch (error) {
+            console.error('❌ Error cleaning application data:', error);
+            return {
+              content: '❌ Error cleaning application data. Please try again.',
+              ephemeral: true
+            };
+          }
+          
+          // Step 3: Log the deletion to server logs
+          try {
+            const deleterName = member.displayName || member.user.username;
+            const serverName = guild.name;
+            const isProduction = process.env.NODE_ENV === 'production';
+            const logChannelId = isProduction ? '1385059476243218552' : '1386998800215969904';
+            
+            const logMessage = `🗑️ **Application Deleted**\n**Applicant:** ${applicantName} (${applicantUserId})\n**Channel:** #${application.channelName || channelId}\n**Deleted by:** ${deleterName} (${userId})\n**Server:** ${serverName}\n**Time:** <t:${Math.floor(Date.now() / 1000)}:F>`;
+            
+            const logChannel = await client.channels.fetch(logChannelId);
+            if (logChannel) {
+              await logChannel.send(logMessage);
+              console.log(`📝 Logged application deletion to ${logChannelId}`);
+            }
+          } catch (error) {
+            console.error('⚠️ Failed to log deletion:', error);
+            // Don't fail the operation if logging fails
+          }
+          
+          // Step 4: Navigate to next application or show "no applications" message
+          const allApplications = await getAllApplicationsFromData(guildId);
+          console.log(`📊 ${allApplications.length} applications remaining after deletion`);
+          
+          if (allApplications.length === 0) {
+            // No applications left - show the default message
+            console.log(`✅ SUCCESS: delete_application_confirm - no applications remaining`);
+            return {
+              content: '✅ Application deleted successfully.\n\n📝 No applications found for this server. Create application buttons first using "Creation Application Process".',
+              ephemeral: true
+            };
+          }
+          
+          // Calculate new navigation index
+          let newIndex = appIndex;
+          if (appIndex >= allApplications.length) {
+            // If we deleted the last item, go to the new last item
+            newIndex = allApplications.length - 1;
+          }
+          // If we deleted the first item, newIndex stays 0 (next item becomes first)
+          
+          const newApp = allApplications[newIndex];
+          console.log(`🧭 Navigating to application ${newIndex + 1} of ${allApplications.length}: ${newApp.displayName}`);
+          
+          // Regenerate Cast Ranking interface for the new application
+          // (Same logic as in season_app_ranking handler)
+          let applicantMember;
+          try {
+            applicantMember = await guild.members.fetch(newApp.userId);
+          } catch (error) {
+            applicantMember = {
+              displayName: newApp.displayName,
+              user: { username: newApp.username },
+              avatarURL: () => newApp.avatarURL || 'https://cdn.discordapp.com/embed/avatars/0.png'
+            };
+          }
+          
+          // Create ranking interface components (similar to existing ranking interface)
+          const rankings = playerData[guildId]?.rankings?.[newApp.channelId] || {};
+          const userScore = rankings[userId];
+          const scores = Object.values(rankings).filter(r => r !== undefined);
+          const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 'N/A';
+          const voteCount = scores.length;
+          
+          const castingStatus = playerData[guildId]?.applications?.[newApp.channelId]?.castingStatus;
+          const statusIcon = castingStatus === 'cast' ? '✅' : castingStatus === 'tentative' ? '❓' : castingStatus === 'reject' ? '🗑️' : '⚪';
+          const statusLabel = castingStatus === 'cast' ? 'Cast' : castingStatus === 'tentative' ? 'Tentative' : castingStatus === 'reject' ? 'Don\'t Cast' : 'Undecided';
+          
+          const headerContent = `> **Applicant ${newIndex + 1} of ${allApplications.length}**
+**Name:** ${newApp.displayName || newApp.username}
+**Average Score:** ${avgScore}/5.0 (${voteCount} vote${voteCount !== 1 ? 's' : ''})
+**Your Score:** ${userScore ? userScore : 'Not rated'}
+**Casting Status:** ${statusIcon} ${statusLabel}
+**App:** <#${newApp.channelId}>
+
+✅ **Application deleted:** ${applicantName}
+${channelDeletedMessage}`;
+          
+          const containerComponents = [
+            {
+              type: 10, // Text Display
+              content: headerContent
+            }
+          ];
+          
+          // Add Media Gallery for avatar
+          if (applicantMember.avatarURL) {
+            try {
+              const avatarUrl = applicantMember.avatarURL({ size: 512, dynamic: true });
+              containerComponents.push({
+                type: 12, // Media Gallery
+                items: [{
+                  media: { url: avatarUrl },
+                  description: `${newApp.displayName || newApp.username} - Application Photo`,
+                  spoiler: false
+                }]
+              });
+            } catch (error) {
+              console.log('Could not add avatar to media gallery:', error);
+            }
+          }
+          
+          // Add ranking buttons (1-5)
+          const rankingButtons = [];
+          for (let i = 1; i <= 5; i++) {
+            rankingButtons.push({
+              type: 2, // Button
+              style: userScore === i ? 3 : 2, // Success if user's score, Secondary otherwise
+              label: i.toString(),
+              custom_id: `rank_${i}_${newApp.channelId}_${newIndex}`,
+              disabled: userScore === i
+            });
+          }
+          
+          containerComponents.push(
+            { type: 14 }, // Separator
+            {
+              type: 10, // Text Display
+              content: `> **Rate this applicant (1-5):**`
+            },
+            {
+              type: 1, // Action Row
+              components: rankingButtons
+            }
+          );
+          
+          // Add casting buttons
+          const castingButtons = [
+            {
+              type: 2, // Button
+              style: castingStatus === 'cast' ? 3 : 2, // Success if selected
+              label: '🎬 Cast Player',
+              custom_id: `cast_player_${newApp.channelId}_${newIndex}`
+            },
+            {
+              type: 2, // Button
+              style: castingStatus === 'tentative' ? 1 : 2, // Primary if selected
+              label: '❓ Tentative',
+              custom_id: `cast_tentative_${newApp.channelId}_${newIndex}`
+            },
+            {
+              type: 2, // Button
+              style: castingStatus === 'reject' ? 4 : 2, // Danger if selected
+              label: '🗑️ Don\'t Cast',
+              custom_id: `cast_reject_${newApp.channelId}_${newIndex}`
+            }
+          ];
+          
+          containerComponents.push(
+            { type: 14 }, // Separator
+            {
+              type: 1, // Action Row
+              components: castingButtons
+            }
+          );
+          
+          // Add navigation buttons
+          const navButtons = [
+            {
+              type: 2, // Button
+              style: 2, // Secondary
+              label: '◀ Previous',
+              custom_id: `ranking_prev_${newIndex}`,
+              disabled: newIndex === 0
+            },
+            {
+              type: 2, // Button
+              style: 2, // Secondary
+              label: 'Next ▶',
+              custom_id: `ranking_next_${newIndex}`,
+              disabled: newIndex === allApplications.length - 1
+            },
+            {
+              type: 2, // Button
+              style: 2, // Secondary
+              label: '📊 View All Scores',
+              custom_id: 'ranking_view_all_scores'
+            }
+          ];
+          
+          containerComponents.push(
+            { type: 14 }, // Separator
+            {
+              type: 1, // Action Row
+              components: navButtons
+            }
+          );
+          
+          // Add voting breakdown if votes exist
+          if (scores.length > 0) {
+            const votingBreakdown = await createVotingBreakdown(newApp.channelId, playerData, guildId, guild);
+            if (votingBreakdown) {
+              containerComponents.push(
+                { type: 14 }, // Separator
+                votingBreakdown
+              );
+            }
+          }
+          
+          // Add player notes section
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(newApp.channelId, newIndex, playerData, guildId);
+          containerComponents.push(
+            { type: 14 }, // Separator
+            playerNotesDisplay,
+            playerNotesButtonRow
+          );
+          
+          const castRankingContainer = {
+            type: 17, // Container
+            accent_color: 0x9B59B6, // Purple
+            components: containerComponents
+          };
+          
+          console.log(`✅ SUCCESS: delete_application_confirm - deleted and navigated to ${newApp.displayName}`);
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [castRankingContainer]
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('cancel_delete_application_')) {
+      // Handle cancel deletion - return to normal ranking interface
+      return ButtonHandlerFactory.create({
+        id: 'cancel_delete_application',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`❌ CANCEL: cancel_delete_application - user ${context.userId}`);
+          
+          // Parse button ID: cancel_delete_application_[channelId]_[appIndex]
+          const parts = context.customId.split('_');
+          const channelId = parts[3];
+          const appIndex = parseInt(parts[4]);
+          
+          // Just reload the normal ranking interface for this application
+          // (Redirect to ranking navigation to regenerate interface)
+          return {
+            content: '❌ Deletion cancelled.',
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('show_castlist')) {
       // Extract castlist name from custom_id if present
       const castlistMatch = custom_id.match(/^show_castlist(?:_(.+))?$/);
