@@ -4415,7 +4415,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const guild = await client.guilds.fetch(guildId);
 
           // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX_CONFIGID (new format) or rank_SCORE_CHANNELID_APPINDEX (legacy)
-          const rankMatch = context.customId.match(/^rank_(\d+)_(.+)_(\d+)(?:_(.+))?$/);
+          const rankMatch = context.customId.match(/^rank_(\d+)_(\d+)_(\d+)(?:_(.+))?$/);
           if (!rankMatch) {
             return {
               content: '❌ Invalid ranking button format.',
