@@ -18192,34 +18192,6 @@ Are you sure you want to continue?`;
             mode: 'edit'
           });
           
-          // Add "Enter Command" button for production team to test modal/trigger passphrases
-          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
-          
-          // Determine if we're in dev or prod environment
-          const isDev = context.guildId === '1331657596087566398'; // Your test server
-          const commandEmojiId = isDev ? '1396095623815495700' : '1396098411287285942';
-          
-          // Create Enter Command button for testing
-          const enterCommandButton = new ButtonBuilder()
-            .setCustomId(`player_enter_command_${coord}`)
-            .setLabel('🧪 Test Command')
-            .setEmoji({ id: commandEmojiId })
-            .setStyle(1); // Primary
-          
-          const testCommandRow = new ActionRowBuilder().addComponents([enterCommandButton]);
-          
-          // Add the test button to the existing UI components
-          if (ui.components && ui.components[0] && ui.components[0].components) {
-            // Add separator and test button to the container
-            ui.components[0].components.push(
-              { type: 14 }, // Separator
-              {
-                type: 10, // Text Display
-                content: "### 🧪 Testing Tools\nTest modal/trigger passphrases for this location:"
-              },
-              testCommandRow.toJSON()
-            );
-          }
           
           console.log(`✅ SUCCESS: map_location_actions - showing entity UI with test button for ${coord}`);
           
