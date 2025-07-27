@@ -22826,12 +22826,167 @@ Are you sure you want to continue?`;
         
         console.log(`✅ SUCCESS: save_player_notes - notes updated`);
         
-        // Send success response
+        // Regenerate the ranking interface with updated notes
+        const guild = await client.guilds.fetch(guildId);
+        const allApplications = await getAllApplicationsFromData(guildId);
+        const currentApp = allApplications[appIndex];
+        
+        if (!currentApp) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Application not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Fetch the applicant member for avatar
+        let applicantMember;
+        try {
+          applicantMember = await guild.members.fetch(currentApp.userId);
+        } catch (error) {
+          applicantMember = {
+            displayName: currentApp.displayName,
+            user: { username: currentApp.username },
+            displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+          };
+        }
+        
+        const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
+        
+        const galleryComponent = {
+          type: 12,
+          items: [{
+            media: { url: applicantAvatarURL },
+            description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
+          }]
+        };
+        
+        // Create ranking buttons
+        const rankingButtons = [];
+        const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+        
+        for (let i = 1; i <= 5; i++) {
+          const isSelected = userRanking === i;
+          rankingButtons.push(
+            new ButtonBuilder()
+              .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
+              .setLabel(i.toString())
+              .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+              .setDisabled(isSelected)
+          );
+        }
+        
+        const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
+        
+        // Create navigation buttons
+        const navButtons = [];
+        if (allApplications.length > 1) {
+          navButtons.push(
+            new ButtonBuilder()
+              .setCustomId(`ranking_prev_${appIndex}`)
+              .setLabel('◀ Previous')
+              .setStyle(ButtonStyle.Secondary)
+              .setDisabled(appIndex === 0),
+            new ButtonBuilder()
+              .setCustomId(`ranking_next_${appIndex}`)
+              .setLabel('Next ▶')
+              .setStyle(ButtonStyle.Secondary)
+              .setDisabled(appIndex === allApplications.length - 1)
+          );
+        }
+        
+        navButtons.push(
+          new ButtonBuilder()
+            .setCustomId('ranking_view_all_scores')
+            .setLabel('📊 View All Scores')
+            .setStyle(ButtonStyle.Primary)
+        );
+        
+        const navRow = new ActionRowBuilder().addComponents(navButtons);
+        
+        // Calculate average score
+        const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+        const rankings = Object.values(allRankings).filter(r => r !== undefined);
+        const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
+        
+        // Get casting status for display
+        const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
+        let castingStatusText = '';
+        if (castingStatus === 'cast') {
+          castingStatusText = '✅ Cast';
+        } else if (castingStatus === 'tentative') {
+          castingStatusText = '❓ Tentative';
+        } else if (castingStatus === 'reject') {
+          castingStatusText = '🗑️ Don\'t Cast';
+        } else {
+          castingStatusText = '⚪ Undecided';
+        }
+        
+        // Create voting breakdown if there are votes
+        const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
+        
+        // Create Components V2 Container for Cast Ranking interface
+        const containerComponents = [
+          {
+            type: 10, // Text Display component
+            content: `## Cast Ranking | ${guild.name}`
+          },
+          {
+            type: 14 // Separator
+          },
+          {
+            type: 10, // Text Display component
+            content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
+          },
+          galleryComponent, // Applicant avatar display
+          {
+            type: 10, // Text Display component  
+            content: `> **Rate this applicant (1-5):**`
+          },
+          rankingRow.toJSON(), // Ranking buttons
+          {
+            type: 14 // Separator
+          },
+          createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
+          {
+            type: 14 // Separator
+          },
+          navRow.toJSON() // Navigation and view all scores
+        ];
+        
+        // Add voting breakdown if there are votes
+        if (votingBreakdown) {
+          containerComponents.push(
+            {
+              type: 14 // Separator
+            },
+            votingBreakdown // Voting breakdown display
+          );
+        }
+        
+        // Add player notes section at the bottom
+        const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId);
+        containerComponents.push(
+          {
+            type: 14 // Separator
+          },
+          playerNotesDisplay, // Player notes text display
+          playerNotesButtonRow // Edit button
+        );
+        
+        const castRankingContainer = {
+          type: 17, // Container component
+          accent_color: 0x9B59B6, // Purple accent color
+          components: containerComponents
+        };
+        
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            content: '✅ **Player notes updated successfully!**\n\nThe notes have been saved and will appear in the ranking interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            components: [castRankingContainer]
           }
         });
         
