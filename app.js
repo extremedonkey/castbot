@@ -4624,6 +4624,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         id: 'ranking_navigation',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true, // Navigation updates existing message
         handler: async (context) => {
           console.log(`🔍 START: ranking_navigation - user ${context.userId}, button ${context.customId}`);
           
@@ -4723,18 +4724,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             ]
           };
           
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              flags: (1 << 15), // IS_COMPONENTS_V2 flag only, remove EPHEMERAL to make public
-              components: [summaryContainer]
-            }
-          });
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2 flag only, remove EPHEMERAL to make public
+            components: [summaryContainer]
+          };
         }
         
         // Handle navigation (prev/next)
         console.log('🔍 DEBUG: Checking for navigation match...');
-        const navMatch = custom_id.match(/^ranking_(prev|next)_(\d+)$/);
+        const navMatch = context.customId.match(/^ranking_(prev|next)_(\d+)(?:_(.+))?$/);
         if (navMatch) {
           console.log('🔍 DEBUG: Navigation match found:', navMatch);
           const [, direction, currentIndexStr] = navMatch;
@@ -4744,13 +4742,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           if (newIndex < 0 || newIndex >= allApplications.length) {
             console.log('🔍 DEBUG: Invalid navigation index, sending error');
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: {
-                content: '❌ Invalid navigation.',
-                flags: InteractionResponseFlags.EPHEMERAL
-              }
-            });
+            return {
+              content: '❌ Invalid navigation.',
+              ephemeral: true
+            };
           }
           
           const currentApp = allApplications[newIndex];
@@ -4823,12 +4818,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           if (allApplications.length > 1) {
             navButtons.push(
               new ButtonBuilder()
-                .setCustomId(`ranking_prev_${newIndex}`)
+                .setCustomId(`ranking_prev_${newIndex}_${configId || 'legacy'}`)
                 .setLabel('◀ Previous')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(newIndex === 0),
               new ButtonBuilder()
-                .setCustomId(`ranking_next_${newIndex}`)
+                .setCustomId(`ranking_next_${newIndex}_${configId || 'legacy'}`)
                 .setLabel('Next ▶')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(newIndex === allApplications.length - 1)
@@ -4918,17 +4913,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             components: containerComponents
           };
           
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              flags: (1 << 15),
-              components: [castRankingContainer]
-            }
-          });
+          console.log(`✅ SUCCESS: ranking_navigation - ${context.customId} completed`);
+          return {
+            flags: (1 << 15),
+            components: [castRankingContainer]
+          };
         }
         
-          console.log(`✅ SUCCESS: ranking_navigation - ${context.customId} completed`);
-        }
+        // If we get here, no handler matched
+        console.log(`❌ ERROR: ranking_navigation - unhandled pattern ${context.customId}`);
+        return {
+          content: '❌ Unknown ranking navigation command.',
+          ephemeral: true
+        };
+      }
       })(req, res, client);
     } else if (custom_id.startsWith('cast_player_') || custom_id.startsWith('cast_tentative_') || custom_id.startsWith('cast_reject_')) {
       // Handle casting status buttons - converted to Button Handler Factory
@@ -4936,6 +4934,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         id: 'casting_status',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true, // This is an UPDATE_MESSAGE response
         handler: async (context) => {
           console.log(`🎬 START: casting_status - user ${context.userId}, button ${context.customId}`);
           
