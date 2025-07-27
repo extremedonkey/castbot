@@ -5141,51 +5141,76 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     } else if (custom_id.startsWith('edit_player_notes_')) {
       // Handle edit player notes button clicks
-      return ButtonHandlerFactory.create({
-        id: 'edit_player_notes',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        showModal: true,
-        handler: async (context) => {
-          console.log(`✏️ START: edit_player_notes - user ${context.userId}, button ${context.customId}`);
-          const { guildId } = context;
-          
-          // Parse button ID: edit_player_notes_[channelId]_[appIndex]
-          const parts = context.customId.split('_');
-          const channelId = parts[3];
-          const appIndex = parseInt(parts[4]);
-          
-          console.log(`✏️ Editing notes for channel ${channelId}, app index ${appIndex}`);
-          
-          // Load existing notes
-          const playerData = await loadPlayerData();
-          const existingNotes = playerData[guildId]?.applications?.[channelId]?.playerNotes || '';
-          
-          // Create modal
-          const modal = new ModalBuilder()
-            .setCustomId(`save_player_notes_${channelId}_${appIndex}`)
-            .setTitle('Edit Player Notes');
-          
-          const notesInput = new TextInputBuilder()
-            .setCustomId('player_notes_text')
-            .setLabel('Add / Update Player Notes')
-            .setPlaceholder('Use this section to record casting notes such as other players they may know, potential issues you\'ve heard about in other servers, etc.')
-            .setStyle(TextInputStyle.Paragraph)
-            .setMaxLength(2000)
-            .setRequired(false);
-          
-          // Set existing notes if any
-          if (existingNotes) {
-            notesInput.setValue(existingNotes);
-          }
-          
-          const actionRow = new ActionRowBuilder().addComponents(notesInput);
-          modal.addComponents(actionRow);
-          
-          console.log(`✅ SUCCESS: edit_player_notes modal created`);
-          return { modal };
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        const guild = await client.guilds.fetch(guildId);
+        const member = await guild.members.fetch(userId);
+        
+        // Check admin permissions (same pattern as other ranking features)
+        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
+            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
+            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need admin permissions (Manage Roles, Manage Channels, or Manage Server) to edit player notes.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
         }
-      })(req, res, client);
+        
+        console.log(`✏️ START: edit_player_notes - user ${userId}, button ${custom_id}`);
+        
+        // Parse button ID: edit_player_notes_[channelId]_[appIndex]
+        const parts = custom_id.split('_');
+        const channelId = parts[3];
+        const appIndex = parseInt(parts[4]);
+        
+        console.log(`✏️ Editing notes for channel ${channelId}, app index ${appIndex}`);
+        
+        // Load existing notes
+        const playerData = await loadPlayerData();
+        const existingNotes = playerData[guildId]?.applications?.[channelId]?.playerNotes || '';
+        
+        // Create modal
+        const modal = new ModalBuilder()
+          .setCustomId(`save_player_notes_${channelId}_${appIndex}`)
+          .setTitle('Edit Player Notes');
+        
+        const notesInput = new TextInputBuilder()
+          .setCustomId('player_notes_text')
+          .setLabel('Add / Update Player Notes')
+          .setPlaceholder('Use this section to record casting notes such as other players they may know, potential issues you\'ve heard about in other servers, etc.')
+          .setStyle(TextInputStyle.Paragraph)
+          .setMaxLength(2000)
+          .setRequired(false);
+        
+        // Set existing notes if any
+        if (existingNotes) {
+          notesInput.setValue(existingNotes);
+        }
+        
+        const actionRow = new ActionRowBuilder().addComponents(notesInput);
+        modal.addComponents(actionRow);
+        
+        console.log(`✅ SUCCESS: edit_player_notes modal created`);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+        
+      } catch (error) {
+        console.error('Error handling edit player notes:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error opening player notes editor. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('show_castlist')) {
       // Extract castlist name from custom_id if present
       const castlistMatch = custom_id.match(/^show_castlist(?:_(.+))?$/);
