@@ -5181,13 +5181,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const notesInput = new TextInputBuilder()
           .setCustomId('player_notes_text')
           .setLabel('Add / Update Player Notes')
-          .setPlaceholder('Use this section to record casting notes such as other players they may know, potential issues you\'ve heard about in other servers, etc.')
+          .setPlaceholder('Record casting notes, connections, or potential issues...')
           .setStyle(TextInputStyle.Paragraph)
           .setMaxLength(2000)
           .setRequired(false);
         
-        // Set existing notes if any
-        if (existingNotes) {
+        // Only set existing notes if they exist and are not the default placeholder text
+        if (existingNotes && existingNotes !== 'Use this section to record casting notes such as other players they may know, potential issues you\'ve heard about in other servers, etc.') {
           notesInput.setValue(existingNotes);
         }
         
