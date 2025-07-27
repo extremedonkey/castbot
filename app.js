@@ -6628,6 +6628,7 @@ To fix this:
         id: 'season_delete_confirm',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           console.log(`💥 START: season_delete_confirm - user ${context.userId}`);
           
@@ -6684,10 +6685,23 @@ To fix this:
             console.log(`💥 Deleted ${questionCount} questions`);
             
             console.log(`✅ SUCCESS: season_delete_confirm - season "${seasonName}" deleted (${questionCount} questions, ${applicationCount} applications)`);
-            return {
-              content: `✅ **Season Successfully Deleted**\n\n**"${seasonName}"** has been permanently deleted.\n\n**Deleted:**\n• ${questionCount} application questions\n• ${applicationCount} submitted applications and voting data\n• Season configuration\n\n⚠️ **Remember:** Application channels must be deleted manually if they still exist.\n\nReturning to main menu...`,
-              ephemeral: true
-            };
+            
+            // Navigate back to main production menu and dismiss current message
+            const menuData = await createProductionMenuInterface(context.guild, playerData, context.guildId, context.userId);
+            
+            // Add success notification at the top
+            const successMessage = `✅ **Season Successfully Deleted**\n\n**"${seasonName}"** has been permanently deleted.\n\n**Deleted:**\n• ${questionCount} application questions\n• ${applicationCount} submitted applications and voting data\n• Season configuration\n\n⚠️ **Remember:** Application channels must be deleted manually if they still exist.\n\n---\n\n`;
+            
+            // Prepend success message to the existing menu content
+            if (menuData.components && menuData.components[0] && menuData.components[0].components) {
+              // Find the first text display component and prepend the success message
+              const firstTextComponent = menuData.components[0].components.find(comp => comp.type === 10);
+              if (firstTextComponent) {
+                firstTextComponent.text = successMessage + firstTextComponent.text;
+              }
+            }
+            
+            return menuData;
           } catch (error) {
             console.error(`❌ Error deleting season ${configId}:`, error);
             return {
@@ -6703,13 +6717,27 @@ To fix this:
         id: 'season_delete_cancel',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           console.log(`❌ CANCEL: season_delete_cancel - user ${context.userId}`);
           
-          return {
-            content: '❌ Season deletion cancelled.',
-            ephemeral: true
-          };
+          // Extract configId to return to the manage questions interface
+          const configId = context.customId.replace('season_delete_cancel_', '');
+          
+          // Load player data and return to manage questions interface
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          
+          if (!config) {
+            return {
+              content: '❌ Season configuration not found.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`✅ SUCCESS: season_delete_cancel - returning to manage questions for ${config.seasonName}`);
+          // Return to the manage questions interface
+          return refreshQuestionManagementUI(null, config, configId, 1);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_delete_')) {
@@ -6718,6 +6746,7 @@ To fix this:
         id: 'season_delete',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           console.log(`🗑️ START: season_delete - user ${context.userId}`);
           
