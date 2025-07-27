@@ -18192,6 +18192,36 @@ Are you sure you want to continue?`;
             mode: 'edit'
           });
           
+          // Add "Enter Command" button for production team to test modal/trigger passphrases
+          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
+          
+          // Determine if we're in dev or prod environment
+          const isDev = context.guildId === '1331657596087566398'; // Your test server
+          const commandEmojiId = isDev ? '1396095623815495700' : '1396098411287285942';
+          
+          // Create Enter Command button for testing (grey secondary style as requested)
+          const enterCommandButton = new ButtonBuilder()
+            .setCustomId(`player_enter_command_${coord}`)
+            .setLabel('Enter Command')
+            .setEmoji({ id: commandEmojiId })
+            .setStyle(2); // Secondary (grey)
+          
+          const testCommandRow = new ActionRowBuilder().addComponents([enterCommandButton]);
+          
+          // Add the test button to the existing UI components (check for duplicates)
+          if (ui.components && ui.components[0] && ui.components[0].components) {
+            // Check if the button already exists in the UI
+            const hasExistingButton = ui.components[0].components.some(comp => 
+              comp.components && comp.components.some(btn => 
+                btn.custom_id && btn.custom_id.includes('player_enter_command')
+              )
+            );
+            
+            if (!hasExistingButton) {
+              // Add button to the container only if it doesn't already exist
+              ui.components[0].components.push(testCommandRow.toJSON());
+            }
+          }
           
           console.log(`✅ SUCCESS: map_location_actions - showing entity UI with test button for ${coord}`);
           
