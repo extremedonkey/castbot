@@ -260,20 +260,14 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
         {
           type: 2, // Button
           custom_id: `season_nav_prev_${configId}_${currentPage}`,
-          label: "◀",
+          label: "◀ Previous",
           style: prevDisabled ? 2 : 1, // Secondary : Primary
           disabled: prevDisabled
         },
         {
           type: 2, // Button
-          custom_id: "viral_menu",
-          label: "📋 Menu",
-          style: 1 // Primary
-        },
-        {
-          type: 2, // Button
           custom_id: `season_nav_next_${configId}_${currentPage}`,
-          label: "▶",
+          label: "Next ▶",
           style: nextDisabled ? 2 : 1, // Secondary : Primary
           disabled: nextDisabled
         },
@@ -288,16 +282,10 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
     };
     navComponents.push(navRow);
   } else {
-    // If 5 or fewer questions, just show menu button
+    // If 5 or fewer questions, just show Delete Season button
     const navRow = {
       type: 1, // Action Row
       components: [
-        {
-          type: 2, // Button
-          custom_id: "viral_menu",
-          label: "📋 Menu",
-          style: 1 // Primary
-        },
         {
           type: 2, // Button
           custom_id: `season_delete_${configId}`,
