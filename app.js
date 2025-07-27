@@ -4638,8 +4638,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             configId = context.customId.replace('ranking_view_all_scores_', '');
           } else if (context.customId.startsWith('ranking_prev_') || context.customId.startsWith('ranking_next_')) {
             // Extract configId from navigation buttons: ranking_prev_{appIndex}_{configId} or ranking_next_{appIndex}_{configId}
-            const parts = context.customId.split('_');
-            configId = parts[parts.length - 1]; // Last part is configId
+            // Custom ID format: ranking_next_0_config_1749305698427_391415444084490240
+            const configMatch = context.customId.match(/ranking_(prev|next)_\d+_(.+)$/);
+            if (configMatch) {
+              configId = configMatch[2]; // Everything after the index
+            }
           }
 
           const playerData = await loadPlayerData();
