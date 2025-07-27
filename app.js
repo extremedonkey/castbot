@@ -690,6 +690,32 @@ async function canSendMessagesInChannel(member, channelId, client) {
  * - Consistent architecture across admin vs channel-specific permissions
  */
 
+/**
+ * Check if user has Cast Ranking permissions (with special exception for server 1331657596087566398)
+ * @param {Object} member - Discord member object from interaction
+ * @param {string} guildId - Discord guild ID
+ * @returns {boolean} True if user has cast ranking permissions
+ */
+function hasCastRankingPermissions(member, guildId) {
+  if (!member || !member.permissions) return false;
+  
+  // Special exception for server 1331657596087566398 - allow all users
+  if (guildId === '1331657596087566398') {
+    console.log(`🏆 Cast Ranking: Special permission granted for server ${guildId}`);
+    return true;
+  }
+  
+  // Standard permission check for other servers: Manage Roles OR Manage Channels
+  const permissions = BigInt(member.permissions);
+  const castRankingPermissions = 
+    PermissionFlagsBits.ManageRoles | 
+    PermissionFlagsBits.ManageChannels;
+  
+  const hasPermission = (permissions & BigInt(castRankingPermissions)) !== 0n;
+  console.log(`🏆 Cast Ranking: Standard permission check for server ${guildId}: ${hasPermission}`);
+  return hasPermission;
+}
+
 // createPlayerDisplaySection has been moved to playerManagement.js module
 
 /**
@@ -4636,14 +4662,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Handle ranking navigation and view all scores - converted to Button Handler Factory
       return ButtonHandlerFactory.create({
         id: 'ranking_navigation',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
         updateMessage: true, // Navigation updates existing message (but not View All Scores)
         handler: async (context) => {
           console.log(`🔍 START: ranking_navigation - user ${context.userId}, button ${context.customId}`);
           
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          
+          // Check Cast Ranking permissions (includes special exception for server 1331657596087566398)
+          if (!hasCastRankingPermissions(member, guildId)) {
+            return {
+              content: '❌ You need Manage Roles or Manage Channels permissions to access Cast Ranking.',
+              ephemeral: true
+            };
+          }
 
           // Extract configId from button custom_id
           let configId = null;
@@ -7217,8 +7250,6 @@ To fix this:
     } else if (custom_id.startsWith('season_app_ranking_')) {
       return ButtonHandlerFactory.create({
         id: 'season_app_ranking',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
         handler: async (context) => {
           console.log(`🔍 START: season_app_ranking - user ${context.userId}`);
           const { guildId, userId, client } = context;
@@ -7230,12 +7261,10 @@ To fix this:
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
           
-          // Check additional admin permissions
-          if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-              !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-              !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+          // Check Cast Ranking permissions (includes special exception for server 1331657596087566398)
+          if (!hasCastRankingPermissions(member, guildId)) {
             return {
-              content: '❌ You need Manage Roles, Manage Channels, or Manage Server permissions to use this feature.',
+              content: '❌ You need Manage Roles or Manage Channels permissions to access Cast Ranking.',
               ephemeral: true
             };
           }
