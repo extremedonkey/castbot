@@ -4439,9 +4439,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const allApplications = configId 
             ? await getApplicationsForSeason(guildId, configId)
             : await getAllApplicationsFromData(guildId);
+          
+          console.log(`🔍 DEBUG: rank_applicant - AppIndex: ${appIndex}, ConfigId: ${configId}, Applications count: ${allApplications.length}`);
+          console.log(`🔍 DEBUG: Application IDs:`, allApplications.map(app => app.channelId));
+          
           const currentApp = allApplications[appIndex];
 
           if (!currentApp) {
+            console.log(`🔍 DEBUG: Application not found at index ${appIndex} - Available indices: 0-${allApplications.length - 1}`);
             return {
               content: '❌ Application not found.',
               ephemeral: true
