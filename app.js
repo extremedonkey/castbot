@@ -502,7 +502,7 @@ function createCastingButtons(channelId, appIndex, playerData, guildId, configId
  * @returns {Promise<Object|null>} Text Display component or null if no votes
  */
 async function createVotingBreakdown(channelId, playerData, guildId, guild) {
-  const allRankings = playerData[guildId]?.rankings?.[channelId] || {};
+  const allRankings = playerData[guildId]?.applications?.[channelId]?.rankings || {};
   const rankingEntries = Object.entries(allRankings).filter(([_, score]) => score !== undefined);
   
   if (rankingEntries.length === 0) {
@@ -4430,12 +4430,22 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
           // Load and update ranking data
           const playerData = await loadPlayerData();
-          if (!playerData[guildId]) playerData[guildId] = {};
-          if (!playerData[guildId].rankings) playerData[guildId].rankings = {};
-          if (!playerData[guildId].rankings[channelId]) playerData[guildId].rankings[channelId] = {};
+          
+          // Ensure application exists (it should since we're in Cast Ranking interface)
+          if (!playerData[guildId]?.applications?.[channelId]) {
+            return {
+              content: '❌ Application not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Initialize rankings object if it doesn't exist
+          if (!playerData[guildId].applications[channelId].rankings) {
+            playerData[guildId].applications[channelId].rankings = {};
+          }
 
-          // Record the user's ranking for this application
-          playerData[guildId].rankings[channelId][userId] = rankingScore;
+          // Record the user's ranking for this application (NEW SYSTEM)
+          playerData[guildId].applications[channelId].rankings[userId] = rankingScore;
           await savePlayerData(playerData);
 
           // Get updated application data using season-filtered function when configId is available
@@ -4495,7 +4505,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
           // Create updated ranking buttons
           const rankingButtons = [];
-          const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+          const userRanking = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings?.[userId];
           
           for (let i = 1; i <= 5; i++) {
             const isSelected = userRanking === i;
@@ -4537,7 +4547,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const navRow = new ActionRowBuilder().addComponents(navButtons);
           
           // Calculate updated average score
-          const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+          const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
           const rankings = Object.values(allRankings).filter(r => r !== undefined);
           const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
           
@@ -4662,7 +4672,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           // Calculate scores and casting status for each applicant
           const applicantData = allApplications.map((app, index) => {
-            const rankings = playerData[guildId]?.rankings?.[app.channelId] || {};
+            const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
             const scores = Object.values(rankings).filter(r => r !== undefined);
             const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
             const castingStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus || 'undecided';
@@ -4807,7 +4817,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           console.log('🔍 DEBUG: Navigation Media Gallery component created');
 
           const rankingButtons = [];
-          const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+          const userRanking = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings?.[userId];
           
           for (let i = 1; i <= 5; i++) {
             const isSelected = userRanking === i;
@@ -4847,7 +4857,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           const navRow = new ActionRowBuilder().addComponents(navButtons);
           
-          const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+          const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
           const rankings = Object.values(allRankings).filter(r => r !== undefined);
           const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
           
@@ -5041,7 +5051,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           // Create ranking buttons
           const rankingButtons = [];
-          const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+          const userRanking = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings?.[userId];
           
           for (let i = 1; i <= 5; i++) {
             const isSelected = userRanking === i;
@@ -5083,7 +5093,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const navRow = new ActionRowBuilder().addComponents(navButtons);
           
           // Calculate average score
-          const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+          const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
           const rankings = Object.values(allRankings).filter(r => r !== undefined);
           const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
           
@@ -5356,11 +5366,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               console.log(`🗑️ Removed application data for channel ${channelId}`);
             }
             
-            // Remove from rankings
-            if (playerData[guildId]?.rankings?.[channelId]) {
-              delete playerData[guildId].rankings[channelId];
-              console.log(`🗑️ Removed ranking data for channel ${channelId}`);
-            }
+            // Rankings are automatically removed with application deletion (NEW SYSTEM)
             
             // NOTE: We preserve playerData[guildId].players[applicantUserId] and timezones as requested
             
@@ -5440,7 +5446,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
           
           // Create ranking interface components (similar to existing ranking interface)
-          const rankings = playerData[guildId]?.rankings?.[newApp.channelId] || {};
+          const rankings = playerData[guildId]?.applications?.[newApp.channelId]?.rankings || {};
           const userScore = rankings[userId];
           const scores = Object.values(rankings).filter(r => r !== undefined);
           const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 'N/A';
@@ -7122,7 +7128,7 @@ To fix this:
 
           // Create ranking buttons (1-5)
           const rankingButtons = [];
-          const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+          const userRanking = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings?.[userId];
           
           for (let i = 1; i <= 5; i++) {
             const isSelected = userRanking === i;
@@ -7165,7 +7171,7 @@ To fix this:
           const navRow = new ActionRowBuilder().addComponents(navButtons);
           
           // Calculate average score for current applicant
-          const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+          const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
           const rankings = Object.values(allRankings).filter(r => r !== undefined);
           const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
           
@@ -23301,7 +23307,7 @@ Are you sure you want to continue?`;
         
         // Create ranking buttons
         const rankingButtons = [];
-        const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+        const userRanking = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings?.[userId];
         
           for (let i = 1; i <= 5; i++) {
             const isSelected = userRanking === i;
@@ -23343,7 +23349,7 @@ Are you sure you want to continue?`;
         const navRow = new ActionRowBuilder().addComponents(navButtons);
         
         // Calculate average score
-        const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+        const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
         const rankings = Object.values(allRankings).filter(r => r !== undefined);
         const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
         
