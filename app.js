@@ -231,7 +231,7 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
       },
       {
         type: 2, // Button
-        custom_id: 'season_app_ranking',
+        custom_id: `season_app_ranking_${configId}`,
         label: 'Cast Ranking',
         style: 2, // Secondary
         emoji: { name: '🏆' }
@@ -425,6 +425,26 @@ async function getAllApplicationsFromData(guildId) {
   const playerData = await loadPlayerData();
   const guildApplications = playerData[guildId]?.applications || {};
   return Object.values(guildApplications);
+}
+
+/**
+ * Get applications filtered by season configId
+ * @param {string} guildId - Guild ID
+ * @param {string} configId - Season config ID to filter by
+ * @returns {Array} Array of applications for the specified season
+ */
+async function getApplicationsForSeason(guildId, configId) {
+  const playerData = await loadPlayerData();
+  const guildApplications = playerData[guildId]?.applications || {};
+  
+  return Object.values(guildApplications).filter(app => {
+    // Handle backward compatibility for applications without configId
+    if (!app.configId || app.configId === 'unknown') {
+      // Applications without configId are treated as legacy and excluded from season filtering
+      return false;
+    }
+    return app.configId === configId;
+  });
 }
 
 /**
@@ -4378,8 +4398,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
 
-          // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX
-          const rankMatch = context.customId.match(/^rank_(\d+)_(.+)_(\d+)$/);
+          // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX_CONFIGID (new format) or rank_SCORE_CHANNELID_APPINDEX (legacy)
+          const rankMatch = context.customId.match(/^rank_(\d+)_(.+)_(\d+)(?:_(.+))?$/);
           if (!rankMatch) {
             return {
               content: '❌ Invalid ranking button format.',
@@ -4387,7 +4407,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             };
           }
 
-          const [, score, channelId, appIndexStr] = rankMatch;
+          const [, score, channelId, appIndexStr, configId] = rankMatch;
           const rankingScore = parseInt(score);
           const appIndex = parseInt(appIndexStr);
 
@@ -4401,8 +4421,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           playerData[guildId].rankings[channelId][userId] = rankingScore;
           await savePlayerData(playerData);
 
-          // Get updated application data using helper function
-          const allApplications = await getAllApplicationsFromData(guildId);
+          // Get updated application data using season-filtered function when configId is available
+          const allApplications = configId 
+            ? await getApplicationsForSeason(guildId, configId)
+            : await getAllApplicationsFromData(guildId);
           const currentApp = allApplications[appIndex];
 
           if (!currentApp) {
@@ -4587,12 +4609,30 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
 
-          const playerData = await loadPlayerData();
-          const allApplications = await getAllApplicationsFromData(guildId);
+          // Extract configId from button custom_id
+          let configId = null;
+          if (context.customId.startsWith('ranking_view_all_scores_')) {
+            configId = context.customId.replace('ranking_view_all_scores_', '');
+          } else if (context.customId.startsWith('ranking_prev_') || context.customId.startsWith('ranking_next_')) {
+            // Extract configId from navigation buttons: ranking_prev_{appIndex}_{configId} or ranking_next_{appIndex}_{configId}
+            const parts = context.customId.split('_');
+            configId = parts[parts.length - 1]; // Last part is configId
+          }
 
-          if (context.customId === 'ranking_view_all_scores') {
+          const playerData = await loadPlayerData();
+          
+          // Use season-filtered applications if configId is available, otherwise fall back to all applications
+          const allApplications = configId 
+            ? await getApplicationsForSeason(guildId, configId)
+            : await getAllApplicationsFromData(guildId);
+
+          // Load season configuration for header
+          const seasonConfig = playerData[guildId]?.applicationConfigs?.[configId];
+          const seasonName = seasonConfig?.seasonName || 'Unknown Season';
+
+          if (context.customId.startsWith('ranking_view_all_scores')) {
             // Generate comprehensive score and casting summary
-            let scoreSummary = `## Cast Ranking & Status Summary | ${guild.name}\n\n`;
+            let scoreSummary = `## Cast Ranking & Status Summary - ${seasonName} | ${guild.name}\n\n`;
           
           // Calculate scores and casting status for each applicant
           const applicantData = allApplications.map((app, index) => {
@@ -6981,7 +7021,7 @@ To fix this:
           }
         });
       }
-    } else if (custom_id === 'season_app_ranking') {
+    } else if (custom_id.startsWith('season_app_ranking_')) {
       return ButtonHandlerFactory.create({
         id: 'season_app_ranking',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -6989,6 +7029,10 @@ To fix this:
         handler: async (context) => {
           console.log(`🔍 START: season_app_ranking - user ${context.userId}`);
           const { guildId, userId, client } = context;
+          
+          // Extract configId from custom_id: season_app_ranking_{configId}
+          const configId = context.customId.replace('season_app_ranking_', '');
+          console.log(`🏆 Cast Ranking for season: ${configId}`);
           
           const guild = await client.guilds.fetch(guildId);
           const member = await guild.members.fetch(userId);
@@ -7003,8 +7047,13 @@ To fix this:
             };
           }
 
-          // Load applications data - Use helper function to get all applications from stored data
-          const allApplications = await getAllApplicationsFromData(guildId);
+          // Load season configuration to get season name
+          const playerData = await loadPlayerData();
+          const seasonConfig = playerData[guildId]?.applicationConfigs?.[configId];
+          const seasonName = seasonConfig?.seasonName || 'Unknown Season';
+          
+          // Load applications data filtered by season
+          const allApplications = await getApplicationsForSeason(guildId, configId);
           
           console.log(`Found ${allApplications.length} applications for ranking`);
           console.log('Debug - Guild ID:', guildId);
@@ -7024,7 +7073,7 @@ To fix this:
 
           if (allApplications.length === 0) {
             return {
-              content: '📝 No applications found for this server. Create application buttons first using "Creation Application Process".',
+              content: `📝 No applications found for season "${seasonName}". \n\nApplicants need to use the application button for this specific season to appear in Cast Ranking.`,
               ephemeral: true
             };
           }
@@ -7084,7 +7133,7 @@ To fix this:
             const isSelected = userRanking === i;
             rankingButtons.push(
               new ButtonBuilder()
-                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
+                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}_${configId}`)
                 .setLabel(i.toString())
                 .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
                 .setDisabled(isSelected)
@@ -7098,22 +7147,22 @@ To fix this:
           if (allApplications.length > 1) {
             navButtons.push(
               new ButtonBuilder()
-                .setCustomId(`ranking_prev_${appIndex}`)
+                .setCustomId(`ranking_prev_${appIndex}_${configId}`)
                 .setLabel('◀ Previous')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(appIndex === 0),
               new ButtonBuilder()
-                .setCustomId(`ranking_next_${appIndex}`)
+                .setCustomId(`ranking_next_${appIndex}_${configId}`)
                 .setLabel('Next ▶')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(appIndex === allApplications.length - 1)
             );
           }
           
-          // Add View All Scores button
+          // Add View All Scores button (season-scoped)
           navButtons.push(
             new ButtonBuilder()
-              .setCustomId('ranking_view_all_scores')
+              .setCustomId(`ranking_view_all_scores_${configId}`)
               .setLabel('📊 View All Scores')
               .setStyle(ButtonStyle.Primary)
           );
@@ -7145,7 +7194,7 @@ To fix this:
           const containerComponents = [
             {
               type: 10, // Text Display component
-              content: `## Cast Ranking | ${guild.name}`
+              content: `## Cast Ranking - ${seasonName} | ${guild.name}`
             },
             {
               type: 14 // Separator

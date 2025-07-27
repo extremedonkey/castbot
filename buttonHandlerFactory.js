@@ -752,9 +752,9 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'application_management'
   },
-  'season_app_ranking': {
+  'season_app_ranking_*': {
     label: 'Cast Ranking',
-    description: 'Comprehensive applicant ranking and evaluation system',
+    description: 'Comprehensive applicant ranking and evaluation system for specific season',
     emoji: '🏆',
     style: 'Secondary',
     category: 'application_management'
