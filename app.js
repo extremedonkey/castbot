@@ -4576,41 +4576,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       })(req, res, client);
     } else if (custom_id.startsWith('ranking_')) {
-      // Handle ranking navigation and view all scores
-      console.log('🔍 DEBUG: Processing ranking navigation click:', custom_id);
-      try {
-        console.log('🔍 DEBUG: Extracting guild and user info for navigation...');
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const userId = req.body.member.user.id;
-        console.log('🔍 DEBUG: Navigation - Guild ID:', guildId, 'User ID:', userId);
+      // Handle ranking navigation and view all scores - converted to Button Handler Factory
+      return ButtonHandlerFactory.create({
+        id: 'ranking_navigation',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: ranking_navigation - user ${context.userId}, button ${context.customId}`);
+          
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
 
-        // Check admin permissions
-        console.log('🔍 DEBUG: Checking navigation admin permissions...');
-        const member = await guild.members.fetch(userId);
-        console.log('🔍 DEBUG: Navigation member permissions:', member.permissions.bitfield.toString());
-        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          console.log('🔍 DEBUG: Navigation user lacks admin permissions, sending error response');
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need admin permissions to access rankings.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        console.log('🔍 DEBUG: Navigation admin permissions verified');
+          const playerData = await loadPlayerData();
+          const allApplications = await getAllApplicationsFromData(guildId);
 
-        console.log('🔍 DEBUG: Loading navigation data...');
-        const playerData = await loadPlayerData();
-        const allApplications = await getAllApplicationsFromData(guildId);
-        console.log('🔍 DEBUG: Navigation found', allApplications.length, 'applications');
-
-        if (custom_id === 'ranking_view_all_scores') {
-          // Generate comprehensive score and casting summary
-          let scoreSummary = `## Cast Ranking & Status Summary | ${guild.name}\n\n`;
+          if (context.customId === 'ranking_view_all_scores') {
+            // Generate comprehensive score and casting summary
+            let scoreSummary = `## Cast Ranking & Status Summary | ${guild.name}\n\n`;
           
           // Calculate scores and casting status for each applicant
           const applicantData = allApplications.map((app, index) => {
@@ -4884,77 +4866,60 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
         
-      } catch (error) {
-        console.error('Error handling ranking navigation:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error processing ranking navigation.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          console.log(`✅ SUCCESS: ranking_navigation - ${context.customId} completed`);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('cast_player_') || custom_id.startsWith('cast_tentative_') || custom_id.startsWith('cast_reject_')) {
-      // Handle casting status buttons
-      try {
-        console.log(`🎬 START: casting status - user ${req.body.member.user.id}, button ${custom_id}`);
-        const guildId = req.body.guild_id;
-        const userId = req.body.member.user.id;
-        const guild = await client.guilds.fetch(guildId);
-        
-        // Check admin permissions (same pattern as ranking buttons)
-        if (!requireAdminPermission(req, res, 'You need admin permissions (Manage Roles, Manage Channels, Manage Server, or Administrator) to manage casting status.')) return;
-        
-        
-        // Parse button ID: cast_[status]_[channelId]_[appIndex]
-        const parts = custom_id.split('_');
-        const status = parts[1]; // player, tentative, or reject
-        const channelId = parts[2];
-        const appIndex = parseInt(parts[3]);
-        
-        // Map button status to database status
-        const statusMap = {
-          'player': 'cast',
-          'tentative': 'tentative', 
-          'reject': 'reject'
-        };
-        const castingStatus = statusMap[status];
-        
-        console.log(`🎬 Setting casting status to ${castingStatus} for channel ${channelId}`);
-        
-        // Load and update player data
-        const playerData = await loadPlayerData();
-        
-        // Ensure application exists
-        if (!playerData[guildId]?.applications?.[channelId]) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      // Handle casting status buttons - converted to Button Handler Factory
+      return ButtonHandlerFactory.create({
+        id: 'casting_status',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🎬 START: casting_status - user ${context.userId}, button ${context.customId}`);
+          
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          
+          // Parse button ID: cast_[status]_[channelId]_[appIndex]
+          const parts = context.customId.split('_');
+          const status = parts[1]; // player, tentative, or reject
+          const channelId = parts[2];
+          const appIndex = parseInt(parts[3]);
+          
+          // Map button status to database status
+          const statusMap = {
+            'player': 'cast',
+            'tentative': 'tentative', 
+            'reject': 'reject'
+          };
+          const castingStatus = statusMap[status];
+          
+          // Load and update player data
+          const playerData = await loadPlayerData();
+          
+          // Ensure application exists
+          if (!playerData[guildId]?.applications?.[channelId]) {
+            return {
               content: '❌ Application not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Update casting status
-        playerData[guildId].applications[channelId].castingStatus = castingStatus;
-        await savePlayerData(playerData);
-        
-        console.log(`✅ SUCCESS: casting status updated to ${castingStatus}`);
-        
-        // Regenerate the ranking interface with updated button states
-        const allApplications = await getAllApplicationsFromData(guildId);
-        const currentApp = allApplications[appIndex];
-        
-        if (!currentApp) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+              ephemeral: true
+            };
+          }
+          
+          // Update casting status
+          playerData[guildId].applications[channelId].castingStatus = castingStatus;
+          await savePlayerData(playerData);
+          
+          // Regenerate the ranking interface with updated button states
+          const allApplications = await getAllApplicationsFromData(guildId);
+          const currentApp = allApplications[appIndex];
+          
+          if (!currentApp) {
+            return {
               content: '❌ Application not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+              ephemeral: true
+            };
+          }
           
           // Fetch the applicant member for avatar
           let applicantMember;
@@ -5115,24 +5080,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             components: containerComponents
           };
           
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              components: [castRankingContainer]
-            }
-          });
-          
-      } catch (error) {
-        console.error('Error handling casting button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error updating casting status. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          console.log(`✅ SUCCESS: casting_status - status set to ${castingStatus} for ${currentApp.displayName}`);
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [castRankingContainer]
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('edit_player_notes_')) {
       // Handle edit player notes button clicks
       try {
@@ -5281,6 +5235,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         deferred: true, // This might take time with channel deletion
+        ephemeral: false, // Cast Ranking interface should NOT be ephemeral
         handler: async (context) => {
           console.log(`💥 START: delete_application_confirm - user ${context.userId}`);
           
