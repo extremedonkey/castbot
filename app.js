@@ -14690,7 +14690,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             components: [
               {
                 type: 10, // Text Display
-                content: `## 🚀 Get Started with Your Application\n\nWelcome <@${userId}>! This is your private application channel.\n\nOnly you and the ${config?.productionRole ? `production team (<@&${config.productionRole}>)` : 'admin team'} can see this channel.\n\nTo get your application started, please set up your basic information using the button below:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button below to get started!`
+                content: `## 🚀 Get Started with Your Application\n\nWelcome <@${userId}>! This is your private application channel.\n\nOnly you and the ${config?.productionRole ? `production team (<@&${config.productionRole}>)` : 'admin team'} can see this channel.\n\nTo get your application started, please set up your basic information using the button above:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button above to get started!`
               },
               {
                 type: 1, // Action Row
@@ -14735,7 +14735,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ **Application Withdrawn**\n\nYour application has been withdrawn. If you change your mind, you can re-apply using the button below.',
+              content: '❌ **Application Withdrawn**\n\nYour application has been withdrawn. If you change your mind, you can re-apply using the button above.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -14797,7 +14797,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             components: [
               {
                 type: 10, // Text Display
-                content: `## 🚀 Get Started with Your Application\n\nWelcome <@${userId}>! This is your private application channel.\n\nOnly you and the ${config?.productionRole ? `production team (<@&${config.productionRole}>)` : 'admin team'} can see this channel.\n\nTo get your application started, please set up your basic information using the button below:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button below to get started!`
+                content: `## 🚀 Get Started with Your Application\n\nWelcome <@${userId}>! This is your private application channel.\n\nOnly you and the ${config?.productionRole ? `production team (<@&${config.productionRole}>)` : 'admin team'} can see this channel.\n\nTo get your application started, please set up your basic information using the button above:\n\n• **Pronouns** - Let us know your preferred pronouns\n• **Timezone** - Help other players understand your availability\n• **Age** - Set how old you are\n\nClick the button above to get started!`
               },
               {
                 type: 1, // Action Row
