@@ -1445,14 +1445,27 @@ export function sendResponse(res, data, updateMessage = false) {
     return res.send(data);
   }
   
-  // For UPDATE_MESSAGE, Discord doesn't accept flags in the response
+  // For UPDATE_MESSAGE with Components V2
   if (updateMessage) {
-    console.log('📝 Sending UPDATE_MESSAGE response (no flags)');
-    const { flags, ephemeral, ...cleanData } = data; // Remove flags and ephemeral
-    return res.send({
-      type: InteractionResponseType.UPDATE_MESSAGE,
-      data: cleanData
-    });
+    // Check if this is a Components V2 response (has the IS_COMPONENTS_V2 flag)
+    const isComponentsV2 = data.flags && (data.flags & (1 << 15));
+    
+    if (isComponentsV2) {
+      console.log('📝 Sending UPDATE_MESSAGE response with Components V2 flag');
+      // Keep the flags for Components V2
+      const { ephemeral, ...responseData } = data; // Only remove ephemeral
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: responseData
+      });
+    } else {
+      console.log('📝 Sending UPDATE_MESSAGE response (no flags)');
+      const { flags, ephemeral, ...cleanData } = data; // Remove flags and ephemeral
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: cleanData
+      });
+    }
   }
   
   // For new messages, handle flags normally

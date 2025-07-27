@@ -4625,7 +4625,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         id: 'ranking_navigation',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        updateMessage: true, // Navigation updates existing message
+        updateMessage: true, // Navigation updates existing message (but not View All Scores)
         handler: async (context) => {
           console.log(`🔍 START: ranking_navigation - user ${context.userId}, button ${context.customId}`);
           
@@ -4725,9 +4725,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             ]
           };
           
+          // Force a new message for View All Scores by returning a full response object
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag only, remove EPHEMERAL to make public
-            components: [summaryContainer]
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: (1 << 15), // IS_COMPONENTS_V2 flag only, remove EPHEMERAL to make public
+              components: [summaryContainer]
+            }
           };
         }
         
