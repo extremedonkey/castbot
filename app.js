@@ -455,21 +455,21 @@ async function getApplicationsForSeason(guildId, configId) {
  * @param {string} guildId - Guild ID
  * @returns {Object} ActionRow with casting buttons
  */
-function createCastingButtons(channelId, appIndex, playerData, guildId) {
+function createCastingButtons(channelId, appIndex, playerData, guildId, configId = null) {
   // Get current casting status
   const castingStatus = playerData[guildId]?.applications?.[channelId]?.castingStatus;
   
   const castButtons = [
     new ButtonBuilder()
-      .setCustomId(`cast_player_${channelId}_${appIndex}`)
+      .setCustomId(`cast_player_${channelId}_${appIndex}_${configId || 'legacy'}`)
       .setLabel('🎬 Cast Player')
       .setStyle(castingStatus === 'cast' ? ButtonStyle.Success : ButtonStyle.Secondary),
     new ButtonBuilder()
-      .setCustomId(`cast_tentative_${channelId}_${appIndex}`)
+      .setCustomId(`cast_tentative_${channelId}_${appIndex}_${configId || 'legacy'}`)
       .setLabel('❓ Tentative')
       .setStyle(castingStatus === 'tentative' ? ButtonStyle.Primary : ButtonStyle.Secondary),
     new ButtonBuilder()
-      .setCustomId(`cast_reject_${channelId}_${appIndex}`)
+      .setCustomId(`cast_reject_${channelId}_${appIndex}_${configId || 'legacy'}`)
       .setLabel('🗑️ Don\'t Cast')
       .setStyle(castingStatus === 'reject' ? ButtonStyle.Danger : ButtonStyle.Secondary)
   ];
@@ -4479,7 +4479,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             const isSelected = userRanking === i;
             rankingButtons.push(
               new ButtonBuilder()
-                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
+                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}_${configId || 'legacy'}`)
                 .setLabel(i.toString())
                 .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
                 .setDisabled(isSelected)
@@ -4493,12 +4493,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           if (allApplications.length > 1) {
             navButtons.push(
               new ButtonBuilder()
-                .setCustomId(`ranking_prev_${appIndex}`)
+                .setCustomId(`ranking_prev_${appIndex}_${configId || 'legacy'}`)
                 .setLabel('◀ Previous')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(appIndex === 0),
               new ButtonBuilder()
-                .setCustomId(`ranking_next_${appIndex}`)
+                .setCustomId(`ranking_next_${appIndex}_${configId || 'legacy'}`)
                 .setLabel('Next ▶')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(appIndex === allApplications.length - 1)
@@ -4507,7 +4507,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           navButtons.push(
             new ButtonBuilder()
-              .setCustomId('ranking_view_all_scores')
+              .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
               .setLabel('📊 View All Scores')
               .setStyle(ButtonStyle.Primary)
           );
@@ -4789,7 +4789,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             const isSelected = userRanking === i;
             rankingButtons.push(
               new ButtonBuilder()
-                .setCustomId(`rank_${i}_${currentApp.channelId}_${newIndex}`)
+                .setCustomId(`rank_${i}_${currentApp.channelId}_${newIndex}_${configId || 'legacy'}`)
                 .setLabel(i.toString())
                 .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
                 .setDisabled(isSelected)
@@ -4816,7 +4816,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           navButtons.push(
             new ButtonBuilder()
-              .setCustomId('ranking_view_all_scores')
+              .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
               .setLabel('📊 View All Scores')
               .setStyle(ButtonStyle.Primary)
           );
@@ -4921,11 +4921,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
           
-          // Parse button ID: cast_[status]_[channelId]_[appIndex]
+          // Parse button ID: cast_[status]_[channelId]_[appIndex]_[configId] (new format) or cast_[status]_[channelId]_[appIndex] (legacy)
           const parts = context.customId.split('_');
           const status = parts[1]; // player, tentative, or reject
           const channelId = parts[2];
           const appIndex = parseInt(parts[3]);
+          const configId = parts[4]; // May be undefined for legacy buttons
           
           // Map button status to database status
           const statusMap = {
@@ -4951,7 +4952,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           await savePlayerData(playerData);
           
           // Regenerate the ranking interface with updated button states
-          const allApplications = await getAllApplicationsFromData(guildId);
+          const allApplications = configId 
+            ? await getApplicationsForSeason(guildId, configId)
+            : await getAllApplicationsFromData(guildId);
           const currentApp = allApplications[appIndex];
           
           if (!currentApp) {
@@ -5010,7 +5013,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             const isSelected = userRanking === i;
             rankingButtons.push(
               new ButtonBuilder()
-                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
+                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}_${configId || 'legacy'}`)
                 .setLabel(i.toString())
                 .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
                 .setDisabled(isSelected)
@@ -5024,12 +5027,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           if (allApplications.length > 1) {
             navButtons.push(
               new ButtonBuilder()
-                .setCustomId(`ranking_prev_${appIndex}`)
+                .setCustomId(`ranking_prev_${appIndex}_${configId || 'legacy'}`)
                 .setLabel('◀ Previous')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(appIndex === 0),
               new ButtonBuilder()
-                .setCustomId(`ranking_next_${appIndex}`)
+                .setCustomId(`ranking_next_${appIndex}_${configId || 'legacy'}`)
                 .setLabel('Next ▶')
                 .setStyle(ButtonStyle.Secondary)
                 .setDisabled(appIndex === allApplications.length - 1)
@@ -5038,7 +5041,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           navButtons.push(
             new ButtonBuilder()
-              .setCustomId('ranking_view_all_scores')
+              .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
               .setLabel('📊 View All Scores')
               .setStyle(ButtonStyle.Primary)
           );
@@ -5485,7 +5488,7 @@ ${channelDeletedMessage}`;
               type: 2, // Button
               style: userScore === i ? 3 : 2, // Success if user's score, Secondary otherwise
               label: i.toString(),
-              custom_id: `rank_${i}_${newApp.channelId}_${newIndex}`,
+              custom_id: `rank_${i}_${newApp.channelId}_${newIndex}_${configId || 'legacy'}`,
               disabled: userScore === i
             });
           }
@@ -5552,7 +5555,7 @@ ${channelDeletedMessage}`;
               type: 2, // Button
               style: 2, // Secondary
               label: '📊 View All Scores',
-              custom_id: 'ranking_view_all_scores'
+              custom_id: `ranking_view_all_scores_${configId || 'legacy'}`
             }
           ];
           
@@ -23318,7 +23321,7 @@ Are you sure you want to continue?`;
         
         navButtons.push(
           new ButtonBuilder()
-            .setCustomId('ranking_view_all_scores')
+            .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
             .setLabel('📊 View All Scores')
             .setStyle(ButtonStyle.Primary)
         );
