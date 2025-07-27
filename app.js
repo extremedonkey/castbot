@@ -4435,14 +4435,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Handle ranking button clicks - converted to Button Handler Factory
       return ButtonHandlerFactory.create({
         id: 'rank_applicant',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
         updateMessage: true, // Update existing message instead of creating new one
         handler: async (context) => {
           console.log(`🔍 START: rank_applicant - user ${context.userId}, button ${context.customId}`);
           
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          
+          // Check Cast Ranking permissions (includes special exception for server 1331657596087566398)
+          if (!hasCastRankingPermissions(member, guildId)) {
+            return {
+              content: '❌ You need Manage Roles or Manage Channels permissions to rate applicants.',
+              ephemeral: true
+            };
+          }
 
           // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX_CONFIGID (new format) or rank_SCORE_CHANNELID_APPINDEX (legacy)
           const rankMatch = context.customId.match(/^rank_(\d+)_(\d+)_(\d+)(?:_(.+))?$/);
@@ -4986,14 +4993,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Handle casting status buttons - converted to Button Handler Factory
       return ButtonHandlerFactory.create({
         id: 'casting_status',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
         updateMessage: true, // This is an UPDATE_MESSAGE response
         handler: async (context) => {
           console.log(`🎬 START: casting_status - user ${context.userId}, button ${context.customId}`);
           
           const { guildId, userId, client } = context;
           const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          
+          // Check Cast Ranking permissions (includes special exception for server 1331657596087566398)
+          if (!hasCastRankingPermissions(member, guildId)) {
+            return {
+              content: '❌ You need Manage Roles or Manage Channels permissions to set casting status.',
+              ephemeral: true
+            };
+          }
           
           // Parse button ID: cast_[status]_[channelId]_[appIndex]_[configId] (new format) or cast_[status]_[channelId]_[appIndex] (legacy)
           const parts = context.customId.split('_');
