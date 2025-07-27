@@ -319,8 +319,8 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
         }
     ];
     
-    // Add enter command button if there are modal triggers
-    if (hasModalTriggers) {
+    // Add enter command button for map cells (always show for production team testing)
+    if (entityType === 'map_cell') {
         // Determine emoji based on environment
         const isDev = guildId === '1331657596087566398';
         const commandEmojiId = isDev ? '1396095623815495700' : '1396098411287285942';
