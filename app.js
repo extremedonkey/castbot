@@ -4939,59 +4939,64 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     } else if (custom_id.startsWith('cast_player_') || custom_id.startsWith('cast_tentative_') || custom_id.startsWith('cast_reject_')) {
       // Handle casting status buttons
-      return ButtonHandlerFactory.create({
-        id: custom_id.split('_').slice(0, 2).join('_'), // cast_player, cast_tentative, or cast_reject
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: true,
-        handler: async (context) => {
-          console.log(`🎬 START: casting status - user ${context.userId}, button ${context.customId}`);
-          const { guildId, userId, client } = context;
-          
-          // Parse button ID: cast_[status]_[channelId]_[appIndex]
-          const parts = context.customId.split('_');
-          const status = parts[1]; // player, tentative, or reject
-          const channelId = parts[2];
-          const appIndex = parseInt(parts[3]);
-          
-          // Map button status to database status
-          const statusMap = {
-            'player': 'cast',
-            'tentative': 'tentative', 
-            'reject': 'reject'
-          };
-          const castingStatus = statusMap[status];
-          
-          console.log(`🎬 Setting casting status to ${castingStatus} for channel ${channelId}`);
-          
-          // Load and update player data
-          const playerData = await loadPlayerData();
-          
-          // Ensure application exists
-          if (!playerData[guildId]?.applications?.[channelId]) {
-            return {
+      try {
+        console.log(`🎬 START: casting status - user ${req.body.member.user.id}, button ${custom_id}`);
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        
+        // Check admin permissions (same pattern as ranking buttons)
+        if (!requireAdminPermission(req, res, 'You need admin permissions (Manage Roles, Manage Channels, Manage Server, or Administrator) to manage casting status.')) return;
+        
+        
+        // Parse button ID: cast_[status]_[channelId]_[appIndex]
+        const parts = custom_id.split('_');
+        const status = parts[1]; // player, tentative, or reject
+        const channelId = parts[2];
+        const appIndex = parseInt(parts[3]);
+        
+        // Map button status to database status
+        const statusMap = {
+          'player': 'cast',
+          'tentative': 'tentative', 
+          'reject': 'reject'
+        };
+        const castingStatus = statusMap[status];
+        
+        console.log(`🎬 Setting casting status to ${castingStatus} for channel ${channelId}`);
+        
+        // Load and update player data
+        const playerData = await loadPlayerData();
+        
+        // Ensure application exists
+        if (!playerData[guildId]?.applications?.[channelId]) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
               content: '❌ Application not found.',
-              ephemeral: true
-            };
-          }
-          
-          // Update casting status
-          playerData[guildId].applications[channelId].castingStatus = castingStatus;
-          await savePlayerData(playerData);
-          
-          console.log(`✅ SUCCESS: casting status updated to ${castingStatus}`);
-          
-          // Regenerate the ranking interface with updated button states
-          const guild = await client.guilds.fetch(guildId);
-          const allApplications = await getAllApplicationsFromData(guildId);
-          const currentApp = allApplications[appIndex];
-          
-          if (!currentApp) {
-            return {
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update casting status
+        playerData[guildId].applications[channelId].castingStatus = castingStatus;
+        await savePlayerData(playerData);
+        
+        console.log(`✅ SUCCESS: casting status updated to ${castingStatus}`);
+        
+        // Regenerate the ranking interface with updated button states
+        const allApplications = await getAllApplicationsFromData(guildId);
+        const currentApp = allApplications[appIndex];
+        
+        if (!currentApp) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
               content: '❌ Application not found.',
-              ephemeral: true
-            };
-          }
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
           
           // Fetch the applicant member for avatar
           let applicantMember;
@@ -5133,12 +5138,24 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             components: containerComponents
           };
           
-          return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [castRankingContainer]
-          };
-        }
-      })(req, res, client);
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [castRankingContainer]
+            }
+          });
+          
+      } catch (error) {
+        console.error('Error handling casting button:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating casting status. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('edit_player_notes_')) {
       // Handle edit player notes button clicks
       try {
