@@ -276,6 +276,13 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
           label: "▶",
           style: nextDisabled ? 2 : 1, // Secondary : Primary
           disabled: nextDisabled
+        },
+        {
+          type: 2, // Button
+          custom_id: `season_delete_${configId}`,
+          label: "Delete Season",
+          style: 4, // Danger
+          emoji: { name: '🗑️' }
         }
       ]
     };
@@ -290,6 +297,13 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
           custom_id: "viral_menu",
           label: "📋 Menu",
           style: 1 // Primary
+        },
+        {
+          type: 2, // Button
+          custom_id: `season_delete_${configId}`,
+          label: "Delete Season",
+          style: 4, // Danger
+          emoji: { name: '🗑️' }
         }
       ]
     };

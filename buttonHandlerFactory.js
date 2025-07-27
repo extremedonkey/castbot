@@ -836,6 +836,13 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'application_management'
   },
+  'season_delete_*': {
+    label: 'Delete Season',
+    description: 'Delete entire season and all questions',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'application_management'
+  },
   
   'season_nav_prev_*': {
     label: 'Previous Page',
