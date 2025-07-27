@@ -5002,11 +5002,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           let applicantMember;
           try {
             applicantMember = await guild.members.fetch(currentApp.userId);
+            console.log('🔍 DEBUG: Casting handler - Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
           } catch (error) {
+            console.log('🔍 DEBUG: Casting handler - Failed to fetch member, using fallback:', error.message);
             applicantMember = {
               displayName: currentApp.displayName,
               user: { username: currentApp.username },
-              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+              displayAvatarURL: (options = {}) => {
+                const size = options.size || 128;
+                const baseUrl = currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`;
+                // Replace size parameter in URL or add it if not present
+                return baseUrl.replace(/\?size=\d+/, '').replace(/\.(webp|png|jpg|jpeg)$/, `.webp?size=${size}`);
+              }
             };
           }
           
