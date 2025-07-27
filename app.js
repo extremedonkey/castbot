@@ -4367,263 +4367,214 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
       return;
     } else if (custom_id.startsWith('rank_')) {
-      // Handle ranking button clicks (rank_1_channelId_appIndex, rank_2_channelId_appIndex, etc.)
-      console.log('🔍 DEBUG: Processing rank button click:', custom_id);
-      try {
-        console.log('🔍 DEBUG: Extracting guild and user info...');
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const userId = req.body.member.user.id;
-        console.log('🔍 DEBUG: Guild ID:', guildId, 'User ID:', userId);
+      // Handle ranking button clicks - converted to Button Handler Factory
+      return ButtonHandlerFactory.create({
+        id: 'rank_applicant',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: rank_applicant - user ${context.userId}, button ${context.customId}`);
+          
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
 
-        // Check admin permissions
-        console.log('🔍 DEBUG: Checking admin permissions...');
-        const member = await guild.members.fetch(userId);
-        console.log('🔍 DEBUG: Member permissions:', member.permissions.bitfield.toString());
-        if (!requireAdminPermission(req, res, 'You need admin permissions to rank applicants.')) return;
-        console.log('🔍 DEBUG: Admin permissions verified');
-
-        // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX
-        console.log('🔍 DEBUG: Parsing custom_id...');
-        const rankMatch = custom_id.match(/^rank_(\d+)_(.+)_(\d+)$/);
-        if (!rankMatch) {
-          console.log('🔍 DEBUG: Invalid custom_id format, sending error response');
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+          // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX
+          const rankMatch = context.customId.match(/^rank_(\d+)_(.+)_(\d+)$/);
+          if (!rankMatch) {
+            return {
               content: '❌ Invalid ranking button format.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+              ephemeral: true
+            };
+          }
 
-        const [, score, channelId, appIndexStr] = rankMatch;
-        const rankingScore = parseInt(score);
-        const appIndex = parseInt(appIndexStr);
-        console.log('🔍 DEBUG: Parsed values - Score:', rankingScore, 'Channel ID:', channelId, 'App Index:', appIndex);
+          const [, score, channelId, appIndexStr] = rankMatch;
+          const rankingScore = parseInt(score);
+          const appIndex = parseInt(appIndexStr);
 
-        // Load and update ranking data
-        console.log('🔍 DEBUG: Loading player data...');
-        const playerData = await loadPlayerData();
-        if (!playerData[guildId]) playerData[guildId] = {};
-        if (!playerData[guildId].rankings) playerData[guildId].rankings = {};
-        if (!playerData[guildId].rankings[channelId]) playerData[guildId].rankings[channelId] = {};
+          // Load and update ranking data
+          const playerData = await loadPlayerData();
+          if (!playerData[guildId]) playerData[guildId] = {};
+          if (!playerData[guildId].rankings) playerData[guildId].rankings = {};
+          if (!playerData[guildId].rankings[channelId]) playerData[guildId].rankings[channelId] = {};
 
-        // Record the user's ranking for this application
-        console.log('🔍 DEBUG: Recording ranking score...');
-        playerData[guildId].rankings[channelId][userId] = rankingScore;
-        await savePlayerData(playerData);
-        console.log('🔍 DEBUG: Ranking data saved successfully');
+          // Record the user's ranking for this application
+          playerData[guildId].rankings[channelId][userId] = rankingScore;
+          await savePlayerData(playerData);
 
-        // Get updated application data using helper function
-        console.log('🔍 DEBUG: Loading application data...');
-        const allApplications = await getAllApplicationsFromData(guildId);
-        console.log('🔍 DEBUG: Found', allApplications.length, 'applications');
-        
-        const currentApp = allApplications[appIndex];
-        console.log('🔍 DEBUG: Current app:', currentApp ? 'Found' : 'Not found');
+          // Get updated application data using helper function
+          const allApplications = await getAllApplicationsFromData(guildId);
+          const currentApp = allApplications[appIndex];
 
-        if (!currentApp) {
-          console.log('🔍 DEBUG: Application not found, sending error response');
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+          if (!currentApp) {
+            return {
               content: '❌ Application not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+              ephemeral: true
+            };
+          }
 
-        // Regenerate ranking interface with updated scores
-        console.log('🔍 DEBUG: Creating Media Gallery component...');
-        
-        // Fetch the applicant as a guild member to get their current avatar
-        let applicantMember;
-        try {
-          applicantMember = await guild.members.fetch(currentApp.userId);
-          console.log('🔍 DEBUG: Ranking handler - Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
-        } catch (error) {
-          console.log('🔍 DEBUG: Ranking handler - Could not fetch applicant member, using fallback:', error.message);
-          // Fallback: create a basic user object for avatar URL generation
-          applicantMember = {
-            displayName: currentApp.displayName,
-            user: { username: currentApp.username },
-            displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+          // Regenerate ranking interface with updated scores
+          // Fetch the applicant as a guild member to get their current avatar
+          let applicantMember;
+          try {
+            applicantMember = await guild.members.fetch(currentApp.userId);
+          } catch (error) {
+            // Fallback: create a basic user object for avatar URL generation
+            applicantMember = {
+              displayName: currentApp.displayName,
+              user: { username: currentApp.username },
+              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+            };
+          }
+          
+          // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
+          const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
+          
+          // Pre-fetch avatar to warm up Discord CDN cache
+          try {
+            await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
+          } catch (error) {
+            // Non-critical error, continue
+          }
+          
+          // Media Gallery component for displaying applicant avatar
+          const galleryComponent = {
+            type: 12, // Media Gallery component
+            items: [
+              {
+                media: {
+                  url: applicantAvatarURL
+                },
+                description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
+              }
+            ]
           };
-        }
-        
-        // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
-        const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
-        console.log('🔍 DEBUG: Ranking handler - Applicant avatar URL:', applicantAvatarURL);
-        
-        // Pre-fetch avatar to warm up Discord CDN cache
-        try {
-          console.log('🔍 DEBUG: Ranking handler - Pre-fetching applicant avatar to warm CDN cache...');
-          const prefetchStart = Date.now();
-          await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
-          const prefetchTime = Date.now() - prefetchStart;
-          console.log(`🔍 DEBUG: Ranking handler - Applicant avatar pre-fetch completed in ${prefetchTime}ms`);
-        } catch (error) {
-          console.log('🔍 DEBUG: Ranking handler - Applicant avatar pre-fetch failed (non-critical):', error.message);
-        }
-        
-        // Media Gallery component for displaying applicant avatar
-        const galleryComponent = {
-          type: 12, // Media Gallery component
-          items: [
-            {
-              media: {
-                url: applicantAvatarURL
-              },
-              description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
-            }
-          ]
-        };
-        console.log('🔍 DEBUG: Media Gallery component created');
 
-        // Create updated ranking buttons
-        const rankingButtons = [];
-        const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
-        
-        for (let i = 1; i <= 5; i++) {
-          const isSelected = userRanking === i;
-          rankingButtons.push(
-            new ButtonBuilder()
-              .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
-              .setLabel(i.toString())
-              .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
-              .setDisabled(isSelected)
-          );
-        }
-        
-        const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
-        
-        // Create navigation buttons
-        const navButtons = [];
-        if (allApplications.length > 1) {
+          // Create updated ranking buttons
+          const rankingButtons = [];
+          const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
+          
+          for (let i = 1; i <= 5; i++) {
+            const isSelected = userRanking === i;
+            rankingButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
+                .setLabel(i.toString())
+                .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+                .setDisabled(isSelected)
+            );
+          }
+          
+          const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
+          
+          // Create navigation buttons
+          const navButtons = [];
+          if (allApplications.length > 1) {
+            navButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`ranking_prev_${appIndex}`)
+                .setLabel('◀ Previous')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(appIndex === 0),
+              new ButtonBuilder()
+                .setCustomId(`ranking_next_${appIndex}`)
+                .setLabel('Next ▶')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(appIndex === allApplications.length - 1)
+            );
+          }
+          
           navButtons.push(
             new ButtonBuilder()
-              .setCustomId(`ranking_prev_${appIndex}`)
-              .setLabel('◀ Previous')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(appIndex === 0),
-            new ButtonBuilder()
-              .setCustomId(`ranking_next_${appIndex}`)
-              .setLabel('Next ▶')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(appIndex === allApplications.length - 1)
+              .setCustomId('ranking_view_all_scores')
+              .setLabel('📊 View All Scores')
+              .setStyle(ButtonStyle.Primary)
           );
-        }
-        
-        navButtons.push(
-          new ButtonBuilder()
-            .setCustomId('ranking_view_all_scores')
-            .setLabel('📊 View All Scores')
-            .setStyle(ButtonStyle.Primary)
-        );
-        
-        const navRow = new ActionRowBuilder().addComponents(navButtons);
-        
-        // Calculate updated average score
-        const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
-        const rankings = Object.values(allRankings).filter(r => r !== undefined);
-        const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
-        
-        // Get casting status for display
-        const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
-        let castingStatusText = '';
-        if (castingStatus === 'cast') {
-          castingStatusText = '✅ Cast';
-        } else if (castingStatus === 'tentative') {
-          castingStatusText = '❓ Tentative';
-        } else if (castingStatus === 'reject') {
-          castingStatusText = '🗑️ Don\'t Cast';
-        } else {
-          castingStatusText = '⚪ Undecided';
-        }
-        
-        // Create voting breakdown if there are votes
-        const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
-        
-        // Create updated container
-        const containerComponents = [
-          {
-            type: 10,
-            content: `## Cast Ranking | ${guild.name}`
-          },
-          {
-            type: 14
-          },
-          {
-            type: 10,
-            content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-          },
-          galleryComponent,
-          {
-            type: 10,
-            content: `> **Rate this applicant (1-5):**`
-          },
-          rankingRow.toJSON(),
-          {
-            type: 14
-          },
-          createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
-          {
-            type: 14
-          },
-          navRow.toJSON()
-        ];
-        
-        // Add voting breakdown if there are votes
-        if (votingBreakdown) {
+          
+          const navRow = new ActionRowBuilder().addComponents(navButtons);
+          
+          // Calculate updated average score
+          const allRankings = playerData[guildId]?.rankings?.[currentApp.channelId] || {};
+          const rankings = Object.values(allRankings).filter(r => r !== undefined);
+          const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
+          
+          // Get casting status for display
+          const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
+          let castingStatusText = '';
+          if (castingStatus === 'cast') {
+            castingStatusText = '✅ Cast';
+          } else if (castingStatus === 'tentative') {
+            castingStatusText = '❓ Tentative';
+          } else if (castingStatus === 'reject') {
+            castingStatusText = '🗑️ Don\'t Cast';
+          } else {
+            castingStatusText = '⚪ Undecided';
+          }
+          
+          // Create voting breakdown if there are votes
+          const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
+          
+          // Create updated container
+          const containerComponents = [
+            {
+              type: 10,
+              content: `## Cast Ranking | ${guild.name}`
+            },
+            {
+              type: 14
+            },
+            {
+              type: 10,
+              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
+            },
+            galleryComponent,
+            {
+              type: 10,
+              content: `> **Rate this applicant (1-5):**`
+            },
+            rankingRow.toJSON(),
+            {
+              type: 14
+            },
+            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
+            {
+              type: 14
+            },
+            navRow.toJSON()
+          ];
+          
+          // Add voting breakdown if there are votes
+          if (votingBreakdown) {
+            containerComponents.push(
+              {
+                type: 14 // Separator
+              },
+              votingBreakdown // Voting breakdown display
+            );
+          }
+          
+          // Add player notes section at the bottom
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId);
           containerComponents.push(
             {
               type: 14 // Separator
             },
-            votingBreakdown // Voting breakdown display
+            playerNotesDisplay, // Player notes text display
+            playerNotesButtonRow // Edit button
           );
-        }
-        
-        // Add player notes section at the bottom
-        const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId);
-        containerComponents.push(
-          {
-            type: 14 // Separator
-          },
-          playerNotesDisplay, // Player notes text display
-          playerNotesButtonRow // Edit button
-        );
-        
-        const castRankingContainer = {
-          type: 17,
-          accent_color: 0x9B59B6,
-          components: containerComponents
-        };
-        
-        console.log('🔍 DEBUG: Final container structure:', JSON.stringify(castRankingContainer, null, 2));
-        console.log('🔍 DEBUG: Sending updated message response...');
-        
-        const response = {
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
+          
+          const castRankingContainer = {
+            type: 17,
+            accent_color: 0x9B59B6,
+            components: containerComponents
+          };
+          
+          console.log(`✅ SUCCESS: rank_applicant - score ${rankingScore} recorded for ${currentApp.displayName}`);
+          return {
             flags: (1 << 15),
             components: [castRankingContainer]
-          }
-        };
-        
-        console.log('🔍 DEBUG: Full response structure:', JSON.stringify(response, null, 2));
-        return res.send(response);
-        
-      } catch (error) {
-        console.error('Error handling ranking button:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: 'Error processing ranking.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('ranking_')) {
       // Handle ranking navigation and view all scores
       console.log('🔍 DEBUG: Processing ranking navigation click:', custom_id);
@@ -5488,6 +5439,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 ${channelDeletedMessage}`;
           
           const containerComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## Cast Ranking | ${guild.name}`
+            },
+            {
+              type: 14 // Separator
+            },
             {
               type: 10, // Text Display
               content: headerContent
