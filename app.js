@@ -4573,7 +4573,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             galleryComponent,
             {
               type: 10,
-              content: `> **Rate this applicant (1-5):**`
+              content: `> **Rate this applicant (1-5)**`
             },
             rankingRow.toJSON(),
             {
@@ -4882,7 +4882,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             galleryComponent,
             {
               type: 10,
-              content: `> **Rate this applicant (1-5):**`
+              content: `> **Rate this applicant (1-5)**`
             },
             rankingRow.toJSON(),
             {
@@ -5118,7 +5118,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             galleryComponent,
             {
               type: 10,
-              content: `> **Rate this applicant (1-5):**`
+              content: `> **Rate this applicant (1-5)**`
             },
             rankingRow.toJSON(),
             {
@@ -5321,6 +5321,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           const applicantName = application.displayName || application.username || 'Unknown Applicant';
           const applicantUserId = application.userId;
+          const configId = application.configId; // Extract configId from application data
           
           // Step 1: Try to delete the channel (silently handle if it doesn't exist)
           let channelDeletedMessage = '';
@@ -5512,7 +5513,7 @@ ${channelDeletedMessage}`;
             { type: 14 }, // Separator
             {
               type: 10, // Text Display
-              content: `> **Rate this applicant (1-5):**`
+              content: `> **Rate this applicant (1-5)**`
             },
             {
               type: 1, // Action Row
@@ -7200,7 +7201,7 @@ To fix this:
             avatarDisplayComponent, // Applicant avatar display
             {
               type: 10, // Text Display component  
-              content: `> **Rate this applicant (1-5):**`
+              content: `> **Rate this applicant (1-5)**`
             },
             rankingRow.toJSON(), // Ranking buttons
             {
@@ -23378,7 +23379,7 @@ Are you sure you want to continue?`;
           galleryComponent, // Applicant avatar display
           {
             type: 10, // Text Display component  
-            content: `> **Rate this applicant (1-5):**`
+            content: `> **Rate this applicant (1-5)**`
           },
           rankingRow.toJSON(), // Ranking buttons
           {
