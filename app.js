@@ -4943,6 +4943,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         console.log(`🎬 START: casting status - user ${req.body.member.user.id}, button ${custom_id}`);
         const guildId = req.body.guild_id;
         const userId = req.body.member.user.id;
+        const guild = await client.guilds.fetch(guildId);
         
         // Check admin permissions (same pattern as ranking buttons)
         if (!requireAdminPermission(req, res, 'You need admin permissions (Manage Roles, Manage Channels, Manage Server, or Administrator) to manage casting status.')) return;
