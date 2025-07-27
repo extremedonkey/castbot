@@ -5368,7 +5368,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             applicantMember = {
               displayName: newApp.displayName,
               user: { username: newApp.username },
-              avatarURL: () => newApp.avatarURL || 'https://cdn.discordapp.com/embed/avatars/0.png'
+              displayAvatarURL: (options = {}) => {
+                const size = options.size || 128;
+                const baseUrl = newApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${newApp.userId % 5}.png`;
+                // For Discord CDN URLs, ensure they have proper extension and size
+                if (baseUrl.includes('cdn.discordapp.com')) {
+                  return baseUrl.replace(/\?size=\d+/, '').replace(/\.(webp|png|jpg|jpeg)$/, `.png?size=${size}`);
+                }
+                return baseUrl;
+              }
             };
           }
           
@@ -5408,17 +5416,23 @@ ${channelDeletedMessage}`;
           ];
           
           // Add Media Gallery for avatar
-          if (applicantMember.avatarURL) {
+          if (applicantMember.displayAvatarURL || applicantMember.avatarURL) {
             try {
-              const avatarUrl = applicantMember.avatarURL({ size: 512, dynamic: true });
-              containerComponents.push({
-                type: 12, // Media Gallery
-                items: [{
-                  media: { url: avatarUrl },
-                  description: `${newApp.displayName || newApp.username} - Application Photo`,
-                  spoiler: false
-                }]
-              });
+              const avatarUrl = applicantMember.displayAvatarURL 
+                ? applicantMember.displayAvatarURL({ size: 512, dynamic: true })
+                : applicantMember.avatarURL({ size: 512, dynamic: true });
+              
+              // Validate URL before adding to media gallery
+              if (avatarUrl && avatarUrl.trim()) {
+                containerComponents.push({
+                  type: 12, // Media Gallery
+                  items: [{
+                    media: { url: avatarUrl.trim() },
+                    description: `${newApp.displayName || newApp.username} - Application Photo`,
+                    spoiler: false
+                  }]
+                });
+              }
             } catch (error) {
               console.log('Could not add avatar to media gallery:', error);
             }
