@@ -780,6 +780,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'casting_management'
   },
+  'edit_player_notes_*': {
+    label: 'Edit Player Notes',
+    description: 'Add or update casting notes for applicant',
+    emoji: '✏️',
+    style: 'Primary',
+    category: 'casting_management'
+  },
   'season_question_edit_*': {
     label: 'Edit Question',
     description: 'Edit application question details',

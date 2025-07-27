@@ -481,7 +481,7 @@ async function createVotingBreakdown(channelId, playerData, guildId, guild) {
   const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
   
   // Build voting breakdown
-  let votingText = `## :ballot_box: Votes\n> **Average:** ${avgScore}/5.0 (${scores.length} vote${scores.length !== 1 ? 's' : ''})\n`;
+  let votingText = `### :ballot_box: Votes\n> **Average:** ${avgScore}/5.0 (${scores.length} vote${scores.length !== 1 ? 's' : ''})\n`;
   
   // Fetch member names and build vote list
   for (const [userId, score] of rankingEntries) {
@@ -500,6 +500,36 @@ async function createVotingBreakdown(channelId, playerData, guildId, guild) {
     type: 10, // Text Display component
     content: votingText
   };
+}
+
+/**
+ * Helper function to create player notes section and edit button
+ * @param {string} channelId - Application channel ID
+ * @param {number} appIndex - Application index for navigation
+ * @param {Object} playerData - Player data object
+ * @param {string} guildId - Guild ID
+ * @returns {Array} Array containing Text Display and ActionRow components
+ */
+function createPlayerNotesSection(channelId, appIndex, playerData, guildId) {
+  // Get existing notes or default text
+  const existingNotes = playerData[guildId]?.applications?.[channelId]?.playerNotes;
+  const notesText = existingNotes || 'Use this section to record casting notes such as other players they may know, potential issues you\'ve heard about in other servers, etc.';
+  
+  // Create notes text display
+  const notesDisplay = {
+    type: 10, // Text Display component
+    content: `### :pencil: Player Notes\n${notesText}`
+  };
+  
+  // Create edit button
+  const editButton = new ButtonBuilder()
+    .setCustomId(`edit_player_notes_${channelId}_${appIndex}`)
+    .setLabel('✏️ Edit Player Notes')
+    .setStyle(ButtonStyle.Primary);
+  
+  const editButtonRow = new ActionRowBuilder().addComponents(editButton);
+  
+  return [notesDisplay, editButtonRow.toJSON()];
 }
 
 /**
@@ -4548,6 +4578,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           );
         }
         
+        // Add player notes section at the bottom
+        const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId);
+        containerComponents.push(
+          {
+            type: 14 // Separator
+          },
+          playerNotesDisplay, // Player notes text display
+          playerNotesButtonRow // Edit button
+        );
+        
         const castRankingContainer = {
           type: 17,
           accent_color: 0x9B59B6,
@@ -4862,6 +4902,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             );
           }
           
+          // Add player notes section at the bottom
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, newIndex, playerData, guildId);
+          containerComponents.push(
+            {
+              type: 14 // Separator
+            },
+            playerNotesDisplay, // Player notes text display
+            playerNotesButtonRow // Edit button
+          );
+          
           const castRankingContainer = {
             type: 17,
             accent_color: 0x9B59B6,
@@ -5067,6 +5117,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             );
           }
           
+          // Add player notes section at the bottom
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId);
+          containerComponents.push(
+            {
+              type: 14 // Separator
+            },
+            playerNotesDisplay, // Player notes text display
+            playerNotesButtonRow // Edit button
+          );
+          
           const castRankingContainer = {
             type: 17,
             accent_color: 0x9B59B6,
@@ -5077,6 +5137,53 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             flags: (1 << 15), // IS_COMPONENTS_V2
             components: [castRankingContainer]
           };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('edit_player_notes_')) {
+      // Handle edit player notes button clicks
+      return ButtonHandlerFactory.create({
+        id: 'edit_player_notes',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        showModal: true,
+        handler: async (context) => {
+          console.log(`✏️ START: edit_player_notes - user ${context.userId}, button ${context.customId}`);
+          const { guildId } = context;
+          
+          // Parse button ID: edit_player_notes_[channelId]_[appIndex]
+          const parts = context.customId.split('_');
+          const channelId = parts[3];
+          const appIndex = parseInt(parts[4]);
+          
+          console.log(`✏️ Editing notes for channel ${channelId}, app index ${appIndex}`);
+          
+          // Load existing notes
+          const playerData = await loadPlayerData();
+          const existingNotes = playerData[guildId]?.applications?.[channelId]?.playerNotes || '';
+          
+          // Create modal
+          const modal = new ModalBuilder()
+            .setCustomId(`save_player_notes_${channelId}_${appIndex}`)
+            .setTitle('Edit Player Notes');
+          
+          const notesInput = new TextInputBuilder()
+            .setCustomId('player_notes_text')
+            .setLabel('Add / Update Player Notes')
+            .setPlaceholder('Use this section to record casting notes such as other players they may know, potential issues you\'ve heard about in other servers, etc.')
+            .setStyle(TextInputStyle.Paragraph)
+            .setMaxLength(2000)
+            .setRequired(false);
+          
+          // Set existing notes if any
+          if (existingNotes) {
+            notesInput.setValue(existingNotes);
+          }
+          
+          const actionRow = new ActionRowBuilder().addComponents(notesInput);
+          modal.addComponents(actionRow);
+          
+          console.log(`✅ SUCCESS: edit_player_notes modal created`);
+          return { modal };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('show_castlist')) {
@@ -6678,6 +6785,16 @@ To fix this:
               votingBreakdown // Voting breakdown display
             );
           }
+          
+          // Add player notes section at the bottom
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId);
+          containerComponents.push(
+            {
+              type: 14 // Separator
+            },
+            playerNotesDisplay, // Player notes text display
+            playerNotesButtonRow // Edit button
+          );
           
           const castRankingContainer = {
             type: 17, // Container component
@@ -22642,6 +22759,63 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error editing question. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('save_player_notes_')) {
+      // Handle player notes modal submission
+      try {
+        console.log(`✏️ START: save_player_notes modal - custom_id: ${custom_id}`);
+        
+        // Parse custom_id: save_player_notes_[channelId]_[appIndex]
+        const parts = custom_id.split('_');
+        const channelId = parts[3];
+        const appIndex = parseInt(parts[4]);
+        
+        const guildId = req.body.guild_id;
+        const userId = req.body.member.user.id;
+        
+        // Get the notes text from the modal
+        const notesText = components[0].components[0].value?.trim() || '';
+        
+        console.log(`✏️ Saving notes for channel ${channelId}: "${notesText}"`);
+        
+        // Load and update player data
+        const playerData = await loadPlayerData();
+        
+        // Ensure application exists
+        if (!playerData[guildId]) playerData[guildId] = {};
+        if (!playerData[guildId].applications) playerData[guildId].applications = {};
+        if (!playerData[guildId].applications[channelId]) playerData[guildId].applications[channelId] = {};
+        
+        // Update player notes
+        if (notesText) {
+          playerData[guildId].applications[channelId].playerNotes = notesText;
+        } else {
+          // Remove notes if empty
+          delete playerData[guildId].applications[channelId].playerNotes;
+        }
+        
+        await savePlayerData(playerData);
+        
+        console.log(`✅ SUCCESS: save_player_notes - notes updated`);
+        
+        // Send success response
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '✅ **Player notes updated successfully!**\n\nThe notes have been saved and will appear in the ranking interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error saving player notes:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error saving player notes. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
