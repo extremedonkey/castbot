@@ -513,7 +513,7 @@ async function createVotingBreakdown(channelId, playerData, guildId, guild) {
 function createPlayerNotesSection(channelId, appIndex, playerData, guildId) {
   // Get existing notes or default text
   const existingNotes = playerData[guildId]?.applications?.[channelId]?.playerNotes;
-  const notesText = existingNotes || 'Use this section to record casting notes such as other players they may know, potential issues you\'ve heard about in other servers, etc.';
+  const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
   
   // Create notes text display
   const notesDisplay = {
@@ -5187,7 +5187,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .setRequired(false);
         
         // Only set existing notes if they exist and are not the default placeholder text
-        if (existingNotes && existingNotes !== 'Use this section to record casting notes such as other players they may know, potential issues you\'ve heard about in other servers, etc.') {
+        if (existingNotes && existingNotes !== 'Record casting notes, connections or potential issues...') {
           notesInput.setValue(existingNotes);
         }
         
