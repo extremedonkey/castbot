@@ -319,14 +319,18 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
         }
     ];
     
-    // Add admin test command button if there are modal triggers
+    // Add enter command button if there are modal triggers
     if (hasModalTriggers) {
+        // Determine emoji based on environment
+        const isDev = guildId === '1331657596087566398';
+        const commandEmojiId = isDev ? '1396095623815495700' : '1396098411287285942';
+        
         actionRowComponents.push({
             type: 2, // Button
             style: 2, // Secondary (grey)
-            label: 'Test Command',
-            custom_id: `admin_test_command_${entityId}`,
-            emoji: { name: '🧪' }
+            label: 'Enter Command',
+            custom_id: `player_enter_command_${entityId}`,
+            emoji: { id: commandEmojiId }
         });
     }
     
