@@ -6329,14 +6329,16 @@ To fix this:
             description: 'Start a new application season'
           });
 
-          // Add existing seasons
-          Object.entries(applicationConfigs).forEach(([configId, config]) => {
-            seasonOptions.push({
-              label: `📝 ${config.seasonName}`,
-              value: configId,
-              description: `Created: ${new Date(config.createdAt).toLocaleDateString()}`
+          // Add existing seasons sorted by lastUpdated (most recent first)
+          Object.entries(applicationConfigs)
+            .sort(([, a], [, b]) => (b.lastUpdated || b.createdAt || 0) - (a.lastUpdated || a.createdAt || 0))
+            .forEach(([configId, config]) => {
+              seasonOptions.push({
+                label: `📝 ${config.seasonName}`,
+                value: configId,
+                description: `Updated: ${new Date(config.lastUpdated || config.createdAt).toLocaleDateString()}`
+              });
             });
-          });
 
           // Limit to Discord's 25 option max
           if (seasonOptions.length > 25) {
