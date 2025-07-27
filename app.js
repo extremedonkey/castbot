@@ -5011,6 +5011,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
           
           const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
+          console.log('🔍 DEBUG: Casting handler - Applicant avatar URL:', applicantAvatarURL);
+          
+          // Pre-fetch avatar to warm up Discord CDN cache
+          try {
+            console.log('🔍 DEBUG: Casting handler - Pre-fetching applicant avatar to warm CDN cache...');
+            const prefetchStart = Date.now();
+            await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
+            const prefetchTime = Date.now() - prefetchStart;
+            console.log(`🔍 DEBUG: Casting handler - Applicant avatar pre-fetch completed in ${prefetchTime}ms`);
+          } catch (error) {
+            console.log('🔍 DEBUG: Casting handler - Avatar pre-fetch failed (non-critical):', error.message);
+          }
           
           const galleryComponent = {
             type: 12,
