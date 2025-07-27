@@ -4954,7 +4954,13 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const status = parts[1]; // player, tentative, or reject
           const channelId = parts[2];
           const appIndex = parseInt(parts[3]);
-          const configId = parts[4]; // May be undefined for legacy buttons
+          
+          // Extract configId properly: cast_player_1398865589887434783_0_config_1749305698427_391415444084490240
+          let configId = null;
+          const configMatch = context.customId.match(/cast_\w+_\d+_\d+_(.+)$/);
+          if (configMatch) {
+            configId = configMatch[1]; // Everything after the appIndex
+          }
           
           // Map button status to database status
           const statusMap = {
