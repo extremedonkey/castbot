@@ -546,7 +546,7 @@ async function createVotingBreakdown(channelId, playerData, guildId, guild) {
  * @param {string} guildId - Guild ID
  * @returns {Array} Array containing Text Display and ActionRow components
  */
-function createPlayerNotesSection(channelId, appIndex, playerData, guildId) {
+function createPlayerNotesSection(channelId, appIndex, playerData, guildId, configId = null) {
   // Get existing notes or default text
   const existingNotes = playerData[guildId]?.applications?.[channelId]?.playerNotes;
   const notesText = existingNotes || 'Record casting notes, connections or potential issues...';
@@ -559,13 +559,13 @@ function createPlayerNotesSection(channelId, appIndex, playerData, guildId) {
   
   // Create edit button
   const editButton = new ButtonBuilder()
-    .setCustomId(`edit_player_notes_${channelId}_${appIndex}`)
+    .setCustomId(`edit_player_notes_${channelId}_${appIndex}_${configId || 'legacy'}`)
     .setLabel('✏️ Edit Player Notes')
     .setStyle(ButtonStyle.Primary);
   
   // Create delete application button
   const deleteButton = new ButtonBuilder()
-    .setCustomId(`delete_application_mode_${channelId}_${appIndex}`)
+    .setCustomId(`delete_application_mode_${channelId}_${appIndex}_${configId || 'legacy'}`)
     .setLabel('🗑️ Delete Application')
     .setStyle(ButtonStyle.Danger);
   
@@ -4596,7 +4596,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
           
           // Add player notes section at the bottom
-          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId);
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId, configId);
           containerComponents.push(
             {
               type: 14 // Separator
@@ -4903,7 +4903,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
           
           // Add player notes section at the bottom
-          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, newIndex, playerData, guildId);
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, newIndex, playerData, guildId, configId);
           containerComponents.push(
             {
               type: 14 // Separator
@@ -5129,7 +5129,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
           
           // Add player notes section at the bottom
-          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId);
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId, configId);
           containerComponents.push(
             {
               type: 14 // Separator
@@ -5152,77 +5152,59 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       })(req, res, client);
     } else if (custom_id.startsWith('edit_player_notes_')) {
-      // Handle edit player notes button clicks
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member.user.id;
-        const guild = await client.guilds.fetch(guildId);
-        const member = await guild.members.fetch(userId);
-        
-        // Check admin permissions (same pattern as other ranking features)
-        if (!member.permissions.has(PermissionFlagsBits.ManageRoles) && 
-            !member.permissions.has(PermissionFlagsBits.ManageChannels) && 
-            !member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ You need admin permissions (Manage Roles, Manage Channels, or Manage Server) to edit player notes.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        console.log(`✏️ START: edit_player_notes - user ${userId}, button ${custom_id}`);
-        
-        // Parse button ID: edit_player_notes_[channelId]_[appIndex]
-        const parts = custom_id.split('_');
-        const channelId = parts[3];
-        const appIndex = parseInt(parts[4]);
-        
-        console.log(`✏️ Editing notes for channel ${channelId}, app index ${appIndex}`);
-        
-        // Load existing notes
-        const playerData = await loadPlayerData();
-        const existingNotes = playerData[guildId]?.applications?.[channelId]?.playerNotes || '';
-        
-        // Create modal
-        const modal = new ModalBuilder()
-          .setCustomId(`save_player_notes_${channelId}_${appIndex}`)
-          .setTitle('Edit Player Notes');
-        
-        const notesInput = new TextInputBuilder()
-          .setCustomId('player_notes_text')
-          .setLabel('Add / Update Player Notes')
-          .setPlaceholder('Record casting notes, connections, or potential issues...')
-          .setStyle(TextInputStyle.Paragraph)
-          .setMaxLength(2000)
-          .setRequired(false);
-        
-        // Only set existing notes if they exist and are not the default placeholder text
-        if (existingNotes && existingNotes !== 'Record casting notes, connections or potential issues...') {
-          notesInput.setValue(existingNotes);
-        }
-        
-        const actionRow = new ActionRowBuilder().addComponents(notesInput);
-        modal.addComponents(actionRow);
-        
-        console.log(`✅ SUCCESS: edit_player_notes modal created`);
-        
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-        
-      } catch (error) {
-        console.error('Error handling edit player notes:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error opening player notes editor. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
+      // Handle edit player notes button clicks - converted to Button Handler Factory
+      return ButtonHandlerFactory.create({
+        id: 'edit_player_notes',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`✏️ START: edit_player_notes - user ${context.userId}, button ${context.customId}`);
+          
+          // Parse button ID: edit_player_notes_[channelId]_[appIndex]_[configId] (new) or edit_player_notes_[channelId]_[appIndex] (legacy)
+          const parts = context.customId.split('_');
+          const channelId = parts[3];
+          const appIndex = parseInt(parts[4]);
+          const configId = parts[5]; // May be undefined for legacy buttons
+          
+          console.log(`✏️ Editing notes for channel ${channelId}, app index ${appIndex}`);
+          
+          // Load existing notes
+          const playerData = await loadPlayerData();
+          const existingNotes = playerData[context.guildId]?.applications?.[channelId]?.playerNotes || '';
+          
+          // Create modal with configId if available
+          const modalCustomId = configId 
+            ? `save_player_notes_${channelId}_${appIndex}_${configId}`
+            : `save_player_notes_${channelId}_${appIndex}`;
+            
+          const modal = new ModalBuilder()
+            .setCustomId(modalCustomId)
+            .setTitle('Edit Player Notes');
+          
+          const notesInput = new TextInputBuilder()
+            .setCustomId('player_notes_text')
+            .setLabel('Add / Update Player Notes')
+            .setPlaceholder('Record casting notes, connections, or potential issues...')
+            .setStyle(TextInputStyle.Paragraph)
+            .setMaxLength(2000)
+            .setRequired(false);
+          
+          // Only set existing notes if they exist and are not the default placeholder text
+          if (existingNotes && existingNotes !== 'Record casting notes, connections or potential issues...') {
+            notesInput.setValue(existingNotes);
           }
-        });
-      }
+          
+          const actionRow = new ActionRowBuilder().addComponents(notesInput);
+          modal.addComponents(actionRow);
+          
+          console.log(`✅ SUCCESS: edit_player_notes modal created`);
+          
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('delete_application_mode_')) {
       // Handle delete application button clicks - show confirmation using Entity Framework pattern
       return ButtonHandlerFactory.create({
@@ -5600,7 +5582,7 @@ ${channelDeletedMessage}`;
           }
           
           // Add player notes section
-          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(newApp.channelId, newIndex, playerData, guildId);
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(newApp.channelId, newIndex, playerData, guildId, configId);
           containerComponents.push(
             { type: 14 }, // Separator
             playerNotesDisplay,
@@ -7255,7 +7237,7 @@ To fix this:
           }
           
           // Add player notes section at the bottom
-          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId);
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId, configId);
           containerComponents.push(
             {
               type: 14 // Separator
@@ -23232,57 +23214,58 @@ Are you sure you want to continue?`;
         });
       }
     } else if (custom_id.startsWith('save_player_notes_')) {
-      // Handle player notes modal submission
-      try {
-        console.log(`✏️ START: save_player_notes modal - custom_id: ${custom_id}`);
-        
-        // Parse custom_id: save_player_notes_[channelId]_[appIndex]
-        const parts = custom_id.split('_');
-        const channelId = parts[3];
-        const appIndex = parseInt(parts[4]);
-        
-        const guildId = req.body.guild_id;
-        const userId = req.body.member.user.id;
-        
-        // Get the notes text from the modal
-        const notesText = components[0].components[0].value?.trim() || '';
-        
-        console.log(`✏️ Saving notes for channel ${channelId}: "${notesText}"`);
-        
-        // Load and update player data
-        const playerData = await loadPlayerData();
-        
-        // Ensure application exists
-        if (!playerData[guildId]) playerData[guildId] = {};
-        if (!playerData[guildId].applications) playerData[guildId].applications = {};
-        if (!playerData[guildId].applications[channelId]) playerData[guildId].applications[channelId] = {};
-        
-        // Update player notes
-        if (notesText) {
-          playerData[guildId].applications[channelId].playerNotes = notesText;
-        } else {
-          // Remove notes if empty
-          delete playerData[guildId].applications[channelId].playerNotes;
-        }
-        
-        await savePlayerData(playerData);
-        
-        console.log(`✅ SUCCESS: save_player_notes - notes updated`);
-        
-        // Regenerate the ranking interface with updated notes
-        const guild = await client.guilds.fetch(guildId);
-        const allApplications = await getAllApplicationsFromData(guildId);
-        const currentApp = allApplications[appIndex];
-        
-        if (!currentApp) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      // Handle player notes modal submission - converted to Button Handler Factory
+      return ButtonHandlerFactory.create({
+        id: 'save_player_notes',
+        handler: async (context) => {
+          console.log(`✏️ START: save_player_notes modal - custom_id: ${context.customId}`);
+          
+          // Parse custom_id: save_player_notes_[channelId]_[appIndex]_[configId] (new) or save_player_notes_[channelId]_[appIndex] (legacy)
+          const parts = context.customId.split('_');
+          const channelId = parts[3];
+          const appIndex = parseInt(parts[4]);
+          const configId = parts[5]; // May be undefined for legacy modals
+          
+          const { guildId, userId, client } = context;
+          
+          // Get the notes text from the modal
+          const notesText = req.body.data.components[0].components[0].value?.trim() || '';
+          
+          console.log(`✏️ Saving notes for channel ${channelId}: "${notesText}"`);
+          
+          // Load and update player data
+          const playerData = await loadPlayerData();
+          
+          // Ensure application exists
+          if (!playerData[guildId]) playerData[guildId] = {};
+          if (!playerData[guildId].applications) playerData[guildId].applications = {};
+          if (!playerData[guildId].applications[channelId]) playerData[guildId].applications[channelId] = {};
+          
+          // Update player notes
+          if (notesText) {
+            playerData[guildId].applications[channelId].playerNotes = notesText;
+          } else {
+            // Remove notes if empty
+            delete playerData[guildId].applications[channelId].playerNotes;
+          }
+          
+          await savePlayerData(playerData);
+          
+          console.log(`✅ SUCCESS: save_player_notes - notes updated`);
+          
+          // Regenerate the ranking interface with updated notes
+          const guild = await client.guilds.fetch(guildId);
+          const allApplications = configId 
+            ? await getApplicationsForSeason(guildId, configId)
+            : await getAllApplicationsFromData(guildId);
+          const currentApp = allApplications[appIndex];
+          
+          if (!currentApp) {
+            return {
               content: '❌ Application not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
+              ephemeral: true
+            };
+          }
         
         // Fetch the applicant member for avatar
         let applicantMember;
@@ -23310,42 +23293,42 @@ Are you sure you want to continue?`;
         const rankingButtons = [];
         const userRanking = playerData[guildId]?.rankings?.[currentApp.channelId]?.[userId];
         
-        for (let i = 1; i <= 5; i++) {
-          const isSelected = userRanking === i;
-          rankingButtons.push(
-            new ButtonBuilder()
-              .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}`)
-              .setLabel(i.toString())
-              .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
-              .setDisabled(isSelected)
-          );
-        }
+          for (let i = 1; i <= 5; i++) {
+            const isSelected = userRanking === i;
+            rankingButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}_${configId || 'legacy'}`)
+                .setLabel(i.toString())
+                .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+                .setDisabled(isSelected)
+            );
+          }
         
         const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
         
-        // Create navigation buttons
-        const navButtons = [];
-        if (allApplications.length > 1) {
+          // Create navigation buttons
+          const navButtons = [];
+          if (allApplications.length > 1) {
+            navButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`ranking_prev_${appIndex}_${configId || 'legacy'}`)
+                .setLabel('◀ Previous')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(appIndex === 0),
+              new ButtonBuilder()
+                .setCustomId(`ranking_next_${appIndex}_${configId || 'legacy'}`)
+                .setLabel('Next ▶')
+                .setStyle(ButtonStyle.Secondary)
+                .setDisabled(appIndex === allApplications.length - 1)
+            );
+          }
+          
           navButtons.push(
             new ButtonBuilder()
-              .setCustomId(`ranking_prev_${appIndex}`)
-              .setLabel('◀ Previous')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(appIndex === 0),
-            new ButtonBuilder()
-              .setCustomId(`ranking_next_${appIndex}`)
-              .setLabel('Next ▶')
-              .setStyle(ButtonStyle.Secondary)
-              .setDisabled(appIndex === allApplications.length - 1)
+              .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
+              .setLabel('📊 View All Scores')
+              .setStyle(ButtonStyle.Primary)
           );
-        }
-        
-        navButtons.push(
-          new ButtonBuilder()
-            .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
-            .setLabel('📊 View All Scores')
-            .setStyle(ButtonStyle.Primary)
-        );
         
         const navRow = new ActionRowBuilder().addComponents(navButtons);
         
@@ -23409,40 +23392,31 @@ Are you sure you want to continue?`;
           );
         }
         
-        // Add player notes section at the bottom
-        const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId);
-        containerComponents.push(
-          {
-            type: 14 // Separator
-          },
-          playerNotesDisplay, // Player notes text display
-          playerNotesButtonRow // Edit button
-        );
-        
-        const castRankingContainer = {
-          type: 17, // Container component
-          accent_color: 0x9B59B6, // Purple accent color
-          components: containerComponents
-        };
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [castRankingContainer]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error saving player notes:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error saving player notes. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          // Add player notes section at the bottom
+          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId, configId);
+          containerComponents.push(
+            {
+              type: 14 // Separator
+            },
+            playerNotesDisplay, // Player notes text display
+            playerNotesButtonRow // Edit button
+          );
+          
+          const castRankingContainer = {
+            type: 17, // Container component
+            accent_color: 0x9B59B6, // Purple accent color
+            components: containerComponents
+          };
+          
+          return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              flags: (1 << 15), // IS_COMPONENTS_V2 flag
+              components: [castRankingContainer]
+            }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('admin_age_modal_')) {
       // Use new modular handler for admin age modal
       const playerData = await loadPlayerData();
