@@ -282,10 +282,24 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
     };
     navComponents.push(navRow);
   } else {
-    // If 5 or fewer questions, just show Delete Season button
+    // If 5 or fewer questions, show disabled navigation buttons for consistency
     const navRow = {
       type: 1, // Action Row
       components: [
+        {
+          type: 2, // Button
+          custom_id: `season_nav_prev_${configId}_${currentPage}`,
+          label: "◀ Previous",
+          style: 2, // Secondary
+          disabled: true
+        },
+        {
+          type: 2, // Button
+          custom_id: `season_nav_next_${configId}_${currentPage}`,
+          label: "Next ▶",
+          style: 2, // Secondary
+          disabled: true
+        },
         {
           type: 2, // Button
           custom_id: `season_delete_${configId}`,
