@@ -5511,34 +5511,9 @@ ${channelDeletedMessage}`;
             }
           );
           
-          // Add casting buttons
-          const castingButtons = [
-            {
-              type: 2, // Button
-              style: castingStatus === 'cast' ? 3 : 2, // Success if selected
-              label: '🎬 Cast Player',
-              custom_id: `cast_player_${newApp.channelId}_${newIndex}`
-            },
-            {
-              type: 2, // Button
-              style: castingStatus === 'tentative' ? 1 : 2, // Primary if selected
-              label: '❓ Tentative',
-              custom_id: `cast_tentative_${newApp.channelId}_${newIndex}`
-            },
-            {
-              type: 2, // Button
-              style: castingStatus === 'reject' ? 4 : 2, // Danger if selected
-              label: '🗑️ Don\'t Cast',
-              custom_id: `cast_reject_${newApp.channelId}_${newIndex}`
-            }
-          ];
-          
           containerComponents.push(
             { type: 14 }, // Separator
-            {
-              type: 1, // Action Row
-              components: castingButtons
-            }
+            createCastingButtons(newApp.channelId, newIndex, playerData, guildId, configId).toJSON() // Casting buttons
           );
           
           // Add navigation buttons
