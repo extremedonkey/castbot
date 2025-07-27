@@ -7059,7 +7059,6 @@ To fix this:
           console.log('Debug - Guild ID:', guildId);
           
           // Debug: Check what's actually in playerData
-          const playerData = await loadPlayerData();
           console.log('Debug - Guild exists in playerData:', !!playerData[guildId]);
           console.log('Debug - Applications section exists:', !!playerData[guildId]?.applications);
           if (playerData[guildId]?.applications) {
