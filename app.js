@@ -6619,6 +6619,160 @@ To fix this:
           return refreshQuestionManagementUI(res, config, configId, validPage);
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('season_delete_')) {
+      // Don't match season_delete_confirm_ or season_delete_cancel_
+      if (custom_id.startsWith('season_delete_confirm_') || custom_id.startsWith('season_delete_cancel_')) {
+        // Let these be handled by their specific handlers below
+      } else {
+        // Handle season delete button clicks - show confirmation dialog
+        return ButtonHandlerFactory.create({
+          id: 'season_delete',
+          requiresPermission: PermissionFlagsBits.ManageRoles,
+          permissionName: 'Manage Roles',
+          handler: async (context) => {
+            console.log(`🗑️ START: season_delete - user ${context.userId}`);
+            
+            // Extract configId: season_delete_{configId}
+            const configId = context.customId.replace('season_delete_', '');
+            
+            // Load player data to get season info and count applications
+            const playerData = await loadPlayerData();
+            const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+            
+            if (!config) {
+              return {
+                content: `❌ Season configuration not found. ConfigId: ${configId}`,
+                ephemeral: true
+              };
+            }
+            
+            // Count applications for this configId
+            const applications = playerData[context.guildId]?.applications || {};
+            const seasonApplications = Object.values(applications).filter(app => app.configId === configId);
+            const applicationCount = seasonApplications.length;
+            const questionCount = config.questions?.length || 0;
+            
+            // Create confirmation UI
+            const components = [{
+              type: 17, // Container
+              accent_color: 0xe74c3c, // Red for danger
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `## ⚠️ Delete Season: ${config.seasonName}\n\n**This action will permanently delete:**\n• **${questionCount}** application questions\n• **${applicationCount}** submitted applications and all voting data\n• All season configuration data\n\n⚠️ **Channels will NOT be deleted automatically - you must delete them manually**\n\n**This action cannot be undone!**\n\nAre you sure you want to proceed?`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row
+                  components: [
+                    {
+                      type: 2, // Button
+                      style: 4, // Danger
+                      label: 'Yes, Delete Season',
+                      custom_id: `season_delete_confirm_${configId}`,
+                      emoji: { name: '⚠️' }
+                    },
+                    {
+                      type: 2, // Button
+                      style: 2, // Secondary
+                      label: 'Cancel',
+                      custom_id: `season_delete_cancel_${configId}`,
+                      emoji: { name: '❌' }
+                    }
+                  ]
+                }
+              ]
+            }];
+            
+            console.log(`✅ SUCCESS: season_delete - confirmation shown for ${config.seasonName} (${questionCount} questions, ${applicationCount} applications)`);
+            return {
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components,
+              ephemeral: true
+            };
+          }
+        })(req, res, client);
+      }
+    } else if (custom_id.startsWith('season_delete_confirm_')) {
+      // Handle confirmed season deletion
+      return ButtonHandlerFactory.create({
+        id: 'season_delete_confirm',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`💥 START: season_delete_confirm - user ${context.userId}`);
+          
+          // Extract configId: season_delete_confirm_{configId}
+          const configId = context.customId.replace('season_delete_confirm_', '');
+          
+          // Load player data
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+          
+          if (!config) {
+            return {
+              content: `❌ Season configuration not found during deletion. ConfigId: ${configId}`,
+              ephemeral: true
+            };
+          }
+          
+          const seasonName = config.seasonName || 'Unknown Season';
+          
+          // Count what we're about to delete
+          const applications = playerData[context.guildId]?.applications || {};
+          const seasonApplications = Object.values(applications).filter(app => app.configId === configId);
+          const applicationCount = seasonApplications.length;
+          const questionCount = config.questions?.length || 0;
+          
+          try {
+            // Step 1: Delete all applications with matching configId
+            const deletedChannelIds = [];
+            for (const [channelId, application] of Object.entries(applications)) {
+              if (application.configId === configId) {
+                deletedChannelIds.push(channelId);
+                delete applications[channelId];
+              }
+            }
+            
+            // Step 2: Delete the application config
+            delete playerData[context.guildId].applicationConfigs[configId];
+            
+            // Step 3: Save the data
+            await savePlayerData(playerData);
+            
+            console.log(`💥 Season deleted: ${seasonName} (configId: ${configId})`);
+            console.log(`💥 Deleted ${applicationCount} applications: ${deletedChannelIds.join(', ')}`);
+            console.log(`💥 Deleted ${questionCount} questions`);
+            
+            console.log(`✅ SUCCESS: season_delete_confirm - season "${seasonName}" deleted (${questionCount} questions, ${applicationCount} applications)`);
+            return {
+              content: `✅ **Season Successfully Deleted**\n\n**"${seasonName}"** has been permanently deleted.\n\n**Deleted:**\n• ${questionCount} application questions\n• ${applicationCount} submitted applications and voting data\n• Season configuration\n\n⚠️ **Remember:** Application channels must be deleted manually if they still exist.\n\nReturning to main menu...`,
+              ephemeral: true
+            };
+          } catch (error) {
+            console.error(`❌ Error deleting season ${configId}:`, error);
+            return {
+              content: `❌ **Error deleting season**\n\nSeason: "${seasonName}"\nConfigId: ${configId}\nError: ${error.message}\n\nPlease check the logs and try again or contact an administrator.`,
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('season_delete_cancel_')) {
+      // Handle cancel season deletion
+      return ButtonHandlerFactory.create({
+        id: 'season_delete_cancel',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`❌ CANCEL: season_delete_cancel - user ${context.userId}`);
+          
+          return {
+            content: '❌ Season deletion cancelled.',
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('season_nav_prev_')) {
       return ButtonHandlerFactory.create({
         id: 'season_nav_prev',

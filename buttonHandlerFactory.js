@@ -843,6 +843,20 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'application_management'
   },
+  'season_delete_confirm_*': {
+    label: 'Yes, Delete Season',
+    description: 'Confirm season deletion',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'application_management'
+  },
+  'season_delete_cancel_*': {
+    label: 'Cancel',
+    description: 'Cancel season deletion',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'application_management'
+  },
   
   'season_nav_prev_*': {
     label: 'Previous Page',
