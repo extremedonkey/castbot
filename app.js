@@ -458,6 +458,51 @@ function createCastingButtons(channelId, appIndex, playerData, guildId) {
 }
 
 /**
+ * Helper function to create individual voting breakdown display
+ * @param {string} channelId - Application channel ID
+ * @param {Object} playerData - Player data object
+ * @param {string} guildId - Guild ID
+ * @param {Object} guild - Discord guild object
+ * @returns {Promise<Object|null>} Text Display component or null if no votes
+ */
+async function createVotingBreakdown(channelId, playerData, guildId, guild) {
+  const allRankings = playerData[guildId]?.rankings?.[channelId] || {};
+  const rankingEntries = Object.entries(allRankings).filter(([_, score]) => score !== undefined);
+  
+  if (rankingEntries.length === 0) {
+    return null; // No votes, don't render anything
+  }
+  
+  // Sort by score (highest to lowest)
+  rankingEntries.sort(([_a, scoreA], [_b, scoreB]) => scoreB - scoreA);
+  
+  // Calculate average
+  const scores = rankingEntries.map(([_, score]) => score);
+  const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
+  
+  // Build voting breakdown
+  let votingText = `## :ballot_box: Votes\n> **Average:** ${avgScore}/5.0 (${scores.length} vote${scores.length !== 1 ? 's' : ''})\n`;
+  
+  // Fetch member names and build vote list
+  for (const [userId, score] of rankingEntries) {
+    try {
+      const member = await guild.members.fetch(userId);
+      const displayName = member.displayName || member.user.username;
+      const stars = ':star:'.repeat(score);
+      votingText += `• @${displayName}: ${stars} (${score}/5)\n`;
+    } catch (error) {
+      // Fallback if can't fetch member
+      votingText += `• User ${userId}: ${':star:'.repeat(score)} (${score}/5)\n`;
+    }
+  }
+  
+  return {
+    type: 10, // Text Display component
+    content: votingText
+  };
+}
+
+/**
  * Check if user has admin permissions (any of: Manage Channels, Manage Guild, Manage Roles, Administrator)
  * @param {Object} member - Discord member object from interaction
  * @returns {boolean} True if user has admin permissions
@@ -4461,37 +4506,52 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           castingStatusText = '⚪ Undecided';
         }
         
+        // Create voting breakdown if there are votes
+        const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
+        
         // Create updated container
+        const containerComponents = [
+          {
+            type: 10,
+            content: `## Cast Ranking | ${guild.name}`
+          },
+          {
+            type: 14
+          },
+          {
+            type: 10,
+            content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
+          },
+          galleryComponent,
+          {
+            type: 10,
+            content: `> **Rate this applicant (1-5):**`
+          },
+          rankingRow.toJSON(),
+          {
+            type: 14
+          },
+          createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
+          {
+            type: 14
+          },
+          navRow.toJSON()
+        ];
+        
+        // Add voting breakdown if there are votes
+        if (votingBreakdown) {
+          containerComponents.push(
+            {
+              type: 14 // Separator
+            },
+            votingBreakdown // Voting breakdown display
+          );
+        }
+        
         const castRankingContainer = {
           type: 17,
           accent_color: 0x9B59B6,
-          components: [
-            {
-              type: 10,
-              content: `## Cast Ranking | ${guild.name}`
-            },
-            {
-              type: 14
-            },
-            {
-              type: 10,
-              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-            },
-            galleryComponent,
-            {
-              type: 10,
-              content: `> **Rate this applicant (1-5):**`
-            },
-            rankingRow.toJSON(),
-            {
-              type: 14
-            },
-            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
-            {
-              type: 14
-            },
-            navRow.toJSON()
-          ]
+          components: containerComponents
         };
         
         console.log('🔍 DEBUG: Final container structure:', JSON.stringify(castRankingContainer, null, 2));
@@ -4761,36 +4821,51 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             castingStatusText = '⚪ Undecided';
           }
           
+          // Create voting breakdown if there are votes
+          const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
+          
+          const containerComponents = [
+            {
+              type: 10,
+              content: `## Cast Ranking | ${guild.name}`
+            },
+            {
+              type: 14
+            },
+            {
+              type: 10,
+              content: `> **Applicant ${newIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
+            },
+            galleryComponent,
+            {
+              type: 10,
+              content: `> **Rate this applicant (1-5):**`
+            },
+            rankingRow.toJSON(),
+            {
+              type: 14
+            },
+            createCastingButtons(currentApp.channelId, newIndex, playerData, guildId).toJSON(), // Casting buttons
+            {
+              type: 14
+            },
+            navRow.toJSON()
+          ];
+          
+          // Add voting breakdown if there are votes
+          if (votingBreakdown) {
+            containerComponents.push(
+              {
+                type: 14 // Separator
+              },
+              votingBreakdown // Voting breakdown display
+            );
+          }
+          
           const castRankingContainer = {
             type: 17,
             accent_color: 0x9B59B6,
-            components: [
-              {
-                type: 10,
-                content: `## Cast Ranking | ${guild.name}`
-              },
-              {
-                type: 14
-              },
-              {
-                type: 10,
-                content: `> **Applicant ${newIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-              },
-              galleryComponent,
-              {
-                type: 10,
-                content: `> **Rate this applicant (1-5):**`
-              },
-              rankingRow.toJSON(),
-              {
-                type: 14
-              },
-              createCastingButtons(currentApp.channelId, newIndex, playerData, guildId).toJSON(), // Casting buttons
-              {
-                type: 14
-              },
-              navRow.toJSON()
-            ]
+            components: containerComponents
           };
           
           return res.send({
@@ -4951,36 +5026,51 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             castingStatusText = '⚪ Undecided';
           }
           
+          // Create voting breakdown if there are votes
+          const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
+          
+          const containerComponents = [
+            {
+              type: 10,
+              content: `## Cast Ranking | ${guild.name}`
+            },
+            {
+              type: 14
+            },
+            {
+              type: 10,
+              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
+            },
+            galleryComponent,
+            {
+              type: 10,
+              content: `> **Rate this applicant (1-5):**`
+            },
+            rankingRow.toJSON(),
+            {
+              type: 14
+            },
+            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Updated casting buttons
+            {
+              type: 14
+            },
+            navRow.toJSON()
+          ];
+          
+          // Add voting breakdown if there are votes
+          if (votingBreakdown) {
+            containerComponents.push(
+              {
+                type: 14 // Separator
+              },
+              votingBreakdown // Voting breakdown display
+            );
+          }
+          
           const castRankingContainer = {
             type: 17,
             accent_color: 0x9B59B6,
-            components: [
-              {
-                type: 10,
-                content: `## Cast Ranking | ${guild.name}`
-              },
-              {
-                type: 14
-              },
-              {
-                type: 10,
-                content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-              },
-              galleryComponent,
-              {
-                type: 10,
-                content: `> **Rate this applicant (1-5):**`
-              },
-              rankingRow.toJSON(),
-              {
-                type: 14
-              },
-              createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Updated casting buttons
-              {
-                type: 14
-              },
-              navRow.toJSON()
-            ]
+            components: containerComponents
           };
           
           return {
@@ -6547,37 +6637,52 @@ To fix this:
             castingStatusText = '⚪ Undecided';
           }
           
+          // Create voting breakdown if there are votes
+          const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
+          
           // Create Components V2 Container for Cast Ranking interface
+          const containerComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## Cast Ranking | ${guild.name}`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
+            },
+            avatarDisplayComponent, // Applicant avatar display
+            {
+              type: 10, // Text Display component  
+              content: `> **Rate this applicant (1-5):**`
+            },
+            rankingRow.toJSON(), // Ranking buttons
+            {
+              type: 14 // Separator
+            },
+            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
+            {
+              type: 14 // Separator
+            },
+            navRow.toJSON() // Navigation and view all scores
+          ];
+          
+          // Add voting breakdown if there are votes
+          if (votingBreakdown) {
+            containerComponents.push(
+              {
+                type: 14 // Separator
+              },
+              votingBreakdown // Voting breakdown display
+            );
+          }
+          
           const castRankingContainer = {
             type: 17, // Container component
             accent_color: 0x9B59B6, // Purple accent color
-            components: [
-              {
-                type: 10, // Text Display component
-                content: `## Cast Ranking | ${guild.name}`
-              },
-              {
-                type: 14 // Separator
-              },
-              {
-                type: 10, // Text Display component
-                content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-              },
-              avatarDisplayComponent, // Applicant avatar display
-              {
-                type: 10, // Text Display component  
-                content: `> **Rate this applicant (1-5):**`
-              },
-              rankingRow.toJSON(), // Ranking buttons
-              {
-                type: 14 // Separator
-              },
-              createCastingButtons(currentApp.channelId, appIndex, playerData, guildId).toJSON(), // Casting buttons
-              {
-                type: 14 // Separator
-              },
-              navRow.toJSON() // Navigation and view all scores
-            ]
+            components: containerComponents
           };
           
           console.log('Sending cast ranking interface...');
