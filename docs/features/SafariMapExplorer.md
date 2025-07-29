@@ -639,6 +639,14 @@ graph TD
 - **Permission Overwrites**: Limited to 500 per channel
   - Solution: Use role-based permissions for groups
 
+### Map Creation File Size Limitations
+- **Large Image Files**: Maps with large file sizes can cause deployment aborts
+  - **Symptom**: Dev restart/deployment process fails silently during file upload
+  - **Root Cause**: Image files exceeding upload limits during git push operations
+  - **Solution**: Compress images or use external hosting for large map files
+  - **Prevention**: Add file size validation in map upload process
+  - **Workaround**: Use smaller source images or optimize PNG compression before upload
+
 ### Image Processing
 - **Memory Usage**: Large images can consume significant memory
   - Solution: Stream processing, image size limits
