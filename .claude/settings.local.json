@@ -175,7 +175,8 @@
       "Bash(touch:*)",
       "WebFetch(domain:i.ibb.co)",
       "Bash(/tmp/fix_anchor_calls.sh:*)",
-      "Bash(env)"
+      "Bash(env)",
+      "Bash(./scripts/dev/dev-start.sh:*)"
     ],
     "deny": []
   }
