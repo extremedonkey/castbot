@@ -98,8 +98,9 @@ fi
 echo "Starting CastBot with node..."
 pkill -f "node app.js" 2>/dev/null || true  # Kill any existing instances
 
-# Ensure we're in the right directory
-cd "$(dirname "$0")"
+# Ensure we're in the project root directory
+PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+cd "$PROJECT_ROOT"
 
 nohup node app.js > /tmp/castbot-dev.log 2>&1 &
 APP_PID=$!
