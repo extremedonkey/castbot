@@ -15916,17 +15916,87 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           console.log(`✅ SUCCESS: condition_type_select - changed to ${newType}`);
           
-          // Refresh condition editor
-          const { showConditionEditor } = await import('./customActionUI.js');
-          await showConditionEditor({
-            res,
-            actionId,
-            conditionIndex,
-            guildId: context.guildId,
-            currentPage
+          // Build the condition editor UI components
+          const customActionUI = await import('./customActionUI.js');
+          const { createCurrencyConditionUI, createItemConditionUI, createRoleConditionUI } = customActionUI.default;
+          
+          const components = [
+            {
+              type: 10,
+              content: '## ➕ Condition Editor\nWhen...'
+            },
+            {
+              type: 1, // Action Row - Type selector
+              components: [{
+                type: 3, // String Select
+                custom_id: `condition_type_select_${actionId}_${conditionIndex}_${currentPage}`,
+                placeholder: 'Select Condition Type...',
+                options: [
+                  {
+                    label: 'Currency',
+                    value: 'currency',
+                    description: "User's currency is greater/less than or equal to a value",
+                    emoji: { name: '🪙' },
+                    default: condition.type === 'currency'
+                  },
+                  {
+                    label: 'Item',
+                    value: 'item',
+                    description: "User has/doesn't have item",
+                    emoji: { name: '📦' },
+                    default: condition.type === 'item'
+                  },
+                  {
+                    label: 'Role',
+                    value: 'role',
+                    description: "User has/doesn't have role",
+                    emoji: { name: '👑' },
+                    default: condition.type === 'role'
+                  }
+                ]
+              }]
+            }
+          ];
+          
+          // Add separator if type selected
+          if (condition.type) {
+            components.push({ type: 14 }); // Separator
+            
+            // Type-specific UI
+            switch (condition.type) {
+              case 'currency':
+                components.push(...createCurrencyConditionUI(condition, actionId, conditionIndex, currentPage));
+                break;
+              case 'item':
+                components.push(...await createItemConditionUI(condition, actionId, conditionIndex, currentPage, context.guildId));
+                break;
+              case 'role':
+                components.push(...createRoleConditionUI(condition, actionId, conditionIndex, currentPage));
+                break;
+            }
+          }
+          
+          // Back button
+          components.push({
+            type: 1, // Action Row
+            components: [{
+              type: 2,
+              custom_id: `condition_manager_${actionId}_${currentPage}`,
+              label: '← Back',
+              style: 2,
+              emoji: { name: '🧩' }
+            }]
           });
           
-          return;
+          const container = {
+            type: 17,
+            accent_color: 0x5865f2,
+            components: components
+          };
+          
+          return {
+            components: [container]
+          };
         }
       })(req, res, client);
       

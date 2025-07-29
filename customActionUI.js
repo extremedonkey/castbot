@@ -1790,5 +1790,8 @@ export default {
   showDisplayTextConfig,
   handleDisplayTextEdit,
   handleDisplayTextSave,
-  handleDisplayTextExecuteOn
+  handleDisplayTextExecuteOn,
+  createCurrencyConditionUI,
+  createItemConditionUI,
+  createRoleConditionUI
 };
