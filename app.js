@@ -17895,18 +17895,26 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setStyle(ButtonStyle.Success)
             .setEmoji('🚶');
           
+          const blacklistButton = new ButtonBuilder()
+            .setCustomId('map_admin_blacklist')
+            .setLabel('Blacklisted Coords')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🚫');
+          
           // Set states based on whether map exists
           if (hasActiveMap) {
             createButton.setStyle(ButtonStyle.Secondary).setDisabled(true);
             deleteButton.setDisabled(false);
             initPlayerButton.setDisabled(false);
+            blacklistButton.setDisabled(false);
           } else {
             createButton.setStyle(ButtonStyle.Primary).setDisabled(false);
             deleteButton.setDisabled(true);
             initPlayerButton.setDisabled(true);
+            blacklistButton.setDisabled(true);
           }
           
-          const mapButtonRow = new ActionRowBuilder().addComponents([createButton, deleteButton, initPlayerButton]);
+          const mapButtonRow = new ActionRowBuilder().addComponents([createButton, deleteButton, initPlayerButton, blacklistButton]);
           
           // Create back button
           const backButton = new ButtonBuilder()
@@ -18114,6 +18122,80 @@ Are you sure you want to continue?`;
           return ui;
         }
       })(req, res, client);
+      
+    } else if (custom_id === 'map_admin_blacklist') {
+      // Handle blacklisted coordinates management
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_blacklist',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🚫 START: map_admin_blacklist - user ${context.userId}`);
+          
+          // Load current blacklisted coordinates
+          const { getBlacklistedCoordinates } = await import('./mapExplorer.js');
+          const blacklistedCoords = await getBlacklistedCoordinates(context.guildId);
+          
+          // Create modal to edit blacklisted coordinates
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: 'map_admin_blacklist_modal',
+              title: 'Manage Blacklisted Coordinates',
+              components: [
+                {
+                  type: 1, // Action Row
+                  components: [
+                    {
+                      type: 4, // Text Input
+                      custom_id: 'blacklisted_coords',
+                      label: 'Blacklisted Coordinates',
+                      style: 2, // Paragraph
+                      placeholder: 'Enter comma-separated coordinates (e.g., A1, B3, C5)',
+                      value: blacklistedCoords.join(', '),
+                      required: false,
+                      min_length: 0,
+                      max_length: 1000
+                    }
+                  ]
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'map_admin_blacklist_modal') {
+      // Handle blacklist modal submission
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_blacklist_modal',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🚫 START: map_admin_blacklist_modal - user ${context.userId}`);
+          
+          // Get the input value
+          const blacklistedCoordsInput = req.body.data.components[0].components[0].value || '';
+          
+          // Parse coordinates - split by comma and clean up
+          const coordinatesList = blacklistedCoordsInput
+            .split(',')
+            .map(coord => coord.trim().toUpperCase())
+            .filter(coord => coord.match(/^[A-Z]\d+$/)); // Validate format (e.g., A1, B2)
+          
+          // Update blacklisted coordinates
+          const { updateBlacklistedCoordinates } = await import('./mapExplorer.js');
+          const result = await updateBlacklistedCoordinates(context.guildId, coordinatesList);
+          
+          console.log(`✅ SUCCESS: map_admin_blacklist_modal - updated ${coordinatesList.length} blacklisted coordinates`);
+          
+          return {
+            content: result.message,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('map_location_actions_')) {
       // Handle Location Actions button
       return ButtonHandlerFactory.create({

@@ -518,6 +518,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari',
     requiresPermission: 'ManageRoles'
   },
+  'map_admin_blacklist': {
+    label: 'Blacklisted Coordinates',
+    description: 'Manage restricted coordinates on the map',
+    emoji: '🚫',
+    style: 'Secondary',
+    category: 'safari',
+    requiresPermission: 'ManageRoles'
+  },
   'map_delete': {
     label: 'Delete Map',
     description: 'Delete entire map with confirmation',
