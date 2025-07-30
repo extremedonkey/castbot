@@ -17277,26 +17277,28 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Clean up any follow-up button references to this action
           console.log(`🔍 Scanning for follow-up references to ${actionId}...`);
           let cleanupCount = 0;
-          const mapData = safariData[context.guildId]?.maps?.[activeMapId];
-          if (mapData && mapData.cells) {
-            Object.entries(mapData.cells).forEach(([coord, cellData]) => {
-              if (cellData.customActions) {
-                cellData.customActions.forEach(action => {
-                  if (action.type === 'follow_up_button' && 
-                      action.config?.buttonId === actionId) {
-                    console.log(`🔧 Converting broken follow-up reference at ${coord}`);
-                    // Convert to error text display
-                    action.type = 'display_text';
-                    action.config = {
+          
+          // Scan all buttons for follow-up actions that reference the deleted button
+          const allButtons = safariData[context.guildId]?.buttons || {};
+          Object.entries(allButtons).forEach(([buttonId, button]) => {
+            if (button.actions && Array.isArray(button.actions)) {
+              button.actions.forEach((action, index) => {
+                if (action.type === 'follow_up_button' && 
+                    action.config?.buttonId === actionId) {
+                  console.log(`🔧 Converting broken follow-up reference in button ${buttonId} action ${index}`);
+                  // Convert to error text display
+                  button.actions[index] = {
+                    type: 'display_text',
+                    config: {
                       content: `⚠️ Referenced action "${actionName}" was deleted`,
                       title: 'Broken Follow-Up (Action Deleted)'
-                    };
-                    cleanupCount++;
-                  }
-                });
-              }
-            });
-          }
+                    }
+                  };
+                  cleanupCount++;
+                }
+              });
+            }
+          });
           
           if (cleanupCount > 0) {
             console.log(`✅ Cleaned up ${cleanupCount} follow-up references`);
