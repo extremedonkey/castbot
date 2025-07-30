@@ -17277,6 +17277,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Clean up any follow-up button references to this action
           console.log(`🔍 Scanning for follow-up references to ${actionId}...`);
           let cleanupCount = 0;
+          const brokenReferences = [];
           
           // Scan all buttons for follow-up actions that reference the deleted button
           const allButtons = safariData[context.guildId]?.buttons || {};
@@ -17286,6 +17287,16 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                 if (action.type === 'follow_up_button' && 
                     action.config?.buttonId === actionId) {
                   console.log(`🔧 Converting broken follow-up reference in button ${buttonId} action ${index}`);
+                  
+                  // Track where this broken reference is
+                  const buttonName = button.name || button.label || buttonId;
+                  const buttonCoords = button.coordinates || [];
+                  brokenReferences.push({
+                    buttonName,
+                    buttonId,
+                    coordinates: buttonCoords
+                  });
+                  
                   // Convert to error text display
                   button.actions[index] = {
                     type: 'display_text',
@@ -17328,7 +17339,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           let successMessage = `✅ **Action Deleted Successfully!**\n\n**"${actionName}"** has been removed from all locations and deleted permanently.`;
           
           if (cleanupCount > 0) {
-            successMessage += `\n\n⚠️ **Follow-up References Cleaned:** ${cleanupCount} follow-up action${cleanupCount > 1 ? 's' : ''} that referenced this action ${cleanupCount > 1 ? 'have' : 'has'} been converted to warning text.`;
+            successMessage += `\n\n⚠️ **Follow-up References Found and Fixed:**\n`;
+            successMessage += `${cleanupCount} broken follow-up action${cleanupCount > 1 ? 's' : ''} ${cleanupCount > 1 ? 'have' : 'has'} been converted to warning text.\n\n`;
+            
+            // Add specific locations of broken references
+            successMessage += `**To complete the cleanup:**\n`;
+            brokenReferences.forEach((ref, index) => {
+              const coordsText = ref.coordinates.length > 0 ? ref.coordinates.join(', ') : 'No locations';
+              successMessage += `${index + 1}. **"${ref.buttonName}"** (at ${coordsText})\n`;
+              successMessage += `   • Go to 📍 Location Actions → ⚡ Custom Actions\n`;
+              successMessage += `   • Delete the broken follow-up action\n\n`;
+            });
           }
           
           return {
