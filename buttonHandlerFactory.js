@@ -243,9 +243,9 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
   'safari_player_inventory': {
-    label: '🦕 Player Inventory',
+    label: '📦 Player Inventory',
     description: 'Show current user Safari inventory',
-    emoji: '🦕',
+    emoji: '📦',
     style: 'Primary',
     category: 'safari'
   },

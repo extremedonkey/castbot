@@ -390,12 +390,12 @@ export async function createPlayerManagementUI(options) {
             const { getStoreBrowseButtons } = await import('./safariManager.js');
             const storeBrowseButtons = await getStoreBrowseButtons(guildId);
             
-            // Create inventory button with new dinosaur emoji
+            // Create inventory button with custom inventory emoji
             const inventoryButton = new ButtonBuilder()
               .setCustomId('safari_player_inventory')
-              .setLabel(customTerms.inventoryName) // Remove currency emoji since we're using dinosaur emoji
+              .setLabel(customTerms.inventoryName)
               .setStyle(ButtonStyle.Primary)
-              .setEmoji('🦕'); // Dinosaur emoji
+              .setEmoji(customTerms.inventoryEmoji || '📦'); // Use custom inventory emoji
             
             // Create Navigate button (check if player is initialized on map)
             const { loadSafariContent } = await import('./safariManager.js');

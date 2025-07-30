@@ -988,7 +988,7 @@ async function createReeceStuffMenu() {
 async function createSafariMenu(guildId, userId, member) {
   // Get the inventory name and current round for this guild
   let inventoryName = 'Nest'; // Default
-  let inventoryEmoji = '🦕'; // Default emoji
+  let inventoryEmoji = '📦'; // Default emoji
   let currentRound = 1; // Default round
   
   try {
@@ -997,12 +997,9 @@ async function createSafariMenu(guildId, userId, member) {
     const guildConfig = safariContent[guildId]?.safariConfig;
     if (guildConfig?.inventoryName) {
       inventoryName = guildConfig.inventoryName;
-      // Extract emoji if present in the inventory name
-      const emojiMatch = inventoryName.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])/u);
-      if (emojiMatch) {
-        inventoryEmoji = emojiMatch[0];
-        inventoryName = inventoryName.replace(emojiMatch[0], '').trim();
-      }
+    }
+    if (guildConfig?.inventoryEmoji) {
+      inventoryEmoji = guildConfig.inventoryEmoji;
     }
     // Get current round for dynamic button label
     if (guildConfig?.currentRound) {
@@ -3778,7 +3775,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .setCustomId('safari_player_inventory')
           .setLabel(customTerms.inventoryName)
           .setStyle(ButtonStyle.Primary)
-          .setEmoji('🦕'); // Dinosaur emoji
+          .setEmoji(customTerms.inventoryEmoji || '📦'); // Use custom inventory emoji
         
         const backRow = new ActionRowBuilder().addComponents(backButton);
         containerComponents.push(backRow.toJSON());
@@ -3947,7 +3944,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .setCustomId('safari_player_inventory')
           .setLabel(customTerms.inventoryName)
           .setStyle(ButtonStyle.Primary)
-          .setEmoji('🦕'); // Dinosaur emoji
+          .setEmoji(customTerms.inventoryEmoji || '📦'); // Use custom inventory emoji
         
         const inventoryRow = new ActionRowBuilder().addComponents(inventoryButton);
         

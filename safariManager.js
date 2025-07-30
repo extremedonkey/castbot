@@ -5200,7 +5200,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
                                 custom_id: 'safari_player_inventory',
                                 label: customTerms.inventoryName,
                                 style: 1, // Primary (blue)
-                                emoji: { name: '🦕' } // Dinosaur emoji
+                                emoji: { name: customTerms.inventoryEmoji || '📦' } // Use custom inventory emoji
                             }
                         ]
                     }
