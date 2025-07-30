@@ -193,9 +193,22 @@ export async function importSafariData(guildId, importJson, client = null) {
         // Save updated data
         await saveSafariContent(currentData);
         
-        // If maps were imported, trigger channel creation
+        // If maps were imported, we need to handle channel creation differently
+        // We'll temporarily remove the map data, create channels, then restore with content
         if (summary.maps.created > 0 && client) {
-            summary.channelsCreated = await createChannelsForImportedMaps(guildId, currentData[guildId].maps, client);
+            // Store the imported map data
+            const importedMaps = { ...currentData[guildId].maps };
+            
+            // Temporarily clear maps so createMapGrid doesn't complain
+            delete currentData[guildId].maps;
+            await saveSafariContent(currentData);
+            
+            // Create channels using the standard process
+            summary.channelsCreated = await createChannelsForImportedMaps(guildId, importedMaps, client);
+            
+            // Restore the map data with imported content
+            currentData[guildId].maps = importedMaps;
+            await saveSafariContent(currentData);
         }
         
         return summary;
@@ -413,25 +426,25 @@ async function createChannelsForImportedMaps(guildId, mapsData, client) {
         }
         
         const activeMapId = mapsData.active;
-        const mapData = mapsData[activeMapId];
+        const importedMapData = mapsData[activeMapId];
         
-        if (!mapData || !mapData.coordinates) {
+        if (!importedMapData || !importedMapData.coordinates) {
             return 0;
         }
         
         // Check if channels already exist
-        const hasChannels = Object.values(mapData.coordinates).some(coord => coord.channelId);
+        const hasChannels = Object.values(importedMapData.coordinates).some(coord => coord.channelId);
         if (hasChannels) {
             console.log('Map already has channels, skipping channel creation');
             return 0;
         }
         
-        console.log(`🏗️ Creating Discord infrastructure for imported map: ${mapData.id}`);
+        console.log(`🏗️ Creating Discord infrastructure for imported map: ${importedMapData.id}`);
         
         // Get the guild object
         const guild = await client.guilds.fetch(guildId);
         
-        // Use the existing createMapGrid function
+        // Use the existing createMapGrid function (maps are temporarily cleared from data)
         const { createMapGrid } = await import('./mapExplorer.js');
         const result = await createMapGrid(guild, guild.client.user.id);
         
@@ -440,12 +453,38 @@ async function createChannelsForImportedMaps(guildId, mapsData, client) {
             return 0;
         }
         
-        // Now we need to update the anchor messages with imported content
-        const { postImportedContentToChannels } = await import('./mapExplorer.js');
-        await postImportedContentToChannels(guildId, mapData, client);
+        // Now we need to update the newly created map with imported content
+        // Load the fresh data to get channel IDs
+        const { loadSafariContent, saveSafariContent } = await import('./mapExplorer.js');
+        const freshData = await loadSafariContent();
+        const newMapId = freshData[guildId]?.maps?.active;
+        
+        if (newMapId && freshData[guildId].maps[newMapId]) {
+            // Merge imported content into the newly created map
+            const newMapData = freshData[guildId].maps[newMapId];
+            
+            // Update each coordinate with imported content
+            for (const [coord, newCoordData] of Object.entries(newMapData.coordinates)) {
+                const importedCoordData = importedMapData.coordinates[coord];
+                if (importedCoordData) {
+                    // Preserve the channel IDs from new map, but take content from import
+                    newCoordData.baseContent = importedCoordData.baseContent || newCoordData.baseContent;
+                    newCoordData.buttons = importedCoordData.buttons || [];
+                    newCoordData.cellType = importedCoordData.cellType || 'normal';
+                    newCoordData.discovered = importedCoordData.discovered || false;
+                }
+            }
+            
+            // Save the merged data
+            await saveSafariContent(freshData);
+            
+            // Update anchor messages with imported content
+            const { postImportedContentToChannels } = await import('./mapExplorer.js');
+            await postImportedContentToChannels(guildId, importedMapData, client);
+        }
         
         // Count the created channels
-        const channelsCreated = Object.keys(mapData.coordinates).length;
+        const channelsCreated = Object.keys(importedMapData.coordinates).length;
         
         return channelsCreated;
         
