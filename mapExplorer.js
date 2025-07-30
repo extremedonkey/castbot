@@ -493,7 +493,7 @@ async function updateBlacklistedCoordinates(guildId, coordinatesList) {
  * @param {string} guildId - Discord guild ID
  * @returns {Array<string>} Array of blacklisted coordinates
  */
-export async function getBlacklistedCoordinates(guildId) {
+async function getBlacklistedCoordinates(guildId) {
   const safariData = await loadSafariContent();
   const activeMapId = safariData[guildId]?.maps?.active;
   
