@@ -1287,6 +1287,12 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
   }).slice(0, 25); // Discord limit
   
   if (itemOptions.length > 0) {
+    // Ensure at least one option is selected if none are
+    const hasSelection = itemOptions.some(opt => opt.default);
+    if (!hasSelection && itemOptions.length > 0) {
+      itemOptions[0].default = true;
+    }
+    
     components.push({
       type: 1, // Action Row
       components: [{

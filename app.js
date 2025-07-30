@@ -15901,7 +15901,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               condition.operator = 'has';
               delete condition.value;
               delete condition.roleId;
-              condition.itemId = null;
+              // Set to first available item if any exist, otherwise null
+              const availableItems = Object.keys(allSafariContent[context.guildId]?.items || {});
+              condition.itemId = availableItems.length > 0 ? availableItems[0] : null;
               break;
             case 'role':
               condition.operator = 'has';
