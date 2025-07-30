@@ -1087,5 +1087,6 @@ export {
   createMapExplorerMenu, 
   loadSafariContent, 
   saveSafariContent,
-  createMapInfrastructure 
+  createMapInfrastructure,
+  postMapAnchorMessage
 };

@@ -35,9 +35,10 @@ export async function exportSafariData(guildId) {
  * Import Safari data with smart merge logic
  * @param {string} guildId - Discord guild ID
  * @param {string} importJson - JSON string to import
+ * @param {Client} client - Discord client (optional, for channel creation)
  * @returns {Object} Import summary with counts
  */
-export async function importSafariData(guildId, importJson) {
+export async function importSafariData(guildId, importJson, client = null) {
     try {
         // Parse and validate import data
         const importData = JSON.parse(importJson);
@@ -193,8 +194,7 @@ export async function importSafariData(guildId, importJson) {
         await saveSafariContent(currentData);
         
         // If maps were imported, trigger channel creation
-        if (summary.maps.created > 0) {
-            const { client } = await import('./app.js');
+        if (summary.maps.created > 0 && client) {
             summary.channelsCreated = await createChannelsForImportedMaps(guildId, currentData[guildId].maps, client);
         }
         

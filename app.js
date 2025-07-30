@@ -8862,7 +8862,7 @@ Your server is now ready for Tycoons gameplay!`;
             
             // Import the Safari data
             const { importSafariData, formatImportSummary } = await import('./safariImportExport.js');
-            const summary = await importSafariData(guildId, jsonContent);
+            const summary = await importSafariData(guildId, jsonContent, client);
             
             console.log(`✅ DEBUG: Safari import completed for guild ${guildId}:`, summary);
             
@@ -26159,7 +26159,7 @@ Are you sure you want to continue?`;
         
         // Import Safari data
         const { importSafariData, formatImportSummary } = await import('./safariImportExport.js');
-        const summary = await importSafariData(guildId, importData.trim());
+        const summary = await importSafariData(guildId, importData.trim(), client);
         
         console.log(`✅ DEBUG: Safari import completed for guild ${guildId}:`, summary);
         
