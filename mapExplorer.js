@@ -587,8 +587,6 @@ export {
   createMapGrid, 
   deleteMapGrid, 
   createMapExplorerMenu, 
-  loadSafariContent, 
-  saveSafariContent,
   postImportedContentToChannels,
   updateBlacklistedCoordinates,
   getBlacklistedCoordinates
