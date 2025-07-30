@@ -17274,6 +17274,34 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             }
           }
           
+          // Clean up any follow-up button references to this action
+          console.log(`🔍 Scanning for follow-up references to ${actionId}...`);
+          let cleanupCount = 0;
+          const mapData = safariData[context.guildId]?.maps?.[activeMapId];
+          if (mapData && mapData.cells) {
+            Object.entries(mapData.cells).forEach(([coord, cellData]) => {
+              if (cellData.customActions) {
+                cellData.customActions.forEach(action => {
+                  if (action.type === 'follow_up_button' && 
+                      action.config?.buttonId === actionId) {
+                    console.log(`🔧 Converting broken follow-up reference at ${coord}`);
+                    // Convert to error text display
+                    action.type = 'display_text';
+                    action.config = {
+                      content: `⚠️ Referenced action "${actionName}" was deleted`,
+                      title: 'Broken Follow-Up (Action Deleted)'
+                    };
+                    cleanupCount++;
+                  }
+                });
+              }
+            });
+          }
+          
+          if (cleanupCount > 0) {
+            console.log(`✅ Cleaned up ${cleanupCount} follow-up references`);
+          }
+          
           // Delete the action itself
           delete safariData[context.guildId].buttons[actionId];
           
@@ -17293,10 +17321,16 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             }
           }
           
-          console.log(`✅ SUCCESS: custom_action_delete_confirm - deleted ${actionId} from ${coordinates.length} coordinates`);
+          console.log(`✅ SUCCESS: custom_action_delete_confirm - deleted ${actionId} from ${coordinates.length} coordinates, cleaned ${cleanupCount} follow-up references`);
+          
+          let successMessage = `✅ **Action Deleted Successfully!**\n\n**"${actionName}"** has been removed from all locations and deleted permanently.`;
+          
+          if (cleanupCount > 0) {
+            successMessage += `\n\n⚠️ **Follow-up References Cleaned:** ${cleanupCount} follow-up action${cleanupCount > 1 ? 's' : ''} that referenced this action ${cleanupCount > 1 ? 'have' : 'has'} been converted to warning text.`;
+          }
           
           return {
-            content: `✅ **Action Deleted Successfully!**\n\n**"${actionName}"** has been removed from all locations and deleted permanently.`,
+            content: successMessage,
             ephemeral: true
           };
         }
