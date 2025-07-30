@@ -2,7 +2,6 @@ import path from 'path';
 import sharp from 'sharp';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { File } from 'buffer';
 import { ChannelType, PermissionFlagsBits } from 'discord.js';
 import { MapGridSystem } from './scripts/map-tests/mapGridSystem.js';
 import { loadSafariContent as loadSafariContentOriginal, saveSafariContent as saveSafariContentOriginal } from './safariManager.js';
@@ -44,13 +43,13 @@ async function uploadImageToDiscord(guild, imagePath, fileName) {
     // Read the image file
     const imageBuffer = await fs.readFile(imagePath);
     
-    // Create a File object from the buffer
-    const file = new File([imageBuffer], fileName, { type: 'image/png' });
-    
-    // Send the file to the storage channel
+    // Send the file using Discord.js attachment format
     const message = await storageChannel.send({
       content: `Map image: ${fileName}`,
-      files: [file]
+      files: [{
+        attachment: imageBuffer,
+        name: fileName
+      }]
     });
     
     // Get the attachment URL
