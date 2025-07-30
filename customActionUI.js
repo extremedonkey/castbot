@@ -1226,6 +1226,11 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
   const allSafariContent = await loadSafariContent();
   const items = allSafariContent[guildId]?.items || {};
   
+  // Validate and fix operator if corrupted
+  if (condition.operator !== 'has' && condition.operator !== 'not_has') {
+    condition.operator = 'has';
+  }
+  
   const components = [
     {
       type: 10,

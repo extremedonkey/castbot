@@ -15898,7 +15898,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               delete condition.roleId;
               break;
             case 'item':
-              condition.operator = 'has';
+              condition.operator = 'has';  // Always reset to valid operator
               delete condition.value;
               delete condition.roleId;
               // Set to first available item if any exist, otherwise null
