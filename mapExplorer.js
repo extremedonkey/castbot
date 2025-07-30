@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
 import { File } from 'buffer';
 import { ChannelType, PermissionFlagsBits } from 'discord.js';
-import { MapGridSystem } from './services/MapGridSystem.js';
+import { MapGridSystem } from './src/services/MapGridSystem.js';
 import { loadSafariContent as loadSafariContentOriginal, saveSafariContent as saveSafariContentOriginal } from './safariManager.js';
 
 // Get directory name for ES modules
