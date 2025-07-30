@@ -400,7 +400,7 @@ export function formatImportSummary(summary) {
 }
 
 /**
- * Create Discord channels for imported maps
+ * Create Discord channels for imported maps using existing createMapGrid
  * @param {string} guildId - Discord guild ID
  * @param {Object} mapsData - Maps data from safariContent
  * @param {Client} client - Discord client object
@@ -428,13 +428,26 @@ async function createChannelsForImportedMaps(guildId, mapsData, client) {
         
         console.log(`🏗️ Creating Discord infrastructure for imported map: ${mapData.id}`);
         
-        // Import required modules
-        const { createMapInfrastructure } = await import('./mapExplorer.js');
+        // Get the guild object
+        const guild = await client.guilds.fetch(guildId);
         
-        // Create the Discord infrastructure
-        const result = await createMapInfrastructure(guildId, mapData, client);
+        // Use the existing createMapGrid function
+        const { createMapGrid } = await import('./mapExplorer.js');
+        const result = await createMapGrid(guild, guild.client.user.id);
         
-        return result.channelsCreated || 0;
+        if (!result.success) {
+            console.error('Failed to create map grid:', result.message);
+            return 0;
+        }
+        
+        // Now we need to update the anchor messages with imported content
+        const { postImportedContentToChannels } = await import('./mapExplorer.js');
+        await postImportedContentToChannels(guildId, mapData, client);
+        
+        // Count the created channels
+        const channelsCreated = Object.keys(mapData.coordinates).length;
+        
+        return channelsCreated;
         
     } catch (error) {
         console.error('Error creating channels for imported maps:', error);
