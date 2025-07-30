@@ -504,6 +504,7 @@ async function updateCurrency(guildId, userId, amount) {
  */
 async function executeDisplayText(config, interaction) {
     console.log('📄 DEBUG: Executing display text action');
+    console.log('📄 DEBUG: Display text config:', JSON.stringify(config, null, 2));
     
     const components = [];
     
@@ -951,6 +952,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
         
         for (let i = 0; i < sortedActions.length; i++) {
             const action = sortedActions[i];
+            console.log(`🎯 DEBUG: Executing action ${i}: type=${action.type}, config=${JSON.stringify(action.config)}`);
             let result;
             
             switch (action.type) {
