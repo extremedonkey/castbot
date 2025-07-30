@@ -113,7 +113,8 @@ export const EDIT_CONFIGS = {
         fields: {
           currencyName: { type: 'text', maxLength: 30, required: true, label: 'Currency Name', placeholder: 'coins' },
           currencyEmoji: { type: 'text', maxLength: 10, required: false, label: 'Currency Emoji', placeholder: '🪙' },
-          inventoryName: { type: 'text', maxLength: 30, required: true, label: 'Inventory Name', placeholder: 'Nest' }
+          inventoryName: { type: 'text', maxLength: 30, required: true, label: 'Inventory Name', placeholder: 'Nest' },
+          inventoryEmoji: { type: 'text', maxLength: 10, required: false, label: 'Inventory Emoji', placeholder: 'Set the emoji to be used to represent inventory' }
         }
       },
       events: {

@@ -140,7 +140,13 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
         }
         
         // Pre-populate with current value
-        const currentValue = currentConfig[fieldKey];
+        let currentValue = currentConfig[fieldKey];
+        
+        // Special handling for inventoryEmoji - always ensure default
+        if (fieldKey === 'inventoryEmoji' && !currentValue) {
+            currentValue = '📦';
+        }
+        
         if (currentValue !== undefined && currentValue !== null) {
             input.setValue(String(currentValue));
         }
@@ -196,11 +202,13 @@ function createCurrentSettingsDisplay(config) {
     const currencyEmoji = config.currencyEmoji || '🪙';
     const currencyName = config.currencyName || 'coins';
     const inventoryName = config.inventoryName || 'Nest';
+    const inventoryEmoji = config.inventoryEmoji || '📦';
     
     let display = `**🪙 Currency & Inventory**\n`;
     display += `• Currency Name: ${currencyName}\n`;
     display += `• Currency Emoji: ${currencyEmoji}\n`;
-    display += `• Inventory Name: ${inventoryName}\n\n`;
+    display += `• Inventory Name: ${inventoryName}\n`;
+    display += `• Inventory Emoji: ${inventoryEmoji}\n\n`;
     
     if (config.goodEventName || config.badEventName || config.goodEventEmoji || config.badEventEmoji) {
         display += `**☄️ Events**\n`;

@@ -25175,6 +25175,14 @@ Are you sure you want to continue?`;
         const { processFieldGroupSubmission } = await import('./safariConfigUI.js');
         const updates = processFieldGroupSubmission(groupKey, req.body.data);
         
+        // If updating inventory emoji, parse it properly
+        if (updates.inventoryEmoji) {
+          const { parseTextEmoji } = await import('./utils/emojiUtils.js');
+          const { cleanText, emoji } = parseTextEmoji(updates.inventoryEmoji, '📦');
+          // Use the emoji name if it's a valid emoji, otherwise default to 📦
+          updates.inventoryEmoji = emoji.name || '📦';
+        }
+        
         // Update Safari settings using existing function
         const { updateCustomTerms } = await import('./safariManager.js');
         const success = await updateCustomTerms(guildId, updates);

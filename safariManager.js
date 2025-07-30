@@ -2269,9 +2269,10 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
         const components = [];
         
         // Header with personalized player name and custom inventory name
+        const inventoryEmoji = customTerms.inventoryEmoji || '📦';
         components.push({
             type: 10, // Text Display
-            content: `# ${playerDisplayName}'s ${customTerms.inventoryName}`
+            content: `# ${inventoryEmoji} ${playerDisplayName}'s ${customTerms.inventoryName}`
         });
         
         // Add separator before balance
@@ -2489,6 +2490,7 @@ async function getCustomTerms(guildId) {
             currencyName: config.currencyName || 'coins',
             inventoryName: config.inventoryName || 'Nest',
             currencyEmoji: config.currencyEmoji || '🪙',
+            inventoryEmoji: config.inventoryEmoji || '📦',
             
             // Game settings - Challenge Game Logic
             round1GoodProbability: config.round1GoodProbability || null,
@@ -2514,6 +2516,7 @@ async function getCustomTerms(guildId) {
             currencyName: 'coins',
             inventoryName: 'Nest',
             currencyEmoji: '🪙',
+            inventoryEmoji: '📦',
             
             // Game settings fallbacks
             round1GoodProbability: null,
@@ -2576,6 +2579,9 @@ async function updateCustomTerms(guildId, terms) {
         if (terms.currencyEmoji !== undefined) {
             safariData[guildId].safariConfig.currencyEmoji = terms.currencyEmoji || '🪙';
         }
+        if (terms.inventoryEmoji !== undefined) {
+            safariData[guildId].safariConfig.inventoryEmoji = terms.inventoryEmoji || '📦';
+        }
         
         // Update game settings - Challenge Game Logic
         if (terms.round1GoodProbability !== undefined) {
@@ -2637,7 +2643,8 @@ async function resetCustomTerms(guildId) {
     return await updateCustomTerms(guildId, {
         currencyName: 'coins',
         inventoryName: 'Nest',
-        currencyEmoji: '🪙'
+        currencyEmoji: '🪙',
+        inventoryEmoji: '📦'
     });
 }
 
