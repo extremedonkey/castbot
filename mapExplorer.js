@@ -1087,8 +1087,6 @@ export {
   createMapExplorerMenu, 
   loadSafariContent, 
   saveSafariContent,
-  isCoordinateBlacklisted,
-  getBlacklistedCoordinates,
-  setBlacklistedCoordinates,
+  updateBlacklistedCoordinates,
   createMapInfrastructure 
 };
