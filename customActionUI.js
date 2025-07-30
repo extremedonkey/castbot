@@ -1273,10 +1273,19 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
           id: customEmojiMatch[2],
           name: customEmojiMatch[1]
         };
+      } else if (item.emoji.startsWith(':') && item.emoji.endsWith(':')) {
+        // Discord shortcode (like :worm:) - not valid for components, use default
+        console.warn(`Invalid emoji shortcode "${item.emoji}" for item ${itemId}, using default`);
+        emojiObj = { name: '📦' };
       } else {
         // Regular unicode emoji - clean any trailing zero-width joiners
         const cleanEmoji = item.emoji.replace(/\u200D$/, '').trim();
-        emojiObj = { name: cleanEmoji };
+        // Validate it's not empty after cleaning
+        if (cleanEmoji.length === 0) {
+          emojiObj = { name: '📦' };
+        } else {
+          emojiObj = { name: cleanEmoji };
+        }
       }
     } else {
       emojiObj = { name: '📦' };
