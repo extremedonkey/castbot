@@ -192,6 +192,11 @@ export async function importSafariData(guildId, importJson) {
         // Save updated data
         await saveSafariContent(currentData);
         
+        // If maps were imported, trigger channel creation
+        if (summary.maps.created > 0) {
+            summary.channelsCreated = await createChannelsForImportedMaps(guildId, currentData[guildId].maps);
+        }
+        
         return summary;
         
     } catch (error) {
@@ -382,9 +387,56 @@ export function formatImportSummary(summary) {
         parts.push(`⚙️ **Config:** Updated`);
     }
     
+    if (summary.channelsCreated > 0) {
+        parts.push(`🏗️ **Channels Created:** ${summary.channelsCreated}`);
+    }
+    
     if (parts.length === 0) {
         return '✅ Import completed with no changes.';
     }
     
     return `✅ **Import completed successfully!**\n\n${parts.join('\n')}`;
+}
+
+/**
+ * Create Discord channels for imported maps
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} mapsData - Maps data from safariContent
+ * @returns {number} Number of channels created
+ */
+async function createChannelsForImportedMaps(guildId, mapsData) {
+    try {
+        if (!mapsData || !mapsData.active) {
+            return 0;
+        }
+        
+        const activeMapId = mapsData.active;
+        const mapData = mapsData[activeMapId];
+        
+        if (!mapData || !mapData.coordinates) {
+            return 0;
+        }
+        
+        // Check if channels already exist
+        const hasChannels = Object.values(mapData.coordinates).some(coord => coord.channelId);
+        if (hasChannels) {
+            console.log('Map already has channels, skipping channel creation');
+            return 0;
+        }
+        
+        console.log(`🏗️ Creating Discord infrastructure for imported map: ${mapData.id}`);
+        
+        // Import required modules
+        const { createMapInfrastructure } = await import('./mapExplorer.js');
+        
+        // Create the Discord infrastructure
+        const result = await createMapInfrastructure(guildId, mapData);
+        
+        return result.channelsCreated || 0;
+        
+    } catch (error) {
+        console.error('Error creating channels for imported maps:', error);
+        // Don't throw - we still want the import to succeed even if channel creation fails
+        return 0;
+    }
 }

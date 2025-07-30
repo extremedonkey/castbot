@@ -842,5 +842,253 @@ export async function getBlacklistedCoordinates(guildId) {
   return mapData?.blacklistedCoordinates || [];
 }
 
+/**
+ * Post anchor message in a map channel with imported content
+ * @param {Guild} guild - Discord guild object
+ * @param {TextChannel} channel - Discord channel object
+ * @param {string} coord - Coordinate (e.g., "A1")
+ * @param {Object} coordData - Coordinate data from import
+ * @param {string} discordImageUrl - URL of the map image on Discord CDN
+ * @returns {Message} The posted message
+ */
+async function postMapAnchorMessage(guild, channel, coord, coordData, discordImageUrl) {
+  try {
+    // Get player movement display component
+    const { getMovementDisplay } = await import('./mapMovement.js');
+    
+    // Create a fake member object for the system
+    const systemMember = {
+      id: guild.client.user.id,
+      user: guild.client.user
+    };
+    
+    // Get movement display for this coordinate
+    const movementDisplay = await getMovementDisplay(guild.id, systemMember.id, coord);
+    
+    // If there's imported content, update the text display
+    if (coordData.baseContent) {
+      // Find the text display component and update it
+      const container = movementDisplay.components[0];
+      if (container && container.type === 17) {
+        // Update the second text display (description) with imported content
+        const descriptionComponent = container.components.find(c => c.type === 10 && c.content.includes('Choose a direction'));
+        if (descriptionComponent) {
+          descriptionComponent.content = coordData.baseContent.description || `Welcome to ${coord}!`;
+        }
+      }
+    }
+    
+    // Add any imported Safari buttons
+    if (coordData.buttons && coordData.buttons.length > 0) {
+      const container = movementDisplay.components[0];
+      if (container && container.type === 17) {
+        // Add a separator before custom buttons
+        container.components.push({ type: 14 }); // Separator
+        
+        // Add text for custom actions
+        container.components.push({
+          type: 10,
+          content: '**Location Actions:**'
+        });
+        
+        // Create action row for custom buttons (max 5 per row)
+        const customButtons = [];
+        for (let i = 0; i < Math.min(coordData.buttons.length, 5); i++) {
+          const buttonId = coordData.buttons[i];
+          // These would be actual Safari buttons from the imported data
+          customButtons.push({
+            type: 2,
+            custom_id: `safari_button_${buttonId}`,
+            label: `Action ${i + 1}`,
+            style: 1
+          });
+        }
+        
+        if (customButtons.length > 0) {
+          container.components.push({
+            type: 1,
+            components: customButtons
+          });
+        }
+      }
+    }
+    
+    // Post the message
+    const message = await channel.send(movementDisplay);
+    
+    console.log(`📍 Posted anchor message in ${coord}`);
+    return message;
+    
+  } catch (error) {
+    console.error(`Error posting anchor message for ${coord}:`, error);
+    // Fallback to basic message
+    const fallbackMessage = await channel.send({
+      content: `**Location: ${coord}**\n\n${coordData.baseContent?.description || 'Welcome to this location!'}`,
+      components: []
+    });
+    return fallbackMessage;
+  }
+}
+
+/**
+ * Create Discord infrastructure for an imported map
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} mapData - Map data from safariContent
+ * @returns {Object} Result with channelsCreated count
+ */
+export async function createMapInfrastructure(guildId, mapData) {
+  const { client } = await import('./app.js');
+  const guild = await client.guilds.fetch(guildId);
+  
+  if (!guild) {
+    throw new Error('Guild not found');
+  }
+  
+  console.log(`🏗️ Creating infrastructure for map: ${mapData.id}`);
+  
+  // Generate map image
+  const gridSize = mapData.gridSize || 7;
+  const timestamp = Date.now();
+  const mapId = mapData.id || `map_${gridSize}x${gridSize}_${timestamp}`;
+  
+  // Create directory for guild images if it doesn't exist
+  const guildDir = path.join(__dirname, 'img', guildId);
+  await fs.mkdir(guildDir, { recursive: true });
+  
+  // Generate map with grid overlay
+  const mapPath = path.join(__dirname, 'img', 'map.png');
+  const outputPath = path.join(guildDir, `${mapId}.png`);
+  
+  const gridSystem = new MapGridSystem(mapPath, {
+    gridSize: gridSize,
+    borderSize: 80,
+    lineWidth: 4,
+    fontSize: 40,
+    labelStyle: 'standard'
+  });
+  
+  // Initialize grid system and generate SVG overlay
+  await gridSystem.initialize();
+  const svg = gridSystem.generateGridOverlaySVG();
+  const svgBuffer = Buffer.from(svg);
+  
+  // Create map image with grid
+  await sharp({
+      create: {
+        width: gridSystem.totalWidth,
+        height: gridSystem.totalHeight,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 }
+      }
+    })
+    .composite([
+      {
+        input: mapPath,
+        top: gridSystem.options.borderSize,
+        left: gridSystem.options.borderSize
+      },
+      {
+        input: svgBuffer,
+        top: 0,
+        left: 0
+      }
+    ])
+    .png()
+    .toFile(outputPath);
+  
+  console.log(`✅ Generated map image: ${outputPath}`);
+  
+  // Create map category
+  console.log('🏗️ Creating map category...');
+  const category = await guild.channels.create({
+    name: '🗺️ Map Explorer',
+    type: ChannelType.GuildCategory,
+    position: 100
+  });
+  
+  // Upload map image to Discord
+  console.log('📤 Uploading map image to Discord...');
+  const discordImageUrl = await uploadImageToDiscord(guild, outputPath, `${mapId}.png`);
+  
+  // Update map data
+  mapData.category = category.id;
+  mapData.imageFile = outputPath;
+  mapData.discordImageUrl = discordImageUrl;
+  
+  // Create channels for each coordinate
+  let channelsCreated = 0;
+  const coordinates = Object.keys(mapData.coordinates);
+  
+  for (let i = 0; i < coordinates.length; i++) {
+    const coord = coordinates[i];
+    const coordData = mapData.coordinates[coord];
+    
+    // Rate limiting: 5 channels per 5 seconds
+    if (i > 0 && i % 5 === 0) {
+      console.log(`⏳ Rate limiting: waiting 5 seconds... (${i}/${coordinates.length})`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+    
+    try {
+      const channel = await guild.channels.create({
+        name: coord.toLowerCase(),
+        type: ChannelType.GuildText,
+        parent: category.id,
+        topic: `Map location ${coord} - Use buttons to explore!`,
+        permissionOverwrites: [
+          {
+            id: guild.id, // @everyone role
+            deny: [PermissionFlagsBits.ViewChannel]
+          }
+        ]
+      });
+      
+      // Update coordinate with channel ID
+      coordData.channelId = channel.id;
+      
+      // Post anchor message with imported content
+      const anchorMessage = await postMapAnchorMessage(guild, channel, coord, coordData, discordImageUrl);
+      if (anchorMessage) {
+        coordData.anchorMessageId = anchorMessage.id;
+      }
+      
+      channelsCreated++;
+      console.log(`✅ Created channel for ${coord} (${channelsCreated}/${coordinates.length})`);
+      
+    } catch (error) {
+      console.error(`❌ Error creating channel for ${coord}:`, error);
+    }
+  }
+  
+  // Save updated map data
+  const safariData = await loadSafariContent();
+  if (!safariData[guildId].maps) {
+    safariData[guildId].maps = {};
+  }
+  safariData[guildId].maps[mapId] = mapData;
+  safariData[guildId].maps.active = mapId;
+  await saveSafariContent(safariData);
+  
+  console.log(`✅ Map infrastructure created: ${channelsCreated} channels`);
+  
+  return {
+    success: true,
+    channelsCreated,
+    categoryId: category.id,
+    mapId,
+    discordImageUrl
+  };
+}
+
 // Export functions
-export { createMapGrid, deleteMapGrid, createMapExplorerMenu, loadSafariContent, saveSafariContent };
+export { 
+  createMapGrid, 
+  deleteMapGrid, 
+  createMapExplorerMenu, 
+  loadSafariContent, 
+  saveSafariContent,
+  isCoordinateBlacklisted,
+  getBlacklistedCoordinates,
+  setBlacklistedCoordinates,
+  createMapInfrastructure 
+};
