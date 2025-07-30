@@ -17290,8 +17290,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                   button.actions[index] = {
                     type: 'display_text',
                     config: {
-                      content: `⚠️ Referenced action "${actionName}" was deleted`,
-                      title: 'Broken Follow-Up (Action Deleted)'
+                      content: `⚠️ Referenced action "${actionName}" was deleted\n\n**To fix this:**\n1. Go to 📍 Location Actions\n2. Click ⚡ Custom Actions\n3. Delete this broken action`,
+                      title: 'Broken Follow-Up - Please Delete'
                     }
                   };
                   cleanupCount++;
