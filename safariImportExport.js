@@ -194,7 +194,8 @@ export async function importSafariData(guildId, importJson) {
         
         // If maps were imported, trigger channel creation
         if (summary.maps.created > 0) {
-            summary.channelsCreated = await createChannelsForImportedMaps(guildId, currentData[guildId].maps);
+            const { client } = await import('./app.js');
+            summary.channelsCreated = await createChannelsForImportedMaps(guildId, currentData[guildId].maps, client);
         }
         
         return summary;
@@ -402,9 +403,10 @@ export function formatImportSummary(summary) {
  * Create Discord channels for imported maps
  * @param {string} guildId - Discord guild ID
  * @param {Object} mapsData - Maps data from safariContent
+ * @param {Client} client - Discord client object
  * @returns {number} Number of channels created
  */
-async function createChannelsForImportedMaps(guildId, mapsData) {
+async function createChannelsForImportedMaps(guildId, mapsData, client) {
     try {
         if (!mapsData || !mapsData.active) {
             return 0;
@@ -430,7 +432,7 @@ async function createChannelsForImportedMaps(guildId, mapsData) {
         const { createMapInfrastructure } = await import('./mapExplorer.js');
         
         // Create the Discord infrastructure
-        const result = await createMapInfrastructure(guildId, mapData);
+        const result = await createMapInfrastructure(guildId, mapData, client);
         
         return result.channelsCreated || 0;
         

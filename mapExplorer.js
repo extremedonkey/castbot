@@ -934,10 +934,10 @@ async function postMapAnchorMessage(guild, channel, coord, coordData, discordIma
  * Create Discord infrastructure for an imported map
  * @param {string} guildId - Discord guild ID
  * @param {Object} mapData - Map data from safariContent
+ * @param {Client} client - Discord client object
  * @returns {Object} Result with channelsCreated count
  */
-async function createMapInfrastructure(guildId, mapData) {
-  const { client } = await import('./app.js');
+async function createMapInfrastructure(guildId, mapData, client) {
   const guild = await client.guilds.fetch(guildId);
   
   if (!guild) {
