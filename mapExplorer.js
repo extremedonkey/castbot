@@ -853,68 +853,61 @@ export async function getBlacklistedCoordinates(guildId) {
  */
 async function postMapAnchorMessage(guild, channel, coord, coordData, discordImageUrl) {
   try {
-    // Get player movement display component
-    const { getMovementDisplay } = await import('./mapMovement.js');
+    // Build message content
+    let content = `**📍 Location: ${coord}**\n\n`;
     
-    // Create a fake member object for the system
-    const systemMember = {
-      id: guild.client.user.id,
-      user: guild.client.user
-    };
-    
-    // Get movement display for this coordinate
-    const movementDisplay = await getMovementDisplay(guild.id, systemMember.id, coord);
-    
-    // If there's imported content, update the text display
+    // Add imported content if available
     if (coordData.baseContent) {
-      // Find the text display component and update it
-      const container = movementDisplay.components[0];
-      if (container && container.type === 17) {
-        // Update the second text display (description) with imported content
-        const descriptionComponent = container.components.find(c => c.type === 10 && c.content.includes('Choose a direction'));
-        if (descriptionComponent) {
-          descriptionComponent.content = coordData.baseContent.description || `Welcome to ${coord}!`;
-        }
+      if (coordData.baseContent.title) {
+        content += `**${coordData.baseContent.title}**\n\n`;
       }
+      if (coordData.baseContent.description) {
+        content += `${coordData.baseContent.description}\n\n`;
+      }
+    } else {
+      content += `Welcome to ${coord}! You can explore in any direction using the Navigate button.\n\n`;
     }
     
-    // Add any imported Safari buttons
+    // Create Navigate button for movement
+    const components = [{
+      type: 1, // ACTION_ROW
+      components: [{
+        type: 2, // BUTTON
+        style: 1, // PRIMARY
+        label: 'Navigate',
+        emoji: { name: '🧭' },
+        custom_id: `safari_navigate_system_${coord}`
+      }]
+    }];
+    
+    // Add imported Safari buttons if available
     if (coordData.buttons && coordData.buttons.length > 0) {
-      const container = movementDisplay.components[0];
-      if (container && container.type === 17) {
-        // Add a separator before custom buttons
-        container.components.push({ type: 14 }); // Separator
-        
-        // Add text for custom actions
-        container.components.push({
-          type: 10,
-          content: '**Location Actions:**'
+      const buttonRow = {
+        type: 1, // ACTION_ROW
+        components: []
+      };
+      
+      // Add up to 5 buttons per row
+      for (let i = 0; i < Math.min(coordData.buttons.length, 5); i++) {
+        const buttonId = coordData.buttons[i];
+        buttonRow.components.push({
+          type: 2, // BUTTON
+          style: 2, // SECONDARY
+          label: `Action ${i + 1}`,
+          custom_id: `safari_button_${buttonId}`
         });
-        
-        // Create action row for custom buttons (max 5 per row)
-        const customButtons = [];
-        for (let i = 0; i < Math.min(coordData.buttons.length, 5); i++) {
-          const buttonId = coordData.buttons[i];
-          // These would be actual Safari buttons from the imported data
-          customButtons.push({
-            type: 2,
-            custom_id: `safari_button_${buttonId}`,
-            label: `Action ${i + 1}`,
-            style: 1
-          });
-        }
-        
-        if (customButtons.length > 0) {
-          container.components.push({
-            type: 1,
-            components: customButtons
-          });
-        }
+      }
+      
+      if (buttonRow.components.length > 0) {
+        components.push(buttonRow);
       }
     }
     
-    // Post the message
-    const message = await channel.send(movementDisplay);
+    // Post the message using Discord.js format
+    const message = await channel.send({
+      content: content,
+      components: components
+    });
     
     console.log(`📍 Posted anchor message in ${coord}`);
     return message;
