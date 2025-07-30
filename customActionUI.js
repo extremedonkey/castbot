@@ -1261,41 +1261,19 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
     }
   ];
   
+  // Import emoji parsing utility
+  const { parseTextEmoji } = await import('./utils/emojiUtils.js');
+  
   // Item selector
   const itemOptions = Object.entries(items).map(([itemId, item]) => {
-    // Parse emoji - handle both unicode and custom Discord emojis
-    let emojiObj;
-    if (item.emoji) {
-      // Check if it's a custom Discord emoji format <:name:id>
-      const customEmojiMatch = item.emoji.match(/^<:(\w+):(\d+)>$/);
-      if (customEmojiMatch) {
-        emojiObj = {
-          id: customEmojiMatch[2],
-          name: customEmojiMatch[1]
-        };
-      } else if (item.emoji.startsWith(':') && item.emoji.endsWith(':')) {
-        // Discord shortcode (like :worm:) - not valid for components, use default
-        console.warn(`Invalid emoji shortcode "${item.emoji}" for item ${itemId}, using default`);
-        emojiObj = { name: '📦' };
-      } else {
-        // Regular unicode emoji - clean any trailing zero-width joiners
-        const cleanEmoji = item.emoji.replace(/\u200D$/, '').trim();
-        // Validate it's not empty after cleaning
-        if (cleanEmoji.length === 0) {
-          emojiObj = { name: '📦' };
-        } else {
-          emojiObj = { name: cleanEmoji };
-        }
-      }
-    } else {
-      emojiObj = { name: '📦' };
-    }
+    // Use existing emoji parser that handles all formats properly
+    const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
     
     return {
-      label: item.name || 'Unnamed Item',
+      label: cleanText || 'Unnamed Item',
       value: itemId,
       description: item.description?.substring(0, 100) || 'No description',
-      emoji: emojiObj,
+      emoji: emoji,
       default: condition.itemId === itemId
     };
   }).slice(0, 25); // Discord limit

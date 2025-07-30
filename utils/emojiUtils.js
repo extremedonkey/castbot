@@ -24,6 +24,20 @@ export function parseEmojiCode(emojiCode) {
     return null;
 }
 
+// Common Discord shortcode to Unicode emoji mapping
+const SHORTCODE_TO_EMOJI = {
+    ':worm:': '🪱',
+    ':leaves:': '🍃',
+    ':bone:': '🦴',
+    ':apple:': '🍎',
+    ':fish:': '🐟',
+    ':fishing_pole_and_fish:': '🎣',
+    ':herb:': '🌿',
+    ':seedling:': '🌱',
+    ':cheese:': '🧀',
+    ':meat_on_bone:': '🍖'
+};
+
 /**
  * Parse Discord emoji from text and create select option with proper emoji field
  * @param {string} text - Text that may contain Discord emoji codes
@@ -45,6 +59,16 @@ export function parseTextEmoji(text, fallbackEmoji = '📦') {
             emoji: parsed
         };
     } else {
+        // Check for Discord shortcodes
+        const shortcodeMatch = text.match(/^(:\w+:)/);
+        if (shortcodeMatch && SHORTCODE_TO_EMOJI[shortcodeMatch[0]]) {
+            const cleanText = text.replace(shortcodeMatch[0], '').trim();
+            return {
+                cleanText,
+                emoji: { name: SHORTCODE_TO_EMOJI[shortcodeMatch[0]] }
+            };
+        }
+        
         // No Discord emoji found - check if text starts with a regular emoji
         const regularEmojiMatch = text.match(/^([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])/u);
         if (regularEmojiMatch) {
