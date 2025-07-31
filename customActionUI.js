@@ -1538,8 +1538,29 @@ export async function handleDisplayTextEdit(guildId, userId, customId) {
   // If no action exists at this index, or it's not a display_text action, we're creating a new one
   // Only error if the button itself doesn't exist
   if (!button) {
+    console.error(`❌ Button ${buttonId} not found in guild ${guildId}. It may have been deleted or the UI is showing stale data.`);
+    
+    // Check if button exists on any coordinate to provide more helpful message
+    const maps = safariData[guildId]?.maps || {};
+    const activeMapId = maps.active;
+    const activeMap = maps[activeMapId];
+    let foundOnCoordinate = null;
+    
+    if (activeMap?.coordinates) {
+      for (const [coord, coordData] of Object.entries(activeMap.coordinates)) {
+        if (coordData.buttons?.includes(buttonId)) {
+          foundOnCoordinate = coord;
+          break;
+        }
+      }
+    }
+    
+    const errorMessage = foundOnCoordinate 
+      ? `❌ Button "${buttonId}" was expected on coordinate ${foundOnCoordinate} but no longer exists in the button registry.\n\nThis can happen if:\n• The map was recreated\n• The button was deleted\n• You're viewing an old cached message\n\n**Solution:** Dismiss this message and navigate to the coordinate's Location Actions menu to create a new Custom Action.`
+      : `❌ Button "${buttonId}" not found.\n\nThis button no longer exists in the system. This can happen if:\n• The map was recreated\n• The button was deleted\n• You're viewing an old cached message\n\n**Solution:** Dismiss this message and create a new Custom Action from the Location Actions menu.`;
+    
     return {
-      content: '❌ Button not found.',
+      content: errorMessage,
       ephemeral: true
     };
   }
@@ -1637,8 +1658,9 @@ export async function handleDisplayTextSave(guildId, customId, formData) {
   const button = safariData[guildId]?.buttons?.[buttonId];
   
   if (!button) {
+    console.error(`❌ Button ${buttonId} not found during save operation for guild ${guildId}`);
     return {
-      content: '❌ Button not found.',
+      content: `❌ Button "${buttonId}" not found.\n\nThe button you're trying to save no longer exists. This can happen if:\n• The map was recreated\n• The button was deleted\n• Another session removed it\n\n**Solution:** Dismiss this message and create a new Custom Action from the Location Actions menu.`,
       ephemeral: true
     };
   }
@@ -1726,8 +1748,9 @@ export async function handleDisplayTextExecuteOn(guildId, customId, executeOnVal
   const button = safariData[guildId]?.buttons?.[buttonId];
   
   if (!button) {
+    console.error(`❌ Button ${buttonId} not found during executeOn update for guild ${guildId}`);
     return {
-      content: '❌ Button not found.',
+      content: `❌ Button "${buttonId}" not found.\n\nThe button you're trying to update no longer exists. This can happen if:\n• The map was recreated\n• The button was deleted\n• Another session removed it\n\n**Solution:** Dismiss this message and create a new Custom Action from the Location Actions menu.`,
       ephemeral: true
     };
   }

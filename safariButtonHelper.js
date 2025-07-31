@@ -1,68 +1,90 @@
 import { loadSafariContent } from './safariManager.js';
 
 /**
- * Safely create emoji object for Discord button
- * @param {string} emoji - Emoji string
- * @returns {object|undefined} Valid emoji object or undefined
+ * Advanced emoji parsing and validation for Discord buttons
+ * Supports Unicode emojis, Discord custom emojis, shortcodes, and animated emojis
+ * @param {string} emojiInput - Emoji input (🧀, :cheese:, <:Cheese2:123>, <a:spin:456>)
+ * @returns {object|undefined} Valid Discord emoji object or undefined
  */
-export function createSafeEmoji(emoji) {
-  // Check if emoji is a valid non-empty string
-  if (typeof emoji === 'string' && emoji.trim().length > 0) {
-    // Clean emoji string by removing potential zero-width joiners and other problematic characters
-    const cleanEmoji = emoji
-      .trim()
-      .replace(/[\u200D\u200C\uFEFF]/g, '') // Remove zero-width joiner, non-joiner, and BOM
-      .replace(/\s+/g, '') // Remove any whitespace
-      .replace(/[\uFE0E\uFE0F]/g, ''); // Remove variation selectors
+export async function createSafeEmoji(emojiInput) {
+  if (!emojiInput || typeof emojiInput !== 'string' || !emojiInput.trim()) {
+    return undefined;
+  }
+
+  try {
+    // Import advanced emoji parsing utilities
+    const { parseTextEmoji } = await import('./utils/emojiUtils.js');
     
-    // Additional validation for complex emojis
-    if (cleanEmoji.length > 0) {
-      try {
-        // Check for basic emoji patterns and common characters that break Discord
-        if (cleanEmoji.includes('\n') || cleanEmoji.includes('\r') || cleanEmoji.includes('\t')) {
-          console.warn(`⚠️ Emoji contains line breaks: "${emoji}"`);
-          return undefined;
-        }
-        
-        // Enhanced validation: Check if the string contains actual emoji Unicode characters
-        // Regular text like "asd" should be rejected
-        const firstCodePoint = cleanEmoji.codePointAt(0);
-        
-        // Check if it's a valid emoji Unicode range or known emoji patterns
-        const isValidEmojiRange = (
-          // Emoji ranges (simplified but covers most common emojis)
-          (firstCodePoint >= 0x1F600 && firstCodePoint <= 0x1F64F) || // Emoticons
-          (firstCodePoint >= 0x1F300 && firstCodePoint <= 0x1F5FF) || // Misc Symbols and Pictographs
-          (firstCodePoint >= 0x1F680 && firstCodePoint <= 0x1F6FF) || // Transport and Map
-          (firstCodePoint >= 0x1F700 && firstCodePoint <= 0x1F77F) || // Alchemical Symbols
-          (firstCodePoint >= 0x1F780 && firstCodePoint <= 0x1F7FF) || // Geometric Shapes Extended
-          (firstCodePoint >= 0x1F800 && firstCodePoint <= 0x1F8FF) || // Supplemental Arrows-C
-          (firstCodePoint >= 0x1F900 && firstCodePoint <= 0x1F9FF) || // Supplemental Symbols and Pictographs
-          (firstCodePoint >= 0x1FA00 && firstCodePoint <= 0x1FA6F) || // Chess Symbols
-          (firstCodePoint >= 0x1FA70 && firstCodePoint <= 0x1FAFF) || // Symbols and Pictographs Extended-A
-          (firstCodePoint >= 0x2600 && firstCodePoint <= 0x26FF) ||   // Misc symbols
-          (firstCodePoint >= 0x2700 && firstCodePoint <= 0x27BF) ||   // Dingbats
-          (firstCodePoint >= 0x1FB00 && firstCodePoint <= 0x1FBFF) || // Symbols for Legacy Computing
-          (firstCodePoint >= 0x23E9 && firstCodePoint <= 0x23F3) ||   // Media control symbols
-          (firstCodePoint >= 0x23F8 && firstCodePoint <= 0x23FA) ||   // More media controls
-          cleanEmoji.match(/^[\u2194-\u2199\u21A9\u21AA\u231A\u231B\u2328\u23CF\u23ED-\u23EF\u23F1\u23F2\u23F8-\u23FA\u24C2\u25AA\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u2604\u260E\u2611\u2614\u2615\u2618\u261D\u2620\u2622\u2623\u2626\u262A\u262E\u262F\u2638-\u263A\u2640\u2642\u2648-\u2653\u265F\u2660\u2663\u2665\u2666\u2668\u267B\u267E\u267F\u2692-\u2697\u2699\u269B\u269C\u26A0\u26A1\u26A7\u26AA\u26AB\u26B0\u26B1\u26BD\u26BE\u26C4\u26C5\u26C8\u26CE\u26CF\u26D1\u26D3\u26D4\u26E9\u26EA\u26F0-\u26F5\u26F7-\u26FA\u26FD\u2702\u2705\u2708-\u270D\u270F\u2712\u2714\u2716\u271D\u2721\u2728\u2733\u2734\u2744\u2747\u274C\u274E\u2753-\u2755\u2757\u2763\u2764\u2795-\u2797\u27A1\u27B0\u27BF\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B50\u2B55\u3030\u303D\u3297\u3299]$/) // Additional common symbols
-        );
-        
-        if (!isValidEmojiRange) {
-          console.warn(`⚠️ Invalid emoji - not in valid Unicode emoji range: "${cleanEmoji}" (codepoint: ${firstCodePoint.toString(16)})`);
-          return undefined;
-        }
-        
-        // Allow most Unicode emojis but log for debugging
-        console.log(`✅ Using emoji: "${cleanEmoji}" (codepoint: ${firstCodePoint.toString(16)})`);
-        return { name: cleanEmoji };
-      } catch (error) {
-        console.warn(`⚠️ Error processing emoji "${emoji}":`, error);
+    // Use advanced parsing to handle all Discord emoji formats
+    const { emoji } = parseTextEmoji(emojiInput.trim(), null);
+    
+    if (!emoji) {
+      console.warn(`⚠️ No valid emoji found in: "${emojiInput}"`);
+      return undefined;
+    }
+
+    // Handle Discord custom emojis (with ID)
+    if (emoji.id) {
+      console.log(`✅ Using Discord custom emoji: ${emoji.name} (ID: ${emoji.id}${emoji.animated ? ', animated' : ''})`);
+      return {
+        name: emoji.name,
+        id: emoji.id,
+        animated: emoji.animated || false
+      };
+    }
+    
+    // Handle Unicode emojis - apply enhanced validation
+    if (emoji.name) {
+      const cleanEmoji = emoji.name
+        .replace(/[\u200D\u200C\uFEFF]/g, '') // Remove zero-width joiners
+        .replace(/[\uFE0E\uFE0F]/g, ''); // Remove variation selectors
+      
+      // Check for problematic characters
+      if (cleanEmoji.includes('\n') || cleanEmoji.includes('\r') || cleanEmoji.includes('\t')) {
+        console.warn(`⚠️ Emoji contains line breaks: "${emojiInput}"`);
         return undefined;
       }
+      
+      // Enhanced Unicode validation - check if it's actually an emoji
+      const firstCodePoint = cleanEmoji.codePointAt(0);
+      
+      // Check if it's in valid emoji Unicode ranges
+      const isValidEmojiRange = (
+        // Emoji ranges (comprehensive coverage)
+        (firstCodePoint >= 0x1F600 && firstCodePoint <= 0x1F64F) || // Emoticons
+        (firstCodePoint >= 0x1F300 && firstCodePoint <= 0x1F5FF) || // Misc Symbols and Pictographs
+        (firstCodePoint >= 0x1F680 && firstCodePoint <= 0x1F6FF) || // Transport and Map
+        (firstCodePoint >= 0x1F700 && firstCodePoint <= 0x1F77F) || // Alchemical Symbols
+        (firstCodePoint >= 0x1F780 && firstCodePoint <= 0x1F7FF) || // Geometric Shapes Extended
+        (firstCodePoint >= 0x1F800 && firstCodePoint <= 0x1F8FF) || // Supplemental Arrows-C
+        (firstCodePoint >= 0x1F900 && firstCodePoint <= 0x1F9FF) || // Supplemental Symbols and Pictographs
+        (firstCodePoint >= 0x1FA00 && firstCodePoint <= 0x1FA6F) || // Chess Symbols
+        (firstCodePoint >= 0x1FA70 && firstCodePoint <= 0x1FAFF) || // Symbols and Pictographs Extended-A
+        (firstCodePoint >= 0x2600 && firstCodePoint <= 0x26FF) ||   // Misc symbols
+        (firstCodePoint >= 0x2700 && firstCodePoint <= 0x27BF) ||   // Dingbats
+        (firstCodePoint >= 0x1FB00 && firstCodePoint <= 0x1FBFF) || // Symbols for Legacy Computing
+        (firstCodePoint >= 0x23E9 && firstCodePoint <= 0x23F3) ||   // Media control symbols
+        (firstCodePoint >= 0x23F8 && firstCodePoint <= 0x23FA) ||   // More media controls
+        // Additional common symbols
+        cleanEmoji.match(/^[\u2194-\u2199\u21A9\u21AA\u231A\u231B\u2328\u23CF\u23ED-\u23EF\u23F1\u23F2\u23F8-\u23FA\u24C2\u25AA\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u2604\u260E\u2611\u2614\u2615\u2618\u261D\u2620\u2622\u2623\u2626\u262A\u262E\u262F\u2638-\u263A\u2640\u2642\u2648-\u2653\u265F\u2660\u2663\u2665\u2666\u2668\u267B\u267E\u267F\u2692-\u2697\u2699\u269B\u269C\u26A0\u26A1\u26A7\u26AA\u26AB\u26B0\u26B1\u26BD\u26BE\u26C4\u26C5\u26C8\u26CE\u26CF\u26D1\u26D3\u26D4\u26E9\u26EA\u26F0-\u26F5\u26F7-\u26FA\u26FD\u2702\u2705\u2708-\u270D\u270F\u2712\u2714\u2716\u271D\u2721\u2728\u2733\u2734\u2744\u2747\u274C\u274E\u2753-\u2755\u2757\u2763\u2764\u2795-\u2797\u27A1\u27B0\u27BF\u2934\u2935\u2B05-\u2B07\u2B1B\u2B1C\u2B50\u2B55\u3030\u303D\u3297\u3299]$/)
+      );
+      
+      if (!isValidEmojiRange) {
+        console.warn(`⚠️ Invalid emoji - not in valid Unicode emoji range: "${cleanEmoji}" (codepoint: ${firstCodePoint?.toString(16)})`);
+        return undefined;
+      }
+      
+      console.log(`✅ Using Unicode emoji: "${cleanEmoji}" (codepoint: ${firstCodePoint?.toString(16)})`);
+      return { name: cleanEmoji };
     }
+    
+    console.warn(`⚠️ Emoji parsing returned unexpected result for: "${emojiInput}"`);
+    return undefined;
+    
+  } catch (error) {
+    console.error(`❌ Error processing emoji "${emojiInput}":`, error);
+    return undefined;
   }
-  return undefined;
 }
 
 /**

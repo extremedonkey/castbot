@@ -22473,8 +22473,12 @@ Are you sure you want to continue?`;
         console.log('📝 DEBUG: Safari button modal submitted');
         
         const buttonLabel = components[0].components[0].value?.trim();
-        const buttonEmoji = components[1].components[0].value?.trim() || null;
+        const buttonEmojiInput = components[1].components[0].value?.trim() || null;
         const buttonDesc = components[2].components[0].value?.trim() || null;
+        
+        // Validate emoji using advanced parsing
+        const { createSafeEmoji } = await import('./safariButtonHelper.js');
+        const buttonEmoji = buttonEmojiInput ? await createSafeEmoji(buttonEmojiInput) : null;
         
         if (!buttonLabel) {
           return res.send({
@@ -22600,8 +22604,12 @@ Are you sure you want to continue?`;
         console.log(`📝 DEBUG: Safari button modal submitted for coordinate ${coordinate}`);
         
         const buttonLabel = components[0].components[0].value?.trim();
-        const buttonEmoji = components[1].components[0].value?.trim() || null;
+        const buttonEmojiInput = components[1].components[0].value?.trim() || null;
         const buttonDesc = components[2].components[0].value?.trim() || null;
+        
+        // Validate emoji using advanced parsing
+        const { createSafeEmoji } = await import('./safariButtonHelper.js');
+        const buttonEmoji = buttonEmojiInput ? await createSafeEmoji(buttonEmojiInput) : null;
         
         if (!buttonLabel) {
           return res.send({
@@ -25346,8 +25354,12 @@ Are you sure you want to continue?`;
         
         // Parse fields from modal
         const buttonLabel = components[0].components[0].value?.trim();
-        const buttonEmoji = components[1].components[0].value?.trim() || null;
+        const buttonEmojiInput = components[1].components[0].value?.trim() || null;
         const buttonDesc = components[2].components[0].value?.trim() || null;
+        
+        // Validate emoji using advanced parsing
+        const { createSafeEmoji } = await import('./safariButtonHelper.js');
+        const buttonEmoji = buttonEmojiInput ? await createSafeEmoji(buttonEmojiInput) : null;
         
         if (!buttonLabel) {
           return res.send({
@@ -25572,10 +25584,11 @@ Are you sure you want to continue?`;
         if (actionEmoji) {
           // Import emoji validation function
           const { createSafeEmoji } = await import('./safariButtonHelper.js');
-          const emojiResult = createSafeEmoji(actionEmoji);
+          const emojiResult = await createSafeEmoji(actionEmoji);
           if (emojiResult) {
-            validatedEmoji = emojiResult.name;
-            console.log(`✅ Validated emoji: "${validatedEmoji}"`);
+            // Store the full emoji object (supports both Unicode and Discord custom emojis)
+            validatedEmoji = emojiResult;
+            console.log(`✅ Validated emoji: ${emojiResult.name}${emojiResult.id ? ` (ID: ${emojiResult.id})` : ''}`);
           } else {
             console.warn(`⚠️ Invalid emoji provided: "${actionEmoji}", will be ignored`);
             validatedEmoji = null;
