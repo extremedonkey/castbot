@@ -17346,10 +17346,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             successMessage += `**To complete the cleanup:**\n`;
             brokenReferences.forEach((ref, index) => {
               const coordsText = ref.coordinates.length > 0 ? ref.coordinates.join(', ') : 'No locations';
-              successMessage += `${index + 1}. **"${ref.buttonName}"** (at ${coordsText})\n`;
-              successMessage += `   • Go to 📍 Location Actions → ⚡ Custom Actions\n`;
-              successMessage += `   • Delete the broken follow-up action\n\n`;
+              successMessage += `• **"${ref.buttonName}"** (at ${coordsText})\n`;
             });
+            successMessage += `\nGo to 📍 Location Actions → ⚡ Custom Actions → Delete the broken action(s)`;
           }
           
           return {
