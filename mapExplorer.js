@@ -148,6 +148,7 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         // Store anchor message ID and fog map URL
         safariData[guild.id].maps[activeMapId].coordinates[coord].anchorMessageId = anchorMessage.id;
         safariData[guild.id].maps[activeMapId].coordinates[coord].fogMapUrl = fogMapUrl;
+        console.log(`💾 map_create: Stored fog map URL for ${coord}: ${fogMapUrl}`);
         
         console.log(`✅ Posted anchor message for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
         
@@ -911,6 +912,7 @@ async function updateMapImage(guild, userId, mapUrl) {
         
         // Store fog map URL in coordinate data for persistence
         safariData[guild.id].maps[activeMapId].coordinates[coord].fogMapUrl = fogMapUrl;
+        console.log(`💾 map_update: Updated fog map URL for ${coord}: ${fogMapUrl}`);
         
         // Rebuild anchor message components using stored data
         const { createAnchorMessageComponents } = await import('./safariButtonHelper.js');

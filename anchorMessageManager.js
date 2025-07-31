@@ -140,7 +140,7 @@ async function updateSingleAnchor(guildId, coordinate) {
     let fogMapUrl = coordData.fogMapUrl || null;
     console.log(`🔍 Using stored fog map URL for ${coordinate}: ${fogMapUrl}`);
     
-    // Fallback: extract from existing message if not stored
+    // Only extract as absolute last resort - never overwrite existing stored URLs
     if (!fogMapUrl) {
       console.log(`⚠️ No stored fog map URL for ${coordinate}, attempting extraction from Discord message...`);
       try {
@@ -153,8 +153,11 @@ async function updateSingleAnchor(guildId, coordinate) {
         for (const container of message.components || []) {
           for (const component of container.components || []) {
             if (component.type === 12) { // Media gallery
-              fogMapUrl = component.items?.[0]?.media?.url;
-              if (fogMapUrl) break;
+              const extractedUrl = component.items?.[0]?.media?.url;
+              if (extractedUrl) {
+                fogMapUrl = extractedUrl;
+                break;
+              }
             }
           }
           if (fogMapUrl) break;
@@ -162,9 +165,15 @@ async function updateSingleAnchor(guildId, coordinate) {
         
         if (fogMapUrl) {
           console.log(`🔍 Extracted fog map URL for ${coordinate}: ${fogMapUrl}`);
-          // Store extracted URL for future use
-          coordData.fogMapUrl = fogMapUrl;
-          await saveSafariContent(safariData);
+          // CRITICAL: Only store if coordinate doesn't already have a fogMapUrl
+          // This prevents overwriting newer URLs with older ones from Discord messages
+          if (!coordData.fogMapUrl) {
+            console.log(`💾 Storing extracted fog map URL for future use`);
+            coordData.fogMapUrl = fogMapUrl;
+            await saveSafariContent(safariData);
+          } else {
+            console.log(`⚠️ Not overwriting existing stored fogMapUrl - this was just for immediate use`);
+          }
         }
       } catch (error) {
         console.log(`⚠️ Could not retrieve existing message for ${coordinate}: ${error.message}`);
@@ -175,13 +184,24 @@ async function updateSingleAnchor(guildId, coordinate) {
     const components = await createAnchorMessageComponents(coordData, guildId, coordinate, fogMapUrl);
     
     // Update the message
-    await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
-      method: 'PATCH',
-      body: {
-        flags: (1 << 15), // IS_COMPONENTS_V2
-        components: components
+    try {
+      await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+        method: 'PATCH',
+        body: {
+          flags: (1 << 15), // IS_COMPONENTS_V2
+          components: components
+        }
+      });
+    } catch (error) {
+      if (error.message?.includes('Unknown Message')) {
+        console.log(`⚠️ Anchor message ${coordData.anchorMessageId} no longer exists for ${coordinate}, clearing stored ID`);
+        // Clear the invalid anchor message ID
+        coordData.anchorMessageId = null;
+        await saveSafariContent(safariData);
+        return false; // This coordinate needs to be reinitialized
       }
-    });
+      throw error; // Re-throw other errors
+    }
     
     console.log(`✅ Updated anchor message for ${coordinate}`);
     return true;

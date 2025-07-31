@@ -122,11 +122,18 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
         if (fogMapUrl) break;
       }
       
-      // If extracted successfully, store it for future use
+      // If extracted successfully, store it for future use ONLY if not already stored
       if (fogMapUrl) {
         console.log(`🔍 Extracted fog map URL from message: ${fogMapUrl}`);
-        coordData.fogMapUrl = fogMapUrl;
-        await saveSafariContent(safariData);
+        // CRITICAL: Only store if coordinate doesn't already have a fogMapUrl
+        // This prevents overwriting newer URLs with older ones from Discord messages
+        if (!coordData.fogMapUrl) {
+          console.log(`💾 Storing extracted fog map URL for future use`);
+          coordData.fogMapUrl = fogMapUrl;
+          await saveSafariContent(safariData);
+        } else {
+          console.log(`⚠️ Not overwriting existing stored fogMapUrl - this was just for immediate use`);
+        }
       }
     }
     
@@ -141,9 +148,14 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
         if (fogMessage && fogMessage.attachments.size > 0) {
           fogMapUrl = fogMessage.attachments.first().url;
           console.log(`🔍 Recovered fog map URL from storage: ${fogMapUrl}`);
-          // Store recovered URL
-          coordData.fogMapUrl = fogMapUrl;
-          await saveSafariContent(safariData);
+          // Store recovered URL ONLY if not already stored
+          if (!coordData.fogMapUrl) {
+            console.log(`💾 Storing recovered fog map URL for future use`);
+            coordData.fogMapUrl = fogMapUrl;
+            await saveSafariContent(safariData);
+          } else {
+            console.log(`⚠️ Not overwriting existing stored fogMapUrl - this was just for immediate use`);
+          }
         }
       }
     }
@@ -160,13 +172,28 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
     
     // Use DiscordRequest for Components V2 editing with PATCH to preserve message position
     const { DiscordRequest } = await import('./utils.js');
-    await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
-      method: 'PATCH',
-      body: {
-        flags: (1 << 15), // IS_COMPONENTS_V2
-        components: validatedComponents
+    try {
+      await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+        method: 'PATCH',
+        body: {
+          flags: (1 << 15), // IS_COMPONENTS_V2
+          components: validatedComponents
+        }
+      });
+    } catch (error) {
+      if (error.message?.includes('Unknown Message')) {
+        console.log(`⚠️ Anchor message ${coordData.anchorMessageId} no longer exists for ${coordinate}, clearing stored ID`);
+        // Clear the invalid anchor message ID and reload safari data to save the change
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        if (safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate]) {
+          safariData[guildId].maps[activeMapId].coordinates[coordinate].anchorMessageId = null;
+          await saveSafariContent(safariData);
+        }
+        return false; // This coordinate needs to be reinitialized
       }
-    });
+      throw error; // Re-throw other errors
+    }
     
     console.log(`✅ Updated anchor message for ${coordinate}`);
     return true;
