@@ -151,7 +151,7 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
     console.log(`🏷️ Using original button label for ${buttonId}: "${label}"`);
     
     // Create emoji safely with logging
-    const safeEmoji = createSafeEmoji(button.emoji);
+    const safeEmoji = await createSafeEmoji(button.emoji);
     if (button.emoji && !safeEmoji) {
       console.warn(`⚠️ Rejected invalid emoji for button ${buttonId}: "${button.emoji}"`);
     }
@@ -245,7 +245,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
           custom_id: `map_coord_store_${coord}_${storeId}`,
           label: store.name,
           style: 2, // Secondary/grey
-          emoji: createSafeEmoji(store.emoji)
+          emoji: await createSafeEmoji(store.emoji)
         });
       }
     }
@@ -260,7 +260,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
         custom_id: `map_item_drop_${coord}_${index}`,
         label: isExhausted ? `${drop.buttonText} (Taken)` : drop.buttonText,
         style: drop.buttonStyle || 2,
-        emoji: createSafeEmoji(drop.buttonEmoji),
+        emoji: await createSafeEmoji(drop.buttonEmoji),
         disabled: !!isExhausted // Force boolean conversion
       });
     }
@@ -275,7 +275,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
         custom_id: `map_currency_drop_${coord}_${index}`,
         label: isExhausted ? `${drop.buttonText} (Taken)` : drop.buttonText,
         style: drop.buttonStyle || 2,
-        emoji: createSafeEmoji(drop.buttonEmoji),
+        emoji: await createSafeEmoji(drop.buttonEmoji),
         disabled: !!isExhausted // Force boolean conversion
       });
     }
