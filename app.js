@@ -16572,7 +16572,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setLabel('Action Emoji (Optional)')
             .setPlaceholder('e.g., 🗺️')
             .setStyle(TextInputStyle.Short)
-            .setValue(action.emoji || '')
+            .setValue(typeof action.emoji === 'string' ? action.emoji : (action.emoji?.name || ''))
             .setRequired(false)
             .setMaxLength(10);
 
@@ -25634,8 +25634,8 @@ Are you sure you want to continue?`;
           const { createSafeEmoji } = await import('./safariButtonHelper.js');
           const emojiResult = await createSafeEmoji(actionEmoji);
           if (emojiResult) {
-            // Store the full emoji object (supports both Unicode and Discord custom emojis)
-            validatedEmoji = emojiResult;
+            // Store the original input string - safariButtonHelper will process it later
+            validatedEmoji = actionEmoji;
             console.log(`✅ Validated emoji: ${emojiResult.name}${emojiResult.id ? ` (ID: ${emojiResult.id})` : ''}`);
           } else {
             console.warn(`⚠️ Invalid emoji provided: "${actionEmoji}", will be ignored`);
