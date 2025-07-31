@@ -522,12 +522,12 @@ async function executeDisplayText(config, interaction) {
         content: config.content
     });
     
-    // Add Media Gallery if imageUrl is provided
-    if (config.imageUrl) {
+    // Add Media Gallery if image is provided
+    if (config.image) {
         components.push({
             type: 12, // Media Gallery
             items: [{
-                media: { url: config.imageUrl },
+                media: { url: config.image },
                 description: config.title || 'Image'
             }]
         });
