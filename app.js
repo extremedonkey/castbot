@@ -18071,27 +18071,31 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         handler: async (context) => {
           console.log(`🔄 START: map_update - user ${context.userId}`);
           
-          // Show modal for Discord image URL
+          // Create modal using ModalBuilder for consistency
+          const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
+          
+          const modal = new ModalBuilder()
+            .setCustomId('map_update_modal')
+            .setTitle('Update Map Image');
+            
+          const urlInput = new TextInputBuilder()
+            .setCustomId('map_url')
+            .setLabel('Discord Image URL')
+            .setStyle(2) // Paragraph
+            .setRequired(true)
+            .setPlaceholder('Paste Discord CDN URL here (e.g., https://cdn.discordapp.com/attachments/...)')
+            .setMinLength(20)
+            .setMaxLength(500);
+            
+          const actionRow = new ActionRowBuilder().addComponents(urlInput);
+          modal.addComponents(actionRow);
+          
+          console.log(`✅ SUCCESS: map_update - modal created`);
+          
+          // Return modal response for ButtonHandlerFactory to send
           return {
             type: InteractionResponseType.MODAL,
-            data: {
-              custom_id: 'map_update_modal',
-              title: 'Update Map Image',
-              components: [{
-                type: 1, // Action Row
-                components: [{
-                  type: 4, // Text Input
-                  custom_id: 'map_url',
-                  label: 'Discord Image URL',
-                  style: 2, // Paragraph
-                  required: true,
-                  placeholder: 'Paste Discord CDN URL here (e.g., https://cdn.discordapp.com/attachments/...)',
-                  min_length: 20,
-                  max_length: 500,
-                  value: ''
-                }]
-              }]
-            }
+            data: modal.toJSON()
           };
         }
       })(req, res, client);
