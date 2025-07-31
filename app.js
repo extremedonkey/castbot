@@ -22476,9 +22476,20 @@ Are you sure you want to continue?`;
         const buttonEmojiInput = components[1].components[0].value?.trim() || null;
         const buttonDesc = components[2].components[0].value?.trim() || null;
         
-        // Validate emoji using advanced parsing
-        const { createSafeEmoji } = await import('./safariButtonHelper.js');
-        const buttonEmoji = buttonEmojiInput ? await createSafeEmoji(buttonEmojiInput) : null;
+        // Validate emoji using advanced parsing (for error checking only)
+        let buttonEmoji = null;
+        if (buttonEmojiInput) {
+          const { createSafeEmoji } = await import('./safariButtonHelper.js');
+          const validatedEmoji = await createSafeEmoji(buttonEmojiInput);
+          if (validatedEmoji) {
+            // Store the original input string - safariButtonHelper will process it later
+            buttonEmoji = buttonEmojiInput;
+            console.log(`✅ Validated emoji input: "${buttonEmojiInput}"`);
+          } else {
+            console.warn(`⚠️ Invalid emoji input: "${buttonEmojiInput}", will be ignored`);
+            buttonEmoji = null;
+          }
+        }
         
         if (!buttonLabel) {
           return res.send({
@@ -22607,9 +22618,20 @@ Are you sure you want to continue?`;
         const buttonEmojiInput = components[1].components[0].value?.trim() || null;
         const buttonDesc = components[2].components[0].value?.trim() || null;
         
-        // Validate emoji using advanced parsing
-        const { createSafeEmoji } = await import('./safariButtonHelper.js');
-        const buttonEmoji = buttonEmojiInput ? await createSafeEmoji(buttonEmojiInput) : null;
+        // Validate emoji using advanced parsing (for error checking only)
+        let buttonEmoji = null;
+        if (buttonEmojiInput) {
+          const { createSafeEmoji } = await import('./safariButtonHelper.js');
+          const validatedEmoji = await createSafeEmoji(buttonEmojiInput);
+          if (validatedEmoji) {
+            // Store the original input string - safariButtonHelper will process it later
+            buttonEmoji = buttonEmojiInput;
+            console.log(`✅ Validated emoji input: "${buttonEmojiInput}"`);
+          } else {
+            console.warn(`⚠️ Invalid emoji input: "${buttonEmojiInput}", will be ignored`);
+            buttonEmoji = null;
+          }
+        }
         
         if (!buttonLabel) {
           return res.send({
@@ -25357,9 +25379,20 @@ Are you sure you want to continue?`;
         const buttonEmojiInput = components[1].components[0].value?.trim() || null;
         const buttonDesc = components[2].components[0].value?.trim() || null;
         
-        // Validate emoji using advanced parsing
-        const { createSafeEmoji } = await import('./safariButtonHelper.js');
-        const buttonEmoji = buttonEmojiInput ? await createSafeEmoji(buttonEmojiInput) : null;
+        // Validate emoji using advanced parsing (for error checking only)
+        let buttonEmoji = null;
+        if (buttonEmojiInput) {
+          const { createSafeEmoji } = await import('./safariButtonHelper.js');
+          const validatedEmoji = await createSafeEmoji(buttonEmojiInput);
+          if (validatedEmoji) {
+            // Store the original input string - safariButtonHelper will process it later
+            buttonEmoji = buttonEmojiInput;
+            console.log(`✅ Validated emoji input: "${buttonEmojiInput}"`);
+          } else {
+            console.warn(`⚠️ Invalid emoji input: "${buttonEmojiInput}", will be ignored`);
+            buttonEmoji = null;
+          }
+        }
         
         if (!buttonLabel) {
           return res.send({
@@ -25382,7 +25415,7 @@ Are you sure you want to continue?`;
           name: buttonLabel,
           label: buttonLabel,
           description: buttonDesc || '',
-          emoji: buttonEmoji || '⚡',
+          emoji: buttonEmoji,
           style: 1, // Primary
           coordinates: [], // No coordinates initially
           actions: [],
@@ -25480,8 +25513,23 @@ Are you sure you want to continue?`;
         if (entityType === 'safari_button' && coordinate) {
           // Parse fields from custom modal format
           const buttonLabel = components[0].components[0].value?.trim();
-          const buttonEmoji = components[1].components[0].value?.trim() || null;
+          const buttonEmojiInput = components[1].components[0].value?.trim() || null;
           const buttonDesc = components[2].components[0].value?.trim() || null;
+          
+          // Validate emoji using advanced parsing (for error checking only)
+          let buttonEmoji = null;
+          if (buttonEmojiInput) {
+            const { createSafeEmoji } = await import('./safariButtonHelper.js');
+            const validatedEmoji = await createSafeEmoji(buttonEmojiInput);
+            if (validatedEmoji) {
+              // Store the original input string - safariButtonHelper will process it later
+              buttonEmoji = buttonEmojiInput;
+              console.log(`✅ Validated emoji input: "${buttonEmojiInput}"`);
+            } else {
+              console.warn(`⚠️ Invalid emoji input: "${buttonEmojiInput}", will be ignored`);
+              buttonEmoji = null;
+            }
+          }
           
           if (!buttonLabel) {
             return res.send({
