@@ -8041,10 +8041,10 @@ Your server is now ready for Tycoons gameplay!`;
         const emojiInput = new TextInputBuilder()
           .setCustomId('button_emoji')
           .setLabel('Button Emoji (optional)')
-          .setPlaceholder('e.g., 🗺️')
+          .setPlaceholder('e.g., 🗺️ or <:custom:123456>')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
-          .setMaxLength(10);
+          .setMaxLength(100);
 
         // Button description input
         const descInput = new TextInputBuilder()
@@ -9221,8 +9221,8 @@ Your server is now ready for Tycoons gameplay!`;
           .setLabel('Store Emoji')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
-          .setMaxLength(10)
-          .setPlaceholder('🏪');
+          .setMaxLength(100)
+          .setPlaceholder('🏪 or <:custom:123456>');
         
         const storeDescriptionInput = new TextInputBuilder()
           .setCustomId('store_description')
@@ -9842,9 +9842,9 @@ Your server is now ready for Tycoons gameplay!`;
           .setLabel('Store Emoji')
           .setStyle(TextInputStyle.Short)
           .setRequired(false)
-          .setMaxLength(10)
+          .setMaxLength(100)
           .setValue(store.emoji || '')
-          .setPlaceholder('🏪');
+          .setPlaceholder('🏪 or <:custom:123456>');
         
         const storeDescriptionInput = new TextInputBuilder()
           .setCustomId('store_description')
@@ -16568,11 +16568,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const emojiInput = new TextInputBuilder()
             .setCustomId('action_emoji')
             .setLabel('Action Emoji (Optional)')
-            .setPlaceholder('e.g., 🗺️')
+            .setPlaceholder('e.g., 🗺️ or <:custom:123456>')
             .setStyle(TextInputStyle.Short)
             .setValue(typeof action.emoji === 'string' ? action.emoji : (action.emoji?.name || ''))
             .setRequired(false)
-            .setMaxLength(10);
+            .setMaxLength(100); // Allow for Discord custom emoji format
 
           const descInput = new TextInputBuilder()
             .setCustomId('action_description')
@@ -16580,7 +16580,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setPlaceholder('e.g., "Begin your journey through the forest"')
             .setStyle(TextInputStyle.Paragraph)
             .setValue(action.description || '')
-            .setRequired(false);
+            .setRequired(false)
+            .setMaxLength(4000); // Set explicit high limit
 
           modal.addComponents(
             new ActionRowBuilder().addComponents(nameInput),
@@ -20271,9 +20272,9 @@ Are you sure you want to continue?`;
             .setLabel('Button Emoji')
             .setStyle(TextInputStyle.Short)
             .setValue(drop?.buttonEmoji || '🪙')
-            .setPlaceholder('🪙')
+            .setPlaceholder('🪙 or <:custom:123456>')
             .setRequired(false)
-            .setMaxLength(10);
+            .setMaxLength(100);
             
           modal.addComponents(
             new ActionRowBuilder().addComponents(amountInput),
