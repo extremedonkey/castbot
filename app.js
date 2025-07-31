@@ -799,7 +799,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       new ButtonBuilder()
         .setCustomId('reece_stuff_menu')
         .setLabel('Analytics')
-        .setStyle(ButtonStyle.Danger)
+        .setStyle(ButtonStyle.Secondary)
         .setEmoji('🧮')
     );
   }
