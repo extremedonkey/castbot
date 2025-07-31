@@ -27,7 +27,7 @@ export const BUTTON_REGISTRY = {
     label: 'Analytics',
     description: 'Main analytics and admin menu for Reece',
     emoji: '🧮',
-    style: 'Danger',
+    style: 'Secondary',
     menu: 'reece_analytics',
     parent: null,
     restrictedUser: '391415444084490240',
