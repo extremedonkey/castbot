@@ -971,5 +971,275 @@ async function updateMapImage(guild, userId, mapUrl) {
   }
 }
 
+/**
+ * Creates a map grid for the guild using a custom image URL
+ * @param {Guild} guild - Discord guild object
+ * @param {string} userId - User ID creating the map
+ * @param {string} mapUrl - Discord CDN URL of the map image
+ * @returns {Object} Result with success status and message
+ */
+async function createMapGridWithCustomImage(guild, userId, mapUrl) {
+  try {
+    console.log(`🏗️ Creating map grid with custom image for guild ${guild.id}`);
+    
+    // Load safari content data
+    let safariData = await loadSafariContent();
+    
+    // Ensure guild structure exists
+    if (!safariData[guild.id]) {
+      safariData[guild.id] = {
+        buttons: {},
+        safaris: {},
+        applications: {},
+        stores: {},
+        items: {},
+        safariConfig: {
+          currencyName: "coins",
+          inventoryName: "Inventory",
+          currencyEmoji: "🪙"
+        }
+      };
+    }
+    
+    // Check if map already exists
+    if (safariData[guild.id].maps?.active) {
+      return {
+        success: false,
+        message: '❌ A map already exists! Delete the current map before creating a new one.'
+      };
+    }
+    
+    // Initialize maps structure if it doesn't exist
+    if (!safariData[guild.id].maps) {
+      safariData[guild.id].maps = {};
+    }
+    
+    let progressMessages = [];
+    progressMessages.push('🏗️ Starting map creation with custom image...');
+    
+    // Download the custom map image
+    progressMessages.push('📥 Downloading custom map image...');
+    const response = await fetch(mapUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+    }
+    
+    const imageBuffer = Buffer.from(await response.arrayBuffer());
+    
+    // Validate it's an image
+    const metadata = await sharp(imageBuffer).metadata();
+    progressMessages.push(`✅ Image downloaded: ${metadata.width}x${metadata.height} pixels`);
+    
+    // Generate map data
+    const gridSize = 7; // 7x7 grid
+    const timestamp = Date.now();
+    const mapId = `map_${gridSize}x${gridSize}_${timestamp}`;
+    
+    // Create directory for guild images if it doesn't exist
+    const guildDir = path.join(__dirname, 'img', guild.id);
+    await fs.mkdir(guildDir, { recursive: true });
+    
+    // Save the custom image temporarily
+    const tempMapPath = path.join(guildDir, `temp_${timestamp}.png`);
+    await sharp(imageBuffer).toFile(tempMapPath);
+    
+    // Generate map with grid overlay
+    const outputPath = path.join(guildDir, `${mapId}.png`);
+    
+    const gridSystem = new MapGridSystem(tempMapPath, {
+      gridSize: gridSize,
+      borderSize: 80,
+      lineWidth: 4,
+      fontSize: 40,
+      labelStyle: 'standard'
+    });
+    
+    // Initialize grid system and generate SVG overlay
+    await gridSystem.initialize();
+    const svg = gridSystem.generateGridOverlaySVG();
+    const svgBuffer = Buffer.from(svg);
+    
+    // Create a white border canvas first, then composite the map, then the grid
+    await sharp({
+        create: {
+          width: gridSystem.totalWidth,
+          height: gridSystem.totalHeight,
+          channels: 4,
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        }
+      })
+      .composite([
+        {
+          input: tempMapPath,
+          top: gridSystem.options.borderSize,
+          left: gridSystem.options.borderSize
+        },
+        {
+          input: svgBuffer,
+          top: 0,
+          left: 0
+        }
+      ])
+      .png()
+      .toFile(outputPath);
+    
+    console.log(`✅ Generated map image: ${outputPath}`);
+    progressMessages.push('✅ Generated map with grid overlay');
+    
+    // Clean up temp file
+    await fs.unlink(tempMapPath);
+    
+    // Create map category
+    progressMessages.push('🏗️ Creating map category...');
+    
+    // Upload map image to Discord and get CDN URL
+    progressMessages.push('📤 Uploading map image to Discord...');
+    const discordImageUrl = await uploadImageToDiscord(guild, outputPath, `${mapId}.png`);
+    console.log(`📤 Map image uploaded to Discord CDN: ${discordImageUrl}`);
+    progressMessages.push('✅ Map image uploaded to Discord CDN');
+    
+    const category = await guild.channels.create({
+      name: '🗺️ Map Explorer',
+      type: ChannelType.GuildCategory,
+      permissionOverwrites: [
+        {
+          id: guild.roles.everyone.id,
+          deny: [PermissionFlagsBits.ViewChannel]
+        }
+      ]
+    });
+    
+    progressMessages.push(`✅ Created category: ${category.name}`);
+    
+    // Generate coordinate list for 7x7 grid
+    const coordinates = [];
+    for (let y = 0; y < gridSize; y++) {
+      for (let x = 0; x < gridSize; x++) {
+        const coord = `${String.fromCharCode(65 + x)}${y + 1}`;
+        coordinates.push(coord);
+      }
+    }
+    
+    // Create channels with rate limiting
+    const channels = {};
+    progressMessages.push(`📍 Creating ${coordinates.length} channels...`);
+    
+    for (let i = 0; i < coordinates.length; i++) {
+      const coord = coordinates[i];
+      
+      // Rate limiting: 5 channels per 5 seconds
+      if (i > 0 && i % 5 === 0) {
+        progressMessages.push(`⏳ Rate limiting... (${i}/${coordinates.length} channels created)`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+      
+      try {
+        const channel = await guild.channels.create({
+          name: coord.toLowerCase(),
+          type: ChannelType.GuildText,
+          parent: category.id,
+          topic: `Map location ${coord} - Use buttons to explore!`,
+          permissionOverwrites: [
+            {
+              id: guild.roles.everyone.id,
+              deny: [PermissionFlagsBits.ViewChannel]
+            }
+          ]
+        });
+        
+        channels[coord] = channel.id;
+        console.log(`Created channel #${coord.toLowerCase()} (${i + 1}/${coordinates.length})`);
+        
+        if ((i + 1) % 5 === 0 || i === coordinates.length - 1) {
+          progressMessages.push(`📍 Progress: ${i + 1}/${coordinates.length} channels created`);
+        }
+      } catch (error) {
+        console.error(`Failed to create channel for ${coord}:`, error);
+        progressMessages.push(`❌ Failed to create channel for ${coord}: ${error.message}`);
+      }
+    }
+    
+    // Create map data structure
+    const mapData = {
+      id: mapId,
+      name: 'Adventure Island',
+      gridSize: gridSize,
+      imageFile: outputPath.replace(__dirname + '/', ''),
+      discordImageUrl: discordImageUrl, // Store Discord CDN URL
+      category: category.id,
+      createdAt: new Date().toISOString(),
+      createdBy: userId,
+      coordinates: {},
+      playerStates: {},
+      globalState: {
+        openedChests: [],
+        triggeredEvents: [],
+        discoveredSecrets: []
+      },
+      config: {
+        staminaEnabled: true,
+        staminaPerMove: 1,
+        maxStamina: 5,
+        staminaRegenHours: 12,
+        chestMechanic: 'shared',
+        allowBacktracking: true,
+        fogOfWar: true
+      }
+    };
+    
+    // Initialize coordinate data
+    for (const coord of coordinates) {
+      mapData.coordinates[coord] = {
+        channelId: channels[coord] || null,
+        baseContent: {
+          title: `📍 Location ${coord}`,
+          description: `You are at grid location ${coord}. This area hasn't been configured yet.`,
+          image: null,
+          clues: []
+        },
+        buttons: [],
+        hiddenCommands: {},
+        navigation: generateNavigation(coord, gridSize),
+        cellType: 'unexplored',
+        discovered: false,
+        specialEvents: [],
+        fogMapUrl: null // Store fog of war map URL persistently
+      };
+    }
+    
+    // Set the map as active
+    safariData[guild.id].maps.active = mapId;
+    safariData[guild.id].maps[mapId] = mapData;
+    
+    // Save safari content data
+    await saveSafariContent(safariData);
+    
+    progressMessages.push('✅ Map data structure created and saved');
+    
+    // Post fog of war maps to each channel
+    progressMessages.push('🌫️ Generating fog of war maps for each location...');
+    await postFogOfWarMapsToChannels(guild, outputPath, gridSystem, channels, coordinates);
+    progressMessages.push('✅ Fog of war maps posted to all channels');
+    
+    progressMessages.push(`🎉 **Map creation complete!**`);
+    progressMessages.push(`• Grid Size: ${gridSize}x${gridSize}`);
+    progressMessages.push(`• Total Locations: ${coordinates.length}`);
+    progressMessages.push(`• Category: ${category.name}`);
+    progressMessages.push(`• Custom Image: Used`);
+    
+    return {
+      success: true,
+      message: progressMessages.join('\n')
+    };
+    
+  } catch (error) {
+    console.error('Error creating map grid with custom image:', error);
+    return {
+      success: false,
+      message: `❌ Error creating map: ${error.message}`
+    };
+  }
+}
+
 // Export functions
-export { createMapGrid, deleteMapGrid, createMapExplorerMenu, updateMapImage, loadSafariContent, saveSafariContent };
+export { createMapGrid, deleteMapGrid, createMapExplorerMenu, updateMapImage, createMapGridWithCustomImage, loadSafariContent, saveSafariContent };

@@ -17935,10 +17935,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
           
           // Create map management buttons
-          const createButton = new ButtonBuilder()
-            .setCustomId('map_create')
-            .setLabel('Create Map')
-            .setEmoji('🏗️');
+          // Create / Update Map button (always active)
+          const createUpdateButton = new ButtonBuilder()
+            .setCustomId('map_update')
+            .setLabel('Create / Update Map')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🗺️');
           
           const deleteButton = new ButtonBuilder()
             .setCustomId('map_delete')
@@ -17952,26 +17954,24 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setStyle(ButtonStyle.Success)
             .setEmoji('🚶');
           
-          const updateMapButton = new ButtonBuilder()
-            .setCustomId('map_update')
-            .setLabel('Update Map')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('🔄');
+          // Legacy create button (grey, will be far right)
+          const legacyCreateButton = new ButtonBuilder()
+            .setCustomId('map_create')
+            .setLabel('Create Map (Legacy)')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🏗️');
           
           // Set states based on whether map exists
           if (hasActiveMap) {
-            createButton.setStyle(ButtonStyle.Secondary).setDisabled(true);
             deleteButton.setDisabled(false);
             initPlayerButton.setDisabled(false);
-            updateMapButton.setDisabled(false);
           } else {
-            createButton.setStyle(ButtonStyle.Primary).setDisabled(false);
             deleteButton.setDisabled(true);
             initPlayerButton.setDisabled(true);
-            updateMapButton.setDisabled(true);
           }
           
-          const mapButtonRow = new ActionRowBuilder().addComponents([createButton, updateMapButton, deleteButton, initPlayerButton]);
+          // Button arrangement: [Create/Update, Delete, Start Exploring, Legacy Create]
+          const mapButtonRow = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, initPlayerButton, legacyCreateButton]);
           
           // Create back button
           const backButton = new ButtonBuilder()
@@ -18077,9 +18077,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Create modal using ModalBuilder for consistency
           const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
           
+          // Check if map exists to determine modal title
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const hasActiveMap = safariData[context.guildId]?.maps?.active;
+          
           const modal = new ModalBuilder()
             .setCustomId('map_update_modal')
-            .setTitle('Update Map Image');
+            .setTitle(hasActiveMap ? 'Update Map Image' : 'Create Map with Custom Image');
             
           const urlInput = new TextInputBuilder()
             .setCustomId('map_url')
@@ -26540,10 +26545,25 @@ Are you sure you want to continue?`;
           }
         });
         
-        // Process the map update
-        const { updateMapImage } = await import('./mapExplorer.js');
+        // Check if map exists to determine create vs update
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const hasActiveMap = safariData[guildId]?.maps?.active;
+        
         const guild = await client.guilds.fetch(guildId);
-        const result = await updateMapImage(guild, userId, mapUrl);
+        let result;
+        
+        if (hasActiveMap) {
+          // Update existing map
+          console.log(`🔄 Updating existing map for guild ${guildId}`);
+          const { updateMapImage } = await import('./mapExplorer.js');
+          result = await updateMapImage(guild, userId, mapUrl);
+        } else {
+          // Create new map with custom image
+          console.log(`🏗️ Creating new map with custom image for guild ${guildId}`);
+          const { createMapGridWithCustomImage } = await import('./mapExplorer.js');
+          result = await createMapGridWithCustomImage(guild, userId, mapUrl);
+        }
         
         // Send followup with result
         const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -26571,7 +26591,7 @@ Are you sure you want to continue?`;
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              content: `❌ Error updating map: ${error.message}`,
+              content: `❌ Error ${hasActiveMap ? 'updating' : 'creating'} map: ${error.message}`,
               flags: InteractionResponseFlags.EPHEMERAL
             })
           });
