@@ -17950,18 +17950,26 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setStyle(ButtonStyle.Success)
             .setEmoji('🚶');
           
+          const updateMapButton = new ButtonBuilder()
+            .setCustomId('map_update')
+            .setLabel('Update Map')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('🔄');
+          
           // Set states based on whether map exists
           if (hasActiveMap) {
             createButton.setStyle(ButtonStyle.Secondary).setDisabled(true);
             deleteButton.setDisabled(false);
             initPlayerButton.setDisabled(false);
+            updateMapButton.setDisabled(false);
           } else {
             createButton.setStyle(ButtonStyle.Primary).setDisabled(false);
             deleteButton.setDisabled(true);
             initPlayerButton.setDisabled(true);
+            updateMapButton.setDisabled(true);
           }
           
-          const mapButtonRow = new ActionRowBuilder().addComponents([createButton, deleteButton, initPlayerButton]);
+          const mapButtonRow = new ActionRowBuilder().addComponents([createButton, updateMapButton, deleteButton, initPlayerButton]);
           
           // Create back button
           const backButton = new ButtonBuilder()
@@ -18053,6 +18061,40 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           console.error('Error sending followup:', followupError);
         }
       }
+      
+    } else if (custom_id === 'map_update') {
+      // Handle Map Update - Show modal for Discord image URL
+      return ButtonHandlerFactory.create({
+        id: 'map_update',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔄 START: map_update - user ${context.userId}`);
+          
+          // Show modal for Discord image URL
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: 'map_update_modal',
+              title: 'Update Map Image',
+              components: [{
+                type: 1, // Action Row
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'map_url',
+                  label: 'Discord Image URL',
+                  style: 2, // Paragraph
+                  required: true,
+                  placeholder: 'Paste Discord CDN URL here (e.g., https://cdn.discordapp.com/attachments/...)',
+                  min_length: 20,
+                  max_length: 500,
+                  value: ''
+                }]
+              }]
+            }
+          };
+        }
+      })(req, res, client);
       
     } else if (custom_id === 'map_delete') {
       // Handle Map Deletion - Show confirmation first
@@ -26461,6 +26503,74 @@ Are you sure you want to continue?`;
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
+      }
+      
+    } else if (custom_id === 'map_update_modal') {
+      // Handle map update modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const mapUrl = components[0].components[0].value?.trim();
+        
+        console.log(`🔄 DEBUG: Map update modal submitted - guild: ${guildId}, url: ${mapUrl}`);
+        
+        // Basic URL validation
+        if (!mapUrl || !mapUrl.startsWith('https://cdn.discordapp.com/attachments/')) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please provide a valid Discord CDN URL (must start with https://cdn.discordapp.com/attachments/)',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Defer response for long operation
+        await res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+        // Process the map update
+        const { updateMapImage } = await import('./mapExplorer.js');
+        const guild = await client.guilds.fetch(guildId);
+        const result = await updateMapImage(guild, userId, mapUrl);
+        
+        // Send followup with result
+        const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+        
+        await fetch(followupUrl, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            content: result.message,
+            flags: InteractionResponseFlags.EPHEMERAL
+          })
+        });
+        
+      } catch (error) {
+        console.error('Error in map_update_modal handler:', error);
+        
+        // Try to send error as followup
+        try {
+          const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          await fetch(followupUrl, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              content: `❌ Error updating map: ${error.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            })
+          });
+        } catch (followupError) {
+          console.error('Error sending followup:', followupError);
+        }
       }
       
     } else {

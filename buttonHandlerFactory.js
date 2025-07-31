@@ -263,6 +263,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'map_update': {
+    label: 'Update Map',
+    description: 'Update the existing map image with a new one',
+    emoji: '🔄',
+    style: 'Primary',
+    category: 'safari'
+  },
   'safari_map_init_player': {
     label: 'Start Exploring',
     description: 'Initialize player on Safari map with starting position and stamina',

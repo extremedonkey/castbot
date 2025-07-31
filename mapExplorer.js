@@ -755,5 +755,222 @@ async function createMapExplorerMenu(guildId) {
   }
 }
 
+/**
+ * Updates the map image and regenerates fog of war maps
+ * @param {Guild} guild - Discord guild object
+ * @param {string} userId - User ID updating the map
+ * @param {string} mapUrl - Discord CDN URL of the new map image
+ * @returns {Object} Result with success status and message
+ */
+async function updateMapImage(guild, userId, mapUrl) {
+  try {
+    console.log(`🔄 Starting map image update for guild ${guild.id}`);
+    
+    // Load safari content data
+    let safariData = await loadSafariContent();
+    
+    // Check if map exists
+    const activeMapId = safariData[guild.id]?.maps?.active;
+    if (!activeMapId) {
+      return {
+        success: false,
+        message: '❌ No active map found to update.'
+      };
+    }
+    
+    const mapData = safariData[guild.id].maps[activeMapId];
+    if (!mapData) {
+      return {
+        success: false,
+        message: '❌ Map data not found.'
+      };
+    }
+    
+    let progressMessages = [];
+    progressMessages.push('🔄 Starting map update process...');
+    
+    // Download the new map image
+    progressMessages.push('📥 Downloading new map image...');
+    const response = await fetch(mapUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.status} ${response.statusText}`);
+    }
+    
+    const imageBuffer = Buffer.from(await response.arrayBuffer());
+    
+    // Get image metadata to validate dimensions
+    const metadata = await sharp(imageBuffer).metadata();
+    progressMessages.push(`✅ Image downloaded: ${metadata.width}x${metadata.height} pixels`);
+    
+    // Create a temporary file for the new map
+    const tempMapPath = path.join(__dirname, 'img', guild.id, `temp_${Date.now()}.png`);
+    await fs.mkdir(path.dirname(tempMapPath), { recursive: true });
+    await sharp(imageBuffer).toFile(tempMapPath);
+    
+    // Initialize grid system with the new map
+    const gridSystem = new MapGridSystem(tempMapPath, {
+      gridSize: mapData.gridSize,
+      borderSize: 80,
+      lineWidth: 4,
+      fontSize: 40,
+      labelStyle: 'standard'
+    });
+    
+    await gridSystem.initialize();
+    
+    // Validate dimensions match
+    const expectedWidth = gridSystem.totalWidth;
+    const expectedHeight = gridSystem.totalHeight;
+    
+    // Create the map with grid overlay
+    const outputPath = path.join(__dirname, 'img', guild.id, `${activeMapId}_updated.png`);
+    const svg = gridSystem.generateGridOverlaySVG();
+    const svgBuffer = Buffer.from(svg);
+    
+    // Create a white border canvas first, then composite the map, then the grid
+    await sharp({
+        create: {
+          width: gridSystem.totalWidth,
+          height: gridSystem.totalHeight,
+          channels: 4,
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        }
+      })
+      .composite([
+        {
+          input: tempMapPath,
+          top: gridSystem.options.borderSize,
+          left: gridSystem.options.borderSize
+        },
+        {
+          input: svgBuffer,
+          top: 0,
+          left: 0
+        }
+      ])
+      .png()
+      .toFile(outputPath);
+    
+    progressMessages.push('✅ Generated updated map with grid overlay');
+    
+    // Upload the updated map to Discord
+    progressMessages.push('📤 Uploading updated map to Discord...');
+    const discordImageUrl = await uploadImageToDiscord(guild, outputPath, `${activeMapId}_updated.png`);
+    progressMessages.push('✅ Map image uploaded to Discord CDN');
+    
+    // Update map data with new image URL
+    mapData.discordImageUrl = discordImageUrl;
+    mapData.lastUpdated = new Date().toISOString();
+    mapData.updatedBy = userId;
+    
+    // Generate fog of war maps for each coordinate
+    progressMessages.push(`🌫️ Generating fog of war maps for ${Object.keys(mapData.coordinates).length} locations...`);
+    
+    const coordinates = Object.keys(mapData.coordinates);
+    const { DiscordRequest } = await import('./utils.js');
+    
+    for (let i = 0; i < coordinates.length; i++) {
+      const coord = coordinates[i];
+      const coordData = mapData.coordinates[coord];
+      
+      if (!coordData.anchorMessageId || !coordData.channelId) {
+        console.log(`⏭️ Skipping ${coord} - no anchor message`);
+        continue;
+      }
+      
+      try {
+        // Create fog of war map for this specific coordinate
+        const fogOfWarBuffer = await createFogOfWarMap(outputPath, gridSystem, coord, coordinates);
+        
+        // Upload fog map to storage channel
+        let storageChannel = guild.channels.cache.find(ch => ch.name === 'map-storage' && ch.type === 0);
+        if (!storageChannel) {
+          storageChannel = await guild.channels.create({
+            name: 'map-storage',
+            type: 0,
+            topic: 'Storage for map images - do not delete',
+            permissionOverwrites: [{
+              id: guild.roles.everyone.id,
+              deny: ['ViewChannel', 'SendMessages']
+            }]
+          });
+        }
+        
+        const { AttachmentBuilder } = await import('discord.js');
+        const attachment = new AttachmentBuilder(fogOfWarBuffer, { 
+          name: `${coord.toLowerCase()}_fogmap_updated.png` 
+        });
+        
+        const storageMessage = await storageChannel.send({
+          content: `Updated fog map for ${coord}`,
+          files: [attachment]
+        });
+        const fogMapUrl = storageMessage.attachments.first()?.url;
+        
+        // Get existing anchor message to preserve other content
+        const existingMessage = await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+          method: 'GET'
+        });
+        
+        // Update the Media Gallery component with new fog map URL
+        const updatedComponents = existingMessage.components;
+        if (updatedComponents?.[0]?.components?.[0]?.type === 12) {
+          // Update the first media gallery (fog of war map)
+          updatedComponents[0].components[0].items[0].media.url = fogMapUrl;
+        }
+        
+        // Update the anchor message
+        await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+          method: 'PATCH',
+          body: {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: updatedComponents
+          }
+        });
+        
+        console.log(`✅ Updated fog map for ${coord} (${i + 1}/${coordinates.length})`);
+        
+        // Rate limiting
+        if ((i + 1) % 5 === 0 && i < coordinates.length - 1) {
+          progressMessages.push(`⏳ Progress: ${i + 1}/${coordinates.length} fog maps updated...`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+      } catch (error) {
+        console.error(`❌ Failed to update fog map for ${coord}:`, error);
+        progressMessages.push(`⚠️ Failed to update ${coord}: ${error.message}`);
+      }
+    }
+    
+    // Save updated safari data
+    await saveSafariContent(safariData);
+    progressMessages.push('✅ Map data saved');
+    
+    // Clean up temporary files
+    try {
+      await fs.unlink(tempMapPath);
+      // Keep the updated map file as backup
+    } catch (error) {
+      console.error('Error cleaning up temp files:', error);
+    }
+    
+    progressMessages.push(`🎉 **Map update complete!**`);
+    progressMessages.push(`• Updated ${coordinates.length} fog of war maps`);
+    progressMessages.push(`• New map saved and distributed`);
+    
+    return {
+      success: true,
+      message: progressMessages.join('\n')
+    };
+    
+  } catch (error) {
+    console.error('Error updating map image:', error);
+    return {
+      success: false,
+      message: `❌ Error updating map: ${error.message}`
+    };
+  }
+}
+
 // Export functions
-export { createMapGrid, deleteMapGrid, createMapExplorerMenu, loadSafariContent, saveSafariContent };
+export { createMapGrid, deleteMapGrid, createMapExplorerMenu, updateMapImage, loadSafariContent, saveSafariContent };
