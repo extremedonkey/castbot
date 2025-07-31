@@ -8052,8 +8052,7 @@ Your server is now ready for Tycoons gameplay!`;
           .setLabel('Button Description (for your reference)')
           .setPlaceholder('e.g., "Starts the jungle adventure safari"')
           .setStyle(TextInputStyle.Paragraph)
-          .setRequired(false)
-          .setMaxLength(200);
+          .setRequired(false);
 
         const labelRow = new ActionRowBuilder().addComponents(labelInput);
         const emojiRow = new ActionRowBuilder().addComponents(emojiInput);
@@ -16500,8 +16499,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               .setLabel('Action Description')
               .setPlaceholder('e.g., "Starts the jungle adventure safari"')
               .setStyle(TextInputStyle.Paragraph)
-              .setRequired(false)
-              .setMaxLength(200);
+              .setRequired(false);
 
             const labelRow = new ActionRowBuilder().addComponents(labelInput);
             const emojiRow = new ActionRowBuilder().addComponents(emojiInput);
@@ -16582,8 +16580,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setPlaceholder('e.g., "Begin your journey through the forest"')
             .setStyle(TextInputStyle.Paragraph)
             .setValue(action.description || '')
-            .setRequired(false)
-            .setMaxLength(200);
+            .setRequired(false);
 
           modal.addComponents(
             new ActionRowBuilder().addComponents(nameInput),
