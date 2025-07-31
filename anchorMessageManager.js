@@ -135,6 +135,76 @@ async function processBatchUpdates() {
 }
 
 /**
+ * Repair missing anchor message IDs by finding existing messages in channels
+ * @param {string} guildId - Guild ID
+ * @param {string} coordinate - Map coordinate
+ * @returns {boolean} Success status
+ */
+async function repairMissingAnchorMessage(guildId, coordinate) {
+  try {
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[guildId]?.maps?.active;
+    const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate];
+    
+    if (!coordData?.channelId) {
+      console.log(`❌ Cannot repair ${coordinate} - no channel ID found`);
+      return false;
+    }
+    
+    if (coordData.anchorMessageId) {
+      console.log(`✅ ${coordinate} already has anchor message ID: ${coordData.anchorMessageId}`);
+      return true;
+    }
+    
+    console.log(`🔧 Attempting to repair missing anchor message ID for ${coordinate} in channel ${coordData.channelId}`);
+    
+    // Fetch recent messages from the channel to find the anchor message
+    const response = await DiscordRequest(`channels/${coordData.channelId}/messages?limit=20`, {
+      method: 'GET'
+    });
+    
+    if (!response.ok) {
+      console.error(`❌ Failed to fetch messages from channel ${coordData.channelId}`);
+      return false;
+    }
+    
+    const messages = await response.json();
+    
+    // Look for a message from the bot that contains the coordinate and map
+    const botMessages = messages.filter(msg => 
+      msg.author?.bot && 
+      msg.components?.length > 0 &&
+      (msg.content?.includes(`Location ${coordinate}`) || 
+       msg.components.some(comp => 
+         comp.components?.some(btn => 
+           btn.custom_id?.includes(`map_location_actions_${coordinate}`)
+         )
+       ))
+    );
+    
+    if (botMessages.length === 0) {
+      console.log(`❌ No anchor message found for ${coordinate} in channel ${coordData.channelId}`);
+      return false;
+    }
+    
+    // Use the most recent matching message
+    const anchorMessage = botMessages[0];
+    coordData.anchorMessageId = anchorMessage.id;
+    
+    // Save the updated data
+    const { saveSafariContent } = await import('./safariManager.js');
+    await saveSafariContent(safariData);
+    
+    console.log(`✅ Repaired anchor message ID for ${coordinate}: ${anchorMessage.id}`);
+    return true;
+    
+  } catch (error) {
+    console.error(`❌ Error repairing anchor message for ${coordinate}:`, error);
+    return false;
+  }
+}
+
+/**
  * Update a single anchor message
  * @param {string} guildId - Guild ID
  * @param {string} coordinate - Map coordinate
@@ -148,6 +218,18 @@ async function updateSingleAnchor(guildId, coordinate) {
     
     if (!coordData?.anchorMessageId || !coordData?.channelId) {
       console.log(`⏭️ Skipping ${coordinate} - no anchor message`);
+      
+      // Attempt to repair missing anchor message ID
+      if (coordData?.channelId && !coordData?.anchorMessageId) {
+        console.log(`🔧 Attempting to repair missing anchor message ID for ${coordinate}`);
+        const repaired = await repairMissingAnchorMessage(guildId, coordinate);
+        if (repaired) {
+          console.log(`✅ Successfully repaired anchor message for ${coordinate}, retrying update`);
+          // Reload data and try again
+          return await updateSingleAnchor(guildId, coordinate);
+        }
+      }
+      
       return true;
     }
     

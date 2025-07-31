@@ -5,7 +5,7 @@ import { loadSafariContent } from './safariManager.js';
  * @param {string} emoji - Emoji string
  * @returns {object|undefined} Valid emoji object or undefined
  */
-function createSafeEmoji(emoji) {
+export function createSafeEmoji(emoji) {
   // Check if emoji is a valid non-empty string
   if (typeof emoji === 'string' && emoji.trim().length > 0) {
     // Clean emoji string by removing potential zero-width joiners and other problematic characters

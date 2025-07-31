@@ -16566,6 +16566,16 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setRequired(true)
             .setMaxLength(80);
 
+          // Action emoji input (optional) - matches Create modal
+          const emojiInput = new TextInputBuilder()
+            .setCustomId('action_emoji')
+            .setLabel('Action Emoji (Optional)')
+            .setPlaceholder('e.g., 🗺️')
+            .setStyle(TextInputStyle.Short)
+            .setValue(action.emoji || '')
+            .setRequired(false)
+            .setMaxLength(10);
+
           const descInput = new TextInputBuilder()
             .setCustomId('action_description')
             .setLabel('Action Description')
@@ -16577,6 +16587,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
           modal.addComponents(
             new ActionRowBuilder().addComponents(nameInput),
+            new ActionRowBuilder().addComponents(emojiInput),
             new ActionRowBuilder().addComponents(descInput)
           );
           
@@ -25551,9 +25562,25 @@ Are you sure you want to continue?`;
         const actionId = custom_id.replace('entity_edit_action_info_modal_', '');
         const guildId = req.body.guild_id;
         const actionName = components[0].components[0].value?.trim();
-        const actionDescription = components[1].components[0].value?.trim() || '';
+        const actionEmoji = components[1].components[0].value?.trim() || '';
+        const actionDescription = components[2].components[0].value?.trim() || '';
         
-        console.log(`📝 Updating action ${actionId} with name: "${actionName}", description: "${actionDescription}"`);
+        console.log(`📝 Updating action ${actionId} with name: "${actionName}", emoji: "${actionEmoji}", description: "${actionDescription}"`);
+        
+        // Validate emoji using enhanced validation (same as Create modal)
+        let validatedEmoji = null;
+        if (actionEmoji) {
+          // Import emoji validation function
+          const { createSafeEmoji } = await import('./safariButtonHelper.js');
+          const emojiResult = createSafeEmoji(actionEmoji);
+          if (emojiResult) {
+            validatedEmoji = emojiResult.name;
+            console.log(`✅ Validated emoji: "${validatedEmoji}"`);
+          } else {
+            console.warn(`⚠️ Invalid emoji provided: "${actionEmoji}", will be ignored`);
+            validatedEmoji = null;
+          }
+        }
         
         // Load and update safari content
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
@@ -25571,6 +25598,7 @@ Are you sure you want to continue?`;
         
         // Update action info
         allSafariContent[guildId].buttons[actionId].name = actionName;
+        allSafariContent[guildId].buttons[actionId].emoji = validatedEmoji; // Store validated emoji (null if invalid/empty)
         allSafariContent[guildId].buttons[actionId].description = actionDescription;
         
         await saveSafariContent(allSafariContent);
