@@ -4,7 +4,7 @@
  * Ensures Discord messages stay in sync with safariContent.json changes
  */
 
-import { loadSafariContent } from './safariManager.js';
+import { loadSafariContent, saveSafariContent } from './safariManager.js';
 import { createAnchorMessageComponents } from './safariButtonHelper.js';
 import { DiscordRequest } from './utils.js';
 
@@ -136,28 +136,39 @@ async function updateSingleAnchor(guildId, coordinate) {
       return true;
     }
     
-    // Get fog map URL from existing message
-    let fogMapUrl = null;
-    try {
-      const { DiscordRequest } = await import('./utils.js');
-      const message = await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
-        method: 'GET'
-      });
-      
-      // Check all components for media gallery
-      for (const container of message.components || []) {
-        for (const component of container.components || []) {
-          if (component.type === 12) { // Media gallery
-            fogMapUrl = component.items?.[0]?.media?.url;
-            if (fogMapUrl) break;
+    // Get fog map URL from stored coordinate data (more reliable than Discord extraction)
+    let fogMapUrl = coordData.fogMapUrl || null;
+    console.log(`🔍 Using stored fog map URL for ${coordinate}: ${fogMapUrl}`);
+    
+    // Fallback: extract from existing message if not stored
+    if (!fogMapUrl) {
+      console.log(`⚠️ No stored fog map URL for ${coordinate}, attempting extraction from Discord message...`);
+      try {
+        const { DiscordRequest } = await import('./utils.js');
+        const message = await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
+          method: 'GET'
+        });
+        
+        // Check all components for media gallery
+        for (const container of message.components || []) {
+          for (const component of container.components || []) {
+            if (component.type === 12) { // Media gallery
+              fogMapUrl = component.items?.[0]?.media?.url;
+              if (fogMapUrl) break;
+            }
           }
+          if (fogMapUrl) break;
         }
-        if (fogMapUrl) break;
+        
+        if (fogMapUrl) {
+          console.log(`🔍 Extracted fog map URL for ${coordinate}: ${fogMapUrl}`);
+          // Store extracted URL for future use
+          coordData.fogMapUrl = fogMapUrl;
+          await saveSafariContent(safariData);
+        }
+      } catch (error) {
+        console.log(`⚠️ Could not retrieve existing message for ${coordinate}: ${error.message}`);
       }
-      
-      console.log(`🔍 Found fog map URL for ${coordinate}: ${fogMapUrl}`);
-    } catch (error) {
-      console.log(`⚠️ Could not retrieve existing message for ${coordinate}: ${error.message}`);
     }
     
     // Create updated components

@@ -104,32 +104,46 @@ export async function updateAnchorMessage(guildId, coordinate, client) {
     const channel = await client.channels.fetch(coordData.channelId);
     const message = await channel.messages.fetch(coordData.anchorMessageId);
     
-    // Get the fog map URL from the existing message
-    let fogMapUrl = null;
+    // Get the fog map URL from stored coordinate data (more reliable than extracting from Discord)
+    let fogMapUrl = coordData.fogMapUrl || null;
+    console.log(`🔍 Using stored fog map URL: ${fogMapUrl}`);
     
-    // Check all components for media gallery
-    for (const container of message.components || []) {
-      for (const component of container.components || []) {
-        if (component.type === 12) { // Media gallery
-          fogMapUrl = component.items?.[0]?.media?.url;
-          if (fogMapUrl) break;
+    // Fallback: if no stored URL, try to extract from existing message
+    if (!fogMapUrl) {
+      console.log(`⚠️ No stored fog map URL, attempting extraction from Discord message...`);
+      
+      for (const container of message.components || []) {
+        for (const component of container.components || []) {
+          if (component.type === 12) { // Media gallery
+            fogMapUrl = component.items?.[0]?.media?.url;
+            if (fogMapUrl) break;
+          }
         }
+        if (fogMapUrl) break;
       }
-      if (fogMapUrl) break;
+      
+      // If extracted successfully, store it for future use
+      if (fogMapUrl) {
+        console.log(`🔍 Extracted fog map URL from message: ${fogMapUrl}`);
+        coordData.fogMapUrl = fogMapUrl;
+        await saveSafariContent(safariData);
+      }
     }
     
-    console.log(`🔍 Found fog map URL: ${fogMapUrl}`);
-    
-    // If no fog map URL found, try to recreate from storage channel
+    // Final fallback: try to recreate from storage channel
     if (!fogMapUrl) {
+      console.log(`⚠️ Attempting fog map recovery from storage channel...`);
       const guild = await client.guilds.fetch(guildId);
       const storageChannel = guild.channels.cache.find(ch => ch.name === 'map-storage' && ch.type === 0);
       if (storageChannel) {
         const messages = await storageChannel.messages.fetch({ limit: 50 });
-        const fogMessage = messages.find(m => m.content.includes(`Fog map for ${coordinate}`));
+        const fogMessage = messages.find(m => m.content.includes(`Fog map for ${coordinate}`) || m.content.includes(`fog map for ${coordinate}`) || m.content.includes(`Updated fog map for ${coordinate}`));
         if (fogMessage && fogMessage.attachments.size > 0) {
           fogMapUrl = fogMessage.attachments.first().url;
           console.log(`🔍 Recovered fog map URL from storage: ${fogMapUrl}`);
+          // Store recovered URL
+          coordData.fogMapUrl = fogMapUrl;
+          await saveSafariContent(safariData);
         }
       }
     }
@@ -234,9 +248,11 @@ export async function repostAnchorMessage(guildId, coordinate, channel) {
   }
   
   try {
-    // Get the fog map URL from the original anchor message if possible
-    let fogMapUrl = null;
-    if (coordData.anchorMessageId) {
+    // Get the fog map URL from stored coordinate data first (more reliable)
+    let fogMapUrl = coordData.fogMapUrl || null;
+    
+    // Fallback: Get from the original anchor message if not stored
+    if (!fogMapUrl && coordData.anchorMessageId) {
       try {
         const originalMessage = await channel.messages.fetch(coordData.anchorMessageId);
         if (originalMessage.components?.[0]?.components?.[0]?.type === 12) {

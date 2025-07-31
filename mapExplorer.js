@@ -145,8 +145,9 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
           body: messagePayload
         });
         
-        // Store anchor message ID
+        // Store anchor message ID and fog map URL
         safariData[guild.id].maps[activeMapId].coordinates[coord].anchorMessageId = anchorMessage.id;
+        safariData[guild.id].maps[activeMapId].coordinates[coord].fogMapUrl = fogMapUrl;
         
         console.log(`✅ Posted anchor message for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
         
@@ -436,7 +437,8 @@ async function createMapGrid(guild, userId) {
         navigation: generateNavigation(coord, gridSize),
         cellType: 'unexplored',
         discovered: false,
-        specialEvents: []
+        specialEvents: [],
+        fogMapUrl: null // Store fog of war map URL persistently
       };
     }
     
@@ -907,17 +909,12 @@ async function updateMapImage(guild, userId, mapUrl) {
         });
         const fogMapUrl = storageMessage.attachments.first()?.url;
         
-        // Get existing anchor message to preserve other content
-        const existingMessage = await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
-          method: 'GET'
-        });
+        // Store fog map URL in coordinate data for persistence
+        safariData[guild.id].maps[activeMapId].coordinates[coord].fogMapUrl = fogMapUrl;
         
-        // Update the Media Gallery component with new fog map URL
-        const updatedComponents = existingMessage.components;
-        if (updatedComponents?.[0]?.components?.[0]?.type === 12) {
-          // Update the first media gallery (fog of war map)
-          updatedComponents[0].components[0].items[0].media.url = fogMapUrl;
-        }
+        // Rebuild anchor message components using stored data
+        const { createAnchorMessageComponents } = await import('./safariButtonHelper.js');
+        const updatedComponents = await createAnchorMessageComponents(coordData, guild.id, coord, fogMapUrl);
         
         // Update the anchor message
         await DiscordRequest(`channels/${coordData.channelId}/messages/${coordData.anchorMessageId}`, {
