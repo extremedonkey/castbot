@@ -18063,6 +18063,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       }
       
     } else if (custom_id === 'map_update') {
+      console.log('🎯 DEBUG: map_update button clicked!');
       // Handle Map Update - Show modal for Discord image URL
       return ButtonHandlerFactory.create({
         id: 'map_update',
