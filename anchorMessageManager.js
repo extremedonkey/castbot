@@ -11,9 +11,11 @@ import { DiscordRequest } from './utils.js';
 // Update queue to batch changes and avoid rate limits
 const updateQueue = new Map(); // Map<guildId, Set<coordinate>>
 const updateErrors = new Map(); // Track failed updates for retry
+const retryCounters = new Map(); // Track retry attempts per error to prevent endless loops
 
 // Batch update interval (5 seconds)
 const BATCH_INTERVAL = 5000;
+const MAX_RETRY_ATTEMPTS = 3; // Maximum retry attempts before giving up
 let batchTimer = null;
 
 /**
@@ -113,7 +115,20 @@ async function processBatchUpdates() {
     const retries = new Map(updateErrors);
     updateErrors.clear();
     
-    for (const [key, { guildId, coordinate }] of retries.entries()) {
+    for (const [key, { guildId, coordinate, error }] of retries.entries()) {
+      // Check retry counter to prevent endless loops
+      const currentRetries = retryCounters.get(key) || 0;
+      
+      if (currentRetries >= MAX_RETRY_ATTEMPTS) {
+        console.error(`❌ Max retry attempts (${MAX_RETRY_ATTEMPTS}) reached for ${coordinate} in guild ${guildId}. Giving up. Last error: ${error}`);
+        retryCounters.delete(key); // Clean up retry counter
+        continue;
+      }
+      
+      // Increment retry counter
+      retryCounters.set(key, currentRetries + 1);
+      console.log(`🔄 Retry attempt ${currentRetries + 1}/${MAX_RETRY_ATTEMPTS} for ${coordinate}`);
+      
       queueAnchorUpdate(guildId, coordinate, { reason: 'retry' });
     }
   }
@@ -204,14 +219,36 @@ async function updateSingleAnchor(guildId, coordinate) {
     }
     
     console.log(`✅ Updated anchor message for ${coordinate}`);
+    
+    // Clear retry counter on successful update
+    const errorKey = `${guildId}_${coordinate}`;
+    retryCounters.delete(errorKey);
+    
     return true;
     
   } catch (error) {
     console.error(`❌ Failed to update anchor for ${coordinate}:`, error.message);
     
-    // Track error for retry
-    const errorKey = `${guildId}_${coordinate}`;
-    updateErrors.set(errorKey, { guildId, coordinate, error: error.message });
+    // Handle specific Discord API errors
+    if (error.message?.includes('Invalid Form Body') && error.message?.includes('BUTTON_COMPONENT_INVALID_EMOJI')) {
+      console.error(`❌ Invalid emoji detected in buttons for ${coordinate}. This will not be retried.`);
+      // Don't retry emoji validation errors as they will continue to fail
+      return false;
+    }
+    
+    if (error.message?.includes('Invalid Form Body')) {
+      console.error(`❌ Invalid form body for ${coordinate}. Discord rejected the message format.`);
+      // Log additional details about the error if available
+      if (error.errors) {
+        console.error(`❌ Discord API error details:`, JSON.stringify(error.errors, null, 2));
+      }
+    }
+    
+    // Track error for retry (except for emoji validation errors)
+    if (!error.message?.includes('BUTTON_COMPONENT_INVALID_EMOJI')) {
+      const errorKey = `${guildId}_${coordinate}`;
+      updateErrors.set(errorKey, { guildId, coordinate, error: error.message });
+    }
     
     return false;
   }

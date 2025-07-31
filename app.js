@@ -12875,11 +12875,13 @@ Your server is now ready for Tycoons gameplay!`;
           const actionId = parts.slice(0, -1).join('_');
           
           console.log(`📝 Editing action ${actionIndex} from button ${actionId}`);
+          console.log(`🔍 DEBUG: custom_id="${context.customId}", parts=[${parts.join(', ')}], actionId="${actionId}", actionIndex=${actionIndex}`);
           
           // Load button and get action
           const { loadSafariContent } = await import('./safariManager.js');
           const allSafariContent = await loadSafariContent();
           const guildData = allSafariContent[context.guildId] || {};
+          console.log(`🔍 DEBUG: Available buttons in guild: [${Object.keys(guildData.buttons || {}).join(', ')}]`);
           const button = guildData.buttons?.[actionId];
           
           if (!button) {
