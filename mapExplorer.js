@@ -86,10 +86,24 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
       }
       
       try {
-        // Get the channel
-        const channel = await guild.channels.fetch(channelId);
+        // Get the channel with retry logic for newly created channels
+        let channel;
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            channel = await guild.channels.fetch(channelId);
+            if (channel) break;
+          } catch (fetchError) {
+            console.log(`⚠️ Retry ${4 - retries}/3 - Could not fetch channel for ${coord}: ${fetchError.message}`);
+            retries--;
+            if (retries > 0) {
+              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+            }
+          }
+        }
+        
         if (!channel) {
-          console.log(`⚠️ Could not fetch channel for ${coord}`);
+          console.log(`❌ Failed to fetch channel for ${coord} after 3 retries`);
           continue;
         }
         
@@ -145,10 +159,23 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
           body: messagePayload
         });
         
+        // Check if anchor message was created successfully
+        if (!anchorMessage || !anchorMessage.id) {
+          console.error(`❌ Failed to create anchor message for ${coord} - response:`, anchorMessage);
+          throw new Error('Anchor message creation failed - no message ID returned');
+        }
+        
         // Store anchor message ID and fog map URL
         safariData[guild.id].maps[activeMapId].coordinates[coord].anchorMessageId = anchorMessage.id;
         safariData[guild.id].maps[activeMapId].coordinates[coord].fogMapUrl = fogMapUrl;
         console.log(`💾 map_create: Stored fog map URL for ${coord}: ${fogMapUrl}`);
+        console.log(`💾 map_create: Stored anchor message ID for ${coord}: ${anchorMessage.id}`);
+        
+        // Save incrementally to prevent data loss if later coordinates fail
+        if ((i + 1) % 5 === 0 || i === coordinates.length - 1) {
+          await saveSafariContent(safariData);
+          console.log(`💾 Saved safari data after processing ${i + 1} coordinates`);
+        }
         
         console.log(`✅ Posted anchor message for ${coord} to #${channel.name} (${i + 1}/${coordinates.length})`);
         
@@ -160,6 +187,17 @@ async function postFogOfWarMapsToChannels(guild, fullMapPath, gridSystem, channe
         
       } catch (error) {
         console.error(`❌ Failed to post fog map for ${coord}:`, error);
+        
+        // Even if anchor message creation fails, try to at least save the fog map URL
+        if (fogMapUrl && coordData) {
+          console.log(`🔧 Attempting to save fog map URL despite anchor message failure for ${coord}`);
+          safariData[guild.id].maps[activeMapId].coordinates[coord].fogMapUrl = fogMapUrl;
+          // Note: anchorMessageId will remain null and needs to be repaired later
+          
+          // Save data immediately to prevent loss
+          await saveSafariContent(safariData);
+          console.log(`💾 Saved partial data for ${coord} with fog map URL but no anchor message ID`);
+        }
       }
     }
     
