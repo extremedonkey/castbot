@@ -16202,9 +16202,34 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               });
               
               if (storeOptions.length === 0) {
+                // Use Components V2 pattern for error message
+                const errorContainer = {
+                  type: 17, // Container
+                  accent_color: 0xe74c3c, // Red accent
+                  components: [
+                    {
+                      type: 10, // Text Display
+                      content: '## ❌ No Stores Available\n\nYou need to create stores first before you can add them to map locations.\n\nUse the **Safari Menu** → **Store Management** to create stores.'
+                    },
+                    { type: 14 }, // Separator
+                    {
+                      type: 1, // Action Row
+                      components: [
+                        {
+                          type: 2, // Button
+                          custom_id: 'dismiss_message',
+                          label: 'Dismiss',
+                          style: 2, // Secondary
+                          emoji: { name: '✖️' }
+                        }
+                      ]
+                    }
+                  ]
+                };
+                
                 return {
-                  content: '❌ No stores available. Create stores first using Safari menu.',
-                  ephemeral: true
+                  flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + ephemeral
+                  components: [errorContainer]
                 };
               }
               
