@@ -11803,9 +11803,10 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Handle search selection
           if (followUpButtonId === 'search_follow_up_actions') {
+            // Use existing custom_action_search_modal pattern with follow-up context
             const modalCustomId = actionIndex !== undefined ? 
-              `follow_up_search_modal_${buttonId}_${actionIndex}` : 
-              `follow_up_search_modal_${buttonId}`;
+              `custom_action_search_modal_followup_${buttonId}_${actionIndex}` : 
+              `custom_action_search_modal_followup_${buttonId}`;
             
             return {
               type: InteractionResponseType.MODAL,
@@ -21158,55 +21159,6 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
       
-    } else if (custom_id.startsWith('follow_up_search_again_')) {
-      // Handle search again for follow-up actions
-      return ButtonHandlerFactory.create({
-        id: 'follow_up_search_again',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          console.log(`🔍 DEBUG: Search again clicked for follow-up actions`);
-          
-          // Parse buttonId and actionIndex from custom_id
-          const parts = context.customId.replace('follow_up_search_again_', '').split('_');
-          let buttonId, actionIndex;
-          
-          // Check if last part is a number (actionIndex)
-          const lastPart = parts[parts.length - 1];
-          if (!isNaN(parseInt(lastPart))) {
-            actionIndex = parseInt(lastPart);
-            buttonId = parts.slice(0, -1).join('_');
-          } else {
-            buttonId = parts.join('_');
-          }
-          
-          const modalCustomId = actionIndex !== undefined ? 
-            `follow_up_search_modal_${buttonId}_${actionIndex}` : 
-            `follow_up_search_modal_${buttonId}`;
-          
-          // Show search modal
-          return {
-            type: InteractionResponseType.MODAL,
-            data: {
-              title: 'Search Follow-up Actions',
-              custom_id: modalCustomId,
-              components: [{
-                type: 1, // ActionRow
-                components: [{
-                  type: 4, // Text Input
-                  custom_id: 'search_term',
-                  label: 'Search Term',
-                  style: 1, // Short
-                  placeholder: 'Enter action name or description...',
-                  required: true,
-                  max_length: 50
-                }]
-              }]
-            }
-          };
-        }
-      })(req, res, client);
-      
     } else if (custom_id === 'map_admin_user_select') {
       // Handle user selection for map admin
       console.log(`🛡️ START: map_admin_user_select handler`);
@@ -27206,15 +27158,32 @@ Are you sure you want to continue?`;
       console.log(`🔍 DEBUG: Custom action search modal - custom_id: ${custom_id}`);
       
       try {
-        // Parse coordinate and mapId if present
+        // Parse context: could be map context or follow-up context
         let coordinate = null;
         let mapId = null;
+        let isFollowUpContext = false;
+        let buttonId = null;
+        let actionIndex = null;
         
         if (custom_id !== 'custom_action_search_modal_global') {
-          // Parse: custom_action_search_modal_{coordinate}_{mapId}
           const parts = custom_id.replace('custom_action_search_modal_', '').split('_');
-          coordinate = parts[0];
-          mapId = parts[1];
+          
+          // Check if this is follow-up context: custom_action_search_modal_followup_{buttonId}_{actionIndex}
+          if (parts[0] === 'followup') {
+            isFollowUpContext = true;
+            buttonId = parts.slice(1, -1).join('_'); // Handle button IDs with underscores
+            const lastPart = parts[parts.length - 1];
+            if (!isNaN(parseInt(lastPart))) {
+              actionIndex = parseInt(lastPart);
+            } else {
+              // No actionIndex, so buttonId includes the last part
+              buttonId = parts.slice(1).join('_');
+            }
+          } else {
+            // Original map context: custom_action_search_modal_{coordinate}_{mapId}
+            coordinate = parts[0];
+            mapId = parts[1];
+          }
         }
         
         // Get search term from modal
@@ -27230,7 +27199,7 @@ Are you sure you want to continue?`;
           });
         }
         
-        console.log(`🔍 DEBUG: Searching custom actions for term: "${searchTerm}"`);
+        console.log(`🔍 DEBUG: Searching ${isFollowUpContext ? 'follow-up' : 'custom'} actions for term: "${searchTerm}"`);
         
         // Import required modules
         const { loadSafariContent } = await import('./safariManager.js');
@@ -27244,6 +27213,11 @@ Are you sure you want to continue?`;
         // Search through actions
         const searchResults = Object.entries(allActions)
           .filter(([actionId, action]) => {
+            // For follow-up context, exclude the current button
+            if (isFollowUpContext && actionId === buttonId) {
+              return false;
+            }
+            
             const searchableText = [
               action.name?.toLowerCase() || '',
               action.label?.toLowerCase() || '',
@@ -27254,13 +27228,13 @@ Are you sure you want to continue?`;
           })
           .map(([actionId, action]) => ({ actionId, action }));
         
-        console.log(`🔍 DEBUG: Found ${searchResults.length} matching custom actions`);
+        console.log(`🔍 DEBUG: Found ${searchResults.length} matching ${isFollowUpContext ? 'follow-up' : 'custom'} actions`);
         
         if (searchResults.length === 0) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: `❌ No custom actions found matching "${searchTerm}".`,
+              content: `❌ No ${isFollowUpContext ? 'follow-up' : 'custom'} actions found matching "${searchTerm}".`,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -27311,9 +27285,18 @@ Are you sure you want to continue?`;
         }
         
         // Build select menu with search results
-        const customId = coordinate && mapId ? 
-          `entity_custom_action_list_${coordinate}_${mapId}` : 
-          'entity_custom_action_list_global';
+        let customId;
+        if (isFollowUpContext) {
+          // For follow-up context, route back to follow-up selector
+          customId = actionIndex !== undefined ? 
+            `safari_follow_up_select_${buttonId}_${actionIndex}` : 
+            `safari_follow_up_select_${buttonId}`;
+        } else {
+          // For map context, route back to custom action list
+          customId = coordinate && mapId ? 
+            `entity_custom_action_list_${coordinate}_${mapId}` : 
+            'entity_custom_action_list_global';
+        }
         const selectMenu = new StringSelectMenuBuilder()
           .setCustomId(customId)
           .setPlaceholder(`${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchTerm}"`)
@@ -27321,11 +27304,19 @@ Are you sure you want to continue?`;
           .setMaxValues(1);
         
         // Add back option
-        selectMenu.addOptions({
-          label: '🔙 Back to all',
-          value: 'back_to_all',
-          description: 'Return to full action list'
-        });
+        if (isFollowUpContext) {
+          selectMenu.addOptions({
+            label: '🔙 Back to all',
+            value: 'back_to_all_follow_up',
+            description: 'Return to full follow-up action list'
+          });
+        } else {
+          selectMenu.addOptions({
+            label: '🔙 Back to all',
+            value: 'back_to_all',
+            description: 'Return to full action list'
+          });
+        }
         
         // Add search results (limited to 23 to leave room for back option)
         for (const { actionId, action } of searchResults.slice(0, 23)) {
@@ -27375,196 +27366,6 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error searching custom actions. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-      
-    } else if (custom_id.startsWith('follow_up_search_modal_')) {
-      // Handle follow-up action search modal submission
-      console.log(`🔍 DEBUG: Follow-up action search modal - custom_id: ${custom_id}`);
-      
-      try {
-        // Parse buttonId and actionIndex from custom_id
-        const parts = custom_id.replace('follow_up_search_modal_', '').split('_');
-        let buttonId, actionIndex;
-        
-        // Check if last part is a number (actionIndex)
-        const lastPart = parts[parts.length - 1];
-        if (!isNaN(parseInt(lastPart))) {
-          actionIndex = parseInt(lastPart);
-          buttonId = parts.slice(0, -1).join('_');
-        } else {
-          buttonId = parts.join('_');
-        }
-        
-        // Get search term from modal
-        const searchTerm = data.components[0]?.components[0]?.value?.toLowerCase().trim();
-        
-        if (!searchTerm) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Please enter a search term.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        console.log(`🔍 DEBUG: Searching follow-up actions for term: "${searchTerm}"`);
-        
-        // Import required modules
-        const { loadSafariContent } = await import('./safariManager.js');
-        
-        // Load safari content
-        const allSafariContent = await loadSafariContent();
-        const guildData = allSafariContent[req.body.guild_id] || {};
-        const allButtons = guildData.buttons || {};
-        
-        // Get current button
-        const currentButton = allButtons[buttonId];
-        if (!currentButton) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Current button not found.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Search through buttons (excluding current one)
-        const searchResults = Object.entries(allButtons)
-          .filter(([id, button]) => {
-            // Exclude current button
-            if (id === buttonId) return false;
-            
-            const searchableText = [
-              button.name?.toLowerCase() || '',
-              button.label?.toLowerCase() || '',
-              button.description?.toLowerCase() || '',
-              id.toLowerCase()
-            ].join(' ');
-            return searchableText.includes(searchTerm);
-          })
-          .map(([id, button]) => ({ id, button }));
-        
-        console.log(`🔍 DEBUG: Found ${searchResults.length} matching follow-up actions`);
-        
-        if (searchResults.length === 0) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `❌ No follow-up actions found matching "${searchTerm}".`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Check if too many results
-        if (searchResults.length >= 24) {
-          console.log(`🔍 DEBUG: Too many results (${searchResults.length}), asking user to refine search`);
-          
-          // Create Components V2 "too many results" message
-          const tooManyContainer = {
-            type: 17, // Container
-            accent_color: 0xff6b6b, // Red accent for warning
-            components: [
-              {
-                type: 10, // Text Display
-                content: `## 🔍 Too Many Search Results\n\nFound **${searchResults.length}** actions matching "${searchTerm}"\n\n⚠️ Please make your search more specific to see results (max 24 results).`
-              },
-              { type: 14 }, // Separator
-              {
-                type: 1, // Action Row
-                components: [
-                  {
-                    type: 2, // Button
-                    style: 1, // Primary
-                    label: '🔍 Search Again',
-                    custom_id: actionIndex !== undefined ? 
-                      `follow_up_search_again_${buttonId}_${actionIndex}` : 
-                      `follow_up_search_again_${buttonId}`,
-                    emoji: { name: '🔍' }
-                  },
-                  {
-                    type: 2, // Button
-                    style: 2, // Secondary
-                    label: '⬅️ Back to Action',
-                    custom_id: `safari_config_${buttonId}_${actionIndex || 0}`,
-                    emoji: { name: '⬅️' }
-                  }
-                ]
-              }
-            ]
-          };
-          
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              components: [tooManyContainer],
-              flags: (1 << 15) // IS_COMPONENTS_V2
-            }
-          });
-        }
-        
-        // Build response with search results
-        const customId = actionIndex !== undefined ? 
-          `safari_follow_up_select_${buttonId}_${actionIndex}` : 
-          `safari_follow_up_select_${buttonId}`;
-        
-        const options = [{
-          label: '🔙 Back to all',
-          value: 'back_to_all_follow_up',
-          description: 'Return to full action list'
-        }];
-        
-        // Add search results (limited to 23 to leave room for back option)
-        searchResults.slice(0, 23).forEach(({ id, button }) => {
-          options.push({
-            label: (button.name || button.label || id).substring(0, 100),
-            value: id,
-            description: (`ID: ${id}` + (button.actions?.length ? ` • ${button.actions.length} actions` : '')).substring(0, 100),
-            emoji: { name: '🔗' }
-          });
-        });
-        
-        // Create UI with Components V2
-        const uiComponents = [{
-          type: 17, // Container
-          accent_color: 0x8B5CF6, // Purple accent for follow-up actions
-          components: [
-            {
-              type: 10, // Text Display
-              content: `## Search Results: Follow-up Actions\n\nFound ${searchResults.length} matching "${searchTerm}" for **${currentButton.name || buttonId}**`
-            },
-            { type: 14 }, // Separator
-            {
-              type: 1, // Action Row
-              components: [{
-                type: 3, // String Select
-                custom_id: customId,
-                placeholder: `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchTerm}"`,
-                options: options
-              }]
-            }
-          ]
-        }];
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            components: uiComponents,
-            flags: (1 << 15) // IS_COMPONENTS_V2
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error handling follow-up action search:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error searching follow-up actions. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
