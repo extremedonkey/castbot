@@ -464,3 +464,58 @@ export async function cleanupOldReactionMappings(guildId) {
   
   return cleanedCount;
 }
+
+// Clean up missing roles from both timezones and pronouns data
+export async function cleanupMissingRoles(guildId, guild) {
+  const data = await loadPlayerData();
+  if (!data[guildId]) return { cleaned: 0, errors: [] };
+  
+  let cleanedCount = 0;
+  const errors = [];
+  
+  // Clean up timezone roles
+  if (data[guildId].timezones) {
+    const timezoneRoleIds = Object.keys(data[guildId].timezones);
+    for (const roleId of timezoneRoleIds) {
+      try {
+        const discordRole = guild.roles.cache.get(roleId);
+        if (!discordRole) {
+          console.log(`🧹 CLEANUP: Removing missing timezone role ${roleId} from guild ${guildId}`);
+          delete data[guildId].timezones[roleId];
+          cleanedCount++;
+        }
+      } catch (error) {
+        console.log(`⚠️ WARNING: Error checking timezone role ${roleId}:`, error.message);
+        errors.push(`timezone role ${roleId}: ${error.message}`);
+      }
+    }
+  }
+  
+  // Clean up pronoun roles
+  if (data[guildId].pronounRoleIDs && Array.isArray(data[guildId].pronounRoleIDs)) {
+    const validPronounRoles = [];
+    for (const roleId of data[guildId].pronounRoleIDs) {
+      try {
+        const discordRole = guild.roles.cache.get(roleId);
+        if (discordRole) {
+          validPronounRoles.push(roleId);
+        } else {
+          console.log(`🧹 CLEANUP: Removing missing pronoun role ${roleId} from guild ${guildId}`);
+          cleanedCount++;
+        }
+      } catch (error) {
+        console.log(`⚠️ WARNING: Error checking pronoun role ${roleId}:`, error.message);
+        errors.push(`pronoun role ${roleId}: ${error.message}`);
+      }
+    }
+    data[guildId].pronounRoleIDs = validPronounRoles;
+  }
+  
+  // Save changes if any cleanup occurred
+  if (cleanedCount > 0) {
+    await savePlayerData(data);
+    console.log(`🧹 CLEANUP: Cleaned up ${cleanedCount} missing roles in guild ${guildId}`);
+  }
+  
+  return { cleaned: cleanedCount, errors };
+}

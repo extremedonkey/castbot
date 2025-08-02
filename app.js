@@ -13452,6 +13452,13 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
 
+        // Clean up any missing roles first
+        const { cleanupMissingRoles } = await import('./storage.js');
+        const cleanupResult = await cleanupMissingRoles(guildId, guild);
+        if (cleanupResult.cleaned > 0) {
+          console.log(`🧹 CLEANUP: Cleaned up ${cleanupResult.cleaned} missing roles before creating timezone reaction`);
+        }
+
         // Get timezone roles from storage
         const timezones = await getGuildTimezones(guildId);
         if (!Object.keys(timezones).length) {
@@ -13596,7 +13603,15 @@ Your server is now ready for Tycoons gameplay!`;
         const token = req.body.token;
         const applicationId = req.body.application_id;
         
-        // Load guild data for the enhanced function
+        // Clean up any missing roles first
+        const guild = await client.guilds.fetch(guildId);
+        const { cleanupMissingRoles } = await import('./storage.js');
+        const cleanupResult = await cleanupMissingRoles(guildId, guild);
+        if (cleanupResult.cleaned > 0) {
+          console.log(`🧹 CLEANUP: Cleaned up ${cleanupResult.cleaned} missing roles before creating pronoun reaction`);
+        }
+
+        // Load guild data (after potential cleanup)
         const playerData = await loadPlayerData();
         const guildData = { 
           ...playerData[guildId], 
