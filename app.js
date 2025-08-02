@@ -17918,9 +17918,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             await saveSafariContent(allSafariContent);
             console.log(`🔍 DEBUG: remove_coord - safari content saved`);
             
-            // Queue anchor message updates
+            // Queue anchor message updates - update both the removed coordinate AND remaining coordinates
             try {
-              const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+              const { queueActionCoordinateUpdates, queueAnchorUpdate } = await import('./anchorMessageManager.js');
+              // Update the removed coordinate (won't be in action.coordinates anymore)
+              queueAnchorUpdate(context.guildId, coordinate, { reason: 'action_removed', immediate: false });
+              // Update remaining coordinates (if any)
               await queueActionCoordinateUpdates(context.guildId, actionId, 'coordinate_removed');
             } catch (error) {
               console.error('Error queueing anchor updates:', error);
