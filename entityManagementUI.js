@@ -730,11 +730,36 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
         }
     }
     
+    // IF searching: Add search results first (items matching search that aren't stocked)
+    if (searchTerm) {
+        const searchResults = Object.entries(items)
+            .filter(([id]) => !currentItemIds.has(id))
+            .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
+            
+        // Calculate how many search results we can show
+        const maxSearchResults = Math.min(searchResults.length, 24 - options.length - currentItemIds.size);
+        
+        searchResults.slice(0, maxSearchResults).forEach(([id, item]) => {
+            const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
+                `${item.emoji || '📦'} ${item.name}`, 
+                '📦'
+            );
+            
+            options.push({
+                label: `🆕 ${cleanText}`.substring(0, 100),
+                value: id,
+                description: `Search result • Price: ${item.basePrice || 0}`,
+                emoji: parsedEmoji,
+                default: false // Not selected
+            });
+        });
+    }
+    
     // CRITICAL: Always include ALL currently stocked items, even if they don't match search
     // This prevents existing items from being cleared when searching
     const stockedItemsToShow = [];
     
-    // First, add all existing store items regardless of search
+    // Add all existing store items regardless of search
     currentItemIds.forEach(itemId => {
         const item = (allItems || items)[itemId];
         if (item) {
@@ -760,41 +785,30 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
         });
     });
     
-    // Add separator between stocked and available items if we have search results
-    if (searchTerm && searchResultsCount > 0) {
-        // Add visual separator using emoji in description
-        const separatorAdded = options.length > 1; // Only if we have stocked items
-    }
-    
-    // Then add search results or available items at the top of available section
-    const availableItems = Object.entries(items)
-        .filter(([id]) => !currentItemIds.has(id))
-        .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
+    // IF NOT searching: Add other available items at the end
+    if (!searchTerm) {
+        const availableItems = Object.entries(items)
+            .filter(([id]) => !currentItemIds.has(id))
+            .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
+            
+        // Calculate how many we can add
+        const remainingSlots = 24 - options.length;
         
-    // Calculate how many we can add
-    const remainingSlots = 24 - options.length; // Leave room for search and existing items
-    
-    availableItems.slice(0, remainingSlots).forEach(([id, item]) => {
-        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
-            `${item.emoji || '📦'} ${item.name}`, 
-            '📦'
-        );
-        
-        // Visual indicator for search results
-        const isSearchResult = searchTerm;
-        const label = isSearchResult ? `🆕 ${cleanText}` : cleanText; // 🆕 for search results
-        const description = isSearchResult ? 
-            `Search result • Price: ${item.basePrice || 0}` : 
-            `Available • Price: ${item.basePrice || 0}`;
-        
-        options.push({
-            label: label.substring(0, 100),
-            value: id,
-            description: description,
-            emoji: parsedEmoji,
-            default: false // Not selected
+        availableItems.slice(0, remainingSlots).forEach(([id, item]) => {
+            const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
+                `${item.emoji || '📦'} ${item.name}`, 
+                '📦'
+            );
+            
+            options.push({
+                label: cleanText.substring(0, 100),
+                value: id,
+                description: `Available • Price: ${item.basePrice || 0}`,
+                emoji: parsedEmoji,
+                default: false // Not selected
+            });
         });
-    });
+    }
     
     return {
         type: 1, // ActionRow
