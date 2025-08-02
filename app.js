@@ -26918,11 +26918,14 @@ client.on('messageReactionAdd', async (reaction, user) => {
       // Remove the user's reaction to indicate failure
       await reaction.users.remove(user.id);
       
-      try {
-        // Try to DM the user about the error
-        await user.send(`Could not assign role in ${guild.name}: ${permCheck.reason}. Please contact a server admin to fix the bot's role position.`);
-      } catch (dmError) {
-        console.log('Could not DM user about role assignment failure');
+      // Only send DM for actual errors, not for deleted roles (silent handling)
+      if (!permCheck.reason.includes('Role not found (may have been deleted)')) {
+        try {
+          // Try to DM the user about the error
+          await user.send(`Could not assign role in ${guild.name}: ${permCheck.reason}. Please contact a server admin to fix the bot's role position.`);
+        } catch (dmError) {
+          console.log('Could not DM user about role assignment failure');
+        }
       }
       
       // Also log the error
