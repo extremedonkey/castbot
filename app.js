@@ -26627,10 +26627,54 @@ Are you sure you want to continue?`;
           });
         }
         
-        // Sort results and limit to 25 for Discord select menu
+        // Check if too many results (need to leave room for "Back to all" option = 24 max entity results)
+        if (entities.length >= 24) {
+          console.log(`🔍 DEBUG: Too many results (${entities.length}), asking user to refine search`);
+          
+          // Create Components V2 "too many results" message
+          const tooManyContainer = {
+            type: 17, // Container
+            accent_color: 0xff6b6b, // Red accent for warning
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 🔍 Too Many Search Results\n\nFound **${entities.length}** ${entityType}s matching "${searchTerm}"\n\n⚠️ Please make your search more specific to see results (max 24 results).`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    style: 1, // Primary
+                    label: '🔍 Search Again', 
+                    custom_id: `entity_search_again_${entityType}`,
+                    emoji: { name: '🔍' }
+                  },
+                  {
+                    type: 2, // Button
+                    style: 2, // Secondary
+                    label: '🏠 Back to Menu',
+                    custom_id: `safari_manage_${entityType === 'item' ? 'items' : entityType === 'store' ? 'stores' : entityType === 'safari_button' ? 'safari_buttons' : 'items'}`
+                  }
+                ]
+              }
+            ]
+          };
+          
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              components: [tooManyContainer],
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Sort results and limit to 25 for Discord select menu (should be under 24 now)
         entities = entities
           .sort((a, b) => a.label.localeCompare(b.label))
-          .slice(0, 25);
+          .slice(0, 24); // Take max 24 to leave room for "Back to all"
         
         // Create select menu with search results
         const options = entities.map(entity => ({
