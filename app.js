@@ -9454,7 +9454,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_store_items_select') {
-      // Handle store selection for items management
+      // Handle store selection for items management - Using new multi-select UI
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -9468,9 +9468,10 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
+        const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
+        
         const safariData = await loadSafariContent();
         const store = safariData[guildId]?.stores?.[selectedStoreId];
-        const allItems = safariData[guildId]?.items || {};
         
         if (!store) {
           return res.send({
@@ -9487,138 +9488,17 @@ Your server is now ready for Tycoons gameplay!`;
           store.items = [];
         }
         
-        // Get items currently in store and available items
-        const currentItems = store.items || [];
-        const currentItemIds = new Set(currentItems.map(item => item.itemId || item));
-        const availableItems = Object.entries(allItems).filter(([itemId]) => !currentItemIds.has(itemId));
-        
-        // Build simplified interface to avoid Discord component limits and timeout
-        let currentItemsList = '';
-        currentItems.forEach((storeItem, index) => {
-          const itemId = storeItem.itemId || storeItem;
-          const item = allItems[itemId];
-          if (item) {
-            const price = storeItem.price || item.basePrice || 0;
-            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - 💰 ${price} coins\n`;
-          }
+        // Create the new multi-select UI
+        const uiResponse = await createStoreItemManagementUI({
+          storeId: selectedStoreId,
+          store: store,
+          guildId: guildId,
+          searchTerm: ''
         });
-        
-        let availableItemsList = '';
-        availableItems.slice(0, 15).forEach(([itemId, item], index) => {
-          availableItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - 💰 ${item.basePrice || 0} coins\n`;
-        });
-        
-        if (availableItems.length > 15) {
-          availableItemsList += `\n*...and ${availableItems.length - 15} more items*`;
-        }
-        
-        // Create action buttons (Discord limit: ~25-30 buttons max due to 40 component limit)
-        const actionButtons = [];
-        
-        // Remove buttons for current items (show all current items)
-        currentItems.forEach((storeItem, index) => {
-          const itemId = storeItem.itemId || storeItem;
-          const item = allItems[itemId];
-          if (item) {
-            actionButtons.push({
-              type: 2, // Button
-              custom_id: `safari_store_remove_item_${selectedStoreId}::${itemId}`,
-              label: `Remove ${item.name}`.slice(0, 80),
-              style: 4,
-              emoji: { name: '🗑️' }
-            });
-          }
-        });
-        
-        // Add buttons for available items (show more available items)
-        // Conservative limit: 20 total buttons to stay well under 40 component limit
-        const maxTotalButtons = 20;
-        const remainingSlots = Math.max(0, maxTotalButtons - actionButtons.length);
-        availableItems.slice(0, remainingSlots).forEach(([itemId, item]) => {
-          actionButtons.push({
-            type: 2, // Button
-            custom_id: `safari_store_add_item_${selectedStoreId}::${itemId}`,
-            label: `Add ${item.name}`.slice(0, 80),
-            style: 3,
-            emoji: { name: '➕' }
-          });
-        });
-        
-        // Split buttons into rows (max 5 per row)
-        const buttonRows = [];
-        for (let i = 0; i < actionButtons.length; i += 5) {
-          const rowButtons = actionButtons.slice(i, i + 5);
-          if (rowButtons.length > 0) {
-            buttonRows.push({
-              type: 1, // Action Row
-              components: rowButtons
-            });
-          }
-        }
-        
-        const containerComponents = [
-          {
-            type: 10, // Text Display
-            content: `## 🏪 ${store.emoji || '🏪'} ${store.name} - Store Management\n\n**Store Items:** ${currentItems.length} • **Available to Add:** ${availableItems.length}`
-          },
-          {
-            type: 10, // Text Display
-            content: `### 🛍️ Current Items in Store\n${currentItemsList || '*No items in this store yet.*'}`
-          },
-          {
-            type: 10, // Text Display
-            content: `### ➕ Available Items to Add\n${availableItemsList || '*All items are already in this store.*'}`
-          },
-          ...buttonRows,
-          {
-            type: 14 // Separator
-          },
-          {
-            type: 1, // Action Row
-            components: [
-              {
-                type: 2, // Button
-                custom_id: 'safari_store_manage_items',
-                label: '⬅ Back to Store Selection',
-                style: 2
-              },
-              {
-                type: 2, // Button
-                custom_id: `safari_store_edit_${selectedStoreId}`,
-                label: 'Edit Store',
-                style: 2, // Secondary/Grey style
-                emoji: { name: '✏️' }
-              },
-              {
-                type: 2, // Button
-                custom_id: `safari_store_open_${selectedStoreId}`,
-                label: 'Open Store',
-                style: 1,
-                emoji: { name: '🏪' }
-              },
-              {
-                type: 2, // Button
-                custom_id: `safari_store_delete_${selectedStoreId}`,
-                label: 'Delete Store',
-                style: 4, // Red/Destructive style
-                emoji: { name: '🗑️' }
-              }
-            ]
-          }
-        ];
-        
-        const container = {
-          type: 17, // Container
-          accent_color: 0x3498db, // Blue
-          components: containerComponents
-        };
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [container]
-          }
+          data: uiResponse
         });
         
       } catch (error) {
@@ -9627,6 +9507,131 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error loading store items.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('store_items_multiselect_')) {
+      // Handle multi-select store item changes
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const data = req.body.data;
+        const selectedValues = data.values || [];
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage store items.')) return;
+        
+        // Extract store ID from custom_id
+        const storeId = custom_id.replace('store_items_multiselect_', '');
+        
+        console.log(`📦 DEBUG: Multi-select update for store ${storeId} - ${selectedValues.length} items selected`);
+        
+        // Handle search selection separately
+        if (selectedValues.includes('search_entities')) {
+          // Show search modal
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+          
+          const modal = new ModalBuilder()
+            .setCustomId(`store_item_search_modal_${storeId}`)
+            .setTitle('Search Items');
+          
+          const searchInput = new TextInputBuilder()
+            .setCustomId('search_term')
+            .setLabel('Search Term')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder('Enter item name to search...')
+            .setRequired(true)
+            .setMaxLength(50);
+          
+          modal.addComponents(new ActionRowBuilder().addComponents(searchInput));
+          
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          });
+        }
+        
+        // Import required functions
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
+        
+        const safariData = await loadSafariContent();
+        const store = safariData[guildId]?.stores?.[storeId];
+        
+        if (!store) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Store not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Calculate changes
+        const currentItems = store.items || [];
+        const currentItemIds = new Set(currentItems.map(item => item.itemId || item));
+        const newItemIds = new Set(selectedValues);
+        
+        // Items to add (in new selection but not in current)
+        const itemsToAdd = selectedValues.filter(id => !currentItemIds.has(id));
+        
+        // Items to remove (in current but not in new selection)
+        const itemsToRemove = currentItems
+          .map(item => item.itemId || item)
+          .filter(id => !newItemIds.has(id));
+        
+        console.log(`📦 DEBUG: Adding ${itemsToAdd.length} items, removing ${itemsToRemove.length} items`);
+        
+        // Update store items
+        const updatedItems = [];
+        
+        // Keep existing items that weren't removed
+        currentItems.forEach(storeItem => {
+          const itemId = storeItem.itemId || storeItem;
+          if (newItemIds.has(itemId)) {
+            updatedItems.push(storeItem);
+          }
+        });
+        
+        // Add new items with metadata
+        itemsToAdd.forEach(itemId => {
+          const item = safariData[guildId]?.items?.[itemId];
+          if (item) {
+            updatedItems.push({
+              itemId: itemId,
+              price: item.basePrice || 0,
+              addedAt: Date.now()
+            });
+          }
+        });
+        
+        // Update store
+        store.items = updatedItems;
+        await saveSafariContent(safariData);
+        
+        console.log(`✅ DEBUG: Store ${storeId} updated - now has ${updatedItems.length} items`);
+        
+        // Refresh UI
+        const uiResponse = await createStoreItemManagementUI({
+          storeId: storeId,
+          store: store,
+          guildId: guildId,
+          searchTerm: ''
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error in store_items_multiselect handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating store items.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -26762,6 +26767,70 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error searching entities. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('store_item_search_modal_')) {
+      // Handle store item search modal submission
+      console.log(`🔍 DEBUG: Store item search modal - custom_id: ${custom_id}`);
+      
+      try {
+        // Extract store ID from custom_id
+        const storeId = custom_id.replace('store_item_search_modal_', '');
+        
+        // Get search term from modal
+        const searchTerm = data.components[0]?.components[0]?.value?.toLowerCase().trim();
+        
+        if (!searchTerm) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a search term.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🔍 DEBUG: Searching store items for term: "${searchTerm}" in store ${storeId}`);
+        
+        // Import required functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
+        
+        const safariData = await loadSafariContent();
+        const store = safariData[req.body.guild_id]?.stores?.[storeId];
+        
+        if (!store) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Store not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Create UI with search term
+        const uiResponse = await createStoreItemManagementUI({
+          storeId: storeId,
+          store: store,
+          guildId: req.body.guild_id,
+          searchTerm: searchTerm
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error handling store item search:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error searching store items. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

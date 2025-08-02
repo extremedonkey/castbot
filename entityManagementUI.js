@@ -565,8 +565,199 @@ function getEntityDescription(entity, entityType) {
     return parts.join(' • ').substring(0, 100) || entity.description?.substring(0, 100) || '';
 }
 
+/**
+ * Create store item management UI with multi-select
+ * @param {Object} options - Configuration options
+ * @returns {Object} Discord Components V2 response
+ */
+export async function createStoreItemManagementUI(options) {
+    const {
+        storeId,
+        store,
+        guildId,
+        searchTerm = ''
+    } = options;
+    
+    // Load entity data
+    const safariData = await loadSafariContent();
+    const guildData = safariData[guildId] || {};
+    const allItems = guildData.items || {};
+    
+    // Get current store items
+    const currentItems = store.items || [];
+    const currentItemIds = new Set(currentItems.map(item => item.itemId || item));
+    
+    // Filter items if search term provided
+    const filteredItems = searchTerm ? filterEntities(allItems, searchTerm) : allItems;
+    
+    // Check if we have too many results when searching
+    if (searchTerm && Object.keys(filteredItems).length >= 24) {
+        // Return "too many results" UI
+        const components = [{
+            type: 17, // Container
+            accent_color: 0xff6b6b, // Red accent for warning
+            components: [
+                {
+                    type: 10, // Text Display
+                    content: `## 🔍 Too Many Search Results\n\nFound **${Object.keys(filteredItems).length}** items matching "${searchTerm}"\n\n⚠️ Please make your search more specific to see results (max 24 results).`
+                },
+                { type: 14 }, // Separator
+                {
+                    type: 1, // Action Row
+                    components: [
+                        {
+                            type: 2, // Button
+                            style: 2, // Secondary
+                            label: '← 📦 Back',
+                            custom_id: `safari_store_items_select_${storeId}`,
+                            emoji: { name: '📦' }
+                        }
+                    ]
+                }
+            ]
+        }];
+        
+        return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components
+        };
+    }
+    
+    // Build current items display
+    let currentItemsList = '';
+    currentItems.forEach((storeItem, index) => {
+        const itemId = storeItem.itemId || storeItem;
+        const item = allItems[itemId];
+        if (item) {
+            const price = storeItem.price || item.basePrice || 0;
+            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - 💰 ${price} coins\n`;
+        }
+    });
+    
+    // Build Components V2 UI
+    const components = [{
+        type: 17, // Container
+        accent_color: store.accentColor || 0x3498db,
+        components: [
+            // Title - Remove extra store emoji as requested
+            {
+                type: 10, // Text Display
+                content: `## ${store.emoji || '🏪'} ${store.name} - Store Management`
+            },
+            
+            // Current items list
+            {
+                type: 10, // Text Display
+                content: `### 🛍️ Current Items in Store\n${currentItemsList || '*No items in this store yet.*'}`
+            },
+            
+            // Separator as requested
+            { type: 14 },
+            
+            // Multi-select entity selector
+            createStoreItemSelector(filteredItems, currentItemIds, storeId, searchTerm),
+            
+            // Action buttons
+            {
+                type: 1, // Action Row
+                components: [
+                    {
+                        type: 2, // Button
+                        custom_id: 'safari_store_manage_items',
+                        label: '← Stores', // Changed as requested
+                        style: 2,
+                        emoji: { name: '🏪' }
+                    },
+                    {
+                        type: 2, // Button
+                        custom_id: `safari_store_open_${storeId}`,
+                        label: 'Open Store',
+                        style: 2, // Changed to grey as requested
+                        emoji: { name: '🛍️' } // Changed emoji as requested
+                    }
+                ]
+            }
+        ]
+    }];
+    
+    return {
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        components
+    };
+}
+
+/**
+ * Create store item selector with multi-select
+ */
+function createStoreItemSelector(items, currentItemIds, storeId, searchTerm) {
+    const options = [];
+    
+    // Add search option if many items
+    if (Object.keys(items).length > 10) {
+        options.push({
+            label: `🔍 Search: "${searchTerm || 'Type to search...'}"`,
+            value: 'search_entities',
+            description: 'Click to search items'
+        });
+    }
+    
+    // First add currently stocked items (alphabetically)
+    const stockedItems = Object.entries(items)
+        .filter(([id]) => currentItemIds.has(id))
+        .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
+        
+    stockedItems.forEach(([id, item]) => {
+        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
+            `${item.emoji || '📦'} ${item.name}`, 
+            '📦'
+        );
+        options.push({
+            label: cleanText.substring(0, 100),
+            value: id,
+            description: `Price: ${item.basePrice || 0}`,
+            emoji: parsedEmoji,
+            default: true // Pre-selected
+        });
+    });
+    
+    // Then add other available items (alphabetically)
+    const availableItems = Object.entries(items)
+        .filter(([id]) => !currentItemIds.has(id))
+        .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
+        
+    // Calculate how many we can add
+    const remainingSlots = 24 - options.length; // Leave room for search
+    
+    availableItems.slice(0, remainingSlots).forEach(([id, item]) => {
+        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
+            `${item.emoji || '📦'} ${item.name}`, 
+            '📦'
+        );
+        options.push({
+            label: cleanText.substring(0, 100),
+            value: id,
+            description: `Price: ${item.basePrice || 0}`,
+            emoji: parsedEmoji,
+            default: false // Not selected
+        });
+    });
+    
+    return {
+        type: 1, // ActionRow
+        components: [{
+            type: 3, // String Select
+            custom_id: `store_items_multiselect_${storeId}`,
+            placeholder: searchTerm ? `Filtered: "${searchTerm}"` : 'Select item(s) to add to the store',
+            options: options,
+            min_values: 0, // Allow deselecting all
+            max_values: Math.min(options.length, 24) // Up to 24 selections
+        }]
+    };
+}
+
 export {
     getDefaultEmoji,
     getEntitiesForType,
-    filterEntities
+    filterEntities,
+    createStoreItemManagementUI
 };
