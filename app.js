@@ -3747,7 +3747,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 custom_id: `safari_store_buy_${guildId}_${storeId}_${itemId}`,
                 label: `Buy ${item.name}`.slice(0, 80),
                 style: 1,
-                emoji: item.emoji ? (parseEmojiCode(item.emoji) || { name: item.emoji }) : { name: '🛒' }
+                emoji: item.emoji ? parseTextEmoji(item.emoji).emoji : { name: '🛒' }
               }
             };
             
