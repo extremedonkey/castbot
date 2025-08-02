@@ -16126,6 +16126,40 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('entity_search_again_')) {
+      // Handle "Search Again" button from too many results screen (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'entity_search_again',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const entityType = context.customId.replace('entity_search_again_', '');
+          
+          console.log(`🔍 DEBUG: Search again clicked for entityType: ${entityType}`);
+          
+          // Show search modal (same as the "search_entities" option)
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              title: `Search ${entityType}s`,
+              custom_id: `entity_search_modal_${entityType}`,
+              components: [{
+                type: 1, // ActionRow
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'search_term',
+                  label: 'Search Term',
+                  style: 1, // Short
+                  placeholder: 'Enter name or description to search...',
+                  required: true,
+                  max_length: 50
+                }]
+              }]
+            }
+          };
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('entity_edit_mode_')) {
       // Switch to edit mode for an entity (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({

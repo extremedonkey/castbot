@@ -736,6 +736,13 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'entity_management'
   },
+  'entity_search_again': {
+    label: 'Search Again',
+    description: 'Reopen search modal when too many results found',
+    emoji: '🔍',
+    style: 'Primary',
+    category: 'entity_management'
+  },
 
   // === APPLICATION MANAGEMENT SYSTEM ===
   'season_management_menu': {
