@@ -301,7 +301,7 @@ export const BUTTON_REGISTRY = {
     label: 'Navigate',
     description: 'Show navigation options for current location',
     emoji: '🗺️',
-    style: 'Primary',
+    style: 'Secondary',
     category: 'safari_movement'
   },
   
@@ -1038,7 +1038,7 @@ export const BUTTON_REGISTRY = {
     label: 'Enter Command',
     description: 'Enter a text command at this location',
     emoji: '⌨️',
-    style: 'Primary',
+    style: 'Secondary',
     category: 'safari_player'
   },
   'admin_test_command_*': {
