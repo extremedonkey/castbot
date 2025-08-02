@@ -29,6 +29,15 @@ export async function checkRoleHierarchyPermission(guild, roleId, client = null)
   const bot = await guild.members.fetch(client.user.id);
   const role = await guild.roles.fetch(roleId);
   
+  // Handle case where role was deleted
+  if (!role) {
+    console.log(`⚠️ SILENT: Role ${roleId} not found (likely deleted) - skipping role assignment`);
+    return { 
+      allowed: false, 
+      reason: 'Role not found (may have been deleted)' 
+    };
+  }
+  
   if (!bot.permissions.has(PermissionFlagsBits.ManageRoles)) {
     return { 
       allowed: false, 
