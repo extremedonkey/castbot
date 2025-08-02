@@ -758,11 +758,22 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
     }
 
     case 'timezone': {
+      // Get guild for cleanup and role fetching
+      const guild = await client.guilds.fetch(guildId);
+      
+      // Clean up any missing roles first
+      const { cleanupMissingRoles } = await import('./storage.js');
+      const cleanupResult = await cleanupMissingRoles(guildId, guild);
+      if (cleanupResult.cleaned > 0) {
+        console.log(`🧹 CLEANUP: Cleaned up ${cleanupResult.cleaned} missing roles before creating timezone select`);
+      }
+
+      // Get timezone roles (after potential cleanup)
       const timezones = await getGuildTimezones(guildId);
       const timezoneEntries = Object.entries(timezones || {});
       if (timezoneEntries.length === 0) return null;
 
-      // Check if more than 25 timezone roles exist
+      // Check if more than 25 timezone roles exist (after cleanup)
       if (timezoneEntries.length > 25) {
         console.error(`❌ Too many timezone roles (${timezoneEntries.length}). Discord String Select limit is 25.`);
         return {
@@ -775,7 +786,6 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
       }
 
       // Get role objects and sort by UTC offset
-      const guild = await client.guilds.fetch(guildId);
       const timezoneRoles = [];
       
       for (const [roleId, data] of timezoneEntries) {
