@@ -16384,10 +16384,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               // Create store select menu with proper emoji parsing
               const storeOptions = Object.entries(stores).map(([storeId, store]) => {
                 const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
+                const description = store.description?.trim();
                 return {
                   label: cleanText.substring(0, 100),
                   value: storeId,
-                  description: store.description?.substring(0, 100),
+                  description: description && description.length > 0 ? description.substring(0, 100) : undefined,
                   emoji: emoji,
                   default: coordStores.includes(storeId)
                 };
