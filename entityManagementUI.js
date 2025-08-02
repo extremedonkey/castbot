@@ -655,7 +655,7 @@ export async function createStoreItemManagementUI(options) {
             { type: 14 },
             
             // Multi-select entity selector
-            createStoreItemSelector(filteredItems, currentItemIds, storeId, searchTerm),
+            createStoreItemSelector(filteredItems, currentItemIds, storeId, searchTerm, allItems),
             
             // Action buttons
             {
@@ -689,11 +689,11 @@ export async function createStoreItemManagementUI(options) {
 /**
  * Create store item selector with multi-select
  */
-function createStoreItemSelector(items, currentItemIds, storeId, searchTerm) {
+function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, allItems) {
     const options = [];
     
     // Add search option if many items
-    if (Object.keys(items).length > 10) {
+    if (Object.keys(allItems || items).length > 10) {
         options.push({
             label: `🔍 Search: "${searchTerm || 'Type to search...'}"`,
             value: 'search_entities',
@@ -701,12 +701,23 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm) {
         });
     }
     
-    // First add currently stocked items (alphabetically)
-    const stockedItems = Object.entries(items)
-        .filter(([id]) => currentItemIds.has(id))
-        .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
-        
-    stockedItems.forEach(([id, item]) => {
+    // CRITICAL: Always include ALL currently stocked items, even if they don't match search
+    // This prevents existing items from being cleared when searching
+    const stockedItemsToShow = [];
+    
+    // First, add all existing store items regardless of search
+    currentItemIds.forEach(itemId => {
+        const item = (allItems || items)[itemId];
+        if (item) {
+            stockedItemsToShow.push([itemId, item]);
+        }
+    });
+    
+    // Sort stocked items alphabetically
+    stockedItemsToShow.sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
+    
+    // Add all stocked items to options
+    stockedItemsToShow.forEach(([id, item]) => {
         const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
             `${item.emoji || '📦'} ${item.name}`, 
             '📦'
@@ -720,13 +731,13 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm) {
         });
     });
     
-    // Then add other available items (alphabetically)
+    // Then add other available items that match search (alphabetically)
     const availableItems = Object.entries(items)
         .filter(([id]) => !currentItemIds.has(id))
         .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
         
     // Calculate how many we can add
-    const remainingSlots = 24 - options.length; // Leave room for search
+    const remainingSlots = 24 - options.length; // Leave room for search and existing items
     
     availableItems.slice(0, remainingSlots).forEach(([id, item]) => {
         const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
