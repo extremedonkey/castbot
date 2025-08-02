@@ -17886,7 +17886,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             mode: 'delete_confirm'
           });
           
-          return uiResponse;
+          return {
+            ...uiResponse,
+            ephemeral: true
+          };
         }
       })(req, res, client);
       
@@ -17920,7 +17923,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             mode: 'edit'
           });
           
-          return uiResponse;
+          return {
+            ...uiResponse,
+            ephemeral: true
+          };
         }
       })(req, res, client);
       
