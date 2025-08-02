@@ -914,7 +914,7 @@ async function createTimezoneReactionMessage(guildData, channelId, token, client
             return {
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                 data: {
-                    content: `❌ Too many timezone roles (${roleObjects.length}). Maximum ${REACTION_EMOJIS.length} supported due to Discord limits.\n\n💡 Consider using fewer timezone roles or contact admin to remove unused ones.`,
+                    content: `❌ Too many timezone roles to post React for Pronouns prompt (${roleObjects.length}). Maximum ${REACTION_EMOJIS.length} supported due to Discord limits.\n\n💡 Please remove timezones from \`/menu\` > :purple_heart: Pronouns & Timezones > Bulk Modify (no offset) until you have ${REACTION_EMOJIS.length} or less.`,
                     flags: InteractionResponseFlags.EPHEMERAL
                 }
             };

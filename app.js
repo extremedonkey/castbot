@@ -2781,7 +2781,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          content: `Too many timezone roles (maximum ${REACTION_EMOJIS.length} supported due to Discord limits)`,
+          content: `Too many timezone roles to post React for Pronouns prompt (maximum ${REACTION_EMOJIS.length} supported due to Discord limits). Please remove timezones from \`/menu\` > :purple_heart: Pronouns & Timezones > Bulk Modify (no offset) until you have ${REACTION_EMOJIS.length} or less.`,
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
@@ -3041,7 +3041,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: {
-          content: `Too many timezone roles (maximum ${REACTION_EMOJIS.length} supported due to Discord limits)`,
+          content: `Too many timezone roles to post React for Pronouns prompt (maximum ${REACTION_EMOJIS.length} supported due to Discord limits). Please remove timezones from \`/menu\` > :purple_heart: Pronouns & Timezones > Bulk Modify (no offset) until you have ${REACTION_EMOJIS.length} or less.`,
           flags: InteractionResponseFlags.EPHEMERAL
         }
       });
@@ -13500,7 +13500,7 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: `Too many timezone roles (maximum ${REACTION_EMOJIS.length} supported due to Discord limits)`,
+              content: `Too many timezone roles to post React for Pronouns prompt (maximum ${REACTION_EMOJIS.length} supported due to Discord limits). Please remove timezones from \`/menu\` > :purple_heart: Pronouns & Timezones > Bulk Modify (no offset) until you have ${REACTION_EMOJIS.length} or less.`,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
