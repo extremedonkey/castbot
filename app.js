@@ -16107,21 +16107,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               mode: 'edit'
             });
             
-            // For map_cell selections, use UPDATE_MESSAGE to dismiss the picker
-            if (entityType === 'map_cell') {
-              return res.send({
-                type: InteractionResponseType.UPDATE_MESSAGE,
-                data: {
-                  ...uiResponse,
-                  ephemeral: true
-                }
-              });
-            }
-            
-            return {
-              ...uiResponse,
-              ephemeral: true
-            };
+            // Use UPDATE_MESSAGE to replace the entity picker with the item editor
+            return res.send({
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                ...uiResponse,
+                ephemeral: true
+              }
+            });
           }
         }
       })(req, res, client);
@@ -16195,6 +16188,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'entity_view_mode',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true, // Replace delete confirmation with item editor
         handler: async (context) => {
           const parts = context.customId.split('_');
           const entityType = parts[3];
@@ -17862,6 +17856,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'entity_delete_mode',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true, // Replace item editor with delete confirmation
         handler: async (context) => {
           const parts = context.customId.split('_');
           const entityType = parts[3];
@@ -17886,10 +17881,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             mode: 'delete_confirm'
           });
           
-          return {
-            ...uiResponse,
-            ephemeral: true
-          };
+          return uiResponse;
         }
       })(req, res, client);
       
