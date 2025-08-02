@@ -3981,7 +3981,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           
           try {
             // Import movement functions
-            const { movePlayer, getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
+            const { movePlayer, getMovementDisplay, getPlayerLocation, createMovementNotification } = await import('./mapMovement.js');
             const { loadSafariContent } = await import('./safariManager.js');
             
             // Validate that user is in the correct channel for their current position
@@ -4059,8 +4059,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                     const editResponse = await DiscordRequest(`webhooks/${navData.appId}/${navData.token}/messages/@original`, {
                       method: 'PATCH',
                       body: {
-                        content: `✅ **You have moved to <#${targetChannelId}>**\n\n📍 **${result.oldCoordinate}** → **${result.newCoordinate}**\n\nThis navigation panel is no longer active.`,
-                        components: [] // Remove all buttons
+                        ...createMovementNotification(context.guildId, context.userId, result.oldCoordinate, result.newCoordinate, targetChannelId),
+                        ephemeral: undefined // Remove ephemeral flag for PATCH requests
                       }
                     });
                     

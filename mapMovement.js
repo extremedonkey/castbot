@@ -226,10 +226,17 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
     };
 }
 
-// Create movement notification for ephemeral response
+// Create movement notification for ephemeral response (Components V2 format)
 export function createMovementNotification(guildId, userId, oldCoordinate, newCoordinate, newChannelId) {
     return {
-        content: `✅ **You have moved to <#${newChannelId}>**\n\n📍 **${oldCoordinate}** → **${newCoordinate}**\n\nClick the channel link above to continue exploring!`,
+        components: [{
+            type: 17, // Container
+            components: [{
+                type: 10, // Text Display
+                text: `✅ **You have moved to <#${newChannelId}>**\n\n📍 **${oldCoordinate}** → **${newCoordinate}**\n\nClick the channel link above to continue exploring!`
+            }]
+        }],
+        flags: 1 << 15, // IS_COMPONENTS_V2
         ephemeral: true
     };
 }
