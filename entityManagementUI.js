@@ -165,12 +165,28 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
         // Keep "Create new" and search, trim entities
         const createNew = options[0];
         const search = options.length > 10 && options[1].value === 'search_entities' ? options[1] : null;
-        const entities = options.slice(search ? 2 : 1);
+        const entityOptions = options.slice(search ? 2 : 1);
+        
+        // Always include selected item if it exists, even if it pushes us over limit
+        let selectedOption = null;
+        let remainingEntities = entityOptions;
+        if (selectedId) {
+            selectedOption = entityOptions.find(opt => opt.value === selectedId);
+            remainingEntities = entityOptions.filter(opt => opt.value !== selectedId);
+        }
         
         options.length = 0;
         options.push(createNew);
         if (search) options.push(search);
-        options.push(...entities.slice(0, 23 - options.length));
+        
+        // Add selected item first if it exists
+        if (selectedOption) {
+            options.push(selectedOption);
+        }
+        
+        // Fill remaining slots with other entities
+        const remainingSlots = 25 - options.length;
+        options.push(...remainingEntities.slice(0, remainingSlots));
     }
     
     return {
