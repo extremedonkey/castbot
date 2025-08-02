@@ -26561,8 +26561,8 @@ Are you sure you want to continue?`;
             }
             break;
             
-          case 'safari_item':
-            // Search safari items
+          case 'item':
+            // Search items
             if (guildData.items) {
               entities = Object.entries(guildData.items)
                 .filter(([id, item]) => {
@@ -26581,6 +26581,38 @@ Are you sure you want to continue?`;
                 }));
             }
             break;
+            
+          case 'store':
+            // Search stores
+            if (guildData.stores) {
+              entities = Object.entries(guildData.stores)
+                .filter(([id, store]) => {
+                  const searchableText = [
+                    store.name?.toLowerCase() || '',
+                    store.description?.toLowerCase() || '',
+                    store.storeownerText?.toLowerCase() || '',
+                    id.toLowerCase()
+                  ].join(' ');
+                  return searchableText.includes(searchTerm);
+                })
+                .map(([id, store]) => ({
+                  value: id,
+                  label: store.name || id,
+                  description: store.description || store.storeownerText,
+                  emoji: store.emoji
+                }));
+            }
+            break;
+            
+          default:
+            console.error(`🚨 Unknown entity type in search: ${entityType}`);
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ Unknown entity type: ${entityType}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
         }
         
         console.log(`🔍 DEBUG: Found ${entities.length} matching ${entityType}s`);
