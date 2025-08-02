@@ -18696,7 +18696,14 @@ Are you sure you want to continue?`;
               .setEmoji({ id: commandEmojiId })
               .setStyle(1); // Primary
             
-            const buttonRow = new ActionRowBuilder().addComponents([enterCommandButton]);
+            // Create Navigate button
+            const navigateButton = new ButtonBuilder()
+              .setCustomId(`safari_navigate_${context.userId}_${coord}`)
+              .setLabel('Navigate')
+              .setEmoji('🗺️')
+              .setStyle(1); // Primary
+            
+            const buttonRow = new ActionRowBuilder().addComponents([enterCommandButton, navigateButton]);
             
             return {
               components: [{
