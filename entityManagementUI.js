@@ -654,6 +654,12 @@ export async function createStoreItemManagementUI(options) {
             // Separator as requested
             { type: 14 },
             
+            // Search results indicator (if searching)
+            ...(searchTerm ? [{
+                type: 10, // Text Display
+                content: `### 🔍 Search Results\nShowing items matching **"${searchTerm}"** • ${Object.keys(filteredItems).filter(id => !currentItemIds.has(id)).length} new items found\n\n**Legend:** ✅ Currently stocked • 🆕 Search results • 🔍 Search again`
+            }, { type: 14 }] : []),
+            
             // Multi-select entity selector
             createStoreItemSelector(filteredItems, currentItemIds, storeId, searchTerm, allItems),
             
@@ -692,13 +698,36 @@ export async function createStoreItemManagementUI(options) {
 function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, allItems) {
     const options = [];
     
-    // Add search option if many items
+    // Create better placeholder text based on search state
+    let placeholder;
+    let searchResultsCount = 0;
+    
+    if (searchTerm) {
+        const searchResults = Object.entries(items).filter(([id]) => !currentItemIds.has(id));
+        searchResultsCount = searchResults.length;
+        placeholder = `🔍 Search: "${searchTerm}" (${searchResultsCount} results) • Select items to add/remove`;
+    } else {
+        placeholder = 'Select item(s) to add/remove from store';
+    }
+    
+    // Add search and clear search options
     if (Object.keys(allItems || items).length > 10) {
         options.push({
-            label: `🔍 Search: "${searchTerm || 'Type to search...'}"`,
+            label: searchTerm ? '🔍 New Search' : '🔍 Search Items',
             value: 'search_entities',
-            description: 'Click to search items'
+            description: searchTerm ? 'Search for different items' : 'Search by name to filter items',
+            emoji: { name: '🔍' }
         });
+        
+        // Add clear search option if currently searching
+        if (searchTerm) {
+            options.push({
+                label: '🔄 Clear Search',
+                value: 'clear_search',
+                description: 'View all available items',
+                emoji: { name: '🔄' }
+            });
+        }
     }
     
     // CRITICAL: Always include ALL currently stocked items, even if they don't match search
@@ -716,22 +745,28 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
     // Sort stocked items alphabetically
     stockedItemsToShow.sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
     
-    // Add all stocked items to options
+    // Add all stocked items to options with clear labeling
     stockedItemsToShow.forEach(([id, item]) => {
         const { cleanText, emoji: parsedEmoji } = parseTextEmoji(
             `${item.emoji || '📦'} ${item.name}`, 
             '📦'
         );
         options.push({
-            label: cleanText.substring(0, 100),
+            label: `✅ ${cleanText}`.substring(0, 100), // ✅ indicates currently stocked
             value: id,
-            description: `Price: ${item.basePrice || 0}`,
+            description: `Currently stocked • Price: ${item.basePrice || 0}`,
             emoji: parsedEmoji,
             default: true // Pre-selected
         });
     });
     
-    // Then add other available items that match search (alphabetically)
+    // Add separator between stocked and available items if we have search results
+    if (searchTerm && searchResultsCount > 0) {
+        // Add visual separator using emoji in description
+        const separatorAdded = options.length > 1; // Only if we have stocked items
+    }
+    
+    // Then add search results or available items at the top of available section
     const availableItems = Object.entries(items)
         .filter(([id]) => !currentItemIds.has(id))
         .sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
@@ -744,10 +779,18 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
             `${item.emoji || '📦'} ${item.name}`, 
             '📦'
         );
+        
+        // Visual indicator for search results
+        const isSearchResult = searchTerm;
+        const label = isSearchResult ? `🆕 ${cleanText}` : cleanText; // 🆕 for search results
+        const description = isSearchResult ? 
+            `Search result • Price: ${item.basePrice || 0}` : 
+            `Available • Price: ${item.basePrice || 0}`;
+        
         options.push({
-            label: cleanText.substring(0, 100),
+            label: label.substring(0, 100),
             value: id,
-            description: `Price: ${item.basePrice || 0}`,
+            description: description,
             emoji: parsedEmoji,
             default: false // Not selected
         });
@@ -758,7 +801,7 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
         components: [{
             type: 3, // String Select
             custom_id: `store_items_multiselect_${storeId}`,
-            placeholder: searchTerm ? `Filtered: "${searchTerm}"` : 'Select item(s) to add to the store',
+            placeholder: placeholder,
             options: options,
             min_values: 0, // Allow deselecting all
             max_values: Math.min(options.length, 24) // Up to 24 selections

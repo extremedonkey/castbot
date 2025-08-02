@@ -9552,6 +9552,39 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
+        // Handle clear search selection
+        if (selectedValues.includes('clear_search')) {
+          // Clear search and show all items
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
+          
+          const safariData = await loadSafariContent();
+          const store = safariData[guildId]?.stores?.[storeId];
+          
+          if (!store) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Store not found.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          // Create UI without search term (shows all items)
+          const uiResponse = await createStoreItemManagementUI({
+            storeId: storeId,
+            store: store,
+            guildId: guildId,
+            searchTerm: '' // Clear search
+          });
+          
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: uiResponse
+          });
+        }
+        
         // Import required functions
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
         const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
