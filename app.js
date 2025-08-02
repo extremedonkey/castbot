@@ -17899,66 +17899,33 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'entity_confirm_delete',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        deferred: true, // Use deferred response for deletion + followup
-        handler: async (context, req, res, client) => {
+        updateMessage: true, // Replace confirmation dialog with entity list
+        handler: async (context) => {
           const parts = context.customId.split('_');
           const entityType = parts[3];
           const entityId = parts.slice(4).join('_');
           
           console.log(`🗑️ DEBUG: Deleting ${entityType} ${entityId}`);
           
-          try {
-            // Delete entity
-            const success = await deleteEntity(context.guildId, entityType, entityId);
-            
-            if (!success) {
-              throw new Error('Failed to delete entity');
-            }
-            
-            // 1. Dismiss the confirmation dialog by updating it to minimal content
-            const originalMessageId = req.body.message.id;
-            await DiscordRequest(`applications/${req.body.application_id}/interactions/${req.body.id}/${req.body.token}/edit-original-response`, {
-              method: 'PATCH',
-              body: {
-                content: '✅ Deleted successfully',
-                components: [],
-                embeds: []
-              }
-            });
-            
-            // 2. Send new ephemeral entity list as followup
-            const uiResponse = await createEntityManagementUI({
-              entityType: entityType,
-              guildId: context.guildId,
-              selectedId: null,
-              activeFieldGroup: null,
-              searchTerm: '',
-              mode: 'edit'
-            });
-            
-            // Send as followup message
-            await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}`, {
-              method: 'POST',
-              body: {
-                ...uiResponse,
-                flags: 64 // EPHEMERAL flag
-              }
-            });
-            
-            console.log(`✅ DEBUG: Entity ${entityType} ${entityId} deleted and UI updated`);
-            
-          } catch (error) {
-            console.error('Error in delete confirmation:', error);
-            
-            // Send error followup
-            await DiscordRequest(`webhooks/${req.body.application_id}/${req.body.token}`, {
-              method: 'POST',
-              body: {
-                content: '❌ Failed to delete entity. Please try again.',
-                flags: 64 // EPHEMERAL
-              }
-            });
+          // Delete entity
+          const success = await deleteEntity(context.guildId, entityType, entityId);
+          
+          if (!success) {
+            throw new Error('Failed to delete entity');
           }
+          
+          // Return entity list to replace confirmation dialog
+          const uiResponse = await createEntityManagementUI({
+            entityType: entityType,
+            guildId: context.guildId,
+            selectedId: null,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'edit'
+          });
+          
+          console.log(`✅ DEBUG: Entity ${entityType} ${entityId} deleted successfully`);
+          return uiResponse;
         }
       })(req, res, client);
       
@@ -26738,7 +26705,7 @@ Are you sure you want to continue?`;
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
               components: [tooManyContainer],
-              flags: InteractionResponseFlags.EPHEMERAL
+              flags: InteractionResponseFlags.EPHEMERAL | (1 << 15) // EPHEMERAL + IS_COMPONENTS_V2
             }
           });
         }
