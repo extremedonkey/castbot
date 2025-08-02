@@ -48,14 +48,24 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
     });
   }
   
-  // Add existing actions sorted by lastModified (most recent first)
-  const sortedActions = Object.entries(allActions)
-    .map(([actionId, action]) => ({ actionId, action }))
+  // Add existing actions in prioritized order
+  const allActionEntries = Object.entries(allActions).map(([actionId, action]) => ({ actionId, action }));
+  
+  // Step 1: Get actions assigned to this coordinate (if coordinate-specific view)
+  const assignedActions = coordinate && mapId ? 
+    allActionEntries.filter(({ actionId }) => assignedActionIds.includes(actionId)) : [];
+  
+  // Step 2: Get unassigned actions, sorted by reverse creation order (newest first)
+  const unassignedActions = allActionEntries
+    .filter(({ actionId }) => !assignedActionIds.includes(actionId))
     .sort((a, b) => {
       const aLastModified = a.action.metadata?.lastModified || 0;
       const bLastModified = b.action.metadata?.lastModified || 0;
       return bLastModified - aLastModified; // Descending order (newest first)
-    })
+    });
+  
+  // Step 3: Combine in required order: assigned actions first, then unassigned
+  const sortedActions = [...assignedActions, ...unassignedActions]
     .slice(0, totalActions > 10 ? 22 : 24); // Leave room for Create New and Search if needed
   
   for (const { actionId, action } of sortedActions) {
