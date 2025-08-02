@@ -47,11 +47,11 @@ function getDefaultPointsConfig() {
         stamina: {
             displayName: "Stamina",
             emoji: "⚡",
-            defaultMax: 10,
+            defaultMax: 1,
             defaultMin: 0,
             regeneration: {
                 type: "full_reset",
-                interval: 43200000, // 12 hours
+                interval: 180000, // 3 minutes
                 amount: "max"
             },
             visibility: "hidden" // For MVP, just show cooldown
