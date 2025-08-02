@@ -16233,6 +16233,42 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               }
             });
           } else {
+            // Check if this is a map cell selection - if so, go directly to custom actions
+            if (entityType === 'map_cell') {
+              // For map cells, directly open the custom action UI
+              const { createCustomActionSelectionUI } = await import('./customActionUI.js');
+              const { loadSafariContent } = await import('./safariManager.js');
+              
+              const allSafariData = await loadSafariContent();
+              const guildData = allSafariData[context.guildId] || {};
+              const activeMapId = guildData.maps?.active;
+              
+              if (!activeMapId) {
+                return res.send({
+                  type: InteractionResponseType.UPDATE_MESSAGE,
+                  data: {
+                    content: '❌ No active map found.',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                  }
+                });
+              }
+              
+              // selectedValue is the coordinate (e.g., "B3")
+              const customActionUI = await createCustomActionSelectionUI({
+                guildId: context.guildId,
+                coordinate: selectedValue,
+                mapId: activeMapId
+              });
+              
+              return res.send({
+                type: InteractionResponseType.UPDATE_MESSAGE,
+                data: {
+                  ...customActionUI,
+                  ephemeral: true
+                }
+              });
+            }
+            
             // Regular entity selection - go straight to edit mode
             const uiResponse = await createEntityManagementUI({
               entityType: entityType,
