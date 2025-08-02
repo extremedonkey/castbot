@@ -4059,8 +4059,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                     const editResponse = await DiscordRequest(`webhooks/${navData.appId}/${navData.token}/messages/@original`, {
                       method: 'PATCH',
                       body: {
-                        ...createMovementNotification(context.guildId, context.userId, result.oldCoordinate, result.newCoordinate, targetChannelId),
-                        ephemeral: undefined // Remove ephemeral flag for PATCH requests
+                        components: createMovementNotification(context.guildId, context.userId, result.oldCoordinate, result.newCoordinate, targetChannelId).components
                       }
                     });
                     
