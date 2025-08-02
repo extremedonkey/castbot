@@ -758,6 +758,5 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm) {
 export {
     getDefaultEmoji,
     getEntitiesForType,
-    filterEntities,
-    createStoreItemManagementUI
+    filterEntities
 };
