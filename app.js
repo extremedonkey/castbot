@@ -16723,7 +16723,46 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             mapId = parts[1];
           }
           
-          if (selectedValue === 'create_new') {
+          if (selectedValue === 'back_to_all') {
+            // Return to full action list
+            const { createCustomActionSelectionUI } = await import('./customActionUI.js');
+            
+            const ui = await createCustomActionSelectionUI({
+              guildId: context.guildId,
+              coordinate: coordinate,
+              mapId: mapId
+            });
+            
+            return {
+              ...ui,
+              ephemeral: true
+            };
+          } else if (selectedValue === 'search_actions') {
+            // Show search modal for custom actions
+            const modalCustomId = coordinate ? 
+              `custom_action_search_modal_${coordinate}_${mapId}` : 
+              'custom_action_search_modal_global';
+            
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                title: 'Search Custom Actions',
+                custom_id: modalCustomId,
+                components: [{
+                  type: 1, // ActionRow
+                  components: [{
+                    type: 4, // Text Input
+                    custom_id: 'search_term',
+                    label: 'Search Term',
+                    style: 1, // Short
+                    placeholder: 'Enter action name or description...',
+                    required: true,
+                    max_length: 50
+                  }]
+                }]
+              }
+            };
+          } else if (selectedValue === 'create_new') {
             // Show creation modal using standard factory pattern
             const modalCustomId = coordinate ? 
               `entity_create_modal_safari_button_info_${coordinate}` : 
@@ -20950,6 +20989,53 @@ Are you sure you want to continue?`;
           return {
             ...ui,
             ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('custom_action_search_again_')) {
+      // Handle search again for custom actions
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_search_again',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 DEBUG: Search again clicked for custom actions`);
+          
+          // Parse coordinate and mapId if present
+          let coordinate = null;
+          let mapId = null;
+          
+          if (context.customId !== 'custom_action_search_again_global') {
+            // Parse: custom_action_search_again_{coordinate}_{mapId}
+            const parts = context.customId.replace('custom_action_search_again_', '').split('_');
+            coordinate = parts[0];
+            mapId = parts[1];
+          }
+          
+          const modalCustomId = coordinate ? 
+            `custom_action_search_modal_${coordinate}_${mapId}` : 
+            'custom_action_search_modal_global';
+          
+          // Show search modal
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              title: 'Search Custom Actions',
+              custom_id: modalCustomId,
+              components: [{
+                type: 1, // ActionRow
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'search_term',
+                  label: 'Search Term',
+                  style: 1, // Short
+                  placeholder: 'Enter action name or description...',
+                  required: true,
+                  max_length: 50
+                }]
+              }]
+            }
           };
         }
       })(req, res, client);
@@ -26943,6 +27029,185 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error searching entities. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('custom_action_search_modal_')) {
+      // Handle custom action search modal submission
+      console.log(`🔍 DEBUG: Custom action search modal - custom_id: ${custom_id}`);
+      
+      try {
+        // Parse coordinate and mapId if present
+        let coordinate = null;
+        let mapId = null;
+        
+        if (custom_id !== 'custom_action_search_modal_global') {
+          // Parse: custom_action_search_modal_{coordinate}_{mapId}
+          const parts = custom_id.replace('custom_action_search_modal_', '').split('_');
+          coordinate = parts[0];
+          mapId = parts[1];
+        }
+        
+        // Get search term from modal
+        const searchTerm = data.components[0]?.components[0]?.value?.toLowerCase().trim();
+        
+        if (!searchTerm) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a search term.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🔍 DEBUG: Searching custom actions for term: "${searchTerm}"`);
+        
+        // Import required modules
+        const { loadSafariContent } = await import('./safariManager.js');
+        const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+        
+        // Load safari content
+        const allSafariContent = await loadSafariContent();
+        const guildData = allSafariContent[req.body.guild_id] || {};
+        const allActions = guildData.buttons || {};
+        
+        // Search through actions
+        const searchResults = Object.entries(allActions)
+          .filter(([actionId, action]) => {
+            const searchableText = [
+              action.name?.toLowerCase() || '',
+              action.label?.toLowerCase() || '',
+              action.description?.toLowerCase() || '',
+              action.trigger?.modal?.title?.toLowerCase() || ''
+            ].join(' ');
+            return searchableText.includes(searchTerm);
+          })
+          .map(([actionId, action]) => ({ actionId, action }));
+        
+        console.log(`🔍 DEBUG: Found ${searchResults.length} matching custom actions`);
+        
+        if (searchResults.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ No custom actions found matching "${searchTerm}".`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Check if too many results
+        if (searchResults.length >= 24) {
+          console.log(`🔍 DEBUG: Too many results (${searchResults.length}), asking user to refine search`);
+          
+          // Create Components V2 "too many results" message
+          const tooManyContainer = {
+            type: 17, // Container
+            accent_color: 0xff6b6b, // Red accent for warning
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 🔍 Too Many Search Results\n\nFound **${searchResults.length}** actions matching "${searchTerm}"\n\n⚠️ Please make your search more specific to see results (max 24 results).`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    style: 1, // Primary
+                    label: '🔍 Search Again',
+                    custom_id: coordinate ? `custom_action_search_again_${coordinate}_${mapId}` : 'custom_action_search_again_global',
+                    emoji: { name: '🔍' }
+                  },
+                  {
+                    type: 2, // Button
+                    style: 2, // Secondary
+                    label: '⬅️ Back to Actions',
+                    custom_id: coordinate ? `entity_field_group_map_cell_${coordinate}_interaction` : 'safari_action_editor'
+                  }
+                ]
+              }
+            ]
+          };
+          
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              components: [tooManyContainer],
+              flags: (1 << 15) // IS_COMPONENTS_V2
+            }
+          });
+        }
+        
+        // Build select menu with search results
+        const customId = coordinate && mapId ? 
+          `entity_custom_action_list_${coordinate}_${mapId}` : 
+          'entity_custom_action_list_global';
+        const selectMenu = new StringSelectMenuBuilder()
+          .setCustomId(customId)
+          .setPlaceholder(`${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchTerm}"`)
+          .setMinValues(1)
+          .setMaxValues(1);
+        
+        // Add back option
+        selectMenu.addOptions({
+          label: '🔙 Back to all',
+          value: 'back_to_all',
+          description: 'Return to full action list'
+        });
+        
+        // Add search results (limited to 23 to leave room for back option)
+        for (const { actionId, action } of searchResults.slice(0, 23)) {
+          // Create meaningful description
+          let description = action.description || 'No description';
+          const actionCount = action.actions?.length || 0;
+          if (actionCount > 0) {
+            description += ` • ${actionCount} action${actionCount !== 1 ? 's' : ''}`;
+          }
+          
+          selectMenu.addOptions({
+            label: (action.name || action.label || 'Unnamed Action').substring(0, 100),
+            value: actionId,
+            description: description.substring(0, 100)
+          });
+        }
+        
+        const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+        
+        // Create UI with Components V2
+        const uiComponents = [
+          {
+            type: 17, // Container
+            accent_color: 0x5865f2,
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## Search Results: Custom Actions\nFound ${searchResults.length} matching "${searchTerm}"`
+              },
+              { type: 14 }, // Separator
+              selectRow.toJSON()
+            ]
+          }
+        ];
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: uiComponents,
+            flags: (1 << 15) // IS_COMPONENTS_V2
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling custom action search:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error searching custom actions. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

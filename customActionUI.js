@@ -38,6 +38,16 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
     description: "Design a new interactive action"
   });
   
+  // Add search option if many actions
+  const totalActions = Object.keys(allActions).length;
+  if (totalActions > 10) {
+    selectMenu.addOptions({
+      label: "🔍 Search Actions",
+      value: "search_actions",
+      description: "Search through all custom actions"
+    });
+  }
+  
   // Add existing actions sorted by lastModified (most recent first)
   const sortedActions = Object.entries(allActions)
     .map(([actionId, action]) => ({ actionId, action }))
@@ -46,7 +56,7 @@ export async function createCustomActionSelectionUI({ guildId, coordinate = null
       const bLastModified = b.action.metadata?.lastModified || 0;
       return bLastModified - aLastModified; // Descending order (newest first)
     })
-    .slice(0, 24); // Limit to 24 to leave room for "Create New"
+    .slice(0, totalActions > 10 ? 22 : 24); // Leave room for Create New and Search if needed
   
   for (const { actionId, action } of sortedActions) {
     // Create meaningful description showing action type and status
