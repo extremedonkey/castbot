@@ -18763,7 +18763,7 @@ Are you sure you want to continue?`;
                 custom_id: `safari_store_buy_${context.guildId}_${storeId}_${itemId}`,
                 label: `Buy ${item.name}`,
                 style: 3, // Success
-                emoji: item.emoji ? { name: item.emoji } : undefined
+                emoji: item.emoji ? parseTextEmoji(item.emoji).emoji : undefined
               });
             }
           });
@@ -21163,7 +21163,7 @@ Are you sure you want to continue?`;
               label: item.name || 'Unnamed Item',
               description: item.description?.substring(0, 100) || 'No description',
               value: `${targetUserId}_${itemId}`, // Include target user in value
-              emoji: item.emoji ? { name: item.emoji } : undefined
+              emoji: item.emoji ? parseTextEmoji(item.emoji).emoji : undefined
             });
           }
           
@@ -26753,7 +26753,7 @@ Are you sure you want to continue?`;
                   value: id,
                   label: item.name || id,
                   description: item.description,
-                  emoji: item.emoji
+                  emoji: item.emoji ? parseTextEmoji(item.emoji).emoji : { name: '📦' }
                 }));
             }
             break;
@@ -26857,7 +26857,7 @@ Are you sure you want to continue?`;
           label: entity.label,
           value: entity.value,
           description: entity.description,
-          emoji: entity.emoji ? { name: entity.emoji } : undefined
+          emoji: entity.emoji ? (typeof entity.emoji === 'object' ? entity.emoji : parseTextEmoji(entity.emoji).emoji) : undefined
         }));
         
         // Add back/management option
