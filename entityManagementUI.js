@@ -396,7 +396,7 @@ export function getFieldGroups(entityType) {
                 info: { label: 'Item Info', emoji: '📝', fields: ['name', 'description'] },
                 financials: { label: 'Financials', emoji: '💰', fields: ['basePrice', 'goodOutcomeValue', 'badOutcomeValue'] },
                 battle: { label: 'Battle', emoji: '⚔️', fields: ['attackValue', 'defenseValue'] },
-                properties: { label: 'Properties', emoji: '⚙️', fields: ['consumable'] }
+                properties: { label: 'Consumable', emoji: '🍏', fields: ['consumable'] }
             };
         case 'store':
             return {
