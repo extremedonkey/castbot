@@ -9189,7 +9189,10 @@ Your server is now ready for Tycoons gameplay!`;
             mode: 'edit'
           });
           
-          return uiResponse;
+          return {
+            ...uiResponse,
+            ephemeral: true
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_store_create') {
@@ -11247,7 +11250,8 @@ Your server is now ready for Tycoons gameplay!`;
           
           return {
             flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [container]
+            components: [container],
+            ephemeral: true
           };
         }
       })(req, res, client);
@@ -16030,7 +16034,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             
             return res.send({
               type: InteractionResponseType.UPDATE_MESSAGE,
-              data: ui
+              data: {
+                ...ui,
+                ephemeral: true
+              }
             });
           } else if (selectedValue === 'search_entities') {
             // Show search modal
@@ -16111,7 +16118,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               });
             }
             
-            return uiResponse;
+            return {
+              ...uiResponse,
+              ephemeral: true
+            };
           }
         }
       })(req, res, client);
@@ -16138,7 +16148,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             mode: 'edit'
           });
           
-          return uiResponse;
+          return {
+            ...uiResponse,
+            ephemeral: true
+          };
         }
       })(req, res, client);
       
@@ -16424,7 +16437,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             // Insert the consumable select before the separator
             containerComponents.splice(insertIndex, 0, consumableSelect);
             
-            return uiResponse;
+            return {
+              ...uiResponse,
+              ephemeral: true
+            };
           } else if (entityType === 'map_cell' && fieldGroup === 'interaction') {
             // Custom Actions UI - opens editor for actions
             const { createCustomActionSelectionUI } = await import('./customActionUI.js');
