@@ -11507,12 +11507,28 @@ Your server is now ready for Tycoons gameplay!`;
             }
             
             // Create options for button selection
-            const buttonOptions = availableButtons.map(([id, btn]) => ({
-              label: (btn.name || btn.label || id).substring(0, 100),
-              value: id,
-              description: (`ID: ${id}` + (btn.actions?.length ? ` • ${btn.actions.length} actions` : '')).substring(0, 100),
-              emoji: { name: '🔗' }
-            }));
+            const buttonOptions = [];
+            
+            // Add search option if many buttons
+            if (availableButtons.length > 10) {
+              buttonOptions.push({
+                label: '🔍 Search Actions',
+                value: 'search_follow_up_actions',
+                description: 'Search through available actions',
+                emoji: { name: '🔍' }
+              });
+            }
+            
+            // Add available buttons (limited to leave room for search)
+            const buttonLimit = availableButtons.length > 10 ? 24 : 25;
+            availableButtons.slice(0, buttonLimit).forEach(([id, btn]) => {
+              buttonOptions.push({
+                label: (btn.name || btn.label || id).substring(0, 100),
+                value: id,
+                description: (`ID: ${id}` + (btn.actions?.length ? ` • ${btn.actions.length} actions` : '')).substring(0, 100),
+                emoji: { name: '🔗' }
+              });
+            });
             
             console.log(`✅ SUCCESS: safari_action_type_select - showing button selection for follow_up_button`);
             
@@ -11707,6 +11723,108 @@ Your server is now ready for Tycoons gameplay!`;
             return {
               content: '❌ No follow-up action selected.',
               ephemeral: true
+            };
+          }
+          
+          // Handle back to all selection
+          if (followUpButtonId === 'back_to_all_follow_up') {
+            // Reload the follow-up selection UI
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const button = safariData[context.guildId]?.buttons?.[buttonId];
+            
+            if (!button) {
+              return {
+                content: '❌ Button not found.',
+                ephemeral: true
+              };
+            }
+            
+            // Get all available buttons (excluding current)
+            const allButtons = safariData[context.guildId]?.buttons || {};
+            const availableButtons = Object.entries(allButtons)
+              .filter(([id]) => id !== buttonId)
+              .sort((a, b) => {
+                const aLastModified = a[1].metadata?.lastModified || 0;
+                const bLastModified = b[1].metadata?.lastModified || 0;
+                return bLastModified - aLastModified;
+              })
+              .slice(0, 25);
+            
+            // Recreate the button options
+            const buttonOptions = [];
+            
+            if (availableButtons.length > 10) {
+              buttonOptions.push({
+                label: '🔍 Search Actions',
+                value: 'search_follow_up_actions',
+                description: 'Search through available actions',
+                emoji: { name: '🔍' }
+              });
+            }
+            
+            const buttonLimit = availableButtons.length > 10 ? 24 : 25;
+            availableButtons.slice(0, buttonLimit).forEach(([id, btn]) => {
+              buttonOptions.push({
+                label: (btn.name || btn.label || id).substring(0, 100),
+                value: id,
+                description: (`ID: ${id}` + (btn.actions?.length ? ` • ${btn.actions.length} actions` : '')).substring(0, 100),
+                emoji: { name: '🔗' }
+              });
+            });
+            
+            return {
+              components: [{
+                type: 17, // Container
+                accent_color: 0x8B5CF6,
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `# Select Follow-up Action for ${button.name || 'Custom Action'}\n\nChoose which action should be triggered after this action completes.`
+                  },
+                  { type: 14 }, // Separator
+                  {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 3, // String Select
+                      custom_id: actionIndex !== undefined ? 
+                        `safari_follow_up_select_${buttonId}_${actionIndex}` : 
+                        `safari_follow_up_select_${buttonId}`,
+                      placeholder: 'Select action to chain to...',
+                      options: buttonOptions
+                    }]
+                  }
+                ]
+              }],
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+              ephemeral: true
+            };
+          }
+          
+          // Handle search selection
+          if (followUpButtonId === 'search_follow_up_actions') {
+            const modalCustomId = actionIndex !== undefined ? 
+              `follow_up_search_modal_${buttonId}_${actionIndex}` : 
+              `follow_up_search_modal_${buttonId}`;
+            
+            return {
+              type: InteractionResponseType.MODAL,
+              data: {
+                title: 'Search Follow-up Actions',
+                custom_id: modalCustomId,
+                components: [{
+                  type: 1, // ActionRow
+                  components: [{
+                    type: 4, // Text Input
+                    custom_id: 'search_term',
+                    label: 'Search Term',
+                    style: 1, // Short
+                    placeholder: 'Enter action name or description...',
+                    required: true,
+                    max_length: 50
+                  }]
+                }]
+              }
             };
           }
           
@@ -21040,6 +21158,55 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('follow_up_search_again_')) {
+      // Handle search again for follow-up actions
+      return ButtonHandlerFactory.create({
+        id: 'follow_up_search_again',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 DEBUG: Search again clicked for follow-up actions`);
+          
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('follow_up_search_again_', '').split('_');
+          let buttonId, actionIndex;
+          
+          // Check if last part is a number (actionIndex)
+          const lastPart = parts[parts.length - 1];
+          if (!isNaN(parseInt(lastPart))) {
+            actionIndex = parseInt(lastPart);
+            buttonId = parts.slice(0, -1).join('_');
+          } else {
+            buttonId = parts.join('_');
+          }
+          
+          const modalCustomId = actionIndex !== undefined ? 
+            `follow_up_search_modal_${buttonId}_${actionIndex}` : 
+            `follow_up_search_modal_${buttonId}`;
+          
+          // Show search modal
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              title: 'Search Follow-up Actions',
+              custom_id: modalCustomId,
+              components: [{
+                type: 1, // ActionRow
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'search_term',
+                  label: 'Search Term',
+                  style: 1, // Short
+                  placeholder: 'Enter action name or description...',
+                  required: true,
+                  max_length: 50
+                }]
+              }]
+            }
+          };
+        }
+      })(req, res, client);
+      
     } else if (custom_id === 'map_admin_user_select') {
       // Handle user selection for map admin
       console.log(`🛡️ START: map_admin_user_select handler`);
@@ -27208,6 +27375,196 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error searching custom actions. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('follow_up_search_modal_')) {
+      // Handle follow-up action search modal submission
+      console.log(`🔍 DEBUG: Follow-up action search modal - custom_id: ${custom_id}`);
+      
+      try {
+        // Parse buttonId and actionIndex from custom_id
+        const parts = custom_id.replace('follow_up_search_modal_', '').split('_');
+        let buttonId, actionIndex;
+        
+        // Check if last part is a number (actionIndex)
+        const lastPart = parts[parts.length - 1];
+        if (!isNaN(parseInt(lastPart))) {
+          actionIndex = parseInt(lastPart);
+          buttonId = parts.slice(0, -1).join('_');
+        } else {
+          buttonId = parts.join('_');
+        }
+        
+        // Get search term from modal
+        const searchTerm = data.components[0]?.components[0]?.value?.toLowerCase().trim();
+        
+        if (!searchTerm) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a search term.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`🔍 DEBUG: Searching follow-up actions for term: "${searchTerm}"`);
+        
+        // Import required modules
+        const { loadSafariContent } = await import('./safariManager.js');
+        
+        // Load safari content
+        const allSafariContent = await loadSafariContent();
+        const guildData = allSafariContent[req.body.guild_id] || {};
+        const allButtons = guildData.buttons || {};
+        
+        // Get current button
+        const currentButton = allButtons[buttonId];
+        if (!currentButton) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Current button not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Search through buttons (excluding current one)
+        const searchResults = Object.entries(allButtons)
+          .filter(([id, button]) => {
+            // Exclude current button
+            if (id === buttonId) return false;
+            
+            const searchableText = [
+              button.name?.toLowerCase() || '',
+              button.label?.toLowerCase() || '',
+              button.description?.toLowerCase() || '',
+              id.toLowerCase()
+            ].join(' ');
+            return searchableText.includes(searchTerm);
+          })
+          .map(([id, button]) => ({ id, button }));
+        
+        console.log(`🔍 DEBUG: Found ${searchResults.length} matching follow-up actions`);
+        
+        if (searchResults.length === 0) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ No follow-up actions found matching "${searchTerm}".`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Check if too many results
+        if (searchResults.length >= 24) {
+          console.log(`🔍 DEBUG: Too many results (${searchResults.length}), asking user to refine search`);
+          
+          // Create Components V2 "too many results" message
+          const tooManyContainer = {
+            type: 17, // Container
+            accent_color: 0xff6b6b, // Red accent for warning
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 🔍 Too Many Search Results\n\nFound **${searchResults.length}** actions matching "${searchTerm}"\n\n⚠️ Please make your search more specific to see results (max 24 results).`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    style: 1, // Primary
+                    label: '🔍 Search Again',
+                    custom_id: actionIndex !== undefined ? 
+                      `follow_up_search_again_${buttonId}_${actionIndex}` : 
+                      `follow_up_search_again_${buttonId}`,
+                    emoji: { name: '🔍' }
+                  },
+                  {
+                    type: 2, // Button
+                    style: 2, // Secondary
+                    label: '⬅️ Back to Action',
+                    custom_id: `safari_config_${buttonId}_${actionIndex || 0}`,
+                    emoji: { name: '⬅️' }
+                  }
+                ]
+              }
+            ]
+          };
+          
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              components: [tooManyContainer],
+              flags: (1 << 15) // IS_COMPONENTS_V2
+            }
+          });
+        }
+        
+        // Build response with search results
+        const customId = actionIndex !== undefined ? 
+          `safari_follow_up_select_${buttonId}_${actionIndex}` : 
+          `safari_follow_up_select_${buttonId}`;
+        
+        const options = [{
+          label: '🔙 Back to all',
+          value: 'back_to_all_follow_up',
+          description: 'Return to full action list'
+        }];
+        
+        // Add search results (limited to 23 to leave room for back option)
+        searchResults.slice(0, 23).forEach(({ id, button }) => {
+          options.push({
+            label: (button.name || button.label || id).substring(0, 100),
+            value: id,
+            description: (`ID: ${id}` + (button.actions?.length ? ` • ${button.actions.length} actions` : '')).substring(0, 100),
+            emoji: { name: '🔗' }
+          });
+        });
+        
+        // Create UI with Components V2
+        const uiComponents = [{
+          type: 17, // Container
+          accent_color: 0x8B5CF6, // Purple accent for follow-up actions
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## Search Results: Follow-up Actions\n\nFound ${searchResults.length} matching "${searchTerm}" for **${currentButton.name || buttonId}**`
+            },
+            { type: 14 }, // Separator
+            {
+              type: 1, // Action Row
+              components: [{
+                type: 3, // String Select
+                custom_id: customId,
+                placeholder: `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} for "${searchTerm}"`,
+                options: options
+              }]
+            }
+          ]
+        }];
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: uiComponents,
+            flags: (1 << 15) // IS_COMPONENTS_V2
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error handling follow-up action search:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error searching follow-up actions. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
