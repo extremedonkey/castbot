@@ -26703,7 +26703,7 @@ Are you sure you want to continue?`;
           };
           
           return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
               components: [tooManyContainer],
               flags: InteractionResponseFlags.EPHEMERAL
