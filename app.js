@@ -10318,7 +10318,7 @@ Your server is now ready for Tycoons gameplay!`;
             custom_id: `safari_store_browse_${guildId}_${storeId}`,
             label: `Browse ${store.name}`,
             style: 1,
-            emoji: store.emoji ? { name: store.emoji } : { name: '🏪' }
+            emoji: store.emoji ? parseTextEmoji(store.emoji).emoji : { name: '🏪' }
           }]
         };
         
