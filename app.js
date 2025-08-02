@@ -24923,12 +24923,20 @@ Are you sure you want to continue?`;
         
         console.log(`✅ DEBUG: Store ${storeId} updated successfully`);
         
+        // Redirect back to store management UI with updated store data
+        const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
+        
+        const updatedStore = safariData[guildId].stores[storeId];
+        const uiResponse = await createStoreItemManagementUI({
+          storeId: storeId,
+          store: updatedStore,
+          guildId: guildId,
+          searchTerm: '' // Clear any search
+        });
+        
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `✅ **Store Updated Successfully!**\n\n**${storeEmoji ? storeEmoji + ' ' : ''}${storeName}**\n${storeDescription ? storeDescription : ''}\n\nStore details have been updated.`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
         });
         
       } catch (error) {

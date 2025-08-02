@@ -670,16 +670,23 @@ export async function createStoreItemManagementUI(options) {
                     {
                         type: 2, // Button
                         custom_id: 'safari_store_manage_items',
-                        label: '← Stores', // Changed as requested
+                        label: '← Stores',
                         style: 2,
                         emoji: { name: '🏪' }
                     },
                     {
                         type: 2, // Button
+                        custom_id: `safari_store_edit_${storeId}`,
+                        label: 'Edit Store',
+                        style: 2,
+                        emoji: { name: '✏️' }
+                    },
+                    {
+                        type: 2, // Button
                         custom_id: `safari_store_open_${storeId}`,
                         label: 'Open Store',
-                        style: 2, // Changed to grey as requested
-                        emoji: { name: '🛍️' } // Changed emoji as requested
+                        style: 2,
+                        emoji: { name: '🛍️' }
                     }
                 ]
             }
