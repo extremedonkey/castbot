@@ -17918,6 +17918,14 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             await saveSafariContent(allSafariContent);
             console.log(`🔍 DEBUG: remove_coord - safari content saved`);
             
+            // Queue anchor message updates
+            try {
+              const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+              await queueActionCoordinateUpdates(context.guildId, actionId, 'coordinate_removed');
+            } catch (error) {
+              console.error('Error queueing anchor updates:', error);
+            }
+            
             // Return updated UI
             console.log(`🔍 DEBUG: remove_coord - creating UI...`);
             const { createCoordinateManagementUI } = await import('./customActionUI.js');
@@ -26873,7 +26881,27 @@ Are you sure you want to continue?`;
           action.coordinates.push(coordinate);
         }
         
+        // Add bidirectional sync - update coordinate's buttons array
+        const activeMapId = allSafariContent[guildId]?.maps?.active;
+        if (activeMapId && allSafariContent[guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate]) {
+          const coordData = allSafariContent[guildId].maps[activeMapId].coordinates[coordinate];
+          if (!coordData.buttons) {
+            coordData.buttons = [];
+          }
+          if (!coordData.buttons.includes(actionId)) {
+            coordData.buttons.push(actionId);
+          }
+        }
+        
         await saveSafariContent(allSafariContent);
+        
+        // Queue anchor message updates
+        try {
+          const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+          await queueActionCoordinateUpdates(guildId, actionId, 'coordinate_added');
+        } catch (error) {
+          console.error('Error queueing anchor updates:', error);
+        }
         
         // Return updated UI
         const { createCoordinateManagementUI } = await import('./customActionUI.js');
