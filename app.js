@@ -12501,12 +12501,18 @@ Your server is now ready for Tycoons gameplay!`;
           // Clean up state
           dropConfigState.delete(stateKey);
           
-          // Return to custom action editor
+          // Return to custom action editor (make it ephemeral)
           const { createCustomActionEditorUI } = await import('./customActionUI.js');
-          return await createCustomActionEditorUI({
+          const editorUI = await createCustomActionEditorUI({
             guildId: context.guildId,
             actionId: buttonId
           });
+          
+          // Ensure the response is ephemeral
+          return {
+            ...editorUI,
+            ephemeral: true
+          };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_currency_amount_')) {
