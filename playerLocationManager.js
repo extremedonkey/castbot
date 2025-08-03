@@ -346,7 +346,6 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
     // Add blacklist legend if showing blacklisted coords
     if (showBlacklisted && blacklistedCoords.length > 0) {
         legend += `${blacklistSymbol} = Blacklisted (restricted access)\n`;
-        legend += `${blacklistSymbol}♟ = Player(s) on blacklisted cell\n`;
     }
     
     // List coordinates with players and blacklisted coordinates
