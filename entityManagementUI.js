@@ -38,7 +38,9 @@ export async function createMapItemSelectionUI(options) {
     }
     
     // Filter items if search term provided
+    console.log(`🔍 DEBUG: createMapItemSelectionUI - filtering ${Object.keys(items).length} items with search term: "${searchTerm}"`);
     const filteredItems = filterEntities(items, searchTerm);
+    console.log(`🔍 DEBUG: createMapItemSelectionUI - found ${Object.keys(filteredItems).length} matching items`);
     
     // Create item selector with map-specific custom_ids
     const itemSelector = createMapItemSelector(filteredItems, coordinate, searchTerm);
@@ -225,15 +227,19 @@ function filterEntities(entities, searchTerm) {
     const filtered = {};
     const search = searchTerm.toLowerCase();
     
+    console.log(`🔍 DEBUG: filterEntities - searching for "${search}" in ${Object.keys(entities).length} entities`);
+    
     for (const [id, entity] of Object.entries(entities)) {
         const name = (entity.name || entity.label || '').toLowerCase();
         const description = (entity.description || '').toLowerCase();
         
         if (name.includes(search) || description.includes(search)) {
             filtered[id] = entity;
+            console.log(`✅ Match: ${entity.name || entity.label} (${id})`);
         }
     }
     
+    console.log(`🔍 DEBUG: filterEntities - found ${Object.keys(filtered).length} matches`);
     return filtered;
 }
 
