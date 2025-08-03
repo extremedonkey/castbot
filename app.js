@@ -19258,7 +19258,7 @@ Are you sure you want to continue?`;
       })(req, res, client);
       
     } else if (custom_id.startsWith('map_add_item_drop_')) {
-      // Show item selection for drop configuration with search functionality
+      // Show item selection for drop configuration using existing working entity UI
       return ButtonHandlerFactory.create({
         id: 'map_add_item_drop',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -19269,18 +19269,21 @@ Are you sure you want to continue?`;
           
           console.log(`📦 START: map_add_item_drop - coord ${coord}, user ${context.userId}`);
           
-          // Use the new searchable item selection UI
-          const { createMapItemSelectionUI } = await import('./entityManagementUI.js');
-          
-          const itemSelectionInterface = await createMapItemSelectionUI({
+          // Use the existing working entity management UI for item selection
+          const uiResponse = await createEntityManagementUI({
+            entityType: 'item',
             guildId: context.guildId,
-            coordinate: coord,
-            title: `Select Item Drop for ${coord}`,
-            description: 'Choose an item to add as a drop at this map location'
+            selectedId: null,
+            activeFieldGroup: null,
+            searchTerm: '',
+            mode: 'edit'
           });
           
-          console.log(`✅ SUCCESS: map_add_item_drop - showing searchable item selection for ${coord}`);
-          return itemSelectionInterface;
+          console.log(`✅ SUCCESS: map_add_item_drop - showing item selection UI for ${coord}`);
+          return {
+            ...uiResponse,
+            ephemeral: true
+          };
         }
       })(req, res, client);
       

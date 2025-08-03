@@ -371,6 +371,7 @@ Most admin functionality accessed via `/menu` → Production Menu
 - **Permission errors** → Use BigInt for permission checks
 - **Menu crashes** → Check 5-button limit per Action Row (see ComponentsV2.md line 61)
 - **"Interaction failed" with UPDATE_MESSAGE** → Check flag compatibility and response format
+- **String Select option limits** → Discord String Selects have maximum 25 options (ComponentsV2.md line 185-201)
 - **Complex UI requests** → Start with existing simple patterns before building complex systems
 
 ### Development Best Practices
