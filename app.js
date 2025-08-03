@@ -25223,11 +25223,16 @@ Are you sure you want to continue?`;
         const filteredItems = {};
         const searchLower = searchTerm.toLowerCase();
         
+        console.log(`🔍 DEBUG: Searching for "${searchTerm}" in ${Object.keys(allItems).length} items`);
+        
         for (const [itemId, item] of Object.entries(allItems)) {
           if (item.name && item.name.toLowerCase().includes(searchLower)) {
             filteredItems[itemId] = item;
+            console.log(`✅ Match found: ${item.name} (${itemId})`);
           }
         }
+        
+        console.log(`🔍 DEBUG: Found ${Object.keys(filteredItems).length} matching items`)
         
         // Create item options array with search results
         const itemOptions = [];
