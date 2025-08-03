@@ -3456,7 +3456,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'condition_item_select',
         'condition_role_select',
         'map_add_item_drop',
-        'map_item_search'
+        'map_item_search',
+        'map_item_drop_select',
+        'map_drop_save',
+        'map_drop_remove',
+        'map_drop_style',
+        'map_drop_type'
       ];
       
       for (const pattern of dynamicPatterns) {
@@ -19258,7 +19263,7 @@ Are you sure you want to continue?`;
       })(req, res, client);
       
     } else if (custom_id.startsWith('map_add_item_drop_')) {
-      // Show item selection for drop configuration using existing working entity UI
+      // Show item selection for drop configuration with custom map context
       return ButtonHandlerFactory.create({
         id: 'map_add_item_drop',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -19269,7 +19274,7 @@ Are you sure you want to continue?`;
           
           console.log(`📦 START: map_add_item_drop - coord ${coord}, user ${context.userId}`);
           
-          // Use the existing working entity management UI for item selection
+          // Create custom item selection UI with map-specific custom_id
           const uiResponse = await createEntityManagementUI({
             entityType: 'item',
             guildId: context.guildId,
@@ -19278,6 +19283,16 @@ Are you sure you want to continue?`;
             searchTerm: '',
             mode: 'edit'
           });
+          
+          // Replace the entity_select_item custom_id with our map-specific one
+          if (uiResponse.components?.[0]?.components) {
+            for (const component of uiResponse.components[0].components) {
+              if (component.type === 1 && component.components?.[0]?.custom_id === 'entity_select_item') {
+                component.components[0].custom_id = `map_item_drop_select_${coord}`;
+                component.components[0].placeholder = `Select item to add to ${coord}...`;
+              }
+            }
+          }
           
           console.log(`✅ SUCCESS: map_add_item_drop - showing item selection UI for ${coord}`);
           return {

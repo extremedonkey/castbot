@@ -361,6 +361,50 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map'
   },
   
+  // Map Item Drop Selection
+  'map_item_drop_select_*': {
+    label: 'Configure Item Drop',
+    description: 'Configure item drop settings for map location',
+    emoji: '📦',
+    style: 'Primary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
+  
+  // Map Drop Management
+  'map_drop_save_*': {
+    label: 'Save Item Drop',
+    description: 'Save item drop configuration for map location',
+    emoji: '✅',
+    style: 'Success',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
+  'map_drop_remove_*': {
+    label: 'Remove Item Drop',
+    description: 'Remove item drop from map location',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
+  'map_drop_style_*': {
+    label: 'Drop Button Style',
+    description: 'Select button style for item drop',
+    emoji: '🎨',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
+  'map_drop_type_*': {
+    label: 'Drop Type',
+    description: 'Select drop type (once per player/season)',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
+  
   // Map Item/Currency Drops (removed duplicate - keeping the one above)
   'map_add_currency_drop_*': {
     label: 'Add Currency Drop',
