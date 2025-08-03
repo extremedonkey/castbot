@@ -728,7 +728,7 @@ export async function handleMapAdminRefreshAnchorsModal(context, req) {
   
   console.log(`✅ SUCCESS: map_admin_refresh_anchors_modal - refreshed ${results.success}/${coordinatesList.length} anchor messages`);
   
-  let responseContent = `🔄 **Anchor Refresh Results**\n\n`;
+  let responseContent = `## 🔄 Anchor Refresh Results\n\n`;
   responseContent += `✅ **Successfully refreshed**: ${results.success}\n`;
   responseContent += `❌ **Failed to refresh**: ${results.failed}\n`;
   responseContent += `📍 **Coordinates processed**: ${coordinatesList.join(', ')}\n\n`;
@@ -741,7 +741,15 @@ export async function handleMapAdminRefreshAnchorsModal(context, req) {
   }
   
   return {
-    content: responseContent,
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    components: [{
+      type: 17, // Container
+      accent_color: 0x2ecc71, // Green for success
+      components: [{
+        type: 10, // Text Display
+        content: responseContent
+      }]
+    }],
     ephemeral: true
   };
 }
