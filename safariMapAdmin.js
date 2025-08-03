@@ -68,13 +68,22 @@ function createUserSelectUI(guildId) {
         { type: 14 }, // Separator
         {
           type: 1, // Action Row
-          components: [{
-            type: 2, // Button
-            custom_id: 'safari_map_explorer',
-            label: 'Back to Map Explorer',
-            style: 2,
-            emoji: { name: '◀️' }
-          }]
+          components: [
+            {
+              type: 2, // Button
+              custom_id: 'map_admin_blacklist',
+              label: 'Blacklisted Coords',
+              style: 2, // Secondary
+              emoji: { name: '🚫' }
+            },
+            {
+              type: 2, // Button
+              custom_id: 'safari_map_explorer',
+              label: 'Back to Map Explorer',
+              style: 2,
+              emoji: { name: '◀️' }
+            }
+          ]
         }
       ]
     }]
