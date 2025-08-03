@@ -27981,7 +27981,10 @@ Are you sure you want to continue?`;
         
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: result
+          data: {
+            ...result,
+            flags: result.flags | InteractionResponseFlags.EPHEMERAL
+          }
         });
         
       } catch (error) {
