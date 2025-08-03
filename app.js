@@ -19294,6 +19294,8 @@ Are you sure you want to continue?`;
           console.log(`🔍 START: map_item_search - coord ${coord}, user ${context.userId}`);
           
           // Show search modal
+          const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
+          
           const modal = new ModalBuilder()
             .setCustomId(`map_item_search_modal_${coord}`)
             .setTitle(`Search Items for ${coord}`);

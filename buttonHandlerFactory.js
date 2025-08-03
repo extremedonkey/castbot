@@ -334,6 +334,16 @@ export const BUTTON_REGISTRY = {
     requiresPermission: 'ManageRoles'
   },
   
+  // Map Item Search
+  'map_item_search_*': {
+    label: 'Search Items',
+    description: 'Search items for map location selection',
+    emoji: '🔍',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
+  
   // Map Store Management
   'map_stores_select_*': {
     label: 'Store Selection',
