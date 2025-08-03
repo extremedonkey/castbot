@@ -458,7 +458,8 @@ async function createMapGrid(guild, userId) {
         chestMechanic: 'shared',
         allowBacktracking: true,
         fogOfWar: true
-      }
+      },
+      blacklistedCoordinates: [] // Array to store restricted coordinates
     };
     
     // Initialize coordinate data
@@ -747,16 +748,24 @@ async function createMapExplorerMenu(guildId) {
       .setStyle(ButtonStyle.Danger)
       .setEmoji('🗑️');
     
+    const blacklistButton = new ButtonBuilder()
+      .setCustomId('map_admin_blacklist')
+      .setLabel('Blacklisted Coords')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🚫');
+    
     // Set states based on whether map exists
     if (hasActiveMap) {
       createButton.setStyle(ButtonStyle.Secondary).setDisabled(true);
       deleteButton.setDisabled(false);
+      blacklistButton.setDisabled(false);
     } else {
       createButton.setStyle(ButtonStyle.Primary).setDisabled(false);
       deleteButton.setDisabled(true);
+      blacklistButton.setDisabled(true);
     }
     
-    const mapButtons = [createButton, deleteButton];
+    const mapButtons = [createButton, deleteButton, blacklistButton];
     
     const mapButtonRow = new ActionRowBuilder().addComponents(mapButtons);
     
@@ -1222,7 +1231,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
         chestMechanic: 'shared',
         allowBacktracking: true,
         fogOfWar: true
-      }
+      },
+      blacklistedCoordinates: [] // Array to store restricted coordinates
     };
     
     // Initialize coordinate data
@@ -1277,6 +1287,84 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
       message: `❌ Error creating map: ${error.message}`
     };
   }
+}
+
+/**
+ * Check if a coordinate is blacklisted for a given map
+ * @param {string} guildId - Discord guild ID
+ * @param {string} coordinate - Coordinate to check (e.g., "A1", "B3")
+ * @returns {boolean} True if blacklisted, false otherwise
+ */
+export async function isCoordinateBlacklisted(guildId, coordinate) {
+  const safariData = await loadSafariContent();
+  const activeMapId = safariData[guildId]?.maps?.active;
+  
+  if (!activeMapId) return false;
+  
+  const mapData = safariData[guildId]?.maps?.[activeMapId];
+  const blacklistedCoordinates = mapData?.blacklistedCoordinates || [];
+  
+  return blacklistedCoordinates.includes(coordinate);
+}
+
+/**
+ * Update the blacklisted coordinates for a map
+ * @param {string} guildId - Discord guild ID
+ * @param {Array<string>} coordinatesList - Array of blacklisted coordinates
+ * @returns {Object} Result with success status and message
+ */
+export async function updateBlacklistedCoordinates(guildId, coordinatesList) {
+  try {
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[guildId]?.maps?.active;
+    
+    if (!activeMapId) {
+      return {
+        success: false,
+        message: '❌ No active map found.'
+      };
+    }
+    
+    // Ensure the map data exists
+    if (!safariData[guildId].maps[activeMapId]) {
+      return {
+        success: false,
+        message: '❌ Map data not found.'
+      };
+    }
+    
+    // Update blacklisted coordinates
+    safariData[guildId].maps[activeMapId].blacklistedCoordinates = coordinatesList;
+    
+    // Save the updated data
+    await saveSafariContent(safariData);
+    
+    return {
+      success: true,
+      message: `✅ Updated blacklisted coordinates. ${coordinatesList.length} locations are now restricted.`
+    };
+  } catch (error) {
+    console.error('Error updating blacklisted coordinates:', error);
+    return {
+      success: false,
+      message: `❌ Error updating blacklisted coordinates: ${error.message}`
+    };
+  }
+}
+
+/**
+ * Get the list of blacklisted coordinates for the active map
+ * @param {string} guildId - Discord guild ID
+ * @returns {Array<string>} Array of blacklisted coordinates
+ */
+export async function getBlacklistedCoordinates(guildId) {
+  const safariData = await loadSafariContent();
+  const activeMapId = safariData[guildId]?.maps?.active;
+  
+  if (!activeMapId) return [];
+  
+  const mapData = safariData[guildId]?.maps?.[activeMapId];
+  return mapData?.blacklistedCoordinates || [];
 }
 
 // Export functions

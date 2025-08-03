@@ -18693,14 +18693,14 @@ Are you sure you want to continue?`;
               .setCustomId(`player_enter_command_${coord}`)
               .setLabel('Enter Command')
               .setEmoji({ id: commandEmojiId })
-              .setStyle(1); // Primary
+              .setStyle(2); // Secondary
             
             // Create Navigate button
             const navigateButton = new ButtonBuilder()
               .setCustomId(`safari_navigate_${context.userId}_${coord}`)
               .setLabel('Navigate')
               .setEmoji('🗺️')
-              .setStyle(1); // Primary
+              .setStyle(2); // Secondary
             
             const buttonRow = new ActionRowBuilder().addComponents([enterCommandButton, navigateButton]);
             

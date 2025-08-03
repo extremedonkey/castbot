@@ -114,6 +114,9 @@ export async function getValidMoves(currentCoordinate, movementSchema = 'adjacen
     // Get the actual grid size for this guild's map
     const gridSize = guildId ? await getMapGridSize(guildId) : 7; // Default to 7x7 if no guildId provided
     
+    // Import isCoordinateBlacklisted to check for restricted coordinates
+    const { isCoordinateBlacklisted } = await import('./mapExplorer.js');
+    
     const validMoves = [];
     const directionsToCheck = movementSchema === 'cardinal_4' 
         ? ['north', 'east', 'south', 'west']
@@ -125,12 +128,18 @@ export async function getValidMoves(currentCoordinate, movementSchema = 'adjacen
         // Check if move is within grid bounds using dynamic grid size
         if (move.col >= 0 && move.col < gridSize && move.row >= 0 && move.row < gridSize) {
             const coordinate = String.fromCharCode(65 + move.col) + (move.row + 1);
+            
+            // Check if coordinate is blacklisted
+            const isBlacklisted = guildId ? await isCoordinateBlacklisted(guildId, coordinate) : false;
+            
             validMoves.push({
                 direction: move.direction,
                 coordinate: coordinate,
                 customId: `safari_move_${coordinate}`,
                 // Add label with coordinate for button display
-                label: `${move.direction.split(' ')[1]} (${coordinate})`
+                label: `${move.direction.split(' ')[1]} (${coordinate})`,
+                disabled: isBlacklisted, // Mark as disabled if blacklisted
+                blacklisted: isBlacklisted // Additional flag for UI handling
             });
         }
     }
@@ -186,6 +195,15 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
             return { 
                 success: false, 
                 message: `❌ You cannot move to ${newCoordinate} from ${oldCoordinate}. Your current location may have changed.` 
+            };
+        }
+        
+        // Check if target coordinate is blacklisted
+        const targetMove = validMoves.find(move => move.coordinate === newCoordinate);
+        if (targetMove && targetMove.blacklisted) {
+            return {
+                success: false,
+                message: `⛔ You cannot access that location. It has been restricted.`
             };
         }
     }

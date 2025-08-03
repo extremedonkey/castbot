@@ -594,3 +594,72 @@ export async function createCurrencyModal(userId, currentAmount, currencyName) {
   
   return modal;
 }
+
+/**
+ * Handle blacklisted coordinates management button
+ * @param {Object} context - Interaction context
+ * @returns {Object} Modal response for editing blacklisted coordinates
+ */
+export async function handleMapAdminBlacklist(context) {
+  console.log(`🚫 START: map_admin_blacklist - user ${context.userId}`);
+  
+  // Load current blacklisted coordinates
+  const { getBlacklistedCoordinates } = await import('./mapExplorer.js');
+  const blacklistedCoords = await getBlacklistedCoordinates(context.guildId);
+  
+  return {
+    type: InteractionResponseType.MODAL,
+    data: {
+      custom_id: 'map_admin_blacklist_modal',
+      title: 'Manage Blacklisted Coordinates',
+      components: [
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 4, // Text Input
+              custom_id: 'blacklisted_coords',
+              label: 'Blacklisted Coordinates',
+              style: 2, // Paragraph
+              placeholder: 'Enter comma-separated coordinates (e.g., A1, B3, C5)',
+              value: blacklistedCoords.join(', '),
+              required: false,
+              min_length: 0,
+              max_length: 1000
+            }
+          ]
+        }
+      ]
+    }
+  };
+}
+
+/**
+ * Handle blacklist modal submission
+ * @param {Object} context - Interaction context
+ * @param {Object} req - Request object containing modal data
+ * @returns {Object} Response with update status
+ */
+export async function handleMapAdminBlacklistModal(context, req) {
+  console.log(`🚫 START: map_admin_blacklist_modal - user ${context.userId}`);
+  
+  // Get the input value
+  const blacklistedCoordsInput = req.body.data.components[0].components[0].value || '';
+  
+  // Parse coordinates - split by comma and clean up
+  const coordinatesList = blacklistedCoordsInput
+    .split(',')
+    .map(coord => coord.trim().toUpperCase())
+    .filter(coord => coord.match(/^[A-Z]\d+$/)); // Validate format (e.g., A1, B2)
+  
+  // Update blacklisted coordinates
+  const { updateBlacklistedCoordinates } = await import('./mapExplorer.js');
+  const result = await updateBlacklistedCoordinates(context.guildId, coordinatesList);
+  
+  console.log(`✅ SUCCESS: map_admin_blacklist_modal - updated ${coordinatesList.length} blacklisted coordinates`);
+  
+  return {
+    content: result.message,
+    ephemeral: true
+  };
+}
