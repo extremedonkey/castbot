@@ -305,6 +305,15 @@ export const BUTTON_REGISTRY = {
     category: 'safari_movement'
   },
   
+  // Safari Navigation Refresh
+  'safari_navigate_refresh_*': {
+    label: 'Refresh',
+    description: 'Refresh stamina and movement display',
+    emoji: '🧭',
+    style: 'Secondary',
+    category: 'safari_movement'
+  },
+  
   // Map Location Actions
   'map_location_actions_*': {
     label: 'Location Actions',

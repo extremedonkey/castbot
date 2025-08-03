@@ -4218,6 +4218,50 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     }
     
+    // === SAFARI NAVIGATE REFRESH HANDLER ===
+    if (custom_id.startsWith('safari_navigate_refresh_')) {
+      const parts = custom_id.split('_');
+      const targetUserId = parts[3];
+      const coordinate = parts[4];
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`🧭 START: safari_navigate_refresh - user ${context.userId}, coordinate ${coordinate}`);
+          
+          // Verify this button is for the correct user
+          if (context.userId !== targetUserId) {
+            return {
+              content: '❌ This refresh button is for another player.',
+              ephemeral: true
+            };
+          }
+          
+          // Import movement display function
+          const { getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
+          
+          // Verify player is at this location
+          const mapState = await getPlayerLocation(context.guildId, context.userId);
+          if (!mapState || mapState.currentCoordinate !== coordinate) {
+            return {
+              content: `❌ You are no longer at ${coordinate}. Your current location is ${mapState?.currentCoordinate || 'unknown'}.`,
+              ephemeral: true
+            };
+          }
+          
+          // Get updated movement display
+          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate);
+          
+          console.log(`✅ SUCCESS: safari_navigate_refresh - refreshed display`);
+          return {
+            ...movementDisplay,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    }
+    
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
     if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
         !custom_id.startsWith('safari_add_action_') && 

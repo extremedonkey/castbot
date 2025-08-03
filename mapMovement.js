@@ -462,14 +462,27 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
     
     actionRows = [row1, row2, row3];
     
+    // Get stamina data for both can move and can't move cases
+    const stamina = await getEntityPoints(guildId, entityId, 'stamina');
+    
     if (canMove) {
-        const stamina = await getEntityPoints(guildId, entityId, 'stamina');
-        description = `Choose a direction to move:\n\n⚡ **Stamina:** ${stamina.current}/${stamina.max}`;
+        description = `Choose a direction to move:`;
     } else {
-        const stamina = await getEntityPoints(guildId, entityId, 'stamina');
         const timeUntil = await getTimeUntilRegeneration(guildId, entityId, 'stamina');
-        description = `*You're too tired to move! Rest for ${timeUntil} before moving again.*\n\n⚡ **Stamina:** ${stamina.current}/${stamina.max}`;
+        description = `*You're too tired to move! Rest for ${timeUntil} before moving again.*`;
     }
+    
+    // Create refresh button for stamina updates
+    const refreshButton = {
+        type: 1, // Action Row
+        components: [{
+            type: 2, // Button
+            custom_id: `safari_navigate_refresh_${userId}_${coordinate}`,
+            label: 'Refresh',
+            emoji: { name: '🧭' },
+            style: 2 // Secondary
+        }]
+    };
     
     // Always use Components V2 format since ButtonHandlerFactory automatically adds the flag
     // For both interaction responses and channel messages
@@ -487,6 +500,19 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
             {
                 type: 10, // Text Display
                 content: description
+            },
+            
+            // Stamina section
+            {
+                type: 15, // Section
+                title: "Player Status",
+                components: [
+                    {
+                        type: 10, // Text Display
+                        content: `⚡ **Stamina:** ${stamina.current}/${stamina.max}`
+                    },
+                    refreshButton
+                ]
             },
             
             // Add separator before movement buttons
