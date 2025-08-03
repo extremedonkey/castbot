@@ -333,9 +333,9 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
                 if (count === 0) {
                     gridDisplay += ' · ';
                 } else if (count === 1) {
-                    gridDisplay += ' 👤';
+                    gridDisplay += ' ♟';
                 } else if (count <= 9) {
-                    gridDisplay += ` ${count}👥`;
+                    gridDisplay += ` ${count}♟`;
                 } else {
                     gridDisplay += ' 9+';
                 }
@@ -349,8 +349,8 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
     // Build legend
     let legend = '\n**Legend:**\n';
     legend += '· = Empty cell\n';
-    legend += '👤 = 1 player\n';
-    legend += '#👥 = Multiple players\n';
+    legend += '♟ = 1 player\n';
+    legend += '#♟ = Multiple players\n';
     
     // Add blacklist legend if showing blacklisted coords
     if (showBlacklisted && blacklistedCoords.length > 0) {
