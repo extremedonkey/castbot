@@ -57,7 +57,7 @@ grep -B20 -A20 "fieldGroup === 'stores'" app.js
 **🚨 PLAYER LOCATION FEATURES**: For ANY feature involving player locations, proximity, or interactions:
 - **ALWAYS** use PlayerLocationManager module (`playerLocationManager.js`)
 - **NEVER** access player location data directly
-- See [PlayerLocationManager.md](docs/features/PlayerLocationManager.md) for complete API
+- **QUICK REF**: [PlayerLocationSystem.md](docs/quick-reference/PlayerLocationSystem.md) | **FULL API**: [PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
 
 ## 🛠️ Critical Development Information
 

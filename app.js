@@ -11490,23 +11490,37 @@ Your server is now ready for Tycoons gameplay!`;
           if (actionType === 'give_item') {
             // Load items
             const items = safariData[context.guildId]?.items || {};
+            const itemCount = Object.keys(items).length;
             
-            if (Object.keys(items).length === 0) {
+            if (itemCount === 0) {
               return {
                 content: '❌ No items available. Create items first using Safari menu.',
                 ephemeral: true
               };
             }
             
-            // Create item select menu with proper emoji parsing
-            const itemOptions = Object.entries(items).slice(0, 25).map(([itemId, item]) => {
+            // Create item options array
+            const itemOptions = [];
+            
+            // Add search option if more than 10 items
+            if (itemCount > 10) {
+              itemOptions.push({
+                label: '🔍 Search: "Type to search..."',
+                value: 'search_entities',
+                description: 'Click to search items'
+              });
+            }
+            
+            // Add item options (limited to remaining slots after search option)
+            const maxItems = itemCount > 10 ? 24 : 25; // Leave room for search option
+            Object.entries(items).slice(0, maxItems).forEach(([itemId, item]) => {
               const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
-              return {
+              itemOptions.push({
                 label: cleanText.substring(0, 100),
                 value: itemId,
                 description: item.description?.substring(0, 100),
                 emoji: emoji
-              };
+              });
             });
             
             console.log(`✅ SUCCESS: safari_action_type_select - showing item selection for give_item`);
@@ -11517,7 +11531,7 @@ Your server is now ready for Tycoons gameplay!`;
                 components: [
                   {
                     type: 10, // Text Display
-                    content: `# Select Item for ${button.name || 'Custom Action'}\n\nChoose an item to give when this action is triggered.`
+                    content: `## Item`
                   },
                   { type: 14 }, // Separator
                   {
@@ -11525,7 +11539,7 @@ Your server is now ready for Tycoons gameplay!`;
                     components: [{
                       type: 3, // String Select
                       custom_id: `safari_give_item_select_${buttonId}`,
-                      placeholder: 'Select an item...',
+                      placeholder: `Select item to give...`,
                       options: itemOptions
                     }]
                   }
@@ -11713,6 +11727,41 @@ Your server is now ready for Tycoons gameplay!`;
           if (!itemId) {
             return {
               content: '❌ No item selected.',
+              ephemeral: true
+            };
+          }
+          
+          // Handle search option
+          if (itemId === 'search_entities') {
+            console.log(`🔍 SEARCH: safari_give_item_select - opening search modal for ${buttonId}`);
+            
+            // Return search modal
+            return {
+              type: 9, // MODAL interaction response
+              data: {
+                custom_id: `safari_item_search_modal_${buttonId}`,
+                title: `Search Items`,
+                components: [
+                  {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 4, // Text Input
+                      custom_id: 'search_term',
+                      label: 'Search Term',
+                      style: 1, // Short
+                      placeholder: 'Enter item name...',
+                      required: false
+                    }]
+                  }
+                ]
+              }
+            };
+          }
+          
+          // Handle no results
+          if (itemId === 'no_results') {
+            return {
+              content: '❌ No item selected. Please search again or select a different item.',
               ephemeral: true
             };
           }
@@ -25141,6 +25190,107 @@ Are you sure you want to continue?`;
         
       } catch (error) {
         console.error(`❌ ERROR: map_item_search_modal - ${error.message}`);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error searching items. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_item_search_modal_')) {
+      // Handle item search modal submission for safari give_item action
+      try {
+        const buttonId = custom_id.replace('safari_item_search_modal_', '');
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+        
+        console.log(`🔍 START: safari_item_search_modal - button ${buttonId}`);
+        
+        // Extract search term from modal
+        const searchTerm = components[0].components[0].value?.trim() || '';
+        
+        // Load and filter items
+        const { loadSafariContent } = await import('./safariManager.js');
+        const { parseTextEmoji } = await import('./utils/emojiUtils.js');
+        const safariData = await loadSafariContent();
+        const allItems = safariData[guildId]?.items || {};
+        
+        // Filter items by name (case insensitive)
+        const filteredItems = {};
+        const searchLower = searchTerm.toLowerCase();
+        
+        for (const [itemId, item] of Object.entries(allItems)) {
+          if (item.name && item.name.toLowerCase().includes(searchLower)) {
+            filteredItems[itemId] = item;
+          }
+        }
+        
+        // Create item options array with search results
+        const itemOptions = [];
+        
+        // Add search option again if still many results
+        if (Object.keys(filteredItems).length > 10) {
+          itemOptions.push({
+            label: `🔍 Search: "${searchTerm}"`,
+            value: 'search_entities',
+            description: 'Click to search again'
+          });
+        }
+        
+        // Add filtered items (limited to remaining slots)
+        const maxItems = Object.keys(filteredItems).length > 10 ? 24 : 25;
+        Object.entries(filteredItems).slice(0, maxItems).forEach(([itemId, item]) => {
+          const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+          itemOptions.push({
+            label: cleanText.substring(0, 100),
+            value: itemId,
+            description: item.description?.substring(0, 100),
+            emoji: emoji
+          });
+        });
+        
+        // If no results, show message
+        if (itemOptions.length === 0 || (itemOptions.length === 1 && itemOptions[0].value === 'search_entities')) {
+          itemOptions.push({
+            label: 'No items found',
+            value: 'no_results',
+            description: `No items matching "${searchTerm}"`,
+            emoji: { name: '❌' }
+          });
+        }
+        
+        console.log(`✅ SUCCESS: safari_item_search_modal - found ${Object.keys(filteredItems).length} items matching "${searchTerm}"`);
+        
+        // Return filtered results
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `## Item\n\n*Search results for "${searchTerm}"*`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 3, // String Select
+                    custom_id: `safari_give_item_select_${buttonId}`,
+                    placeholder: `Select item to give...`,
+                    options: itemOptions
+                  }]
+                }
+              ]
+            }],
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in safari_item_search_modal:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
