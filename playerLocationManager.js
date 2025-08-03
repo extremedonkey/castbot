@@ -14,9 +14,10 @@ import { logger } from './logger.js';
  * Get all players on the map with their current locations
  * @param {string} guildId - The guild ID
  * @param {boolean} includeOffline - Whether to include offline players
+ * @param {Object} client - Discord client instance for fetching member data
  * @returns {Map<string, Object>} Map of userId -> location data
  */
-export async function getAllPlayerLocations(guildId, includeOffline = true) {
+export async function getAllPlayerLocations(guildId, includeOffline = true, client = null) {
     const playerData = await loadPlayerData();
     const safariData = await loadSafariContent();
     const activeMapId = safariData[guildId]?.maps?.active;
@@ -29,9 +30,37 @@ export async function getAllPlayerLocations(guildId, includeOffline = true) {
     const guildPlayers = playerData[guildId]?.players || {};
     const playerLocations = new Map();
     
+    // Fetch guild and members if client is provided
+    let guild = null;
+    let members = null;
+    if (client) {
+        try {
+            guild = await client.guilds.fetch(guildId);
+            // Fetch all members to ensure cache is populated
+            members = await guild.members.fetch({ force: true });
+            logger.debug('LOCATION_MANAGER', 'Fetched guild members', { guildId, memberCount: members.size });
+        } catch (error) {
+            logger.debug('LOCATION_MANAGER', 'Could not fetch guild or members', { guildId, error: error.message });
+        }
+    }
+    
     for (const [userId, player] of Object.entries(guildPlayers)) {
         const mapProgress = player.safari?.mapProgress?.[activeMapId];
         if (!mapProgress?.currentLocation) continue;
+        
+        // Try to get display name from Discord member
+        let displayName = 'Unknown Player';
+        let avatar = null;
+        
+        if (members) {
+            const member = members.get(userId);
+            if (member) {
+                displayName = member.displayName || member.user.username || 'Unknown Player';
+                avatar = member.user.displayAvatarURL({ size: 128 });
+            } else {
+                logger.debug('LOCATION_MANAGER', 'Member not found in cache', { userId });
+            }
+        }
         
         const locationData = {
             userId,
@@ -39,8 +68,8 @@ export async function getAllPlayerLocations(guildId, includeOffline = true) {
             lastMovement: mapProgress.movementHistory?.slice(-1)[0]?.timestamp || null,
             exploredCount: mapProgress.exploredCoordinates?.length || 0,
             stamina: await getPlayerStamina(guildId, userId),
-            displayName: player.displayName || 'Unknown Player',
-            avatar: player.avatar || null
+            displayName: displayName,
+            avatar: avatar
         };
         
         playerLocations.set(userId, locationData);
