@@ -259,13 +259,13 @@ export function formatPlayerLocationDisplay(players, options = {}) {
  * @param {Object} client - Discord client instance for fetching member data
  * @param {Object} options - Display options
  * @param {boolean} options.showBlacklisted - Whether to show blacklisted coordinates
- * @param {string} options.blacklistSymbol - Symbol to use for blacklisted cells (default: ❌)
+ * @param {string} options.blacklistSymbol - Symbol to use for blacklisted cells (default: X)
  * @returns {Object} Components V2 formatted map display
  */
 export async function createPlayerLocationMap(guildId, client = null, options = {}) {
     const { 
         showBlacklisted = true, 
-        blacklistSymbol = '❌' 
+        blacklistSymbol = 'X' 
     } = options;
     
     const safariData = await loadSafariContent();
@@ -384,10 +384,7 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
     }
     
     if (showBlacklisted && blacklistedWithInfo.length > 0) {
-        legend += '\n**Blacklisted (Empty) Cells:**\n';
-        for (const coord of blacklistedWithInfo) {
-            legend += `${coord} *(restricted access)*\n`;
-        }
+        legend += `\n**Blacklisted Cells:** ${blacklistedWithInfo.join(', ')}\n`;
     }
     
     return {
