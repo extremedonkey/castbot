@@ -542,6 +542,22 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map_admin',
     requiresPermission: 'ManageRoles'
   },
+  'map_player_locations': {
+    label: 'Player Locations',
+    description: 'View all player locations on the map',
+    emoji: '👥',
+    style: 'Primary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
+  'map_player_locations_refresh': {
+    label: 'Refresh',
+    description: 'Refresh player locations display',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
   'map_delete': {
     label: 'Delete Map',
     description: 'Delete entire map with confirmation',

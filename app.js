@@ -18433,11 +18433,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setStyle(ButtonStyle.Danger)
             .setEmoji('🗑️');
           
-          const initPlayerButton = new ButtonBuilder()
-            .setCustomId('safari_map_init_player')
-            .setLabel('Start Exploring')
-            .setStyle(ButtonStyle.Success)
-            .setEmoji('🚶');
+          const playerLocationsButton = new ButtonBuilder()
+            .setCustomId('map_player_locations')
+            .setLabel('Player Locations')
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji('👥');
           
           // Legacy create button (grey, will be far right)
           const legacyCreateButton = new ButtonBuilder()
@@ -18449,10 +18449,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Set states based on whether map exists
           if (hasActiveMap) {
             deleteButton.setDisabled(false);
-            initPlayerButton.setDisabled(false);
+            playerLocationsButton.setDisabled(false);
           } else {
             deleteButton.setDisabled(true);
-            initPlayerButton.setDisabled(true);
+            playerLocationsButton.setDisabled(true);
           }
           
           // Create blacklist button
@@ -18464,7 +18464,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setDisabled(!hasActiveMap); // Only enable if there's an active map
 
           // First row: Main map management buttons
-          const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, initPlayerButton]);
+          const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, playerLocationsButton]);
           
           // Second row: Admin functions and legacy
           const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, legacyCreateButton]);
@@ -18742,6 +18742,148 @@ Are you sure you want to continue?`;
         handler: async (context) => {
           const { handleMapAdminBlacklistModal } = await import('./safariMapAdmin.js');
           return await handleMapAdminBlacklistModal(context, req);
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'map_player_locations') {
+      // Handle player locations display
+      return ButtonHandlerFactory.create({
+        id: 'map_player_locations',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`👥 START: map_player_locations - user ${context.userId}`);
+          
+          const { getAllPlayerLocations, formatPlayerLocationDisplay, createPlayerLocationMap } = await import('./playerLocationManager.js');
+          
+          // Get all player locations
+          const playerLocations = await getAllPlayerLocations(context.guildId);
+          
+          // Convert Map to array for display
+          const playersArray = Array.from(playerLocations.values());
+          
+          // Create visual map display
+          const mapDisplay = await createPlayerLocationMap(context.guildId);
+          
+          // Format detailed player list
+          const detailedList = formatPlayerLocationDisplay(playersArray, {
+            showStamina: true,
+            showLastMove: true,
+            showExplored: true,
+            groupByLocation: true
+          });
+          
+          // Build UI components
+          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
+          
+          // Navigation buttons
+          const refreshButton = new ButtonBuilder()
+            .setCustomId('map_player_locations_refresh')
+            .setLabel('Refresh')
+            .setStyle(2) // Secondary
+            .setEmoji('🔄');
+          
+          const backButton = new ButtonBuilder()
+            .setCustomId('safari_map_explorer')
+            .setLabel('Back to Map Explorer')
+            .setStyle(2) // Secondary
+            .setEmoji('◀️');
+          
+          const adminButton = new ButtonBuilder()
+            .setCustomId('safari_map_admin')
+            .setLabel('Player Setup')
+            .setStyle(4) // Danger
+            .setEmoji('🧭');
+          
+          const navigationRow = new ActionRowBuilder().addComponents([refreshButton, adminButton, backButton]);
+          
+          console.log(`✅ SUCCESS: map_player_locations - found ${playerLocations.size} players`);
+          
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [{
+              type: 17, // Container
+              accent_color: 0x5865f2, // Discord blurple
+              components: [
+                mapDisplay,
+                { type: 14 }, // Separator
+                {
+                  type: 10, // Text Display
+                  content: `## 📊 Player Details\n\n${detailedList || '_No players on the map_'}`
+                },
+                { type: 14 }, // Separator
+                navigationRow.toJSON()
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'map_player_locations_refresh') {
+      // Handle refresh button
+      return ButtonHandlerFactory.create({
+        id: 'map_player_locations_refresh',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`🔄 REFRESH: map_player_locations - user ${context.userId}`);
+          
+          // Reuse the same handler logic as map_player_locations
+          const { getAllPlayerLocations, formatPlayerLocationDisplay, createPlayerLocationMap } = await import('./playerLocationManager.js');
+          
+          const playerLocations = await getAllPlayerLocations(context.guildId);
+          const playersArray = Array.from(playerLocations.values());
+          const mapDisplay = await createPlayerLocationMap(context.guildId);
+          const detailedList = formatPlayerLocationDisplay(playersArray, {
+            showStamina: true,
+            showLastMove: true,
+            showExplored: true,
+            groupByLocation: true
+          });
+          
+          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
+          
+          const refreshButton = new ButtonBuilder()
+            .setCustomId('map_player_locations_refresh')
+            .setLabel('Refresh')
+            .setStyle(2)
+            .setEmoji('🔄');
+          
+          const backButton = new ButtonBuilder()
+            .setCustomId('safari_map_explorer')
+            .setLabel('Back to Map Explorer')
+            .setStyle(2)
+            .setEmoji('◀️');
+          
+          const adminButton = new ButtonBuilder()
+            .setCustomId('safari_map_admin')
+            .setLabel('Player Setup')
+            .setStyle(4)
+            .setEmoji('🧭');
+          
+          const navigationRow = new ActionRowBuilder().addComponents([refreshButton, adminButton, backButton]);
+          
+          return {
+            flags: (1 << 15),
+            components: [{
+              type: 17,
+              accent_color: 0x5865f2,
+              components: [
+                mapDisplay,
+                { type: 14 },
+                {
+                  type: 10,
+                  content: `## 📊 Player Details\n\n${detailedList || '_No players on the map_'}`
+                },
+                { type: 14 },
+                navigationRow.toJSON()
+              ]
+            }]
+          };
         }
       })(req, res, client);
       
