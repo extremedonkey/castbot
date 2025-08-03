@@ -18660,6 +18660,31 @@ Are you sure you want to continue?`;
           return ui;
         }
       })(req, res, client);
+      
+    } else if (custom_id === 'map_admin_blacklist') {
+      // Handle blacklisted coordinates management
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_blacklist',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const { handleMapAdminBlacklist } = await import('./safariMapAdmin.js');
+          return await handleMapAdminBlacklist(context);
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'map_admin_blacklist_modal') {
+      // Handle blacklist modal submission
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_blacklist_modal',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const { handleMapAdminBlacklistModal } = await import('./safariMapAdmin.js');
+          return await handleMapAdminBlacklistModal(context, req);
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('map_location_actions_')) {
       // Handle Location Actions button
       return ButtonHandlerFactory.create({

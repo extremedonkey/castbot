@@ -392,10 +392,22 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
         const targetCoordinate = !isOutOfBounds ? String.fromCharCode(65 + targetCol) + (targetRow + 1) : null;
         
         if (movesByDirection[dir] && !isOutOfBounds) {
-            // Valid move
+            const move = movesByDirection[dir];
+            // Check if coordinate is blacklisted
+            if (move.blacklisted) {
+                return {
+                    type: 2,
+                    custom_id: `blacklisted_${dir}`,
+                    label: `🚫 ${dirLabel}`,
+                    style: 2, // Secondary
+                    disabled: true
+                };
+            }
+            
+            // Valid move (not blacklisted)
             return {
                 type: 2,
-                custom_id: movesByDirection[dir].customId,
+                custom_id: move.customId,
                 label: `${dirLabel} (${targetCoordinate})`,
                 style: canMove ? 1 : 2, // Primary if can move, Secondary if out of stamina
                 disabled: !canMove
