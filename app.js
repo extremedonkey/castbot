@@ -3575,7 +3575,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 }
                 return nestedComponent;
               });
-              return { ...component, components: updatedNestedComponents };
+              return { 
+                ...component, 
+                accent_color: 0xe74c3c, // Red when not tested
+                components: updatedNestedComponents 
+              };
             } else if (component.type === 1) { // Direct Action Row (fallback for non-V2)
               const updatedButtons = component.components.map(button => {
                 if (button.custom_id === 'restart_test_not_tested') {
@@ -3643,7 +3647,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 }
                 return nestedComponent;
               });
-              return { ...component, components: updatedNestedComponents };
+              return { 
+                ...component, 
+                accent_color: 0x2ecc71, // Green when tested
+                components: updatedNestedComponents 
+              };
             } else if (component.type === 1) { // Direct Action Row (fallback for non-V2)
               const updatedButtons = component.components.map(button => {
                 if (button.custom_id === 'restart_test_tested') {

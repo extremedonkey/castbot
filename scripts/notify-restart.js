@@ -210,7 +210,7 @@ async function sendRestartNotification() {
             flags: (1 << 15), // IS_COMPONENTS_V2
             components: [{
                 type: 17, // Container
-                accent_color: 0x5865f2, // Discord blurple
+                accent_color: 0xe74c3c, // Red default (not tested)
                 components: [
                     {
                         type: 10, // Text Display
