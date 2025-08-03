@@ -470,35 +470,18 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
     
     // Prepare whisper content
     const whisperContent = {
+      content: `## 💬 ${whisperData.senderName} whispers to you\n\n> **${whisperData.senderName}:** ${whisperData.message}`,
       components: [{
-        type: 17, // Container
-        accent_color: 0x9B59B6, // Purple for whispers
-        components: [
-          {
-            type: 10, // Text Display
-            content: `## 💬 ${whisperData.senderName} whispers to you`
-          },
-          {
-            type: 9, // Section
-            components: [{
-              type: 10,
-              content: `> **@${whisperData.senderName} whispered:**\n${whisperData.message}`
-            }]
-          },
-          { type: 14 }, // Separator
-          {
-            type: 1, // Action Row
-            components: [{
-              type: 2, // Button
-              custom_id: `whisper_reply_${whisperData.senderId}_${whisperData.coordinate}`,
-              label: 'Reply',
-              emoji: { name: '💬' },
-              style: 2 // Secondary
-            }]
-          }
-        ]
+        type: 1, // Action Row
+        components: [{
+          type: 2, // Button
+          custom_id: `whisper_reply_${whisperData.senderId}_${whisperData.coordinate}`,
+          label: 'Reply',
+          emoji: { name: '💬' },
+          style: 2 // Secondary
+        }]
       }],
-      flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+      flags: InteractionResponseFlags.EPHEMERAL,
       ephemeral: true
     };
     
