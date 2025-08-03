@@ -23382,6 +23382,8 @@ Are you sure you want to continue?`;
       const targetUserId = parts[3];
       const coordinate = parts.slice(4).join('_'); // Handle coordinates with underscores
       const message = components[0].components[0].value;
+      const userId = req.body.member?.user?.id || req.body.user?.id;
+      const guildId = req.body.guild_id;
       
       console.log(`💬 Whisper modal submitted - sender: ${userId}, target: ${targetUserId}, coord: ${coordinate}`);
       
