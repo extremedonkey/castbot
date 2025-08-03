@@ -57,9 +57,12 @@ export async function getAllPlayerLocations(guildId, includeOffline = true, clie
             if (member) {
                 displayName = member.displayName || member.user.username || 'Unknown Player';
                 avatar = member.user.displayAvatarURL({ size: 128 });
+                logger.debug('LOCATION_MANAGER', 'Found member', { userId, displayName, username: member.user.username });
             } else {
-                logger.debug('LOCATION_MANAGER', 'Member not found in cache', { userId });
+                logger.debug('LOCATION_MANAGER', 'Member not found in cache', { userId, totalMembers: members.size });
             }
+        } else {
+            logger.debug('LOCATION_MANAGER', 'No members cache available', { userId, hasClient: !!client });
         }
         
         const locationData = {
