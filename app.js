@@ -1050,11 +1050,11 @@ async function createSafariMenu(guildId, userId, member) {
   const mapAdminButtons = [
     new ButtonBuilder()
       .setCustomId('safari_map_explorer')
-      .setLabel('🗺️ Map Setup')
+      .setLabel('🗺️ Map Admin')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('safari_map_admin')
-      .setLabel('🧭 Player Setup')
+      .setLabel('🧭 Player Admin')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('safari_location_editor')
@@ -18793,7 +18793,7 @@ Are you sure you want to continue?`;
           
           const adminButton = new ButtonBuilder()
             .setCustomId('safari_map_admin')
-            .setLabel('Player Setup')
+            .setLabel('Player Admin')
             .setStyle(4) // Danger
             .setEmoji('🧭');
           
@@ -18861,7 +18861,7 @@ Are you sure you want to continue?`;
           
           const adminButton = new ButtonBuilder()
             .setCustomId('safari_map_admin')
-            .setLabel('Player Setup')
+            .setLabel('Player Admin')
             .setStyle(4)
             .setEmoji('🧭');
           
