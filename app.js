@@ -4337,9 +4337,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     // === WHISPER READ MESSAGE HANDLER ===
     if (custom_id.startsWith('whisper_read_')) {
       // Format: whisper_read_whisperId_targetUserId
-      const parts = custom_id.split('_');
-      const whisperId = parts[2];
-      const targetUserId = parts[3];
+      const parts = custom_id.replace('whisper_read_', '').split('_');
+      const whisperId = parts[0] + '_' + parts[1]; // Reconstruct whisperId with underscore
+      const targetUserId = parts[2];
       
       return ButtonHandlerFactory.create({
         id: 'whisper_read',
