@@ -16390,12 +16390,26 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       
       console.log(`💬 Whisper player selected - sender: ${userId}, target: ${targetUserId}, coord: ${coordinate}`);
       
-      const { showWhisperModal } = await import('./whisperManager.js');
-      return await showWhisperModal({ 
-        userId, 
-        guildId, 
-        token: req.body.token 
-      }, targetUserId, coordinate, client);
+      try {
+        const { showWhisperModal } = await import('./whisperManager.js');
+        const modalResponse = await showWhisperModal({ 
+          userId, 
+          guildId, 
+          token: req.body.token 
+        }, targetUserId, coordinate, client);
+        
+        console.log(`💬 Sending modal response for whisper`);
+        return res.send(modalResponse);
+      } catch (error) {
+        console.error('❌ Failed to show whisper modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ An error occurred while preparing the whisper interface.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
       
     } else if (custom_id.startsWith('entity_select_')) {
       // Handle entity selection from dropdown (MIGRATED TO FACTORY)
