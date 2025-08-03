@@ -126,7 +126,7 @@ function createMapItemSelector(items, coordinate, searchTerm) {
         type: 1, // Action Row
         components: [{
             type: 3, // String Select
-            custom_id: `map_item_select_${coordinate}`,
+            custom_id: `map_item_drop_select_${coordinate}`,
             placeholder: `Select an item for location ${coordinate}...`,
             options: options,
             max_values: 1
