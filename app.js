@@ -11733,29 +11733,31 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Handle search option - Use Entity Manager
+          // Handle search option - Show search modal
           if (itemId === 'search_entities') {
-            console.log(`🔍 SEARCH: safari_give_item_select - opening entity manager for ${buttonId}`);
+            console.log(`🔍 SEARCH: safari_give_item_select - opening search modal for ${buttonId}`);
             
-            // Use the entity management UI for item selection
-            const { createEntityManagementUI } = await import('./entityManagementUI.js');
+            // Show search modal (following map item search pattern)
+            const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
             
-            const entityUI = await createEntityManagementUI({
-              entityType: 'item',
-              guildId: context.guildId,
-              mode: 'select', // Special selection mode for safari give_item
-              searchTerm: '',
-              selectedId: null,
-              activeFieldGroup: null,
-              customId: `safari_entity_item_select_${buttonId}` // Custom ID to route back
-            });
+            const modal = new ModalBuilder()
+              .setCustomId(`safari_item_search_modal_${buttonId}`)
+              .setTitle('Search Items');
+              
+            const searchInput = new TextInputBuilder()
+              .setCustomId('search_term')
+              .setLabel('Search for items...')
+              .setStyle(1) // Short
+              .setPlaceholder('Enter item name')
+              .setRequired(true);
+              
+            modal.addComponents(new ActionRowBuilder().addComponents(searchInput));
             
-            // Override the title for context
-            if (entityUI.components?.[0]?.components?.[0]) {
-              entityUI.components[0].components[0].content = '## Select Item to Give\n\nChoose an item from your server\'s inventory';
-            }
-            
-            return entityUI;
+            console.log(`✅ SUCCESS: safari_give_item_select - showing search modal`);
+            return {
+              type: InteractionResponseType.MODAL,
+              data: modal.toJSON()
+            };
           }
           
           // Handle no results
