@@ -14,6 +14,127 @@ import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { parseTextEmoji } from './utils/emojiUtils.js';
 
 /**
+ * Create item selection UI for map locations
+ * @param {Object} options - Configuration options
+ * @returns {Object} Discord Components V2 response
+ */
+export async function createMapItemSelectionUI(options) {
+    const {
+        guildId,
+        coordinate,
+        title = `Select Item for Location ${coordinate}`,
+        description = 'Choose an item to add as a drop at this map location',
+        searchTerm = ''
+    } = options;
+    
+    // Load item data
+    const safariData = await loadSafariContent();
+    const guildData = safariData[guildId] || {};
+    const items = getEntitiesForType(guildData, 'item');
+    const config = EDIT_CONFIGS['item'];
+    
+    if (!config) {
+        throw new Error(`Item configuration not found`);
+    }
+    
+    // Filter items if search term provided
+    const filteredItems = filterEntities(items, searchTerm);
+    
+    // Create item selector with map-specific custom_ids
+    const itemSelector = createMapItemSelector(filteredItems, coordinate, searchTerm);
+    
+    // Build Components V2 UI
+    const components = [{
+        type: 17, // Container
+        accent_color: 0x2ecc71, // Green for map-related actions
+        components: [
+            // Title
+            {
+                type: 10, // Text Display
+                content: `## ${title}\n\n${description}`
+            },
+            
+            // Item selector
+            itemSelector,
+            
+            // Search button
+            {
+                type: 1, // Action Row
+                components: [{
+                    type: 2, // Button
+                    custom_id: `map_item_search_${coordinate}`,
+                    label: 'Search Items',
+                    emoji: { name: '🔍' },
+                    style: 2 // Secondary
+                }]
+            }
+        ]
+    }];
+    
+    return {
+        components,
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        ephemeral: true
+    };
+}
+
+/**
+ * Create item selector for map locations (no create/edit options)
+ */
+function createMapItemSelector(items, coordinate, searchTerm) {
+    const options = [];
+    
+    // Add search option if many items
+    if (Object.keys(items).length > 10) {
+        options.push({
+            label: `🔍 Search: "${searchTerm || 'Type to search...'}"`,
+            value: 'search_items',
+            description: 'Click to search items'
+        });
+    }
+    
+    // Add item options
+    Object.entries(items).forEach(([id, item]) => {
+        const name = item.name || 'Unnamed Item';
+        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(`${item.emoji || '📦'} ${name}`, '📦');
+        
+        options.push({
+            label: cleanText.substring(0, 100),
+            value: id,
+            description: item.description || 'No description',
+            emoji: parsedEmoji
+        });
+    });
+    
+    // Limit options to 25 max
+    if (options.length > 25) {
+        const search = options[0].value === 'search_items' ? options[0] : null;
+        const itemOptions = options.slice(search ? 1 : 0, 24);
+        options.splice(0, options.length, ...(search ? [search, ...itemOptions] : itemOptions));
+    }
+    
+    if (options.length === 0) {
+        options.push({
+            label: 'No items available',
+            value: 'no_items',
+            description: 'Create some items first',
+            emoji: { name: '❌' }
+        });
+    }
+    
+    return {
+        type: 1, // Action Row
+        components: [{
+            type: 3, // String Select
+            custom_id: `map_item_select_${coordinate}`,
+            placeholder: `Select an item for location ${coordinate}...`,
+            options: options,
+            max_values: 1
+        }]
+    };
+}
+
+/**
  * Create the main entity management UI
  * @param {Object} options - Configuration options
  * @returns {Object} Discord Components V2 response

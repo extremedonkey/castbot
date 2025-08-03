@@ -324,6 +324,16 @@ export const BUTTON_REGISTRY = {
     requiresPermission: 'ManageRoles'
   },
   
+  // Map Item Drop Management
+  'map_add_item_drop_*': {
+    label: 'Add Item Drop',
+    description: 'Add item drop to map location with searchable item selection',
+    emoji: '📦',
+    style: 'Primary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
+  
   // Map Store Management
   'map_stores_select_*': {
     label: 'Store Selection',

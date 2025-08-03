@@ -20,6 +20,8 @@ When working on specific features, refer to these dedicated documentation files:
 
 **🚶 SAFARI MAP MOVEMENT:** Player movement, permissions, exploration → [docs/features/SafariMapMovement.md](docs/features/SafariMapMovement.md)
 
+**👥 PLAYER LOCATION MANAGER:** Centralized location tracking for all player interactions (MANDATORY) → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
+
 **📋 SEASON APPLICATION BUILDER:** Application systems, applicant management → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
 
 **🎨 COMPONENTS V2:** Discord UI architecture (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
@@ -51,6 +53,11 @@ When working on specific features, refer to these dedicated documentation files:
 # Find how stores field group works
 grep -B20 -A20 "fieldGroup === 'stores'" app.js
 ```
+
+**🚨 PLAYER LOCATION FEATURES**: For ANY feature involving player locations, proximity, or interactions:
+- **ALWAYS** use PlayerLocationManager module (`playerLocationManager.js`)
+- **NEVER** access player location data directly
+- See [PlayerLocationManager.md](docs/features/PlayerLocationManager.md) for complete API
 
 ## 🛠️ Critical Development Information
 

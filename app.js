@@ -18837,7 +18837,7 @@ Are you sure you want to continue?`;
           
           const playerLocations = await getAllPlayerLocations(context.guildId, true, client);
           const playersArray = Array.from(playerLocations.values());
-          const mapDisplay = await createPlayerLocationMap(context.guildId);
+          const mapDisplay = await createPlayerLocationMap(context.guildId, client);
           const detailedList = formatPlayerLocationDisplay(playersArray, {
             showStamina: true,
             showLastMove: true,
@@ -19256,7 +19256,7 @@ Are you sure you want to continue?`;
       })(req, res, client);
       
     } else if (custom_id.startsWith('map_add_item_drop_')) {
-      // Show item selection for drop configuration
+      // Show item selection for drop configuration with search functionality
       return ButtonHandlerFactory.create({
         id: 'map_add_item_drop',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -19265,55 +19265,52 @@ Are you sure you want to continue?`;
         handler: async (context) => {
           const coord = context.customId.replace('map_add_item_drop_', '');
           
-          console.log(`📦 START: map_add_item_drop - coord ${coord}`);
+          console.log(`📦 START: map_add_item_drop - coord ${coord}, user ${context.userId}`);
           
-          // Load items
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const items = safariData[context.guildId]?.items || {};
+          // Use the new searchable item selection UI
+          const { createMapItemSelectionUI } = await import('./entityManagementUI.js');
           
-          if (Object.keys(items).length === 0) {
-            return {
-              content: '❌ No items available. Create items first using Safari menu.',
-              ephemeral: true
-            };
-          }
-          
-          // Create item select menu with proper emoji parsing
-          const itemOptions = Object.entries(items).slice(0, 25).map(([itemId, item]) => {
-            const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
-            return {
-              label: cleanText.substring(0, 100),
-              value: itemId,
-              description: item.description?.substring(0, 100),
-              emoji: emoji
-            };
+          const itemSelectionInterface = await createMapItemSelectionUI({
+            guildId: context.guildId,
+            coordinate: coord,
+            title: `Select Item Drop for ${coord}`,
+            description: 'Choose an item to add as a drop at this map location'
           });
           
-          console.log(`✅ SUCCESS: map_add_item_drop - showing item selection for ${coord}`);
+          console.log(`✅ SUCCESS: map_add_item_drop - showing searchable item selection for ${coord}`);
+          return itemSelectionInterface;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_item_search_')) {
+      // Handle item search button for map locations
+      return ButtonHandlerFactory.create({
+        id: 'map_item_search',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('map_item_search_', '');
           
+          console.log(`🔍 START: map_item_search - coord ${coord}, user ${context.userId}`);
+          
+          // Show search modal
+          const modal = new ModalBuilder()
+            .setCustomId(`map_item_search_modal_${coord}`)
+            .setTitle(`Search Items for ${coord}`);
+
+          const searchInput = new TextInputBuilder()
+            .setCustomId('search_term')
+            .setLabel('Search for items...')
+            .setStyle(1) // Short
+            .setPlaceholder('Enter item name or description')
+            .setRequired(false);
+
+          modal.addComponents(new ActionRowBuilder().addComponents(searchInput));
+
+          console.log(`✅ SUCCESS: map_item_search - showing search modal for ${coord}`);
           return {
-            components: [{
-              type: 17, // Container
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: `# Select Item Drop for ${coord}\n\nChoose an item to add as a drop at this location.`
-                },
-                { type: 14 }, // Separator
-                {
-                  type: 1, // Action Row
-                  components: [{
-                    type: 3, // String Select
-                    custom_id: `map_item_drop_select_${coord}`,
-                    placeholder: 'Select an item...',
-                    options: itemOptions
-                  }]
-                }
-              ]
-            }],
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            ephemeral: true
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
           };
         }
       })(req, res, client);
@@ -24985,6 +24982,49 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error configuring currency drop.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('map_item_search_modal_')) {
+      // Handle item search modal submission for map locations
+      try {
+        const coord = custom_id.replace('map_item_search_modal_', '');
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+        
+        console.log(`🔍 START: map_item_search_modal - coord ${coord}`);
+        
+        // Extract search term from modal
+        const searchTerm = components[0].components[0].value?.trim() || '';
+        
+        // Show filtered item selection
+        const { createMapItemSelectionUI } = await import('./entityManagementUI.js');
+        
+        const itemSelectionInterface = await createMapItemSelectionUI({
+          guildId: guildId,
+          coordinate: coord,
+          title: `Search Results for "${searchTerm}" - ${coord}`,
+          description: `Items matching "${searchTerm}" for map location`,
+          searchTerm: searchTerm
+        });
+        
+        console.log(`✅ SUCCESS: map_item_search_modal - showing filtered results for "${searchTerm}"`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            ...itemSelectionInterface,
+            ephemeral: true
+          }
+        });
+        
+      } catch (error) {
+        console.error(`❌ ERROR: map_item_search_modal - ${error.message}`);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error searching items. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
