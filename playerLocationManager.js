@@ -58,10 +58,11 @@ export async function getAllPlayerLocations(guildId, includeOffline = true) {
  * Get all players at a specific coordinate
  * @param {string} guildId - The guild ID
  * @param {string} coordinate - The map coordinate (e.g., 'A1', 'B3')
+ * @param {Object} client - Discord client instance for fetching member data
  * @returns {Array<Object>} Array of player data at the coordinate
  */
-export async function getPlayersAtLocation(guildId, coordinate) {
-    const allLocations = await getAllPlayerLocations(guildId);
+export async function getPlayersAtLocation(guildId, coordinate, client = null) {
+    const allLocations = await getAllPlayerLocations(guildId, true, client);
     const playersAtLocation = [];
     
     for (const [userId, locationData] of allLocations) {
@@ -110,9 +111,10 @@ export async function arePlayersAtSameLocation(guildId, userId1, userId2) {
  * Get detailed location information for a specific player
  * @param {string} guildId - The guild ID
  * @param {string} userId - The player's user ID
+ * @param {Object} client - Discord client instance for fetching member data
  * @returns {Object|null} Detailed location data or null if not found
  */
-export async function getPlayerLocationDetails(guildId, userId) {
+export async function getPlayerLocationDetails(guildId, userId, client = null) {
     const playerData = await loadPlayerData();
     const safariData = await loadSafariContent();
     const activeMapId = safariData[guildId]?.maps?.active;
@@ -126,19 +128,34 @@ export async function getPlayerLocationDetails(guildId, userId) {
     const coordinate = mapProgress.currentLocation;
     
     // Get other players at same location
-    const othersAtLocation = await getPlayersAtLocation(guildId, coordinate);
+    const othersAtLocation = await getPlayersAtLocation(guildId, coordinate, client);
     const otherPlayers = othersAtLocation.filter(p => p.userId !== userId);
     
     // Get coordinate details from map
     const mapData = safariData[guildId].maps[activeMapId];
     const coordData = mapData.coordinates?.[coordinate] || {};
     
+    // Try to get display name from Discord if client is provided
+    let displayName = 'Unknown Player';
+    let avatar = null;
+    
+    if (client) {
+        try {
+            const guild = await client.guilds.fetch(guildId);
+            const member = await guild.members.fetch(userId);
+            displayName = member.displayName || member.user.username || 'Unknown Player';
+            avatar = member.user.displayAvatarURL({ size: 128 });
+        } catch (error) {
+            logger.debug('LOCATION_MANAGER', 'Could not fetch member in getPlayerLocationDetails', { userId, error: error.message });
+        }
+    }
+    
     return {
         userId,
         coordinate,
         channelId: coordData.channelId || null,
-        displayName: player.displayName || 'Unknown Player',
-        avatar: player.avatar || null,
+        displayName: displayName,
+        avatar: avatar,
         stamina: await getPlayerStamina(guildId, userId),
         exploredCoordinates: mapProgress.exploredCoordinates || [],
         movementHistory: mapProgress.movementHistory || [],
@@ -207,9 +224,10 @@ export function formatPlayerLocationDisplay(players, options = {}) {
 /**
  * Create a visual map showing player positions
  * @param {string} guildId - The guild ID
+ * @param {Object} client - Discord client instance for fetching member data
  * @returns {Object} Components V2 formatted map display
  */
-export async function createPlayerLocationMap(guildId) {
+export async function createPlayerLocationMap(guildId, client = null) {
     const safariData = await loadSafariContent();
     const activeMapId = safariData[guildId]?.maps?.active;
     
@@ -222,7 +240,7 @@ export async function createPlayerLocationMap(guildId) {
     
     const mapData = safariData[guildId].maps[activeMapId];
     const gridSize = mapData.gridSize || 7;
-    const allLocations = await getAllPlayerLocations(guildId);
+    const allLocations = await getAllPlayerLocations(guildId, true, client);
     
     // Count players per coordinate
     const playerCounts = {};
@@ -276,7 +294,12 @@ export async function createPlayerLocationMap(guildId) {
     if (occupiedCoords.length > 0) {
         legend += '\n**Occupied Cells:**\n';
         for (const [coord, count] of occupiedCoords) {
-            const playersHere = await getPlayersAtLocation(guildId, coord);
+            const playersHere = [];
+            for (const [userId, locationData] of allLocations) {
+                if (locationData.coordinate === coord) {
+                    playersHere.push(locationData);
+                }
+            }
             const names = playersHere.slice(0, 3).map(p => p.displayName).join(', ');
             const more = playersHere.length > 3 ? ` +${playersHere.length - 3}` : '';
             legend += `${coord}: ${names}${more}\n`;
@@ -336,17 +359,18 @@ function formatSinglePlayer(player, options) {
  * @param {string} guildId - The guild ID
  * @param {string} userId - The player's user ID
  * @param {number} distance - Maximum distance (1 = adjacent only)
+ * @param {Object} client - Discord client instance for fetching member data
  * @returns {Array<Object>} Array of nearby players
  */
-export async function getNearbyPlayers(guildId, userId, distance = 1) {
-    const playerLocation = await getPlayerLocationDetails(guildId, userId);
+export async function getNearbyPlayers(guildId, userId, distance = 1, client = null) {
+    const playerLocation = await getPlayerLocationDetails(guildId, userId, client);
     if (!playerLocation) return [];
     
     const coord = playerLocation.coordinate;
     const col = coord.charCodeAt(0) - 65;
     const row = parseInt(coord.substring(1)) - 1;
     
-    const allLocations = await getAllPlayerLocations(guildId);
+    const allLocations = await getAllPlayerLocations(guildId, true, client);
     const nearbyPlayers = [];
     
     for (const [otherUserId, locationData] of allLocations) {
