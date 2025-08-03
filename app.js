@@ -18451,8 +18451,19 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             initPlayerButton.setDisabled(true);
           }
           
-          // Button arrangement: [Create/Update, Delete, Start Exploring, Legacy Create]
-          const mapButtonRow = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, initPlayerButton, legacyCreateButton]);
+          // Create blacklist button
+          const blacklistButton = new ButtonBuilder()
+            .setCustomId('map_admin_blacklist')
+            .setLabel('Blacklisted Coords')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🚫')
+            .setDisabled(!hasActiveMap); // Only enable if there's an active map
+
+          // First row: Main map management buttons
+          const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, initPlayerButton]);
+          
+          // Second row: Admin functions and legacy
+          const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, legacyCreateButton]);
           
           // Create back button
           const backButton = new ButtonBuilder()
@@ -18463,7 +18474,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const backRow = new ActionRowBuilder().addComponents([backButton]);
           
           // Add action row components to container
-          containerComponents.push(mapButtonRow.toJSON());
+          containerComponents.push(mapButtonRow1.toJSON());
+          containerComponents.push(mapButtonRow2.toJSON());
           containerComponents.push({
             type: 14 // Separator
           });
