@@ -22,6 +22,8 @@ When working on specific features, refer to these dedicated documentation files:
 
 **👥 PLAYER LOCATION MANAGER:** Centralized location tracking for all player interactions (MANDATORY) → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
 
+**💬 WHISPER SYSTEM:** Private player-to-player messaging at locations → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)
+
 **📋 SEASON APPLICATION BUILDER:** Application systems, applicant management → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
 
 **🎨 COMPONENTS V2:** Discord UI architecture (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
