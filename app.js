@@ -18470,11 +18470,19 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setEmoji('🚫')
             .setDisabled(!hasActiveMap); // Only enable if there's an active map
 
+          // Create refresh anchors button
+          const refreshAnchorsButton = new ButtonBuilder()
+            .setCustomId('map_admin_refresh_anchors')
+            .setLabel('Refresh Anchors')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🔄')
+            .setDisabled(!hasActiveMap); // Only enable if there's an active map
+
           // First row: Main map management buttons
           const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, playerLocationsButton]);
           
           // Second row: Admin functions and legacy
-          const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, legacyCreateButton]);
+          const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, refreshAnchorsButton, legacyCreateButton]);
           
           // Create back button
           const backButton = new ButtonBuilder()
@@ -18749,6 +18757,30 @@ Are you sure you want to continue?`;
         handler: async (context) => {
           const { handleMapAdminBlacklistModal } = await import('./safariMapAdmin.js');
           return await handleMapAdminBlacklistModal(context, req);
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'map_admin_refresh_anchors') {
+      // Handle refresh anchors management
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_refresh_anchors',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const { handleMapAdminRefreshAnchors } = await import('./safariMapAdmin.js');
+          return await handleMapAdminRefreshAnchors(context);
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'map_admin_refresh_anchors_modal') {
+      // Handle refresh anchors modal submission
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_refresh_anchors_modal',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const { handleMapAdminRefreshAnchorsModal } = await import('./safariMapAdmin.js');
+          return await handleMapAdminRefreshAnchorsModal(context, req);
         }
       })(req, res, client);
       
@@ -20293,15 +20325,44 @@ Are you sure you want to continue?`;
           const activeMapId = safariData[context.guildId]?.maps?.active;
           const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
           
-          const dropIndex = coordData?.itemDrops?.findIndex(drop => drop.itemId === itemId);
-          if (dropIndex >= 0) {
-            coordData.itemDrops[dropIndex].buttonStyle = selectedStyle;
-            await saveSafariContent(safariData);
-            
-            // Update anchor message
-            const { safeUpdateAnchorMessage } = await import('./mapCellUpdater.js');
-            await safeUpdateAnchorMessage(context.guildId, coord, client);
+          // Initialize itemDrops if needed
+          if (!coordData.itemDrops) {
+            coordData.itemDrops = [];
           }
+          
+          let dropIndex = coordData.itemDrops.findIndex(drop => drop.itemId === itemId);
+          
+          // Create drop if it doesn't exist
+          if (dropIndex === -1) {
+            const item = safariData[context.guildId]?.items?.[itemId];
+            if (!item) {
+              return {
+                content: '❌ Item not found.',
+                ephemeral: true
+              };
+            }
+            
+            const newDrop = {
+              itemId: itemId,
+              buttonText: `Open ${item.name}`,
+              buttonEmoji: item.emoji || '📦',
+              buttonStyle: selectedStyle,
+              dropType: 'once_per_player',
+              claimedBy: []
+            };
+            
+            coordData.itemDrops.push(newDrop);
+            dropIndex = coordData.itemDrops.length - 1;
+          } else {
+            // Update existing drop
+            coordData.itemDrops[dropIndex].buttonStyle = selectedStyle;
+          }
+          
+          await saveSafariContent(safariData);
+          
+          // Update anchor message
+          const { safeUpdateAnchorMessage } = await import('./mapCellUpdater.js');
+          await safeUpdateAnchorMessage(context.guildId, coord, client);
           
           // Return to the drop configuration interface
           const item = safariData[context.guildId]?.items?.[itemId];
@@ -27869,6 +27930,36 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating blacklisted coordinates. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id === 'map_admin_refresh_anchors_modal') {
+      // Handle refresh anchors modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const { handleMapAdminRefreshAnchorsModal } = await import('./safariMapAdmin.js');
+        
+        // Create context for the handler
+        const context = {
+          guildId: guildId,
+          userId: req.body.member?.user?.id || req.body.user?.id
+        };
+        
+        const result = await handleMapAdminRefreshAnchorsModal(context, req);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: result
+        });
+        
+      } catch (error) {
+        console.error('Error handling refresh anchors modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error refreshing anchor messages. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

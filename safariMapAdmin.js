@@ -663,3 +663,85 @@ export async function handleMapAdminBlacklistModal(context, req) {
     ephemeral: true
   };
 }
+
+/**
+ * Handle refresh anchors management button
+ * @param {Object} context - Interaction context
+ * @returns {Object} Modal response for refreshing anchor messages
+ */
+export async function handleMapAdminRefreshAnchors(context) {
+  console.log(`🔄 START: map_admin_refresh_anchors - user ${context.userId}`);
+  
+  return {
+    type: InteractionResponseType.MODAL,
+    data: {
+      custom_id: 'map_admin_refresh_anchors_modal',
+      title: 'Refresh Anchor Messages',
+      components: [
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 4, // Text Input
+              custom_id: 'coordinates_to_refresh',
+              label: 'Coordinates to Refresh',
+              style: 2, // Paragraph
+              placeholder: 'Enter coordinates separated by commas (e.g., G7, H8, A1)',
+              required: true,
+              max_length: 500
+            }
+          ]
+        }
+      ]
+    }
+  };
+}
+
+/**
+ * Handle refresh anchors modal submission
+ * @param {Object} context - Interaction context
+ * @param {Object} req - Request object containing modal data
+ * @returns {Object} Response with refresh status
+ */
+export async function handleMapAdminRefreshAnchorsModal(context, req) {
+  console.log(`🔄 START: map_admin_refresh_anchors_modal - user ${context.userId}`);
+  
+  // Get the input value
+  const coordinatesInput = req.body.data.components[0].components[0].value || '';
+  
+  // Parse coordinates - split by comma and clean up
+  const coordinatesList = coordinatesInput
+    .split(',')
+    .map(coord => coord.trim().toUpperCase())
+    .filter(coord => coord.match(/^[A-Z]\d+$/)); // Validate format (e.g., A1, B2)
+  
+  if (coordinatesList.length === 0) {
+    return {
+      content: '❌ **No valid coordinates found**\n\nPlease enter coordinates in format: A1, B2, C3, etc.',
+      ephemeral: true
+    };
+  }
+  
+  // Refresh anchor messages using the anchor manager
+  const { forceUpdateAnchors } = await import('./anchorMessageManager.js');
+  const results = await forceUpdateAnchors(context.guildId, coordinatesList);
+  
+  console.log(`✅ SUCCESS: map_admin_refresh_anchors_modal - refreshed ${results.success}/${coordinatesList.length} anchor messages`);
+  
+  let responseContent = `🔄 **Anchor Refresh Results**\n\n`;
+  responseContent += `✅ **Successfully refreshed**: ${results.success}\n`;
+  responseContent += `❌ **Failed to refresh**: ${results.failed}\n`;
+  responseContent += `📍 **Coordinates processed**: ${coordinatesList.join(', ')}\n\n`;
+  
+  if (results.failed > 0 && results.errors.length > 0) {
+    responseContent += `⚠️ **Failed coordinates**: ${results.errors.join(', ')}\n`;
+    responseContent += `Check logs for detailed error information.`;
+  } else if (results.success > 0) {
+    responseContent += `🎉 **All anchor messages refreshed successfully!**`;
+  }
+  
+  return {
+    content: responseContent,
+    ephemeral: true
+  };
+}

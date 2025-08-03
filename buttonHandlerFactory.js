@@ -599,6 +599,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map_admin',
     requiresPermission: 'ManageRoles'
   },
+  'map_admin_refresh_anchors': {
+    label: 'Refresh Anchors',
+    description: 'Manually refresh anchor messages for specific coordinates',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
   'map_player_locations': {
     label: 'Player Locations',
     description: 'View all player locations on the map',
