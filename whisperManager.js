@@ -183,7 +183,7 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
     if (!sameLocation || currentCoord !== coordinate) {
       return {
         content: '❌ The player has moved to a different location.',
-        ephemeral: true
+        flags: InteractionResponseFlags.EPHEMERAL
       };
     }
     
@@ -270,13 +270,13 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
     
     return {
       content: `✅ Your whisper has been sent to ${recipientName}.`,
-      ephemeral: true
+      flags: InteractionResponseFlags.EPHEMERAL
     };
   } catch (error) {
     logger.error('WHISPER', 'Failed to send whisper', { error: error.message });
     return {
       content: '❌ An error occurred while sending your whisper.',
-      ephemeral: true
+      flags: InteractionResponseFlags.EPHEMERAL
     };
   }
 }
