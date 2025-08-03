@@ -4220,9 +4220,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     
     // === SAFARI NAVIGATE REFRESH HANDLER ===
     if (custom_id.startsWith('safari_navigate_refresh_')) {
-      const parts = custom_id.split('_');
-      const targetUserId = parts[3];
-      const coordinate = parts[4];
+      // Format: safari_navigate_refresh_userId_coordinate
+      const afterPrefix = custom_id.replace('safari_navigate_refresh_', '');
+      const lastUnderscoreIndex = afterPrefix.lastIndexOf('_');
+      const targetUserId = afterPrefix.substring(0, lastUnderscoreIndex);
+      const coordinate = afterPrefix.substring(lastUnderscoreIndex + 1);
       
       return ButtonHandlerFactory.create({
         id: custom_id,
