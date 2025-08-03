@@ -240,28 +240,17 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
     
     logger.info('WHISPER', 'Step 6: Sending notification message');
     const notificationMessage = await channel.send({
-      content: `<@${context.userId}> whispers to <@${targetUserId}>`,
+      content: `💬 **<@${context.userId}> whispers to <@${targetUserId}>**`,
       components: [{
-        type: 17, // Container
-        components: [
-          {
-            type: 10, // Text Display
-            content: `## 💬 Private Message\n\n<@${context.userId}> sent a whisper to <@${targetUserId}>`
-          },
-          { type: 14 }, // Separator
-          {
-            type: 1, // Action Row
-            components: [{
-              type: 2, // Button
-              custom_id: `whisper_read_${whisperId}_${targetUserId}`,
-              label: 'Read Message',
-              emoji: { name: '💬' },
-              style: 1 // Primary
-            }]
-          }
-        ]
-      }],
-      flags: (1 << 15) // IS_COMPONENTS_V2
+        type: 1, // Action Row
+        components: [{
+          type: 2, // Button
+          custom_id: `whisper_read_${whisperId}_${targetUserId}`,
+          label: 'Read Message',
+          emoji: { name: '💬' },
+          style: 1 // Primary
+        }]
+      }]
     });
     
     logger.info('WHISPER', 'Step 7: Notification sent successfully');
