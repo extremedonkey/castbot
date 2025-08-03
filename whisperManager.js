@@ -69,8 +69,6 @@ export async function showWhisperPlayerSelect(context, coordinate, client) {
         }))
       );
     
-    const selectRow = new ActionRowBuilder().addComponents(selectMenu);
-    
     logger.info('WHISPER', 'Player select shown', { 
       userId: context.userId, 
       coordinate, 
@@ -86,7 +84,10 @@ export async function showWhisperPlayerSelect(context, coordinate, client) {
             content: `## Select a Player to chat with\n\n_Choose from players at this location:_`
           },
           { type: 14 }, // Separator
-          selectRow.toJSON()
+          {
+            type: 1, // Action Row
+            components: [selectMenu.toJSON()]
+          }
         ]
       }],
       flags: (1 << 15), // IS_COMPONENTS_V2
@@ -227,15 +228,6 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       throw new Error('Could not find channel for coordinate');
     }
     
-    // Create Read Message button (only target can use)
-    const readButton = new ButtonBuilder()
-      .setCustomId(`whisper_read_${whisperId}_${targetUserId}`)
-      .setLabel('Read Message')
-      .setEmoji('💬')
-      .setStyle(1); // Primary
-    
-    const buttonRow = new ActionRowBuilder().addComponents(readButton);
-    
     // Post non-ephemeral notification in the channel
     const channel = await client.channels.fetch(channelId);
     const notificationMessage = await channel.send({
@@ -248,7 +240,16 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
             content: `## 💬 Private Message\n\n<@${context.userId}> sent a whisper to <@${targetUserId}>`
           },
           { type: 14 }, // Separator
-          buttonRow.toJSON()
+          {
+            type: 1, // Action Row
+            components: [{
+              type: 2, // Button
+              custom_id: `whisper_read_${whisperId}_${targetUserId}`,
+              label: 'Read Message',
+              emoji: { name: '💬' },
+              style: 1 // Primary
+            }]
+          }
         ]
       }],
       flags: (1 << 15) // IS_COMPONENTS_V2
@@ -465,15 +466,6 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
     
     const whisperData = global.activeWhispers.get(whisperId);
     
-    // Create reply button
-    const replyButton = new ButtonBuilder()
-      .setCustomId(`whisper_reply_${whisperData.senderId}_${whisperData.coordinate}`)
-      .setLabel('Reply')
-      .setEmoji('💬')
-      .setStyle(2); // Secondary
-    
-    const buttonRow = new ActionRowBuilder().addComponents(replyButton);
-    
     // Prepare whisper content
     const whisperContent = {
       components: [{
@@ -492,7 +484,16 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
             }]
           },
           { type: 14 }, // Separator
-          buttonRow.toJSON()
+          {
+            type: 1, // Action Row
+            components: [{
+              type: 2, // Button
+              custom_id: `whisper_reply_${whisperData.senderId}_${whisperData.coordinate}`,
+              label: 'Reply',
+              emoji: { name: '💬' },
+              style: 2 // Secondary
+            }]
+          }
         ]
       }],
       flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
