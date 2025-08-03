@@ -472,18 +472,6 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
         description = `*You're too tired to move! Rest for ${timeUntil} before moving again.*`;
     }
     
-    // Create refresh button for stamina updates
-    const refreshButton = {
-        type: 1, // Action Row
-        components: [{
-            type: 2, // Button
-            custom_id: `safari_navigate_refresh_${userId}_${coordinate}`,
-            label: 'Refresh',
-            emoji: { name: '🧭' },
-            style: 2 // Secondary
-        }]
-    };
-    
     // Always use Components V2 format since ButtonHandlerFactory automatically adds the flag
     // For both interaction responses and channel messages
     const components = [{
@@ -504,15 +492,20 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
             
             // Stamina section
             {
-                type: 15, // Section
-                title: "Player Status",
+                type: 9, // Section
                 components: [
                     {
                         type: 10, // Text Display
                         content: `⚡ **Stamina:** ${stamina.current}/${stamina.max}`
-                    },
-                    refreshButton
-                ]
+                    }
+                ],
+                accessory: {
+                    type: 2, // Button accessory
+                    custom_id: `safari_navigate_refresh_${userId}_${coordinate}`,
+                    label: 'Refresh',
+                    emoji: { name: '🧭' },
+                    style: 2 // Secondary
+                }
             },
             
             // Add separator before movement buttons
