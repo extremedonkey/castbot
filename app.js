@@ -517,7 +517,7 @@ async function createVotingBreakdown(channelId, playerData, guildId, guild) {
   const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
   
   // Build voting breakdown
-  let votingText = `### :ballot_box: Votes\n> **Average:** ${avgScore}/5.0 (${scores.length} vote${scores.length !== 1 ? 's' : ''})\n`;
+  let votingText = `### :ballot_box: Votes\n> **Average:** ||${avgScore}/5.0 (${scores.length} vote${scores.length !== 1 ? 's' : ''})||\n`;
   
   // Fetch member names and build vote list
   for (const [userId, score] of rankingEntries) {
