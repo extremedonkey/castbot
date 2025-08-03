@@ -27636,6 +27636,36 @@ Are you sure you want to continue?`;
         }
       }
       
+    } else if (custom_id === 'map_admin_blacklist_modal') {
+      // Handle blacklist modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const { handleMapAdminBlacklistModal } = await import('./safariMapAdmin.js');
+        
+        // Create context for the handler
+        const context = {
+          guildId: guildId,
+          userId: req.body.member?.user?.id || req.body.user?.id
+        };
+        
+        const result = await handleMapAdminBlacklistModal(context, req);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: result
+        });
+        
+      } catch (error) {
+        console.error('Error handling blacklist modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating blacklisted coordinates. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
     } else {
       console.log(`⚠️ DEBUG: Unhandled MODAL_SUBMIT custom_id: ${custom_id}`);
     }
