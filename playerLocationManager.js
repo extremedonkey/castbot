@@ -318,26 +318,18 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
             const isBlacklisted = blacklistedCoords.includes(coord);
             
             if (isBlacklisted) {
-                // Show blacklist symbol, or combine with player count if there are players
+                // Show blacklist symbol, or combine with player indicator if there are players
                 if (count === 0) {
                     gridDisplay += ` ${blacklistSymbol} `;
-                } else if (count === 1) {
-                    gridDisplay += ` ${blacklistSymbol}1`;
-                } else if (count <= 9) {
-                    gridDisplay += `${blacklistSymbol}${count}`;
                 } else {
-                    gridDisplay += `${blacklistSymbol}9+`;
+                    gridDisplay += ` ${blacklistSymbol}♟`;
                 }
             } else {
                 // Normal display for non-blacklisted cells
                 if (count === 0) {
                     gridDisplay += ' · ';
-                } else if (count === 1) {
-                    gridDisplay += ' ♟';
-                } else if (count <= 9) {
-                    gridDisplay += ` ${count}♟`;
                 } else {
-                    gridDisplay += ' 9+';
+                    gridDisplay += ' ♟';
                 }
             }
         }
@@ -349,13 +341,12 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
     // Build legend
     let legend = '\n**Legend:**\n';
     legend += '· = Empty cell\n';
-    legend += '♟ = 1 player\n';
-    legend += '#♟ = Multiple players\n';
+    legend += '♟ = Player(s)\n';
     
     // Add blacklist legend if showing blacklisted coords
     if (showBlacklisted && blacklistedCoords.length > 0) {
         legend += `${blacklistSymbol} = Blacklisted (restricted access)\n`;
-        legend += `${blacklistSymbol}# = Players on blacklisted cell\n`;
+        legend += `${blacklistSymbol}♟ = Player(s) on blacklisted cell\n`;
     }
     
     // List coordinates with players and blacklisted coordinates
