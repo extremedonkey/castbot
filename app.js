@@ -3454,7 +3454,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'condition_has',
         'condition_not_has',
         'condition_item_select',
-        'condition_role_select'
+        'condition_role_select',
+        'map_add_item_drop',
+        'map_item_search'
       ];
       
       for (const pattern of dynamicPatterns) {
