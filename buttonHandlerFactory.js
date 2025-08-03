@@ -361,14 +361,7 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map'
   },
   
-  // Map Item/Currency Drops
-  'map_add_item_drop_*': {
-    label: 'Add Item Drop',
-    description: 'Configure item drop for location',
-    emoji: '📦',
-    style: 'Primary',
-    category: 'safari_map_admin'
-  },
+  // Map Item/Currency Drops (removed duplicate - keeping the one above)
   'map_add_currency_drop_*': {
     label: 'Add Currency Drop',
     description: 'Configure currency drop for location',

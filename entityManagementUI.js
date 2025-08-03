@@ -73,7 +73,6 @@ export async function createMapItemSelectionUI(options) {
     
     return {
         components,
-        flags: (1 << 15), // IS_COMPONENTS_V2
         ephemeral: true
     };
 }
