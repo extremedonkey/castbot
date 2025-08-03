@@ -19589,6 +19589,35 @@ Are you sure you want to continue?`;
             
             console.log(`📦 START: map_item_drop_select - coord ${coord}, item ${itemId}`);
             
+            // Handle special values
+            if (itemId === 'search_entities') {
+              console.log(`🔍 SEARCH: map_item_drop_select - opening search modal for ${coord}`);
+              
+              // Return search modal
+              return {
+                type: 9, // MODAL interaction response
+                data: {
+                  custom_id: `map_item_search_modal_${coord}`,
+                  title: `Search Items for ${coord}`,
+                  components: [
+                    {
+                      type: 1, // Action Row
+                      components: [{
+                        type: 4, // Text Input
+                        custom_id: 'search_term',
+                        label: 'Search Term',
+                        style: 1, // Short
+                        placeholder: 'Enter item name or keyword...',
+                        min_length: 1,
+                        max_length: 50,
+                        required: true
+                      }]
+                    }
+                  ]
+                }
+              };
+            }
+            
             // Load current data to check for existing drop
             const { loadSafariContent } = await import('./safariManager.js');
             const safariData = await loadSafariContent();
