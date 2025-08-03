@@ -25127,6 +25127,7 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             ...itemSelectionInterface,
+            flags: (1 << 15), // IS_COMPONENTS_V2
             ephemeral: true
           }
         });
