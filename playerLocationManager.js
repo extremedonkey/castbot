@@ -257,9 +257,17 @@ export function formatPlayerLocationDisplay(players, options = {}) {
  * Create a visual map showing player positions
  * @param {string} guildId - The guild ID
  * @param {Object} client - Discord client instance for fetching member data
+ * @param {Object} options - Display options
+ * @param {boolean} options.showBlacklisted - Whether to show blacklisted coordinates
+ * @param {string} options.blacklistSymbol - Symbol to use for blacklisted cells (default: ❌)
  * @returns {Object} Components V2 formatted map display
  */
-export async function createPlayerLocationMap(guildId, client = null) {
+export async function createPlayerLocationMap(guildId, client = null, options = {}) {
+    const { 
+        showBlacklisted = true, 
+        blacklistSymbol = '❌' 
+    } = options;
+    
     const safariData = await loadSafariContent();
     const activeMapId = safariData[guildId]?.maps?.active;
     
@@ -273,6 +281,17 @@ export async function createPlayerLocationMap(guildId, client = null) {
     const mapData = safariData[guildId].maps[activeMapId];
     const gridSize = mapData.gridSize || 7;
     const allLocations = await getAllPlayerLocations(guildId, true, client);
+    
+    // Get blacklisted coordinates if needed
+    let blacklistedCoords = [];
+    if (showBlacklisted) {
+        try {
+            const { getBlacklistedCoordinates } = await import('./mapExplorer.js');
+            blacklistedCoords = await getBlacklistedCoordinates(guildId);
+        } catch (error) {
+            logger.debug('LOCATION_MANAGER', 'Could not fetch blacklisted coordinates', { guildId, error: error.message });
+        }
+    }
     
     // Count players per coordinate
     const playerCounts = {};
@@ -296,15 +315,30 @@ export async function createPlayerLocationMap(guildId, client = null) {
         for (let col = 0; col < gridSize; col++) {
             const coord = String.fromCharCode(65 + col) + (row + 1);
             const count = playerCounts[coord] || 0;
+            const isBlacklisted = blacklistedCoords.includes(coord);
             
-            if (count === 0) {
-                gridDisplay += ' · ';
-            } else if (count === 1) {
-                gridDisplay += ' 👤';
-            } else if (count <= 9) {
-                gridDisplay += ` ${count}👥`;
+            if (isBlacklisted) {
+                // Show blacklist symbol, or combine with player count if there are players
+                if (count === 0) {
+                    gridDisplay += ` ${blacklistSymbol} `;
+                } else if (count === 1) {
+                    gridDisplay += ` ${blacklistSymbol}1`;
+                } else if (count <= 9) {
+                    gridDisplay += `${blacklistSymbol}${count}`;
+                } else {
+                    gridDisplay += `${blacklistSymbol}9+`;
+                }
             } else {
-                gridDisplay += ' 9+';
+                // Normal display for non-blacklisted cells
+                if (count === 0) {
+                    gridDisplay += ' · ';
+                } else if (count === 1) {
+                    gridDisplay += ' 👤';
+                } else if (count <= 9) {
+                    gridDisplay += ` ${count}👥`;
+                } else {
+                    gridDisplay += ' 9+';
+                }
             }
         }
         gridDisplay += '\n';
@@ -318,10 +352,20 @@ export async function createPlayerLocationMap(guildId, client = null) {
     legend += '👤 = 1 player\n';
     legend += '#👥 = Multiple players\n';
     
-    // List coordinates with players
+    // Add blacklist legend if showing blacklisted coords
+    if (showBlacklisted && blacklistedCoords.length > 0) {
+        legend += `${blacklistSymbol} = Blacklisted (restricted access)\n`;
+        legend += `${blacklistSymbol}# = Players on blacklisted cell\n`;
+    }
+    
+    // List coordinates with players and blacklisted coordinates
     const occupiedCoords = Object.entries(playerCounts)
         .filter(([coord, count]) => count > 0)
         .sort(([a], [b]) => a.localeCompare(b));
+    
+    const blacklistedWithInfo = blacklistedCoords.filter(coord => {
+        return (playerCounts[coord] || 0) === 0; // Only show empty blacklisted coords here
+    }).sort();
     
     if (occupiedCoords.length > 0) {
         legend += '\n**Occupied Cells:**\n';
@@ -334,7 +378,15 @@ export async function createPlayerLocationMap(guildId, client = null) {
             }
             const names = playersHere.slice(0, 3).map(p => p.displayName).join(', ');
             const more = playersHere.length > 3 ? ` +${playersHere.length - 3}` : '';
-            legend += `${coord}: ${names}${more}\n`;
+            const blacklistNote = blacklistedCoords.includes(coord) ? ' *(blacklisted)*' : '';
+            legend += `${coord}: ${names}${more}${blacklistNote}\n`;
+        }
+    }
+    
+    if (showBlacklisted && blacklistedWithInfo.length > 0) {
+        legend += '\n**Blacklisted (Empty) Cells:**\n';
+        for (const coord of blacklistedWithInfo) {
+            legend += `${coord} *(restricted access)*\n`;
         }
     }
     

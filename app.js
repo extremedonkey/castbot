@@ -18765,7 +18765,7 @@ Are you sure you want to continue?`;
           const playersArray = Array.from(playerLocations.values());
           
           // Create visual map display
-          const mapDisplay = await createPlayerLocationMap(context.guildId, client);
+          const mapDisplay = await createPlayerLocationMap(context.guildId, client, { showBlacklisted: true });
           
           // Format detailed player list
           const detailedList = formatPlayerLocationDisplay(playersArray, {
@@ -18837,7 +18837,7 @@ Are you sure you want to continue?`;
           
           const playerLocations = await getAllPlayerLocations(context.guildId, true, client);
           const playersArray = Array.from(playerLocations.values());
-          const mapDisplay = await createPlayerLocationMap(context.guildId, client);
+          const mapDisplay = await createPlayerLocationMap(context.guildId, client, { showBlacklisted: true });
           const detailedList = formatPlayerLocationDisplay(playersArray, {
             showStamina: true,
             showLastMove: true,
