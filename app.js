@@ -19194,8 +19194,39 @@ Are you sure you want to continue?`;
             mode: 'edit'
           });
           
+          // Add production admin buttons at the top
+          const { ButtonBuilder } = await import('discord.js');
           
-          console.log(`✅ SUCCESS: map_location_actions - showing entity UI for ${coord}`);
+          // Create Enter Command button for admins
+          const adminEnterCommandButton = {
+            type: 2, // Button
+            custom_id: `admin_enter_command_${coord}`,
+            label: 'Enter Command',
+            emoji: { name: '⌨️' },
+            style: 2 // Secondary
+          };
+          
+          // Create Whisper button for admins
+          const adminWhisperButton = {
+            type: 2, // Button
+            custom_id: `safari_whisper_${coord}`,
+            label: 'Whisper',
+            emoji: { name: '💬' },
+            style: 2 // Secondary (grey)
+          };
+          
+          // Add admin buttons row at the top
+          const adminButtonRow = {
+            type: 1, // Action Row
+            components: [adminEnterCommandButton, adminWhisperButton]
+          };
+          
+          // Insert admin buttons at the beginning of the UI
+          if (ui.components && ui.components.length > 0) {
+            ui.components.unshift(adminButtonRow);
+          }
+          
+          console.log(`✅ SUCCESS: map_location_actions - showing entity UI with admin buttons for ${coord}`);
           
           return {
             ...ui,
@@ -19204,6 +19235,41 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
     
+    } else if (custom_id.startsWith('admin_enter_command_')) {
+      // Handle admin command entry button 
+      return ButtonHandlerFactory.create({
+        id: 'admin_enter_command',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const coord = context.customId.replace('admin_enter_command_', '');
+          
+          console.log(`⌨️ START: admin_enter_command - user ${context.userId}, coord ${coord}`);
+          
+          // Show modal for admin command input
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `admin_command_modal_${coord}`,
+              title: 'Enter Command (Admin)',
+              components: [{
+                type: 1, // Action Row
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'command',
+                  label: 'Command',
+                  style: 1, // Short
+                  required: true,
+                  placeholder: 'Enter command to test at this location',
+                  min_length: 1,
+                  max_length: 100
+                }]
+              }]
+            }
+          };
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('player_enter_command_')) {
       // Handle player command entry button
       return ButtonHandlerFactory.create({
