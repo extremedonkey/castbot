@@ -477,6 +477,15 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
             custom_id: `player_enter_command_${entityId}`,
             emoji: { id: commandEmojiId }
         });
+
+        // Add whisper button for admins
+        actionRowComponents.push({
+            type: 2, // Button
+            style: 2, // Secondary (grey)
+            label: 'Whisper',
+            custom_id: `safari_whisper_${entityId}`,
+            emoji: { name: '💬' }
+        });
     }
     
     // Add Player Qty button only for items
