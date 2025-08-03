@@ -525,10 +525,10 @@ async function createVotingBreakdown(channelId, playerData, guildId, guild) {
       const member = await guild.members.fetch(userId);
       const displayName = member.displayName || member.user.username;
       const stars = ':star:'.repeat(score);
-      votingText += `• @${displayName}: ${stars} (${score}/5)\n`;
+      votingText += `• @${displayName}: ||${stars} (${score}/5)||\n`;
     } catch (error) {
       // Fallback if can't fetch member
-      votingText += `• User ${userId}: ${':star:'.repeat(score)} (${score}/5)\n`;
+      votingText += `• User ${userId}: ||${':star:'.repeat(score)} (${score}/5)||\n`;
     }
   }
   
@@ -11733,31 +11733,29 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Handle search option
+          // Handle search option - Use Entity Manager
           if (itemId === 'search_entities') {
-            console.log(`🔍 SEARCH: safari_give_item_select - opening search modal for ${buttonId}`);
+            console.log(`🔍 SEARCH: safari_give_item_select - opening entity manager for ${buttonId}`);
             
-            // Return search modal
-            return {
-              type: 9, // MODAL interaction response
-              data: {
-                custom_id: `safari_item_search_modal_${buttonId}`,
-                title: `Search Items`,
-                components: [
-                  {
-                    type: 1, // Action Row
-                    components: [{
-                      type: 4, // Text Input
-                      custom_id: 'search_term',
-                      label: 'Search Term',
-                      style: 1, // Short
-                      placeholder: 'Enter item name...',
-                      required: false
-                    }]
-                  }
-                ]
-              }
-            };
+            // Use the entity management UI for item selection
+            const { createEntityManagementUI } = await import('./entityManagementUI.js');
+            
+            const entityUI = await createEntityManagementUI({
+              entityType: 'item',
+              guildId: context.guildId,
+              mode: 'select', // Special selection mode for safari give_item
+              searchTerm: '',
+              selectedId: null,
+              activeFieldGroup: null,
+              customId: `safari_entity_item_select_${buttonId}` // Custom ID to route back
+            });
+            
+            // Override the title for context
+            if (entityUI.components?.[0]?.components?.[0]) {
+              entityUI.components[0].components[0].content = '## Select Item to Give\n\nChoose an item from your server\'s inventory';
+            }
+            
+            return entityUI;
           }
           
           // Handle no results
