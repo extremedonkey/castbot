@@ -11760,11 +11760,15 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Handle no results
+          // Handle no results - gracefully ignore with no response
           if (itemId === 'no_results') {
+            console.log(`ℹ️ INFO: safari_give_item_select - user selected no_results, ignoring gracefully`);
+            // Return empty response to prevent "This interaction failed"
             return {
-              content: '❌ No item selected. Please search again or select a different item.',
-              ephemeral: true
+              type: InteractionResponseType.UPDATE_MESSAGE,
+              data: {
+                components: [] // Keep the existing message but remove components to indicate nothing happened
+              }
             };
           }
           
@@ -25271,9 +25275,9 @@ Are you sure you want to continue?`;
         
         console.log(`✅ SUCCESS: safari_item_search_modal - found ${Object.keys(filteredItems).length} items matching "${searchTerm}"`);
         
-        // Return filtered results
+        // Return filtered results (update original message to prevent duplicates)
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
             components: [{
               type: 17, // Container
@@ -25293,8 +25297,8 @@ Are you sure you want to continue?`;
                   }]
                 }
               ]
-            }],
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+            }]
+            // Note: UPDATE_MESSAGE cannot have flags - they're stripped automatically
           }
         });
         
