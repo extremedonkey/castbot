@@ -4153,6 +4153,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return ButtonHandlerFactory.create({
         id: custom_id,
         ephemeral: true,
+        updateMessage: true, // Update existing message instead of creating new one
         handler: async (context) => {
           console.log(`🧭 START: safari_navigate_refresh - user ${context.userId}, coordinate ${coordinate}`);
           
