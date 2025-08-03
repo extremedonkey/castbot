@@ -468,20 +468,29 @@ export async function handleReadWhisper(context, whisperId, targetUserId, client
     
     const whisperData = global.activeWhispers.get(whisperId);
     
-    // Prepare whisper content
+    // Prepare whisper content (using same pattern as player select)
     const whisperContent = {
-      content: `## 💬 ${whisperData.senderName} whispers to you\n\n> **${whisperData.senderName}:** ${whisperData.message}`,
       components: [{
-        type: 1, // Action Row
-        components: [{
-          type: 2, // Button
-          custom_id: `whisper_reply_${whisperData.senderId}_${whisperData.coordinate}`,
-          label: 'Reply',
-          emoji: { name: '💬' },
-          style: 2 // Secondary
-        }]
+        type: 17, // Container
+        components: [
+          {
+            type: 10, // Text Display
+            content: `## 💬 ${whisperData.senderName} whispers to you\n\n> **${whisperData.senderName}:** ${whisperData.message}`
+          },
+          { type: 14 }, // Separator
+          {
+            type: 1, // Action Row
+            components: [{
+              type: 2, // Button
+              custom_id: `whisper_reply_${whisperData.senderId}_${whisperData.coordinate}`,
+              label: 'Reply',
+              emoji: { name: '💬' },
+              style: 2 // Secondary
+            }]
+          }
+        ]
       }],
-      flags: InteractionResponseFlags.EPHEMERAL,
+      flags: (1 << 15), // IS_COMPONENTS_V2
       ephemeral: true
     };
     
