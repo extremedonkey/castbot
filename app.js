@@ -4141,6 +4141,53 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     }
     
+    // === SAFARI NAVIGATE REFRESH HANDLER ===
+    // IMPORTANT: Must come before general safari_navigate_ handler
+    if (custom_id.startsWith('safari_navigate_refresh_')) {
+      // Format: safari_navigate_refresh_userId_coordinate
+      const afterPrefix = custom_id.replace('safari_navigate_refresh_', '');
+      const lastUnderscoreIndex = afterPrefix.lastIndexOf('_');
+      const targetUserId = afterPrefix.substring(0, lastUnderscoreIndex);
+      const coordinate = afterPrefix.substring(lastUnderscoreIndex + 1);
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`🧭 START: safari_navigate_refresh - user ${context.userId}, coordinate ${coordinate}`);
+          
+          // Verify this button is for the correct user
+          if (context.userId !== targetUserId) {
+            return {
+              content: '❌ This refresh button is for another player.',
+              ephemeral: true
+            };
+          }
+          
+          // Import movement display function
+          const { getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
+          
+          // Verify player is at this location
+          const mapState = await getPlayerLocation(context.guildId, context.userId);
+          if (!mapState || mapState.currentCoordinate !== coordinate) {
+            return {
+              content: `❌ You are no longer at ${coordinate}. Your current location is ${mapState?.currentCoordinate || 'unknown'}.`,
+              ephemeral: true
+            };
+          }
+          
+          // Get updated movement display
+          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate);
+          
+          console.log(`✅ SUCCESS: safari_navigate_refresh - refreshed display`);
+          return {
+            ...movementDisplay,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    }
+    
     // === NAVIGATE HANDLER (shows movement and deletes arrival message) ===
     if (custom_id.startsWith('safari_navigate_')) {
       const parts = custom_id.split('_');
@@ -4210,52 +4257,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
           
           console.log(`✅ SUCCESS: safari_navigate - displayed movement options`);
-          return {
-            ...movementDisplay,
-            ephemeral: true
-          };
-        }
-      })(req, res, client);
-    }
-    
-    // === SAFARI NAVIGATE REFRESH HANDLER ===
-    if (custom_id.startsWith('safari_navigate_refresh_')) {
-      // Format: safari_navigate_refresh_userId_coordinate
-      const afterPrefix = custom_id.replace('safari_navigate_refresh_', '');
-      const lastUnderscoreIndex = afterPrefix.lastIndexOf('_');
-      const targetUserId = afterPrefix.substring(0, lastUnderscoreIndex);
-      const coordinate = afterPrefix.substring(lastUnderscoreIndex + 1);
-      
-      return ButtonHandlerFactory.create({
-        id: custom_id,
-        ephemeral: true,
-        handler: async (context) => {
-          console.log(`🧭 START: safari_navigate_refresh - user ${context.userId}, coordinate ${coordinate}`);
-          
-          // Verify this button is for the correct user
-          if (context.userId !== targetUserId) {
-            return {
-              content: '❌ This refresh button is for another player.',
-              ephemeral: true
-            };
-          }
-          
-          // Import movement display function
-          const { getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
-          
-          // Verify player is at this location
-          const mapState = await getPlayerLocation(context.guildId, context.userId);
-          if (!mapState || mapState.currentCoordinate !== coordinate) {
-            return {
-              content: `❌ You are no longer at ${coordinate}. Your current location is ${mapState?.currentCoordinate || 'unknown'}.`,
-              ephemeral: true
-            };
-          }
-          
-          // Get updated movement display
-          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate);
-          
-          console.log(`✅ SUCCESS: safari_navigate_refresh - refreshed display`);
           return {
             ...movementDisplay,
             ephemeral: true
