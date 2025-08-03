@@ -3762,7 +3762,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 custom_id: `safari_store_buy_${guildId}_${storeId}_${itemId}`,
                 label: `Buy ${item.name}`.slice(0, 80),
                 style: 1,
-                emoji: item.emoji ? parseTextEmoji(item.emoji).emoji : { name: '🛒' }
+                emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || { name: '🛒' }) : { name: '🛒' }
               }
             };
             
@@ -9447,8 +9447,9 @@ Your server is now ready for Tycoons gameplay!`;
         const storeOptions = Object.entries(stores).slice(0, 25).map(([storeId, store]) => {
           const itemCount = store.items?.length || 0;
           const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
+          const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;
           return {
-            label: cleanText.slice(0, 100),
+            label: safeCleanText.slice(0, 100),
             value: storeId,
             description: `${itemCount} item${itemCount !== 1 ? 's' : ''} currently in stock`.slice(0, 100),
             emoji: emoji
@@ -10380,7 +10381,7 @@ Your server is now ready for Tycoons gameplay!`;
             custom_id: `safari_store_browse_${guildId}_${storeId}`,
             label: `Browse ${store.name}`,
             style: 1,
-            emoji: store.emoji ? parseTextEmoji(store.emoji).emoji : { name: '🏪' }
+            emoji: store.emoji ? (parseTextEmoji(store.emoji)?.emoji || { name: '🏪' }) : { name: '🏪' }
           }]
         };
         
@@ -11515,8 +11516,9 @@ Your server is now ready for Tycoons gameplay!`;
             const maxItems = itemCount > 10 ? 24 : 25; // Leave room for search option
             Object.entries(items).slice(0, maxItems).forEach(([itemId, item]) => {
               const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+              const safeCleanText = cleanText || `${item.emoji || '📦'} ${item.name || 'Unnamed Item'}`;
               itemOptions.push({
-                label: cleanText.substring(0, 100),
+                label: safeCleanText.substring(0, 100),
                 value: itemId,
                 description: item.description?.substring(0, 100),
                 emoji: emoji
@@ -16650,9 +16652,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               // Create store select menu with proper emoji parsing
               const storeOptions = Object.entries(stores).map(([storeId, store]) => {
                 const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
+                const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name}`;
                 const description = store.description?.trim();
                 return {
-                  label: cleanText.substring(0, 100),
+                  label: safeCleanText.substring(0, 100),
                   value: storeId,
                   description: description && description.length > 0 ? description.substring(0, 100) : undefined,
                   emoji: emoji,
@@ -19297,7 +19300,7 @@ Are you sure you want to continue?`;
                 custom_id: `safari_store_buy_${context.guildId}_${storeId}_${itemId}`,
                 label: `Buy ${item.name}`,
                 style: 3, // Success
-                emoji: item.emoji ? parseTextEmoji(item.emoji).emoji : undefined
+                emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || undefined) : undefined
               });
             }
           });
@@ -21814,7 +21817,7 @@ Are you sure you want to continue?`;
               label: item.name || 'Unnamed Item',
               description: item.description?.substring(0, 100) || 'No description',
               value: `${targetUserId}_${itemId}`, // Include target user in value
-              emoji: item.emoji ? parseTextEmoji(item.emoji).emoji : undefined
+              emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || undefined) : undefined
             });
           }
           
@@ -25242,8 +25245,9 @@ Are you sure you want to continue?`;
         const maxItems = Object.keys(filteredItems).length > 10 ? 24 : 25;
         Object.entries(filteredItems).slice(0, maxItems).forEach(([itemId, item]) => {
           const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+          const safeCleanText = cleanText || `${item.emoji || '📦'} ${item.name || 'Unnamed Item'}`;
           itemOptions.push({
-            label: cleanText.substring(0, 100),
+            label: safeCleanText.substring(0, 100),
             value: itemId,
             description: item.description?.substring(0, 100),
             emoji: emoji
@@ -27568,7 +27572,7 @@ Are you sure you want to continue?`;
                   value: id,
                   label: item.name || id,
                   description: item.description,
-                  emoji: item.emoji ? parseTextEmoji(item.emoji).emoji : { name: '📦' }
+                  emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || { name: '📦' }) : { name: '📦' }
                 }));
             }
             break;
@@ -27672,7 +27676,7 @@ Are you sure you want to continue?`;
           label: entity.label,
           value: entity.value,
           description: entity.description,
-          emoji: entity.emoji ? (typeof entity.emoji === 'object' ? entity.emoji : parseTextEmoji(entity.emoji).emoji) : undefined
+          emoji: entity.emoji ? (typeof entity.emoji === 'object' ? entity.emoji : (parseTextEmoji(entity.emoji)?.emoji || undefined)) : undefined
         }));
         
         // Add back/management option

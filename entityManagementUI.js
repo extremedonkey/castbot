@@ -97,9 +97,10 @@ function createMapItemSelector(items, coordinate, searchTerm) {
     Object.entries(items).forEach(([id, item]) => {
         const name = item.name || 'Unnamed Item';
         const { cleanText, emoji: parsedEmoji } = parseTextEmoji(`${item.emoji || '📦'} ${name}`, '📦');
+        const safeCleanText = cleanText || `${item.emoji || '📦'} ${name}`;
         
         options.push({
-            label: cleanText.substring(0, 100),
+            label: safeCleanText.substring(0, 100),
             value: id,
             description: item.description || 'No description',
             emoji: parsedEmoji
@@ -272,8 +273,9 @@ function createEntitySelector(entities, selectedId, entityType, searchTerm) {
         }
         
         const { cleanText, emoji: parsedEmoji } = parseTextEmoji(`${emoji} ${name}`, getDefaultEmoji(entityType));
+        const safeCleanText = cleanText || `${emoji} ${name}`;
         options.push({
-            label: cleanText.substring(0, 100),
+            label: safeCleanText.substring(0, 100),
             value: id,
             description: getEntityDescription(entity, entityType),
             emoji: parsedEmoji,
@@ -935,8 +937,9 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
                 '📦'
             );
             
+            const safeCleanText = cleanText || `${item.emoji || '📦'} ${item.name || 'Unnamed Item'}`;
             options.push({
-                label: cleanText.substring(0, 100),
+                label: safeCleanText.substring(0, 100),
                 value: id,
                 description: `Available • Price: ${item.basePrice || 0}`,
                 emoji: parsedEmoji,
