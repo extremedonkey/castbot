@@ -207,9 +207,11 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
     }
     
     // Store whisper data globally for retrieval when Read Message is clicked
+    logger.info('WHISPER', 'Step 1: Creating whisper storage');
     global.activeWhispers = global.activeWhispers || new Map();
     const whisperId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
+    logger.info('WHISPER', 'Step 2: Storing whisper data');
     global.activeWhispers.set(whisperId, {
       senderId: context.userId,
       senderName,
@@ -221,6 +223,7 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
     });
     
     // Get the channel for this coordinate
+    logger.info('WHISPER', 'Step 3: Loading safari data');
     const safariData = await loadSafariContent();
     const activeMapId = safariData[context.guildId]?.maps?.active;
     const channelId = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate]?.channelId;
@@ -229,8 +232,13 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       throw new Error('Could not find channel for coordinate');
     }
     
+    logger.info('WHISPER', 'Step 4: Found channel', { channelId });
+    
     // Post non-ephemeral notification in the channel
+    logger.info('WHISPER', 'Step 5: Fetching channel');
     const channel = await client.channels.fetch(channelId);
+    
+    logger.info('WHISPER', 'Step 6: Sending notification message');
     const notificationMessage = await channel.send({
       content: `<@${context.userId}> whispers to <@${targetUserId}>`,
       components: [{
@@ -256,6 +264,8 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       flags: (1 << 15) // IS_COMPONENTS_V2
     });
     
+    logger.info('WHISPER', 'Step 7: Notification sent successfully');
+    
     // Store message ID for deletion when read
     global.activeWhispers.get(whisperId).messageId = notificationMessage.id;
     global.activeWhispers.get(whisperId).channelId = channelId;
@@ -267,9 +277,9 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       messageId: notificationMessage.id 
     });
     
-    // Post detection and log messages
-    await postWhisperDetection(context.guildId, coordinate, client);
-    await postWhisperLog(context.guildId, senderName, recipientName, coordinate, message);
+    // Post detection and log messages (temporarily disabled for debugging)
+    // await postWhisperDetection(context.guildId, coordinate, client);
+    // await postWhisperLog(context.guildId, senderName, recipientName, coordinate, message);
     
     logger.info('WHISPER', 'Whisper delivered successfully', { 
       senderId: context.userId, 
