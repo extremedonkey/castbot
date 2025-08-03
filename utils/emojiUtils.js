@@ -55,8 +55,8 @@ export function parseTextEmoji(text, fallbackEmoji = '📦') {
         const parsed = parseEmojiCode(emojiMatch[0]);
         const cleanText = text.replace(emojiMatch[0], '').trim();
         return {
-            cleanText,
-            emoji: parsed
+            cleanText: cleanText || text, // Ensure cleanText is never undefined
+            emoji: parsed || { name: fallbackEmoji } // Ensure emoji is never null
         };
     } else {
         // Check for Discord shortcodes
@@ -64,7 +64,7 @@ export function parseTextEmoji(text, fallbackEmoji = '📦') {
         if (shortcodeMatch && SHORTCODE_TO_EMOJI[shortcodeMatch[0]]) {
             const cleanText = text.replace(shortcodeMatch[0], '').trim();
             return {
-                cleanText,
+                cleanText: cleanText || text, // Ensure cleanText is never undefined
                 emoji: { name: SHORTCODE_TO_EMOJI[shortcodeMatch[0]] }
             };
         }
@@ -74,7 +74,7 @@ export function parseTextEmoji(text, fallbackEmoji = '📦') {
         if (regularEmojiMatch) {
             const cleanText = text.replace(regularEmojiMatch[0], '').trim();
             return {
-                cleanText,
+                cleanText: cleanText || text, // Ensure cleanText is never undefined
                 emoji: { name: regularEmojiMatch[0] }
             };
         } else {
