@@ -11,7 +11,6 @@
 
 import { 
   ButtonBuilder, 
-  ActionRowBuilder, 
   StringSelectMenuBuilder,
   ModalBuilder,
   TextInputBuilder,
@@ -143,8 +142,10 @@ export async function showWhisperModal(context, targetUserId, coordinate, client
       .setMaxLength(1000)
       .setRequired(true);
     
-    const actionRow = new ActionRowBuilder().addComponents(messageInput);
-    modal.addComponents(actionRow);
+    modal.addComponents({
+      type: 1, // Action Row
+      components: [messageInput.toJSON()]
+    });
     
     return {
       type: InteractionResponseType.MODAL,
@@ -418,8 +419,10 @@ export async function showReplyModal(context, originalSenderId, coordinate, clie
       .setMaxLength(1000)
       .setRequired(true);
     
-    const actionRow = new ActionRowBuilder().addComponents(messageInput);
-    modal.addComponents(actionRow);
+    modal.addComponents({
+      type: 1, // Action Row
+      components: [messageInput.toJSON()]
+    });
     
     return {
       type: InteractionResponseType.MODAL,
