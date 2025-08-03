@@ -16385,6 +16385,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       // Handle whisper player selection
       const coordinate = custom_id.replace('whisper_player_select_', '');
       const targetUserId = req.body.data.values[0];
+      const userId = req.body.member?.user?.id || req.body.user?.id;
+      const guildId = req.body.guild_id;
       
       console.log(`💬 Whisper player selected - sender: ${userId}, target: ${targetUserId}, coord: ${coordinate}`);
       
