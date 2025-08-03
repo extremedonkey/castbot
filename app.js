@@ -1900,6 +1900,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     return res.send({ type: InteractionResponseType.PONG });
   }
   
+  // Check for pending whispers (skip for PING interactions)
+  if (type !== InteractionType.PING && req.body.member?.user?.id) {
+    const userId = req.body.member.user.id;
+    const token = req.body.token;
+    
+    // Deliver pending whispers as a follow-up message
+    const { checkAndDeliverWhispers } = await import('./whisperManager.js');
+    checkAndDeliverWhispers(userId, token).catch(error => {
+      console.error('Failed to deliver pending whispers:', error);
+    });
+  }
+  
 
 
 
@@ -4281,6 +4293,47 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     }
     
+    // === SAFARI WHISPER HANDLER ===
+    if (custom_id.startsWith('safari_whisper_')) {
+      const coordinate = custom_id.replace('safari_whisper_', '');
+      
+      return ButtonHandlerFactory.create({
+        id: 'safari_whisper',
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`💬 START: safari_whisper - user ${context.userId}, coordinate ${coordinate}`);
+          
+          const { showWhisperPlayerSelect } = await import('./whisperManager.js');
+          const result = await showWhisperPlayerSelect(context, coordinate, client);
+          
+          console.log(`✅ SUCCESS: safari_whisper - completed`);
+          return result;
+        }
+      })(req, res, client);
+    }
+    
+    // === WHISPER REPLY HANDLER ===
+    if (custom_id.startsWith('whisper_reply_')) {
+      // Format: whisper_reply_originalSenderId_coordinate
+      const parts = custom_id.split('_');
+      const originalSenderId = parts[2];
+      const coordinate = parts.slice(3).join('_'); // Handle coordinates with underscores
+      
+      return ButtonHandlerFactory.create({
+        id: 'whisper_reply',
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`💬 START: whisper_reply - replying user ${context.userId} to ${originalSenderId}`);
+          
+          const { showReplyModal } = await import('./whisperManager.js');
+          const result = await showReplyModal(context, originalSenderId, coordinate, client);
+          
+          console.log(`✅ SUCCESS: whisper_reply - completed`);
+          return result;
+        }
+      })(req, res, client);
+    }
+    
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
     if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
         !custom_id.startsWith('safari_add_action_') && 
@@ -4297,6 +4350,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_item_') &&
         !custom_id.startsWith('safari_attack_') &&
         !custom_id.startsWith('safari_schedule_') &&
+        !custom_id.startsWith('safari_whisper_') &&
         !custom_id.startsWith('safari_button_') &&
         !custom_id.startsWith('safari_round_') &&
         !custom_id.startsWith('safari_edit_properties_') &&
@@ -16327,6 +16381,20 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('whisper_player_select_')) {
+      // Handle whisper player selection
+      const coordinate = custom_id.replace('whisper_player_select_', '');
+      const targetUserId = req.body.data.values[0];
+      
+      console.log(`💬 Whisper player selected - sender: ${userId}, target: ${targetUserId}, coord: ${coordinate}`);
+      
+      const { showWhisperModal } = await import('./whisperManager.js');
+      return await showWhisperModal({ 
+        userId, 
+        guildId, 
+        token: req.body.token 
+      }, targetUserId, coordinate, client);
+      
     } else if (custom_id.startsWith('entity_select_')) {
       // Handle entity selection from dropdown (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
@@ -19038,7 +19106,14 @@ Are you sure you want to continue?`;
               .setEmoji('🗺️')
               .setStyle(2); // Secondary
             
-            const buttonRow = new ActionRowBuilder().addComponents([enterCommandButton, navigateButton]);
+            // Create Whisper button
+            const whisperButton = new ButtonBuilder()
+              .setCustomId(`safari_whisper_${coord}`)
+              .setLabel('Whisper')
+              .setEmoji('💬')
+              .setStyle(2); // Secondary
+            
+            const buttonRow = new ActionRowBuilder().addComponents([enterCommandButton, navigateButton, whisperButton]);
             
             return {
               components: [{
@@ -23284,7 +23359,29 @@ Are you sure you want to continue?`;
     const { custom_id, components } = data;
     console.log(`🔍 DEBUG: MODAL_SUBMIT received - custom_id: ${custom_id}`);
     
-    if (custom_id.startsWith('condition_currency_modal_')) {
+    if (custom_id.startsWith('whisper_send_modal_')) {
+      // Handle whisper modal submission
+      // Format: whisper_send_modal_targetUserId_coordinate
+      const parts = custom_id.split('_');
+      const targetUserId = parts[3];
+      const coordinate = parts.slice(4).join('_'); // Handle coordinates with underscores
+      const message = components[0].components[0].value;
+      
+      console.log(`💬 Whisper modal submitted - sender: ${userId}, target: ${targetUserId}, coord: ${coordinate}`);
+      
+      const { sendWhisper } = await import('./whisperManager.js');
+      const result = await sendWhisper({
+        userId,
+        guildId,
+        token: req.body.token
+      }, targetUserId, coordinate, message, client);
+      
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: result
+      });
+      
+    } else if (custom_id.startsWith('condition_currency_modal_')) {
       // Handle currency amount modal submission
       try {
         // Parse custom_id: condition_currency_modal_actionId_conditionIndex_currentPage

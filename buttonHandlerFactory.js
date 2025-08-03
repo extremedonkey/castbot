@@ -1305,6 +1305,22 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'conditional_logic',
     type: 'role_select'
+  },
+  
+  // === SAFARI SOCIAL FEATURES ===
+  'safari_whisper': {
+    label: 'Whisper',
+    description: 'Send private message to player at location',
+    emoji: '💬',
+    style: 'Secondary',
+    category: 'safari_social'
+  },
+  'whisper_reply': {
+    label: 'Reply',
+    description: 'Reply to whisper',
+    emoji: '💬',
+    style: 'Secondary',
+    category: 'safari_social'
   }
 };
 

@@ -13,8 +13,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // SSH Configuration (reuse from deploy script)
-const SSH_KEY_PATH = path.join(__dirname, '..', 'lightsail-key.pem');
-const SSH_TARGET = 'bitnami@44.219.175.110';
+import os from 'os';
+const SSH_KEY_PATH = path.join(os.homedir(), '.ssh', 'castbot-key.pem');
+const SSH_TARGET = 'bitnami@13.238.148.170';
 const REMOTE_PATH = '/opt/bitnami/projects/castbot';
 
 // ANSI color codes for output formatting
