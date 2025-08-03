@@ -11733,30 +11733,60 @@ Your server is now ready for Tycoons gameplay!`;
             };
           }
           
-          // Handle search option
+          // Handle search option - Show all items with built-in Discord search
           if (itemId === 'search_entities') {
-            console.log(`🔍 SEARCH: safari_give_item_select - opening search modal for ${buttonId}`);
+            console.log(`🔍 SEARCH: safari_give_item_select - showing all items for ${buttonId}`);
             
-            // Return search modal
+            // Load all items
+            const { loadSafariContent } = await import('./safariManager.js');
+            const { parseTextEmoji } = await import('./utils/emojiUtils.js');
+            const safariData = await loadSafariContent();
+            const allItems = safariData[context.guildId]?.items || {};
+            
+            // Create options for ALL items (Discord's built-in search will handle filtering)
+            const itemOptions = Object.entries(allItems).map(([itemId, item]) => {
+              // Simple, safe label creation
+              const label = item.name || 'Unnamed Item';
+              const emoji = item.emoji || '📦';
+              
+              return {
+                label: label.substring(0, 100),
+                value: itemId,
+                description: item.description?.substring(0, 100) || 'No description',
+                emoji: { name: '📦' } // Use consistent fallback emoji to avoid parsing issues
+              };
+            });
+            
+            // Sort alphabetically
+            itemOptions.sort((a, b) => a.label.localeCompare(b.label));
+            
+            // Limit to Discord's 25 option limit
+            const limitedOptions = itemOptions.slice(0, 25);
+            
+            console.log(`✅ SUCCESS: safari_give_item_select - showing ${limitedOptions.length} items (Discord search enabled)`);
+            
             return {
-              type: 9, // MODAL interaction response
-              data: {
-                custom_id: `safari_item_search_modal_${buttonId}`,
-                title: `Search Items`,
+              components: [{
+                type: 17, // Container
                 components: [
+                  {
+                    type: 10, // Text Display
+                    content: `## Select Item to Give\n\n*Showing ${limitedOptions.length} of ${itemOptions.length} items. Start typing to search.*`
+                  },
+                  { type: 14 }, // Separator
                   {
                     type: 1, // Action Row
                     components: [{
-                      type: 4, // Text Input
-                      custom_id: 'search_term',
-                      label: 'Search Term',
-                      style: 1, // Short
-                      placeholder: 'Enter item name...',
-                      required: false
+                      type: 3, // String Select
+                      custom_id: `safari_give_item_select_${buttonId}`,
+                      placeholder: `🔍 Type to search ${itemOptions.length} items...`,
+                      options: limitedOptions
                     }]
                   }
                 ]
-              }
+              }],
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              ephemeral: true
             };
           }
           
@@ -19651,30 +19681,56 @@ Are you sure you want to continue?`;
             
             // Handle special values
             if (itemId === 'search_entities') {
-              console.log(`🔍 SEARCH: map_item_drop_select - opening search modal for ${coord}`);
+              console.log(`🔍 SEARCH: map_item_drop_select - showing all items for ${coord}`);
               
-              // Return search modal
+              // Load all items and show with Discord's built-in search
+              const { loadSafariContent } = await import('./safariManager.js');
+              const safariData = await loadSafariContent();
+              const allItems = safariData[context.guildId]?.items || {};
+              
+              // Create simple options for ALL items
+              const itemOptions = Object.entries(allItems).map(([itemId, item]) => {
+                const label = item.name || 'Unnamed Item';
+                
+                return {
+                  label: label.substring(0, 100),
+                  value: itemId,
+                  description: item.description?.substring(0, 100) || 'No description',
+                  emoji: { name: '📦' } // Consistent emoji to avoid parsing issues
+                };
+              });
+              
+              // Sort alphabetically
+              itemOptions.sort((a, b) => a.label.localeCompare(b.label));
+              
+              // Limit to 25
+              const limitedOptions = itemOptions.slice(0, 25);
+              
+              console.log(`✅ SUCCESS: map_item_drop_select - showing ${limitedOptions.length} items for search`);
+              
               return {
-                type: 9, // MODAL interaction response
-                data: {
-                  custom_id: `map_item_search_modal_${coord}`,
-                  title: `Search Items for ${coord}`,
+                components: [{
+                  type: 17, // Container
+                  accent_color: 0x2ecc71, // Green for map actions
                   components: [
+                    {
+                      type: 10, // Text Display
+                      content: `## Select Item for ${coord}\n\n*Showing ${limitedOptions.length} of ${itemOptions.length} items. Start typing to search.*`
+                    },
+                    { type: 14 }, // Separator
                     {
                       type: 1, // Action Row
                       components: [{
-                        type: 4, // Text Input
-                        custom_id: 'search_term',
-                        label: 'Search Term',
-                        style: 1, // Short
-                        placeholder: 'Enter item name or keyword...',
-                        min_length: 1,
-                        max_length: 50,
-                        required: true
+                        type: 3, // String Select
+                        custom_id: `map_item_drop_select_${coord}`,
+                        placeholder: `🔍 Type to search ${itemOptions.length} items...`,
+                        options: limitedOptions
                       }]
                     }
                   ]
-                }
+                }],
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                ephemeral: true
               };
             }
             
