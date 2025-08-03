@@ -1321,6 +1321,13 @@ export const BUTTON_REGISTRY = {
     emoji: '💬',
     style: 'Secondary',
     category: 'safari_social'
+  },
+  'whisper_read': {
+    label: 'Read Message',
+    description: 'Read private whisper message',
+    emoji: '💬',
+    style: 'Primary',
+    category: 'safari_social'
   }
 };
 

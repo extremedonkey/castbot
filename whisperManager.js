@@ -204,59 +204,65 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       }
     }
     
-    // Create reply button
-    const replyButton = new ButtonBuilder()
-      .setCustomId(`whisper_reply_${context.userId}_${coordinate}`)
-      .setLabel('Reply')
+    // Store whisper data globally for retrieval when Read Message is clicked
+    global.activeWhispers = global.activeWhispers || new Map();
+    const whisperId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    global.activeWhispers.set(whisperId, {
+      senderId: context.userId,
+      senderName,
+      targetUserId,
+      recipientName,
+      message,
+      coordinate,
+      timestamp: Date.now()
+    });
+    
+    // Get the channel for this coordinate
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[context.guildId]?.maps?.active;
+    const channelId = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coordinate]?.channelId;
+    
+    if (!channelId) {
+      throw new Error('Could not find channel for coordinate');
+    }
+    
+    // Create Read Message button (only target can use)
+    const readButton = new ButtonBuilder()
+      .setCustomId(`whisper_read_${whisperId}_${targetUserId}`)
+      .setLabel('Read Message')
       .setEmoji('💬')
-      .setStyle(2); // Secondary
+      .setStyle(1); // Primary
     
-    const buttonRow = new ActionRowBuilder().addComponents(replyButton);
+    const buttonRow = new ActionRowBuilder().addComponents(readButton);
     
-    // Deliver whisper to recipient
-    const whisperContent = {
+    // Post non-ephemeral notification in the channel
+    const channel = await client.channels.fetch(channelId);
+    const notificationMessage = await channel.send({
+      content: `<@${context.userId}> whispers to <@${targetUserId}>`,
       components: [{
         type: 17, // Container
-        accent_color: 0x9B59B6, // Purple for whispers
         components: [
           {
             type: 10, // Text Display
-            content: `## 💬 ${senderName} whispers to you`
-          },
-          {
-            type: 9, // Section
-            components: [{
-              type: 10,
-              content: `> **@${senderName} is whispering to you**\n${message}`
-            }]
+            content: `## 💬 Private Message\n\n<@${context.userId}> sent a whisper to <@${targetUserId}>`
           },
           { type: 14 }, // Separator
           buttonRow.toJSON()
         ]
       }],
-      flags: (1 << 15), // IS_COMPONENTS_V2
-      ephemeral: true
-    };
-    
-    // Store whisper for delivery when recipient interacts
-    // Since we can't send ephemeral messages to other users directly,
-    // we'll store the whisper and deliver it on their next interaction
-    global.pendingWhispers = global.pendingWhispers || new Map();
-    const recipientWhispers = global.pendingWhispers.get(targetUserId) || [];
-    recipientWhispers.push({
-      senderId: context.userId,
-      senderName,
-      message,
-      coordinate,
-      timestamp: Date.now(),
-      whisperContent
+      flags: (1 << 15) // IS_COMPONENTS_V2
     });
-    global.pendingWhispers.set(targetUserId, recipientWhispers);
     
-    logger.info('WHISPER', 'Whisper stored for delivery', { 
+    // Store message ID for deletion when read
+    global.activeWhispers.get(whisperId).messageId = notificationMessage.id;
+    global.activeWhispers.get(whisperId).channelId = channelId;
+    
+    logger.info('WHISPER', 'Whisper notification posted', { 
       senderId: context.userId, 
       targetUserId,
-      pendingCount: recipientWhispers.length 
+      whisperId,
+      messageId: notificationMessage.id 
     });
     
     // Post detection and log messages
@@ -431,65 +437,103 @@ export async function showReplyModal(context, originalSenderId, coordinate, clie
 }
 
 /**
- * Check and deliver pending whispers for a user
+ * Handle Read Message button click
+ */
+export async function handleReadWhisper(context, whisperId, targetUserId, client) {
+  logger.info('WHISPER', 'Read message button clicked', { 
+    clickerId: context.userId, 
+    whisperId,
+    targetUserId 
+  });
+  
+  try {
+    // Check if clicker is the intended recipient
+    if (context.userId !== targetUserId) {
+      return {
+        content: '❌ This whisper is not for you.',
+        flags: InteractionResponseFlags.EPHEMERAL
+      };
+    }
+    
+    // Get whisper data
+    if (!global.activeWhispers || !global.activeWhispers.has(whisperId)) {
+      return {
+        content: '❌ This whisper has expired or already been read.',
+        flags: InteractionResponseFlags.EPHEMERAL
+      };
+    }
+    
+    const whisperData = global.activeWhispers.get(whisperId);
+    
+    // Create reply button
+    const replyButton = new ButtonBuilder()
+      .setCustomId(`whisper_reply_${whisperData.senderId}_${whisperData.coordinate}`)
+      .setLabel('Reply')
+      .setEmoji('💬')
+      .setStyle(2); // Secondary
+    
+    const buttonRow = new ActionRowBuilder().addComponents(replyButton);
+    
+    // Prepare whisper content
+    const whisperContent = {
+      components: [{
+        type: 17, // Container
+        accent_color: 0x9B59B6, // Purple for whispers
+        components: [
+          {
+            type: 10, // Text Display
+            content: `## 💬 ${whisperData.senderName} whispers to you`
+          },
+          {
+            type: 9, // Section
+            components: [{
+              type: 10,
+              content: `> **@${whisperData.senderName} whispered:**\n${whisperData.message}`
+            }]
+          },
+          { type: 14 }, // Separator
+          buttonRow.toJSON()
+        ]
+      }],
+      flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+      ephemeral: true
+    };
+    
+    // Delete the notification message
+    try {
+      const channel = await client.channels.fetch(whisperData.channelId);
+      const message = await channel.messages.fetch(whisperData.messageId);
+      await message.delete();
+      logger.info('WHISPER', 'Deleted notification message', { messageId: whisperData.messageId });
+    } catch (error) {
+      logger.error('WHISPER', 'Failed to delete notification', { error: error.message });
+    }
+    
+    // Clean up whisper data
+    global.activeWhispers.delete(whisperId);
+    
+    // Deliver the whisper content
+    logger.info('WHISPER', 'Delivering whisper content', { 
+      recipientId: context.userId, 
+      senderId: whisperData.senderId 
+    });
+    
+    return whisperContent;
+  } catch (error) {
+    logger.error('WHISPER', 'Failed to handle read whisper', { error: error.message });
+    return {
+      content: '❌ An error occurred while reading the whisper.',
+      flags: InteractionResponseFlags.EPHEMERAL
+    };
+  }
+}
+
+/**
+ * Check and deliver pending whispers for a user (deprecated - keeping for backwards compatibility)
  * Should be called early in interaction handling
  */
 export async function checkAndDeliverWhispers(userId, interactionToken) {
-  if (!global.pendingWhispers || !global.pendingWhispers.has(userId)) {
-    return null;
-  }
-  
-  const whispers = global.pendingWhispers.get(userId);
-  if (whispers.length === 0) {
-    return null;
-  }
-  
-  // Get the oldest whisper
-  const whisper = whispers.shift();
-  
-  // Remove from pending if no more whispers
-  if (whispers.length === 0) {
-    global.pendingWhispers.delete(userId);
-  }
-  
-  logger.info('WHISPER', 'Delivering pending whisper', { 
-    recipientId: userId, 
-    senderId: whisper.senderId,
-    remainingWhispers: whispers.length 
-  });
-  
-  // Deliver the whisper as a follow-up message
-  try {
-    await DiscordRequest(`webhooks/${process.env.APP_ID}/${interactionToken}`, {
-      method: 'POST',
-      body: {
-        ...whisper.whisperContent,
-        flags: InteractionResponseFlags.EPHEMERAL
-      }
-    });
-    
-    // If there are more whispers, inform the user
-    if (whispers.length > 0) {
-      setTimeout(async () => {
-        try {
-          await DiscordRequest(`webhooks/${process.env.APP_ID}/${interactionToken}`, {
-            method: 'POST',
-            body: {
-              content: `💬 You have ${whispers.length} more whisper${whispers.length > 1 ? 's' : ''} waiting. Interact with something to see them.`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        } catch (error) {
-          logger.debug('WHISPER', 'Could not send whisper notification', { error: error.message });
-        }
-      }, 1000);
-    }
-    
-    return true;
-  } catch (error) {
-    logger.error('WHISPER', 'Failed to deliver pending whisper', { error: error.message });
-    // Put the whisper back if delivery failed
-    whispers.unshift(whisper);
-    return false;
-  }
+  // This function is now deprecated as we use the notification pattern
+  // Keeping it to prevent errors during transition
+  return null;
 }

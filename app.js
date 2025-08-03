@@ -4334,6 +4334,28 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       })(req, res, client);
     }
     
+    // === WHISPER READ MESSAGE HANDLER ===
+    if (custom_id.startsWith('whisper_read_')) {
+      // Format: whisper_read_whisperId_targetUserId
+      const parts = custom_id.split('_');
+      const whisperId = parts[2];
+      const targetUserId = parts[3];
+      
+      return ButtonHandlerFactory.create({
+        id: 'whisper_read',
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`💬 START: whisper_read - user ${context.userId} reading whisper ${whisperId}`);
+          
+          const { handleReadWhisper } = await import('./whisperManager.js');
+          const result = await handleReadWhisper(context, whisperId, targetUserId, client);
+          
+          console.log(`✅ SUCCESS: whisper_read - completed`);
+          return result;
+        }
+      })(req, res, client);
+    }
+    
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
     if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
         !custom_id.startsWith('safari_add_action_') && 
