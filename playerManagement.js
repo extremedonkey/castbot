@@ -186,6 +186,7 @@ export async function createPlayerManagementUI(options) {
     title = mode === PlayerManagementMode.ADMIN ? 'CastBot | Player Management' : 'CastBot | Player Menu',
     activeButton = null, // Which button is currently active
     client = null, // Discord client for fetching data
+    channelId = null, // Discord channel ID for location context
     // Application context options
     isApplicationContext = false, // Whether this is being used in application channel
     hideBottomButtons = false // Whether to hide bottom action row buttons
@@ -398,7 +399,7 @@ export async function createPlayerManagementUI(options) {
               .setEmoji(customTerms.inventoryEmoji || '📦'); // Use custom inventory emoji
             
             // Create Navigate button (check if player is initialized on map)
-            const { loadSafariContent } = await import('./safariManager.js');
+            const { loadSafariContent, getCoordinateFromChannelId } = await import('./safariManager.js');
             const safariData = await loadSafariContent();
             const activeMapId = safariData[guildId]?.maps?.active;
             const playerMapData = playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId];
@@ -410,11 +411,42 @@ export async function createPlayerManagementUI(options) {
               .setEmoji('🗺️')
               .setDisabled(!playerMapData); // Disabled if not initialized
             
-            // Create inventory row with Navigate, then inventory, then store buttons
-            const inventoryComponents = [navigateButton, inventoryButton];
+            // Create Location Actions button
+            // Use channelId parameter passed from the interaction context
+            const currentCoordinate = channelId ? await getCoordinateFromChannelId(guildId, channelId) : null;
             
-            // Add store browse buttons (max 2 to stay within 5-button limit due to Navigate)
-            for (let i = 0; i < Math.min(storeBrowseButtons.length, 2); i++) {
+            const locationActionsButton = new ButtonBuilder()
+              .setCustomId(currentCoordinate ? `map_location_actions_${currentCoordinate}` : 'map_location_actions_none')
+              .setLabel('Location Actions')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('📍')
+              .setDisabled(!currentCoordinate); // Disabled if not in a map channel
+            
+            // Create inventory row with Navigate, inventory, Location Actions, then store buttons
+            const inventoryComponents = [];
+            
+            // For production menu (My Profile), replace Navigate with Location Actions
+            if (title === 'CastBot | My Profile') {
+              // Only add Location Actions button for production menu
+              if (currentCoordinate) {
+                inventoryComponents.push(locationActionsButton);
+              }
+            } else {
+              // Regular player menu: add Navigate button
+              inventoryComponents.push(navigateButton);
+              
+              // Add Location Actions button if we're in a map location
+              if (currentCoordinate) {
+                inventoryComponents.push(locationActionsButton);
+              }
+            }
+            
+            // Always add inventory button
+            inventoryComponents.push(inventoryButton);
+            
+            // Add store browse buttons (max to stay within 5-button limit)
+            const remainingSlots = 5 - inventoryComponents.length;
+            for (let i = 0; i < Math.min(storeBrowseButtons.length, remainingSlots); i++) {
               const storeButton = storeBrowseButtons[i];
               inventoryComponents.push(new ButtonBuilder()
                 .setCustomId(storeButton.custom_id)

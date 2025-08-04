@@ -71,6 +71,32 @@ function clearPlayerNameCache() {
  */
 
 /**
+ * Get coordinate from channel ID
+ * @param {string} guildId - Discord guild ID
+ * @param {string} channelId - Discord channel ID
+ * @returns {string|null} Coordinate (e.g., 'A1') or null if not found
+ */
+export async function getCoordinateFromChannelId(guildId, channelId) {
+    const safariData = await loadSafariContent();
+    const activeMapId = safariData[guildId]?.maps?.active;
+    
+    if (!activeMapId) {
+        return null;
+    }
+    
+    const coordinates = safariData[guildId]?.maps?.[activeMapId]?.coordinates || {};
+    
+    // Find the coordinate that matches this channel ID
+    for (const [coord, data] of Object.entries(coordinates)) {
+        if (data.channelId === channelId) {
+            return coord;
+        }
+    }
+    
+    return null;
+}
+
+/**
  * Generate detailed item content for display (reusable between store and inventory)
  * @param {Object} item - The item object with stats
  * @param {Object} customTerms - Custom terminology for the guild

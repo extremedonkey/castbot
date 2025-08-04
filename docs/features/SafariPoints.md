@@ -39,45 +39,28 @@ The system supports points for any entity type:
 ### File Structure
 ```
 /castbot
-├── pointsManager.js      # Core points logic
+├── pointsManager.js      # Core points logic and configuration
 ├── safariManager.js      # Integration with Safari actions
-├── safariContent.json    # Points configuration and data
+├── safariContent.json    # Points data storage
+├── playerData.json       # Legacy player stamina storage
 └── mapMovement.js        # Movement system using points
 ```
 
 ### Data Storage
 
-Points configuration is stored in `safariContent.json`:
+Points are stored in two locations:
 
+1. **safariContent.json** (Entity Points System):
 ```json
 {
   "guildId": {
-    "pointsConfig": {
-      "definitions": {
-        "stamina": {
-          "displayName": "Energy",
-          "emoji": "⚡",
-          "defaultMax": 10,
-          "defaultMin": 0,
-          "regeneration": {
-            "type": "full_reset",
-            "interval": 43200000,  // 12 hours in ms
-            "amount": "max"
-          },
-          "visibility": "hidden"  // or "bar", "numbers"
-        }
-      },
-      "movementCost": {
-        "stamina": 1
-      }
-    },
     "entityPoints": {
       "player_391415444084490240": {
         "stamina": {
-          "current": 8,
-          "max": 10,
-          "lastRegeneration": 1704236400000,
-          "lastUse": 1704236400000
+          "current": 1,
+          "max": 1,
+          "lastRegeneration": 1754313989646,
+          "lastUse": 1754313989646
         }
       }
     }
@@ -85,13 +68,74 @@ Points configuration is stored in `safariContent.json`:
 }
 ```
 
+2. **playerData.json** (Legacy System - still in use):
+```json
+{
+  "guildId": {
+    "players": {
+      "userId": {
+        "safari": {
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,  // Note: uses "maximum" not "max"
+              "lastRegeneration": "2025-08-04T13:22:16.559Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### ⚠️ Important: Field Name Differences
+
+- **safariContent.json** uses `max` for the maximum value
+- **playerData.json** uses `maximum` for the maximum value
+- When accessing stamina from playerData, use `stamina.maximum`
+- When accessing stamina from entityPoints, use `stamina.max`
+
+## Configuration
+
+### Central Configuration (pointsManager.js)
+
+The stamina configuration is centralized in `pointsManager.js` in the `getDefaultPointsConfig()` function:
+
+```javascript
+function getDefaultPointsConfig() {
+    return {
+        stamina: {
+            displayName: "Stamina",
+            emoji: "⚡",
+            defaultMax: 1,              // Maximum stamina points
+            defaultMin: 0,              // Minimum stamina points
+            regeneration: {
+                type: "full_reset",     // Regeneration type
+                interval: 180000,       // 3 minutes (in milliseconds)
+                amount: "max"           // Reset to maximum
+            },
+            visibility: "hidden"        // UI display mode
+        }
+    };
+}
+```
+
+### Key Configuration Values
+
+- **Default Maximum**: `1` stamina point
+- **Regeneration Time**: `180000ms` (3 minutes)
+- **Regeneration Type**: `full_reset` - stamina fully resets after 3 minutes of not being used
+- **Movement Cost**: 1 stamina per move (configured elsewhere)
+
 ## Point Types
 
-### Stamina (MVP Implementation)
+### Stamina (Current Implementation)
 - **Purpose**: Limits map movement
-- **Default Max**: 10 points
+- **Default Max**: 1 point (configurable in pointsManager.js)
 - **Cost**: 1 point per map movement
-- **Regeneration**: Full reset every 12 hours
+- **Regeneration**: Full reset every 3 minutes
 
 ### Future Point Types
 - **Hit Points (HP)**: Combat and survival
@@ -279,6 +323,60 @@ Integrate with Safari's custom terms system:
 - Rename "stamina" to match server theme
 - Custom emojis and display formats
 - Localized messages
+
+## Making Stamina Configurable
+
+### Current State
+- Stamina max is hard-coded to `1` in `getDefaultPointsConfig()`
+- Regeneration interval is hard-coded to `180000ms` (3 minutes)
+- All servers use the same configuration
+
+### Future Enhancement: Per-Server Configuration
+
+To make stamina configurable per server:
+
+1. **Modify getDefaultPointsConfig()** to check for server-specific settings:
+```javascript
+export function getDefaultPointsConfig(guildId = null) {
+    // Check for guild-specific config first
+    if (guildId) {
+        const guildConfig = getGuildStaminaConfig(guildId);
+        if (guildConfig) return guildConfig;
+    }
+    
+    // Fall back to defaults
+    return {
+        stamina: {
+            displayName: "Stamina",
+            emoji: "⚡",
+            defaultMax: 1,
+            defaultMin: 0,
+            regeneration: {
+                type: "full_reset",
+                interval: 180000, // 3 minutes
+                amount: "max"
+            },
+            visibility: "hidden"
+        }
+    };
+}
+```
+
+2. **Store server configurations** in safariContent.json:
+```json
+{
+  "guildId": {
+    "pointsConfig": {
+      "stamina": {
+        "defaultMax": 5,
+        "regeneration": {
+          "interval": 600000  // 10 minutes
+        }
+      }
+    }
+  }
+}
+```
 
 ## Future Enhancements
 

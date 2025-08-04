@@ -26,6 +26,9 @@ function maybePrependDev(baseName) {
 // For open commands, do not assign default_member_permissions!
 // Legacy castlist command - REMOVED from registration (but handlers remain active)
 
+
+// Only CASTLIST and MENU ar active at the moment
+
 const CASTLIST_COMMAND = {
 	name: maybePrependDev('castlist'),
 	description: 'Display your CastBot castlist(s).',
@@ -40,7 +43,7 @@ const CASTLIST_COMMAND = {
 	]
 };
 
-// Only active slash commands - admin commands moved to /menu interface
+// Not active or deployed - to be legacy code to be removed in the future
 
 const APPLY_BUTTON_COMMAND = {
 	name: maybePrependDev('apply_button'),
@@ -48,6 +51,8 @@ const APPLY_BUTTON_COMMAND = {
 	type: 1,
 	default_member_permissions: ADMIN_ANY
 };
+
+// Not active or deployed - to be legacy code to be removed in the future
 
 // Admin-only commands: assign ADMIN_ANY as the default permission
 const SET_TRIBE_COMMAND = {
@@ -224,6 +229,9 @@ const ROLE_GENERATOR_COMMAND = {
 
 // Player commands - REMOVED from registration (handlers remain active for legacy support)
 // These are now replaced by the enhanced /menu system
+
+
+// Only CASTLIST and MENU ar active at the moment
 
 // Unified menu command that shows player menu for regular users, admin menu for admins
 const MENU_COMMAND = {
