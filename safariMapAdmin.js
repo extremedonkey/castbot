@@ -244,16 +244,12 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
   const playerData = await loadPlayerData();
   const safariData = await loadSafariContent();
   
-  // Ensure structures exist
-  if (!playerData[guildId]) {
-    playerData[guildId] = { players: {} };
-  }
-  if (!playerData[guildId].players[userId]) {
-    playerData[guildId].players[userId] = { safari: {} };
-  }
+  // Use universal safari initialization to ensure ALL required fields exist
+  const { initializePlayerSafari } = await import('./safariManager.js');
+  initializePlayerSafari(playerData, guildId, userId);
   
   const player = playerData[guildId].players[userId];
-  if (!player.safari) player.safari = {};
+  // Ensure map-specific structures exist
   if (!player.safari.mapProgress) player.safari.mapProgress = {};
   if (!player.safari.points) player.safari.points = {};
   

@@ -483,31 +483,71 @@ async function getCurrency(guildId, userId) {
 }
 
 /**
+ * Universal safari player initialization - ensures all required safari fields exist
+ * @param {Object} playerData - Player data object to modify
+ * @param {string} guildId - Guild ID
+ * @param {string} userId - User ID
+ */
+function initializePlayerSafari(playerData, guildId, userId) {
+    // Initialize guild structure
+    if (!playerData[guildId]) {
+        playerData[guildId] = { players: {}, tribes: {}, timezones: {} };
+    }
+    
+    // Initialize player structure
+    if (!playerData[guildId].players[userId]) {
+        playerData[guildId].players[userId] = {};
+    }
+    
+    // Initialize complete safari structure with all required fields
+    if (!playerData[guildId].players[userId].safari) {
+        playerData[guildId].players[userId].safari = {
+            currency: 0,
+            history: [],
+            lastInteraction: Date.now(),
+            achievements: [],
+            inventory: {},          // CRITICAL: Always initialize inventory
+            cooldowns: {},          // Button cooldowns  
+            buttonUses: {},         // Usage tracking
+            storeHistory: []        // Purchase history
+        };
+    }
+    
+    // DEFENSIVE: Ensure inventory exists even if safari structure exists
+    if (!playerData[guildId].players[userId].safari.inventory) {
+        console.warn(`⚠️ DEFENSIVE: Missing inventory for user ${userId}, reinitializing`);
+        playerData[guildId].players[userId].safari.inventory = {};
+    }
+    
+    // DEFENSIVE: Ensure other critical fields exist
+    if (!playerData[guildId].players[userId].safari.history) {
+        playerData[guildId].players[userId].safari.history = [];
+    }
+    if (!playerData[guildId].players[userId].safari.achievements) {
+        playerData[guildId].players[userId].safari.achievements = [];
+    }
+    if (!playerData[guildId].players[userId].safari.cooldowns) {
+        playerData[guildId].players[userId].safari.cooldowns = {};
+    }
+    if (!playerData[guildId].players[userId].safari.buttonUses) {
+        playerData[guildId].players[userId].safari.buttonUses = {};
+    }
+    if (!playerData[guildId].players[userId].safari.storeHistory) {
+        playerData[guildId].players[userId].safari.storeHistory = [];
+    }
+    
+    console.log(`🔧 DEBUG: Safari initialization complete for user ${userId}`);
+}
+
+/**
  * Update player currency
  */
 async function updateCurrency(guildId, userId, amount) {
     try {
         const playerData = await loadPlayerData();
         
-        // Initialize structures with MVP2 features if needed
-        if (!playerData[guildId]) {
-            playerData[guildId] = { players: {}, tribes: {}, timezones: {} };
-        }
-        if (!playerData[guildId].players[userId]) {
-            playerData[guildId].players[userId] = {};
-        }
-        if (!playerData[guildId].players[userId].safari) {
-            playerData[guildId].players[userId].safari = {
-                currency: 0,
-                history: [],
-                lastInteraction: Date.now(),
-                achievements: [],
-                inventory: {},          // NEW: MVP2 - Item inventory
-                cooldowns: {},          // NEW: MVP2 - Button cooldowns  
-                buttonUses: {},         // NEW: MVP2 - Usage tracking
-                storeHistory: []         // NEW: MVP2 - Purchase history
-            };
-        }
+        // Use universal safari initialization
+        initializePlayerSafari(playerData, guildId, userId);
         
         const currentCurrency = playerData[guildId].players[userId].safari.currency;
         const newCurrency = Math.max(0, currentCurrency + amount); // Don't go below 0
@@ -1301,14 +1341,13 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1, existin
         const playerData = existingPlayerData || await loadPlayerData();
         const safariData = await loadSafariContent();
         
-        // Initialize structures
-        if (!playerData[guildId]) playerData[guildId] = { players: {} };
-        if (!playerData[guildId].players[userId]) playerData[guildId].players[userId] = {};
-        if (!playerData[guildId].players[userId].safari) {
-            playerData[guildId].players[userId].safari = {
-                currency: 0, history: [], lastInteraction: Date.now(),
-                achievements: [], inventory: {}, cooldowns: {}, buttonUses: {}, storeHistory: []
-            };
+        // Use universal safari initialization
+        initializePlayerSafari(playerData, guildId, userId);
+        
+        // DEFENSIVE: Additional check to ensure inventory exists before access
+        if (!playerData[guildId].players[userId].safari.inventory) {
+            console.error(`🚨 CRITICAL: Inventory still missing after initialization for user ${userId}`);
+            playerData[guildId].players[userId].safari.inventory = {};
         }
         
         // Get item definition to check if it's an attack item
@@ -5548,6 +5587,7 @@ export {
     postButtonToChannel,
     getCurrency,
     updateCurrency,
+    initializePlayerSafari,
     generateCustomId,
     generateButtonId,
     loadSafariContent,
