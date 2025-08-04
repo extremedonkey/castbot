@@ -19242,7 +19242,7 @@ Are you sure you want to continue?`;
               .setEmoji('💬')
               .setStyle(2); // Secondary
             
-            const buttonRow = new ActionRowBuilder().addComponents([enterCommandButton, navigateButton, whisperButton]);
+            const buttonRow = new ActionRowBuilder().addComponents([navigateButton, enterCommandButton, whisperButton]);
             
             return {
               components: [{
