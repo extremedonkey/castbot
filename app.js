@@ -19276,6 +19276,14 @@ Are you sure you want to continue?`;
             };
           }
           
+          // Create Navigate button for admins too
+          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
+          const navigateButton = new ButtonBuilder()
+            .setCustomId(`safari_navigate_${context.userId}_${coord}`)
+            .setLabel('Navigate')
+            .setEmoji('🗺️')
+            .setStyle(2); // Secondary (grey)
+          
           // Create entity management UI for this coordinate
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
@@ -19285,8 +19293,11 @@ Are you sure you want to continue?`;
             mode: 'edit'
           });
           
+          // Add Navigate button to the entity UI
+          const navigateRow = new ActionRowBuilder().addComponents([navigateButton]);
+          ui.components.push(navigateRow.toJSON());
           
-          console.log(`✅ SUCCESS: map_location_actions - showing entity UI with admin buttons for ${coord}`);
+          console.log(`✅ SUCCESS: map_location_actions - showing entity UI with admin buttons and Navigate for ${coord}`);
           
           return {
             ...ui,
