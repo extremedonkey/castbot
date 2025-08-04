@@ -47,11 +47,11 @@ export function getDefaultPointsConfig() {
         stamina: {
             displayName: "Stamina",
             emoji: "⚡",
-            defaultMax: 1,
+            defaultMax: parseInt(process.env.STAMINA_MAX || '1'),
             defaultMin: 0,
             regeneration: {
                 type: "full_reset",
-                interval: 180000, // 3 minutes
+                interval: (parseInt(process.env.STAMINA_REGEN_MINUTES || '3')) * 60000,
                 amount: "max"
             },
             visibility: "hidden" // For MVP, just show cooldown

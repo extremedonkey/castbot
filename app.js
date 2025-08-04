@@ -8744,6 +8744,66 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'stamina_global_config') {
+      // Handle global stamina configuration button - ADMIN ONLY
+      return ButtonHandlerFactory.create({
+        id: 'stamina_global_config',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`⚡ DEBUG: User ${context.userId} attempting to access global stamina config`);
+          
+          // Check if user is the specific admin
+          if (context.userId !== '391415444084490240') {
+            console.log(`❌ Access denied: User ${context.userId} is not authorized for global stamina config`);
+            return {
+              content: '❌ Access denied. This feature is restricted to bot administrators.',
+              ephemeral: true
+            };
+          }
+          
+          // Get current stamina configuration
+          const { getDefaultPointsConfig } = await import('./pointsManager.js');
+          const currentConfig = getDefaultPointsConfig();
+          const currentRegenMinutes = Math.floor(currentConfig.stamina.regeneration.interval / 60000);
+          const currentMaxStamina = currentConfig.stamina.defaultMax;
+          
+          // Create stamina settings modal
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+          
+          const modal = new ModalBuilder()
+            .setCustomId('stamina_global_config_modal')
+            .setTitle('⚡ Global Stamina Settings');
+          
+          const regenTimeInput = new TextInputBuilder()
+            .setCustomId('stamina_regen_minutes')
+            .setLabel('Stamina Regen Time (mins) - 720mins = 12hrs')
+            .setStyle(TextInputStyle.Short)
+            .setValue(currentRegenMinutes.toString())
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(6);
+          
+          const maxStaminaInput = new TextInputBuilder()
+            .setCustomId('stamina_max_value')
+            .setLabel('Max Stamina')
+            .setStyle(TextInputStyle.Short)
+            .setValue(currentMaxStamina.toString())
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(3);
+          
+          const firstActionRow = new ActionRowBuilder().addComponents(regenTimeInput);
+          const secondActionRow = new ActionRowBuilder().addComponents(maxStaminaInput);
+          
+          modal.addComponents(firstActionRow, secondActionRow);
+          
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_config_reset_defaults') {
       // Handle reset to defaults button
       try {
@@ -26598,6 +26658,87 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating Safari settings. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'stamina_global_config_modal') {
+      // Handle global stamina configuration modal submission - ADMIN ONLY
+      try {
+        const member = req.body.member;
+        const userId = member.user.id;
+        
+        // Check admin permissions and specific user ID
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to configure stamina settings.')) return;
+        
+        if (userId !== '391415444084490240') {
+          console.log(`❌ Access denied: User ${userId} is not authorized for global stamina config`);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted to bot administrators.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Extract modal values
+        const components = req.body.data.components;
+        const regenMinutes = parseInt(components[0]?.components[0]?.value || '3');
+        const maxStamina = parseInt(components[1]?.components[0]?.value || '1');
+        
+        // Validate inputs
+        if (isNaN(regenMinutes) || regenMinutes < 1 || regenMinutes > 10080) { // Max 1 week
+          throw new Error('Regeneration time must be between 1 and 10080 minutes (1 week)');
+        }
+        
+        if (isNaN(maxStamina) || maxStamina < 1 || maxStamina > 999) {
+          throw new Error('Max stamina must be between 1 and 999');
+        }
+        
+        console.log(`⚡ DEBUG: Updating global stamina config - Regen: ${regenMinutes}min, Max: ${maxStamina}`);
+        
+        // Update environment variables (requires app restart to take effect)
+        const fs = await import('fs');
+        const path = await import('path');
+        
+        const envPath = path.join(process.cwd(), '.env');
+        let envContent = fs.readFileSync(envPath, 'utf8');
+        
+        // Update or add the stamina environment variables
+        const updateEnvVar = (content, key, value) => {
+          const regex = new RegExp(`^${key}=.*$`, 'm');
+          if (regex.test(content)) {
+            return content.replace(regex, `${key}=${value}`);
+          } else {
+            return content + `\n${key}=${value}`;
+          }
+        };
+        
+        envContent = updateEnvVar(envContent, 'STAMINA_REGEN_MINUTES', regenMinutes);
+        envContent = updateEnvVar(envContent, 'STAMINA_MAX', maxStamina);
+        
+        fs.writeFileSync(envPath, envContent);
+        
+        console.log(`✅ SUCCESS: Global stamina config updated - requires restart to take effect`);
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ **Global Stamina Settings Updated**\n\n` +
+                    `🔄 **Regeneration Time:** ${regenMinutes} minutes\n` +
+                    `⚡ **Max Stamina:** ${maxStamina}\n\n` +
+                    `⚠️ **Note:** App restart required for changes to take effect.`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error updating global stamina config:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error updating stamina settings: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

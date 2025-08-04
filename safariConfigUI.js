@@ -27,6 +27,15 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         });
     });
 
+    // Add global stamina settings button (admin only)
+    fieldGroupButtons.push({
+        type: 2, // Button
+        custom_id: 'stamina_global_config',
+        label: 'Stamina Settings',
+        style: 2, // Secondary
+        emoji: { name: '⚡' }
+    });
+
     // Create Components V2 Container
     const containerComponents = [
         {

@@ -235,6 +235,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'stamina_global_config': {
+    label: 'Stamina Settings',
+    description: 'Global stamina configuration (admin only)',
+    emoji: '⚡',
+    style: 'Secondary',
+    category: 'safari_admin'
+  },
   'safari_round_results': {
     label: '🎨 Round Results',
     description: 'Safari round results management',
