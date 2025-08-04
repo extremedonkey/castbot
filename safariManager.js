@@ -714,8 +714,14 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
         }
     }
     
-    // Give the currency
-    const newBalance = await updateCurrency(guildId, userId, config.amount);
+    // Give the currency with context for logging
+    const context = {
+        username: interaction?.user?.username || 'Unknown',
+        displayName: interaction?.member?.displayName || interaction?.user?.username || 'Unknown',
+        source: buttonId ? `Button: ${buttonId}` : 'give_currency',
+        channelName: interaction?.channel?.name || null
+    };
+    const newBalance = await updateCurrency(guildId, userId, config.amount, context);
     
     // Update claim tracking persistently - use specific button and action if provided
     if (config.limit && config.limit.type !== 'unlimited') {
@@ -1027,6 +1033,24 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
         if (safariData[guildId]?.buttons?.[buttonId]) {
             safariData[guildId].buttons[buttonId].metadata.usageCount++;
             await saveSafariContent(safariData);
+        }
+        
+        // Log button interaction to Safari Log
+        try {
+            const { logSafariButton } = await import('./safariLogger.js');
+            await logSafariButton({
+                guildId,
+                userId,
+                buttonId,
+                buttonName: button.text || buttonId,
+                buttonEmoji: button.emoji || '🎯',
+                conditionsResult,
+                actionsCount: button.actions?.length || 0,
+                usageCount: safariData[guildId].buttons[buttonId].metadata.usageCount
+            });
+        } catch (logError) {
+            console.error('Failed to log Safari button interaction:', logError);
+            // Don't fail the button action if logging fails
         }
         
         // Filter actions based on executeOn property and conditions result
@@ -2030,9 +2054,52 @@ async function buyItem(guildId, storeId, itemId, userId) {
             }
         }
         
-        // Process purchase
-        await updateCurrency(guildId, userId, -price);
-        await addItemToInventory(guildId, userId, itemId, 1);
+        // Process purchase with context for logging
+        const purchaseContext = {
+            username: interaction?.user?.username || 'Unknown',
+            displayName: interaction?.member?.displayName || interaction?.user?.username || 'Unknown',
+            source: `Store: ${store.name}`,
+            channelName: interaction?.channel?.name || null
+        };
+        
+        await updateCurrency(guildId, userId, -price, purchaseContext);
+        await addItemToInventory(guildId, userId, itemId, 1, {
+            ...purchaseContext,
+            source: `Purchase from ${store.name}`
+        });
+        
+        // Log store purchase
+        try {
+            const { logStorePurchase } = await import('./safariLogger.js');
+            
+            // Get player location
+            const activeMapId = safariData[guildId]?.maps?.active;
+            let location = 'Unknown';
+            const playerData = await loadPlayerData();
+            if (activeMapId && playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]) {
+                location = playerData[guildId].players[userId].safari.mapProgress[activeMapId].currentLocation || 'Unknown';
+            }
+            
+            await logStorePurchase({
+                guildId,
+                userId,
+                username: purchaseContext.username,
+                displayName: purchaseContext.displayName,
+                location,
+                storeId,
+                storeName: store.name,
+                itemId,
+                itemName: item.name,
+                itemEmoji: item.emoji || '📦',
+                quantity: 1,
+                price,
+                currencyName: customTerms.currencyName,
+                channelName: purchaseContext.channelName
+            });
+        } catch (logError) {
+            console.error('Safari Log Error:', logError);
+            // Don't fail the purchase if logging fails
+        }
         
         // Update store sales stats
         if (safariData[guildId]?.stores?.[storeId]) {
@@ -4140,6 +4207,34 @@ async function addAttackToQueue(guildId, attackRecord) {
         
         await saveSafariContent(safariData);
         console.log(`⚔️ DEBUG: Added attack to queue for round ${round}:`, attackRecord);
+        
+        // Log attack to Safari Log
+        try {
+            const { logAttack } = await import('./safariLogger.js');
+            const playerData = await loadPlayerData();
+            const attackerName = playerData[guildId]?.players?.[attackRecord.attackingPlayer]?.displayName || 
+                               playerData[guildId]?.players?.[attackRecord.attackingPlayer]?.username || 
+                               'Unknown Attacker';
+            const defenderName = playerData[guildId]?.players?.[attackRecord.defendingPlayer]?.displayName || 
+                                playerData[guildId]?.players?.[attackRecord.defendingPlayer]?.username || 
+                                'Unknown Defender';
+            
+            await logAttack({
+                guildId,
+                attackerId: attackRecord.attackingPlayer,
+                attackerName,
+                defenderId: attackRecord.defendingPlayer,
+                defenderName,
+                itemId: attackRecord.itemId,
+                itemName: attackRecord.itemName,
+                quantity: attackRecord.attacksPlanned,
+                totalDamage: attackRecord.totalDamage,
+                round: round
+            });
+        } catch (logError) {
+            console.error('Failed to log attack:', logError);
+            // Don't fail the attack if logging fails
+        }
         
         return true;
     } catch (error) {

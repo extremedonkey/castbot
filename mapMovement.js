@@ -235,6 +235,28 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
         ? `📍 You have been moved by the Production team to **${newCoordinate}**!`
         : `You move to ${newCoordinate}!`;
     
+    // Log player movement to Safari Log
+    try {
+        const { logPlayerMovement } = await import('./safariLogger.js');
+        const playerData = await loadPlayerData();
+        const playerName = playerData[guildId]?.players?.[userId]?.displayName || 
+                          playerData[guildId]?.players?.[userId]?.username || 
+                          'Unknown Player';
+        
+        await logPlayerMovement({
+            guildId,
+            userId,
+            playerName,
+            fromLocation: oldCoordinate,
+            toLocation: newCoordinate,
+            isAdminMove: adminMove,
+            staminaConsumed: !bypassStamina ? movementCost : 0
+        });
+    } catch (logError) {
+        console.error('Failed to log player movement:', logError);
+        // Don't fail the movement if logging fails
+    }
+    
     return { 
         success: true, 
         message,

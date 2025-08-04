@@ -1043,7 +1043,12 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_customize_terms')
       .setLabel('Safari Settings')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️')
+      .setEmoji('⚙️'),
+    new ButtonBuilder()
+      .setCustomId('safari_configure_log')
+      .setLabel('Safari Log')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📊')
   ];
   
   // Map Administration section buttons
@@ -8707,6 +8712,129 @@ Your server is now ready for Tycoons gameplay!`;
           return interfaceData;
         }
       })(req, res, client);
+    } else if (custom_id === 'safari_configure_log') {
+      // Handle Safari Log configuration button
+      return ButtonHandlerFactory.create({
+        id: 'safari_configure_log',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📊 DEBUG: User ${context.userId} opening Safari Log configuration for guild ${context.guildId}`);
+          
+          // Load current Safari log settings
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const logSettings = safariData[context.guildId]?.safariLogSettings || {
+            enabled: false,
+            logChannelId: null,
+            productionRoleId: null,
+            logTypes: {
+              whispers: true,
+              itemPickups: true,
+              currencyChanges: true,
+              storeTransactions: true,
+              buttonActions: true,
+              mapMovement: true,
+              attacks: true
+            }
+          };
+          
+          // Create UI components
+          const { ButtonBuilder, ActionRowBuilder, StringSelectMenuBuilder } = await import('discord.js');
+          
+          // Create enable/disable button
+          const toggleButton = new ButtonBuilder()
+            .setCustomId('safari_log_toggle')
+            .setLabel(logSettings.enabled ? 'Disable Safari Log' : 'Enable Safari Log')
+            .setStyle(logSettings.enabled ? 4 : 3) // Danger if enabled, Success if disabled
+            .setEmoji(logSettings.enabled ? '🔴' : '🟢');
+          
+          // Create channel select button
+          const channelButton = new ButtonBuilder()
+            .setCustomId('safari_log_channel_select')
+            .setLabel('Set Log Channel')
+            .setStyle(2) // Secondary
+            .setEmoji('📝')
+            .setDisabled(!logSettings.enabled);
+          
+          // Create log types configuration button
+          const logTypesButton = new ButtonBuilder()
+            .setCustomId('safari_log_types_config')
+            .setLabel('Configure Log Types')
+            .setStyle(2) // Secondary
+            .setEmoji('⚙️')
+            .setDisabled(!logSettings.enabled);
+          
+          // Create test message button
+          const testButton = new ButtonBuilder()
+            .setCustomId('safari_log_test')
+            .setLabel('Send Test Message')
+            .setStyle(2) // Secondary
+            .setEmoji('🧪')
+            .setDisabled(!logSettings.enabled || !logSettings.logChannelId);
+          
+          // Create back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('prod_safari_menu')
+            .setLabel('← Back to Safari')
+            .setStyle(2) // Secondary
+            .setEmoji('🦁');
+          
+          const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
+          const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
+          const backRow = new ActionRowBuilder().addComponents(backButton);
+          
+          // Create status display
+          let statusText = `## 📊 Safari Log Configuration\n\n`;
+          statusText += `**Status:** ${logSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
+          statusText += `**Log Channel:** ${logSettings.logChannelId ? `<#${logSettings.logChannelId}>` : 'Not Set'}\n\n`;
+          
+          if (logSettings.enabled && logSettings.logChannelId) {
+            statusText += `**Active Log Types:**\n`;
+            const logTypeNames = {
+              whispers: '🤫 Whispers',
+              itemPickups: '🧰 Item Pickups',
+              currencyChanges: '🪙 Currency Changes',
+              storeTransactions: '🛒 Store Purchases',
+              buttonActions: '🎯 Safari Actions',
+              mapMovement: '🗺️ Map Movement',
+              attacks: '⚔️ Attack Queue'
+            };
+            
+            for (const [type, enabled] of Object.entries(logSettings.logTypes || {})) {
+              if (enabled) {
+                statusText += `• ${logTypeNames[type] || type}\n`;
+              }
+            }
+          }
+          
+          // Create Components V2 container
+          const containerComponents = [
+            {
+              type: 10, // Text Display
+              content: statusText
+            },
+            { type: 14 }, // Separator
+            toggleRow.toJSON(),
+            { type: 14 }, // Separator
+            configRow.toJSON(),
+            { type: 14 }, // Separator
+            backRow.toJSON()
+          ];
+          
+          const container = {
+            type: 17, // Container
+            accent_color: 0x9B59B6, // Purple accent
+            components: containerComponents
+          };
+          
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [container]
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_config_group_')) {
       // Handle field group button clicks - Currency, Events, Rounds
       try {
@@ -8802,6 +8930,313 @@ Your server is now ready for Tycoons gameplay!`;
             type: InteractionResponseType.MODAL,
             data: modal.toJSON()
           };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_log_toggle') {
+      // Handle Safari Log enable/disable toggle
+      return ButtonHandlerFactory.create({
+        id: 'safari_log_toggle',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔧 DEBUG: User ${context.userId} toggling Safari Log for guild ${context.guildId}`);
+          
+          // Load and toggle Safari log settings
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          
+          // Initialize if missing
+          if (!safariData[context.guildId]) {
+            safariData[context.guildId] = {};
+          }
+          if (!safariData[context.guildId].safariLogSettings) {
+            safariData[context.guildId].safariLogSettings = {
+              enabled: false,
+              logChannelId: null,
+              productionRoleId: null,
+              logTypes: {
+                whispers: true,
+                itemPickups: true,
+                currencyChanges: true,
+                storeTransactions: true,
+                buttonActions: true,
+                mapMovement: true,
+                attacks: true
+              }
+            };
+          }
+          
+          // Toggle the enabled state
+          const wasEnabled = safariData[context.guildId].safariLogSettings.enabled;
+          safariData[context.guildId].safariLogSettings.enabled = !wasEnabled;
+          
+          // Save the updated settings
+          await saveSafariContent(safariData);
+          
+          console.log(`📊 DEBUG: Safari Log ${!wasEnabled ? 'enabled' : 'disabled'} for guild ${context.guildId}`);
+          
+          // Return to Safari Log configuration with updated state
+          return context.buttonHandlers['safari_configure_log'](context);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_log_channel_select') {
+      // Handle Safari Log channel selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_log_channel_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`📝 DEBUG: User ${context.userId} selecting Safari Log channel for guild ${context.guildId}`);
+          
+          const { ChannelSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+          
+          // Create channel select menu
+          const channelSelect = new ChannelSelectMenuBuilder()
+            .setCustomId('safari_log_channel_set')
+            .setPlaceholder('Select a channel for Safari logs...')
+            .setChannelTypes([0]) // Text channels only
+            .setMinValues(1)
+            .setMaxValues(1);
+          
+          const selectRow = new ActionRowBuilder().addComponents(channelSelect);
+          
+          // Create Components V2 container
+          const container = {
+            type: 17, // Container
+            components: [
+              {
+                type: 10, // Text Display
+                content: '## 📝 Select Safari Log Channel\n\nChoose a channel where all Safari interactions will be logged. This should be a private channel only accessible to staff.'
+              },
+              { type: 14 }, // Separator
+              selectRow.toJSON()
+            ]
+          };
+          
+          return {
+            components: [container],
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_log_types_config') {
+      // Handle Safari Log types configuration
+      return ButtonHandlerFactory.create({
+        id: 'safari_log_types_config',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`⚙️ DEBUG: User ${context.userId} configuring Safari Log types for guild ${context.guildId}`);
+          
+          // Load current Safari log settings
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const logSettings = safariData[context.guildId]?.safariLogSettings || {};
+          const logTypes = logSettings.logTypes || {
+            whispers: true,
+            itemPickups: true,
+            currencyChanges: true,
+            storeTransactions: true,
+            buttonActions: true,
+            mapMovement: true,
+            attacks: true
+          };
+          
+          const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+          
+          // Create multi-select menu for log types
+          const logTypeOptions = [
+            { label: 'Whispers', value: 'whispers', emoji: '🤫', description: 'Log all player whispers with full content' },
+            { label: 'Item Pickups', value: 'itemPickups', emoji: '🧰', description: 'Log when players pick up items' },
+            { label: 'Currency Changes', value: 'currencyChanges', emoji: '🪙', description: 'Log currency gains and losses' },
+            { label: 'Store Purchases', value: 'storeTransactions', emoji: '🛒', description: 'Log all store transactions' },
+            { label: 'Safari Actions', value: 'buttonActions', emoji: '🎯', description: 'Log Safari button interactions' },
+            { label: 'Map Movement', value: 'mapMovement', emoji: '🗺️', description: 'Log player movement on the map' },
+            { label: 'Attack Queue', value: 'attacks', emoji: '⚔️', description: 'Log attack queue activities' }
+          ];
+          
+          // Set which options are currently selected
+          const selectedValues = Object.entries(logTypes)
+            .filter(([_, enabled]) => enabled)
+            .map(([type, _]) => type);
+          
+          const logTypeSelect = new StringSelectMenuBuilder()
+            .setCustomId('safari_log_types_set')
+            .setPlaceholder('Select log types to enable...')
+            .setMinValues(0)
+            .setMaxValues(logTypeOptions.length)
+            .addOptions(logTypeOptions.map(opt => ({
+              ...opt,
+              default: selectedValues.includes(opt.value)
+            })));
+          
+          const selectRow = new ActionRowBuilder().addComponents(logTypeSelect);
+          
+          // Create Components V2 container
+          const container = {
+            type: 17, // Container
+            components: [
+              {
+                type: 10, // Text Display
+                content: '## ⚙️ Configure Safari Log Types\n\nSelect which types of interactions you want to log. Deselect any types you want to exclude from the logs.'
+              },
+              { type: 14 }, // Separator
+              selectRow.toJSON()
+            ]
+          };
+          
+          return {
+            components: [container],
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_log_test') {
+      // Handle Safari Log test message
+      return ButtonHandlerFactory.create({
+        id: 'safari_log_test',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        deferred: true,
+        handler: async (context) => {
+          console.log(`🧪 DEBUG: User ${context.userId} sending Safari Log test message for guild ${context.guildId}`);
+          
+          // Load Safari log settings
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const logSettings = safariData[context.guildId]?.safariLogSettings;
+          
+          if (!logSettings?.enabled || !logSettings?.logChannelId) {
+            return {
+              content: '❌ Safari Log is not properly configured. Please enable it and set a log channel first.',
+              ephemeral: true
+            };
+          }
+          
+          // Send test message using analytics logger
+          const { logInteraction } = await import('./src/analytics/analyticsLogger.js');
+          const testContent = {
+            testMessage: true,
+            timestamp: Date.now(),
+            configuredBy: context.member?.displayName || context.username
+          };
+          
+          await logInteraction(
+            context.userId,
+            context.guildId,
+            'SAFARI_TEST',
+            'Safari Log Test Message',
+            context.username,
+            null,
+            null,
+            'safari-config',
+            context.member?.displayName || context.username,
+            testContent
+          );
+          
+          return {
+            content: `✅ Test message sent to <#${logSettings.logChannelId}>! Check the channel to verify the Safari Log is working correctly.`,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_log_channel_set') {
+      // Handle Safari Log channel selection from channel select menu
+      return ButtonHandlerFactory.create({
+        id: 'safari_log_channel_set',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const selectedChannelId = context.values[0];
+          console.log(`📝 DEBUG: User ${context.userId} setting Safari Log channel to ${selectedChannelId} for guild ${context.guildId}`);
+          
+          // Load and update Safari log settings
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          
+          // Initialize if missing
+          if (!safariData[context.guildId]) {
+            safariData[context.guildId] = {};
+          }
+          if (!safariData[context.guildId].safariLogSettings) {
+            safariData[context.guildId].safariLogSettings = {
+              enabled: false,
+              logChannelId: null,
+              productionRoleId: null,
+              logTypes: {
+                whispers: true,
+                itemPickups: true,
+                currencyChanges: true,
+                storeTransactions: true,
+                buttonActions: true,
+                mapMovement: true,
+                attacks: true
+              }
+            };
+          }
+          
+          // Update the log channel
+          safariData[context.guildId].safariLogSettings.logChannelId = selectedChannelId;
+          
+          // Save the updated settings
+          await saveSafariContent(safariData);
+          
+          console.log(`📊 DEBUG: Safari Log channel set to ${selectedChannelId} for guild ${context.guildId}`);
+          
+          // Return to Safari Log configuration with updated state
+          return context.buttonHandlers['safari_configure_log'](context);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_log_types_set') {
+      // Handle Safari Log types selection from multi-select menu
+      return ButtonHandlerFactory.create({
+        id: 'safari_log_types_set',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const selectedTypes = context.values || [];
+          console.log(`⚙️ DEBUG: User ${context.userId} setting Safari Log types for guild ${context.guildId}`, selectedTypes);
+          
+          // Load and update Safari log settings
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          
+          // Initialize if missing
+          if (!safariData[context.guildId]) {
+            safariData[context.guildId] = {};
+          }
+          if (!safariData[context.guildId].safariLogSettings) {
+            safariData[context.guildId].safariLogSettings = {
+              enabled: false,
+              logChannelId: null,
+              productionRoleId: null,
+              logTypes: {
+                whispers: true,
+                itemPickups: true,
+                currencyChanges: true,
+                storeTransactions: true,
+                buttonActions: true,
+                mapMovement: true,
+                attacks: true
+              }
+            };
+          }
+          
+          // Update log types based on selection
+          const allTypes = ['whispers', 'itemPickups', 'currencyChanges', 'storeTransactions', 'buttonActions', 'mapMovement', 'attacks'];
+          for (const type of allTypes) {
+            safariData[context.guildId].safariLogSettings.logTypes[type] = selectedTypes.includes(type);
+          }
+          
+          // Save the updated settings
+          await saveSafariContent(safariData);
+          
+          console.log(`📊 DEBUG: Safari Log types updated for guild ${context.guildId}`);
+          
+          // Return to Safari Log configuration with updated state
+          return context.buttonHandlers['safari_configure_log'](context);
         }
       })(req, res, client);
     } else if (custom_id === 'safari_config_reset_defaults') {
