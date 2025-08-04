@@ -19287,15 +19287,27 @@ Are you sure you want to continue?`;
           
           // Add Navigate button to the action row containing Enter Command
           // Find the action row with Enter Command button and add Navigate to the left
+          console.log(`🔍 DEBUG: UI has ${ui.components?.length || 0} components`);
+          
           if (ui.components && ui.components.length > 0) {
-            for (let component of ui.components) {
+            let foundEnterCommand = false;
+            for (let i = 0; i < ui.components.length; i++) {
+              const component = ui.components[i];
+              console.log(`🔍 DEBUG: Component ${i}: type=${component.type}, has ${component.components?.length || 0} sub-components`);
+              
               if (component.type === 1) { // Action Row
                 // Check if this row has Enter Command button
-                const hasEnterCommand = component.components?.some(btn => 
-                  btn.custom_id && btn.custom_id.startsWith('player_enter_command_')
-                );
+                const hasEnterCommand = component.components?.some(btn => {
+                  console.log(`🔍 DEBUG: Button custom_id: ${btn.custom_id}`);
+                  return btn.custom_id && btn.custom_id.startsWith('player_enter_command_');
+                });
+                
+                console.log(`🔍 DEBUG: Action row ${i} has Enter Command: ${hasEnterCommand}`);
                 
                 if (hasEnterCommand) {
+                  foundEnterCommand = true;
+                  console.log(`🔍 DEBUG: Adding Navigate button to action row ${i} (before: ${component.components.length} buttons)`);
+                  
                   // Add Navigate button at the beginning of this action row
                   const navigateButton = {
                     type: 2, // Button
@@ -19307,10 +19319,12 @@ Are you sure you want to continue?`;
                   
                   // Insert Navigate button at the beginning
                   component.components.unshift(navigateButton);
+                  console.log(`🔍 DEBUG: Added Navigate button (after: ${component.components.length} buttons)`);
                   break;
                 }
               }
             }
+            console.log(`🔍 DEBUG: Found Enter Command row: ${foundEnterCommand}`);
           }
           
           console.log(`✅ SUCCESS: map_location_actions - showing entity UI with admin buttons and Navigate for ${coord}`);
