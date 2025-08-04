@@ -8,7 +8,7 @@ import {
     InteractionResponseType,
     InteractionResponseFlags
 } from 'discord-interactions';
-import { loadSafariContent, saveSafariContent } from './safariManager.js';
+import { loadSafariContent, saveSafariContent, getCustomTerms } from './safariManager.js';
 import { EDIT_CONFIGS } from './editFramework.js';
 import { SAFARI_LIMITS } from './config/safariLimits.js';
 import { parseTextEmoji } from './utils/emojiUtils.js';
@@ -721,6 +721,9 @@ export async function createStoreItemManagementUI(options) {
     const guildData = safariData[guildId] || {};
     const allItems = guildData.items || {};
     
+    // Get custom terms for currency display
+    const customTerms = await getCustomTerms(guildId);
+    
     // Get current store items
     const currentItems = store.items || [];
     const currentItemIds = new Set(currentItems.map(item => item.itemId || item));
@@ -768,7 +771,7 @@ export async function createStoreItemManagementUI(options) {
         const item = allItems[itemId];
         if (item) {
             const price = storeItem.price || item.basePrice || 0;
-            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - 💰 ${price} coins\n`;
+            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName}\n`;
         }
     });
     
