@@ -19295,18 +19295,57 @@ Are you sure you want to continue?`;
               const component = ui.components[i];
               console.log(`🔍 DEBUG: Component ${i}: type=${component.type}, has ${component.components?.length || 0} sub-components`);
               
-              if (component.type === 1) { // Action Row
+              // Look for Container (type 17) first
+              if (component.type === 17) { // Container
+                console.log(`🔍 DEBUG: Found Container with ${component.components?.length || 0} sub-components`);
+                
+                // Look through Container's components for Action Rows
+                if (component.components && component.components.length > 0) {
+                  for (let j = 0; j < component.components.length; j++) {
+                    const subComponent = component.components[j];
+                    console.log(`🔍 DEBUG: Container sub-component ${j}: type=${subComponent.type}`);
+                    
+                    if (subComponent.type === 1) { // Action Row inside Container
+                      const hasEnterCommand = subComponent.components?.some(btn => {
+                        console.log(`🔍 DEBUG: Button custom_id: ${btn.custom_id}`);
+                        return btn.custom_id && btn.custom_id.startsWith('player_enter_command_');
+                      });
+                      
+                      console.log(`🔍 DEBUG: Container action row ${j} has Enter Command: ${hasEnterCommand}`);
+                      
+                      if (hasEnterCommand) {
+                        foundEnterCommand = true;
+                        console.log(`🔍 DEBUG: Adding Navigate button to container action row ${j} (before: ${subComponent.components.length} buttons)`);
+                        
+                        // Add Navigate button at the beginning of this action row
+                        const navigateButton = {
+                          type: 2, // Button
+                          style: 2, // Secondary (grey)
+                          label: 'Navigate',
+                          custom_id: `safari_navigate_${context.userId}_${coord}`,
+                          emoji: { name: '🗺️' }
+                        };
+                        
+                        // Insert Navigate button at the beginning
+                        subComponent.components.unshift(navigateButton);
+                        console.log(`🔍 DEBUG: Added Navigate button (after: ${subComponent.components.length} buttons)`);
+                        break;
+                      }
+                    }
+                  }
+                }
+              } else if (component.type === 1) { // Action Row at top level
                 // Check if this row has Enter Command button
                 const hasEnterCommand = component.components?.some(btn => {
                   console.log(`🔍 DEBUG: Button custom_id: ${btn.custom_id}`);
                   return btn.custom_id && btn.custom_id.startsWith('player_enter_command_');
                 });
                 
-                console.log(`🔍 DEBUG: Action row ${i} has Enter Command: ${hasEnterCommand}`);
+                console.log(`🔍 DEBUG: Top-level action row ${i} has Enter Command: ${hasEnterCommand}`);
                 
                 if (hasEnterCommand) {
                   foundEnterCommand = true;
-                  console.log(`🔍 DEBUG: Adding Navigate button to action row ${i} (before: ${component.components.length} buttons)`);
+                  console.log(`🔍 DEBUG: Adding Navigate button to top-level action row ${i} (before: ${component.components.length} buttons)`);
                   
                   // Add Navigate button at the beginning of this action row
                   const navigateButton = {
@@ -19323,6 +19362,8 @@ Are you sure you want to continue?`;
                   break;
                 }
               }
+              
+              if (foundEnterCommand) break;
             }
             console.log(`🔍 DEBUG: Found Enter Command row: ${foundEnterCommand}`);
           }
