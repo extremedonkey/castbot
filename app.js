@@ -19276,14 +19276,6 @@ Are you sure you want to continue?`;
             };
           }
           
-          // Create Navigate button for admins too
-          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
-          const navigateButton = new ButtonBuilder()
-            .setCustomId(`safari_navigate_${context.userId}_${coord}`)
-            .setLabel('Navigate')
-            .setEmoji('🗺️')
-            .setStyle(2); // Secondary (grey)
-          
           // Create entity management UI for this coordinate
           const { createEntityManagementUI } = await import('./entityManagementUI.js');
           const ui = await createEntityManagementUI({
@@ -19293,9 +19285,33 @@ Are you sure you want to continue?`;
             mode: 'edit'
           });
           
-          // Add Navigate button to the entity UI
-          const navigateRow = new ActionRowBuilder().addComponents([navigateButton]);
-          ui.components.push(navigateRow.toJSON());
+          // Add Navigate button to the action row containing Enter Command
+          // Find the action row with Enter Command button and add Navigate to the left
+          if (ui.components && ui.components.length > 0) {
+            for (let component of ui.components) {
+              if (component.type === 1) { // Action Row
+                // Check if this row has Enter Command button
+                const hasEnterCommand = component.components?.some(btn => 
+                  btn.custom_id && btn.custom_id.startsWith('player_enter_command_')
+                );
+                
+                if (hasEnterCommand) {
+                  // Add Navigate button at the beginning of this action row
+                  const navigateButton = {
+                    type: 2, // Button
+                    style: 2, // Secondary (grey)
+                    label: 'Navigate',
+                    custom_id: `safari_navigate_${context.userId}_${coord}`,
+                    emoji: { name: '🗺️' }
+                  };
+                  
+                  // Insert Navigate button at the beginning
+                  component.components.unshift(navigateButton);
+                  break;
+                }
+              }
+            }
+          }
           
           console.log(`✅ SUCCESS: map_location_actions - showing entity UI with admin buttons and Navigate for ${coord}`);
           
