@@ -276,7 +276,7 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
     });
     
     return {
-      content: `✅ Your whisper has been sent to ${recipientName}.`,
+      content: `✅ Your whisper has been sent to ${recipientName}.\n\n> **${message}**`,
       flags: InteractionResponseFlags.EPHEMERAL
     };
   } catch (error) {
