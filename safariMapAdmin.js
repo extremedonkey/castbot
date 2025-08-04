@@ -102,7 +102,7 @@ async function createPlayerViewUI(guildId, userId) {
   
   // Get current location and stamina
   const currentLocation = playerMapData?.currentLocation || 'Not on map';
-  const stamina = safari.points?.stamina || { current: 0, maximum: 1 };
+  const stamina = safari.points?.stamina || { current: 0, maximum: 0 };
   const exploredCount = playerMapData?.exploredCoordinates?.length || 0;
   const lastMove = playerMapData?.movementHistory?.slice(-1)[0];
   
@@ -257,10 +257,12 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
   if (!player.safari.mapProgress) player.safari.mapProgress = {};
   if (!player.safari.points) player.safari.points = {};
   
-  // Initialize stamina
+  // Initialize stamina with default config values
+  const { getDefaultPointsConfig } = await import('./pointsManager.js');
+  const staminaConfig = getDefaultPointsConfig().stamina;
   player.safari.points.stamina = {
-    current: 1,
-    maximum: 1,
+    current: staminaConfig.defaultMax,
+    maximum: staminaConfig.defaultMax,
     lastRegeneration: new Date().toISOString(),
     regenConfig: 'hourly' // Regenerate 1 stamina per hour
   };
@@ -310,7 +312,7 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
             components: [
               {
                 type: 10, // Text Display
-                content: `🎉 **Welcome to the Safari Map!**\n\n<@${userId}> has been initialized at coordinate **${coordinate}**.\n\nYou have been granted **10 stamina** to start exploring!`
+                content: `🎉 **Welcome to the Safari Map!**\n\n<@${userId}> has been initialized at coordinate **${coordinate}**.\n\nYou have been granted **${player.safari.points.stamina.current} stamina** to start exploring!`
               },
               {
                 type: 1, // Action Row
@@ -455,7 +457,7 @@ export async function setPlayerStamina(guildId, userId, amount) {
   // Also update the old system for backwards compatibility
   const playerData = await loadPlayerData();
   const player = playerData[guildId]?.players?.[userId];
-  let staminaResult = { current: amount, maximum: 1 };
+  let staminaResult = { current: amount, maximum: player?.safari?.points?.stamina?.maximum || 1 };
   
   if (player?.safari?.points?.stamina) {
     const stamina = player.safari.points.stamina;

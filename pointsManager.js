@@ -42,7 +42,7 @@ export async function initializeEntityPoints(guildId, entityId, pointTypes = ['s
 }
 
 // Get default points configuration
-function getDefaultPointsConfig() {
+export function getDefaultPointsConfig() {
     return {
         stamina: {
             displayName: "Stamina",
