@@ -391,7 +391,7 @@ export async function createPlayerManagementUI(options) {
             const inventoryButton = new ButtonBuilder()
               .setCustomId('safari_player_inventory')
               .setLabel(customTerms.inventoryName)
-              .setStyle(ButtonStyle.Primary)
+              .setStyle(ButtonStyle.Secondary)
               .setEmoji(customTerms.inventoryEmoji || '📦'); // Use custom inventory emoji
             
             // Create Navigate button (check if player is initialized on map)
