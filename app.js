@@ -19315,9 +19315,9 @@ Are you sure you want to continue?`;
                       
                       if (hasEnterCommand) {
                         foundEnterCommand = true;
-                        console.log(`🔍 DEBUG: Adding Navigate button to container action row ${j} (before: ${subComponent.components.length} buttons)`);
+                        console.log(`🔍 DEBUG: Reordering buttons in container action row ${j} (before: ${subComponent.components.length} buttons)`);
                         
-                        // Add Navigate button at the beginning of this action row
+                        // Create Navigate button
                         const navigateButton = {
                           type: 2, // Button
                           style: 2, // Secondary (grey)
@@ -19326,9 +19326,29 @@ Are you sure you want to continue?`;
                           emoji: { name: '🗺️' }
                         };
                         
-                        // Insert Navigate button at the beginning
-                        subComponent.components.unshift(navigateButton);
-                        console.log(`🔍 DEBUG: Added Navigate button (after: ${subComponent.components.length} buttons)`);
+                        // Create Inventory button
+                        const inventoryButton = {
+                          type: 2, // Button
+                          style: 2, // Secondary (grey)
+                          label: 'Inventory',
+                          custom_id: 'safari_player_inventory',
+                          emoji: { name: '🌃' } // Using city emoji as requested for inventory
+                        };
+                        
+                        // Find existing buttons
+                        const safariButton = subComponent.components.find(btn => btn.custom_id === 'prod_safari_menu');
+                        const enterCommandButton = subComponent.components.find(btn => btn.custom_id && btn.custom_id.startsWith('player_enter_command_'));
+                        const whisperButton = subComponent.components.find(btn => btn.custom_id && btn.custom_id.startsWith('safari_whisper_'));
+                        
+                        // Rebuild components in desired order: Safari, Navigate, Inventory, Enter Command, Whisper
+                        subComponent.components = [];
+                        if (safariButton) subComponent.components.push(safariButton);
+                        subComponent.components.push(navigateButton);
+                        subComponent.components.push(inventoryButton);
+                        if (enterCommandButton) subComponent.components.push(enterCommandButton);
+                        if (whisperButton) subComponent.components.push(whisperButton);
+                        
+                        console.log(`🔍 DEBUG: Reordered buttons (after: ${subComponent.components.length} buttons)`);
                         break;
                       }
                     }
