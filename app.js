@@ -22191,60 +22191,141 @@ Are you sure you want to continue?`;
       }
       
     } else if (custom_id.startsWith('map_admin_edit_items_')) {
-      // Use Safari item management flow for specific player
+      // Show comprehensive player inventory editor
       return ButtonHandlerFactory.create({
         id: 'map_admin_edit_items',
         handler: async (context) => {
           const targetUserId = context.customId.split('_').pop();
-          console.log(`🛡️ START: map_admin_edit_items for user ${targetUserId}`);
+          console.log(`🛡️ START: map_admin_edit_items - comprehensive inventory editor for user ${targetUserId}`);
           
           // Import necessary functions
-          const { loadSafariContent } = await import('./safariManager.js');
-          const { loadEntity } = await import('./entityManager.js');
-          const { createEditUI } = await import('./editFramework.js');
+          const { loadSafariContent, getCustomTerms, getItemQuantity } = await import('./safariManager.js');
+          const { loadPlayerData } = await import('./storage.js');
           
-          // Load items
+          // Load data
           const safariData = await loadSafariContent();
+          const playerData = await loadPlayerData();
           const items = safariData[context.guildId]?.items || {};
+          const customTerms = await getCustomTerms(context.guildId);
           
-          if (Object.keys(items).length === 0) {
-            return {
-              content: '❌ No items have been created yet. Please create items first using Safari → Manage Items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            };
-          }
-          
-          // Create item selection dropdown using the existing pattern
-          const options = [];
-          for (const [itemId, item] of Object.entries(items)) {
-            options.push({
-              label: item.name || 'Unnamed Item',
-              description: item.description?.substring(0, 100) || 'No description',
-              value: `${targetUserId}_${itemId}`, // Include target user in value
-              emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || undefined) : undefined
-            });
-          }
-          
-          // Limit to 25 items for Discord's dropdown limit
-          const limitedOptions = options.slice(0, 25);
-          
-          const selectMenu = new StringSelectMenuBuilder()
-            .setCustomId(`map_admin_item_select_${targetUserId}`)
-            .setPlaceholder('Select an item to edit quantity...')
-            .addOptions(limitedOptions);
-          
-          const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+          // Get player inventory
+          const playerSafari = playerData[context.guildId]?.players?.[targetUserId]?.safari || {};
+          const inventory = playerSafari.inventory || {};
+          const currency = playerSafari.currency || 0;
           
           // Get user info for display
           const guild = await context.client.guilds.fetch(context.guildId);
           const targetMember = await guild.members.fetch(targetUserId);
+          const displayName = targetMember.displayName || targetMember.user.username;
           
-          console.log(`✅ SUCCESS: map_admin_edit_items - showing item selection`);
+          // Build inventory display with edit controls
+          const components = [];
+          
+          // Header
+          components.push({
+            type: 10, // Text Display
+            content: `## 📦 Inventory Editor - ${displayName}\n\n**${customTerms.currencyEmoji} ${customTerms.currencyName}:** ${currency}`
+          });
+          
+          // Current inventory section
+          components.push({ type: 14 }); // Separator
+          components.push({
+            type: 10, // Text Display
+            content: '### Current Inventory'
+          });
+          
+          // List current items with quantities
+          const inventoryList = [];
+          let hasItems = false;
+          
+          for (const [itemId, itemData] of Object.entries(inventory)) {
+            const quantity = getItemQuantity(itemData);
+            if (quantity > 0) {
+              hasItems = true;
+              const item = items[itemId];
+              if (item) {
+                inventoryList.push(`${item.emoji || '📦'} **${item.name}** - Qty: ${quantity}`);
+              }
+            }
+          }
+          
+          components.push({
+            type: 10, // Text Display
+            content: hasItems ? inventoryList.join('\n') : '*No items in inventory*'
+          });
+          
+          // Action buttons
+          components.push({ type: 14 }); // Separator
+          
+          const actionButtons = [];
+          
+          // Add Item button
+          actionButtons.push({
+            type: 2, // Button
+            style: 3, // Success
+            label: 'Add Item',
+            custom_id: `map_admin_add_item_${targetUserId}`,
+            emoji: { name: '➕' }
+          });
+          
+          // Edit Quantities button (if has items)
+          if (hasItems) {
+            actionButtons.push({
+              type: 2, // Button
+              style: 1, // Primary
+              label: 'Edit Quantities',
+              custom_id: `map_admin_edit_quantities_${targetUserId}`,
+              emoji: { name: '📝' }
+            });
+            
+            // Clear All button
+            actionButtons.push({
+              type: 2, // Button
+              style: 4, // Danger
+              label: 'Clear All',
+              custom_id: `map_admin_clear_inventory_${targetUserId}`,
+              emoji: { name: '🗑️' }
+            });
+          }
+          
+          // Edit Currency button
+          actionButtons.push({
+            type: 2, // Button
+            style: 2, // Secondary
+            label: `Edit ${customTerms.currencyName}`,
+            custom_id: `map_admin_edit_currency_${targetUserId}`,
+            emoji: { name: customTerms.currencyEmoji || '🪙' }
+          });
+          
+          // Back button
+          actionButtons.push({
+            type: 2, // Button
+            style: 2, // Secondary
+            label: 'Back',
+            custom_id: `map_admin_user_select_continue_${targetUserId}`,
+            emoji: { name: '⬅️' }
+          });
+          
+          // Create action rows (max 5 buttons per row)
+          const actionRows = [];
+          for (let i = 0; i < actionButtons.length; i += 5) {
+            actionRows.push({
+              type: 1, // Action Row
+              components: actionButtons.slice(i, i + 5)
+            });
+          }
+          
+          actionRows.forEach(row => components.push(row));
+          
+          console.log(`✅ SUCCESS: map_admin_edit_items - showing comprehensive inventory editor`);
           
           return {
-            content: `## 📦 Edit Items for ${targetMember.displayName}\n\nSelect an item to set the quantity:`,
-            components: [selectRow],
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + ephemeral
+            components: [{
+              type: 17, // Container
+              accent_color: 0x3498db, // Blue accent
+              components: components
+            }]
           };
         }
       })(req, res, client);
@@ -22316,6 +22397,358 @@ Are you sure you want to continue?`;
           }
         });
       }
+      
+    } else if (custom_id.startsWith('map_admin_add_item_')) {
+      // Show item selection dropdown to add to player inventory
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_add_item',
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛡️ START: map_admin_add_item for user ${targetUserId}`);
+          
+          // Import necessary functions
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { parseTextEmoji } = await import('./utils/emojiUtils.js');
+          
+          // Load items
+          const safariData = await loadSafariContent();
+          const items = safariData[context.guildId]?.items || {};
+          
+          if (Object.keys(items).length === 0) {
+            return {
+              content: '❌ No items have been created yet. Please create items first using Safari → Manage Items.',
+              ephemeral: true
+            };
+          }
+          
+          // Create item selection dropdown
+          const options = [];
+          for (const [itemId, item] of Object.entries(items)) {
+            const { cleanText, emoji } = parseTextEmoji(item.emoji || '📦', '📦');
+            options.push({
+              label: item.name || 'Unnamed Item',
+              description: item.description?.substring(0, 100) || 'No description',
+              value: itemId,
+              emoji: emoji
+            });
+          }
+          
+          // Limit to 25 items for Discord's dropdown limit
+          if (options.length > 25) {
+            options.length = 25;
+          }
+          
+          const selectRow = {
+            type: 1, // Action Row
+            components: [{
+              type: 3, // String Select
+              custom_id: `map_admin_add_item_select_${targetUserId}`,
+              placeholder: 'Select an item to add...',
+              options: options
+            }]
+          };
+          
+          const cancelButton = {
+            type: 1, // Action Row
+            components: [{
+              type: 2, // Button
+              style: 2, // Secondary
+              label: 'Cancel',
+              custom_id: `map_admin_edit_items_${targetUserId}`,
+              emoji: { name: '❌' }
+            }]
+          };
+          
+          console.log(`✅ SUCCESS: map_admin_add_item - showing item selection`);
+          
+          return {
+            content: `## ➕ Add Item\n\nSelect an item to add:`,
+            components: [selectRow, cancelButton],
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_admin_add_item_select_')) {
+      // Handle item selection to add - show quantity modal
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        const itemId = req.body.data.values[0];
+        
+        console.log(`🛡️ Processing map admin add item select: user=${targetUserId}, item=${itemId}`);
+        
+        // Load item data to get item name
+        const { loadEntity } = await import('./entityManager.js');
+        const item = await loadEntity(req.body.guild_id, 'item', itemId);
+        const itemName = item?.name || 'Unknown Item';
+        
+        // Get target user info
+        const guild = await client.guilds.fetch(req.body.guild_id);
+        const targetMember = await guild.members.fetch(targetUserId);
+        
+        // Create quantity modal
+        const modal = new ModalBuilder()
+          .setCustomId(`map_admin_add_item_qty_modal_${req.body.guild_id}_${itemId}_${targetUserId}`)
+          .setTitle(`Add ${itemName} to ${targetMember.displayName}`);
+        
+        const quantityInput = new TextInputBuilder()
+          .setCustomId('item_quantity')
+          .setLabel('Quantity to Add')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Enter quantity to add')
+          .setValue('1')
+          .setRequired(true)
+          .setMaxLength(4);
+        
+        const row = new ActionRowBuilder().addComponents(quantityInput);
+        modal.addComponents(row);
+        
+        console.log(`✅ SUCCESS: map_admin_add_item_select - showing quantity modal`);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal
+        });
+      } catch (error) {
+        console.error('Error in map_admin_add_item_select:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error showing quantity modal.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('map_admin_edit_quantities_')) {
+      // Show dropdown of current inventory items to edit
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_edit_quantities',
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛡️ START: map_admin_edit_quantities for user ${targetUserId}`);
+          
+          // Import necessary functions
+          const { loadSafariContent, getItemQuantity } = await import('./safariManager.js');
+          const { loadPlayerData } = await import('./storage.js');
+          const { parseTextEmoji } = await import('./utils/emojiUtils.js');
+          
+          // Load data
+          const safariData = await loadSafariContent();
+          const playerData = await loadPlayerData();
+          const items = safariData[context.guildId]?.items || {};
+          
+          // Get player inventory
+          const inventory = playerData[context.guildId]?.players?.[targetUserId]?.safari?.inventory || {};
+          
+          // Create options for items in inventory
+          const options = [];
+          for (const [itemId, itemData] of Object.entries(inventory)) {
+            const quantity = getItemQuantity(itemData);
+            if (quantity > 0) {
+              const item = items[itemId];
+              if (item) {
+                const { cleanText, emoji } = parseTextEmoji(item.emoji || '📦', '📦');
+                options.push({
+                  label: `${item.name} (Qty: ${quantity})`,
+                  description: item.description?.substring(0, 100) || 'No description',
+                  value: itemId,
+                  emoji: emoji
+                });
+              }
+            }
+          }
+          
+          if (options.length === 0) {
+            return {
+              content: '❌ This player has no items in their inventory.',
+              ephemeral: true
+            };
+          }
+          
+          // Limit to 25 items for Discord's dropdown limit
+          if (options.length > 25) {
+            options.length = 25;
+          }
+          
+          const selectRow = {
+            type: 1, // Action Row
+            components: [{
+              type: 3, // String Select
+              custom_id: `map_admin_edit_qty_select_${targetUserId}`,
+              placeholder: 'Select an item to edit quantity...',
+              options: options
+            }]
+          };
+          
+          const cancelButton = {
+            type: 1, // Action Row
+            components: [{
+              type: 2, // Button
+              style: 2, // Secondary
+              label: 'Cancel',
+              custom_id: `map_admin_edit_items_${targetUserId}`,
+              emoji: { name: '❌' }
+            }]
+          };
+          
+          console.log(`✅ SUCCESS: map_admin_edit_quantities - showing item selection`);
+          
+          return {
+            content: `## 📝 Edit Item Quantities\n\nSelect an item to edit:`,
+            components: [selectRow, cancelButton],
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_admin_edit_qty_select_')) {
+      // Handle item selection for quantity edit - show modal with current quantity
+      try {
+        const targetUserId = custom_id.split('_').pop();
+        const itemId = req.body.data.values[0];
+        
+        console.log(`🛡️ Processing map admin edit qty select: user=${targetUserId}, item=${itemId}`);
+        
+        // Load item data to get item name
+        const { loadEntity } = await import('./entityManager.js');
+        const { loadPlayerData } = await import('./storage.js');
+        const { getItemQuantity } = await import('./safariManager.js');
+        
+        const item = await loadEntity(req.body.guild_id, 'item', itemId);
+        const itemName = item?.name || 'Unknown Item';
+        
+        // Get current quantity
+        const playerData = await loadPlayerData();
+        const inventory = playerData[req.body.guild_id]?.players?.[targetUserId]?.safari?.inventory || {};
+        const currentQuantity = getItemQuantity(inventory[itemId] || 0);
+        
+        // Get target user info
+        const guild = await client.guilds.fetch(req.body.guild_id);
+        const targetMember = await guild.members.fetch(targetUserId);
+        
+        // Create quantity modal
+        const modal = new ModalBuilder()
+          .setCustomId(`map_admin_item_qty_modal_${req.body.guild_id}_${itemId}_${targetUserId}`)
+          .setTitle(`Edit ${itemName} for ${targetMember.displayName}`);
+        
+        const quantityInput = new TextInputBuilder()
+          .setCustomId('item_quantity')
+          .setLabel('New Quantity')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Enter new quantity (0 to remove)')
+          .setValue(currentQuantity.toString())
+          .setRequired(true)
+          .setMaxLength(4);
+        
+        const row = new ActionRowBuilder().addComponents(quantityInput);
+        modal.addComponents(row);
+        
+        console.log(`✅ SUCCESS: map_admin_edit_qty_select - showing quantity modal`);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal
+        });
+      } catch (error) {
+        console.error('Error in map_admin_edit_qty_select:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error showing quantity modal.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('map_admin_clear_inventory_')) {
+      // Show clear inventory confirmation
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_clear_inventory',
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛡️ START: map_admin_clear_inventory confirmation for user ${targetUserId}`);
+          
+          // Get user info for display
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const targetMember = await guild.members.fetch(targetUserId);
+          const displayName = targetMember.displayName || targetMember.user.username;
+          
+          const confirmButton = {
+            type: 2, // Button
+            style: 4, // Danger
+            label: 'Yes, Clear All',
+            custom_id: `map_admin_clear_inventory_confirm_${targetUserId}`,
+            emoji: { name: '⚠️' }
+          };
+          
+          const cancelButton = {
+            type: 2, // Button
+            style: 2, // Secondary
+            label: 'Cancel',
+            custom_id: `map_admin_edit_items_${targetUserId}`,
+            emoji: { name: '❌' }
+          };
+          
+          console.log(`✅ SUCCESS: map_admin_clear_inventory - showing confirmation`);
+          
+          return {
+            content: `## ⚠️ Clear Inventory\n\nAre you sure you want to clear **ALL items** from ${displayName}'s inventory?\n\nThis action cannot be undone!`,
+            components: [{
+              type: 1, // Action Row
+              components: [confirmButton, cancelButton]
+            }],
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_admin_clear_inventory_confirm_')) {
+      // Execute inventory clear
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_clear_inventory_confirm',
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛡️ START: map_admin_clear_inventory_confirm executing for user ${targetUserId}`);
+          
+          // Import necessary functions
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          
+          // Load player data
+          const playerData = await loadPlayerData();
+          
+          // Clear inventory
+          if (!playerData[context.guildId]) playerData[context.guildId] = { players: {} };
+          if (!playerData[context.guildId].players[targetUserId]) playerData[context.guildId].players[targetUserId] = { safari: {} };
+          if (!playerData[context.guildId].players[targetUserId].safari) playerData[context.guildId].players[targetUserId].safari = {};
+          
+          playerData[context.guildId].players[targetUserId].safari.inventory = {};
+          
+          await savePlayerData(playerData);
+          
+          // Get user info for display
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const targetMember = await guild.members.fetch(targetUserId);
+          const displayName = targetMember.displayName || targetMember.user.username;
+          
+          console.log(`✅ SUCCESS: map_admin_clear_inventory_confirm - inventory cleared`);
+          
+          return {
+            content: `✅ Successfully cleared all items from ${displayName}'s inventory.`,
+            components: [{
+              type: 1, // Action Row
+              components: [{
+                type: 2, // Button
+                style: 2, // Secondary
+                label: 'Back to Inventory',
+                custom_id: `map_admin_edit_items_${targetUserId}`,
+                emoji: { name: '⬅️' }
+              }]
+            }],
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
       
     } else if (custom_id.startsWith('map_admin_view_raw_')) {
       // Show raw player data
@@ -25988,17 +26421,20 @@ Are you sure you want to continue?`;
         });
       }
       
-    } else if (custom_id.startsWith('map_admin_item_qty_modal_')) {
-      // Handle map admin item quantity submission
+    } else if (custom_id.startsWith('map_admin_item_qty_modal_') || custom_id.startsWith('map_admin_add_item_qty_modal_')) {
+      // Handle map admin item quantity submission (both edit and add)
       try {
+        const isAddMode = custom_id.startsWith('map_admin_add_item_qty_modal_');
         // Format: map_admin_item_qty_modal_${guildId}_${itemId}_${userId}
+        // OR: map_admin_add_item_qty_modal_${guildId}_${itemId}_${userId}
         const parts = custom_id.split('_');
         const userId = parts.pop(); // Get last part
         const guildId = req.body.guild_id;
         
         // Find where guildId ends and itemId starts
         let guildIdIndex = -1;
-        for (let i = 5; i < parts.length; i++) {
+        const startIndex = isAddMode ? 6 : 5; // Different starting index for add vs edit
+        for (let i = startIndex; i < parts.length; i++) {
           if (parts[i] === guildId) {
             guildIdIndex = i;
             break;
@@ -26009,7 +26445,7 @@ Are you sure you want to continue?`;
         const itemId = parts.slice(guildIdIndex + 1).join('_');
         const quantity = parseInt(components[0].components[0].value?.trim());
         
-        console.log(`🛡️ Processing item quantity set: user=${userId}, item=${itemId}, qty=${quantity}`);
+        console.log(`🛡️ Processing item quantity ${isAddMode ? 'add' : 'set'}: user=${userId}, item=${itemId}, qty=${quantity}`);
         
         if (isNaN(quantity) || quantity < 0 || quantity > 9999) {
           return res.send({
@@ -26035,39 +26471,92 @@ Are you sure you want to continue?`;
         
         const inventory = playerData[guildId].players[userId].safari.inventory;
         
-        if (quantity === 0) {
-          // Remove item
-          delete inventory[itemId];
-        } else {
-          // Set item quantity
+        // Import getItemQuantity to handle both number and object formats
+        const { getItemQuantity } = await import('./safariManager.js');
+        
+        if (isAddMode) {
+          // Add mode - add to existing quantity
+          const currentQuantity = getItemQuantity(inventory[itemId] || 0);
+          const newQuantity = currentQuantity + quantity;
+          
+          if (newQuantity > 9999) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Adding this quantity would exceed the maximum of 9999.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
           if (item?.attackValue) {
             // Attack item - use object format
+            const currentAttacks = inventory[itemId]?.numAttacksAvailable || 0;
             inventory[itemId] = {
-              quantity: quantity,
-              numAttacksAvailable: quantity // For admin, set attacks equal to quantity
+              quantity: newQuantity,
+              numAttacksAvailable: currentAttacks + quantity // Add to available attacks
             };
           } else {
             // Regular item - use object format for consistency
             inventory[itemId] = {
-              quantity: quantity,
+              quantity: newQuantity,
               numAttacksAvailable: 0
             };
+          }
+        } else {
+          // Edit mode - set exact quantity
+          if (quantity === 0) {
+            // Remove item
+            delete inventory[itemId];
+          } else {
+            // Set item quantity
+            if (item?.attackValue) {
+              // Attack item - use object format
+              inventory[itemId] = {
+                quantity: quantity,
+                numAttacksAvailable: quantity // For admin, set attacks equal to quantity
+              };
+            } else {
+              // Regular item - use object format for consistency
+              inventory[itemId] = {
+                quantity: quantity,
+                numAttacksAvailable: 0
+              };
+            }
           }
         }
         
         await savePlayerData(playerData);
         
-        // Return to player view
-        const { createMapAdminUI } = await import('./safariMapAdmin.js');
-        const ui = await createMapAdminUI({
-          guildId,
-          userId,
-          mode: 'player_view'
-        });
+        // Get user info for success message
+        const guild = await client.guilds.fetch(guildId);
+        const targetMember = await guild.members.fetch(userId);
+        const displayName = targetMember.displayName || targetMember.user.username;
+        const itemName = item?.name || 'Unknown Item';
+        
+        // Success message
+        const successMessage = isAddMode 
+          ? `✅ Added ${quantity} × ${item?.emoji || '📦'} ${itemName} to ${displayName}'s inventory.`
+          : quantity === 0 
+            ? `✅ Removed ${item?.emoji || '📦'} ${itemName} from ${displayName}'s inventory.`
+            : `✅ Set ${item?.emoji || '📦'} ${itemName} quantity to ${quantity} for ${displayName}.`;
         
         return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: ui
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: successMessage,
+            components: [{
+              type: 1, // Action Row
+              components: [{
+                type: 2, // Button
+                style: 2, // Secondary
+                label: 'Back to Inventory',
+                custom_id: `map_admin_edit_items_${userId}`,
+                emoji: { name: '⬅️' }
+              }]
+            }],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
         });
         
       } catch (error) {

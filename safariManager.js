@@ -541,8 +541,12 @@ function initializePlayerSafari(playerData, guildId, userId) {
 
 /**
  * Update player currency
+ * @param {string} guildId - Discord guild ID
+ * @param {string} userId - Discord user ID
+ * @param {number} amount - Amount to add/subtract
+ * @param {Object} context - Optional context for logging (username, source, etc.)
  */
-async function updateCurrency(guildId, userId, amount) {
+async function updateCurrency(guildId, userId, amount, context = {}) {
     try {
         const playerData = await loadPlayerData();
         
@@ -558,6 +562,38 @@ async function updateCurrency(guildId, userId, amount) {
         await savePlayerData(playerData);
         
         console.log(`🪙 DEBUG: Currency updated for user ${userId}: ${currentCurrency} → ${newCurrency} (${amount >= 0 ? '+' : ''}${amount})`);
+        
+        // Log currency change to Safari Log
+        if (amount !== 0) { // Only log actual changes
+            try {
+                const { logCurrencyChange } = await import('./safariLogger.js');
+                const safariData = await loadSafariContent();
+                const customTerms = await getCustomTerms(guildId);
+                
+                // Get player location
+                const activeMapId = safariData[guildId]?.maps?.active;
+                let location = 'Unknown';
+                if (activeMapId && playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]) {
+                    location = playerData[guildId].players[userId].safari.mapProgress[activeMapId].currentLocation || 'Unknown';
+                }
+                
+                await logCurrencyChange({
+                    guildId,
+                    userId,
+                    username: context.username || 'Unknown',
+                    displayName: context.displayName || context.username || 'Unknown',
+                    location,
+                    amount,
+                    currencyName: customTerms.currencyName,
+                    source: context.source || 'manual',
+                    channelName: context.channelName || null
+                });
+            } catch (logError) {
+                console.error('Safari Log Error:', logError);
+                // Don't fail the currency update if logging fails
+            }
+        }
+        
         return newCurrency;
     } catch (error) {
         console.error('Error updating currency:', error);
@@ -775,8 +811,15 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         }
     }
     
-    // Give the item
-    const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity);
+    // Give the item with user context for logging
+    const playerData = await loadPlayerData();
+    const member = playerData[guildId]?.players?.[userId];
+    const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity, {
+        username: context?.username || 'Unknown',
+        displayName: context?.member?.displayName || context?.username || 'Unknown',
+        source: config.buttonId ? `Button: ${config.buttonId}` : 'give_item',
+        channelName: context?.channelName || null
+    });
     
     if (!success) {
         return {
@@ -1391,6 +1434,40 @@ async function addItemToInventory(guildId, userId, itemId, quantity = 1, existin
         }
         
         console.log(`📦 DEBUG: Added ${quantity}x ${itemId} to user ${userId} inventory`);
+        
+        // Log item pickup to Safari Log
+        try {
+            const { logItemPickup } = await import('./safariLogger.js');
+            const itemDef = safariData[guildId]?.items?.[itemId];
+            
+            // Get player location - check if they're on a map
+            const activeMapId = safariData[guildId]?.maps?.active;
+            let location = 'Unknown';
+            if (activeMapId && playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId]) {
+                location = playerData[guildId].players[userId].safari.mapProgress[activeMapId].currentLocation || 'Unknown';
+            }
+            
+            // Get user info from Discord if available (caller can pass via existingPlayerData.username)
+            const username = existingPlayerData?.username || 'Unknown';
+            const displayName = existingPlayerData?.displayName || username;
+            
+            await logItemPickup({
+                guildId,
+                userId,
+                username,
+                displayName,
+                location,
+                itemId,
+                itemName: itemDef?.name || itemId,
+                itemEmoji: itemDef?.emoji || '📦',
+                quantity,
+                source: existingPlayerData?.source || 'manual',
+                channelName: existingPlayerData?.channelName || null
+            });
+        } catch (logError) {
+            console.error('Safari Log Error:', logError);
+            // Don't fail the item pickup if logging fails
+        }
         
         // Return the final quantity using universal accessor
         const finalItem = playerData[guildId].players[userId].safari.inventory[itemId];

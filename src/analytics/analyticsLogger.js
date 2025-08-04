@@ -174,15 +174,16 @@ function getButtonLabel(customId, components) {
  * Log user interaction to analytics file
  * @param {string} userId - Discord user ID
  * @param {string} guildId - Discord guild ID  
- * @param {string} action - Action type ('SLASH_COMMAND' or 'BUTTON_CLICK')
+ * @param {string} action - Action type ('SLASH_COMMAND', 'BUTTON_CLICK', 'SAFARI_WHISPER', 'SAFARI_ITEM', etc.)
  * @param {string} details - Command name or button custom ID
  * @param {string} username - Discord username
  * @param {string} guildName - Discord guild name
  * @param {Array} components - Discord message components (for button label extraction)
  * @param {string} channelName - Discord channel name (optional)
  * @param {string} displayName - User's server display name (optional)
+ * @param {Object} safariContent - Safari-specific content for detailed logging (optional)
  */
-async function logInteraction(userId, guildId, action, details, username, guildName, components = null, channelName = null, displayName = null) {
+async function logInteraction(userId, guildId, action, details, username, guildName, components = null, channelName = null, displayName = null, safariContent = null) {
   try {
     // Get environment-specific timezone offset
     const { getLoggingTimezoneOffset } = await import('../../storage.js');
@@ -266,7 +267,7 @@ async function logInteraction(userId, guildId, action, details, username, guildN
     fs.appendFileSync(ANALYTICS_LOG_FILE, logEntry);
     
     // Try Discord logging (non-blocking)
-    await postToDiscordLogs(logEntry.trim(), userId, action, details, components);
+    await postToDiscordLogs(logEntry.trim(), userId, action, details, components, guildId, safariContent);
     
   } catch (error) {
     console.error('Analytics logging error:', error);
@@ -375,8 +376,10 @@ function formatActionDetails(actionType, details) {
  * @param {string} action - Action type
  * @param {string} details - Action details
  * @param {Array} components - Discord components for button label extraction
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} safariContent - Safari-specific content for detailed logging
  */
-async function postToDiscordLogs(logEntry, userId, action, details, components) {
+async function postToDiscordLogs(logEntry, userId, action, details, components, guildId = null, safariContent = null) {
   try {
     // Skip if Discord client not available
     if (!discordClient) {
@@ -449,6 +452,11 @@ async function postToDiscordLogs(logEntry, userId, action, details, components) 
       setTimeout(async () => {
         await processQueuedMessages(loggingConfig);
       }, 1200);
+    }
+    
+    // If this is a Safari action with content, also post to Safari log channel
+    if (safariContent && guildId && action.startsWith('SAFARI_')) {
+      await postToSafariLog(guildId, userId, action, details, safariContent);
     }
     
   } catch (error) {
@@ -598,6 +606,113 @@ async function logNewServerInstall(guild, ownerInfo = null) {
   } catch (error) {
     console.error('Discord Server Install Announcement Error (non-critical):', error);
     // Don't throw - this should never break the main bot functionality
+  }
+}
+
+/**
+ * Post Safari-specific log to guild's Safari log channel
+ * @param {string} guildId - Discord guild ID
+ * @param {string} userId - User who performed the action
+ * @param {string} action - Safari action type
+ * @param {string} details - Action details
+ * @param {Object} safariContent - Safari-specific content
+ */
+async function postToSafariLog(guildId, userId, action, details, safariContent) {
+  try {
+    // Skip if Discord client not available
+    if (!discordClient) {
+      return;
+    }
+
+    // Load Safari content to get log settings
+    const { loadSafariContent } = await import('../../safariManager.js');
+    const safariData = await loadSafariContent();
+    
+    // Check if Safari logging is enabled for this guild
+    const logSettings = safariData[guildId]?.safariLogSettings;
+    if (!logSettings?.enabled || !logSettings?.logChannelId) {
+      return;
+    }
+    
+    // Check if this specific log type is enabled
+    const logTypeMap = {
+      'SAFARI_WHISPER': 'whispers',
+      'SAFARI_ITEM_PICKUP': 'itemPickups',
+      'SAFARI_CURRENCY': 'currencyChanges',
+      'SAFARI_PURCHASE': 'storeTransactions',
+      'SAFARI_BUTTON': 'buttonActions',
+      'SAFARI_MOVEMENT': 'mapMovement',
+      'SAFARI_ATTACK': 'attacks'
+    };
+    
+    const logType = logTypeMap[action];
+    if (!logType || !logSettings.logTypes?.[logType]) {
+      return;
+    }
+    
+    // Get the Safari log channel
+    let safariLogChannel;
+    try {
+      const guild = await discordClient.guilds.fetch(guildId);
+      safariLogChannel = await guild.channels.fetch(logSettings.logChannelId);
+      
+      if (!safariLogChannel) {
+        console.error(`Safari Log: Channel ${logSettings.logChannelId} not found for guild ${guildId}`);
+        return;
+      }
+    } catch (error) {
+      console.error(`Safari Log: Error fetching channel for guild ${guildId}:`, error);
+      return;
+    }
+    
+    // Format the Safari log message based on action type
+    let logMessage = '';
+    const timestamp = new Date().toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+    
+    switch (action) {
+      case 'SAFARI_WHISPER':
+        logMessage = `🤫 **WHISPER** | [${timestamp}] | <@${safariContent.senderId}> → <@${safariContent.recipientId}> at **${safariContent.location}**\n> ${safariContent.message}`;
+        break;
+        
+      case 'SAFARI_ITEM_PICKUP':
+        logMessage = `🧰 **ITEM PICKUP** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> Collected: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity})`;
+        break;
+        
+      case 'SAFARI_CURRENCY':
+        const changeType = safariContent.amount > 0 ? 'Gained' : 'Lost';
+        logMessage = `🪙 **CURRENCY** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> ${changeType} ${Math.abs(safariContent.amount)} ${safariContent.currencyName} from "${safariContent.source}"`;
+        break;
+        
+      case 'SAFARI_PURCHASE':
+        logMessage = `🛒 **PURCHASE** | [${timestamp}] | <@${userId}> at **${safariContent.storeName}** (${safariContent.location})\n> Bought: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity}) for ${safariContent.price} ${safariContent.currencyName}`;
+        break;
+        
+      case 'SAFARI_BUTTON':
+        logMessage = `🎯 **SAFARI ACTION** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> Clicked: "${safariContent.buttonLabel}" - ${safariContent.result}`;
+        break;
+        
+      case 'SAFARI_MOVEMENT':
+        logMessage = `🗺️ **MOVEMENT** | [${timestamp}] | <@${userId}> moved from **${safariContent.fromLocation}** to **${safariContent.toLocation}**`;
+        break;
+        
+      case 'SAFARI_ATTACK':
+        logMessage = `⚔️ **ATTACK** | [${timestamp}] | <@${safariContent.attackerId}> attacked <@${safariContent.targetId}> at **${safariContent.location}**\n> Result: ${safariContent.result}`;
+        break;
+        
+      default:
+        logMessage = `📝 **${action}** | [${timestamp}] | <@${userId}> - ${details}`;
+    }
+    
+    // Send to Safari log channel
+    await safariLogChannel.send(logMessage);
+    
+  } catch (error) {
+    console.error('Safari Log Error (non-critical):', error);
+    // Don't throw - Safari logging should never break the main bot functionality
   }
 }
 

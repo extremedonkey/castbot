@@ -266,9 +266,22 @@ export async function sendWhisper(context, targetUserId, coordinate, message, cl
       messageId: notificationMessage.id 
     });
     
-    // Post detection and log messages (temporarily disabled for debugging)
+    // Log whisper to Safari Log channel
+    const { logWhisper } = await import('./safariLogger.js');
+    await logWhisper({
+      guildId: context.guildId,
+      senderId: context.userId,
+      senderName: context.username,
+      senderDisplayName: context.member?.displayName || context.username,
+      recipientId: targetUserId,
+      recipientName,
+      location: coordinate,
+      message,
+      channelName: context.channelName
+    });
+    
+    // Post detection messages (temporarily disabled for debugging)
     // await postWhisperDetection(context.guildId, coordinate, client);
-    // await postWhisperLog(context.guildId, senderName, recipientName, coordinate, message);
     
     logger.info('WHISPER', 'Whisper delivered successfully', { 
       senderId: context.userId, 

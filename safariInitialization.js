@@ -36,7 +36,27 @@ const DEFAULT_SAFARI_STRUCTURE = {
     items: {},
     safariConfig: { ...DEFAULT_SAFARI_CONFIG },
     roundHistory: [],
-    attackQueue: {}
+    attackQueue: {},
+    safariLogSettings: {
+        enabled: false,
+        logChannelId: null,
+        productionRoleId: null,
+        logTypes: {
+            whispers: true,
+            itemPickups: true,
+            currencyChanges: true,
+            storeTransactions: true,
+            buttonActions: true,
+            mapMovement: true,
+            attacks: true
+        },
+        formatting: {
+            accentColor: 0x9B59B6,
+            useEmbeds: false,
+            showTimestamps: true,
+            showLocations: true
+        }
+    }
 };
 
 /**
@@ -103,11 +123,17 @@ async function validateAndUpdateSafariStructure(guildId, existingData, customCon
         const updatedData = { ...existingData };
         
         // Ensure all required top-level structures exist
-        const requiredStructures = ['buttons', 'safaris', 'applications', 'stores', 'items', 'safariConfig'];
+        const requiredStructures = ['buttons', 'safaris', 'applications', 'stores', 'items', 'safariConfig', 'safariLogSettings'];
         for (const structure of requiredStructures) {
             if (!updatedData[structure]) {
                 console.log(`📝 DEBUG: Adding missing structure '${structure}' for guild ${guildId}`);
-                updatedData[structure] = structure === 'safariConfig' ? { ...DEFAULT_SAFARI_CONFIG } : {};
+                if (structure === 'safariConfig') {
+                    updatedData[structure] = { ...DEFAULT_SAFARI_CONFIG };
+                } else if (structure === 'safariLogSettings') {
+                    updatedData[structure] = { ...DEFAULT_SAFARI_STRUCTURE.safariLogSettings };
+                } else {
+                    updatedData[structure] = {};
+                }
                 updated = true;
             }
         }
