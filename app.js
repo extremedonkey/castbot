@@ -988,7 +988,7 @@ async function createReeceStuffMenu() {
 async function createSafariMenu(guildId, userId, member) {
   // Get the inventory name and current round for this guild
   let inventoryName = 'Nest'; // Default
-  let inventoryEmoji = '📦'; // Default emoji
+  let inventoryEmoji = '🧰'; // Default emoji
   let currentRound = 1; // Default round
   
   try {
@@ -3803,7 +3803,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .setCustomId('safari_player_inventory')
           .setLabel(customTerms.inventoryName)
           .setStyle(ButtonStyle.Primary)
-          .setEmoji(customTerms.inventoryEmoji || '📦'); // Use custom inventory emoji
+          .setEmoji(customTerms.inventoryEmoji || '🧰'); // Use custom inventory emoji
         
         const backRow = new ActionRowBuilder().addComponents(backButton);
         containerComponents.push(backRow.toJSON());
@@ -3972,7 +3972,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .setCustomId('safari_player_inventory')
           .setLabel(customTerms.inventoryName)
           .setStyle(ButtonStyle.Primary)
-          .setEmoji(customTerms.inventoryEmoji || '📦'); // Use custom inventory emoji
+          .setEmoji(customTerms.inventoryEmoji || '🧰'); // Use custom inventory emoji
         
         const inventoryRow = new ActionRowBuilder().addComponents(inventoryButton);
         
@@ -26786,9 +26786,9 @@ Are you sure you want to continue?`;
         // If updating inventory emoji, parse it properly
         if (updates.inventoryEmoji) {
           const { parseTextEmoji } = await import('./utils/emojiUtils.js');
-          const { cleanText, emoji } = parseTextEmoji(updates.inventoryEmoji, '📦');
-          // Use the emoji name if it's a valid emoji, otherwise default to 📦
-          updates.inventoryEmoji = emoji.name || '📦';
+          const { cleanText, emoji } = parseTextEmoji(updates.inventoryEmoji, '🧰');
+          // Use the emoji name if it's a valid emoji, otherwise default to 🧰
+          updates.inventoryEmoji = emoji.name || '🧰';
         }
         
         // Update Safari settings using existing function

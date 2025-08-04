@@ -153,7 +153,7 @@ export async function createFieldGroupModal(groupKey, currentConfig) {
         
         // Special handling for inventoryEmoji - always ensure default
         if (fieldKey === 'inventoryEmoji' && !currentValue) {
-            currentValue = '📦';
+            currentValue = '🧰';
         }
         
         if (currentValue !== undefined && currentValue !== null) {
@@ -211,7 +211,7 @@ function createCurrentSettingsDisplay(config) {
     const currencyEmoji = config.currencyEmoji || '🪙';
     const currencyName = config.currencyName || 'coins';
     const inventoryName = config.inventoryName || 'Nest';
-    const inventoryEmoji = config.inventoryEmoji || '📦';
+    const inventoryEmoji = config.inventoryEmoji || '🧰';
     
     let display = `**🪙 Currency & Inventory**\n`;
     display += `• Currency Name: ${currencyName}\n`;
