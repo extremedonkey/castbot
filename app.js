@@ -21622,7 +21622,7 @@ Are you sure you want to continue?`;
           
           console.log(`✅ SUCCESS: safari_map_init_player - player initialized at ${startingCoordinate}`);
           return {
-            content: `✅ **Welcome to the Safari Map!**\n\nYou've been initialized at coordinate **${startingCoordinate}** with **10 stamina**.\n\nHead to <#${channelId}> to start exploring! Your movement options are waiting for you there.`,
+            content: `✅ **Welcome to the Safari Map!**\n\nYou've been initialized at coordinate **${startingCoordinate}** with **1 stamina**.\n\nHead to <#${channelId}> to start exploring! Your movement options are waiting for you there.`,
             ephemeral: true
           };
         }
