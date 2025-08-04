@@ -387,10 +387,6 @@ export async function createPlayerManagementUI(options) {
             // Get custom terms for inventory name and emoji
             const customTerms = await getCustomTerms(guildId);
             
-            // Get store browse buttons
-            const { getStoreBrowseButtons } = await import('./safariManager.js');
-            const storeBrowseButtons = await getStoreBrowseButtons(guildId);
-            
             // Create inventory button with custom inventory emoji
             const inventoryButton = new ButtonBuilder()
               .setCustomId('safari_player_inventory')
@@ -407,7 +403,7 @@ export async function createPlayerManagementUI(options) {
             const navigateButton = new ButtonBuilder()
               .setCustomId(`safari_navigate_${userId}_${playerMapData?.currentLocation || 'none'}`)
               .setLabel('Navigate')
-              .setStyle(ButtonStyle.Primary)
+              .setStyle(ButtonStyle.Secondary)
               .setEmoji('🗺️')
               .setDisabled(!playerMapData); // Disabled if not initialized
             
@@ -445,18 +441,6 @@ export async function createPlayerManagementUI(options) {
             
             // Always add inventory button
             inventoryComponents.push(inventoryButton);
-            
-            // Add store browse buttons (max to stay within 5-button limit)
-            const remainingSlots = 5 - inventoryComponents.length;
-            for (let i = 0; i < Math.min(storeBrowseButtons.length, remainingSlots); i++) {
-              const storeButton = storeBrowseButtons[i];
-              inventoryComponents.push(new ButtonBuilder()
-                .setCustomId(storeButton.custom_id)
-                .setLabel(storeButton.label)
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('🪺') // Nest emoji
-              );
-            }
             
             inventoryRow = {
               type: 1, // ActionRow

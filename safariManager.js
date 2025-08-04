@@ -2507,20 +2507,9 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
             components: components
         };
         
-        // Get store browse buttons
-        const storeBrowseButtons = await getStoreBrowseButtons(guildId);
-        
         const responseComponents = [container];
         
-        // Add store browse buttons if any exist
-        if (storeBrowseButtons.length > 0) {
-            responseComponents.push({
-                type: 1, // Action Row
-                components: storeBrowseButtons
-            });
-        }
-        
-        console.log(`✅ DEBUG: Created inventory display with ${components.length} components and ${storeBrowseButtons.length} store buttons`);
+        console.log(`✅ DEBUG: Created inventory display with ${components.length} components`);
         console.log(`📤 DEBUG: Sending response with ${responseComponents.length} response components`);
         
         const response = {
