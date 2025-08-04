@@ -102,7 +102,7 @@ async function createPlayerViewUI(guildId, userId) {
   
   // Get current location and stamina
   const currentLocation = playerMapData?.currentLocation || 'Not on map';
-  const stamina = safari.points?.stamina || { current: 0, maximum: 10 };
+  const stamina = safari.points?.stamina || { current: 0, max: 1 };
   const exploredCount = playerMapData?.exploredCoordinates?.length || 0;
   const lastMove = playerMapData?.movementHistory?.slice(-1)[0];
   
@@ -113,7 +113,7 @@ async function createPlayerViewUI(guildId, userId) {
     statusText += `⚠️ **No active map in this server**\n\n`;
   } else {
     statusText += `📍 **Current Location:** ${currentLocation}\n`;
-    statusText += `⚡ **Stamina:** ${stamina.current}/${stamina.maximum}\n`;
+    statusText += `⚡ **Stamina:** ${stamina.current}/${stamina.max}\n`;
     statusText += `🗺️ **Explored Cells:** ${exploredCount}\n`;
     
     if (lastMove) {
@@ -455,15 +455,15 @@ export async function setPlayerStamina(guildId, userId, amount) {
   // Also update the old system for backwards compatibility
   const playerData = await loadPlayerData();
   const player = playerData[guildId]?.players?.[userId];
-  let staminaResult = { current: amount, maximum: 10 };
+  let staminaResult = { current: amount, max: 1 };
   
   if (player?.safari?.points?.stamina) {
     const stamina = player.safari.points.stamina;
     if (amount === 99) {
       stamina.current = 999;
-      stamina.maximum = 999;
+      stamina.max = 999;
     } else {
-      stamina.current = Math.max(0, Math.min(amount, stamina.maximum));
+      stamina.current = Math.max(0, Math.min(amount, stamina.max));
     }
     stamina.lastRegeneration = new Date().toISOString();
     staminaResult = stamina;
