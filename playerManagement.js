@@ -415,11 +415,13 @@ export async function createPlayerManagementUI(options) {
             // Use channelId parameter passed from the interaction context
             const currentCoordinate = channelId ? await getCoordinateFromChannelId(guildId, channelId) : null;
             
+            // Add suffix for prod menu to control ephemeral behavior
+            const prodSuffix = title === 'CastBot | My Profile' ? '_prod' : '';
             const locationActionsButton = new ButtonBuilder()
-              .setCustomId(currentCoordinate ? `map_location_actions_${currentCoordinate}` : 'map_location_actions_none')
-              .setLabel('Location Actions')
+              .setCustomId(currentCoordinate ? `map_location_display_${currentCoordinate}${prodSuffix}` : 'map_location_display_none')
+              .setLabel('Location')
               .setStyle(ButtonStyle.Secondary)
-              .setEmoji('📍')
+              .setEmoji('⚓')
               .setDisabled(!currentCoordinate); // Disabled if not in a map channel
             
             // Create inventory row with Navigate, inventory, Location Actions, then store buttons

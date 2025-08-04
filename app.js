@@ -19295,6 +19295,66 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
     
+    } else if (custom_id.startsWith('map_location_display_')) {
+      // Handle Location button display (shows anchor message content)
+      return ButtonHandlerFactory.create({
+        id: 'map_location_display',
+        ephemeral: true, // Default to ephemeral
+        handler: async (context) => {
+          // Extract coordinate and check for _prod suffix
+          const customIdParts = context.customId.replace('map_location_display_', '');
+          const isFromProdMenu = customIdParts.endsWith('_prod');
+          const coord = isFromProdMenu ? customIdParts.replace('_prod', '') : customIdParts;
+          
+          console.log(`⚓ START: map_location_display - user ${context.userId}, coord ${coord}, prod=${isFromProdMenu}`);
+          
+          // Check if we have a valid coordinate
+          if (coord === 'none') {
+            return {
+              content: '❌ You are not currently in a map location.',
+              ephemeral: true
+            };
+          }
+          
+          // Load location data
+          const { createAnchorMessageComponents } = await import('./safariButtonHelper.js');
+          const { loadSafariContent } = await import('./safariManager.js');
+          
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          
+          if (!activeMapId) {
+            return {
+              content: '❌ No active map found in this server.',
+              ephemeral: true
+            };
+          }
+          
+          const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
+          
+          if (!coordData) {
+            console.log(`❌ Location data not found for ${coord}`);
+            return {
+              content: `❌ Location data not found for ${coord}.`,
+              ephemeral: true
+            };
+          }
+          
+          // Get fog map URL if available
+          const fogMapUrl = coordData.fogMapUrl || null;
+          
+          // Generate anchor message components
+          const components = await createAnchorMessageComponents(coordData, context.guildId, coord, fogMapUrl);
+          
+          console.log(`✅ SUCCESS: map_location_display - showing anchor content for ${coord}, ephemeral=${!isFromProdMenu}`);
+          
+          return {
+            components,
+            flags: (1 << 15) | (isFromProdMenu ? 0 : (1 << 6)) // IS_COMPONENTS_V2 + ephemeral unless from prod menu
+          };
+        }
+      })(req, res, client);
+    
     } else if (custom_id.startsWith('player_enter_command_')) {
       // Handle player command entry button
       return ButtonHandlerFactory.create({
