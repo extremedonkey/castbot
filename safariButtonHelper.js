@@ -1,4 +1,4 @@
-import { loadSafariContent, getCustomTerms } from './safariManager.js';
+import { loadSafariContent } from './safariManager.js';
 
 /**
  * Advanced emoji parsing and validation for Discord buttons
@@ -316,9 +316,6 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
   }
   
   // Location Actions Button (always present)
-  // Get custom terms for inventory emoji
-  const customTerms = await getCustomTerms(guildId);
-  
   components.push({
     type: 1, // Action Row
     components: [{
@@ -326,7 +323,7 @@ export async function createAnchorMessageComponents(coordData, guildId, coord, f
       custom_id: `map_location_actions_${coord}`,
       label: 'Location Actions',
       style: 2, // Secondary
-      emoji: { name: customTerms.inventoryEmoji || '🧰' }
+      emoji: { name: '📍' }
     }]
   });
   

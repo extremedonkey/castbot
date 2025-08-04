@@ -19327,12 +19327,14 @@ Are you sure you want to continue?`;
                         };
                         
                         // Create Inventory button
+                        const { getCustomTerms } = await import('./safariManager.js');
+                        const customTerms = await getCustomTerms(context.guildId);
                         const inventoryButton = {
                           type: 2, // Button
                           style: 2, // Secondary (grey)
                           label: 'Inventory',
                           custom_id: 'safari_player_inventory',
-                          emoji: { name: '🌃' } // Using city emoji as requested for inventory
+                          emoji: { name: customTerms.inventoryEmoji || '🧰' }
                         };
                         
                         // Find existing buttons
