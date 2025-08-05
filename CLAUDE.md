@@ -20,6 +20,8 @@ When working on specific features, refer to these dedicated documentation files:
 
 **🚶 SAFARI MAP MOVEMENT:** Player movement, permissions, exploration → [docs/features/SafariMapMovement.md](docs/features/SafariMapMovement.md)
 
+**🚀 SAFARI PROGRESS:** Admin overview of map state, actions, conditions, and claim tracking → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
+
 **👥 PLAYER LOCATION MANAGER:** Centralized location tracking for all player interactions (MANDATORY) → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
 
 **💬 WHISPER SYSTEM:** Private player-to-player messaging at locations → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)

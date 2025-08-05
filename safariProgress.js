@@ -53,6 +53,7 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
   let characterCount = content.length;
   
   // Process each coordinate in the row
+  const coordSections = [];
   for (let col = 1; col <= MAX_COLUMNS; col++) {
     const coord = `${currentRow}${col}`;
     const coordData = coordinates[coord];
@@ -105,7 +106,7 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
             const isLast = i === button.actions.length - 1;
             const prefix = isLast ? '   └─' : '   ├─';
             
-            coordSection += await formatAction(action, prefix, guildId, items, playerData, client);
+            coordSection += await formatAction(action, prefix, guildId, items, playerData, client, buttons);
           }
         }
         
@@ -127,7 +128,7 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
           const claimInfo = await formatClaimInfo(drop.claimedBy, drop.dropType, playerData[guildId], client);
           coordSection += `\n  └─ ${claimInfo}`;
         } else if (drop.dropType !== 'unlimited') {
-          coordSection += '\n  └─ Unclaimed';
+          coordSection += '\n  └─ Claimed by: 🎁 Unclaimed';
         }
         
         coordSection += '\n';
@@ -146,14 +147,12 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
           const claimInfo = await formatClaimInfo(drop.claimedBy, drop.dropType, playerData[guildId], client);
           coordSection += `\n  └─ ${claimInfo}`;
         } else if (drop.dropType !== 'unlimited') {
-          coordSection += '\n  └─ Unclaimed';
+          coordSection += '\n  └─ Claimed by: 🎁 Unclaimed';
         }
         
         coordSection += '\n';
       }
     }
-    
-    coordSection += '---\n\n';
     
     // Check character limit
     if (characterCount + coordSection.length > CHARACTER_LIMIT) {
@@ -161,8 +160,17 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
       break;
     }
     
-    content += coordSection;
+    coordSections.push(coordSection.trimEnd());
     characterCount += coordSection.length;
+  }
+  
+  // Build final content with Components V2 dividers
+  for (let i = 0; i < coordSections.length; i++) {
+    content += coordSections[i] + '\n';
+    // Don't add divider after the last section
+    if (i < coordSections.length - 1) {
+      content += '\n'; // Add spacing for visual separation
+    }
   }
   
   if (!hasContent) {
@@ -172,17 +180,30 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
   // Create navigation components
   const navigationButtons = createNavigationButtons(currentRow, activeMapId, coordinates);
   
+  // Build components with dividers between coordinates
+  const components = [];
+  
+  // Add main content
+  components.push({
+    type: 10, // Text Display
+    content: content.trim()
+  });
+  
+  // Add Components V2 dividers between sections
+  if (hasContent && coordSections.length > 1) {
+    // We've already handled visual separation in the text content
+  }
+  
+  // Add separator before navigation
+  components.push({ type: 14 }); // Separator
+  
+  // Add navigation components
+  components.push(...navigationButtons);
+  
   return {
     components: [{
       type: 17, // Container
-      components: [
-        {
-          type: 10, // Text Display
-          content: content.trim()
-        },
-        { type: 14 }, // Separator
-        ...navigationButtons
-      ]
+      components: components
     }],
     flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
   };
@@ -243,7 +264,7 @@ function formatConditions(conditions, items) {
 /**
  * Format action for display
  */
-async function formatAction(action, prefix, guildId, items, playerData, client) {
+async function formatAction(action, prefix, guildId, items, playerData, client, buttons = {}) {
   let result = '';
   
   switch(action.type) {
@@ -279,7 +300,26 @@ async function formatAction(action, prefix, guildId, items, playerData, client) 
       break;
       
     case 'follow_up_button':
-      result = `${prefix} 🔗 Follow-up Button: Show additional buttons\n`;
+      if (action.config?.buttonIds && action.config.buttonIds.length > 0) {
+        result = `${prefix} 🔗 Follow-up Actions:\n`;
+        
+        // Get follow-up button details
+        for (let i = 0; i < action.config.buttonIds.length; i++) {
+          const followUpId = action.config.buttonIds[i];
+          const followUpButton = buttons[followUpId];
+          
+          if (!followUpButton) {
+            result += `${prefix.replace('├', '│').replace('└', ' ')}    ${i === action.config.buttonIds.length - 1 ? '└─' : '├─'} ❌ Missing button: ${followUpId}\n`;
+            continue;
+          }
+          
+          const triggerType = followUpButton.trigger?.type || 'button';
+          const triggerEmoji = triggerType === 'modal' ? '📝' : '🔘';
+          result += `${prefix.replace('├', '│').replace('└', ' ')}    ${i === action.config.buttonIds.length - 1 ? '└─' : '├─'} ${triggerEmoji} ${followUpButton.emoji || ''} ${followUpButton.name || followUpButton.label || 'Unnamed'}\n`;
+        }
+      } else {
+        result = `${prefix} 🔗 Follow-up Button: Show additional buttons\n`;
+      }
       break;
       
     case 'conditional':
@@ -333,12 +373,19 @@ function formatDropType(dropType) {
  * Format claim info for drops
  */
 async function formatClaimInfo(claimedBy, dropType, guildPlayers, client) {
-  if (!claimedBy || claimedBy.length === 0) return 'Unclaimed';
+  if (!claimedBy || claimedBy.length === 0) return 'Claimed by: 🎁 Unclaimed';
   
   if (dropType === 'once_globally') {
-    const player = guildPlayers?.players?.[claimedBy] || null;
-    const displayName = player?.displayName || (client ? await getPlayerName(claimedBy, client) : 'Unknown Player');
-    return `Claimed by: @${displayName}`;
+    // For once_globally, claimedBy could be a string or array
+    const claimedUserId = Array.isArray(claimedBy) ? claimedBy[0] : claimedBy;
+    
+    if (!claimedUserId) {
+      return 'Claimed by: 🎁 Unclaimed';
+    }
+    
+    const player = guildPlayers?.players?.[claimedUserId] || null;
+    const displayName = player?.displayName || (client ? await getPlayerName(claimedUserId, client) : 'Unknown Player');
+    return `Claimed by: 🔒 ${displayName} (@${displayName})`;
   }
   
   // For once_per_player, show claim count and first few names
@@ -352,7 +399,7 @@ async function formatClaimInfo(claimedBy, dropType, guildPlayers, client) {
       return player?.displayName || (client ? await getPlayerName(userId, client) : 'Unknown');
     }));
     
-    return `Claimed by: @${names.join(', @')} (${claimCount}/${totalPlayers} players)`;
+    return `Claimed by: 🔒 @${names.join(', @')} (${claimCount}/${totalPlayers} players)`;
   } else {
     // Show first 3 and count
     const firstThree = claimedBy.slice(0, 3);
@@ -361,7 +408,7 @@ async function formatClaimInfo(claimedBy, dropType, guildPlayers, client) {
       return player?.displayName || (client ? await getPlayerName(userId, client) : 'Unknown');
     }));
     
-    return `Claimed by: @${names.join(', @')} and ${claimCount - 3} more (${claimCount}/${totalPlayers} players)`;
+    return `Claimed by: 🔒 @${names.join(', @')} and ${claimCount - 3} more (${claimCount}/${totalPlayers} players)`;
   }
 }
 
@@ -369,16 +416,31 @@ async function formatClaimInfo(claimedBy, dropType, guildPlayers, client) {
  * Format claim info for action limits
  */
 async function formatActionClaimInfo(limit, guildPlayers, client) {
-  if (!limit.claimedBy) return 'Unclaimed';
+  // Check for empty arrays or null/undefined
+  if (!limit.claimedBy || (Array.isArray(limit.claimedBy) && limit.claimedBy.length === 0)) {
+    return 'Claimed by: 🎁 Unclaimed';
+  }
   
   if (limit.type === 'once_globally') {
-    const player = guildPlayers?.players?.[limit.claimedBy];
-    const displayName = player?.displayName || (client ? await getPlayerName(limit.claimedBy, client) : 'Unknown Player');
-    return `Claimed by: @${displayName}`;
+    // For once_globally, claimedBy might be a string (user ID) or an array with one element
+    const claimedUserId = Array.isArray(limit.claimedBy) ? limit.claimedBy[0] : limit.claimedBy;
+    
+    if (!claimedUserId) {
+      return 'Claimed by: 🎁 Unclaimed';
+    }
+    
+    const player = guildPlayers?.players?.[claimedUserId];
+    const displayName = player?.displayName || (client ? await getPlayerName(claimedUserId, client) : 'Unknown Player');
+    return `Claimed by: 🔒 ${displayName} (@${displayName})`;
   }
   
   if (limit.type === 'once_per_player' && Array.isArray(limit.claimedBy)) {
     return formatClaimInfo(limit.claimedBy, 'once_per_player', guildPlayers, client);
+  }
+  
+  if (limit.type === 'unlimited') {
+    // For unlimited items, we don't track claims
+    return 'Available to all';
   }
   
   return 'Claim data available';
