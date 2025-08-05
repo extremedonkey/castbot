@@ -724,6 +724,29 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
       return;
     }
     
+    // Get channel name for enhanced location display
+    const channelDisplay = safariContent.channelName ? ` (#${safariContent.channelName})` : '';
+    
+    // For Safari buttons, get the button label and emoji
+    let buttonLabel = '';
+    let buttonEmoji = '';
+    if (action === 'SAFARI_CUSTOM_ACTION' && safariContent.actionType === 'safari_button') {
+      try {
+        const { loadSafariContent } = await import('../../safariManager.js');
+        const safariData = await loadSafariContent();
+        const button = safariData[guildId]?.buttons?.[safariContent.actionId];
+        if (button) {
+          buttonLabel = button.label || button.name || safariContent.actionId;
+          buttonEmoji = button.emoji || '';
+        } else {
+          buttonLabel = safariContent.actionId;
+        }
+      } catch (error) {
+        console.error('Error getting button details for Safari Log:', error);
+        buttonLabel = safariContent.actionId;
+      }
+    }
+    
     // Format the Safari log message based on action type
     let logMessage = '';
     const timestamp = new Date().toLocaleTimeString('en-US', { 
@@ -734,32 +757,34 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     
     switch (action) {
       case 'SAFARI_WHISPER':
-        logMessage = `🤫 **WHISPER** | [${timestamp}] | <@${safariContent.senderId}> → <@${safariContent.recipientId}> at **${safariContent.location}**\n> ${safariContent.message}`;
+        logMessage = `🤫 **WHISPER** | [${timestamp}] | <@${safariContent.senderId}> → <@${safariContent.recipientId}> at **${safariContent.location}**${channelDisplay}\n> ${safariContent.message}`;
         break;
         
       case 'SAFARI_ITEM_PICKUP':
-        logMessage = `🧰 **ITEM PICKUP** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> Collected: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity})`;
+        logMessage = `🧰 **ITEM PICKUP** | [${timestamp}] | <@${userId}> at **${safariContent.location}**${channelDisplay}\n> Collected: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity})`;
         break;
         
       case 'SAFARI_CURRENCY':
         const changeType = safariContent.amount > 0 ? 'Gained' : 'Lost';
-        logMessage = `🪙 **CURRENCY** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> ${changeType} ${Math.abs(safariContent.amount)} ${safariContent.currencyName} from "${safariContent.source}"`;
+        logMessage = `🪙 **CURRENCY** | [${timestamp}] | <@${userId}> at **${safariContent.location}**${channelDisplay}\n> ${changeType} ${Math.abs(safariContent.amount)} ${safariContent.currencyName} from "${safariContent.source}"`;
         break;
         
       case 'SAFARI_PURCHASE':
-        logMessage = `🛒 **PURCHASE** | [${timestamp}] | <@${userId}> at **${safariContent.storeName}** (${safariContent.location})\n> Bought: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity}) for ${safariContent.price} ${safariContent.currencyName}`;
+        logMessage = `🛒 **PURCHASE** | [${timestamp}] | <@${userId}> at **${safariContent.storeName}** (${safariContent.location}${channelDisplay})\n> Bought: ${safariContent.itemEmoji} **${safariContent.itemName}** (x${safariContent.quantity}) for ${safariContent.price} ${safariContent.currencyName}`;
         break;
         
       case 'SAFARI_BUTTON':
-        logMessage = `🎯 **SAFARI ACTION** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> Clicked: "${safariContent.buttonLabel}" - ${safariContent.result}`;
+        logMessage = `🎯 **SAFARI ACTION** | [${timestamp}] | <@${userId}> at **${safariContent.location}**${channelDisplay}\n> Clicked: "${safariContent.buttonLabel}" - ${safariContent.result}`;
         break;
         
       case 'SAFARI_MOVEMENT':
-        logMessage = `🗺️ **MOVEMENT** | [${timestamp}] | <@${userId}> moved from **${safariContent.fromLocation}** to **${safariContent.toLocation}**`;
+        const fromChannelDisplay = safariContent.fromChannelName ? ` (#${safariContent.fromChannelName})` : '';
+        const toChannelDisplay = safariContent.toChannelName ? ` (#${safariContent.toChannelName})` : '';
+        logMessage = `🗺️ **MOVEMENT** | [${timestamp}] | <@${userId}> moved from **${safariContent.fromLocation}**${fromChannelDisplay} to **${safariContent.toLocation}**${toChannelDisplay}`;
         break;
         
       case 'SAFARI_ATTACK':
-        logMessage = `⚔️ **ATTACK** | [${timestamp}] | <@${safariContent.attackerId}> attacked <@${safariContent.targetId}> at **${safariContent.location}**\n> Result: ${safariContent.result}`;
+        logMessage = `⚔️ **ATTACK** | [${timestamp}] | <@${safariContent.attackerId}> attacked <@${safariContent.targetId}> at **${safariContent.location}**${channelDisplay}\n> Result: ${safariContent.result}`;
         break;
         
       case 'SAFARI_CUSTOM_ACTION':
@@ -780,9 +805,13 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         }
         
         if (safariContent.actionType === 'player_command') {
-          logMessage = `${emoji} **PLAYER COMMAND** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> Command: "${safariContent.actionId}"${actionDetails}`;
+          logMessage = `${emoji} **PLAYER COMMAND** | [${timestamp}] | <@${userId}> at **${safariContent.location}**${channelDisplay}\n> Command: "${safariContent.actionId}"${actionDetails}`;
         } else {
-          logMessage = `${emoji} **CUSTOM ACTION** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> Button: ${safariContent.actionId}${actionDetails}`;
+          // Enhanced button display with emoji and label
+          const buttonDisplay = buttonEmoji && buttonLabel 
+            ? `${buttonEmoji} ${buttonLabel} (${safariContent.actionId})`
+            : buttonLabel || safariContent.actionId;
+          logMessage = `${emoji} **CUSTOM ACTION** | [${timestamp}] | <@${userId}> at **${safariContent.location}**${channelDisplay}\n> Button: ${buttonDisplay}${actionDetails}`;
         }
         break;
         

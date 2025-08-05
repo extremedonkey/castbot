@@ -24,7 +24,8 @@ export async function logWhisper({ guildId, senderId, senderName, senderDisplayN
     recipientId,
     recipientName,
     location,
-    message
+    message,
+    channelName
   };
   
   await logInteraction(
@@ -63,7 +64,8 @@ export async function logItemPickup({ guildId, userId, username, displayName, lo
     itemName,
     itemEmoji: itemEmoji || '📦',
     quantity,
-    source
+    source,
+    channelName
   };
   
   await logInteraction(
@@ -98,7 +100,8 @@ export async function logCurrencyChange({ guildId, userId, username, displayName
     location,
     amount,
     currencyName,
-    source
+    source,
+    channelName
   };
   
   await logInteraction(
@@ -143,7 +146,8 @@ export async function logStorePurchase({ guildId, userId, username, displayName,
     itemEmoji: itemEmoji || '📦',
     quantity,
     price,
-    currencyName
+    currencyName,
+    channelName
   };
   
   await logInteraction(
@@ -178,7 +182,8 @@ export async function logSafariButton({ guildId, userId, username, displayName, 
     location,
     buttonId,
     buttonLabel,
-    result
+    result,
+    channelName
   };
   
   await logInteraction(
@@ -209,7 +214,8 @@ export async function logSafariButton({ guildId, userId, username, displayName, 
 export async function logPlayerMovement({ guildId, userId, username, displayName, fromLocation, toLocation, channelName }) {
   const safariContent = {
     fromLocation,
-    toLocation
+    toLocation,
+    channelName
   };
   
   await logInteraction(
@@ -245,7 +251,8 @@ export async function logAttack({ guildId, attackerId, attackerName, attackerDis
     targetId,
     targetName,
     location,
-    result
+    result,
+    channelName
   };
   
   await logInteraction(
@@ -304,7 +311,8 @@ export async function logCustomAction({ guildId, userId, username, displayName, 
       result: action.result
     })),
     success,
-    errorMessage
+    errorMessage,
+    channelName
   };
   
   let summary = '';
