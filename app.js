@@ -18265,6 +18265,72 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('condition_nav_next_')) {
+      // Navigation next page handler
+      return ButtonHandlerFactory.create({
+        id: 'condition_nav_next',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_nav_next - user ${context.userId}`);
+          
+          // Parse custom_id: condition_nav_next_actionId_currentPage
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // Remove 'condition'
+          customIdParts.shift(); // Remove 'nav'
+          customIdParts.shift(); // Remove 'next'
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          
+          console.log(`📄 DEBUG: Navigating to next page from ${currentPage} for action ${actionId}`);
+          
+          const { refreshConditionManagerUI } = await import('./customActionUI.js');
+          await refreshConditionManagerUI({
+            res,
+            actionId,
+            guildId: context.guildId,
+            currentPage: currentPage + 1
+          });
+          
+          console.log(`✅ SUCCESS: condition_nav_next - navigated to page ${currentPage + 1}`);
+          return;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('condition_nav_prev_')) {
+      // Navigation previous page handler
+      return ButtonHandlerFactory.create({
+        id: 'condition_nav_prev',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: condition_nav_prev - user ${context.userId}`);
+          
+          // Parse custom_id: condition_nav_prev_actionId_currentPage
+          const customIdParts = context.customId.split('_');
+          customIdParts.shift(); // Remove 'condition'
+          customIdParts.shift(); // Remove 'nav'
+          customIdParts.shift(); // Remove 'prev'
+          const currentPage = parseInt(customIdParts.pop() || '0');
+          const actionId = customIdParts.join('_');
+          
+          console.log(`📄 DEBUG: Navigating to previous page from ${currentPage} for action ${actionId}`);
+          
+          const { refreshConditionManagerUI } = await import('./customActionUI.js');
+          await refreshConditionManagerUI({
+            res,
+            actionId,
+            guildId: context.guildId,
+            currentPage: Math.max(0, currentPage - 1)
+          });
+          
+          console.log(`✅ SUCCESS: condition_nav_prev - navigated to page ${Math.max(0, currentPage - 1)}`);
+          return;
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('condition_edit_')) {
       // Edit condition handler
       return ButtonHandlerFactory.create({
