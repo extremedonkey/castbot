@@ -9081,19 +9081,7 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           console.log(`📝 DEBUG: User ${context.userId} selecting Safari Log channel for guild ${context.guildId}`);
           
-          const { ChannelSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
-          
-          // Create channel select menu
-          const channelSelect = new ChannelSelectMenuBuilder()
-            .setCustomId('safari_log_channel_set')
-            .setPlaceholder('Select a channel for Safari logs...')
-            .setChannelTypes([0]) // Text channels only
-            .setMinValues(1)
-            .setMaxValues(1);
-          
-          const selectRow = new ActionRowBuilder().addComponents(channelSelect);
-          
-          // Create Components V2 container
+          // Create Components V2 container with channel select
           const container = {
             type: 17, // Container
             components: [
@@ -9102,7 +9090,17 @@ Your server is now ready for Tycoons gameplay!`;
                 content: '## 📝 Select Safari Log Channel\n\nChoose a channel where all Safari interactions will be logged. This should be a private channel only accessible to staff.'
               },
               { type: 14 }, // Separator
-              selectRow.toJSON()
+              {
+                type: 1, // Action Row
+                components: [{
+                  type: 8, // Channel Select (Components V2)
+                  custom_id: 'safari_log_channel_set',
+                  placeholder: 'Select a channel for Safari logs...',
+                  channel_types: [0], // Text channels only
+                  min_values: 1,
+                  max_values: 1
+                }]
+              }
             ]
           };
           
