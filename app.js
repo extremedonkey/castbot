@@ -1074,7 +1074,7 @@ async function createSafariMenu(guildId, userId, member) {
     new ButtonBuilder()
       .setCustomId('safari_progress')
       .setLabel('Safari Progress')
-      .setStyle(ButtonStyle.Primary)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('🚀')
   ];
   
