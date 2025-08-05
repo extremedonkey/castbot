@@ -1035,23 +1035,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
             await saveSafariContent(safariData);
         }
         
-        // Log button interaction to Safari Log
-        try {
-            const { logSafariButton } = await import('./safariLogger.js');
-            await logSafariButton({
-                guildId,
-                userId,
-                buttonId,
-                buttonName: button.text || buttonId,
-                buttonEmoji: button.emoji || '🎯',
-                conditionsResult,
-                actionsCount: button.actions?.length || 0,
-                usageCount: safariData[guildId].buttons[buttonId].metadata.usageCount
-            });
-        } catch (logError) {
-            console.error('Failed to log Safari button interaction:', logError);
-            // Don't fail the button action if logging fails
-        }
+        // Note: Safari button logging is now handled by the comprehensive custom action logging at the end of executeButtonActions
         
         // Filter actions based on executeOn property and conditions result
         const conditionsResultString = conditionsResult ? 'true' : 'false';
@@ -1247,11 +1231,14 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
             if (location === 'Unknown' && interaction.channelName) {
                 // Get channel info from interaction if available
                 const channelName = interaction.channelName;
+                console.log(`📝 DEBUG: Attempting to extract location from channelName: "${channelName}"`);
                 if (channelName && channelName !== 'Unknown') {
                     // Extract coordinate from channel name like "#b1"
                     const match = channelName.match(/#?([A-Za-z]\d+)/);
+                    console.log(`📝 DEBUG: Channel name regex match:`, match);
                     if (match) {
                         location = match[1].toUpperCase();
+                        console.log(`📝 DEBUG: Extracted location: ${location}`);
                     }
                 }
             }
