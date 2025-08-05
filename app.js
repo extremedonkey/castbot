@@ -16237,13 +16237,37 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           pronounRoleIDs.includes(role.id)
         );
         
-        if (currentPronounRoles.size > 0) {
-          await member.roles.remove(currentPronounRoles.map(role => role.id));
-        }
+        try {
+          if (currentPronounRoles.size > 0) {
+            await member.roles.remove(currentPronounRoles.map(role => role.id));
+          }
 
-        // Add new selected roles
-        if (selectedRoleIds.length > 0) {
-          await member.roles.add(selectedRoleIds);
+          // Add new selected roles
+          if (selectedRoleIds.length > 0) {
+            await member.roles.add(selectedRoleIds);
+          }
+        } catch (error) {
+          console.error('❌ Pronoun role assignment failed in select_pronouns:', error);
+          if (error.code === 50013) {
+            // Discord permission error - send non-ephemeral message
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '⚠️ **Permission Error**: Unable to assign pronoun roles. Please advise the production team to move the CastBot role to the top of the Discord hierarchy, above pronoun roles.',
+                flags: 0 // Non-ephemeral message
+              }
+            });
+          } else {
+            // Other errors - send ephemeral message
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Failed to update pronoun roles. Please try again.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+        }
           
           // Get role names for confirmation message
           const selectedRoles = await Promise.all(
