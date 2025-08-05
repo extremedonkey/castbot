@@ -1333,6 +1333,22 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'select_menu'
   },
+  'safari_give_role_select': {
+    label: 'Select Role to Give',
+    description: 'Role select menu for choosing role to give to users',
+    emoji: '👑',
+    style: 'Primary',
+    category: 'safari_management',
+    type: 'role_select'
+  },
+  'safari_remove_role_select': {
+    label: 'Select Role to Remove',
+    description: 'Role select menu for choosing role to remove from users',
+    emoji: '🚫',
+    style: 'Primary',
+    category: 'safari_management',
+    type: 'role_select'
+  },
 
   // === CONDITIONAL LOGIC SYSTEM ===
   // Condition Manager buttons

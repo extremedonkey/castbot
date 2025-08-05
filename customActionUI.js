@@ -303,6 +303,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
                   { label: 'Display Text', value: 'display_text', emoji: { name: '📄' } },
                   { label: 'Give Currency', value: 'give_currency', emoji: { name: '🪙' } },
                   { label: 'Give Item', value: 'give_item', emoji: { name: '🎁' } },
+                  { label: 'Give Role', value: 'give_role', emoji: { name: '👑' } },
+                  { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' } },
                   { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } }
                 ]
               }]
@@ -459,6 +461,16 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}) {
       return `**\`${number}. Give Currency\`** Amount: ${displayAmount}${currencyLimitText}`;
     case 'update_currency':
       return `**\`${number}. Update Currency\`** Amount: ${action.amount || 0}`;
+    case 'give_role':
+      const giveRoleId = action.config?.roleId || action.roleId;
+      const executeOnGive = action.config?.executeOn || action.executeOn || 'true';
+      const onGiveText = executeOnGive === 'true' ? 'conditions met' : 'conditions fail';
+      return `**\`${number}. Give Role\`** Role ID: ${giveRoleId || 'Not selected'} (on ${onGiveText})`;
+    case 'remove_role':
+      const removeRoleId = action.config?.roleId || action.roleId;
+      const executeOnRemove = action.config?.executeOn || action.executeOn || 'true';
+      const onRemoveText = executeOnRemove === 'true' ? 'conditions met' : 'conditions fail';
+      return `**\`${number}. Remove Role\`** Role ID: ${removeRoleId || 'Not selected'} (on ${onRemoveText})`;
     case 'follow_up_button':
     case 'follow_up':
       const followUpButtonId = action.config?.buttonId || action.buttonId;

@@ -101,6 +101,14 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `map_currency_remove_*` | 🗑️ Remove Currency | app.js:~14375 | Pattern handler | ✅ Active |
 | `map_currency_reset_*` | 🔃 Reset Currency | app.js:~14415 | Pattern handler | ✅ Active |
 
+### **Whisper System Buttons**
+| Custom ID | Label | Location | Handler Function | Status |
+|-----------|-------|----------|------------------|--------|
+| `safari_whisper` | 💬 Whisper | app.js:~8620 | ButtonHandlerFactory | ✅ Active |
+| `whisper_player_select_*` | Select Player (dropdown) | app.js:~17463 | ButtonHandlerFactory | ✅ Fixed (2025-08-06) |
+| `whisper_read_*` | 💬 Read Message | app.js:~8670 | ButtonHandlerFactory | ✅ Active |
+| `whisper_reply_*` | 💬 Reply | app.js:~8700 | ButtonHandlerFactory | ✅ Active |
+
 ### **Safari Custom Actions System Buttons**
 | Custom ID | Label | Location | Handler Function | Status |
 |-----------|-------|----------|------------------|--------|

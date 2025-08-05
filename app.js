@@ -4404,6 +4404,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_drop_type_') &&
         !custom_id.startsWith('safari_give_item_select_') &&
         !custom_id.startsWith('safari_follow_up_select_') &&
+        !custom_id.startsWith('safari_give_role_select_') &&
+        !custom_id.startsWith('safari_remove_role_select_') &&
         !custom_id.startsWith('safari_followup_execute_on_') &&
         !custom_id.startsWith('safari_followup_save_') &&
         !custom_id.startsWith('safari_item_limit_') &&
@@ -12683,6 +12685,69 @@ Your server is now ready for Tycoons gameplay!`;
               flags: (1 << 15), // IS_COMPONENTS_V2
               ephemeral: true
             };
+          } else if (actionType === 'give_role') {
+            console.log(`✅ SUCCESS: safari_action_type_select - showing role selection for give_role`);
+            
+            // Create role select menu for give_role
+            const { RoleSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+            
+            const roleSelect = new RoleSelectMenuBuilder()
+              .setCustomId(`safari_give_role_select_${buttonId}`)
+              .setPlaceholder('Select a role to give')
+              .setMinValues(1)
+              .setMaxValues(1);
+            
+            const row = new ActionRowBuilder()
+              .addComponents(roleSelect);
+            
+            return {
+              components: [{
+                type: 17, // Container
+                accent_color: 0x10B981, // Green accent for give role
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `# Select Role to Give\n\nChoose which role to give to users when they click this button (and meet the conditions).`
+                  },
+                  { type: 14 }, // Separator
+                  row.toJSON()
+                ]
+              }],
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+              ephemeral: true
+            };
+            
+          } else if (actionType === 'remove_role') {
+            console.log(`✅ SUCCESS: safari_action_type_select - showing role selection for remove_role`);
+            
+            // Create role select menu for remove_role
+            const { RoleSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+            
+            const roleSelect = new RoleSelectMenuBuilder()
+              .setCustomId(`safari_remove_role_select_${buttonId}`)
+              .setPlaceholder('Select a role to remove')
+              .setMinValues(1)
+              .setMaxValues(1);
+            
+            const row = new ActionRowBuilder()
+              .addComponents(roleSelect);
+            
+            return {
+              components: [{
+                type: 17, // Container
+                accent_color: 0xEF4444, // Red accent for remove role
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `# Select Role to Remove\n\nChoose which role to remove from users when they click this button (and meet the conditions).`
+                  },
+                  { type: 14 }, // Separator
+                  row.toJSON()
+                ]
+              }],
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+              ephemeral: true
+            };
           }
           
           // For display_text, show new entity interface
@@ -13222,6 +13287,160 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Clean up state
           dropConfigState.delete(stateKey);
+          
+          // Return to custom action editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          return await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId: buttonId
+          });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_give_role_select_')) {
+      // Handle role selection for give_role action
+      return ButtonHandlerFactory.create({
+        id: 'safari_give_role_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_give_role_select - user ${context.userId}`);
+          
+          const buttonId = context.customId.replace('safari_give_role_select_', '');
+          const roleId = context.values?.[0];
+          
+          if (!roleId) {
+            return {
+              content: '❌ No role selected.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`👑 Selected role ${roleId} for give_role action on button ${buttonId}`);
+          
+          // Load safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          
+          if (!button) {
+            return {
+              content: '❌ Button not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+          
+          // Create the give_role action
+          const actionIndex = button.actions.length;
+          const action = {
+            type: 'give_role',
+            order: actionIndex,
+            config: {
+              roleId: roleId
+            },
+            executeOn: 'true' // Default to execute on conditions met
+          };
+          
+          // Add the action
+          button.actions.push(action);
+          
+          // Update metadata
+          if (!button.metadata) {
+            button.metadata = {
+              createdAt: Date.now(),
+              lastModified: Date.now(),
+              usageCount: 0
+            };
+          } else {
+            button.metadata.lastModified = Date.now();
+          }
+          
+          // Save safari data
+          await saveSafariContent(safariData);
+          
+          console.log(`✅ SUCCESS: safari_give_role_select - added give_role action to button ${buttonId}`);
+          
+          // Return to custom action editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          return await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId: buttonId
+          });
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_remove_role_select_')) {
+      // Handle role selection for remove_role action
+      return ButtonHandlerFactory.create({
+        id: 'safari_remove_role_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_remove_role_select - user ${context.userId}`);
+          
+          const buttonId = context.customId.replace('safari_remove_role_select_', '');
+          const roleId = context.values?.[0];
+          
+          if (!roleId) {
+            return {
+              content: '❌ No role selected.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`🚫 Selected role ${roleId} for remove_role action on button ${buttonId}`);
+          
+          // Load safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+          
+          if (!button) {
+            return {
+              content: '❌ Button not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+          
+          // Create the remove_role action
+          const actionIndex = button.actions.length;
+          const action = {
+            type: 'remove_role',
+            order: actionIndex,
+            config: {
+              roleId: roleId
+            },
+            executeOn: 'true' // Default to execute on conditions met
+          };
+          
+          // Add the action
+          button.actions.push(action);
+          
+          // Update metadata
+          if (!button.metadata) {
+            button.metadata = {
+              createdAt: Date.now(),
+              lastModified: Date.now(),
+              usageCount: 0
+            };
+          } else {
+            button.metadata.lastModified = Date.now();
+          }
+          
+          // Save safari data
+          await saveSafariContent(safariData);
+          
+          console.log(`✅ SUCCESS: safari_remove_role_select - added remove_role action to button ${buttonId}`);
           
           // Return to custom action editor
           const { createCustomActionEditorUI } = await import('./customActionUI.js');
