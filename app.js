@@ -31,6 +31,7 @@ import {
   Partials
 } from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';  // Add DiscordRequest to imports
+import { ButtonHandlerFactory, BUTTON_REGISTRY } from './buttonHandlerFactory.js';
 import { 
   loadPlayerData, 
   updatePlayer, 
@@ -4450,6 +4451,127 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             ...result,
             ephemeral: true // Make all custom action responses ephemeral
           };
+        }
+      })(req, res, client);
+    }
+    
+    // === SAFARI PROGRESS HANDLERS ===
+    // Handle safari progress button
+    if (custom_id === 'safari_progress') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_progress',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_progress - user ${context.userId}`);
+          
+          try {
+            // Import Safari Progress module
+            const { createSafariProgressUI } = await import('./safariProgress.js');
+            
+            // Create the UI for the first row (A)
+            const progressUI = await createSafariProgressUI(context.guildId, 'A', client);
+            
+            console.log(`✅ SUCCESS: safari_progress - displayed row A`);
+            return progressUI;
+          } catch (error) {
+            console.error(`❌ ERROR: safari_progress - ${error.message}`);
+            return {
+              content: '❌ Error loading Safari Progress. Please try again.',
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+    }
+    
+    // Handle safari progress navigation - previous row
+    if (custom_id.startsWith('safari_progress_prev_')) {
+      const currentRow = custom_id.replace('safari_progress_prev_', '');
+      
+      return ButtonHandlerFactory.create({
+        id: 'safari_progress_prev',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_progress_prev - user ${context.userId}, current row ${currentRow}`);
+          
+          try {
+            const { createSafariProgressUI, getAdjacentRow } = await import('./safariProgress.js');
+            const prevRow = getAdjacentRow(currentRow, 'prev');
+            
+            const progressUI = await createSafariProgressUI(context.guildId, prevRow, client);
+            
+            console.log(`✅ SUCCESS: safari_progress_prev - navigated to row ${prevRow}`);
+            return progressUI;
+          } catch (error) {
+            console.error(`❌ ERROR: safari_progress_prev - ${error.message}`);
+            return {
+              content: '❌ Error navigating to previous row.',
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+    }
+    
+    // Handle safari progress navigation - next row
+    if (custom_id.startsWith('safari_progress_next_')) {
+      const currentRow = custom_id.replace('safari_progress_next_', '');
+      
+      return ButtonHandlerFactory.create({
+        id: 'safari_progress_next',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_progress_next - user ${context.userId}, current row ${currentRow}`);
+          
+          try {
+            const { createSafariProgressUI, getAdjacentRow } = await import('./safariProgress.js');
+            const nextRow = getAdjacentRow(currentRow, 'next');
+            
+            const progressUI = await createSafariProgressUI(context.guildId, nextRow, client);
+            
+            console.log(`✅ SUCCESS: safari_progress_next - navigated to row ${nextRow}`);
+            return progressUI;
+          } catch (error) {
+            console.error(`❌ ERROR: safari_progress_next - ${error.message}`);
+            return {
+              content: '❌ Error navigating to next row.',
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+    }
+    
+    // Handle safari progress jump to row
+    if (custom_id === 'safari_progress_jump') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_progress_jump',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_progress_jump - user ${context.userId}`);
+          
+          try {
+            const selectedRow = context.values[0];
+            const { createSafariProgressUI } = await import('./safariProgress.js');
+            
+            const progressUI = await createSafariProgressUI(context.guildId, selectedRow, client);
+            
+            console.log(`✅ SUCCESS: safari_progress_jump - jumped to row ${selectedRow}`);
+            return progressUI;
+          } catch (error) {
+            console.error(`❌ ERROR: safari_progress_jump - ${error.message}`);
+            return {
+              content: '❌ Error jumping to selected row.',
+              ephemeral: true
+            };
+          }
         }
       })(req, res, client);
     } else if (custom_id.startsWith('show_castlist2')) {

@@ -647,6 +647,43 @@ export const BUTTON_REGISTRY = {
     category: 'safari',
     requiresPermission: 'ManageRoles'
   },
+  
+  // Safari Progress Overview
+  'safari_progress': {
+    label: 'Safari Progress',
+    description: 'View comprehensive safari map progress and claim status',
+    emoji: '🚀',
+    style: 'Primary',
+    category: 'safari',
+    requiresPermission: 'ManageRoles'
+  },
+  
+  // Safari Progress Navigation
+  'safari_progress_prev_*': {
+    label: 'Previous Row',
+    description: 'Navigate to previous row in safari progress',
+    emoji: '◀',
+    style: 'Secondary',
+    category: 'safari',
+    requiresPermission: 'ManageRoles'
+  },
+  'safari_progress_next_*': {
+    label: 'Next Row',
+    description: 'Navigate to next row in safari progress',
+    emoji: '▶',
+    style: 'Secondary',
+    category: 'safari',
+    requiresPermission: 'ManageRoles'
+  },
+  'safari_progress_jump': {
+    label: 'Jump to Row',
+    description: 'Jump to specific row in safari progress',
+    emoji: '📍',
+    style: 'Secondary',
+    category: 'safari',
+    requiresPermission: 'ManageRoles',
+    type: 'select_menu'
+  },
   'map_admin_blacklist': {
     label: 'Blacklisted Coordinates',
     description: 'Manage restricted coordinates on the map',
