@@ -17461,34 +17461,40 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       })(req, res, client);
       
     } else if (custom_id.startsWith('whisper_player_select_')) {
-      // Handle whisper player selection
-      const coordinate = custom_id.replace('whisper_player_select_', '');
-      const targetUserId = req.body.data.values[0];
-      const userId = req.body.member?.user?.id || req.body.user?.id;
-      const guildId = req.body.guild_id;
-      
-      console.log(`💬 Whisper player selected - sender: ${userId}, target: ${targetUserId}, coord: ${coordinate}`);
-      
-      try {
-        const { showWhisperModal } = await import('./whisperManager.js');
-        const modalResponse = await showWhisperModal({ 
-          userId, 
-          guildId, 
-          token: req.body.token 
-        }, targetUserId, coordinate, client);
-        
-        console.log(`💬 Sending modal response for whisper`);
-        return res.send(modalResponse);
-      } catch (error) {
-        console.error('❌ Failed to show whisper modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ An error occurred while preparing the whisper interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
+      // Handle whisper player selection (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'whisper_player_select',
+        isModal: true,
+        handler: async (context) => {
+          console.log(`🔍 START: whisper_player_select - user ${context.userId}`);
+          
+          const coordinate = context.customId.replace('whisper_player_select_', '');
+          const targetUserId = context.values[0]; // From select menu
+          
+          console.log(`💬 Whisper player selected - sender: ${context.userId}, target: ${targetUserId}, coord: ${coordinate}`);
+          
+          try {
+            const { showWhisperModal } = await import('./whisperManager.js');
+            const modalResponse = await showWhisperModal({ 
+              userId: context.userId, 
+              guildId: context.guildId, 
+              token: context.token 
+            }, targetUserId, coordinate, client);
+            
+            console.log(`✅ SUCCESS: whisper_player_select - modal shown`);
+            return modalResponse;
+          } catch (error) {
+            console.error('❌ Failed to show whisper modal:', error);
+            return {
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ An error occurred while preparing the whisper interface.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            };
           }
-        });
-      }
+        }
+      })(req, res, client);
       
     } else if (custom_id.startsWith('entity_select_')) {
       // Handle entity selection from dropdown (MIGRATED TO FACTORY)

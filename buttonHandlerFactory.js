@@ -1490,6 +1490,14 @@ export const BUTTON_REGISTRY = {
     emoji: '💬',
     style: 'Primary',
     category: 'safari_social'
+  },
+  'whisper_player_select': {
+    label: 'Select Player',
+    description: 'Select player to whisper to',
+    emoji: '👤',
+    style: 'Secondary',
+    category: 'safari_social',
+    isSelectMenu: true
   }
 };
 
