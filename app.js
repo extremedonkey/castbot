@@ -16245,21 +16245,29 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Add new selected roles
           if (selectedRoleIds.length > 0) {
             await member.roles.add(selectedRoleIds);
+            
+            // Get role names for confirmation message
+            const selectedRoles = await Promise.all(
+              selectedRoleIds.map(id => guild.roles.fetch(id))
+            );
+            const roleNames = selectedRoles.filter(role => role).map(role => role.name);
+            
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `${userName} has set their pronouns to: ${roleNames.join(', ')}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          } else {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `${userName} has removed all pronoun roles`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
           }
-
-          // Get role names for confirmation message
-          const selectedRoles = await Promise.all(
-            selectedRoleIds.map(id => guild.roles.fetch(id))
-          );
-          const roleNames = selectedRoles.filter(role => role).map(role => role.name);
-          
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `${userName} has set their pronouns to: ${roleNames.join(', ')}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
         } catch (error) {
           console.error('❌ Pronoun role assignment failed in select_pronouns:', error);
           if (error.code === 50013) {
@@ -16281,15 +16289,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               }
             });
           }
-        }
-        } else {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `${userName} has removed all pronoun roles`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
         }
 
       } catch (error) {
