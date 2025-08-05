@@ -1296,13 +1296,23 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
  * @returns {boolean} True if blacklisted, false otherwise
  */
 export async function isCoordinateBlacklisted(guildId, coordinate) {
+  console.log(`🔍 DEBUG: isCoordinateBlacklisted called - guildId: ${guildId}, coordinate: ${coordinate}`);
+  
   const safariData = await loadSafariContent();
   const activeMapId = safariData[guildId]?.maps?.active;
   
-  if (!activeMapId) return false;
+  console.log(`🔍 DEBUG: activeMapId: ${activeMapId}`);
+  
+  if (!activeMapId) {
+    console.log(`🔍 DEBUG: No active map found, returning false`);
+    return false;
+  }
   
   const mapData = safariData[guildId]?.maps?.[activeMapId];
   const blacklistedCoordinates = mapData?.blacklistedCoordinates || [];
+  
+  console.log(`🔍 DEBUG: blacklistedCoordinates:`, blacklistedCoordinates);
+  console.log(`🔍 DEBUG: coordinate ${coordinate} is blacklisted: ${blacklistedCoordinates.includes(coordinate)}`);
   
   return blacklistedCoordinates.includes(coordinate);
 }
