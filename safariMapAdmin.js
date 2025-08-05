@@ -185,9 +185,10 @@ async function createPlayerViewUI(guildId, userId) {
       {
         type: 2, // Button
         custom_id: `map_admin_edit_items_${userId}`,
-        label: 'Edit Items',
+        label: 'Edit Items (WIP - use main items menu)',
         style: 2, // Secondary
-        emoji: { name: '📦' }
+        emoji: { name: '📦' },
+        disabled: true
       },
       {
         type: 2, // Button

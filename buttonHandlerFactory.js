@@ -751,8 +751,8 @@ export const BUTTON_REGISTRY = {
     requiresModal: true
   },
   'map_admin_edit_items_*': {
-    label: 'Edit Items',
-    description: 'Manage player inventory items',
+    label: 'Edit Items (WIP - use main items menu)',
+    description: 'Manage player inventory items - currently disabled, use main items menu',
     emoji: '📦',
     style: 'Secondary',
     category: 'safari_map_admin'
