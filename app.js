@@ -23110,6 +23110,7 @@ Are you sure you want to continue?`;
       // Show item selection dropdown to add to player inventory
       return ButtonHandlerFactory.create({
         id: 'map_admin_add_item',
+        updateMessage: true,
         handler: async (context) => {
           const targetUserId = context.customId.split('_').pop();
           console.log(`🛡️ START: map_admin_add_item for user ${targetUserId}`);
@@ -23124,8 +23125,7 @@ Are you sure you want to continue?`;
           
           if (Object.keys(items).length === 0) {
             return {
-              content: '❌ No items have been created yet. Please create items first using Safari → Manage Items.',
-              ephemeral: true
+              content: '❌ No items have been created yet. Please create items first using Safari → Manage Items.'
             };
           }
           
@@ -23171,8 +23171,7 @@ Are you sure you want to continue?`;
           
           return {
             content: `## ➕ Add Item\n\nSelect an item to add:`,
-            components: [selectRow, cancelButton],
-            ephemeral: true
+            components: [selectRow, cancelButton]
           };
         }
       })(req, res, client);
@@ -23232,6 +23231,7 @@ Are you sure you want to continue?`;
       // Show dropdown of current inventory items to edit
       return ButtonHandlerFactory.create({
         id: 'map_admin_edit_quantities',
+        updateMessage: true,
         handler: async (context) => {
           const targetUserId = context.customId.split('_').pop();
           console.log(`🛡️ START: map_admin_edit_quantities for user ${targetUserId}`);
@@ -23269,8 +23269,7 @@ Are you sure you want to continue?`;
           
           if (options.length === 0) {
             return {
-              content: '❌ This player has no items in their inventory.',
-              ephemeral: true
+              content: '❌ This player has no items in their inventory.'
             };
           }
           
@@ -23304,8 +23303,7 @@ Are you sure you want to continue?`;
           
           return {
             content: `## 📝 Edit Item Quantities\n\nSelect an item to edit:`,
-            components: [selectRow, cancelButton],
-            ephemeral: true
+            components: [selectRow, cancelButton]
           };
         }
       })(req, res, client);
@@ -23373,6 +23371,7 @@ Are you sure you want to continue?`;
       // Show clear inventory confirmation
       return ButtonHandlerFactory.create({
         id: 'map_admin_clear_inventory',
+        updateMessage: true,
         handler: async (context) => {
           const targetUserId = context.customId.split('_').pop();
           console.log(`🛡️ START: map_admin_clear_inventory confirmation for user ${targetUserId}`);
@@ -23405,8 +23404,7 @@ Are you sure you want to continue?`;
             components: [{
               type: 1, // Action Row
               components: [confirmButton, cancelButton]
-            }],
-            ephemeral: true
+            }]
           };
         }
       })(req, res, client);
@@ -23415,6 +23413,7 @@ Are you sure you want to continue?`;
       // Execute inventory clear
       return ButtonHandlerFactory.create({
         id: 'map_admin_clear_inventory_confirm',
+        updateMessage: true,
         handler: async (context) => {
           const targetUserId = context.customId.split('_').pop();
           console.log(`🛡️ START: map_admin_clear_inventory_confirm executing for user ${targetUserId}`);
@@ -23452,8 +23451,7 @@ Are you sure you want to continue?`;
                 custom_id: `map_admin_edit_items_${targetUserId}`,
                 emoji: { name: '⬅️' }
               }]
-            }],
-            ephemeral: true
+            }]
           };
         }
       })(req, res, client);
@@ -23462,6 +23460,7 @@ Are you sure you want to continue?`;
       // Handle back button to return to map admin menu
       return ButtonHandlerFactory.create({
         id: 'map_admin_user_select_continue',
+        updateMessage: true,
         handler: async (context) => {
           const targetUserId = context.customId.split('_').pop();
           console.log(`🛡️ START: map_admin_user_select_continue - returning to map admin menu for user ${targetUserId}`);
@@ -23476,10 +23475,7 @@ Are you sure you want to continue?`;
           
           console.log(`✅ SUCCESS: map_admin_user_select_continue - returned to map admin menu`);
           
-          return {
-            ...ui,
-            type: InteractionResponseType.UPDATE_MESSAGE
-          };
+          return ui;
         }
       })(req, res, client);
       
