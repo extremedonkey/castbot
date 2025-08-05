@@ -797,23 +797,45 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
 async function executeGiveItem(config, userId, guildId, interaction, buttonId = null, actionIndex = null) {
     console.log(`🎁 DEBUG: Executing give item: ${config.itemId} x${config.quantity} for user ${userId}`);
     
-    // Check usage limits
+    // Check usage limits using live data from safariContent
     if (config.limit && config.limit.type !== 'unlimited') {
         const safariData = await loadSafariContent();
-        const claimedBy = config.limit.claimedBy || [];
         
-        if (config.limit.type === 'once_per_player' && claimedBy.includes(userId)) {
-            return {
-                content: '❌ You have already claimed this item!',
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+        // Get live claim data from the actual button action
+        let liveClaimedBy = null;
+        if (buttonId && actionIndex !== null) {
+            const button = safariData[guildId]?.buttons?.[buttonId];
+            if (button && button.actions && button.actions[actionIndex]) {
+                const action = button.actions[actionIndex];
+                if (action.type === 'give_item' && action.config?.limit) {
+                    liveClaimedBy = action.config.limit.claimedBy;
+                }
+            }
         }
         
-        if (config.limit.type === 'once_globally' && claimedBy) {
-            return {
-                content: '❌ This item has already been claimed!',
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+        // Fallback to config if live data not available
+        const claimedBy = liveClaimedBy !== null ? liveClaimedBy : config.limit.claimedBy;
+        
+        if (config.limit.type === 'once_per_player') {
+            // For once_per_player, claimedBy should be an array
+            const claimedArray = Array.isArray(claimedBy) ? claimedBy : [];
+            if (claimedArray.includes(userId)) {
+                return {
+                    content: '❌ You have already claimed this item!',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                };
+            }
+        }
+        
+        if (config.limit.type === 'once_globally') {
+            // For once_globally, claimedBy should be a user ID string or undefined
+            // If claimedBy exists and is not empty, item is claimed
+            if (claimedBy && claimedBy !== '' && claimedBy !== null && claimedBy !== undefined) {
+                return {
+                    content: '❌ This item has already been claimed!',
+                    flags: InteractionResponseFlags.EPHEMERAL
+                };
+            }
         }
     }
     
@@ -844,6 +866,8 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
             if (button && button.actions && button.actions[actionIndex]) {
                 const action = button.actions[actionIndex];
                 if (action.type === 'give_item') {
+                    console.log(`🎁 BEFORE CLAIM: ${config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
+                    
                     if (config.limit.type === 'once_per_player') {
                         if (!action.config.limit.claimedBy) {
                             action.config.limit.claimedBy = [];
@@ -854,6 +878,8 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
                     } else if (config.limit.type === 'once_globally') {
                         action.config.limit.claimedBy = userId;
                     }
+                    
+                    console.log(`🎁 AFTER CLAIM: ${config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
                     
                     await saveSafariContent(safariData);
                     console.log(`✅ Updated claim tracking for give_item action ${buttonId}[${actionIndex}]`);

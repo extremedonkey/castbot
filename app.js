@@ -13383,16 +13383,25 @@ Your server is now ready for Tycoons gameplay!`;
           if (button && button.actions && button.actions[actionIndex]) {
             const action = button.actions[actionIndex];
             if (action.type === 'give_item' && action.config?.limit) {
-              // Clear claims
+              console.log(`🔄 BEFORE RESET: ${action.config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
+              
+              // Clear claims based on limit type
               if (action.config.limit.type === 'once_per_player') {
                 action.config.limit.claimedBy = [];
               } else if (action.config.limit.type === 'once_globally') {
-                action.config.limit.claimedBy = null;
+                // For once_globally, remove claimedBy property entirely
+                delete action.config.limit.claimedBy;
               }
               
+              console.log(`🔄 AFTER RESET: ${action.config.limit.type}, claimedBy:`, action.config.limit.claimedBy);
+              
               await saveSafariContent(safariData);
-              console.log(`✅ Claims reset for give_item action ${actionIndex}`);
+              console.log(`✅ Claims reset for give_item action ${buttonId}[${actionIndex}]`);
+            } else {
+              console.log(`❌ Could not find give_item action to reset: ${buttonId}[${actionIndex}]`);
             }
+          } else {
+            console.log(`❌ Could not find button to reset: ${buttonId}`);
           }
           
           // Return updated configuration UI
