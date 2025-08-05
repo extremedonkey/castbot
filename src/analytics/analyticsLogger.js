@@ -628,9 +628,14 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     const { loadSafariContent } = await import('../../safariManager.js');
     const safariData = await loadSafariContent();
     
+    console.log(`🔍 Safari Log Debug: Processing ${action} for guild ${guildId}, user ${userId}`);
+    
     // Check if Safari logging is enabled for this guild
     const logSettings = safariData[guildId]?.safariLogSettings;
+    console.log(`🔍 Safari Log Debug: Log settings:`, JSON.stringify(logSettings, null, 2));
+    
     if (!logSettings?.enabled || !logSettings?.logChannelId) {
+      console.log(`🔍 Safari Log Debug: Safari logging disabled or no channel set for guild ${guildId}`);
       return;
     }
     
@@ -647,20 +652,29 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     };
     
     const logType = logTypeMap[action];
+    console.log(`🔍 Safari Log Debug: Action ${action} maps to logType ${logType}, enabled: ${logSettings.logTypes?.[logType]}`);
+    
     if (!logType || !logSettings.logTypes?.[logType]) {
+      console.log(`🔍 Safari Log Debug: Log type ${logType} not enabled for guild ${guildId}`);
       return;
     }
     
     // Get the Safari log channel
+    console.log(`🔍 Safari Log Debug: Attempting to fetch channel ${logSettings.logChannelId} for guild ${guildId}`);
+    
     let safariLogChannel;
     try {
       const guild = await discordClient.guilds.fetch(guildId);
+      console.log(`🔍 Safari Log Debug: Guild fetched successfully: ${guild.name}`);
+      
       safariLogChannel = await guild.channels.fetch(logSettings.logChannelId);
       
       if (!safariLogChannel) {
         console.error(`Safari Log: Channel ${logSettings.logChannelId} not found for guild ${guildId}`);
         return;
       }
+      
+      console.log(`🔍 Safari Log Debug: Channel fetched successfully: ${safariLogChannel.name}`);
     } catch (error) {
       console.error(`Safari Log: Error fetching channel for guild ${guildId}:`, error);
       return;
@@ -733,10 +747,15 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     }
     
     // Send to Safari log channel
+    console.log(`🔍 Safari Log Debug: Sending log message to channel ${safariLogChannel.name}:`, logMessage);
+    
     await safariLogChannel.send(logMessage);
+    
+    console.log(`🔍 Safari Log Debug: Message sent successfully to Safari Log channel`);
     
   } catch (error) {
     console.error('Safari Log Error (non-critical):', error);
+    console.error('Stack:', error.stack);
     // Don't throw - Safari logging should never break the main bot functionality
   }
 }
