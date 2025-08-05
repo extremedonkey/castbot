@@ -414,13 +414,19 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     console.log(`📊 DEBUG: postToDiscordLogs - User not excluded, continuing...`);
     
     // Get target channel if not cached
+    console.log(`📊 DEBUG: postToDiscordLogs - Checking target channel cache`);
     if (!targetChannel) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Target channel not cached, fetching...`);
       try {
         const { getLoggingChannelId } = await import('../../storage.js');
         const targetChannelId = await getLoggingChannelId();
+        console.log(`📊 DEBUG: postToDiscordLogs - Got target channel ID: ${targetChannelId}`);
         
         const targetGuild = await discordClient.guilds.fetch(loggingConfig.targetGuildId);
+        console.log(`📊 DEBUG: postToDiscordLogs - Fetched target guild: ${targetGuild.name}`);
+        
         targetChannel = await targetGuild.channels.fetch(targetChannelId);
+        console.log(`📊 DEBUG: postToDiscordLogs - Fetched target channel: ${targetChannel?.name}`);
         
         if (!targetChannel) {
           console.error('Discord Logging: Target channel not found');
@@ -430,14 +436,20 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
         console.error('Discord Logging: Error fetching target channel:', error);
         return;
       }
+    } else {
+      console.log(`📊 DEBUG: postToDiscordLogs - Using cached target channel: ${targetChannel.name}`);
     }
     
     // Format the log entry for Discord
+    console.log(`📊 DEBUG: postToDiscordLogs - Formatting log entry`);
     const formattedMessage = `* ${formatAnalyticsLine(logEntry)}`;
+    console.log(`📊 DEBUG: postToDiscordLogs - Formatted message: ${formattedMessage.substring(0, 100)}...`);
     
     // Rate limiting check (simple implementation)
+    console.log(`📊 DEBUG: postToDiscordLogs - Checking rate limits`);
     const now = Date.now();
     if (now - loggingConfig.lastMessageTime < 1200) { // 1.2 seconds between messages
+      console.log(`📊 DEBUG: postToDiscordLogs - Rate limited, adding to queue`);
       // Add to queue for later processing
       loggingConfig.rateLimitQueue.push({
         message: formattedMessage,
@@ -451,15 +463,19 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
       
       return;
     }
+    console.log(`📊 DEBUG: postToDiscordLogs - Rate limit OK, proceeding to send`);
     
     // Update last message time
     loggingConfig.lastMessageTime = now;
     
     // Send message to Discord
+    console.log(`📊 DEBUG: postToDiscordLogs - Sending message to Discord`);
     await targetChannel.send(formattedMessage);
+    console.log(`📊 DEBUG: postToDiscordLogs - Message sent successfully`);
     
     // Process any queued messages
     if (loggingConfig.rateLimitQueue.length > 0) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Processing ${loggingConfig.rateLimitQueue.length} queued messages`);
       setTimeout(async () => {
         await processQueuedMessages(loggingConfig);
       }, 1200);
