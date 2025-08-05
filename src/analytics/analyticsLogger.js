@@ -642,7 +642,8 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
       'SAFARI_PURCHASE': 'storeTransactions',
       'SAFARI_BUTTON': 'buttonActions',
       'SAFARI_MOVEMENT': 'mapMovement',
-      'SAFARI_ATTACK': 'attacks'
+      'SAFARI_ATTACK': 'attacks',
+      'SAFARI_CUSTOM_ACTION': 'customActions'
     };
     
     const logType = logTypeMap[action];
@@ -701,6 +702,30 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         
       case 'SAFARI_ATTACK':
         logMessage = `⚔️ **ATTACK** | [${timestamp}] | <@${safariContent.attackerId}> attacked <@${safariContent.targetId}> at **${safariContent.location}**\n> Result: ${safariContent.result}`;
+        break;
+        
+      case 'SAFARI_CUSTOM_ACTION':
+        const emoji = safariContent.actionType === 'player_command' ? '⌨️' : '🎯';
+        let actionDetails = '';
+        
+        if (safariContent.success && safariContent.executedActions && safariContent.executedActions.length > 0) {
+          // Format executed actions
+          const actions = safariContent.executedActions.map(action => {
+            if (action.type === 'display_text' && action.config) {
+              return `Display Text: "${action.config.title || 'No title'}" - ${action.config.content || 'No content'}`;
+            }
+            return `${action.type}: ${JSON.stringify(action.config || {})}`;
+          }).join('\n> ');
+          actionDetails = `\n> ${actions}`;
+        } else if (!safariContent.success && safariContent.errorMessage) {
+          actionDetails = `\n> ❌ ${safariContent.errorMessage}`;
+        }
+        
+        if (safariContent.actionType === 'player_command') {
+          logMessage = `${emoji} **PLAYER COMMAND** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> Command: "${safariContent.actionId}"${actionDetails}`;
+        } else {
+          logMessage = `${emoji} **CUSTOM ACTION** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> Button: ${safariContent.actionId}${actionDetails}`;
+        }
         break;
         
       default:

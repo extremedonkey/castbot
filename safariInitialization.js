@@ -48,7 +48,8 @@ const DEFAULT_SAFARI_STRUCTURE = {
             storeTransactions: true,
             buttonActions: true,
             mapMovement: true,
-            attacks: true
+            attacks: true,
+            customActions: true
         },
         formatting: {
             accentColor: 0x9B59B6,

@@ -1220,10 +1220,83 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
         }
         
         console.log(`✅ DEBUG: Button actions executed successfully, returning response`);
+        
+        // Log the custom action
+        try {
+            const { logCustomAction } = await import('./safariLogger.js');
+            const { loadPlayerData } = await import('./storage.js');
+            const playerData = await loadPlayerData();
+            const userData = playerData.players?.[guildId]?.[userId] || {};
+            
+            // Get location from button ID or interaction channel
+            let location = 'Unknown';
+            if (button.id && button.id.includes('_')) {
+                // Try to extract location from button ID if it contains coordinates
+                const parts = button.id.split('_');
+                const possibleCoord = parts[parts.length - 1];
+                if (/^[A-Z]\d+$/.test(possibleCoord)) {
+                    location = possibleCoord;
+                }
+            }
+            
+            // Otherwise try to get from channel name
+            if (location === 'Unknown' && interaction.member?.user) {
+                // Get channel info from interaction if available
+                const channelName = interaction.channelName || 'Unknown';
+                if (channelName && channelName !== 'Unknown') {
+                    location = channelName.toUpperCase();
+                }
+            }
+            
+            await logCustomAction({
+                guildId,
+                userId,
+                username: userData.username || 'Unknown',
+                displayName: interaction.member?.displayName || userData.username || 'Unknown',
+                location,
+                actionType: 'safari_button',
+                actionId: buttonId,
+                executedActions: sortedActions.map(action => ({
+                    type: action.type,
+                    config: action.config,
+                    result: 'executed'
+                })),
+                success: true,
+                channelName: interaction.channelName || 'Unknown'
+            });
+        } catch (logError) {
+            console.error('Error logging custom action:', logError);
+        }
+        
         return mainResponse;
         
     } catch (error) {
         console.error('Error executing button actions:', error);
+        
+        // Log the failed action
+        try {
+            const { logCustomAction } = await import('./safariLogger.js');
+            const { loadPlayerData } = await import('./storage.js');
+            const playerData = await loadPlayerData();
+            const userData = playerData.players?.[guildId]?.[userId] || {};
+            
+            await logCustomAction({
+                guildId,
+                userId,
+                username: userData.username || 'Unknown',
+                displayName: interaction.member?.displayName || userData.username || 'Unknown',
+                location: 'Unknown',
+                actionType: 'safari_button',
+                actionId: buttonId,
+                executedActions: [],
+                success: false,
+                errorMessage: error.message,
+                channelName: interaction.channelName || 'Unknown'
+            });
+        } catch (logError) {
+            console.error('Error logging failed custom action:', logError);
+        }
+        
         return {
             content: '❌ Error executing button actions. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL

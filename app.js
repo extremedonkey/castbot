@@ -8801,7 +8801,8 @@ Your server is now ready for Tycoons gameplay!`;
               storeTransactions: '🛒 Store Purchases',
               buttonActions: '🎯 Safari Actions',
               mapMovement: '🗺️ Map Movement',
-              attacks: '⚔️ Attack Queue'
+              attacks: '⚔️ Attack Queue',
+              customActions: '⌨️ Custom Actions'
             };
             
             for (const [type, enabled] of Object.entries(logSettings.logTypes || {})) {
@@ -9038,7 +9039,8 @@ Your server is now ready for Tycoons gameplay!`;
               storeTransactions: '🛒 Store Purchases',
               buttonActions: '🎯 Safari Actions',
               mapMovement: '🗺️ Map Movement',
-              attacks: '⚔️ Attack Queue'
+              attacks: '⚔️ Attack Queue',
+              customActions: '⌨️ Custom Actions'
             };
             
             for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
@@ -9144,7 +9146,8 @@ Your server is now ready for Tycoons gameplay!`;
             { label: 'Store Purchases', value: 'storeTransactions', emoji: '🛒', description: 'Log all store transactions' },
             { label: 'Safari Actions', value: 'buttonActions', emoji: '🎯', description: 'Log Safari button interactions' },
             { label: 'Map Movement', value: 'mapMovement', emoji: '🗺️', description: 'Log player movement on the map' },
-            { label: 'Attack Queue', value: 'attacks', emoji: '⚔️', description: 'Log attack queue activities' }
+            { label: 'Attack Queue', value: 'attacks', emoji: '⚔️', description: 'Log attack queue activities' },
+            { label: 'Custom Actions', value: 'customActions', emoji: '⌨️', description: 'Log custom buttons and player commands' }
           ];
           
           // Set which options are currently selected
@@ -9337,7 +9340,8 @@ Your server is now ready for Tycoons gameplay!`;
               storeTransactions: '🛒 Store Purchases',
               buttonActions: '🎯 Safari Actions',
               mapMovement: '🗺️ Map Movement',
-              attacks: '⚔️ Attack Queue'
+              attacks: '⚔️ Attack Queue',
+              customActions: '⌨️ Custom Actions'
             };
             
             for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
@@ -9407,7 +9411,7 @@ Your server is now ready for Tycoons gameplay!`;
           }
           
           // Update log types based on selection
-          const allTypes = ['whispers', 'itemPickups', 'currencyChanges', 'storeTransactions', 'buttonActions', 'mapMovement', 'attacks'];
+          const allTypes = ['whispers', 'itemPickups', 'currencyChanges', 'storeTransactions', 'buttonActions', 'mapMovement', 'attacks', 'customActions'];
           for (const type of allTypes) {
             safariData[context.guildId].safariLogSettings.logTypes[type] = selectedTypes.includes(type);
           }
@@ -9478,7 +9482,8 @@ Your server is now ready for Tycoons gameplay!`;
               storeTransactions: '🛒 Store Purchases',
               buttonActions: '🎯 Safari Actions',
               mapMovement: '🗺️ Map Movement',
-              attacks: '⚔️ Attack Queue'
+              attacks: '⚔️ Attack Queue',
+              customActions: '⌨️ Custom Actions'
             };
             
             for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
@@ -28598,7 +28603,9 @@ Are you sure you want to continue?`;
           // Create proper interaction object for the execution
           const interactionData = {
             token: req.body.token,
-            applicationId: req.body.application_id
+            applicationId: req.body.application_id,
+            member: req.body.member,
+            channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
           };
           
           const result = await executeButtonActions(
@@ -28607,6 +28614,31 @@ Are you sure you want to continue?`;
             userId,
             interactionData
           );
+          
+          // Log the player command
+          try {
+            const { logCustomAction } = await import('./safariLogger.js');
+            const userData = req.body.member?.user || {};
+            
+            await logCustomAction({
+              guildId,
+              userId,
+              username: userData.username || 'Unknown',
+              displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
+              location: coord,
+              actionType: 'player_command',
+              actionId: command,
+              executedActions: matchingAction.actions?.map(action => ({
+                type: action.type,
+                config: action.config,
+                result: 'executed'
+              })) || [],
+              success: true,
+              channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
+            });
+          } catch (logError) {
+            console.error('Error logging player command:', logError);
+          }
           
           // Return the result
           return res.send({
@@ -28640,7 +28672,9 @@ Are you sure you want to continue?`;
             // Create proper interaction object for the execution
             const interactionData = {
               token: req.body.token,
-              applicationId: req.body.application_id
+              applicationId: req.body.application_id,
+              member: req.body.member,
+              channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
             };
             
             // Execute with forceConditionsFail=true to trigger FALSE actions
@@ -28652,6 +28686,32 @@ Are you sure you want to continue?`;
               true // forceConditionsFail - treat as if conditions failed
             );
             
+            // Log the player command with false actions
+            try {
+              const { logCustomAction } = await import('./safariLogger.js');
+              const userData = req.body.member?.user || {};
+              
+              await logCustomAction({
+                guildId,
+                userId,
+                username: userData.username || 'Unknown',
+                displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
+                location: coord,
+                actionType: 'player_command',
+                actionId: command,
+                executedActions: firstFalseAction.actions.map(action => ({
+                  type: action.type,
+                  config: action.config,
+                  result: 'executed (on failure)'
+                })),
+                success: true,
+                errorMessage: `No match found for command "${command}", executed failure actions`,
+                channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
+              });
+            } catch (logError) {
+              console.error('Error logging player command:', logError);
+            }
+            
             // Return the result
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -28660,6 +28720,28 @@ Are you sure you want to continue?`;
           } else {
             // No false actions found, show default message
             const locationName = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.baseContent?.title || `location ${coord}`;
+            
+            // Log the failed player command
+            try {
+              const { logCustomAction } = await import('./safariLogger.js');
+              const userData = req.body.member?.user || {};
+              
+              await logCustomAction({
+                guildId,
+                userId,
+                username: userData.username || 'Unknown',
+                displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
+                location: coord,
+                actionType: 'player_command',
+                actionId: command,
+                executedActions: [],
+                success: false,
+                errorMessage: `No matching action found for command "${command}"`,
+                channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
+              });
+            } catch (logError) {
+              console.error('Error logging player command:', logError);
+            }
             
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,

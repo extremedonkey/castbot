@@ -263,6 +263,58 @@ export async function logAttack({ guildId, attackerId, attackerName, attackerDis
 }
 
 /**
+ * Log a custom action (Safari button or player command)
+ * @param {Object} params - Custom action parameters
+ * @param {string} params.guildId - Guild ID
+ * @param {string} params.userId - User ID
+ * @param {string} params.username - Username
+ * @param {string} params.displayName - Display name
+ * @param {string} params.location - Map location coordinate
+ * @param {string} params.actionType - Type of action (e.g., "safari_button", "player_command")
+ * @param {string} params.actionId - Action/Button ID or command text
+ * @param {Array} params.executedActions - Array of executed actions with details
+ * @param {boolean} params.success - Whether the action was successful
+ * @param {string} params.errorMessage - Error message if action failed
+ * @param {string} params.channelName - Channel name
+ */
+export async function logCustomAction({ guildId, userId, username, displayName, location, actionType, actionId, executedActions = [], success = true, errorMessage = null, channelName }) {
+  const safariContent = {
+    location,
+    actionType,
+    actionId,
+    executedActions: executedActions.map(action => ({
+      type: action.type,
+      config: action.config,
+      result: action.result
+    })),
+    success,
+    errorMessage
+  };
+  
+  let summary = '';
+  if (actionType === 'player_command') {
+    summary = `Player command: "${actionId}"`;
+  } else if (actionType === 'safari_button') {
+    summary = `Safari button: ${actionId}`;
+  } else {
+    summary = `Custom action: ${actionId}`;
+  }
+  
+  await logInteraction(
+    userId,
+    guildId,
+    'SAFARI_CUSTOM_ACTION',
+    summary,
+    username,
+    null,
+    null,
+    channelName,
+    displayName,
+    safariContent
+  );
+}
+
+/**
  * Check if Safari logging is enabled for a guild
  * @param {string} guildId - Guild ID to check
  * @returns {Promise<boolean>} Whether Safari logging is enabled
