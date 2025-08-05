@@ -601,7 +601,7 @@ export async function createGlobalItemsUI(guildId, client = null) {
   const items = guildData.items || {};
   
   // Build content - only coordinates with once_globally give_item actions
-  let content = `# 🎁 Global Items Overview\\n\\n`;
+  let content = `# 🎁 Global Items Overview\n\n`;
   let hasContent = false;
   let characterCount = content.length;
   
@@ -632,15 +632,15 @@ export async function createGlobalItemsUI(guildId, client = null) {
       
       if (!hasGlobalItems) {
         // Add coordinate header
-        coordSection += `## 📍 ${coord}\\n`;
+        coordSection += `## 📍 ${coord}\n`;
         hasGlobalItems = true;
       }
       
       // Add button with only global item actions
       const triggerType = button.trigger?.type || 'button';
       const triggerEmoji = triggerType === 'modal' ? '📝' : '🔘';
-      coordSection += `${triggerEmoji} **${button.name || button.label || 'Unnamed Action'}** (${getTriggerTypeLabel(triggerType)})\\n`;
-      coordSection += `└─ 🎬 Actions:\\n`;
+      coordSection += `${triggerEmoji} **${button.name || button.label || 'Unnamed Action'}** (${getTriggerTypeLabel(triggerType)})\n`;
+      coordSection += `└─ 🎬 Actions:\n`;
       
       for (let i = 0; i < globalItemActions.length; i++) {
         const action = globalItemActions[i];
@@ -650,7 +650,7 @@ export async function createGlobalItemsUI(guildId, client = null) {
         coordSection += await formatAction(action, prefix, guildId, items, playerData, client, buttons);
       }
       
-      coordSection += '\\n';
+      coordSection += '\n';
     }
     
     if (hasGlobalItems) {
@@ -658,7 +658,7 @@ export async function createGlobalItemsUI(guildId, client = null) {
       
       // Check character limit
       if (characterCount + coordSection.length > CHARACTER_LIMIT) {
-        content += `*... and more coordinates. Character limit reached.*\\n`;
+        content += `*... and more coordinates. Character limit reached.*\n`;
         break;
       }
       
@@ -668,7 +668,7 @@ export async function createGlobalItemsUI(guildId, client = null) {
   }
   
   if (!hasContent) {
-    content += `*No global items (once_globally give_item actions) found on this map.*\\n`;
+    content += `*No global items (once_globally give_item actions) found on this map.*\n`;
   }
   
   // Build components with dividers between coordinates
