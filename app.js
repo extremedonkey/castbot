@@ -22969,6 +22969,15 @@ Are you sure you want to continue?`;
           
           const actionButtons = [];
           
+          // Back button (leftmost)
+          actionButtons.push({
+            type: 2, // Button
+            style: 2, // Secondary
+            label: 'Back',
+            custom_id: `map_admin_user_select_continue_${targetUserId}`,
+            emoji: { name: '⬅️' }
+          });
+          
           // Add Item button
           actionButtons.push({
             type: 2, // Button
@@ -23005,15 +23014,6 @@ Are you sure you want to continue?`;
             label: `Edit ${customTerms.currencyName}`,
             custom_id: `map_admin_edit_currency_${targetUserId}`,
             emoji: { name: customTerms.currencyEmoji || '🪙' }
-          });
-          
-          // Back button
-          actionButtons.push({
-            type: 2, // Button
-            style: 2, // Secondary
-            label: 'Back',
-            custom_id: `map_admin_user_select_continue_${targetUserId}`,
-            emoji: { name: '⬅️' }
           });
           
           // Create action rows (max 5 buttons per row)
@@ -23456,6 +23456,31 @@ Are you sure you want to continue?`;
               }]
             }],
             ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_admin_user_select_continue_')) {
+      // Handle back button to return to map admin menu
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_user_select_continue',
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛡️ START: map_admin_user_select_continue - returning to map admin menu for user ${targetUserId}`);
+          
+          const { createMapAdminUI } = await import('./safariMapAdmin.js');
+          
+          const ui = await createMapAdminUI({
+            guildId: context.guildId,
+            userId: targetUserId,
+            mode: 'player_view'
+          });
+          
+          console.log(`✅ SUCCESS: map_admin_user_select_continue - returned to map admin menu`);
+          
+          return {
+            ...ui,
+            type: InteractionResponseType.UPDATE_MESSAGE
           };
         }
       })(req, res, client);

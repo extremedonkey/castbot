@@ -818,6 +818,13 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'safari_map_admin'
   },
+  'map_admin_user_select_continue_*': {
+    label: 'Back',
+    description: 'Return to player map admin menu',
+    emoji: '⬅️',
+    style: 'Secondary',
+    category: 'safari_map_admin'
+  },
 
   // Safari Currency Management Submenu
   'safari_currency_view_all': {
