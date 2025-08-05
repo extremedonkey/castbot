@@ -9198,43 +9198,59 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           console.log(`🧪 DEBUG: User ${context.userId} sending Safari Log test message for guild ${context.guildId}`);
           
-          // Load Safari log settings
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const logSettings = safariData[context.guildId]?.safariLogSettings;
-          
-          if (!logSettings?.enabled || !logSettings?.logChannelId) {
+          try {
+            // Load Safari log settings
+            const { loadSafariContent } = await import('./safariManager.js');
+            console.log(`🧪 DEBUG: Loading Safari content for guild ${context.guildId}`);
+            const safariData = await loadSafariContent();
+            const logSettings = safariData[context.guildId]?.safariLogSettings;
+            console.log(`🧪 DEBUG: Log settings loaded:`, JSON.stringify(logSettings, null, 2));
+            
+            if (!logSettings?.enabled || !logSettings?.logChannelId) {
+              console.log(`🧪 DEBUG: Safari Log not properly configured - enabled: ${logSettings?.enabled}, channelId: ${logSettings?.logChannelId}`);
+              return {
+                content: '❌ Safari Log is not properly configured. Please enable it and set a log channel first.',
+                ephemeral: true
+              };
+            }
+            
+            // Send test message using analytics logger
+            console.log(`🧪 DEBUG: Importing analytics logger`);
+            const { logInteraction } = await import('./src/analytics/analyticsLogger.js');
+            const testContent = {
+              testMessage: true,
+              timestamp: Date.now(),
+              configuredBy: context.member?.displayName || context.username
+            };
+            console.log(`🧪 DEBUG: Test content created:`, testContent);
+            
+            console.log(`🧪 DEBUG: Calling logInteraction with SAFARI_TEST`);
+            await logInteraction(
+              context.userId,
+              context.guildId,
+              'SAFARI_TEST',
+              'Safari Log Test Message',
+              context.username,
+              null,
+              null,
+              'safari-config',
+              context.member?.displayName || context.username,
+              testContent
+            );
+            console.log(`🧪 DEBUG: logInteraction completed successfully`);
+            
             return {
-              content: '❌ Safari Log is not properly configured. Please enable it and set a log channel first.',
+              content: `✅ Test message sent to <#${logSettings.logChannelId}>! Check the channel to verify the Safari Log is working correctly.`,
+              ephemeral: true
+            };
+          } catch (error) {
+            console.error(`🧪 ERROR: Safari Log test failed:`, error);
+            console.error(`🧪 ERROR: Stack trace:`, error.stack);
+            return {
+              content: `❌ Safari Log test failed: ${error.message}`,
               ephemeral: true
             };
           }
-          
-          // Send test message using analytics logger
-          const { logInteraction } = await import('./src/analytics/analyticsLogger.js');
-          const testContent = {
-            testMessage: true,
-            timestamp: Date.now(),
-            configuredBy: context.member?.displayName || context.username
-          };
-          
-          await logInteraction(
-            context.userId,
-            context.guildId,
-            'SAFARI_TEST',
-            'Safari Log Test Message',
-            context.username,
-            null,
-            null,
-            'safari-config',
-            context.member?.displayName || context.username,
-            testContent
-          );
-          
-          return {
-            content: `✅ Test message sent to <#${logSettings.logChannelId}>! Check the channel to verify the Safari Log is working correctly.`,
-            ephemeral: true
-          };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_log_channel_set') {

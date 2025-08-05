@@ -267,6 +267,7 @@ async function logInteraction(userId, guildId, action, details, username, guildN
     fs.appendFileSync(ANALYTICS_LOG_FILE, logEntry);
     
     // Try Discord logging (non-blocking)
+    console.log(`📊 DEBUG: About to call postToDiscordLogs - action: ${action}, safariContent exists: ${!!safariContent}, guildId: ${guildId}`);
     await postToDiscordLogs(logEntry.trim(), userId, action, details, components, guildId, safariContent);
     
   } catch (error) {
@@ -455,8 +456,13 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     }
     
     // If this is a Safari action with content, also post to Safari log channel
+    console.log(`📊 DEBUG: Checking Safari Log conditions - safariContent: ${!!safariContent}, guildId: ${!!guildId}, action starts with SAFARI_: ${action.startsWith('SAFARI_')}, action: ${action}`);
     if (safariContent && guildId && action.startsWith('SAFARI_')) {
+      console.log(`📊 DEBUG: All Safari Log conditions met, calling postToSafariLog`);
       await postToSafariLog(guildId, userId, action, details, safariContent);
+      console.log(`📊 DEBUG: postToSafariLog completed`);
+    } else {
+      console.log(`📊 DEBUG: Safari Log conditions not met - skipping Safari Log posting`);
     }
     
   } catch (error) {
@@ -619,10 +625,15 @@ async function logNewServerInstall(guild, ownerInfo = null) {
  */
 async function postToSafariLog(guildId, userId, action, details, safariContent) {
   try {
+    console.log(`🦁 DEBUG: postToSafariLog called - guildId: ${guildId}, userId: ${userId}, action: ${action}, details: ${details}`);
+    console.log(`🦁 DEBUG: safariContent:`, JSON.stringify(safariContent, null, 2));
+    
     // Skip if Discord client not available
     if (!discordClient) {
+      console.log(`🦁 DEBUG: Discord client not available - skipping Safari Log`);
       return;
     }
+    console.log(`🦁 DEBUG: Discord client is available`);
 
     // Load Safari content to get log settings
     const { loadSafariContent } = await import('../../safariManager.js');
