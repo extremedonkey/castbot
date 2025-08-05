@@ -31,7 +31,6 @@ import {
   Partials
 } from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';  // Add DiscordRequest to imports
-import { ButtonHandlerFactory, BUTTON_REGISTRY } from './buttonHandlerFactory.js';
 import { 
   loadPlayerData, 
   updatePlayer, 
