@@ -1223,10 +1223,14 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
         
         // Log the custom action
         try {
+            console.log(`📝 DEBUG: Attempting to log custom action for button ${buttonId}`);
+            
             const { logCustomAction } = await import('./safariLogger.js');
             const { loadPlayerData } = await import('./storage.js');
             const playerData = await loadPlayerData();
             const userData = playerData.players?.[guildId]?.[userId] || {};
+            
+            console.log(`📝 DEBUG: User data found - username: ${userData.username || 'Unknown'}`);
             
             // Get location from button ID or interaction channel
             let location = 'Unknown';
@@ -1240,19 +1244,25 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
             }
             
             // Otherwise try to get from channel name
-            if (location === 'Unknown' && interaction.member?.user) {
+            if (location === 'Unknown' && interaction.channelName) {
                 // Get channel info from interaction if available
-                const channelName = interaction.channelName || 'Unknown';
+                const channelName = interaction.channelName;
                 if (channelName && channelName !== 'Unknown') {
-                    location = channelName.toUpperCase();
+                    // Extract coordinate from channel name like "#b1"
+                    const match = channelName.match(/#?([A-Za-z]\d+)/);
+                    if (match) {
+                        location = match[1].toUpperCase();
+                    }
                 }
             }
             
-            await logCustomAction({
+            console.log(`📝 DEBUG: Location determined as: ${location}, channelName: ${interaction.channelName || 'Unknown'}`);
+            
+            const logData = {
                 guildId,
                 userId,
-                username: userData.username || 'Unknown',
-                displayName: interaction.member?.displayName || userData.username || 'Unknown',
+                username: userData.username || interaction.member?.user?.username || 'Unknown',
+                displayName: interaction.member?.displayName || interaction.member?.user?.global_name || userData.username || 'Unknown',
                 location,
                 actionType: 'safari_button',
                 actionId: buttonId,
@@ -1263,9 +1273,16 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
                 })),
                 success: true,
                 channelName: interaction.channelName || 'Unknown'
-            });
+            };
+            
+            console.log(`📝 DEBUG: Calling logCustomAction with data:`, JSON.stringify(logData, null, 2));
+            
+            await logCustomAction(logData);
+            
+            console.log(`📝 DEBUG: Custom action logged successfully`);
         } catch (logError) {
             console.error('Error logging custom action:', logError);
+            console.error('Stack:', logError.stack);
         }
         
         return mainResponse;

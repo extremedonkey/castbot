@@ -278,6 +278,22 @@ export async function logAttack({ guildId, attackerId, attackerName, attackerDis
  * @param {string} params.channelName - Channel name
  */
 export async function logCustomAction({ guildId, userId, username, displayName, location, actionType, actionId, executedActions = [], success = true, errorMessage = null, channelName }) {
+  console.log(`🦁 Safari Logger: logCustomAction called for ${actionType} ${actionId} by user ${userId} in guild ${guildId}`);
+  
+  // Check if Safari logging is enabled
+  const logSettings = await getSafariLogSettings(guildId);
+  console.log(`🦁 Safari Logger: Log settings for guild ${guildId}:`, JSON.stringify(logSettings, null, 2));
+  
+  if (!logSettings?.enabled) {
+    console.log(`🦁 Safari Logger: Safari logging is disabled for guild ${guildId}`);
+    return;
+  }
+  
+  if (!logSettings.logTypes?.customActions) {
+    console.log(`🦁 Safari Logger: Custom actions logging is disabled for guild ${guildId}`);
+    return;
+  }
+  
   const safariContent = {
     location,
     actionType,
@@ -299,6 +315,8 @@ export async function logCustomAction({ guildId, userId, username, displayName, 
   } else {
     summary = `Custom action: ${actionId}`;
   }
+  
+  console.log(`🦁 Safari Logger: Calling logInteraction with action SAFARI_CUSTOM_ACTION`);
   
   await logInteraction(
     userId,
