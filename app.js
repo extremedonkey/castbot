@@ -1070,7 +1070,12 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_action_editor')
       .setLabel('Action Editor')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚡')
+      .setEmoji('⚡'),
+    new ButtonBuilder()
+      .setCustomId('safari_progress')
+      .setLabel('Safari Progress')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🚀')
   ];
   
   // Legacy section buttons
