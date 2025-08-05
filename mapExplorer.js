@@ -1346,6 +1346,36 @@ export async function updateBlacklistedCoordinates(guildId, coordinatesList) {
     // Update blacklisted coordinates
     safariData[guildId].maps[activeMapId].blacklistedCoordinates = coordinatesList;
     
+    // Update navigation blocked properties for all coordinates
+    const mapData = safariData[guildId].maps[activeMapId];
+    const coordinates = mapData.coordinates || {};
+    
+    // First, reset all blocked properties to false
+    for (const coord in coordinates) {
+      const coordData = coordinates[coord];
+      if (coordData.navigation) {
+        for (const direction in coordData.navigation) {
+          if (coordData.navigation[direction] && coordData.navigation[direction].to) {
+            coordData.navigation[direction].blocked = false;
+          }
+        }
+      }
+    }
+    
+    // Then set blocked = true for any navigation pointing to blacklisted coordinates
+    for (const coord in coordinates) {
+      const coordData = coordinates[coord];
+      if (coordData.navigation) {
+        for (const direction in coordData.navigation) {
+          const navData = coordData.navigation[direction];
+          if (navData && navData.to && coordinatesList.includes(navData.to)) {
+            navData.blocked = true;
+            console.log(`🚫 DEBUG: Set ${coord} -> ${direction} (${navData.to}) as blocked`);
+          }
+        }
+      }
+    }
+    
     // Save the updated data
     await saveSafariContent(safariData);
     
