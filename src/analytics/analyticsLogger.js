@@ -648,7 +648,8 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
       'SAFARI_BUTTON': 'buttonActions',
       'SAFARI_MOVEMENT': 'mapMovement',
       'SAFARI_ATTACK': 'attacks',
-      'SAFARI_CUSTOM_ACTION': 'customActions'
+      'SAFARI_CUSTOM_ACTION': 'customActions',
+      'SAFARI_TEST': 'testMessages'
     };
     
     const logType = logTypeMap[action];
@@ -740,6 +741,10 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         } else {
           logMessage = `${emoji} **CUSTOM ACTION** | [${timestamp}] | <@${userId}> at **${safariContent.location}**\n> Button: ${safariContent.actionId}${actionDetails}`;
         }
+        break;
+        
+      case 'SAFARI_TEST':
+        logMessage = `🧪 **TEST MESSAGE** | [${timestamp}] | <@${userId}> from safari-config\n> Safari Log system test - configured by ${safariContent.configuredBy || 'Unknown'}`;
         break;
         
       default:

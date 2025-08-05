@@ -49,7 +49,8 @@ const DEFAULT_SAFARI_STRUCTURE = {
             buttonActions: true,
             mapMovement: true,
             attacks: true,
-            customActions: true
+            customActions: true,
+            testMessages: true
         },
         formatting: {
             accentColor: 0x9B59B6,
