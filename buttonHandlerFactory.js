@@ -1639,6 +1639,7 @@ export function extractButtonContext(req) {
     userId: req.body.member?.user?.id || req.body.user?.id,
     member: req.body.member,
     channelId: req.body.channel_id,
+    channelName: req.body.channel?.name || 'Unknown',
     messageId: req.body.message?.id,
     token: req.body.token,
     applicationId: req.body.application_id || process.env.APP_ID,
