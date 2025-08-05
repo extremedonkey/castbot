@@ -821,10 +821,10 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
     const playerData = await loadPlayerData();
     const member = playerData[guildId]?.players?.[userId];
     const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity, {
-        username: context?.username || 'Unknown',
-        displayName: context?.member?.displayName || context?.username || 'Unknown',
-        source: config.buttonId ? `Button: ${config.buttonId}` : 'give_item',
-        channelName: context?.channelName || null
+        username: member?.displayName || 'Unknown',
+        displayName: member?.displayName || 'Unknown',
+        source: buttonId ? `Button: ${buttonId}` : 'give_item',
+        channelName: null // Channel context not available in this flow
     });
     
     if (!success) {
