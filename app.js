@@ -15381,17 +15381,40 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
         // Handle the selection based on type
         if (actionType === 'pronouns') {
-          // Remove all current pronoun roles
-          const pronounRoleIDs = await getGuildPronouns(guildId);
-          const currentPronounRoles = targetMember.roles.cache.filter(role => 
-            pronounRoleIDs.includes(role.id)
-          );
-          if (currentPronounRoles.size > 0) {
-            await targetMember.roles.remove(currentPronounRoles.map(role => role.id));
-          }
-          // Add new roles
-          if (selectedValues.length > 0) {
-            await targetMember.roles.add(selectedValues);
+          try {
+            // Remove all current pronoun roles
+            const pronounRoleIDs = await getGuildPronouns(guildId);
+            const currentPronounRoles = targetMember.roles.cache.filter(role => 
+              pronounRoleIDs.includes(role.id)
+            );
+            if (currentPronounRoles.size > 0) {
+              await targetMember.roles.remove(currentPronounRoles.map(role => role.id));
+            }
+            // Add new roles
+            if (selectedValues.length > 0) {
+              await targetMember.roles.add(selectedValues);
+            }
+          } catch (error) {
+            console.error('❌ Pronoun role assignment failed:', error);
+            if (error.code === 50013) {
+              // Discord permission error - send non-ephemeral message
+              return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                  content: '⚠️ **Permission Error**: Unable to assign pronoun roles. Please advise the production team to move the CastBot role to the top of the Discord hierarchy, above pronoun roles.',
+                  flags: 0 // Non-ephemeral message
+                }
+              });
+            } else {
+              // Other errors - send ephemeral message
+              return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                  content: '❌ Failed to update pronoun roles. Please try again.',
+                  flags: InteractionResponseFlags.EPHEMERAL
+                }
+              });
+            }
           }
         } else if (actionType === 'timezone') {
           // Remove current timezone role
