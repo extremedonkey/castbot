@@ -459,8 +459,13 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     console.log(`📊 DEBUG: Checking Safari Log conditions - safariContent: ${!!safariContent}, guildId: ${!!guildId}, action starts with SAFARI_: ${action.startsWith('SAFARI_')}, action: ${action}`);
     if (safariContent && guildId && action.startsWith('SAFARI_')) {
       console.log(`📊 DEBUG: All Safari Log conditions met, calling postToSafariLog`);
-      await postToSafariLog(guildId, userId, action, details, safariContent);
-      console.log(`📊 DEBUG: postToSafariLog completed`);
+      try {
+        await postToSafariLog(guildId, userId, action, details, safariContent);
+        console.log(`📊 DEBUG: postToSafariLog completed successfully`);
+      } catch (safariLogError) {
+        console.error(`📊 ERROR: postToSafariLog failed:`, safariLogError);
+        console.error(`📊 ERROR: Stack trace:`, safariLogError.stack);
+      }
     } else {
       console.log(`📊 DEBUG: Safari Log conditions not met - skipping Safari Log posting`);
     }
