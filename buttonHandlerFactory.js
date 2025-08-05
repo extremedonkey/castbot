@@ -795,6 +795,29 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'safari_map_admin'
   },
+  'map_admin_add_item_select_*': {
+    label: 'Add Item Select',
+    description: 'Select item to add to player inventory',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    type: 'select_menu'
+  },
+  'map_admin_edit_qty_select_*': {
+    label: 'Edit Quantity Select',
+    description: 'Select item quantity to edit',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    type: 'select_menu'
+  },
+  'map_admin_clear_inventory_confirm_*': {
+    label: 'Confirm Clear',
+    description: 'Confirm clearing player inventory',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'safari_map_admin'
+  },
 
   // Safari Currency Management Submenu
   'safari_currency_view_all': {
