@@ -382,26 +382,36 @@ function formatActionDetails(actionType, details) {
  */
 async function postToDiscordLogs(logEntry, userId, action, details, components, guildId = null, safariContent = null) {
   try {
+    console.log(`📊 DEBUG: postToDiscordLogs ENTRY - action: ${action}, userId: ${userId}, guildId: ${guildId}`);
+    
     // Skip if Discord client not available
     if (!discordClient) {
+      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - Discord client not available`);
       return;
     }
+    console.log(`📊 DEBUG: postToDiscordLogs - Discord client OK`);
 
     // Load environment config
     const { loadEnvironmentConfig } = await import('../../storage.js');
     const envConfig = await loadEnvironmentConfig();
+    console.log(`📊 DEBUG: postToDiscordLogs - envConfig loaded`);
     
     const loggingConfig = envConfig.liveDiscordLogging;
+    console.log(`📊 DEBUG: postToDiscordLogs - loggingConfig:`, JSON.stringify(loggingConfig, null, 2));
     
     // Check if logging is enabled
     if (!loggingConfig.enabled) {
+      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - Logging not enabled`);
       return;
     }
+    console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled OK`);
     
     // Check user exclusion (Option A: Complete Exclusion)
     if (loggingConfig.excludedUserIds.includes(userId)) {
+      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - User ${userId} is excluded`);
       return;
     }
+    console.log(`📊 DEBUG: postToDiscordLogs - User not excluded, continuing...`);
     
     // Get target channel if not cached
     if (!targetChannel) {
