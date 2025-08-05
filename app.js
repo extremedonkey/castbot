@@ -13389,7 +13389,7 @@ Your server is now ready for Tycoons gameplay!`;
               if (action.config.limit.type === 'once_per_player') {
                 action.config.limit.claimedBy = [];
               } else if (action.config.limit.type === 'once_globally') {
-                // For once_globally, remove claimedBy property entirely
+                // For once_globally, remove claimedBy property entirely - no arrays!
                 delete action.config.limit.claimedBy;
               }
               

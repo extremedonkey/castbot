@@ -828,9 +828,9 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         }
         
         if (config.limit.type === 'once_globally') {
-            // For once_globally, claimedBy should be a user ID string or undefined
-            // If claimedBy exists and is not empty, item is claimed
-            if (claimedBy && claimedBy !== '' && claimedBy !== null && claimedBy !== undefined) {
+            // For once_globally, only block if claimedBy is a valid user ID (string)
+            // Arrays (empty or not) and null/undefined should allow claiming
+            if (typeof claimedBy === 'string' && claimedBy !== '') {
                 return {
                     content: '❌ This item has already been claimed!',
                     flags: InteractionResponseFlags.EPHEMERAL
