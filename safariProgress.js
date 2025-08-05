@@ -164,15 +164,6 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
     characterCount += coordSection.length;
   }
   
-  // Build final content with Components V2 dividers
-  for (let i = 0; i < coordSections.length; i++) {
-    content += coordSections[i] + '\n';
-    // Don't add divider after the last section
-    if (i < coordSections.length - 1) {
-      content += '\n'; // Add spacing for visual separation
-    }
-  }
-  
   if (!hasContent) {
     content += `*No actions, items, or currency configured for Row ${currentRow}*\n`;
   }
@@ -180,18 +171,33 @@ export async function createSafariProgressUI(guildId, currentRow = 'A', client =
   // Create navigation components
   const navigationButtons = createNavigationButtons(currentRow, activeMapId, coordinates);
   
-  // Build components with dividers between coordinates
+  // Build components with Components V2 dividers between coordinates
   const components = [];
   
-  // Add main content
-  components.push({
-    type: 10, // Text Display
-    content: content.trim()
-  });
-  
-  // Add Components V2 dividers between sections
-  if (hasContent && coordSections.length > 1) {
-    // We've already handled visual separation in the text content
+  // Add coordSections with dividers between them
+  if (hasContent && coordSections.length > 0) {
+    for (let i = 0; i < coordSections.length; i++) {
+      // Add coordinate content
+      components.push({
+        type: 10, // Text Display
+        content: coordSections[i].trim()
+      });
+      
+      // Add divider between coordinates (but not after the last one)
+      if (i < coordSections.length - 1) {
+        components.push({
+          type: 14, // Separator
+          divider: true,
+          spacing: 1 // Small spacing
+        });
+      }
+    }
+  } else {
+    // No content case
+    components.push({
+      type: 10, // Text Display
+      content: content.trim()
+    });
   }
   
   // Add separator before navigation
