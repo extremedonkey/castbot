@@ -8976,7 +8976,98 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`📊 DEBUG: Safari Log ${!wasEnabled ? 'enabled' : 'disabled'} for guild ${context.guildId}`);
           
           // Return to Safari Log configuration with updated state
-          return context.buttonHandlers['safari_configure_log'](context);
+          // Re-execute the safari_configure_log handler logic inline
+          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
+          const updatedLogSettings = safariData[context.guildId].safariLogSettings;
+          
+          // Create enable/disable button
+          const toggleButton = new ButtonBuilder()
+            .setCustomId('safari_log_toggle')
+            .setLabel(updatedLogSettings.enabled ? 'Disable Safari Log' : 'Enable Safari Log')
+            .setStyle(updatedLogSettings.enabled ? 4 : 3) // Danger if enabled, Success if disabled
+            .setEmoji(updatedLogSettings.enabled ? '🔴' : '🟢');
+          
+          // Create channel select button
+          const channelButton = new ButtonBuilder()
+            .setCustomId('safari_log_channel_select')
+            .setLabel('Set Log Channel')
+            .setStyle(2) // Secondary
+            .setEmoji('📝')
+            .setDisabled(!updatedLogSettings.enabled);
+          
+          // Create log types configuration button
+          const logTypesButton = new ButtonBuilder()
+            .setCustomId('safari_log_types_config')
+            .setLabel('Configure Log Types')
+            .setStyle(2) // Secondary
+            .setEmoji('⚙️')
+            .setDisabled(!updatedLogSettings.enabled);
+          
+          // Create test message button
+          const testButton = new ButtonBuilder()
+            .setCustomId('safari_log_test')
+            .setLabel('Send Test Message')
+            .setStyle(2) // Secondary
+            .setEmoji('🧪')
+            .setDisabled(!updatedLogSettings.enabled || !updatedLogSettings.logChannelId);
+          
+          // Create back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('prod_safari_menu')
+            .setLabel('← Back to Safari')
+            .setStyle(2) // Secondary
+            .setEmoji('🦁');
+          
+          const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
+          const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
+          const backRow = new ActionRowBuilder().addComponents(backButton);
+          
+          // Create status display
+          let statusText = `## 📊 Safari Log Configuration\n\n`;
+          statusText += `**Status:** ${updatedLogSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
+          statusText += `**Log Channel:** ${updatedLogSettings.logChannelId ? `<#${updatedLogSettings.logChannelId}>` : 'Not Set'}\n\n`;
+          
+          if (updatedLogSettings.enabled && updatedLogSettings.logChannelId) {
+            statusText += `**Active Log Types:**\n`;
+            const logTypeNames = {
+              whispers: '🤫 Whispers',
+              itemPickups: '🧰 Item Pickups',
+              currencyChanges: '🪙 Currency Changes',
+              storeTransactions: '🛒 Store Purchases',
+              buttonActions: '🎯 Safari Actions',
+              mapMovement: '🗺️ Map Movement',
+              attacks: '⚔️ Attack Queue'
+            };
+            
+            for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
+              if (enabled) {
+                statusText += `• ${logTypeNames[type] || type}\n`;
+              }
+            }
+          }
+          
+          // Create Components V2 container
+          const containerComponents = [
+            {
+              type: 10, // Text Display
+              content: statusText
+            },
+            { type: 14 }, // Separator
+            toggleRow.toJSON(),
+            configRow.toJSON(),
+            { type: 14 }, // Separator
+            backRow.toJSON()
+          ];
+          
+          const container = {
+            type: 17, // Container
+            components: containerComponents
+          };
+          
+          return {
+            components: [container],
+            flags: (1 << 15) // IS_COMPONENTS_V2
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_log_channel_select') {
@@ -9186,7 +9277,98 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`📊 DEBUG: Safari Log channel set to ${selectedChannelId} for guild ${context.guildId}`);
           
           // Return to Safari Log configuration with updated state
-          return context.buttonHandlers['safari_configure_log'](context);
+          // Re-execute the safari_configure_log handler logic inline
+          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
+          const updatedLogSettings = safariData[context.guildId].safariLogSettings;
+          
+          // Create enable/disable button
+          const toggleButton = new ButtonBuilder()
+            .setCustomId('safari_log_toggle')
+            .setLabel(updatedLogSettings.enabled ? 'Disable Safari Log' : 'Enable Safari Log')
+            .setStyle(updatedLogSettings.enabled ? 4 : 3) // Danger if enabled, Success if disabled
+            .setEmoji(updatedLogSettings.enabled ? '🔴' : '🟢');
+          
+          // Create channel select button
+          const channelButton = new ButtonBuilder()
+            .setCustomId('safari_log_channel_select')
+            .setLabel('Set Log Channel')
+            .setStyle(2) // Secondary
+            .setEmoji('📝')
+            .setDisabled(!updatedLogSettings.enabled);
+          
+          // Create log types configuration button
+          const logTypesButton = new ButtonBuilder()
+            .setCustomId('safari_log_types_config')
+            .setLabel('Configure Log Types')
+            .setStyle(2) // Secondary
+            .setEmoji('⚙️')
+            .setDisabled(!updatedLogSettings.enabled);
+          
+          // Create test message button
+          const testButton = new ButtonBuilder()
+            .setCustomId('safari_log_test')
+            .setLabel('Send Test Message')
+            .setStyle(2) // Secondary
+            .setEmoji('🧪')
+            .setDisabled(!updatedLogSettings.enabled || !updatedLogSettings.logChannelId);
+          
+          // Create back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('prod_safari_menu')
+            .setLabel('← Back to Safari')
+            .setStyle(2) // Secondary
+            .setEmoji('🦁');
+          
+          const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
+          const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
+          const backRow = new ActionRowBuilder().addComponents(backButton);
+          
+          // Create status display
+          let statusText = `## 📊 Safari Log Configuration\n\n`;
+          statusText += `**Status:** ${updatedLogSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
+          statusText += `**Log Channel:** ${updatedLogSettings.logChannelId ? `<#${updatedLogSettings.logChannelId}>` : 'Not Set'}\n\n`;
+          
+          if (updatedLogSettings.enabled && updatedLogSettings.logChannelId) {
+            statusText += `**Active Log Types:**\n`;
+            const logTypeNames = {
+              whispers: '🤫 Whispers',
+              itemPickups: '🧰 Item Pickups',
+              currencyChanges: '🪙 Currency Changes',
+              storeTransactions: '🛒 Store Purchases',
+              buttonActions: '🎯 Safari Actions',
+              mapMovement: '🗺️ Map Movement',
+              attacks: '⚔️ Attack Queue'
+            };
+            
+            for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
+              if (enabled) {
+                statusText += `• ${logTypeNames[type] || type}\n`;
+              }
+            }
+          }
+          
+          // Create Components V2 container
+          const containerComponents = [
+            {
+              type: 10, // Text Display
+              content: statusText
+            },
+            { type: 14 }, // Separator
+            toggleRow.toJSON(),
+            configRow.toJSON(),
+            { type: 14 }, // Separator
+            backRow.toJSON()
+          ];
+          
+          const container = {
+            type: 17, // Container
+            components: containerComponents
+          };
+          
+          return {
+            components: [container],
+            flags: (1 << 15) // IS_COMPONENTS_V2
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_log_types_set') {
@@ -9236,7 +9418,98 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`📊 DEBUG: Safari Log types updated for guild ${context.guildId}`);
           
           // Return to Safari Log configuration with updated state
-          return context.buttonHandlers['safari_configure_log'](context);
+          // Re-execute the safari_configure_log handler logic inline
+          const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
+          const updatedLogSettings = safariData[context.guildId].safariLogSettings;
+          
+          // Create enable/disable button
+          const toggleButton = new ButtonBuilder()
+            .setCustomId('safari_log_toggle')
+            .setLabel(updatedLogSettings.enabled ? 'Disable Safari Log' : 'Enable Safari Log')
+            .setStyle(updatedLogSettings.enabled ? 4 : 3) // Danger if enabled, Success if disabled
+            .setEmoji(updatedLogSettings.enabled ? '🔴' : '🟢');
+          
+          // Create channel select button
+          const channelButton = new ButtonBuilder()
+            .setCustomId('safari_log_channel_select')
+            .setLabel('Set Log Channel')
+            .setStyle(2) // Secondary
+            .setEmoji('📝')
+            .setDisabled(!updatedLogSettings.enabled);
+          
+          // Create log types configuration button
+          const logTypesButton = new ButtonBuilder()
+            .setCustomId('safari_log_types_config')
+            .setLabel('Configure Log Types')
+            .setStyle(2) // Secondary
+            .setEmoji('⚙️')
+            .setDisabled(!updatedLogSettings.enabled);
+          
+          // Create test message button
+          const testButton = new ButtonBuilder()
+            .setCustomId('safari_log_test')
+            .setLabel('Send Test Message')
+            .setStyle(2) // Secondary
+            .setEmoji('🧪')
+            .setDisabled(!updatedLogSettings.enabled || !updatedLogSettings.logChannelId);
+          
+          // Create back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('prod_safari_menu')
+            .setLabel('← Back to Safari')
+            .setStyle(2) // Secondary
+            .setEmoji('🦁');
+          
+          const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
+          const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
+          const backRow = new ActionRowBuilder().addComponents(backButton);
+          
+          // Create status display
+          let statusText = `## 📊 Safari Log Configuration\n\n`;
+          statusText += `**Status:** ${updatedLogSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
+          statusText += `**Log Channel:** ${updatedLogSettings.logChannelId ? `<#${updatedLogSettings.logChannelId}>` : 'Not Set'}\n\n`;
+          
+          if (updatedLogSettings.enabled && updatedLogSettings.logChannelId) {
+            statusText += `**Active Log Types:**\n`;
+            const logTypeNames = {
+              whispers: '🤫 Whispers',
+              itemPickups: '🧰 Item Pickups',
+              currencyChanges: '🪙 Currency Changes',
+              storeTransactions: '🛒 Store Purchases',
+              buttonActions: '🎯 Safari Actions',
+              mapMovement: '🗺️ Map Movement',
+              attacks: '⚔️ Attack Queue'
+            };
+            
+            for (const [type, enabled] of Object.entries(updatedLogSettings.logTypes || {})) {
+              if (enabled) {
+                statusText += `• ${logTypeNames[type] || type}\n`;
+              }
+            }
+          }
+          
+          // Create Components V2 container
+          const containerComponents = [
+            {
+              type: 10, // Text Display
+              content: statusText
+            },
+            { type: 14 }, // Separator
+            toggleRow.toJSON(),
+            configRow.toJSON(),
+            { type: 14 }, // Separator
+            backRow.toJSON()
+          ];
+          
+          const container = {
+            type: 17, // Container
+            components: containerComponents
+          };
+          
+          return {
+            components: [container],
+            flags: (1 << 15) // IS_COMPONENTS_V2
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_config_reset_defaults') {

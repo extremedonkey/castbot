@@ -235,6 +235,55 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'safari_configure_log': {
+    label: '📊 Safari Log',
+    description: 'Configure Safari Log channel and settings',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'safari'
+  },
+  'safari_log_toggle': {
+    label: 'Toggle Safari Log',
+    description: 'Enable or disable Safari logging',
+    emoji: '🔧',
+    style: 'Dynamic',
+    category: 'safari'
+  },
+  'safari_log_channel_select': {
+    label: 'Set Log Channel',
+    description: 'Select a channel for Safari logs',
+    emoji: '📝',
+    style: 'Secondary',
+    category: 'safari'
+  },
+  'safari_log_channel_set': {
+    label: 'Channel Selected',
+    description: 'Handle channel selection for Safari logs',
+    emoji: '📝',
+    style: 'Hidden',
+    category: 'safari'
+  },
+  'safari_log_types_config': {
+    label: 'Configure Log Types',
+    description: 'Select which types of interactions to log',
+    emoji: '⚙️',
+    style: 'Secondary',
+    category: 'safari'
+  },
+  'safari_log_types_set': {
+    label: 'Types Selected',
+    description: 'Handle log type selection',
+    emoji: '⚙️',
+    style: 'Hidden',
+    category: 'safari'
+  },
+  'safari_log_test': {
+    label: 'Send Test Message',
+    description: 'Send a test message to Safari Log channel',
+    emoji: '🧪',
+    style: 'Secondary',
+    category: 'safari'
+  },
   'stamina_global_config': {
     label: 'Stamina Settings',
     description: 'Global stamina configuration (admin only)',
