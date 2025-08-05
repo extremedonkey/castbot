@@ -516,6 +516,15 @@ function createNavigationButtons(currentRow, activeMapId, coordinates) {
     });
   }
   
+  // Global Items button (far right)
+  buttons.push({
+    type: 2, // Button
+    custom_id: 'safari_progress_global_items',
+    label: 'Global Items',
+    style: 2, // Secondary (grey)
+    emoji: { name: '🎁' }
+  });
+  
   // Add button row if there are navigation buttons
   if (buttons.length > 0) {
     components.unshift({
@@ -556,4 +565,160 @@ export function getAdjacentRow(currentRow, direction) {
     if (charCode <= 65) return 'Z'; // Wrap A to Z  
     return String.fromCharCode(charCode - 1);
   }
+}
+
+/**
+ * Create Global Items view - shows only once_globally give_item actions
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} client - Discord client for user lookup
+ * @returns {Object} Discord Components V2 response
+ */
+export async function createGlobalItemsUI(guildId, client = null) {
+  console.log(`🎁 Creating Global Items UI for guild ${guildId}`);
+  
+  // Load data
+  const safariData = await loadSafariContent();
+  const playerData = await loadPlayerData();
+  const guildData = safariData[guildId] || {};
+  const activeMapId = guildData.maps?.active;
+  
+  if (!activeMapId || !guildData.maps?.[activeMapId]) {
+    return {
+      components: [{
+        type: 17, // Container
+        components: [{
+          type: 10, // Text Display
+          content: '❌ No active safari map found for this server.'
+        }]
+      }],
+      flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+    };
+  }
+  
+  const mapData = guildData.maps[activeMapId];
+  const coordinates = mapData.coordinates || {};
+  const buttons = guildData.buttons || {};
+  const items = guildData.items || {};
+  
+  // Build content - only coordinates with once_globally give_item actions
+  let content = `# 🎁 Global Items Overview\\n\\n`;
+  let hasContent = false;
+  let characterCount = content.length;
+  
+  const coordSections = [];
+  
+  // Process all coordinates to find ones with once_globally give_item actions
+  const sortedCoords = Object.keys(coordinates).sort();
+  
+  for (const coord of sortedCoords) {
+    const coordData = coordinates[coord];
+    if (!coordData || !coordData.buttons || coordData.buttons.length === 0) continue;
+    
+    let coordSection = '';
+    let hasGlobalItems = false;
+    
+    // Check each button for once_globally give_item actions
+    for (const buttonId of coordData.buttons) {
+      const button = buttons[buttonId];
+      if (!button || !button.actions) continue;
+      
+      // Filter to only once_globally give_item actions
+      const globalItemActions = button.actions.filter(action => 
+        action.type === 'give_item' && 
+        action.config?.limit?.type === 'once_globally'
+      );
+      
+      if (globalItemActions.length === 0) continue;
+      
+      if (!hasGlobalItems) {
+        // Add coordinate header
+        coordSection += `## 📍 ${coord}\\n`;
+        hasGlobalItems = true;
+      }
+      
+      // Add button with only global item actions
+      const triggerType = button.trigger?.type || 'button';
+      const triggerEmoji = triggerType === 'modal' ? '📝' : '🔘';
+      coordSection += `${triggerEmoji} **${button.name || button.label || 'Unnamed Action'}** (${getTriggerTypeLabel(triggerType)})\\n`;
+      coordSection += `└─ 🎬 Actions:\\n`;
+      
+      for (let i = 0; i < globalItemActions.length; i++) {
+        const action = globalItemActions[i];
+        const isLast = i === globalItemActions.length - 1;
+        const prefix = isLast ? '   └─' : '   ├─';
+        
+        coordSection += await formatAction(action, prefix, guildId, items, playerData, client, buttons);
+      }
+      
+      coordSection += '\\n';
+    }
+    
+    if (hasGlobalItems) {
+      hasContent = true;
+      
+      // Check character limit
+      if (characterCount + coordSection.length > CHARACTER_LIMIT) {
+        content += `*... and more coordinates. Character limit reached.*\\n`;
+        break;
+      }
+      
+      coordSections.push(coordSection.trimEnd());
+      characterCount += coordSection.length;
+    }
+  }
+  
+  if (!hasContent) {
+    content += `*No global items (once_globally give_item actions) found on this map.*\\n`;
+  }
+  
+  // Build components with dividers between coordinates
+  const components = [];
+  
+  // Add coordSections with dividers between them
+  if (hasContent && coordSections.length > 0) {
+    for (let i = 0; i < coordSections.length; i++) {
+      // Add coordinate content
+      components.push({
+        type: 10, // Text Display
+        content: coordSections[i].trim()
+      });
+      
+      // Add divider between coordinates (but not after the last one)
+      if (i < coordSections.length - 1) {
+        components.push({
+          type: 14, // Separator
+          divider: true,
+          spacing: 1 // Small spacing
+        });
+      }
+    }
+  } else {
+    // No content case
+    components.push({
+      type: 10, // Text Display
+      content: content.trim()
+    });
+  }
+  
+  // Add separator before navigation
+  components.push({ type: 14 }); // Separator
+  
+  // Add back button
+  components.push({
+    type: 1, // Action Row
+    components: [{
+      type: 2, // Button
+      custom_id: 'safari_progress_back_to_rows',
+      label: '← Back to Rows',
+      style: 2 // Secondary
+    }]
+  });
+  
+  return {
+    components: [{
+      type: 17, // Container
+      components: components
+    }],
+    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+  };
 }

@@ -4579,6 +4579,60 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
       })(req, res, client);
+    }
+    
+    // Handle safari progress global items view
+    if (custom_id === 'safari_progress_global_items') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_progress_global_items',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_progress_global_items - user ${context.userId}`);
+          
+          try {
+            const { createGlobalItemsUI } = await import('./safariProgress.js');
+            const globalItemsUI = await createGlobalItemsUI(context.guildId, client);
+            
+            console.log(`✅ SUCCESS: safari_progress_global_items - displayed global items`);
+            return globalItemsUI;
+          } catch (error) {
+            console.error(`❌ ERROR: safari_progress_global_items - ${error.message}`);
+            return {
+              content: '❌ Error loading Global Items. Please try again.',
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+    }
+    
+    // Handle safari progress back to rows
+    if (custom_id === 'safari_progress_back_to_rows') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_progress_back_to_rows',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_progress_back_to_rows - user ${context.userId}`);
+          
+          try {
+            const { createSafariProgressUI } = await import('./safariProgress.js');
+            const progressUI = await createSafariProgressUI(context.guildId, 'A', client);
+            
+            console.log(`✅ SUCCESS: safari_progress_back_to_rows - returned to row A`);
+            return progressUI;
+          } catch (error) {
+            console.error(`❌ ERROR: safari_progress_back_to_rows - ${error.message}`);
+            return {
+              content: '❌ Error returning to rows view.',
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('show_castlist2')) {
       // Extract castlist name from custom_id if present
       const castlistMatch = custom_id.match(/^show_castlist2(?:_(.+))?$/);

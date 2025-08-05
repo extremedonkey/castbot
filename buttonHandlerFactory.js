@@ -684,6 +684,22 @@ export const BUTTON_REGISTRY = {
     requiresPermission: 'ManageRoles',
     type: 'select_menu'
   },
+  'safari_progress_global_items': {
+    label: 'Global Items',
+    description: 'View all once_globally give_item actions across the map',
+    emoji: '🎁',
+    style: 'Secondary',
+    category: 'safari',
+    requiresPermission: 'ManageRoles'
+  },
+  'safari_progress_back_to_rows': {
+    label: 'Back to Rows',
+    description: 'Return to row-based Safari Progress view',
+    emoji: '←',
+    style: 'Secondary',
+    category: 'safari',
+    requiresPermission: 'ManageRoles'
+  },
   'map_admin_blacklist': {
     label: 'Blacklisted Coordinates',
     description: 'Manage restricted coordinates on the map',
