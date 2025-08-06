@@ -8161,8 +8161,10 @@ Your server is now ready for Tycoons gameplay!`;
           // Prepare response message
           let responseMessage;
           if (newStatus) {
+            // Get the correct channel ID for current environment
+            const targetChannelId = await getLoggingChannelId();
             responseMessage = `✅ **Live Analytics Logging ENABLED**\n\n` +
-                            `📤 Analytics events will now be posted to <#${updatedConfig.targetChannelId}>\n` +
+                            `📤 Analytics events will now be posted to <#${targetChannelId}>\n` +
                             `🚫 Excluded users: ${updatedConfig.excludedUserIds.length}`;
           } else {
             responseMessage = `🔴 **Live Analytics Logging DISABLED**\n\n` +
