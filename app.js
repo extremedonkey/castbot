@@ -30126,17 +30126,25 @@ Are you sure you want to continue?`;
                 })
                 .map(([id, item]) => {
                   // Safely parse emoji with error handling
-                  let emojiObj = { name: '📦' }; // Default
+                  let emojiObj = null; // Start with null, Discord will handle no emoji
                   if (item.emoji) {
                     try {
-                      const parsed = parseTextEmoji(item.emoji);
-                      if (parsed?.emoji) {
-                        emojiObj = parsed.emoji;
-                      } else {
-                        // If parsing fails, try to use the emoji directly if it's valid
-                        const emojiStr = String(item.emoji).trim();
-                        if (emojiStr && emojiStr.length <= 10) { // Basic validation
-                          emojiObj = { name: emojiStr };
+                      const emojiStr = String(item.emoji).trim();
+                      
+                      // Skip problematic or invalid emojis
+                      if (emojiStr && !emojiStr.includes('�')) {
+                        // Check if it's a custom Discord emoji
+                        if (emojiStr.match(/<a?:(\w+):(\d+)>/)) {
+                          const parsed = parseTextEmoji(emojiStr);
+                          if (parsed?.emoji) {
+                            emojiObj = parsed.emoji;
+                          }
+                        } else {
+                          // For regular Unicode emojis, just use the string in the name field
+                          // But only if it's a reasonable length (not corrupted)
+                          if (emojiStr.length <= 4) {
+                            emojiObj = { name: emojiStr };
+                          }
                         }
                       }
                     } catch (e) {
@@ -30148,7 +30156,7 @@ Are you sure you want to continue?`;
                     value: id,
                     label: item.name || id,
                     description: item.description,
-                    emoji: emojiObj
+                    emoji: emojiObj // Can be null, Discord handles this
                   };
                 });
             }
@@ -30252,15 +30260,19 @@ Are you sure you want to continue?`;
         const options = entities.map(entity => {
           const option = {
             label: entity.label,
-            value: entity.value,
-            description: entity.description
+            value: entity.value
           };
           
-          // Only add emoji if it's valid
+          // Add description if it exists and is valid
+          if (entity.description && entity.description.length > 0) {
+            option.description = entity.description.substring(0, 100); // Discord limit
+          }
+          
+          // Only add emoji if it's valid and not null
           if (entity.emoji && entity.emoji.name) {
-            // Validate emoji doesn't contain invalid characters
             const emojiName = String(entity.emoji.name);
-            if (emojiName && !emojiName.includes('�')) {
+            // Validate emoji doesn't contain invalid characters and is reasonable length
+            if (emojiName && !emojiName.includes('�') && emojiName.length <= 10) {
               option.emoji = entity.emoji;
             }
           }
@@ -30300,6 +30312,10 @@ Are you sure you want to continue?`;
             ]
           }
         ];
+        
+        // Debug log the response we're about to send
+        console.log('🔍 DEBUG: Sending entity search response with options:', JSON.stringify(options.slice(0, 3), null, 2));
+        console.log('🔍 DEBUG: Response type: UPDATE_MESSAGE, flags:', (1 << 15));
         
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
