@@ -4407,6 +4407,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_follow_up_select_') &&
         !custom_id.startsWith('safari_give_role_select_') &&
         !custom_id.startsWith('safari_remove_role_select_') &&
+        !custom_id.startsWith('safari_role_select_') &&
+        !custom_id.startsWith('safari_role_update_') &&
         !custom_id.startsWith('safari_followup_execute_on_') &&
         !custom_id.startsWith('safari_followup_save_') &&
         !custom_id.startsWith('safari_item_limit_') &&
@@ -14549,6 +14551,79 @@ Your server is now ready for Tycoons gameplay!`;
           return updatedUI;
         }
       })(req, res, client);
+      
+    // Helper function for role action configuration
+    async function showRoleActionConfig(guildId, actionId, actionIndex, actionType) {
+      try {
+        const { loadSafariContent } = await import('./safariManager.js');
+        const allSafariContent = await loadSafariContent();
+        const button = allSafariContent[guildId]?.buttons?.[actionId];
+        const action = button?.actions?.[actionIndex];
+        
+        if (!action) {
+          return {
+            content: '❌ Action not found.',
+            ephemeral: true
+          };
+        }
+        
+        // Get current role ID if any
+        const currentRoleId = action.config?.roleId || '';
+        
+        // Create UI for role selection
+        const components = [];
+        
+        // Header
+        components.push({
+          type: 10, // Text Display
+          content: `# ${actionType === 'give_role' ? '🎯 Give Role Configuration' : '🚫 Remove Role Configuration'}\n\n**Action:** ${button.label}\n**Type:** ${actionType}\n\n${currentRoleId ? `**Current Role:** <@&${currentRoleId}>` : '**Current Role:** None selected'}\n\nClick the button below to select a role.`
+        });
+        
+        // Role selection button
+        const selectButton = {
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: `safari_role_select_${guildId}_${actionId}_${actionIndex}`,
+            label: 'Select Role',
+            style: 1, // Primary
+            emoji: { name: '👥' }
+          }]
+        };
+        
+        components.push(selectButton);
+        
+        // Back button
+        const backButton = {
+          type: 1, // Action Row  
+          components: [{
+            type: 2, // Button
+            custom_id: `entity_custom_action_edit_${actionId}`,
+            label: 'Back to Action Editor',
+            style: 2, // Secondary
+            emoji: { name: '🔙' }
+          }]
+        };
+        
+        components.push(backButton);
+        
+        return {
+          flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+          components: [{
+            type: 17, // Container
+            components: components
+          }]
+        };
+        
+      } catch (error) {
+        console.error('Error showing role action config:', error);
+        return {
+          content: '❌ Error loading role configuration.',
+          ephemeral: true
+        };
+      }
+    }
+      
     } else if (custom_id.startsWith('safari_edit_action_')) {
       return ButtonHandlerFactory.create({
         id: 'safari_edit_action',
@@ -14656,6 +14731,11 @@ Your server is now ready for Tycoons gameplay!`;
             const { showDisplayTextConfig } = await import('./customActionUI.js');
             return await showDisplayTextConfig(context.guildId, actionId, actionIndex);
             
+          } else if (action.type === 'give_role' || action.type === 'remove_role') {
+            // Show role configuration UI
+            console.log(`✅ SUCCESS: safari_edit_action - showing role config for ${actionId}[${actionIndex}]`);
+            return await showRoleActionConfig(context.guildId, actionId, actionIndex, action.type);
+            
           } else {
             console.log(`❌ FAILURE: safari_edit_action - unsupported action type ${action.type}`);
             return {
@@ -14663,6 +14743,100 @@ Your server is now ready for Tycoons gameplay!`;
               ephemeral: true
             };
           }
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_role_select_')) {
+      // Handle role selection for editing existing role actions
+      return ButtonHandlerFactory.create({
+        id: 'safari_role_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_role_select - user ${context.userId}`);
+          
+          // Parse custom_id: safari_role_select_{guildId}_{actionId}_{actionIndex}
+          const parts = context.customId.replace('safari_role_select_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const actionId = parts.slice(1, -1).join('_'); // Skip guildId (first part) and actionIndex (last part)
+          
+          console.log(`🔧 Configuring role for action ${actionIndex} in button ${actionId}`);
+          
+          // Show role selection menu
+          const { RoleSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+          
+          const roleSelect = new RoleSelectMenuBuilder()
+            .setCustomId(`safari_role_update_${context.guildId}_${actionId}_${actionIndex}`)
+            .setPlaceholder('Select a role for this action')
+            .setMinValues(1)
+            .setMaxValues(1);
+
+          const row = new ActionRowBuilder().addComponents(roleSelect);
+
+          return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              content: '👥 **Select a role for this action:**',
+              components: [row.toJSON()],
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_role_update_')) {
+      // Handle role selection submission for editing
+      return ButtonHandlerFactory.create({
+        id: 'safari_role_update',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_role_update - user ${context.userId}`);
+          
+          // Parse custom_id: safari_role_update_{guildId}_{actionId}_{actionIndex}
+          const parts = context.customId.replace('safari_role_update_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const actionId = parts.slice(1, -1).join('_'); // Skip guildId and actionIndex
+          const roleId = context.values?.[0];
+          
+          if (!roleId) {
+            return {
+              content: '❌ No role selected.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`🎯 Updating role ${roleId} for action ${actionIndex} in button ${actionId}`);
+          
+          // Update the action's role ID
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[actionId];
+          
+          if (!button || !button.actions || !button.actions[actionIndex]) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Update the role ID in the action config
+          const action = button.actions[actionIndex];
+          if (!action.config) {
+            action.config = {};
+          }
+          action.config.roleId = roleId;
+          
+          // Save the updated data
+          await saveSafariContent(safariData);
+          
+          console.log(`✅ SUCCESS: safari_role_update - updated role for action ${actionIndex} in button ${actionId}`);
+          
+          // Return to custom action editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          return await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId: actionId
+          });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_display_text_edit_')) {
