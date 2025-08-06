@@ -381,7 +381,8 @@ export async function createPlayerManagementUI(options) {
           const inventory = safari.inventory || {};
           const { getItemQuantity } = await import('./safariManager.js');
           const hasInventory = Object.keys(inventory).length > 0 && Object.values(inventory).some(item => getItemQuantity(item) > 0);
-          const isEligiblePlayer = (currency >= 1 || hasInventory);
+          // Remove eligibility check - all players should see Safari navigation buttons
+          const isEligiblePlayer = true; // Always show Safari buttons
           
           if (isEligiblePlayer) {
             // Get custom terms for inventory name and emoji
