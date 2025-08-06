@@ -2071,7 +2071,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
         const role = await fullGuild.roles.fetch(tribe.roleId);
         if (!role) {
-          console.warn(`Role not found for tribe ${tribe.roleId}, skipping...`);
+          console.warn(`Role not found for tribe ${tribe.roleId} on server ${fullGuild.name} (${fullGuild.id}), skipping...`);
           return null;
         }
         
@@ -2173,7 +2173,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
       const role = await fullGuild.roles.fetch(tribe.roleId);
       if (!role) {
-        console.warn(`Role not found for tribe ${tribe.roleId}, skipping...`);
+        console.warn(`Role not found for tribe ${tribe.roleId} on server ${fullGuild.name} (${fullGuild.id}), skipping...`);
         return null;
       }
       
@@ -4701,7 +4701,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
           const role = await fullGuild.roles.fetch(tribe.roleId);
           if (!role) {
-            console.warn(`Role not found for tribe ${tribe.roleId}, skipping...`);
+            console.warn(`Role not found for tribe ${tribe.roleId} on server ${fullGuild.name} (${fullGuild.id}), skipping...`);
             return null;
           }
           
@@ -24973,9 +24973,16 @@ Are you sure you want to continue?`;
             break;
         }
         
-        // Validate bounds
+        // Validate bounds - handle missing/deleted tribes gracefully
         if (newTribeIndex < 0 || newTribeIndex >= orderedTribes.length) {
-          throw new Error('Invalid tribe index');
+          console.warn(`Invalid tribe index ${newTribeIndex} for ${orderedTribes.length} tribes (server: ${guildId}), resetting to 0`);
+          newTribeIndex = 0;
+          newTribePage = 0;
+          
+          // If no valid tribes exist at all, show error
+          if (orderedTribes.length === 0) {
+            throw new Error('No valid tribes found - all roles may have been deleted');
+          }
         }
         
         // Create new navigation state
