@@ -377,14 +377,10 @@ export async function createPlayerManagementUI(options) {
           const playerData = await loadPlayerData();
           const userData = playerData[guildId]?.players?.[targetMember.id];
           const safari = userData?.safari || {};
-          const currency = safari.currency || 0;
-          const inventory = safari.inventory || {};
-          const { getItemQuantity } = await import('./safariManager.js');
-          const hasInventory = Object.keys(inventory).length > 0 && Object.values(inventory).some(item => getItemQuantity(item) > 0);
-          // Remove eligibility check - all players should see Safari navigation buttons
-          const isEligiblePlayer = true; // Always show Safari buttons
+          // Always show Safari navigation buttons for all players
+          // Previously checked currency/inventory but this prevented new players from accessing Safari
           
-          if (isEligiblePlayer) {
+          if (true) { // Always show Safari interface
             // Get custom terms for inventory name and emoji
             const customTerms = await getCustomTerms(guildId);
             
