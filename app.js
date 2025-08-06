@@ -17622,10 +17622,17 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const guild = await client.guilds.fetch(context.guildId);
           const targetMember = await guild.members.fetch(selectedUserId);
           
-          // Create quantity input modal
+          // Create quantity input modal with truncated title to fit Discord's 45 char limit
+          let modalTitle = `Set ${itemName} Quantity`;
+          if (modalTitle.length > 45) {
+            // Truncate item name to fit
+            const maxItemNameLength = 45 - 13; // "Set " (4) + " Quantity" (9) = 13
+            modalTitle = `Set ${itemName.substring(0, maxItemNameLength)}... Quantity`;
+          }
+          
           const modal = new ModalBuilder()
             .setCustomId(`safari_item_qty_modal_${context.guildId}_${itemId}_${selectedUserId}`)
-            .setTitle(`Set ${itemName} Quantity - ${targetMember.displayName}`);
+            .setTitle(modalTitle);
 
           const quantityInput = new TextInputBuilder()
             .setCustomId('item_quantity')

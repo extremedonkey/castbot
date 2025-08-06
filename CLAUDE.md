@@ -135,10 +135,16 @@ if (custom_id === 'my_button') {
 
 ### Production Deployment
 
+**🚨 CRITICAL: NEVER deploy to production without explicit user permission!**
+- **NEVER** run deployment commands without asking first
+- You can **recommend** deployment when fixes are ready
+- You can **strongly recommend** deployment for critical fixes
+- Always wait for explicit approval like "deploy to prod" or "yes, deploy"
+
 ```bash
-npm run deploy-remote-wsl      # Full deployment (HIGH RISK)
-npm run deploy-commands-wsl    # Commands only (lower risk)
-npm run deploy-remote-wsl-dry  # Preview changes (SAFE)
+npm run deploy-remote-wsl      # Full deployment (HIGH RISK) - REQUIRES PERMISSION
+npm run deploy-commands-wsl    # Commands only (lower risk) - REQUIRES PERMISSION
+npm run deploy-remote-wsl-dry  # Preview changes (SAFE) - No permission needed
 ```
 
 ### Production Log Reading
