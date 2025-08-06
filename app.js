@@ -30057,6 +30057,7 @@ Are you sure you want to continue?`;
         
         // Import required modules
         const { loadSafariContent } = await import('./safariManager.js');
+        const { parseTextEmoji } = await import('./utils/emojiUtils.js');
         
         // Load safari content
         const allSafariContent = await loadSafariContent();
