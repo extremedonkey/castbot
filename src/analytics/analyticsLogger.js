@@ -749,11 +749,21 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     
     // Format the Safari log message based on action type
     let logMessage = '';
-    const timestamp = new Date().toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      hour12: true 
-    });
+    
+    // Get environment-specific timezone offset (same as analytics logs)
+    const { getLoggingTimezoneOffset } = await import('../../storage.js');
+    const timezoneOffset = await getLoggingTimezoneOffset();
+    
+    // Apply environment-specific timezone offset
+    const utcDate = new Date();
+    const localDate = new Date(utcDate.getTime() + (timezoneOffset * 60 * 60 * 1000));
+    
+    // Format as timestamp: [12:34PM]
+    const hours = localDate.getHours();
+    const minutes = localDate.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    const timestamp = `${displayHours}:${minutes}${ampm}`;
     
     switch (action) {
       case 'SAFARI_WHISPER':
