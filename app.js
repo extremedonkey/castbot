@@ -14552,78 +14552,6 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
       
-    // Helper function for role action configuration
-    async function showRoleActionConfig(guildId, actionId, actionIndex, actionType) {
-      try {
-        const { loadSafariContent } = await import('./safariManager.js');
-        const allSafariContent = await loadSafariContent();
-        const button = allSafariContent[guildId]?.buttons?.[actionId];
-        const action = button?.actions?.[actionIndex];
-        
-        if (!action) {
-          return {
-            content: '❌ Action not found.',
-            ephemeral: true
-          };
-        }
-        
-        // Get current role ID if any
-        const currentRoleId = action.config?.roleId || '';
-        
-        // Create UI for role selection
-        const components = [];
-        
-        // Header
-        components.push({
-          type: 10, // Text Display
-          content: `# ${actionType === 'give_role' ? '🎯 Give Role Configuration' : '🚫 Remove Role Configuration'}\n\n**Action:** ${button.label}\n**Type:** ${actionType}\n\n${currentRoleId ? `**Current Role:** <@&${currentRoleId}>` : '**Current Role:** None selected'}\n\nClick the button below to select a role.`
-        });
-        
-        // Role selection button
-        const selectButton = {
-          type: 1, // Action Row
-          components: [{
-            type: 2, // Button
-            custom_id: `safari_role_select_${guildId}_${actionId}_${actionIndex}`,
-            label: 'Select Role',
-            style: 1, // Primary
-            emoji: { name: '👥' }
-          }]
-        };
-        
-        components.push(selectButton);
-        
-        // Back button
-        const backButton = {
-          type: 1, // Action Row  
-          components: [{
-            type: 2, // Button
-            custom_id: `entity_custom_action_edit_${actionId}`,
-            label: 'Back to Action Editor',
-            style: 2, // Secondary
-            emoji: { name: '🔙' }
-          }]
-        };
-        
-        components.push(backButton);
-        
-        return {
-          flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
-          components: [{
-            type: 17, // Container
-            components: components
-          }]
-        };
-        
-      } catch (error) {
-        console.error('Error showing role action config:', error);
-        return {
-          content: '❌ Error loading role configuration.',
-          ephemeral: true
-        };
-      }
-    }
-      
     } else if (custom_id.startsWith('safari_edit_action_')) {
       return ButtonHandlerFactory.create({
         id: 'safari_edit_action',
@@ -14732,9 +14660,56 @@ Your server is now ready for Tycoons gameplay!`;
             return await showDisplayTextConfig(context.guildId, actionId, actionIndex);
             
           } else if (action.type === 'give_role' || action.type === 'remove_role') {
-            // Show role configuration UI
+            // Show role configuration UI inline
             console.log(`✅ SUCCESS: safari_edit_action - showing role config for ${actionId}[${actionIndex}]`);
-            return await showRoleActionConfig(context.guildId, actionId, actionIndex, action.type);
+            
+            // Get current role ID if any
+            const currentRoleId = action.config?.roleId || '';
+            
+            // Create UI for role selection
+            const components = [];
+            
+            // Header
+            components.push({
+              type: 10, // Text Display
+              content: `# ${action.type === 'give_role' ? '🎯 Give Role Configuration' : '🚫 Remove Role Configuration'}\n\n**Action:** ${button.label}\n**Type:** ${action.type}\n\n${currentRoleId ? `**Current Role:** <@&${currentRoleId}>` : '**Current Role:** None selected'}\n\nClick the button below to select a role.`
+            });
+            
+            // Role selection button
+            const selectButton = {
+              type: 1, // Action Row
+              components: [{
+                type: 2, // Button
+                custom_id: `safari_role_select_${context.guildId}_${actionId}_${actionIndex}`,
+                label: 'Select Role',
+                style: 1, // Primary
+                emoji: { name: '👥' }
+              }]
+            };
+            
+            components.push(selectButton);
+            
+            // Back button
+            const backButton = {
+              type: 1, // Action Row  
+              components: [{
+                type: 2, // Button
+                custom_id: `entity_custom_action_edit_${actionId}`,
+                label: 'Back to Action Editor',
+                style: 2, // Secondary
+                emoji: { name: '🔙' }
+              }]
+            };
+            
+            components.push(backButton);
+            
+            return {
+              flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+              components: [{
+                type: 17, // Container
+                components: components
+              }]
+            };
             
           } else {
             console.log(`❌ FAILURE: safari_edit_action - unsupported action type ${action.type}`);
