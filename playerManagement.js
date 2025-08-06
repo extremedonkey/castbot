@@ -372,15 +372,18 @@ export async function createPlayerManagementUI(options) {
       // Check if user is eligible for Safari inventory access
       if (targetMember && client) {
         try {
-          // Fast eligibility check - only check current user, avoid expensive getEligiblePlayersFixed
-          const { loadPlayerData } = await import('./storage.js');
-          const playerData = await loadPlayerData();
-          const userData = playerData[guildId]?.players?.[targetMember.id];
-          const safari = userData?.safari || {};
-          // Always show Safari navigation buttons for all players
-          // Previously checked currency/inventory but this prevented new players from accessing Safari
+          // Check if player has been initialized on the map by an admin
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
           
-          if (true) { // Always show Safari interface
+          // Player is initialized if they have an entity entry with stamina points
+          const entityId = `player_${targetMember.id}`;
+          const isInitialized = safariData[guildId]?.entityPoints?.[entityId] !== undefined;
+          
+          console.log(`🔍 Safari button check for ${targetMember.displayName}: initialized=${isInitialized}, entityId=${entityId}`);
+          
+          // Only show Safari buttons if player has been initialized by admin
+          if (isInitialized) {
             // Get custom terms for inventory name and emoji
             const customTerms = await getCustomTerms(guildId);
             
@@ -391,9 +394,10 @@ export async function createPlayerManagementUI(options) {
               .setStyle(ButtonStyle.Secondary)
               .setEmoji(customTerms.inventoryEmoji || '🧰'); // Use custom inventory emoji
             
-            // Create Navigate button (check if player is initialized on map)
-            const { loadSafariContent, getCoordinateFromChannelId } = await import('./safariManager.js');
-            const safariData = await loadSafariContent();
+            // Create Navigate button (check if player is on map)
+            const { getCoordinateFromChannelId } = await import('./safariManager.js');
+            const { loadPlayerData } = await import('./storage.js');
+            const playerData = await loadPlayerData();
             const activeMapId = safariData[guildId]?.maps?.active;
             const playerMapData = playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId];
             
