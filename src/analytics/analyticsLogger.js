@@ -503,28 +503,46 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
   }
 }
 
+// Global queue processing lock to prevent duplicates
+let queueProcessingActive = false;
+
 /**
  * Process queued messages with rate limiting
  * @param {Object} loggingConfig - Logging configuration object
  */
 async function processQueuedMessages(loggingConfig) {
   try {
+    // Prevent multiple queue processors running simultaneously
+    if (queueProcessingActive) {
+      console.log(`📊 DEBUG: processQueuedMessages - Already processing, skipping`);
+      return;
+    }
+    
     if (loggingConfig.rateLimitQueue.length === 0 || !targetChannel) {
       return;
     }
+    
+    queueProcessingActive = true;
+    console.log(`📊 DEBUG: processQueuedMessages - Starting to process ${loggingConfig.rateLimitQueue.length} queued messages`);
     
     const message = loggingConfig.rateLimitQueue.shift();
     await targetChannel.send(message.message);
     
     loggingConfig.lastMessageTime = Date.now();
+    console.log(`📊 DEBUG: processQueuedMessages - Sent queued message, ${loggingConfig.rateLimitQueue.length} remaining`);
     
     // Schedule next message if queue not empty
     if (loggingConfig.rateLimitQueue.length > 0) {
       setTimeout(async () => {
+        queueProcessingActive = false; // Release lock before next processing
         await processQueuedMessages(loggingConfig);
       }, 1200);
+    } else {
+      queueProcessingActive = false; // Release lock when queue is empty
+      console.log(`📊 DEBUG: processQueuedMessages - Queue processing completed`);
     }
   } catch (error) {
+    queueProcessingActive = false; // Release lock on error
     console.error('Discord Logging Queue Error (non-critical):', error);
   }
 }
