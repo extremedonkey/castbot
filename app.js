@@ -30124,12 +30124,33 @@ Are you sure you want to continue?`;
                   ].join(' ');
                   return searchableText.includes(searchTerm);
                 })
-                .map(([id, item]) => ({
-                  value: id,
-                  label: item.name || id,
-                  description: item.description,
-                  emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || { name: '📦' }) : { name: '📦' }
-                }));
+                .map(([id, item]) => {
+                  // Safely parse emoji with error handling
+                  let emojiObj = { name: '📦' }; // Default
+                  if (item.emoji) {
+                    try {
+                      const parsed = parseTextEmoji(item.emoji);
+                      if (parsed?.emoji) {
+                        emojiObj = parsed.emoji;
+                      } else {
+                        // If parsing fails, try to use the emoji directly if it's valid
+                        const emojiStr = String(item.emoji).trim();
+                        if (emojiStr && emojiStr.length <= 10) { // Basic validation
+                          emojiObj = { name: emojiStr };
+                        }
+                      }
+                    } catch (e) {
+                      console.warn(`⚠️ Failed to parse emoji for item ${id}:`, e.message);
+                    }
+                  }
+                  
+                  return {
+                    value: id,
+                    label: item.name || id,
+                    description: item.description,
+                    emoji: emojiObj
+                  };
+                });
             }
             break;
             
@@ -30228,12 +30249,24 @@ Are you sure you want to continue?`;
           .slice(0, 24); // Take max 24 to leave room for "Back to all"
         
         // Create select menu with search results
-        const options = entities.map(entity => ({
-          label: entity.label,
-          value: entity.value,
-          description: entity.description,
-          emoji: entity.emoji ? (typeof entity.emoji === 'object' ? entity.emoji : (parseTextEmoji(entity.emoji)?.emoji || undefined)) : undefined
-        }));
+        const options = entities.map(entity => {
+          const option = {
+            label: entity.label,
+            value: entity.value,
+            description: entity.description
+          };
+          
+          // Only add emoji if it's valid
+          if (entity.emoji && entity.emoji.name) {
+            // Validate emoji doesn't contain invalid characters
+            const emojiName = String(entity.emoji.name);
+            if (emojiName && !emojiName.includes('�')) {
+              option.emoji = entity.emoji;
+            }
+          }
+          
+          return option;
+        });
         
         // Add back/management option
         options.unshift({
