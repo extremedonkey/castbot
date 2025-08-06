@@ -181,7 +181,8 @@
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"Location.*D3.*Actions\" /mnt/c/Users/extre/OneDrive/ORG/01 Zeldavivor/Tagscript/Castbot/castbot/safariContent.json)",
       "Bash(git format-patch:*)",
       "Bash(git pull:*)",
-      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 50 \"safari.*btn_\" app.js)"
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 50 \"safari.*btn_\" app.js)",
+      "Bash(git log:*)"
     ],
     "deny": []
   }

@@ -431,11 +431,10 @@ export async function createPlayerManagementUI(options) {
                 inventoryComponents.push(locationActionsButton);
               }
             } else {
-              // Regular player menu: add Navigate button
-              inventoryComponents.push(navigateButton);
-              
-              // Add Location Actions button if we're in a map location
+              // Regular player menu: only add Navigate button if in a map channel
               if (currentCoordinate) {
+                inventoryComponents.push(navigateButton);
+                // Also add Location Actions button when in a map location
                 inventoryComponents.push(locationActionsButton);
               }
             }
