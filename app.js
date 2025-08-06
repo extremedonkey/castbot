@@ -14736,24 +14736,28 @@ Your server is now ready for Tycoons gameplay!`;
           
           console.log(`🔧 Configuring role for action ${actionIndex} in button ${actionId}`);
           
-          // Show role selection menu
-          const { RoleSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
-          
-          const roleSelect = new RoleSelectMenuBuilder()
-            .setCustomId(`safari_role_update_${context.guildId}_${actionId}_${actionIndex}`)
-            .setPlaceholder('Select a role for this action')
-            .setMinValues(1)
-            .setMaxValues(1);
-
-          const row = new ActionRowBuilder().addComponents(roleSelect);
-
+          // Show role selection using Components V2
           return {
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              content: '👥 **Select a role for this action:**',
-              components: [row.toJSON()],
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
+            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: '# 👥 Role Selection\n\nSelect a role using the menu below:'
+                },
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 8, // Role Select (Components V2)
+                    custom_id: `safari_role_update_${context.guildId}_${actionId}_${actionIndex}`,
+                    placeholder: 'Select a role for this action',
+                    min_values: 1,
+                    max_values: 1
+                  }]
+                }
+              ]
+            }]
           };
         }
       })(req, res, client);
@@ -18606,6 +18610,29 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('entity_custom_action_edit_') && !custom_id.includes('_info_')) {
+      // Handle back to action editor button
+      return ButtonHandlerFactory.create({
+        id: 'entity_custom_action_edit',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: entity_custom_action_edit - user ${context.userId}`);
+          
+          const actionId = context.customId.replace('entity_custom_action_edit_', '');
+          
+          // Return to custom action editor
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          const ui = await createCustomActionEditorUI({
+            guildId: context.guildId,
+            actionId: actionId
+          });
+          
+          console.log(`✅ SUCCESS: entity_custom_action_edit - showing action editor for ${actionId}`);
+          return ui;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('entity_custom_action_edit_info_')) {
       // Handle edit action info button
       return ButtonHandlerFactory.create({
