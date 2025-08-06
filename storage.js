@@ -351,7 +351,27 @@ export async function loadEnvironmentConfig() {
 
 export async function saveEnvironmentConfig(config) {
   const data = await loadPlayerData();
-  data.environmentConfig = config;
+  
+  // Create a clean copy without runtime-only fields
+  const cleanConfig = {
+    ...config,
+    liveDiscordLogging: {
+      ...config.liveDiscordLogging,
+      // Remove runtime-only fields that should never be persisted
+      rateLimitQueue: undefined,
+      lastMessageTime: undefined
+    }
+  };
+  
+  // Remove undefined fields
+  if (cleanConfig.liveDiscordLogging.rateLimitQueue === undefined) {
+    delete cleanConfig.liveDiscordLogging.rateLimitQueue;
+  }
+  if (cleanConfig.liveDiscordLogging.lastMessageTime === undefined) {
+    delete cleanConfig.liveDiscordLogging.lastMessageTime;
+  }
+  
+  data.environmentConfig = cleanConfig;
   await savePlayerData(data);
 }
 

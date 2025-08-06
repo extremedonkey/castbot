@@ -397,7 +397,8 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     console.log(`📊 DEBUG: postToDiscordLogs - envConfig loaded`);
     
     const loggingConfig = envConfig.liveDiscordLogging;
-    console.log(`📊 DEBUG: postToDiscordLogs - loggingConfig:`, JSON.stringify(loggingConfig, null, 2));
+    // Don't log the entire config (it might have old queue data)
+    console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled:`, loggingConfig.enabled);
     
     // Check if logging is enabled
     if (!loggingConfig.enabled) {
@@ -464,17 +465,17 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     // Rate limiting check (simple implementation)
     console.log(`📊 DEBUG: postToDiscordLogs - Checking rate limits`);
     const now = Date.now();
-    if (now - loggingConfig.lastMessageTime < 1200) { // 1.2 seconds between messages
+    if (now - runtimeState.lastMessageTime < 1200) { // 1.2 seconds between messages
       console.log(`📊 DEBUG: postToDiscordLogs - Rate limited, adding to queue`);
       // Add to queue for later processing
-      loggingConfig.rateLimitQueue.push({
+      runtimeState.rateLimitQueue.push({
         message: formattedMessage,
         timestamp: now
       });
       
       // Limit queue size
-      if (loggingConfig.rateLimitQueue.length > 50) {
-        loggingConfig.rateLimitQueue.shift(); // Remove oldest
+      if (runtimeState.rateLimitQueue.length > 50) {
+        runtimeState.rateLimitQueue.shift(); // Remove oldest
       }
       
       return;
@@ -482,7 +483,7 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     console.log(`📊 DEBUG: postToDiscordLogs - Rate limit OK, proceeding to send`);
     
     // Update last message time
-    loggingConfig.lastMessageTime = now;
+    runtimeState.lastMessageTime = now;
     
     // Send message to Discord
     console.log(`📊 DEBUG: postToDiscordLogs - Sending message to Discord`);
@@ -490,10 +491,10 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     console.log(`📊 DEBUG: postToDiscordLogs - Message sent successfully`);
     
     // Start queue processing if needed (singleton ensures only one processor runs)
-    if (loggingConfig.rateLimitQueue.length > 0) {
-      console.log(`📊 DEBUG: postToDiscordLogs - Requesting queue processing for ${loggingConfig.rateLimitQueue.length} messages`);
+    if (runtimeState.rateLimitQueue.length > 0) {
+      console.log(`📊 DEBUG: postToDiscordLogs - Requesting queue processing for ${runtimeState.rateLimitQueue.length} messages`);
       setTimeout(async () => {
-        await queueProcessor.startProcessing(loggingConfig);
+        await queueProcessor.startProcessing();
       }, 1200);
     }
     
@@ -502,6 +503,12 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     // Don't throw - this should never break the main bot functionality
   }
 }
+
+// In-memory runtime state (NOT persisted to disk)
+const runtimeState = {
+  rateLimitQueue: [],
+  lastMessageTime: 0
+};
 
 // Singleton queue processor to prevent duplicates
 class QueueProcessor {
@@ -512,9 +519,8 @@ class QueueProcessor {
 
   /**
    * Start processing the queue if not already running
-   * @param {Object} loggingConfig - Logging configuration object
    */
-  async startProcessing(loggingConfig) {
+  async startProcessing() {
     // Only start if not already processing
     if (this.isProcessing) {
       console.log(`📊 DEBUG: QueueProcessor - Already processing, ignoring request`);
@@ -523,27 +529,26 @@ class QueueProcessor {
 
     this.isProcessing = true;
     console.log(`📊 DEBUG: QueueProcessor - Starting singleton processor`);
-    await this._processLoop(loggingConfig);
+    await this._processLoop();
   }
 
   /**
    * Internal processing loop that runs until queue is empty
-   * @param {Object} loggingConfig - Logging configuration object
    */
-  async _processLoop(loggingConfig) {
+  async _processLoop() {
     try {
-      while (loggingConfig.rateLimitQueue.length > 0 && targetChannel) {
-        const queueLength = loggingConfig.rateLimitQueue.length;
+      while (runtimeState.rateLimitQueue.length > 0 && targetChannel) {
+        const queueLength = runtimeState.rateLimitQueue.length;
         console.log(`📊 DEBUG: QueueProcessor - Processing ${queueLength} queued messages`);
         
-        const message = loggingConfig.rateLimitQueue.shift();
+        const message = runtimeState.rateLimitQueue.shift();
         await targetChannel.send(message.message);
         
-        loggingConfig.lastMessageTime = Date.now();
-        console.log(`📊 DEBUG: QueueProcessor - Sent message, ${loggingConfig.rateLimitQueue.length} remaining`);
+        runtimeState.lastMessageTime = Date.now();
+        console.log(`📊 DEBUG: QueueProcessor - Sent message, ${runtimeState.rateLimitQueue.length} remaining`);
         
         // Wait 1.2 seconds before next message (only if more messages exist)
-        if (loggingConfig.rateLimitQueue.length > 0) {
+        if (runtimeState.rateLimitQueue.length > 0) {
           await new Promise(resolve => {
             this.timeoutId = setTimeout(resolve, 1200);
           });
@@ -673,7 +678,7 @@ async function logNewServerInstall(guild, ownerInfo = null) {
     }
     
     // Update last message time
-    loggingConfig.lastMessageTime = now;
+    runtimeState.lastMessageTime = now;
     
     // Send announcement to Discord
     await targetChannel.send(announcementMessage);
