@@ -19216,7 +19216,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const interactionData = {
             token: context.token,
             applicationId: context.applicationId,
-            client: client
+            client: client,
+            member: context.member, // Add member data for role operations
+            channelName: context.channelName || 'Unknown' // Add channel name for logging
           };
           
           const result = await executeButtonActions(
@@ -28896,6 +28898,15 @@ Are you sure you want to continue?`;
             if (headerComponent) {
               headerComponent.content += `\n\n✅ **Auto-assigned to location ${coordinate}**`;
             }
+          }
+          
+          // Queue anchor message update for the coordinate
+          try {
+            const { afterAddCoordinate } = await import('./anchorMessageIntegration.js');
+            await afterAddCoordinate(guildId, buttonId, coordinate);
+            console.log(`🔍 DEBUG: entity_create_modal - queued anchor update for ${coordinate}`);
+          } catch (error) {
+            console.error('Error queueing anchor update:', error);
           }
           
           return res.send({
