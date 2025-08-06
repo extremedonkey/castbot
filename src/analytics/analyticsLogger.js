@@ -489,11 +489,11 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     await targetChannel.send(formattedMessage);
     console.log(`📊 DEBUG: postToDiscordLogs - Message sent successfully`);
     
-    // Process any queued messages
+    // Start queue processing if needed (singleton ensures only one processor runs)
     if (loggingConfig.rateLimitQueue.length > 0) {
-      console.log(`📊 DEBUG: postToDiscordLogs - Processing ${loggingConfig.rateLimitQueue.length} queued messages`);
+      console.log(`📊 DEBUG: postToDiscordLogs - Requesting queue processing for ${loggingConfig.rateLimitQueue.length} messages`);
       setTimeout(async () => {
-        await processQueuedMessages(loggingConfig);
+        await queueProcessor.startProcessing(loggingConfig);
       }, 1200);
     }
     
@@ -503,49 +503,77 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
   }
 }
 
-// Global queue processing lock to prevent duplicates
-let queueProcessingActive = false;
+// Singleton queue processor to prevent duplicates
+class QueueProcessor {
+  constructor() {
+    this.isProcessing = false;
+    this.timeoutId = null;
+  }
 
-/**
- * Process queued messages with rate limiting
- * @param {Object} loggingConfig - Logging configuration object
- */
-async function processQueuedMessages(loggingConfig) {
-  try {
-    // Prevent multiple queue processors running simultaneously
-    if (queueProcessingActive) {
-      console.log(`📊 DEBUG: processQueuedMessages - Already processing, skipping`);
+  /**
+   * Start processing the queue if not already running
+   * @param {Object} loggingConfig - Logging configuration object
+   */
+  async startProcessing(loggingConfig) {
+    // Only start if not already processing
+    if (this.isProcessing) {
+      console.log(`📊 DEBUG: QueueProcessor - Already processing, ignoring request`);
       return;
     }
-    
-    if (loggingConfig.rateLimitQueue.length === 0 || !targetChannel) {
-      return;
+
+    this.isProcessing = true;
+    console.log(`📊 DEBUG: QueueProcessor - Starting singleton processor`);
+    await this._processLoop(loggingConfig);
+  }
+
+  /**
+   * Internal processing loop that runs until queue is empty
+   * @param {Object} loggingConfig - Logging configuration object
+   */
+  async _processLoop(loggingConfig) {
+    try {
+      while (loggingConfig.rateLimitQueue.length > 0 && targetChannel) {
+        const queueLength = loggingConfig.rateLimitQueue.length;
+        console.log(`📊 DEBUG: QueueProcessor - Processing ${queueLength} queued messages`);
+        
+        const message = loggingConfig.rateLimitQueue.shift();
+        await targetChannel.send(message.message);
+        
+        loggingConfig.lastMessageTime = Date.now();
+        console.log(`📊 DEBUG: QueueProcessor - Sent message, ${loggingConfig.rateLimitQueue.length} remaining`);
+        
+        // Wait 1.2 seconds before next message (only if more messages exist)
+        if (loggingConfig.rateLimitQueue.length > 0) {
+          await new Promise(resolve => {
+            this.timeoutId = setTimeout(resolve, 1200);
+          });
+        }
+      }
+      
+      console.log(`📊 DEBUG: QueueProcessor - Processing completed, queue empty`);
+    } catch (error) {
+      console.error('Discord Logging Queue Error (non-critical):', error);
+    } finally {
+      // Always release the processing lock
+      this.isProcessing = false;
+      this.timeoutId = null;
     }
-    
-    queueProcessingActive = true;
-    console.log(`📊 DEBUG: processQueuedMessages - Starting to process ${loggingConfig.rateLimitQueue.length} queued messages`);
-    
-    const message = loggingConfig.rateLimitQueue.shift();
-    await targetChannel.send(message.message);
-    
-    loggingConfig.lastMessageTime = Date.now();
-    console.log(`📊 DEBUG: processQueuedMessages - Sent queued message, ${loggingConfig.rateLimitQueue.length} remaining`);
-    
-    // Schedule next message if queue not empty
-    if (loggingConfig.rateLimitQueue.length > 0) {
-      setTimeout(async () => {
-        queueProcessingActive = false; // Release lock before next processing
-        await processQueuedMessages(loggingConfig);
-      }, 1200);
-    } else {
-      queueProcessingActive = false; // Release lock when queue is empty
-      console.log(`📊 DEBUG: processQueuedMessages - Queue processing completed`);
+  }
+
+  /**
+   * Stop the processor (for cleanup)
+   */
+  stop() {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
     }
-  } catch (error) {
-    queueProcessingActive = false; // Release lock on error
-    console.error('Discord Logging Queue Error (non-critical):', error);
+    this.isProcessing = false;
   }
 }
+
+// Create singleton queue processor
+const queueProcessor = new QueueProcessor();
 
 /**
  * Post new server installation announcement to Discord analytics channel
@@ -650,10 +678,10 @@ async function logNewServerInstall(guild, ownerInfo = null) {
     // Send announcement to Discord
     await targetChannel.send(announcementMessage);
     
-    // Process any queued messages
+    // Start queue processing if needed (singleton ensures only one processor runs)
     if (loggingConfig.rateLimitQueue.length > 0) {
       setTimeout(async () => {
-        await processQueuedMessages(loggingConfig);
+        await queueProcessor.startProcessing(loggingConfig);
       }, 1200);
     }
     
