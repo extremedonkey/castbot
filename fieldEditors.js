@@ -71,6 +71,14 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
                 }]
             });
             
+            // Sanitize emoji value to prevent Discord API errors
+            let emojiValue = currentValues.emoji || '';
+            // Check for replacement characters or other invalid characters
+            if (emojiValue && emojiValue.includes('�')) {
+                console.warn(`⚠️ Corrupted emoji detected for item ${itemId}, using empty string`);
+                emojiValue = '';
+            }
+            
             components.push({
                 type: 1, // ActionRow
                 components: [{
@@ -78,7 +86,7 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
                     custom_id: 'emoji',
                     label: 'Item Emoji',
                     style: 1, // Short
-                    value: currentValues.emoji || '',
+                    value: emojiValue,
                     placeholder: 'Enter an emoji for the item',
                     required: false,
                     max_length: 100
@@ -215,6 +223,14 @@ function createStoreFieldModal(storeId, fieldGroupId, group, currentValues) {
                 }]
             });
             
+            // Sanitize emoji value to prevent Discord API errors
+            let storeEmojiValue = currentValues.emoji || '';
+            // Check for replacement characters or other invalid characters
+            if (storeEmojiValue && storeEmojiValue.includes('�')) {
+                console.warn(`⚠️ Corrupted emoji detected for store ${storeId}, using empty string`);
+                storeEmojiValue = '';
+            }
+            
             components.push({
                 type: 1, // ActionRow
                 components: [{
@@ -222,7 +238,7 @@ function createStoreFieldModal(storeId, fieldGroupId, group, currentValues) {
                     custom_id: 'emoji',
                     label: 'Store Emoji',
                     style: 1, // Short
-                    value: currentValues.emoji || '',
+                    value: storeEmojiValue,
                     placeholder: 'Enter an emoji for the store',
                     required: false,
                     max_length: 10
@@ -314,6 +330,14 @@ function createButtonFieldModal(buttonId, fieldGroupId, group, currentValues) {
                 }]
             });
             
+            // Sanitize emoji value to prevent Discord API errors
+            let buttonEmojiValue = currentValues.emoji || '';
+            // Check for replacement characters or other invalid characters
+            if (buttonEmojiValue && buttonEmojiValue.includes('�')) {
+                console.warn(`⚠️ Corrupted emoji detected for button ${buttonId}, using empty string`);
+                buttonEmojiValue = '';
+            }
+            
             components.push({
                 type: 1, // ActionRow
                 components: [{
@@ -321,7 +345,7 @@ function createButtonFieldModal(buttonId, fieldGroupId, group, currentValues) {
                     custom_id: 'emoji',
                     label: 'Button Emoji',
                     style: 1, // Short
-                    value: currentValues.emoji || '',
+                    value: buttonEmojiValue,
                     placeholder: '🦁 (optional)',
                     required: false,
                     max_length: 10
