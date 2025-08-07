@@ -839,15 +839,8 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
         }
     }
     
-    // Give the item with user context for logging
-    const playerData = await loadPlayerData();
-    const member = playerData[guildId]?.players?.[userId];
-    const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity, {
-        username: member?.displayName || 'Unknown',
-        displayName: member?.displayName || 'Unknown',
-        source: buttonId ? `Button: ${buttonId}` : 'give_item',
-        channelName: null // Channel context not available in this flow
-    });
+    // Give the item - pass null so addItemToInventory will handle loading and saving playerData
+    const success = await addItemToInventory(guildId, userId, config.itemId, config.quantity, null);
     
     if (!success) {
         return {
