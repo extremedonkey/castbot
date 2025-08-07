@@ -15510,9 +15510,10 @@ Your server is now ready for Tycoons gameplay!`;
         }
       }
     } else if (custom_id === 'prod_availability_react') {
-      // Post availability time slot reactions
+      // Post availability time slot reactions - PUBLIC MESSAGE for everyone to react
       return ButtonHandlerFactory.create({
         id: 'prod_availability_react',
+        publicMessage: true, // CRITICAL: Make this message public, not ephemeral
         handler: async (context) => {
           console.log(`🔍 START: prod_availability_react - user ${context.userId}`);
           
@@ -15603,13 +15604,19 @@ Your server is now ready for Tycoons gameplay!`;
           };
           
           // Store data for later use
-          const responseData = {
-            components: [availabilityContainer],
-            flags: 0 // Public message for reactions
-          };
+          // CRITICAL: We need to bypass ButtonHandlerFactory's default behavior
+          // and send the response directly to make it public
           
-          // Send the message through ButtonHandlerFactory return
-          // We'll add reactions after the response is sent
+          // Send public message directly (not ephemeral)
+          res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              components: [availabilityContainer],
+              flags: (1 << 15) // ONLY IS_COMPONENTS_V2, no EPHEMERAL flag
+            }
+          });
+          
+          // Add reactions after the response is sent
           setTimeout(async () => {
             try {
               // Get the message to add reactions
@@ -15661,7 +15668,8 @@ Your server is now ready for Tycoons gameplay!`;
           }, 1000); // Wait for response to be sent
           
           console.log(`✅ SUCCESS: prod_availability_react - created availability message`);
-          return responseData;
+          // Don't return anything since we already sent the response directly
+          return;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_availability_options') {
