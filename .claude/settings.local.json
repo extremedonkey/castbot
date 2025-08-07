@@ -182,7 +182,8 @@
       "Bash(git format-patch:*)",
       "Bash(git pull:*)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 50 \"safari.*btn_\" app.js)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(git worktree:*)"
     ],
     "deny": []
   }
