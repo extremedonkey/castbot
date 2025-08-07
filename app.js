@@ -15594,59 +15594,66 @@ Your server is now ready for Tycoons gameplay!`;
             components: availabilityComponents
           };
           
-          // Send the message with Components V2
-          const response = await res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              components: [availabilityContainer],
-              flags: 0 // Public message for reactions
-            }
-          });
+          // Store data for later use
+          const responseData = {
+            components: [availabilityContainer],
+            flags: 0 // Public message for reactions
+          };
           
-          // Get the message to add reactions
-          const webhookUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`;
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          let messageId;
-          try {
-            const webhookResponse = await fetch(webhookUrl, {
-              headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
-            });
-            const webhookData = await webhookResponse.json();
-            messageId = webhookData.id;
-            
-            if (!messageId) {
-              console.error('Failed to get message ID from webhook response');
-              return;
-            }
-          } catch (error) {
-            console.error('Error fetching webhook message:', error);
-            return;
-          }
-          
-          // Get the actual message from Discord
-          const channel = await client.channels.fetch(req.body.channel_id);
-          const message = await channel.messages.fetch(messageId);
-          
-          // Add reactions sequentially
-          for (const emoji of reactionEmojis) {
+          // Send the message through ButtonHandlerFactory return
+          // We'll add reactions after the response is sent
+          setTimeout(async () => {
             try {
-              await message.react(emoji);
-              await new Promise(resolve => setTimeout(resolve, 250)); // Rate limit prevention
+              // Get the message to add reactions
+              const webhookUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`;
+              
+              const webhookResponse = await fetch(webhookUrl, {
+                headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+              });
+              
+              if (!webhookResponse.ok) {
+                console.error('Failed to fetch webhook message:', webhookResponse.status);
+                return;
+              }
+              
+              const webhookData = await webhookResponse.json();
+              const messageId = webhookData.id;
+              
+              if (!messageId) {
+                console.error('No message ID in webhook response');
+                return;
+              }
+              
+              // Get the actual message from Discord
+              const channel = await client.channels.fetch(req.body.channel_id);
+              const message = await channel.messages.fetch(messageId);
+              
+              // Add reactions sequentially
+              for (const emoji of reactionEmojis) {
+                try {
+                  await message.react(emoji);
+                  await new Promise(resolve => setTimeout(resolve, 250)); // Rate limit prevention
+                } catch (error) {
+                  console.error(`Failed to add reaction ${emoji}:`, error);
+                }
+              }
+              
+              // Store availability mapping in client memory
+              if (!client.availabilityReactions) client.availabilityReactions = new Map();
+              client.availabilityReactions.set(messageId, {
+                slots: timeSlots,
+                guildId: guildId,
+                userOffset: userOffset
+              });
+              
+              console.log(`✅ Reactions added to availability message ${messageId}`);
             } catch (error) {
-              console.error(`Failed to add reaction ${emoji}:`, error);
+              console.error('Error adding reactions to availability message:', error);
             }
-          }
-          
-          // Store availability mapping in client memory
-          if (!client.availabilityReactions) client.availabilityReactions = new Map();
-          client.availabilityReactions.set(messageId, {
-            slots: timeSlots,
-            guildId: guildId,
-            userOffset: userOffset
-          });
+          }, 1000); // Wait for response to be sent
           
           console.log(`✅ SUCCESS: prod_availability_react - created availability message`);
+          return responseData;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_availability_options') {
