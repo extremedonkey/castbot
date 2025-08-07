@@ -15516,8 +15516,11 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           console.log(`🔍 START: prod_availability_react - user ${context.userId}`);
           
-          const { guildId, userId, member } = context;
+          const { guildId, userId } = context;
           const guild = await client.guilds.fetch(guildId);
+          
+          // Fetch the member properly
+          const member = await guild.members.fetch(userId);
           
           // Get user's timezone role to calculate their local times
           const timezones = await getGuildTimezones(guildId);
