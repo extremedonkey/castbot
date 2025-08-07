@@ -773,7 +773,12 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('prod_manage_pronouns_timezones')
       .setLabel('Pronouns & Timezones')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💜')
+      .setEmoji('💜'),
+    new ButtonBuilder()
+      .setCustomId('prod_availability')
+      .setLabel('Availability')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🕐')
   ];
   
   // Live Analytics button moved to Reece Stuff submenu
@@ -6581,6 +6586,71 @@ To fix this:
           }
         });
       }
+    } else if (custom_id === 'prod_availability') {
+      // Show availability management menu
+      return ButtonHandlerFactory.create({
+        id: 'prod_availability',
+        handler: async (context) => {
+          console.log(`🔍 START: prod_availability - user ${context.userId}`);
+          
+          const { guildId, channelId } = context;
+          
+          const availabilityRow1 = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_availability_react')
+                .setLabel('Post Availability Times')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('📅'),
+              new ButtonBuilder()
+                .setCustomId('prod_availability_options')
+                .setLabel('View Availability Groups')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('👥'),
+              new ButtonBuilder()
+                .setCustomId('prod_availability_clear')
+                .setLabel('Clear My Availability')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🗑️')
+            );
+          
+          // Create Components V2 Container
+          const availabilityComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## Availability Management`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **📅 Availability System:** Allows players to indicate when they're available for challenges`
+            },
+            {
+              type: 10, // Text Display component
+              content: `> **How it works:**\n> 1. Click "Post Availability Times" to create a reaction message\n> 2. Players react to indicate their available hours (in their local timezone)\n> 3. Use "View Availability Groups" to see optimal challenge times`
+            },
+            availabilityRow1.toJSON()
+          ];
+          
+          // Add Back to Main Menu button
+          const backRow = createBackToMainMenuButton();
+          availabilityComponents.push(
+            { type: 14 }, // Separator
+            backRow.toJSON()
+          );
+          
+          const availabilityContainer = {
+            type: 17, // Container component
+            accent_color: 0x3498DB, // Blue accent color for availability
+            components: availabilityComponents
+          };
+          
+          console.log(`✅ SUCCESS: prod_availability - showing availability menu`);
+          return await sendProductionSubmenuResponse(res, channelId, [availabilityContainer]);
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_manage_tribes') {
       // Show tribe management menu
       try {
@@ -15439,6 +15509,346 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
       }
+    } else if (custom_id === 'prod_availability_react') {
+      // Post availability time slot reactions
+      return ButtonHandlerFactory.create({
+        id: 'prod_availability_react',
+        handler: async (context) => {
+          console.log(`🔍 START: prod_availability_react - user ${context.userId}`);
+          
+          const { guildId, userId, member } = context;
+          const guild = await client.guilds.fetch(guildId);
+          
+          // Get user's timezone role to calculate their local times
+          const timezones = await getGuildTimezones(guildId);
+          const timezoneRole = member.roles.cache.find(role => timezones[role.id]);
+          
+          if (!timezoneRole) {
+            console.log(`⚠️ User ${userId} has no timezone role`);
+            return {
+              content: '⚠️ **Please set your timezone first!**\n\nUse `/player_set_timezone` or ask an admin to assign you a timezone role.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+          
+          const userOffset = timezones[timezoneRole.id].offset;
+          console.log(`User ${userId} timezone: ${timezoneRole.name} (UTC${userOffset >= 0 ? '+' : ''}${userOffset})`);
+          
+          // Create time slots (20 hours: 12 AM - 7 PM)
+          const timeSlots = [];
+          const reactionEmojis = [
+            '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟',
+            '🇦', '🇧', '🇨', '🇩', '🇪', '🇫', '🇬', '🇭', '🇮', '🇯'
+          ];
+          
+          for (let hour = 0; hour < 20; hour++) {
+            // Calculate local time for this UTC hour
+            const localHour = (hour + userOffset + 24) % 24;
+            const period = localHour >= 12 ? 'PM' : 'AM';
+            const displayHour = localHour === 0 ? 12 : (localHour > 12 ? localHour - 12 : localHour);
+            const timeString = `${displayHour}:00 ${period}`;
+            
+            timeSlots.push({
+              emoji: reactionEmojis[hour],
+              time: timeString,
+              utcHour: hour
+            });
+          }
+          
+          // Create Components V2 message with time slots
+          const availabilityComponents = [
+            {
+              type: 10, // Text Display
+              content: `# 🕐 Challenge Availability Times`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display
+              content: `**React to indicate when you're available for challenges!**\n\nYour timezone: **${timezoneRole.name}** (UTC${userOffset >= 0 ? '+' : ''}${userOffset})`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display
+              content: `**Available Time Slots (in your local time):**\n\n${timeSlots.map(slot => `${slot.emoji} - **${slot.time}**`).join('\n')}`
+            },
+            {
+              type: 14, // Separator
+              spacing: 1
+            },
+            {
+              type: 10, // Text Display
+              content: `*Select all times when you can participate in challenges*`
+            }
+          ];
+          
+          const availabilityContainer = {
+            type: 17, // Container
+            accent_color: 0x00FF00, // Green accent
+            components: availabilityComponents
+          };
+          
+          // Send the message with Components V2
+          const response = await res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              components: [availabilityContainer],
+              flags: 0 // Public message for reactions
+            }
+          });
+          
+          // Get the message to add reactions
+          const webhookUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`;
+          await new Promise(resolve => setTimeout(resolve, 500));
+          
+          let messageId;
+          try {
+            const webhookResponse = await fetch(webhookUrl, {
+              headers: { Authorization: `Bot ${process.env.DISCORD_TOKEN}` }
+            });
+            const webhookData = await webhookResponse.json();
+            messageId = webhookData.id;
+            
+            if (!messageId) {
+              console.error('Failed to get message ID from webhook response');
+              return;
+            }
+          } catch (error) {
+            console.error('Error fetching webhook message:', error);
+            return;
+          }
+          
+          // Get the actual message from Discord
+          const channel = await client.channels.fetch(req.body.channel_id);
+          const message = await channel.messages.fetch(messageId);
+          
+          // Add reactions sequentially
+          for (const emoji of reactionEmojis) {
+            try {
+              await message.react(emoji);
+              await new Promise(resolve => setTimeout(resolve, 250)); // Rate limit prevention
+            } catch (error) {
+              console.error(`Failed to add reaction ${emoji}:`, error);
+            }
+          }
+          
+          // Store availability mapping in client memory
+          if (!client.availabilityReactions) client.availabilityReactions = new Map();
+          client.availabilityReactions.set(messageId, {
+            slots: timeSlots,
+            guildId: guildId,
+            userOffset: userOffset
+          });
+          
+          console.log(`✅ SUCCESS: prod_availability_react - created availability message`);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'prod_availability_options') {
+      // View availability groupings
+      return ButtonHandlerFactory.create({
+        id: 'prod_availability_options',
+        handler: async (context) => {
+          console.log(`🔍 START: prod_availability_options - user ${context.userId}`);
+          
+          const { guildId } = context;
+          const playerData = await loadPlayerData();
+          
+          // Get all player availability data
+          const availability = playerData[guildId]?.availability || {};
+          
+          if (Object.keys(availability).length === 0) {
+            const noDataComponents = [
+              {
+                type: 10, // Text Display
+                content: '## 📊 Availability Analysis'
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 10, // Text Display
+                content: '**No availability data yet**\n\nPlayers need to react to availability messages first.'
+              }
+            ];
+            
+            const noDataContainer = {
+              type: 17, // Container
+              accent_color: 0xFF0000, // Red accent for no data
+              components: noDataComponents
+            };
+            
+            return {
+              components: [noDataContainer],
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+            };
+          }
+          
+          // Analyze overlapping availability
+          const timeSlotCoverage = {};
+          
+          for (let hour = 0; hour < 20; hour++) {
+            timeSlotCoverage[hour] = [];
+            
+            for (const [userId, userSlots] of Object.entries(availability)) {
+              if (userSlots.includes(hour)) {
+                timeSlotCoverage[hour].push(userId);
+              }
+            }
+          }
+          
+          // Find optimal time slots (most players available)
+          const sortedSlots = Object.entries(timeSlotCoverage)
+            .sort((a, b) => b[1].length - a[1].length)
+            .filter(([_, players]) => players.length > 0);
+          
+          // Create Components V2 display
+          const analysisComponents = [
+            {
+              type: 10, // Text Display
+              content: '## 📊 Availability Analysis'
+            },
+            {
+              type: 14 // Separator
+            }
+          ];
+          
+          if (sortedSlots.length === 0) {
+            analysisComponents.push({
+              type: 10, // Text Display
+              content: '*No overlapping availability found*'
+            });
+          } else {
+            analysisComponents.push({
+              type: 10, // Text Display
+              content: '**Optimal Challenge Times:**'
+            });
+            
+            // Get guild for member fetching
+            const guild = await client.guilds.fetch(guildId);
+            
+            // Show top time slots with sections
+            for (let i = 0; i < Math.min(10, sortedSlots.length); i++) {
+              const [hour, playerIds] = sortedSlots[i];
+              const hourNum = parseInt(hour);
+              const displayHour = hourNum === 0 ? 12 : (hourNum > 12 ? hourNum - 12 : hourNum);
+              const period = hourNum >= 12 ? 'PM' : 'AM';
+              const timeString = `${displayHour}:00 ${period} UTC`;
+              
+              // Get player names
+              const playerNames = [];
+              for (const playerId of playerIds) {
+                try {
+                  const member = await guild.members.fetch(playerId);
+                  playerNames.push(member.displayName);
+                } catch (e) {
+                  // Skip unknown players
+                }
+              }
+              
+              if (playerNames.length > 0) {
+                // Add separator between time slots
+                if (i > 0) {
+                  analysisComponents.push({
+                    type: 14, // Separator
+                    spacing: 1, // Small spacing
+                    divider: false // No line
+                  });
+                }
+                
+                // Add time slot section
+                analysisComponents.push({
+                  type: 9, // Section
+                  components: [
+                    {
+                      type: 10, // Text Display
+                      content: `**${timeString}** - ${playerIds.length} players available`
+                    },
+                    {
+                      type: 10, // Text Display  
+                      content: playerNames.slice(0, 10).join(', ') + 
+                        (playerNames.length > 10 ? ` +${playerNames.length - 10} more` : '')
+                    }
+                  ]
+                });
+              }
+            }
+            
+            // Add summary at the end
+            analysisComponents.push(
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 10, // Text Display
+                content: `*Total players with availability data: ${Object.keys(availability).length}*`
+              }
+            );
+          }
+          
+          const analysisContainer = {
+            type: 17, // Container
+            accent_color: 0x00FF00, // Green accent for data
+            components: analysisComponents
+          };
+          
+          console.log(`✅ SUCCESS: prod_availability_options - displayed analysis`);
+          return {
+            components: [analysisContainer],
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'prod_availability_clear') {
+      // Clear user's availability
+      return ButtonHandlerFactory.create({
+        id: 'prod_availability_clear',
+        handler: async (context) => {
+          console.log(`🔍 START: prod_availability_clear - user ${context.userId}`);
+          
+          const { guildId, userId } = context;
+          const playerData = await loadPlayerData();
+          
+          if (!playerData[guildId]) {
+            playerData[guildId] = {};
+          }
+          if (!playerData[guildId].availability) {
+            playerData[guildId].availability = {};
+          }
+          
+          // Clear user's availability
+          delete playerData[guildId].availability[userId];
+          await savePlayerData(playerData);
+          
+          const clearComponents = [
+            {
+              type: 10, // Text Display
+              content: '## ✅ Availability Cleared'
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display
+              content: 'Your availability has been successfully cleared.\n\nYou can set new availability by reacting to an availability message.'
+            }
+          ];
+          
+          const clearContainer = {
+            type: 17, // Container
+            accent_color: 0x00FF00, // Green accent for success
+            components: clearComponents
+          };
+          
+          console.log(`✅ SUCCESS: prod_availability_clear - cleared for user ${userId}`);
+          return {
+            components: [clearContainer],
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_pronoun_react') {
       // Use the enhanced pronoun reaction function with heart emojis
       try {
@@ -30929,6 +31339,40 @@ client.on('messageReactionAdd', async (reaction, user) => {
       }
     }
 
+    // Check if this is an availability message
+    const availabilityData = client.availabilityReactions?.get(reaction.message.id);
+    if (availabilityData) {
+      console.log(`Processing availability reaction for user ${user.id}`);
+      
+      // Find which time slot this emoji corresponds to
+      const slot = availabilityData.slots.find(s => s.emoji === reaction.emoji.name);
+      if (!slot) return;
+      
+      // Load player data
+      const playerData = await loadPlayerData();
+      const guildId = availabilityData.guildId;
+      
+      if (!playerData[guildId]) {
+        playerData[guildId] = {};
+      }
+      if (!playerData[guildId].availability) {
+        playerData[guildId].availability = {};
+      }
+      if (!playerData[guildId].availability[user.id]) {
+        playerData[guildId].availability[user.id] = [];
+      }
+      
+      // Add this UTC hour to the user's availability
+      if (!playerData[guildId].availability[user.id].includes(slot.utcHour)) {
+        playerData[guildId].availability[user.id].push(slot.utcHour);
+        playerData[guildId].availability[user.id].sort((a, b) => a - b);
+        await savePlayerData(playerData);
+        console.log(`Added availability slot ${slot.time} (UTC hour ${slot.utcHour}) for user ${user.id}`);
+      }
+      
+      return; // Don't process as a role reaction
+    }
+
     // Check in-memory cache first, then persistent storage
     let roleMapping = client.roleReactions?.get(reaction.message.id);
     
@@ -31023,6 +31467,32 @@ client.on('messageReactionRemove', async (reaction, user) => {
         console.error('Something went wrong when fetching the message:', error);
         return;
       }
+    }
+
+    // Check if this is an availability message
+    const availabilityData = client.availabilityReactions?.get(reaction.message.id);
+    if (availabilityData) {
+      console.log(`Removing availability reaction for user ${user.id}`);
+      
+      // Find which time slot this emoji corresponds to
+      const slot = availabilityData.slots.find(s => s.emoji === reaction.emoji.name);
+      if (!slot) return;
+      
+      // Load player data
+      const playerData = await loadPlayerData();
+      const guildId = availabilityData.guildId;
+      
+      if (playerData[guildId]?.availability?.[user.id]) {
+        // Remove this UTC hour from the user's availability
+        const index = playerData[guildId].availability[user.id].indexOf(slot.utcHour);
+        if (index > -1) {
+          playerData[guildId].availability[user.id].splice(index, 1);
+          await savePlayerData(playerData);
+          console.log(`Removed availability slot ${slot.time} (UTC hour ${slot.utcHour}) for user ${user.id}`);
+        }
+      }
+      
+      return; // Don't process as a role reaction
     }
 
     // Check in-memory cache first, then persistent storage

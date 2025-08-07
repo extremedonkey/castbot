@@ -1514,6 +1514,40 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_social',
     isSelectMenu: true
+  },
+  
+  // === AVAILABILITY SYSTEM ===
+  'prod_availability': {
+    label: 'Availability',
+    description: 'Player availability management system',
+    emoji: '🕐',
+    style: 'Secondary',
+    category: 'admin',
+    menu: 'availability_menu'
+  },
+  'prod_availability_react': {
+    label: 'Post Availability Times',
+    description: 'Post reaction message for players to indicate availability',
+    emoji: '📅',
+    style: 'Primary',
+    parent: 'prod_availability',
+    category: 'availability'
+  },
+  'prod_availability_options': {
+    label: 'View Availability Groups',
+    description: 'View and manage player availability groupings',
+    emoji: '👥',
+    style: 'Secondary',
+    parent: 'prod_availability',
+    category: 'availability'
+  },
+  'prod_availability_clear': {
+    label: 'Clear My Availability',
+    description: 'Clear your availability settings',
+    emoji: '🗑️',
+    style: 'Danger',
+    parent: 'prod_availability',
+    category: 'availability'
   }
 };
 
