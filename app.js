@@ -15653,13 +15653,37 @@ Your server is now ready for Tycoons gameplay!`;
                 }
               }
               
-              // Store availability mapping in client memory
+              // Store availability mapping in client memory AND persistent storage
               if (!client.availabilityReactions) client.availabilityReactions = new Map();
+              
+              // Create a universal slot mapping (not user-specific)
+              const universalSlots = [];
+              for (let i = 0; i < 20; i++) {
+                const utcHour = (currentUTCHour + i + 1) % 24;
+                universalSlots.push({
+                  emoji: reactionEmojis[i],
+                  utcHour: utcHour
+                });
+              }
+              
               client.availabilityReactions.set(messageId, {
-                slots: timeSlots,
+                slots: universalSlots,
                 guildId: guildId,
-                userOffset: userOffset
+                startHour: currentUTCHour
               });
+              
+              // Also save to persistent storage so it survives restarts
+              const playerData = await loadPlayerData();
+              if (!playerData[guildId].availabilityMessages) {
+                playerData[guildId].availabilityMessages = {};
+              }
+              playerData[guildId].availabilityMessages[messageId] = {
+                slots: universalSlots,
+                startHour: currentUTCHour,
+                channelId: req.body.channel_id,
+                createdAt: Date.now()
+              };
+              await savePlayerData(playerData);
               
               console.log(`✅ Reactions added to availability message ${messageId}`);
             } catch (error) {
@@ -31356,13 +31380,37 @@ client.on('messageReactionAdd', async (reaction, user) => {
     }
 
     // Check if this is an availability message
-    const availabilityData = client.availabilityReactions?.get(reaction.message.id);
+    let availabilityData = client.availabilityReactions?.get(reaction.message.id);
+    
+    // If not in memory, try loading from persistent storage
+    if (!availabilityData) {
+      const guildId = reaction.message.guild?.id;
+      if (guildId) {
+        const playerData = await loadPlayerData();
+        const messageData = playerData[guildId]?.availabilityMessages?.[reaction.message.id];
+        if (messageData) {
+          // Restore to memory cache
+          if (!client.availabilityReactions) client.availabilityReactions = new Map();
+          availabilityData = {
+            slots: messageData.slots,
+            guildId: guildId,
+            startHour: messageData.startHour
+          };
+          client.availabilityReactions.set(reaction.message.id, availabilityData);
+          console.log(`Restored availability message ${reaction.message.id} from storage`);
+        }
+      }
+    }
+    
     if (availabilityData) {
       console.log(`Processing availability reaction for user ${user.id}`);
       
       // Find which time slot this emoji corresponds to
       const slot = availabilityData.slots.find(s => s.emoji === reaction.emoji.name);
-      if (!slot) return;
+      if (!slot) {
+        console.log(`No slot found for emoji ${reaction.emoji.name}`);
+        return;
+      }
       
       // Load player data
       const playerData = await loadPlayerData();
@@ -31383,7 +31431,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
         playerData[guildId].availability[user.id].push(slot.utcHour);
         playerData[guildId].availability[user.id].sort((a, b) => a - b);
         await savePlayerData(playerData);
-        console.log(`Added availability slot ${slot.time} (UTC hour ${slot.utcHour}) for user ${user.id}`);
+        console.log(`Added availability slot for UTC hour ${slot.utcHour} for user ${user.id}`);
       }
       
       return; // Don't process as a role reaction
@@ -31486,7 +31534,27 @@ client.on('messageReactionRemove', async (reaction, user) => {
     }
 
     // Check if this is an availability message
-    const availabilityData = client.availabilityReactions?.get(reaction.message.id);
+    let availabilityData = client.availabilityReactions?.get(reaction.message.id);
+    
+    // If not in memory, try loading from persistent storage
+    if (!availabilityData) {
+      const guildId = reaction.message.guild?.id;
+      if (guildId) {
+        const playerData = await loadPlayerData();
+        const messageData = playerData[guildId]?.availabilityMessages?.[reaction.message.id];
+        if (messageData) {
+          // Restore to memory cache
+          if (!client.availabilityReactions) client.availabilityReactions = new Map();
+          availabilityData = {
+            slots: messageData.slots,
+            guildId: guildId,
+            startHour: messageData.startHour
+          };
+          client.availabilityReactions.set(reaction.message.id, availabilityData);
+        }
+      }
+    }
+    
     if (availabilityData) {
       console.log(`Removing availability reaction for user ${user.id}`);
       
@@ -31504,7 +31572,7 @@ client.on('messageReactionRemove', async (reaction, user) => {
         if (index > -1) {
           playerData[guildId].availability[user.id].splice(index, 1);
           await savePlayerData(playerData);
-          console.log(`Removed availability slot ${slot.time} (UTC hour ${slot.utcHour}) for user ${user.id}`);
+          console.log(`Removed availability slot for UTC hour ${slot.utcHour} for user ${user.id}`);
         }
       }
       
