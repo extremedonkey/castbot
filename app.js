@@ -15537,24 +15537,32 @@ Your server is now ready for Tycoons gameplay!`;
           const userOffset = timezones[timezoneRole.id].offset;
           console.log(`User ${userId} timezone: ${timezoneRole.name} (UTC${userOffset >= 0 ? '+' : ''}${userOffset})`);
           
-          // Create time slots (20 hours: 12 AM - 7 PM)
+          // Get current UTC hour
+          const now = new Date();
+          const currentUTCHour = now.getUTCHours();
+          
+          // Create time slots starting from next hour (20 slots total)
           const timeSlots = [];
           const reactionEmojis = [
             '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟',
             '🇦', '🇧', '🇨', '🇩', '🇪', '🇫', '🇬', '🇭', '🇮', '🇯'
           ];
           
-          for (let hour = 0; hour < 20; hour++) {
-            // Calculate local time for this UTC hour
-            const localHour = (hour + userOffset + 24) % 24;
+          // Start from the next hour and go for 20 hours
+          for (let i = 0; i < 20; i++) {
+            const utcHour = (currentUTCHour + i + 1) % 24; // Start from next hour
+            const localHour = (utcHour + userOffset + 24) % 24;
             const period = localHour >= 12 ? 'PM' : 'AM';
             const displayHour = localHour === 0 ? 12 : (localHour > 12 ? localHour - 12 : localHour);
             const timeString = `${displayHour}:00 ${period}`;
             
+            // Add day indicator if it's tomorrow
+            const dayIndicator = (currentUTCHour + i + 1) >= 24 ? ' (tomorrow)' : '';
+            
             timeSlots.push({
-              emoji: reactionEmojis[hour],
-              time: timeString,
-              utcHour: hour
+              emoji: reactionEmojis[i],
+              time: timeString + dayIndicator,
+              utcHour: utcHour
             });
           }
           
@@ -15768,20 +15776,10 @@ Your server is now ready for Tycoons gameplay!`;
                   });
                 }
                 
-                // Add time slot section
+                // Add time slot section - simpler format without nested components
                 analysisComponents.push({
-                  type: 9, // Section
-                  components: [
-                    {
-                      type: 10, // Text Display
-                      content: `**${timeString}** - ${playerIds.length} players available`
-                    },
-                    {
-                      type: 10, // Text Display  
-                      content: playerNames.slice(0, 10).join(', ') + 
-                        (playerNames.length > 10 ? ` +${playerNames.length - 10} more` : '')
-                    }
-                  ]
+                  type: 10, // Text Display
+                  content: `**${timeString}** - ${playerIds.length} players available\n> ${playerNames.slice(0, 10).join(', ')}${playerNames.length > 10 ? ` +${playerNames.length - 10} more` : ''}`
                 });
               }
             }
