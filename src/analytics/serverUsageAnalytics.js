@@ -114,7 +114,7 @@ function parseLogLine(line) {
     const parts = line.split(' | ');
     if (parts.length < 3) return null;
     
-    let timestamp, userInfo, serverInfo, actionType, actionDetail;
+    let timestamp, userInfo, serverInfo, actionType, actionDetail, channelName;
     
     if (line.includes('[ANALYTICS]')) {
       // Format 1: [ANALYTICS] 2025-06-18T15:01:16.725Z | extremedonkey in Unknown Server | SLASH_COMMAND | /castlist
@@ -142,6 +142,38 @@ function parseLogLine(line) {
         actionDetail = actionMatch[2];
         userInfo = { username: actionMatch[3], displayName: actionMatch[3] };
         serverInfo = { name: 'CastBot', id: serverId.trim() };
+      }
+    } else if (parts.length >= 5 && parts[2].startsWith('#')) {
+      // NEW FORMAT 4: [8:18AM] Thu 19 Jun 25 | ReeceBot (extremedonkey) in CastBot (1331657596087566398) | #channel | BUTTON_CLICK | 📋 Menu (viral_menu)
+      timestamp = parseTimestamp(parts[0]);
+      const userServerPart = parts[1];
+      channelName = parts[2]; // #channel
+      actionType = parts[3];
+      actionDetail = parts[4] || '';
+      
+      // Extract user info: "ReeceBot (extremedonkey) in CastBot (1331657596087566398)"
+      const userServerMatch = userServerPart.match(/(.+?) \((.+?)\) in (.+?)$/);
+      if (userServerMatch) {
+        userInfo = { 
+          displayName: userServerMatch[1], 
+          username: userServerMatch[2] 
+        };
+        
+        const serverPart = userServerMatch[3].trim();
+        // Check if server part ends with (ID)
+        const serverIdMatch = serverPart.match(/^(.+?) \((\d+)\)$/);
+        if (serverIdMatch) {
+          serverInfo = { 
+            name: serverIdMatch[1], 
+            id: serverIdMatch[2] 
+          };
+        } else {
+          // Server name without explicit ID
+          serverInfo = { 
+            name: serverPart, 
+            id: 'unknown' 
+          };
+        }
       }
     } else {
       // Format 2: [8:18AM] Thu 19 Jun 25 | ReeceBot (extremedonkey) in CastBot (1331657596087566398) | BUTTON_CLICK | 📋 Menu (viral_menu)
@@ -181,6 +213,28 @@ function parseLogLine(line) {
       return null;
     }
     
+    // Handle edge cases with Safari logs
+    // Skip entries with "undefined" usernames (corrupted Safari logs)
+    if (userInfo.username === 'undefined' || userInfo.displayName === 'undefined') {
+      return null;
+    }
+    
+    // Convert Safari action types to standard analytics format for counting
+    let normalizedActionType = actionType.trim();
+    if (normalizedActionType.startsWith('SAFARI_')) {
+      // Safari actions count as BUTTON_CLICK for analytics purposes
+      // since they represent user interactions with Safari buttons
+      if (normalizedActionType === 'SAFARI_CUSTOM_ACTION' || 
+          normalizedActionType === 'SAFARI_BUTTON' ||
+          normalizedActionType === 'SAFARI_MOVEMENT' ||
+          normalizedActionType === 'SAFARI_ITEM_PICKUP' ||
+          normalizedActionType === 'SAFARI_CURRENCY' ||
+          normalizedActionType === 'SAFARI_WHISPER' ||
+          normalizedActionType === 'SAFARI_TEST') {
+        normalizedActionType = 'BUTTON_CLICK';
+      }
+    }
+    
     // Final validation that timestamp is a valid Date
     if (isNaN(timestamp.getTime())) {
       return null;
@@ -190,7 +244,7 @@ function parseLogLine(line) {
       timestamp,
       user: userInfo,
       server: serverInfo,
-      actionType: actionType.trim(),
+      actionType: normalizedActionType,
       actionDetail: actionDetail.trim(),
       rawLine: line
     };
@@ -217,14 +271,30 @@ async function parseUserAnalyticsLog() {
     console.log(`📈 DEBUG: Found ${lines.length} lines in analytics log`);
     
     const parsedEntries = [];
+    let skippedUndefined = 0;
+    let skippedSafari = 0;
+    let parsedSafari = 0;
+    
     for (const line of lines) {
       const parsed = parseLogLine(line);
       if (parsed) {
         parsedEntries.push(parsed);
+        // Track Safari conversions
+        if (line.includes('SAFARI_')) {
+          parsedSafari++;
+        }
       } else {
-        console.log(`📈 DEBUG: Failed to parse line: ${line.substring(0, 100)}...`);
+        if (line.includes('undefined in')) {
+          skippedUndefined++;
+        } else if (line.includes('SAFARI_')) {
+          skippedSafari++;
+        } else {
+          console.log(`📈 DEBUG: Failed to parse line: ${line.substring(0, 100)}...`);
+        }
       }
     }
+    
+    console.log(`📈 DEBUG: Parsing summary - Parsed: ${parsedEntries.length}, Safari converted: ${parsedSafari}, Skipped undefined: ${skippedUndefined}, Skipped Safari: ${skippedSafari}`);
     
     console.log(`📈 DEBUG: Successfully parsed ${parsedEntries.length} entries`);
     
