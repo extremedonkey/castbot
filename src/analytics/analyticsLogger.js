@@ -640,6 +640,18 @@ async function logNewServerInstall(guild, ownerInfo = null) {
 
     // Create the announcement message in the same format as regular logs
     const announcementMessage = `# ${timestamp} | 🎉🥳 **New Server Install**: \`${guild.name}\` (${guild.id}) | Owner: ${ownerDisplay}`;
+    
+    // Also write to analytics log file for server usage tracking
+    const analyticsLogEntry = `${timestamp} | SERVER_INSTALL | ${guild.name} (${guild.id}) | Owner: ${ownerDisplay}\n`;
+    
+    // Ensure logs directory exists
+    const logDir = path.dirname('./logs/user-analytics.log');
+    if (!fs.existsSync(logDir)) {
+      fs.mkdirSync(logDir, { recursive: true });
+    }
+    
+    // Append to analytics log file
+    fs.appendFileSync('./logs/user-analytics.log', analyticsLogEntry);
 
     // Get target channel if not cached
     if (!targetChannel) {

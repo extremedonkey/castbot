@@ -653,10 +653,10 @@ function calculateOptimalServerLimit(rankedServers) {
 
 /**
  * Parse recent server installs from analytics log
- * @param {number} daysBack - Number of days to look back
+ * @param {number} limit - Number of most recent installs to return (default: 5)
  * @returns {Array} Array of recent server installs
  */
-async function parseRecentServerInstalls(daysBack = 7) {
+async function parseRecentServerInstalls(limit = 5) {
   try {
     if (!fs.existsSync(USER_ANALYTICS_LOG)) {
       return [];
@@ -665,46 +665,72 @@ async function parseRecentServerInstalls(daysBack = 7) {
     const logData = await fs.promises.readFile(USER_ANALYTICS_LOG, 'utf8');
     const lines = logData.split('\n').filter(line => line.trim());
     
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
-    
     const serverInstalls = [];
     
     for (const line of lines) {
-      // Look for server install announcements: "🎉🥳 **New Server Install**: `ServerName` (ID) | Owner: User"
+      // Look for server install announcements: "🎉🥳 **New Server Install**: `ServerName` (ID) | Owner: User" or SERVER_INSTALL entries
       if (line.includes('New Server Install') || line.includes('SERVER_INSTALL')) {
         try {
           // Extract timestamp from the line (various formats)
           let timestamp = null;
-          const timestampMatch = line.match(/\[([^\]]+)\]/);
-          if (timestampMatch) {
-            timestamp = parseTimestamp(timestampMatch[1]);
+          
+          // Format 1: # [timestamp] | announcement (from Discord announcements)
+          const hashTimestampMatch = line.match(/^#\s*(.+?)\s*\|/);
+          if (hashTimestampMatch) {
+            timestamp = parseTimestamp(hashTimestampMatch[1]);
           }
           
-          if (!timestamp || timestamp < cutoffDate) continue;
+          // Format 2: [timestamp] format (standard analytics)
+          if (!timestamp) {
+            const bracketTimestampMatch = line.match(/\[([^\]]+)\]/);
+            if (bracketTimestampMatch) {
+              timestamp = parseTimestamp(bracketTimestampMatch[1]);
+            }
+          }
           
-          // Extract server name and ID - format: `ServerName` (ID)
-          const serverMatch = line.match(/`([^`]+)`\s*\((\d+)\)/);
-          if (serverMatch) {
-            const [, serverName, serverId] = serverMatch;
-            
-            // Extract owner info - format: Owner: DisplayName (username) (ID)
-            const ownerMatch = line.match(/Owner:\s*([^(]+?)(?:\s*\(([^)]+)\))?(?:\s*\((\d+)\))?/);
-            let ownerInfo = 'Unknown';
-            if (ownerMatch) {
-              const [, displayName, username, ownerId] = ownerMatch;
-              if (username && username !== 'unknown') {
-                ownerInfo = `${displayName.trim()} (${username})`;
+          // Skip entries without valid timestamps
+          if (!timestamp) {
+            console.log(`📈 DEBUG: Skipping server install line without timestamp: ${line.substring(0, 100)}`);
+            continue;
+          }
+          
+          let serverName, serverId, ownerInfo;
+          
+          // Format 1: New SERVER_INSTALL format - [timestamp] | SERVER_INSTALL | ServerName (ID) | Owner: DisplayName
+          if (line.includes('SERVER_INSTALL')) {
+            const serverInstallMatch = line.match(/SERVER_INSTALL\s*\|\s*([^(]+?)\s*\((\d+)\)\s*\|\s*Owner:\s*(.+)$/);
+            if (serverInstallMatch) {
+              [, serverName, serverId, ownerInfo] = serverInstallMatch;
+              serverName = serverName.trim();
+              ownerInfo = ownerInfo.trim();
+            }
+          } else {
+            // Format 2: Discord announcement format - `ServerName` (ID) | Owner: DisplayName
+            const serverMatch = line.match(/`([^`]+)`\s*\((\d+)\)/);
+            if (serverMatch) {
+              [, serverName, serverId] = serverMatch;
+              
+              // Extract owner info - format: Owner: DisplayName (username) (ID)
+              const ownerMatch = line.match(/Owner:\s*([^(]+?)(?:\s*\(([^)]+)\))?(?:\s*\((\d+)\))?/);
+              if (ownerMatch) {
+                const [, displayName, username, ownerId] = ownerMatch;
+                if (username && username !== 'unknown') {
+                  ownerInfo = `${displayName.trim()} (${username})`;
+                } else {
+                  ownerInfo = displayName.trim();
+                }
               } else {
-                ownerInfo = displayName.trim();
+                ownerInfo = 'Unknown';
               }
             }
-            
+          }
+          
+          if (serverName && serverId) {
             serverInstalls.push({
               timestamp,
               serverName,
               serverId,
-              owner: ownerInfo,
+              owner: ownerInfo || 'Unknown',
               rawLine: line
             });
           }
@@ -714,10 +740,10 @@ async function parseRecentServerInstalls(daysBack = 7) {
       }
     }
     
-    // Sort by timestamp (newest first) and return last 5
+    // Sort by timestamp (newest first) and return the most recent ones
     return serverInstalls
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-      .slice(0, 5);
+      .slice(0, limit);
       
   } catch (error) {
     console.error('Error parsing recent server installs:', error);
@@ -733,8 +759,8 @@ async function parseRecentServerInstalls(daysBack = 7) {
 async function formatServerUsageForDiscordV2(summary) {
   const { rankedServers, totalInteractions, totalUniqueUsers, activeServers, period, insights } = summary;
   
-  // Get recent server installs
-  const recentInstalls = await parseRecentServerInstalls(7); // Last 7 days
+  // Get recent server installs (most recent 5, regardless of time)
+  const recentInstalls = await parseRecentServerInstalls(5);
   
   // Calculate optimal server display limit
   const { displayServers, hasMore, estimatedLength, componentCount } = calculateOptimalServerLimit(rankedServers);
@@ -823,7 +849,7 @@ async function formatServerUsageForDiscordV2(summary) {
   
   // Recent Server Installs section
   if (recentInstalls.length > 0) {
-    fullContent += `🆕 **Recent Server Installs** (Last 7 days)\n\n`;
+    fullContent += `🆕 **Most Recent Server Installs** (Latest ${recentInstalls.length})\n\n`;
     
     recentInstalls.forEach((install, index) => {
       // Format timestamp to show just date and time
@@ -849,8 +875,8 @@ async function formatServerUsageForDiscordV2(summary) {
       fullContent += `\n`;
     });
   } else {
-    fullContent += `🆕 **Recent Server Installs** (Last 7 days)\n\n`;
-    fullContent += `📭 No new server installations in the past week\n\n`;
+    fullContent += `🆕 **Most Recent Server Installs**\n\n`;
+    fullContent += `📭 No server installations found in logs\n\n`;
   }
   
   // Footer

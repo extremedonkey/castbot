@@ -184,7 +184,8 @@
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 50 \"safari.*btn_\" app.js)",
       "Bash(git log:*)",
       "Bash(git worktree:*)",
-      "Bash(TZ=\"Australia/Perth\" git log --since=\"3 days ago\" --grep=\"safari\\|Safari\\|give_item\\|navigate\\|location\\|backpack\" -i --pretty=format:\"%h | %ad | %s\" --date=format-local:\"%Y-%m-%d %I:%M %p AWST\" --no-merges)"
+      "Bash(TZ=\"Australia/Perth\" git log --since=\"3 days ago\" --grep=\"safari\\|Safari\\|give_item\\|navigate\\|location\\|backpack\" -i --pretty=format:\"%h | %ad | %s\" --date=format-local:\"%Y-%m-%d %I:%M %p AWST\" --no-merges)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -A 10 -B 2 \"} else if \\(custom_id === [''\"\"][^''\"\"]+[''\"\"]\" app.js)"
     ],
     "deny": []
   }
