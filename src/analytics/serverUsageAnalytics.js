@@ -914,17 +914,49 @@ async function formatServerUsageForDiscordV2(summary) {
   // Build a simpler Components V2 structure using only Text Display components in a flat layout
   const components = [];
   
-  // Create a single text block with all the content
-  let fullContent = `> ## 📈 Server Usage Analytics\n\n`;
+  // Create a single text block with all the content - Start with Server Installs
+  let fullContent = '';
   
-  // Summary statistics
-  fullContent += `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}\n`;
-  fullContent += `👥 **Unique Users**: ${totalUniqueUsers}\n`;
-  fullContent += `🏰 **Active Servers**: ${activeServers}\n`;
-  fullContent += `⏱️ **Period**: Last ${period}\n`;
-  fullContent += `📈 **Showing**: Top ${displayServers.length} of ${rankedServers.length} servers\n\n`;
+  // Recent Server Installs section FIRST
+  if (recentInstalls.length > 0) {
+    fullContent += `> ## 🆕 Most Recent Server Installs (Latest ${recentInstalls.length})\n\n`;
+    
+    recentInstalls.forEach((install, index) => {
+      // Format timestamp in compact format
+      const installDate = new Date(install.timestamp);
+      const timeStr = installDate.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+      const dayStr = installDate.toLocaleDateString('en-US', { 
+        weekday: 'short',
+        month: 'short', 
+        day: 'numeric'
+      });
+      
+      // Truncate server name if too long
+      const serverDisplay = install.serverName.length > 30 
+        ? install.serverName.substring(0, 30) + '...'
+        : install.serverName;
+      
+      // Extract display name and username from owner string
+      const ownerMatch = install.owner.match(/^(.+?)\s*\((@[^)]+)\)/);
+      const displayName = ownerMatch ? ownerMatch[1] : install.owner.split(' ')[0];
+      const username = ownerMatch ? ownerMatch[2] : '';
+      const ownerDisplay = username ? `${displayName} (${username})` : displayName;
+      
+      fullContent += `📅 **${serverDisplay}** ([${timeStr}] ${dayStr}, ${ownerDisplay})\n\n`;
+    });
+  } else {
+    fullContent += `> ## 🆕 Most Recent Server Installs\n\n`;
+    fullContent += `📭 No server installations found in logs\n\n`;
+  }
   
-  // Server rankings
+  // Add separator divider
+  fullContent += '\n';
+  
+  // Server rankings SECOND
   if (displayServers.length > 0) {
     fullContent += `> ## 🏆 Server Rankings\n\n`;
     
@@ -991,60 +1023,28 @@ async function formatServerUsageForDiscordV2(summary) {
     fullContent += `📭 **No server activity found**\n\nNo interactions recorded in the specified period.\n\n`;
   }
   
+  // Add separator divider
+  fullContent += '\n';
+  
+  // Server Usage Analytics THIRD (last)
+  fullContent += `> ## 📈 Server Usage Analytics\n\n`;
+  
+  // Summary statistics
+  fullContent += `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}\n`;
+  fullContent += `👥 **Unique Users**: ${totalUniqueUsers}\n`;
+  fullContent += `🏰 **Active Servers**: ${activeServers}\n`;
+  fullContent += `⏱️ **Period**: Last ${period}\n`;
+  fullContent += `📈 **Showing**: Top ${displayServers.length} of ${rankedServers.length} servers\n\n`;
+  
   // Insights section removed per user request
-  
-  // Recent Server Installs section
-  if (recentInstalls.length > 0) {
-    fullContent += `> ## 🆕 Most Recent Server Installs (Latest ${recentInstalls.length})\n\n`;
-    
-    recentInstalls.forEach((install, index) => {
-      // Format timestamp in compact format
-      const installDate = new Date(install.timestamp);
-      const timeStr = installDate.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      });
-      const dayStr = installDate.toLocaleDateString('en-US', { 
-        weekday: 'short',
-        month: 'short', 
-        day: 'numeric'
-      });
-      
-      // Truncate server name if too long
-      const serverDisplay = install.serverName.length > 30 
-        ? install.serverName.substring(0, 30) + '...'
-        : install.serverName;
-      
-      // Extract display name and username from owner string
-      const ownerMatch = install.owner.match(/^(.+?)\s*\((@[^)]+)\)/);
-      const displayName = ownerMatch ? ownerMatch[1] : install.owner.split(' ')[0];
-      const username = ownerMatch ? ownerMatch[2] : '';
-      const ownerDisplay = username ? `${displayName} (${username})` : displayName;
-      
-      fullContent += `📅 **${serverDisplay}** ([${timeStr}] ${dayStr}, ${ownerDisplay})\n\n`;
-    });
-  } else {
-    fullContent += `> ## 🆕 Most Recent Server Installs\n\n`;
-    fullContent += `📭 No server installations found in logs\n\n`;
-  }
-  
-  // Footer
-  fullContent += `🕒 Generated at ${new Date(summary.generatedAt).toLocaleString('en-US', { 
-    timeZone: 'UTC',
-    year: 'numeric',
-    month: 'short', 
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })} UTC`;
+  // Footer removed per user request
   
   // Trim content to fit Discord's 4000 character limit
   if (fullContent.length > 3800) {
     fullContent = fullContent.substring(0, 3800) + '\n\n... (content truncated)';
   }
   
-  // Create Components V2 structure with Container, text content, and refresh button
+  // Create Components V2 structure with Container, text content, separators, and refresh button
   components.push({
     type: 17, // Container
     accent_color: 0xFF0000, // Red accent bar
@@ -1052,6 +1052,12 @@ async function formatServerUsageForDiscordV2(summary) {
       {
         type: 10, // Text Display
         content: fullContent
+      },
+      // Add separator before refresh button
+      {
+        type: 14, // Separator
+        divider: true,
+        spacing: 1
       },
       {
         type: 1, // Action Row
