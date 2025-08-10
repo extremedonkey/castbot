@@ -4708,7 +4708,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Handle ranking navigation and view all scores - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({
         id: 'ranking_navigation',
-        updateMessage: !custom_id.startsWith('ranking_view_all_scores'), // View All Scores creates new message, navigation updates
+        updateMessage: true, // All ranking navigation including View All Scores should update the existing message
         handler: async (context) => {
           console.log(`🔍 START: ranking_navigation - user ${context.userId}, button ${context.customId}`);
           
@@ -4777,26 +4777,80 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return result;
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('ranking_scores_close_')) {
-      // Handle ranking scores summary close button
+    } else if (custom_id.startsWith('ranking_scores_back_')) {
+      // Handle ranking scores summary back button - restore original Cast Ranking UI
       return ButtonHandlerFactory.create({
-        id: 'ranking_scores_close',
-        updateMessage: false, // Create new ephemeral message instead of updating
+        id: 'ranking_scores_back',
+        updateMessage: true, // Replace View All Scores with Cast Ranking UI
         handler: async (context) => {
-          console.log(`🔍 START: ranking_scores_close - user ${context.userId}`);
+          console.log(`🔍 START: ranking_scores_back - user ${context.userId}`);
           
-          // Use Components V2 pattern with minimal dismissal message (Discord requirement)
-          console.log(`✅ SUCCESS: ranking_scores_close - message dismissed`);
-          return {
-            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
-            components: [{
-              type: 17, // Container - MANDATORY wrapper
-              components: [{
-                type: 10, // Text Display - replaces content field
-                content: '✅ Closed'
-              }]
-            }]
-          };
+          // Parse context from custom_id: ranking_scores_back_{configId}_{userId}
+          const backMatch = context.customId.match(/^ranking_scores_back_(.+)_(\d+)$/);
+          if (!backMatch) {
+            console.log(`❌ ERROR: ranking_scores_back - invalid custom_id format: ${context.customId}`);
+            return {
+              content: '❌ Error: Invalid back button format.',
+              ephemeral: true
+            };
+          }
+          
+          const [, configId, originalUserId] = backMatch;
+          console.log(`🔍 DEBUG: ranking_scores_back - configId: ${configId}, originalUserId: ${originalUserId}`);
+          
+          // Import cast ranking functions
+          const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
+          const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
+          
+          // Get applications using season-filtered function when configId is available
+          const allApplications = (configId && configId !== 'none') 
+            ? await getApplicationsForSeason(context.guildId, configId)
+            : await getAllApplicationsFromData(context.guildId);
+          
+          if (!allApplications || allApplications.length === 0) {
+            return {
+              content: '❌ No applications found.',
+              ephemeral: true
+            };
+          }
+          
+          // Default to first applicant for now (we could enhance this to remember the exact applicant later)
+          const appIndex = 0;
+          const currentApp = allApplications[appIndex];
+          
+          // Fetch the applicant as a guild member
+          let applicantMember;
+          try {
+            const guild = await client.guilds.fetch(context.guildId);
+            applicantMember = await guild.members.fetch(currentApp.userId);
+          } catch (error) {
+            // Fallback: create basic user object
+            applicantMember = {
+              displayName: currentApp.displayName,
+              user: { username: currentApp.username },
+              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`,
+              roles: []
+            };
+          }
+          
+          // Restore the original Cast Ranking UI
+          const guild = await client.guilds.fetch(context.guildId);
+          const seasonName = 'Current Season'; // TODO: Get actual season name
+          const result = await generateSeasonAppRankingUI({
+            guildId: context.guildId,
+            userId: context.userId,
+            configId: configId !== 'none' ? configId : 'back',
+            allApplications,
+            currentApp,
+            appIndex,
+            applicantMember,
+            guild,
+            seasonName,
+            playerData: await import('./storage.js').then(m => m.loadPlayerData()).then(f => f())
+          });
+          
+          console.log(`✅ SUCCESS: ranking_scores_back - restored Cast Ranking UI`);
+          return result;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('ranking_scores_refresh_')) {

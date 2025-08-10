@@ -545,13 +545,16 @@ export async function handleRankingNavigation({
     
     // ButtonBuilder and ActionRowBuilder already imported at top of file
     
-    // Create action buttons (Close and Refresh)
+    // Create action buttons (Back and Refresh) - Back button encodes context for restoration
+    // Parse the original request to extract current context for the Back button
+    const backContextId = `${extractedConfigId || 'none'}_${userId}`;
+    
     const actionButtons = [
       new ButtonBuilder()
-        .setCustomId(`ranking_scores_close_${extractedConfigId || 'none'}`)
-        .setLabel('Close')
+        .setCustomId(`ranking_scores_back_${backContextId}`)
+        .setLabel('← Cast Ranking')
         .setStyle(ButtonStyle.Secondary)
-        .setEmoji('❌'),
+        .setEmoji('🏆'),
       new ButtonBuilder()
         .setCustomId(`ranking_scores_refresh_${extractedConfigId || 'none'}`)
         .setLabel('Refresh')
@@ -576,8 +579,8 @@ export async function handleRankingNavigation({
       ]
     };
     
+    // Return plain response for updateMessage pattern (no flags)
     return {
-      flags: (1 << 15), // IS_COMPONENTS_V2 flag only, remove EPHEMERAL to make public
       components: [summaryContainer]
     };
   }

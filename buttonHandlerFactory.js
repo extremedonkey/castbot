@@ -147,18 +147,18 @@ export const BUTTON_REGISTRY = {
   },
 
   // === RANKING SYSTEM ===
-  'ranking_scores_close': {
-    label: 'Close',
-    description: 'Close the View All Scores summary',
-    emoji: '❌',
-    style: 'Secondary',
-    category: 'ranking'
-  },
   'ranking_scores_refresh': {
     label: 'Refresh',
     description: 'Refresh the View All Scores summary data',
     emoji: '🔄',
     style: 'Secondary', 
+    category: 'ranking'
+  },
+  'ranking_scores_back': {
+    label: '← Cast Ranking',
+    description: 'Return to Cast Ranking interface',
+    emoji: '🏆',
+    style: 'Secondary',
     category: 'ranking'
   },
 
