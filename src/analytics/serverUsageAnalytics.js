@@ -891,16 +891,16 @@ async function formatServerUsageForDiscordV2(summary) {
         featureList.push(`🖼️ castlist (${features.castlist} uses)`);
       }
       if (features.seasonApplications > 0) {
-        featureList.push(`📝 season apps (${features.seasonApplications} uses)`);
+        featureList.push(`📝 szn apps (${features.seasonApplications} uses)`);
       }
       if (features.safari > 0) {
         featureList.push(`🦁 safari (${features.safari} uses)`);
       }
       if (features.castRanking > 0) {
-        featureList.push(`🏆 cast ranking (${features.castRanking} uses)`);
+        featureList.push(`🏆 ranking (${features.castRanking} uses)`);
       }
       if (features.reactForRoles > 0) {
-        featureList.push(`💜 react for roles (${features.reactForRoles} uses)`);
+        featureList.push(`💜 r4r (${features.reactForRoles} uses)`);
       }
       if (features.playerEmojis > 0) {
         featureList.push(`😀 player emojis (${features.playerEmojis} uses)`);
