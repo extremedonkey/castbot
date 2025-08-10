@@ -915,7 +915,7 @@ async function formatServerUsageForDiscordV2(summary) {
   const components = [];
   
   // Create a single text block with all the content
-  let fullContent = `📈 **Server Usage Analytics**\n\n`;
+  let fullContent = `## 📈 Server Usage Analytics\n\n`;
   
   // Summary statistics
   fullContent += `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}\n`;
@@ -926,7 +926,7 @@ async function formatServerUsageForDiscordV2(summary) {
   
   // Server rankings
   if (displayServers.length > 0) {
-    fullContent += `🏆 **Server Rankings**\n\n`;
+    fullContent += `## 🏆 Server Rankings\n\n`;
     
     displayServers.forEach((server, index) => {
       const medal = getRankEmoji(index);
@@ -993,7 +993,7 @@ async function formatServerUsageForDiscordV2(summary) {
   
   // Insights section
   if (insights.mostActive || insights.powerUsers.length > 0 || insights.highEngagement.length > 0) {
-    fullContent += `💡 **Key Insights**\n\n`;
+    fullContent += `## 💡 Key Insights\n\n`;
     
     if (insights.mostActive) {
       fullContent += `🔥 **Most Active**: ${insights.mostActive.serverName} (${insights.mostActive.avgDailyActivity}/day avg)\n`;
