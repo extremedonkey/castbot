@@ -1004,14 +1004,26 @@ async function formatServerUsageForDiscordV2(summary) {
     fullContent = fullContent.substring(0, 3800) + '\n\n... (content truncated)';
   }
   
-  // Create Components V2 structure with Container and red accent bar
+  // Create Components V2 structure with Container, text content, and refresh button
   components.push({
     type: 17, // Container
     accent_color: 0xFF0000, // Red accent bar
-    components: [{
-      type: 10, // Text Display
-      content: fullContent
-    }]
+    components: [
+      {
+        type: 10, // Text Display
+        content: fullContent
+      },
+      {
+        type: 1, // Action Row
+        components: [{
+          type: 2, // Button
+          style: 4, // Danger (red)
+          emoji: { name: '📈' },
+          label: 'Refresh Stats',
+          custom_id: 'prod_server_usage_stats'
+        }]
+      }
+    ]
   });
   
   return {
