@@ -755,7 +755,7 @@ export async function handleRankingButton({
   client
 }) {
   // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX_CONFIGID
-  const rankMatch = customId.match(/^rank_(\d+)_(.+)_(\d+)(?:_(.+))?$/);
+  const rankMatch = customId.match(/^rank_(\d+)_(\d+)_(\d+)_(.+)$/);
   if (!rankMatch) {
     return {
       content: '❌ Invalid ranking button format.',
