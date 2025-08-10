@@ -435,177 +435,11 @@ import fs from 'fs';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 
-/**
- * Helper function to create casting status buttons
- * @param {string} channelId - Application channel ID
- * @param {number} appIndex - Application index for navigation
- * @param {Object} playerData - Player data object
- * @param {string} guildId - Guild ID
- * @returns {Object} ActionRow with casting buttons
- */
-function createCastingButtons(channelId, appIndex, playerData, guildId, configId = null) {
-  // Get current casting status
-  const castingStatus = playerData[guildId]?.applications?.[channelId]?.castingStatus;
-  
-  const castButtons = [
-    new ButtonBuilder()
-      .setCustomId(`cast_player_${channelId}_${appIndex}_${configId || 'legacy'}`)
-      .setLabel('🎬 Cast Player')
-      .setStyle(castingStatus === 'cast' ? ButtonStyle.Success : ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`cast_tentative_${channelId}_${appIndex}_${configId || 'legacy'}`)
-      .setLabel('❓ Tentative')
-      .setStyle(castingStatus === 'tentative' ? ButtonStyle.Primary : ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId(`cast_reject_${channelId}_${appIndex}_${configId || 'legacy'}`)
-      .setLabel('🗑️ Don\'t Cast')
-      .setStyle(castingStatus === 'reject' ? ButtonStyle.Danger : ButtonStyle.Secondary)
-  ];
-  
-  return new ActionRowBuilder().addComponents(castButtons);
-}
+// REMOVED: createCastingButtons - now handled by castRankingManager.js
 
-/**
- * Helper function to create individual voting breakdown display
- * @param {string} channelId - Application channel ID
- * @param {Object} playerData - Player data object
- * @param {string} guildId - Guild ID
- * @param {Object} guild - Discord guild object
- * @returns {Promise<Object|null>} Text Display component or null if no votes
- */
-async function createVotingBreakdown(channelId, playerData, guildId, guild) {
-  const allRankings = playerData[guildId]?.applications?.[channelId]?.rankings || {};
-  const rankingEntries = Object.entries(allRankings).filter(([_, score]) => score !== undefined);
-  
-  if (rankingEntries.length === 0) {
-    return null; // No votes, don't render anything
-  }
-  
-  // Sort by score (highest to lowest)
-  rankingEntries.sort(([_a, scoreA], [_b, scoreB]) => scoreB - scoreA);
-  
-  // Calculate average
-  const scores = rankingEntries.map(([_, score]) => score);
-  const avgScore = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1);
-  
-  // Build voting breakdown
-  let votingText = `### :ballot_box: Votes\n> **Average:** ||${avgScore}/5.0 (${scores.length} vote${scores.length !== 1 ? 's' : ''})||\n`;
-  
-  // Fetch member names and build vote list
-  for (const [userId, score] of rankingEntries) {
-    try {
-      const member = await guild.members.fetch(userId);
-      const displayName = member.displayName || member.user.username;
-      const stars = ':star:'.repeat(score);
-      votingText += `• ${displayName}: ||${stars} (${score}/5)||\n`;
-    } catch (error) {
-      // Fallback if can't fetch member
-      votingText += `• User ${userId}: ||${':star:'.repeat(score)} (${score}/5)||\n`;
-    }
-  }
-  
-  return {
-    type: 10, // Text Display component
-    content: votingText
-  };
-}
+// REMOVED: createVotingBreakdown - now handled by castRankingManager.js
 
-/**
- * Helper function to create applicant select options for Cast Ranking navigation
- * @param {Array} allApplications - Array of all applications
- * @param {Object} playerData - Player data object
- * @param {string} guildId - Guild ID
- * @param {number} currentPage - Current page of options (0-based)
- * @returns {Array} Array of select menu options
- */
-function createApplicantSelectOptions(allApplications, playerData, guildId, currentPage = 0) {
-  const itemsPerPage = 24;
-  const startIdx = currentPage * itemsPerPage;
-  const endIdx = Math.min(startIdx + itemsPerPage, allApplications.length);
-  
-  const options = [];
-  
-  // Add "Previous page" option if not on first page
-  if (currentPage > 0) {
-    const prevStart = (currentPage - 1) * itemsPerPage + 1;
-    const prevEnd = currentPage * itemsPerPage;
-    options.push({
-      label: `◀ Show Applications ${prevStart}-${prevEnd}`,
-      value: `page_${currentPage - 1}`,
-      description: `View previous set of applications`,
-      emoji: { name: '📄' }
-    });
-  }
-  
-  // Add applicant options for current page
-  for (let i = startIdx; i < endIdx; i++) {
-    const app = allApplications[i];
-    const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
-    const voteCount = Object.keys(rankings).length;
-    const castingStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus;
-    const hasNotes = !!playerData[guildId]?.applications?.[app.channelId]?.playerNotes;
-    
-    // Determine icon based on priority
-    let icon = '🗳️'; // Default: not enough votes
-    if (castingStatus === 'cast') {
-      icon = '✅';
-    } else if (castingStatus === 'reject') {
-      icon = '❌';
-    } else if (voteCount >= 2) {
-      icon = '☑️';
-    }
-    
-    // Format label (max 100 chars)
-    const position = i + 1;
-    const displayName = app.displayName || 'Unknown';
-    const username = app.username || 'unknown';
-    const voteText = voteCount === 1 ? '1 vote' : `${voteCount} votes`;
-    const notesIndicator = hasNotes ? ' 💬' : '';
-    
-    // Build initial label
-    let label = `${icon} ${position}. ${displayName} (${username}) - ${voteText}${notesIndicator}`;
-    
-    // Truncate if too long (Discord limit is 100 chars)
-    if (label.length > 100) {
-      // Calculate how much space we have for username
-      const fixedParts = `${icon} ${position}. ${displayName} () - ${voteText}${notesIndicator}`;
-      const availableSpace = 100 - fixedParts.length;
-      
-      if (availableSpace > 3) {
-        const truncatedUsername = username.substring(0, availableSpace - 3) + '...';
-        label = `${icon} ${position}. ${displayName} (${truncatedUsername}) - ${voteText}${notesIndicator}`;
-      } else {
-        // If even that's too long, truncate display name too
-        const shorterFixed = `${icon} ${position}. () - ${voteText}${notesIndicator}`;
-        const totalAvailable = 100 - shorterFixed.length;
-        const halfSpace = Math.floor(totalAvailable / 2);
-        const truncatedDisplay = displayName.substring(0, halfSpace - 2) + '..';
-        const truncatedUser = username.substring(0, halfSpace - 2) + '..';
-        label = `${icon} ${position}. ${truncatedDisplay} (${truncatedUser}) - ${voteText}${notesIndicator}`;
-      }
-    }
-    
-    options.push({
-      label: label,
-      value: `${i}`, // Application index as string
-      description: `Jump to ${app.displayName}'s application`
-    });
-  }
-  
-  // Add pagination option if there are more applications
-  if (allApplications.length > endIdx) {
-    const nextStart = endIdx + 1;
-    const nextEnd = Math.min(endIdx + itemsPerPage, allApplications.length);
-    options.push({
-      label: `▶ Show Applications ${nextStart}-${nextEnd}`,
-      value: `page_${currentPage + 1}`,
-      description: `View next set of applications`,
-      emoji: { name: '📄' }
-    });
-  }
-  
-  return options;
-}
+// REMOVED: createApplicantSelectOptions - now handled by castRankingManager.js
 
 /**
  * Helper function to create player notes section and edit button
@@ -4836,7 +4670,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
       return;
     } else if (custom_id.startsWith('rank_')) {
-      // Handle ranking button clicks - converted to Button Handler Factory
+      // Handle ranking button clicks - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({
         id: 'rank_applicant',
         updateMessage: true, // Update existing message instead of creating new one
@@ -4855,243 +4689,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             };
           }
 
-          // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX_CONFIGID (new format) or rank_SCORE_CHANNELID_APPINDEX (legacy)
-          const rankMatch = context.customId.match(/^rank_(\d+)_(\d+)_(\d+)(?:_(.+))?$/);
-          if (!rankMatch) {
-            return {
-              content: '❌ Invalid ranking button format.',
-              ephemeral: true
-            };
-          }
-
-          const [, score, channelId, appIndexStr, configId] = rankMatch;
-          const rankingScore = parseInt(score);
-          const appIndex = parseInt(appIndexStr);
-
-          // Load and update ranking data
-          const playerData = await loadPlayerData();
-          
-          // Ensure application exists (it should since we're in Cast Ranking interface)
-          if (!playerData[guildId]?.applications?.[channelId]) {
-            return {
-              content: '❌ Application not found.',
-              ephemeral: true
-            };
-          }
-          
-          // Initialize rankings object if it doesn't exist
-          if (!playerData[guildId].applications[channelId].rankings) {
-            playerData[guildId].applications[channelId].rankings = {};
-          }
-
-          // Record the user's ranking for this application (NEW SYSTEM)
-          playerData[guildId].applications[channelId].rankings[userId] = rankingScore;
-          await savePlayerData(playerData);
-
-          // Get updated application data using season-filtered function when configId is available
-          const allApplications = configId 
-            ? await getApplicationsForSeason(guildId, configId)
-            : await getAllApplicationsFromData(guildId);
-          
-          console.log(`🔍 DEBUG: rank_applicant - AppIndex: ${appIndex}, ConfigId: ${configId}, Applications count: ${allApplications.length}`);
-          console.log(`🔍 DEBUG: Application IDs:`, allApplications.map(app => app.channelId));
-          
-          const currentApp = allApplications[appIndex];
-
-          if (!currentApp) {
-            console.log(`🔍 DEBUG: Application not found at index ${appIndex} - Available indices: 0-${allApplications.length - 1}`);
-            return {
-              content: '❌ Application not found.',
-              ephemeral: true
-            };
-          }
-
-          // Regenerate ranking interface with updated scores
-          // Fetch the applicant as a guild member to get their current avatar
-          let applicantMember;
-          try {
-            applicantMember = await guild.members.fetch(currentApp.userId);
-          } catch (error) {
-            // Fallback: create a basic user object for avatar URL generation
-            applicantMember = {
-              displayName: currentApp.displayName,
-              user: { username: currentApp.username },
-              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
-            };
-          }
-          
-          // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
-          const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
-          
-          // Pre-fetch avatar to warm up Discord CDN cache
-          try {
-            await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
-          } catch (error) {
-            // Non-critical error, continue
-          }
-          
-          // Media Gallery component for displaying applicant avatar
-          const galleryComponent = {
-            type: 12, // Media Gallery component
-            items: [
-              {
-                media: {
-                  url: applicantAvatarURL
-                },
-                description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
-              }
-            ]
-          };
-
-          // Create updated ranking buttons
-          const rankingButtons = [];
-          const userRanking = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings?.[userId];
-          
-          for (let i = 1; i <= 5; i++) {
-            const isSelected = userRanking === i;
-            rankingButtons.push(
-              new ButtonBuilder()
-                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}_${configId || 'legacy'}`)
-                .setLabel(i.toString())
-                .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
-                .setDisabled(isSelected)
-            );
-          }
-          
-          const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
-          
-          // Create navigation buttons
-          const navButtons = [];
-          if (allApplications.length > 1) {
-            navButtons.push(
-              new ButtonBuilder()
-                .setCustomId(`ranking_prev_${appIndex}_${configId || 'legacy'}`)
-                .setLabel('◀ Previous')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(appIndex === 0),
-              new ButtonBuilder()
-                .setCustomId(`ranking_next_${appIndex}_${configId || 'legacy'}`)
-                .setLabel('Next ▶')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(appIndex === allApplications.length - 1)
-            );
-          }
-          
-          navButtons.push(
-            new ButtonBuilder()
-              .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
-              .setLabel('📊 View All Scores')
-              .setStyle(ButtonStyle.Primary)
-          );
-          
-          const navRow = new ActionRowBuilder().addComponents(navButtons);
-          
-          // Calculate updated average score
-          const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
-          const rankings = Object.values(allRankings).filter(r => r !== undefined);
-          const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
-          
-          // Get casting status for display
-          const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
-          let castingStatusText = '';
-          if (castingStatus === 'cast') {
-            castingStatusText = '✅ Cast';
-          } else if (castingStatus === 'tentative') {
-            castingStatusText = '❓ Tentative';
-          } else if (castingStatus === 'reject') {
-            castingStatusText = '🗑️ Don\'t Cast';
-          } else {
-            castingStatusText = '⚪ Undecided';
-          }
-          
-          // Create voting breakdown if there are votes
-          const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
-          
-          // Create updated container
-          // REVERSIBLE CHANGE: Navigation controls moved above applicant info
-          const containerComponents = [
-            {
-              type: 10,
-              content: `## Cast Ranking | ${guild.name}`
-            },
-            {
-              type: 14
-            },
-            navRow.toJSON(), // MOVED: Navigation controls now above applicant info
-            {
-              type: 10,
-              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-            }
-          ];
-          
-          // Add applicant jump select menu if there are multiple applications (also moved above applicant info)
-          if (allApplications.length > 1) {
-            const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
-            const applicantSelectRow = {
-              type: 1, // Action Row
-              components: [{
-                type: 3, // String Select
-                custom_id: `ranking_select_${appIndex}_${configId || 'legacy'}_0`, // Include current page
-                placeholder: '🔍 Jump to applicant...',
-                options: selectOptions,
-                min_values: 1,
-                max_values: 1
-              }]
-            };
-            // Insert select menu right after navigation buttons but before applicant info
-            containerComponents.splice(-1, 0, applicantSelectRow);
-          }
-          
-          // Add separator between navigation and applicant info
-          containerComponents.push({
-            type: 14 // Separator
+          // Use castRankingManager for ranking button handling
+          console.log('🔧 Using castRankingManager.handleRankingButton()');
+          const { handleRankingButton } = await import('./castRankingManager.js');
+          const result = await handleRankingButton({
+            customId: context.customId,
+            guildId,
+            userId,
+            guild,
+            client
           });
           
-          // Add remaining interface components after applicant info
-          containerComponents.push(
-            galleryComponent,
-            {
-              type: 10,
-              content: `> **Rate this applicant (1-5)**`
-            },
-            rankingRow.toJSON(),
-            {
-              type: 14
-            },
-            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON() // Casting buttons
-          );
-          
-          // Add voting breakdown if there are votes
-          if (votingBreakdown) {
-            containerComponents.push(
-              {
-                type: 14 // Separator
-              },
-              votingBreakdown // Voting breakdown display
-            );
-          }
-          
-          // Add player notes section at the bottom
-          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId, configId);
-          containerComponents.push(
-            {
-              type: 14 // Separator
-            },
-            playerNotesDisplay, // Player notes text display
-            playerNotesButtonRow // Edit button
-          );
-          
-          const castRankingContainer = {
-            type: 17,
-            accent_color: 0x9B59B6,
-            components: containerComponents
-          };
-          
-          console.log(`✅ SUCCESS: rank_applicant - score ${rankingScore} recorded for ${currentApp.displayName}`);
-          return {
-            flags: (1 << 15),
-            components: [castRankingContainer]
-          };
+          console.log(`✅ SUCCESS: rank_applicant - ${context.customId} completed via castRankingManager`);
+          return result;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('ranking_prev_') || custom_id.startsWith('ranking_next_') || custom_id.startsWith('ranking_view_all_scores')) {
@@ -5129,310 +4739,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return result;
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('ranking_select_DISABLED')) {
-      // REMOVED LEGACY CODE - this section disabled
-          const seasonConfig = null;
-          const seasonName = seasonConfig?.seasonName || 'Unknown Season';
-
-          if (context.customId.startsWith('ranking_view_all_scores')) {
-            // Generate comprehensive score and casting summary
-            let scoreSummary = `## Cast Ranking & Status Summary - ${seasonName} | ${guild.name}\n\n`;
-          
-          // Calculate scores and casting status for each applicant
-          const applicantData = allApplications.map((app, index) => {
-            const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
-            const scores = Object.values(rankings).filter(r => r !== undefined);
-            const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-            const castingStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus || 'undecided';
-            
-            return {
-              name: app.displayName || app.username,
-              avgScore,
-              voteCount: scores.length,
-              castingStatus,
-              index: index + 1
-            };
-          });
-          
-          // Group by casting status
-          const castGroups = {
-            cast: applicantData.filter(app => app.castingStatus === 'cast'),
-            tentative: applicantData.filter(app => app.castingStatus === 'tentative'), 
-            reject: applicantData.filter(app => app.castingStatus === 'reject'),
-            undecided: applicantData.filter(app => app.castingStatus === 'undecided')
-          };
-          
-          // Sort each group by average score (highest first)
-          Object.values(castGroups).forEach(group => {
-            group.sort((a, b) => b.avgScore - a.avgScore);
-          });
-          
-          // Build status sections
-          const statusSections = [
-            { key: 'cast', title: '✅ **CAST PLAYERS**', color: '🟢', group: castGroups.cast },
-            { key: 'tentative', title: '❓ **TENTATIVE**', color: '🔵', group: castGroups.tentative },
-            { key: 'reject', title: '🗑️ **DON\'T CAST**', color: '🔴', group: castGroups.reject },
-            { key: 'undecided', title: '⚪ **UNDECIDED**', color: '⚫', group: castGroups.undecided }
-          ];
-          
-          statusSections.forEach(section => {
-            if (section.group.length > 0) {
-              scoreSummary += `### ${section.title} (${section.group.length})\n`;
-              section.group.forEach((applicant, index) => {
-                const ranking = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-                const scoreDisplay = applicant.avgScore > 0 ? applicant.avgScore.toFixed(1) : 'Unrated';
-                scoreSummary += `${ranking} **${applicant.name}** - ${scoreDisplay}/5.0 (${applicant.voteCount} vote${applicant.voteCount !== 1 ? 's' : ''})\n`;
-              });
-              scoreSummary += '\n';
-            }
-          });
-          
-          // Add overall statistics
-          scoreSummary += `---\n### 📊 **SUMMARY**\n`;
-          scoreSummary += `> **Total Applicants:** ${allApplications.length}\n`;
-          scoreSummary += `> **Cast:** ${castGroups.cast.length} | **Tentative:** ${castGroups.tentative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length}\n`;
-          
-          const totalScored = applicantData.filter(app => app.voteCount > 0).length;
-          scoreSummary += `> **Scored:** ${totalScored}/${allApplications.length} applicants\n`;
-          
-          const summaryContainer = {
-            type: 17,
-            accent_color: 0x9B59B6, // Purple to match ranking interface
-            components: [
-              {
-                type: 10,
-                content: scoreSummary
-              }
-            ]
-          };
-          
-          // Force a new message for View All Scores by returning a full response object
-          return {
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              flags: (1 << 15), // IS_COMPONENTS_V2 flag only, remove EPHEMERAL to make public
-              components: [summaryContainer]
-            }
-          };
-        }
-        
-        // Handle navigation (prev/next)
-        console.log('🔍 DEBUG: Checking for navigation match...');
-        const navMatch = context.customId.match(/^ranking_(prev|next)_(\d+)(?:_(.+))?$/);
-        if (navMatch) {
-          console.log('🔍 DEBUG: Navigation match found:', navMatch);
-          const [, direction, currentIndexStr] = navMatch;
-          const currentIndex = parseInt(currentIndexStr);
-          const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
-          console.log('🔍 DEBUG: Navigation - Direction:', direction, 'Current:', currentIndex, 'New:', newIndex);
-          
-          if (newIndex < 0 || newIndex >= allApplications.length) {
-            console.log('🔍 DEBUG: Invalid navigation index, sending error');
-            return {
-              content: '❌ Invalid navigation.',
-              ephemeral: true
-            };
-          }
-          
-          const currentApp = allApplications[newIndex];
-          console.log('🔍 DEBUG: Navigation found current app:', currentApp.displayName || currentApp.username);
-          
-          // Regenerate interface for new applicant
-          console.log('🔍 DEBUG: Creating navigation Media Gallery component...');
-          
-          // Fetch the applicant as a guild member to get their current avatar
-          let applicantMember;
-          try {
-            applicantMember = await guild.members.fetch(currentApp.userId);
-            console.log('🔍 DEBUG: Navigation handler - Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
-          } catch (error) {
-            console.log('🔍 DEBUG: Navigation handler - Could not fetch applicant member, using fallback:', error.message);
-            // Fallback: create a basic user object for avatar URL generation
-            applicantMember = {
-              displayName: currentApp.displayName,
-              user: { username: currentApp.username },
-              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
-            };
-          }
-          
-          // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
-          const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
-          console.log('🔍 DEBUG: Navigation handler - Applicant avatar URL:', applicantAvatarURL);
-          
-          // Pre-fetch avatar to warm up Discord CDN cache
-          try {
-            console.log('🔍 DEBUG: Navigation handler - Pre-fetching applicant avatar to warm CDN cache...');
-            const prefetchStart = Date.now();
-            await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
-            const prefetchTime = Date.now() - prefetchStart;
-            console.log(`🔍 DEBUG: Navigation handler - Applicant avatar pre-fetch completed in ${prefetchTime}ms`);
-          } catch (error) {
-            console.log('🔍 DEBUG: Navigation handler - Applicant avatar pre-fetch failed (non-critical):', error.message);
-          }
-          
-          // Media Gallery component for displaying applicant avatar
-          const galleryComponent = {
-            type: 12, // Media Gallery component
-            items: [
-              {
-                media: {
-                  url: applicantAvatarURL
-                },
-                description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
-              }
-            ]
-          };
-          console.log('🔍 DEBUG: Navigation Media Gallery component created');
-
-          const rankingButtons = [];
-          const userRanking = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings?.[userId];
-          
-          for (let i = 1; i <= 5; i++) {
-            const isSelected = userRanking === i;
-            rankingButtons.push(
-              new ButtonBuilder()
-                .setCustomId(`rank_${i}_${currentApp.channelId}_${newIndex}_${configId || 'legacy'}`)
-                .setLabel(i.toString())
-                .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
-                .setDisabled(isSelected)
-            );
-          }
-          
-          const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
-          
-          const navButtons = [];
-          if (allApplications.length > 1) {
-            navButtons.push(
-              new ButtonBuilder()
-                .setCustomId(`ranking_prev_${newIndex}_${configId || 'legacy'}`)
-                .setLabel('◀ Previous')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(newIndex === 0),
-              new ButtonBuilder()
-                .setCustomId(`ranking_next_${newIndex}_${configId || 'legacy'}`)
-                .setLabel('Next ▶')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(newIndex === allApplications.length - 1)
-            );
-          }
-          
-          navButtons.push(
-            new ButtonBuilder()
-              .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
-              .setLabel('📊 View All Scores')
-              .setStyle(ButtonStyle.Primary)
-          );
-          
-          const navRow = new ActionRowBuilder().addComponents(navButtons);
-          
-          const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
-          const rankings = Object.values(allRankings).filter(r => r !== undefined);
-          const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
-          
-          // Get casting status for display
-          const castingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
-          let castingStatusText = '';
-          if (castingStatus === 'cast') {
-            castingStatusText = '✅ Cast';
-          } else if (castingStatus === 'tentative') {
-            castingStatusText = '❓ Tentative';
-          } else if (castingStatus === 'reject') {
-            castingStatusText = '🗑️ Don\'t Cast';
-          } else {
-            castingStatusText = '⚪ Undecided';
-          }
-          
-          // Create voting breakdown if there are votes
-          const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
-          
-          // REVERSIBLE CHANGE: Navigation controls moved above applicant info
-          const containerComponents = [
-            {
-              type: 10,
-              content: `## Cast Ranking | ${guild.name}`
-            },
-            {
-              type: 14
-            },
-            navRow.toJSON(), // MOVED: Navigation controls now above applicant info
-            {
-              type: 10,
-              content: `> **Applicant ${newIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-            }
-          ];
-          
-          // Add applicant jump select menu if there are multiple applications (also moved above applicant info)
-          if (allApplications.length > 1) {
-            const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
-            const applicantSelectRow = {
-              type: 1, // Action Row
-              components: [{
-                type: 3, // String Select
-                custom_id: `ranking_select_${newIndex}_${configId || 'legacy'}_0`, // Include current page
-                placeholder: '🔍 Jump to applicant...',
-                options: selectOptions,
-                min_values: 1,
-                max_values: 1
-              }]
-            };
-            // Insert select menu right after navigation buttons but before applicant info
-            containerComponents.splice(-1, 0, applicantSelectRow);
-          }
-          
-          // Add separator between navigation and applicant info
-          containerComponents.push({
-            type: 14 // Separator
-          });
-          
-          // Add remaining interface components after applicant info
-          containerComponents.push(
-            galleryComponent,
-            {
-              type: 10,
-              content: `> **Rate this applicant (1-5)**`
-            },
-            rankingRow.toJSON(),
-            {
-              type: 14
-            },
-            createCastingButtons(currentApp.channelId, newIndex, playerData, guildId, configId).toJSON() // Casting buttons
-          );
-          
-          // Add voting breakdown if there are votes
-          if (votingBreakdown) {
-            containerComponents.push(
-              {
-                type: 14 // Separator
-              },
-              votingBreakdown // Voting breakdown display
-            );
-          }
-          
-          // Add player notes section at the bottom
-          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, newIndex, playerData, guildId, configId);
-          containerComponents.push(
-            {
-              type: 14 // Separator
-            },
-            playerNotesDisplay, // Player notes text display
-            playerNotesButtonRow // Edit button
-          );
-          
-          const castRankingContainer = {
-            type: 17,
-            accent_color: 0x9B59B6,
-            components: containerComponents
-          };
-          
-          console.log(`✅ SUCCESS: ranking_navigation - ${context.customId} completed`);
-          return {
-            flags: (1 << 15),
-            components: [castRankingContainer]
-          };
-        }
-        
-        // If we get here, no handler matched
-        console.log(`❌ ERROR: ranking_navigation - unhandled pattern ${context.customId}`);
+    // REMOVED: 300+ lines of disabled legacy ranking code - cleaned up
     } else if (custom_id.startsWith('ranking_select_')) {
       // Handle applicant jump select menu - converted to Button Handler Factory
       return ButtonHandlerFactory.create({
@@ -5471,7 +4778,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       })(req, res, client);
     } else if (custom_id.startsWith('cast_player_') || custom_id.startsWith('cast_tentative_') || custom_id.startsWith('cast_reject_')) {
-      // Handle casting status buttons - converted to Button Handler Factory
+      // Handle casting status buttons - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({
         id: 'casting_status',
         updateMessage: true, // This is an UPDATE_MESSAGE response
@@ -5526,7 +4833,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           playerData[guildId].applications[channelId].castingStatus = castingStatus;
           await savePlayerData(playerData);
           
-          // Regenerate the ranking interface with updated button states
+          // Use castRankingManager to regenerate UI with updated casting status
+          console.log('🔧 Using castRankingManager.generateSeasonAppRankingUI() after casting status update');
+          const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
+          
+          // Get application data for UI regeneration
+          const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
           const allApplications = configId 
             ? await getApplicationsForSeason(guildId, configId)
             : await getAllApplicationsFromData(guildId);
@@ -5539,195 +4851,35 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             };
           }
           
-          // Fetch the applicant member for avatar
+          // Fetch the applicant member
           let applicantMember;
           try {
             applicantMember = await guild.members.fetch(currentApp.userId);
-            console.log('🔍 DEBUG: Casting handler - Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
           } catch (error) {
-            console.log('🔍 DEBUG: Casting handler - Failed to fetch member, using fallback:', error.message);
             applicantMember = {
               displayName: currentApp.displayName,
               user: { username: currentApp.username },
-              displayAvatarURL: (options = {}) => {
-                const size = options.size || 128;
-                const baseUrl = currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`;
-                // Replace size parameter in URL or add it if not present
-                return baseUrl.replace(/\?size=\d+/, '').replace(/\.(webp|png|jpg|jpeg)$/, `.webp?size=${size}`);
-              }
+              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`,
+              roles: []
             };
           }
           
-          const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
-          console.log('🔍 DEBUG: Casting handler - Applicant avatar URL:', applicantAvatarURL);
-          
-          // Pre-fetch avatar to warm up Discord CDN cache
-          try {
-            console.log('🔍 DEBUG: Casting handler - Pre-fetching applicant avatar to warm CDN cache...');
-            const prefetchStart = Date.now();
-            await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
-            const prefetchTime = Date.now() - prefetchStart;
-            console.log(`🔍 DEBUG: Casting handler - Applicant avatar pre-fetch completed in ${prefetchTime}ms`);
-          } catch (error) {
-            console.log('🔍 DEBUG: Casting handler - Avatar pre-fetch failed (non-critical):', error.message);
-          }
-          
-          const galleryComponent = {
-            type: 12,
-            items: [{
-              media: { url: applicantAvatarURL },
-              description: `Avatar of applicant ${currentApp.displayName || currentApp.username}`
-            }]
-          };
-          
-          // Create ranking buttons
-          const rankingButtons = [];
-          const userRanking = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings?.[userId];
-          
-          for (let i = 1; i <= 5; i++) {
-            const isSelected = userRanking === i;
-            rankingButtons.push(
-              new ButtonBuilder()
-                .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}_${configId || 'legacy'}`)
-                .setLabel(i.toString())
-                .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
-                .setDisabled(isSelected)
-            );
-          }
-          
-          const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
-          
-          // Create navigation buttons
-          const navButtons = [];
-          if (allApplications.length > 1) {
-            navButtons.push(
-              new ButtonBuilder()
-                .setCustomId(`ranking_prev_${appIndex}_${configId || 'legacy'}`)
-                .setLabel('◀ Previous')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(appIndex === 0),
-              new ButtonBuilder()
-                .setCustomId(`ranking_next_${appIndex}_${configId || 'legacy'}`)
-                .setLabel('Next ▶')
-                .setStyle(ButtonStyle.Secondary)
-                .setDisabled(appIndex === allApplications.length - 1)
-            );
-          }
-          
-          navButtons.push(
-            new ButtonBuilder()
-              .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
-              .setLabel('📊 View All Scores')
-              .setStyle(ButtonStyle.Primary)
-          );
-          
-          const navRow = new ActionRowBuilder().addComponents(navButtons);
-          
-          // Calculate average score
-          const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
-          const rankings = Object.values(allRankings).filter(r => r !== undefined);
-          const avgScore = rankings.length > 0 ? (rankings.reduce((a, b) => a + b, 0) / rankings.length).toFixed(1) : 'No scores';
-          
-          // Get casting status for display
-          const updatedCastingStatus = playerData[guildId]?.applications?.[currentApp.channelId]?.castingStatus;
-          let castingStatusText = '';
-          if (updatedCastingStatus === 'cast') {
-            castingStatusText = '✅ Cast';
-          } else if (updatedCastingStatus === 'tentative') {
-            castingStatusText = '❓ Tentative';
-          } else if (updatedCastingStatus === 'reject') {
-            castingStatusText = '🗑️ Don\'t Cast';
-          } else {
-            castingStatusText = '⚪ Undecided';
-          }
-          
-          // Create voting breakdown if there are votes
-          const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
-          
-          // REVERSIBLE CHANGE: Navigation controls moved above applicant info (casting handler)
-          const containerComponents = [
-            {
-              type: 10,
-              content: `## Cast Ranking | ${guild.name}`
-            },
-            {
-              type: 14
-            },
-            navRow.toJSON(), // MOVED: Navigation controls now above applicant info
-            {
-              type: 10,
-              content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-            }
-          ];
-          
-          // Add applicant jump select menu if there are multiple applications (also moved above applicant info)
-          if (allApplications.length > 1) {
-            const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
-            const applicantSelectRow = {
-              type: 1, // Action Row
-              components: [{
-                type: 3, // String Select
-                custom_id: `ranking_select_${appIndex}_${configId || 'legacy'}_0`, // Include current page
-                placeholder: '🔍 Jump to applicant...',
-                options: selectOptions,
-                min_values: 1,
-                max_values: 1
-              }]
-            };
-            // Insert select menu right after navigation buttons but before applicant info
-            containerComponents.splice(-1, 0, applicantSelectRow);
-          }
-          
-          // Add separator between navigation and applicant info
-          containerComponents.push({
-            type: 14 // Separator
+          // Generate UI using castRankingManager
+          const result = await generateSeasonAppRankingUI({
+            guildId,
+            userId,
+            configId: configId || 'casting',
+            allApplications,
+            currentApp,
+            appIndex,
+            applicantMember,
+            guild,
+            seasonName: 'Current Season', // TODO: Get actual season name
+            playerData
           });
           
-          // Add remaining interface components after applicant info
-          containerComponents.push(
-            galleryComponent,
-            {
-              type: 10,
-              content: `> **Rate this applicant (1-5)**`
-            },
-            rankingRow.toJSON(),
-            {
-              type: 14
-            },
-            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON() // Updated casting buttons
-          );
-          
-          // Add voting breakdown if there are votes
-          if (votingBreakdown) {
-            containerComponents.push(
-              {
-                type: 14 // Separator
-              },
-              votingBreakdown // Voting breakdown display
-            );
-          }
-          
-          // Add player notes section at the bottom
-          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId, configId);
-          containerComponents.push(
-            {
-              type: 14 // Separator
-            },
-            playerNotesDisplay, // Player notes text display
-            playerNotesButtonRow // Edit button
-          );
-          
-          const castRankingContainer = {
-            type: 17,
-            accent_color: 0x9B59B6,
-            components: containerComponents
-          };
-          
-          console.log(`✅ SUCCESS: casting_status - status set to ${castingStatus} for ${currentApp.displayName}`);
-          return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [castRankingContainer]
-          };
+          console.log(`✅ SUCCESS: casting_status - status set to ${castingStatus} for ${currentApp.displayName} via castRankingManager`);
+          return result;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('edit_player_notes_')) {
