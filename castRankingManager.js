@@ -772,11 +772,12 @@ export async function handleRankingButton({
   const playerData = await loadPlayerData();
   
   if (!playerData[guildId]) playerData[guildId] = {};
-  if (!playerData[guildId].rankings) playerData[guildId].rankings = {};
-  if (!playerData[guildId].rankings[channelId]) playerData[guildId].rankings[channelId] = {};
+  if (!playerData[guildId].applications) playerData[guildId].applications = {};
+  if (!playerData[guildId].applications[channelId]) playerData[guildId].applications[channelId] = {};
+  if (!playerData[guildId].applications[channelId].rankings) playerData[guildId].applications[channelId].rankings = {};
   
   // Record the user's ranking for this application
-  playerData[guildId].rankings[channelId][userId] = rankingScore;
+  playerData[guildId].applications[channelId].rankings[userId] = rankingScore;
   await savePlayerData(playerData);
   
   // Get updated application data
