@@ -459,21 +459,23 @@ export async function handleRankingNavigation({
   
   // Parse the customId to extract configId BEFORE using it
   const navMatch = customId.match(/^ranking_(prev|next)_(\d+)(?:_(.+))?$/);
-  const extractedConfigId = navMatch ? navMatch[3] : null;
+  const scoresMatch = customId.match(/^ranking_view_all_scores(?:_(.+))?$/); // Match view all scores pattern
+  const extractedConfigId = navMatch ? navMatch[3] : (scoresMatch ? scoresMatch[1] : null);
   
   // Use appropriate application fetching based on configId
   const allApplications = extractedConfigId && extractedConfigId !== 'navigation' 
     ? await getApplicationsForSeason(guildId, extractedConfigId)
     : await getAllApplicationsFromData(guildId);
 
-  // Handle "view all scores" button
-  if (customId === 'ranking_view_all_scores') {
+  // Handle "view all scores" button (with or without configId)
+  if (scoresMatch) {
+    console.log(`🔍 DEBUG: Handling view all scores with configId: ${extractedConfigId || 'none'}`);
     // Generate comprehensive score summary
     let scoreSummary = `## All Cast Rankings | ${guild.name}\n\n`;
     
     // Calculate scores for each applicant
     const applicantScores = allApplications.map((app, index) => {
-      const rankings = playerData[guildId]?.rankings?.[app.channelId] || {};
+      const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
       const scores = Object.values(rankings).filter(r => r !== undefined);
       const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
       
@@ -484,6 +486,8 @@ export async function handleRankingNavigation({
         index: index + 1
       };
     });
+    
+    console.log(`🔍 DEBUG: View all scores - found ${applicantScores.length} applicants with scores`);
     
     // Sort by average score (highest first)
     applicantScores.sort((a, b) => b.avgScore - a.avgScore);

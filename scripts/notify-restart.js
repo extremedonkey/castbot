@@ -86,6 +86,72 @@ function generateFileSummary(filesChanged, gitStats) {
 }
 
 /**
+ * Generate auto Claude message based on commit content
+ */
+function generateAutoClaudeMessage(commitMessage) {
+    if (!commitMessage) return "Server restarted - ready for testing!";
+    
+    const message = commitMessage.toLowerCase();
+    
+    // Safari-related changes
+    if (message.includes('safari')) {
+        if (message.includes('fix')) return "Safari issue resolved - check it out!";
+        if (message.includes('button')) return "Safari buttons updated - they should work better now!";
+        if (message.includes('map')) return "Safari map improvements deployed!";
+        if (message.includes('store')) return "Safari store functionality enhanced!";
+        return "Safari system updated - test the changes!";
+    }
+    
+    // UI/UX improvements
+    if (message.includes('ui') || message.includes('layout')) {
+        return "UI improvements deployed - interface should look better!";
+    }
+    
+    // Button-related changes
+    if (message.includes('button')) {
+        return "Button system updated - interactions should be smoother!";
+    }
+    
+    // Menu-related changes
+    if (message.includes('menu')) {
+        return "Menu system enhanced - navigation improved!";
+    }
+    
+    // Fix-related changes
+    if (message.includes('fix') || message.includes('bug')) {
+        return "Bug fix deployed - issue should be resolved!";
+    }
+    
+    // Cast ranking changes
+    if (message.includes('cast ranking') || message.includes('ranking')) {
+        return "Cast Ranking system updated - check the improvements!";
+    }
+    
+    // Database/storage changes
+    if (message.includes('storage') || message.includes('data')) {
+        return "Data system improvements deployed!";
+    }
+    
+    // General improvements
+    if (message.includes('improve') || message.includes('enhance')) {
+        return "System enhancements deployed - performance should be better!";
+    }
+    
+    // Add feature detection
+    if (message.includes('add') || message.includes('new')) {
+        return "New feature added - give it a try!";
+    }
+    
+    // Cleanup/refactor
+    if (message.includes('cleanup') || message.includes('refactor')) {
+        return "Code cleanup completed - system should run smoother!";
+    }
+    
+    // Default fallback
+    return "Changes deployed - ready for testing!";
+}
+
+/**
  * Generate test steps based on commit message content
  */
 function generateTestSteps(commitMessage) {
@@ -200,9 +266,10 @@ async function sendRestartNotification() {
             }
         }
 
-        // Add custom message if provided
-        if (customMessage) {
-            messageContent += `\n\n**🤖 Claude Message:** ${customMessage}`;
+        // Add custom message - generate one if not provided
+        const finalCustomMessage = customMessage || generateAutoClaudeMessage(commitMessage);
+        if (finalCustomMessage) {
+            messageContent += `\n\n**🤖 Claude Message:** ${finalCustomMessage}`;
         }
 
         // Create the notification message with Components V2 structure using direct API
