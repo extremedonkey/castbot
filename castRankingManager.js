@@ -5,8 +5,9 @@
  * This module eliminates code duplication across 8+ handlers in app.js.
  * 
  * PHASE 2: Option A - Dedicated Module
- * - Start with core season_app_ranking handler migration
- * - Test functionality before migrating other handlers
+ * - ✅ Core season_app_ranking handler migration COMPLETE
+ * - ⏳ Migrate ranking navigation handlers (prev/next)
+ * - ⏳ Migrate rank button handlers (1-5 stars)
  */
 
 import { ButtonBuilder, ButtonStyle, ActionRowBuilder } from 'discord.js';
@@ -354,4 +355,206 @@ export async function generateSeasonAppRankingUI({
     flags: (1 << 15), // IS_COMPONENTS_V2
     components: [castRankingContainer]
   };
+}
+
+/**
+ * Handle ranking navigation (prev/next) and regenerate UI
+ * 
+ * @param {Object} params - Parameters object  
+ * @param {string} params.customId - Button custom_id (e.g., ranking_prev_5, ranking_next_3)
+ * @param {string} params.guildId - Discord guild ID
+ * @param {string} params.userId - Current user ID
+ * @param {Object} params.guild - Discord guild object
+ * @param {Object} params.client - Discord.js client instance
+ * @returns {Object} Complete UI response object for navigation
+ */
+export async function handleRankingNavigation({
+  customId,
+  guildId,
+  userId, 
+  guild,
+  client
+}) {
+  // Load data
+  const playerData = await loadPlayerData();
+  const { getAllApplicationsFromData } = await import('./storage.js');
+  const allApplications = await getAllApplicationsFromData(guildId);
+
+  // Handle "view all scores" button
+  if (customId === 'ranking_view_all_scores') {
+    // Generate comprehensive score summary
+    let scoreSummary = `## All Cast Rankings | ${guild.name}\n\n`;
+    
+    // Calculate scores for each applicant
+    const applicantScores = allApplications.map((app, index) => {
+      const rankings = playerData[guildId]?.rankings?.[app.channelId] || {};
+      const scores = Object.values(rankings).filter(r => r !== undefined);
+      const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+      
+      return {
+        name: app.displayName || app.username,
+        avgScore,
+        voteCount: scores.length,
+        index: index + 1
+      };
+    });
+    
+    // Sort by average score (highest first)
+    applicantScores.sort((a, b) => b.avgScore - a.avgScore);
+    
+    // Build ranking display
+    scoreSummary += '> **Ranked by Average Score:**\n\n';
+    applicantScores.forEach((applicant, rank) => {
+      const medal = rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}.`;
+      const scoreDisplay = applicant.avgScore > 0 ? applicant.avgScore.toFixed(1) : 'Unrated';
+      scoreSummary += `${medal} **${applicant.name}** - ${scoreDisplay}/5.0 (${applicant.voteCount} vote${applicant.voteCount !== 1 ? 's' : ''})\n`;
+    });
+    
+    const summaryContainer = {
+      type: 17,
+      accent_color: 0xF39C12,
+      components: [
+        {
+          type: 10,
+          content: scoreSummary
+        }
+      ]
+    };
+    
+    return {
+      flags: (1 << 15), // IS_COMPONENTS_V2 flag only, remove EPHEMERAL to make public
+      components: [summaryContainer]
+    };
+  }
+
+  // Handle navigation (prev/next)
+  const navMatch = customId.match(/^ranking_(prev|next)_(\d+)$/);
+  if (!navMatch) {
+    throw new Error(`Invalid navigation custom_id format: ${customId}`);
+  }
+
+  const [, direction, currentIndexStr] = navMatch;
+  const currentIndex = parseInt(currentIndexStr);
+  const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+  
+  if (newIndex < 0 || newIndex >= allApplications.length) {
+    return {
+      content: '❌ Invalid navigation.',
+      ephemeral: true
+    };
+  }
+  
+  const currentApp = allApplications[newIndex];
+  
+  // Fetch the applicant as a guild member to get their current avatar
+  let applicantMember;
+  try {
+    applicantMember = await guild.members.fetch(currentApp.userId);
+  } catch (error) {
+    // Fallback: create a basic user object for avatar URL generation
+    applicantMember = {
+      displayName: currentApp.displayName,
+      user: { username: currentApp.username },
+      displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+    };
+  }
+  
+  // Use the main UI generation function with navigation parameters
+  const seasonName = 'Current Season'; // TODO: Get actual season name
+  return await generateSeasonAppRankingUI({
+    guildId,
+    userId,
+    configId: 'navigation', // Simple config ID for navigation
+    allApplications,
+    currentApp,
+    appIndex: newIndex,
+    applicantMember,
+    guild,
+    seasonName,
+    playerData
+  });
+}
+
+/**
+ * Handle ranking button clicks (1-5 stars) and update scores
+ * 
+ * @param {Object} params - Parameters object
+ * @param {string} params.customId - Button custom_id (e.g., rank_3_channelId_5_configId)
+ * @param {string} params.guildId - Discord guild ID
+ * @param {string} params.userId - Current user ID
+ * @param {Object} params.guild - Discord guild object
+ * @param {Object} params.client - Discord.js client instance
+ * @returns {Object} Complete UI response object with updated scores
+ */
+export async function handleRankingButton({
+  customId,
+  guildId,
+  userId,
+  guild,
+  client
+}) {
+  // Parse custom_id: rank_SCORE_CHANNELID_APPINDEX_CONFIGID
+  const rankMatch = customId.match(/^rank_(\d+)_(.+)_(\d+)(?:_(.+))?$/);
+  if (!rankMatch) {
+    return {
+      content: '❌ Invalid ranking button format.',
+      ephemeral: true
+    };
+  }
+
+  const [, score, channelId, appIndexStr, configId] = rankMatch;
+  const rankingScore = parseInt(score);
+  const appIndex = parseInt(appIndexStr);
+  
+  // Load and update ranking data
+  const { loadPlayerData, savePlayerData } = await import('./storage.js');
+  const playerData = await loadPlayerData();
+  
+  if (!playerData[guildId]) playerData[guildId] = {};
+  if (!playerData[guildId].rankings) playerData[guildId].rankings = {};
+  if (!playerData[guildId].rankings[channelId]) playerData[guildId].rankings[channelId] = {};
+  
+  // Record the user's ranking for this application
+  playerData[guildId].rankings[channelId][userId] = rankingScore;
+  await savePlayerData(playerData);
+  
+  // Get updated application data
+  const { getAllApplicationsFromData } = await import('./storage.js');
+  const allApplications = await getAllApplicationsFromData(guildId);
+  const currentApp = allApplications[appIndex];
+  
+  if (!currentApp) {
+    return {
+      content: '❌ Application not found.',
+      ephemeral: true
+    };
+  }
+  
+  // Fetch the applicant as a guild member
+  let applicantMember;
+  try {
+    applicantMember = await guild.members.fetch(currentApp.userId);
+  } catch (error) {
+    // Fallback: create a basic user object for avatar URL generation
+    applicantMember = {
+      displayName: currentApp.displayName,
+      user: { username: currentApp.username },
+      displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+    };
+  }
+  
+  // Use the main UI generation function with updated data
+  const seasonName = 'Current Season'; // TODO: Get actual season name
+  return await generateSeasonAppRankingUI({
+    guildId,
+    userId,
+    configId: configId || 'rating',
+    allApplications,
+    currentApp,
+    appIndex,
+    applicantMember,
+    guild,
+    seasonName,
+    playerData
+  });
 }

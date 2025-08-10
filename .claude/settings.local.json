@@ -220,7 +220,8 @@
       "Bash(npm run status-remote-wsl:*)",
       "Read(/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1/*)",
       "Bash(find:*)",
-      "LS(/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1)"
+      "LS(/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1)",
+      "Bash(cd:*)"
     ],
     "deny": []
   }
