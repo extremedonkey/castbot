@@ -915,7 +915,7 @@ async function formatServerUsageForDiscordV2(summary) {
   const components = [];
   
   // Create a single text block with all the content
-  let fullContent = `## 📈 Server Usage Analytics\n\n`;
+  let fullContent = `> ## 📈 Server Usage Analytics\n\n`;
   
   // Summary statistics
   fullContent += `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}\n`;
@@ -926,7 +926,7 @@ async function formatServerUsageForDiscordV2(summary) {
   
   // Server rankings
   if (displayServers.length > 0) {
-    fullContent += `## 🏆 Server Rankings\n\n`;
+    fullContent += `> ## 🏆 Server Rankings\n\n`;
     
     displayServers.forEach((server, index) => {
       const medal = getRankEmoji(index);
@@ -995,7 +995,7 @@ async function formatServerUsageForDiscordV2(summary) {
   
   // Recent Server Installs section
   if (recentInstalls.length > 0) {
-    fullContent += `## 🆕 Most Recent Server Installs (Latest ${recentInstalls.length})\n\n`;
+    fullContent += `> ## 🆕 Most Recent Server Installs (Latest ${recentInstalls.length})\n\n`;
     
     recentInstalls.forEach((install, index) => {
       // Format timestamp to show just date and time
@@ -1021,7 +1021,7 @@ async function formatServerUsageForDiscordV2(summary) {
       fullContent += `\n`;
     });
   } else {
-    fullContent += `## 🆕 Most Recent Server Installs\n\n`;
+    fullContent += `> ## 🆕 Most Recent Server Installs\n\n`;
     fullContent += `📭 No server installations found in logs\n\n`;
   }
   
