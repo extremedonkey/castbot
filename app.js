@@ -4785,12 +4785,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         handler: async (context) => {
           console.log(`🔍 START: ranking_scores_close - user ${context.userId}`);
           
-          // Simply delete the message by returning empty content with UPDATE_MESSAGE
+          // Use minimal content instead of completely empty response (Discord requirement)
           console.log(`✅ SUCCESS: ranking_scores_close - message dismissed`);
           return {
-            content: '', // Empty content effectively dismisses the message
-            components: [], // Remove all components
-            embeds: [] // Remove any embeds
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [{
+              type: 17, // Container
+              components: [{
+                type: 10, // Text Display
+                content: '✅ **Ranking summary closed**\n\n*You can access Cast Ranking anytime from the main menu.*'
+              }]
+            }]
           };
         }
       })(req, res, client);

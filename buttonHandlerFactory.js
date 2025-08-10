@@ -1825,6 +1825,31 @@ export function sendPermissionDenied(res, permissionName) {
  * @param {boolean} updateMessage - Whether to update existing message
  */
 export function sendResponse(res, data, updateMessage = false) {
+  // Response validation - prevent common Discord rejection patterns
+  const validateResponse = (responseData) => {
+    if (updateMessage) {
+      // For UPDATE_MESSAGE, check for empty content patterns
+      const { content = '', components = [], embeds = [] } = responseData;
+      const hasContent = content && content.trim().length > 0;
+      const hasComponents = components.length > 0;
+      const hasEmbeds = embeds.length > 0;
+      
+      if (!hasContent && !hasComponents && !hasEmbeds) {
+        console.warn('⚠️ WARNING: Completely empty UPDATE_MESSAGE detected - Discord may reject this');
+        return false;
+      }
+      
+      // Check for Components V2 structure
+      if (hasComponents) {
+        const hasComponentsV2 = components.some(comp => comp.type === 17); // Container type
+        if (!hasComponentsV2 && responseData.flags && (responseData.flags & (1 << 15))) {
+          console.warn('⚠️ WARNING: Components V2 flag set but no Container component found');
+        }
+      }
+    }
+    return true;
+  };
+
   // If the response already has a type set (like MODAL), send it directly
   if (data.type) {
     console.log(`📝 Sending ${data.type} response directly`);
@@ -1837,6 +1862,12 @@ export function sendResponse(res, data, updateMessage = false) {
     // CRITICAL: UPDATE_MESSAGE cannot have flags - Discord will reject the interaction
     // Always strip flags and ephemeral for UPDATE_MESSAGE responses
     const { flags, ephemeral, ...cleanData } = data;
+    
+    // Validate the response
+    if (!validateResponse(cleanData)) {
+      console.error('❌ VALIDATION FAILED: Response may be rejected by Discord');
+    }
+    
     return res.send({
       type: InteractionResponseType.UPDATE_MESSAGE,
       data: cleanData

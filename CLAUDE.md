@@ -343,6 +343,36 @@ const response = {
 
 **🚨 CRITICAL: 5-Button Limit** - Action Rows can contain maximum 5 buttons (ComponentsV2.md line 61)
 
+**🚨 CRITICAL: Discord Response Validation**
+
+**Common Response Rejection Causes:**
+1. **Empty UPDATE_MESSAGE responses** - Discord rejects completely empty content/components
+2. **Flags in UPDATE_MESSAGE** - ButtonHandlerFactory automatically strips flags for UPDATE_MESSAGE
+3. **Invalid component nesting** - Must follow Components V2 hierarchy
+4. **Missing required fields** - Discord requires specific fields per response type
+
+**✅ Safe Response Patterns:**
+```javascript
+// ✅ GOOD: Minimal dismissal message
+return {
+  flags: (1 << 15), // IS_COMPONENTS_V2
+  components: [{
+    type: 17, // Container
+    components: [{
+      type: 10, // Text Display
+      content: '✅ Action completed'
+    }]
+  }]
+};
+
+// ❌ BAD: Completely empty response
+return {
+  content: '',
+  components: [],
+  embeds: []
+};
+```
+
 **Always update:** [docs/architecture/BUTTON_HANDLER_REGISTRY.md](docs/architecture/BUTTON_HANDLER_REGISTRY.md)
 
 ### 🚨 Button Testing Protocol
