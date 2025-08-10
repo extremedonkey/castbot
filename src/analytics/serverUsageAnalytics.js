@@ -1016,11 +1016,13 @@ async function formatServerUsageForDiscordV2(summary) {
         ? install.serverName.substring(0, 30) + '...'
         : install.serverName;
       
-      // Extract just the username from owner string (remove @ and ID)
-      const ownerMatch = install.owner.match(/^(.+?)\s*\(@/);
-      const ownerName = ownerMatch ? ownerMatch[1] : install.owner.split(' ')[0];
+      // Extract display name and username from owner string
+      const ownerMatch = install.owner.match(/^(.+?)\s*\((@[^)]+)\)/);
+      const displayName = ownerMatch ? ownerMatch[1] : install.owner.split(' ')[0];
+      const username = ownerMatch ? ownerMatch[2] : '';
+      const ownerDisplay = username ? `${displayName} (${username})` : displayName;
       
-      fullContent += `📅 **${serverDisplay}** ([${timeStr}] ${dayStr}, ${ownerName})\n`;
+      fullContent += `📅 **${serverDisplay}** ([${timeStr}] ${dayStr}, ${ownerDisplay})\n\n`;
     });
   } else {
     fullContent += `> ## 🆕 Most Recent Server Installs\n\n`;
