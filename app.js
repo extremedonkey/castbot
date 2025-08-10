@@ -4785,17 +4785,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         handler: async (context) => {
           console.log(`🔍 START: ranking_scores_close - user ${context.userId}`);
           
-          // Use minimal content instead of completely empty response (Discord requirement)
+          // Use minimal ephemeral acknowledgment (Discord requirement - cannot send completely empty response)
           console.log(`✅ SUCCESS: ranking_scores_close - message dismissed`);
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [{
-              type: 17, // Container
-              components: [{
-                type: 10, // Text Display
-                content: '✅ **Ranking summary closed**\n\n*You can access Cast Ranking anytime from the main menu.*'
-              }]
-            }]
+            content: '✅ Closed',
+            ephemeral: true
           };
         }
       })(req, res, client);
