@@ -5462,12 +5462,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         // If we get here, no handler matched
         console.log(`❌ ERROR: ranking_navigation - unhandled pattern ${context.customId}`);
-        return {
-          content: '❌ Unknown ranking navigation command.',
-          ephemeral: true
-        };
-      }
-      })(req, res, client);
     } else if (custom_id.startsWith('ranking_select_')) {
       // Handle applicant jump select menu - converted to Button Handler Factory
       return ButtonHandlerFactory.create({
