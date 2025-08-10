@@ -227,7 +227,20 @@ rankings[guildId][channelId][adminUserId] = score (1-5)
 - **Admin attribution**: Shows who voted what
 - **Conditional rendering**: Only appears when votes exist
 
-### 5. Comprehensive Overview
+### 5. Quick Navigation System
+
+**Purpose**: Efficient navigation through large applicant pools via String Select dropdown
+
+**Features**:
+- **Direct jumping**: Select any applicant from dropdown menu
+- **Smart pagination**: Handles 25+ applicants with page navigation
+- **Visual indicators**: Icons show casting status and vote count
+- **Notes indicator**: 💬 shows which applicants have notes
+- **Maintains state**: Preserves current page and navigation context
+
+**Implementation**: See [Cast Ranking Navigation](CastRankingNavigation.md) for detailed documentation
+
+### 6. Comprehensive Overview
 
 **Purpose**: High-level summary of all applicants organized by casting status
 

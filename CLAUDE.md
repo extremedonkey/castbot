@@ -28,6 +28,8 @@ When working on specific features, refer to these dedicated documentation files:
 
 **📋 SEASON APPLICATION BUILDER:** Application systems, applicant management → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
 
+**🏆 CAST RANKING:** Applicant scoring, voting, and navigation → [docs/features/CastRanking.md](docs/features/CastRanking.md) | [Navigation System](docs/features/CastRankingNavigation.md)
+
 **🎨 COMPONENTS V2:** Discord UI architecture (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
 
 **🔧 ENTITY/EDIT FRAMEWORK:** Universal UI system for content management → [docs/architecture/EntityEditFramework.md](docs/architecture/EntityEditFramework.md)
