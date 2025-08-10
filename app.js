@@ -26765,97 +26765,23 @@ Are you sure you want to continue?`;
           castingStatusText = '⚪ Undecided';
         }
         
-        // Create voting breakdown if there are votes
-        const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
-        
-        // Create Components V2 Container for Cast Ranking interface
-        // REVERSIBLE CHANGE: Navigation controls moved above applicant info (handler 3)
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## Cast Ranking | ${guild.name}`
-          },
-          {
-            type: 14 // Separator
-          },
-          navRow.toJSON(), // MOVED: Navigation controls now above applicant info
-          {
-            type: 10, // Text Display component
-            content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-          }
-        ];
-        
-        // Add select menu and remaining interface components
-        // Add applicant jump select menu if there are multiple applications (also moved above applicant info)
-        if (allApplications.length > 1) {
-          const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
-          const applicantSelectRow = {
-            type: 1, // Action Row
-            components: [{
-              type: 3, // String Select
-              custom_id: `ranking_select_${appIndex}_${configId || 'legacy'}_0`, // Include current page
-              placeholder: '🔍 Jump to applicant...',
-              options: selectOptions,
-              min_values: 1,
-              max_values: 1
-            }]
-          };
-          // Insert select menu right after navigation buttons but before applicant info
-          containerComponents.splice(-1, 0, applicantSelectRow);
-        }
-        
-        // Add separator between navigation and applicant info
-        containerComponents.push({
-          type: 14 // Separator
+        // Use Cast Ranking Manager to regenerate the UI with updated notes
+        const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
+        const result = await generateSeasonAppRankingUI({
+          guildId,
+          userId,
+          configId: configId || 'notes',
+          allApplications,
+          currentApp,
+          appIndex,
+          applicantMember,
+          guild,
+          seasonName: 'Current Season',
+          playerData,
+          ephemeral: false
         });
         
-        // Add remaining interface components after applicant info
-        containerComponents.push(
-          galleryComponent, // Applicant avatar display
-          {
-            type: 10, // Text Display component  
-            content: `> **Rate this applicant (1-5)**`
-          },
-          rankingRow.toJSON(), // Ranking buttons
-          {
-            type: 14 // Separator
-          },
-          createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON() // Casting buttons
-        );
-        
-        // Add voting breakdown if there are votes
-        if (votingBreakdown) {
-          containerComponents.push(
-            {
-              type: 14 // Separator
-            },
-            votingBreakdown // Voting breakdown display
-          );
-        }
-        
-          // Add player notes section at the bottom
-          const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(currentApp.channelId, appIndex, playerData, guildId, configId);
-          containerComponents.push(
-            {
-              type: 14 // Separator
-            },
-            playerNotesDisplay, // Player notes text display
-            playerNotesButtonRow // Edit button
-          );
-          
-          const castRankingContainer = {
-            type: 17, // Container component
-            accent_color: 0x9B59B6, // Purple accent color
-            components: containerComponents
-          };
-          
-          return {
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              flags: (1 << 15), // IS_COMPONENTS_V2 flag
-              components: [castRankingContainer]
-            }
-          };
+        return result;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('admin_age_modal_')) {
