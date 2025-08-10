@@ -674,16 +674,16 @@ async function logNewServerInstall(guild, ownerInfo = null) {
 
     // Rate limiting check (simple implementation)
     const now = Date.now();
-    if (now - loggingConfig.lastMessageTime < 1200) { // 1.2 seconds between messages
+    if (now - runtimeState.lastMessageTime < 1200) { // 1.2 seconds between messages
       // Add to queue for later processing
-      loggingConfig.rateLimitQueue.push({
+      runtimeState.rateLimitQueue.push({
         message: announcementMessage,
         timestamp: now
       });
       
       // Limit queue size
-      if (loggingConfig.rateLimitQueue.length > 50) {
-        loggingConfig.rateLimitQueue.shift(); // Remove oldest
+      if (runtimeState.rateLimitQueue.length > 50) {
+        runtimeState.rateLimitQueue.shift(); // Remove oldest
       }
       
       return;
@@ -696,9 +696,9 @@ async function logNewServerInstall(guild, ownerInfo = null) {
     await targetChannel.send(announcementMessage);
     
     // Start queue processing if needed (singleton ensures only one processor runs)
-    if (loggingConfig.rateLimitQueue.length > 0) {
+    if (runtimeState.rateLimitQueue.length > 0) {
       setTimeout(async () => {
-        await queueProcessor.startProcessing(loggingConfig);
+        await queueProcessor.startProcessing();
       }, 1200);
     }
     

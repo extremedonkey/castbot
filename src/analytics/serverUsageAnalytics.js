@@ -674,17 +674,18 @@ async function parseRecentServerInstalls(limit = 5) {
           // Extract timestamp from the line (various formats)
           let timestamp = null;
           
-          // Format 1: # [timestamp] | announcement (from Discord announcements)
-          const hashTimestampMatch = line.match(/^#\s*(.+?)\s*\|/);
-          if (hashTimestampMatch) {
-            timestamp = parseTimestamp(hashTimestampMatch[1]);
+          // Format 1: [timestamp] at start (standard SERVER_INSTALL format)
+          const bracketTimestampMatch = line.match(/^(\[[^\]]+\])\s+([^|]+)/);
+          if (bracketTimestampMatch) {
+            const fullTimestamp = `${bracketTimestampMatch[1]} ${bracketTimestampMatch[2].trim()}`;
+            timestamp = parseTimestamp(fullTimestamp);
           }
           
-          // Format 2: [timestamp] format (standard analytics)
+          // Format 2: # [timestamp] | announcement (from Discord announcements)
           if (!timestamp) {
-            const bracketTimestampMatch = line.match(/\[([^\]]+)\]/);
-            if (bracketTimestampMatch) {
-              timestamp = parseTimestamp(bracketTimestampMatch[1]);
+            const hashTimestampMatch = line.match(/^#\s*(.+?)\s*\|/);
+            if (hashTimestampMatch) {
+              timestamp = parseTimestamp(hashTimestampMatch[1]);
             }
           }
           
