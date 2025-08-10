@@ -5037,6 +5037,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
           
           // Create updated container
+          // REVERSIBLE CHANGE: Navigation controls moved below applicant info
           const containerComponents = [
             {
               type: 10,
@@ -5049,23 +5050,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               type: 10,
               content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
             },
-            galleryComponent,
-            {
-              type: 10,
-              content: `> **Rate this applicant (1-5)**`
-            },
-            rankingRow.toJSON(),
-            {
-              type: 14
-            },
-            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON(), // Casting buttons
-            {
-              type: 14
-            },
-            navRow.toJSON()
+            navRow.toJSON() // MOVED: Navigation controls now below applicant info
           ];
           
-          // Add applicant jump select menu if there are multiple applications
+          // Add applicant jump select menu if there are multiple applications (also moved up)
           if (allApplications.length > 1) {
             const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
             const applicantSelectRow = {
@@ -5081,6 +5069,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             };
             containerComponents.push(applicantSelectRow);
           }
+          
+          // Add remaining interface components after navigation
+          containerComponents.push(
+            {
+              type: 14
+            },
+            galleryComponent,
+            {
+              type: 10,
+              content: `> **Rate this applicant (1-5)**`
+            },
+            rankingRow.toJSON(),
+            {
+              type: 14
+            },
+            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON() // Casting buttons
+          );
           
           // Add voting breakdown if there are votes
           if (votingBreakdown) {
@@ -5370,6 +5375,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Create voting breakdown if there are votes
           const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
           
+          // REVERSIBLE CHANGE: Navigation controls moved below applicant info
           const containerComponents = [
             {
               type: 10,
@@ -5382,23 +5388,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               type: 10,
               content: `> **Applicant ${newIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
             },
-            galleryComponent,
-            {
-              type: 10,
-              content: `> **Rate this applicant (1-5)**`
-            },
-            rankingRow.toJSON(),
-            {
-              type: 14
-            },
-            createCastingButtons(currentApp.channelId, newIndex, playerData, guildId, configId).toJSON(), // Casting buttons
-            {
-              type: 14
-            },
-            navRow.toJSON()
+            navRow.toJSON() // MOVED: Navigation controls now below applicant info
           ];
           
-          // Add applicant jump select menu if there are multiple applications
+          // Add applicant jump select menu if there are multiple applications (also moved up)
           if (allApplications.length > 1) {
             const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
             const applicantSelectRow = {
@@ -5414,6 +5407,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             };
             containerComponents.push(applicantSelectRow);
           }
+          
+          // Add remaining interface components after navigation
+          containerComponents.push(
+            {
+              type: 14
+            },
+            galleryComponent,
+            {
+              type: 10,
+              content: `> **Rate this applicant (1-5)**`
+            },
+            rankingRow.toJSON(),
+            {
+              type: 14
+            },
+            createCastingButtons(currentApp.channelId, newIndex, playerData, guildId, configId).toJSON() // Casting buttons
+          );
           
           // Add voting breakdown if there are votes
           if (votingBreakdown) {
@@ -8402,6 +8412,7 @@ To fix this:
           const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
           
           // Create Components V2 Container for Cast Ranking interface
+          // REVERSIBLE CHANGE: Navigation controls moved below applicant info
           const containerComponents = [
             {
               type: 10, // Text Display component
@@ -8414,23 +8425,10 @@ To fix this:
               type: 10, // Text Display component
               content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
             },
-            avatarDisplayComponent, // Applicant avatar display
-            {
-              type: 10, // Text Display component  
-              content: `> **Rate this applicant (1-5)**`
-            },
-            rankingRow.toJSON(), // Ranking buttons
-            {
-              type: 14 // Separator
-            },
-            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON(), // Casting buttons
-            {
-              type: 14 // Separator
-            },
-            navRow.toJSON() // Navigation and view all scores
+            navRow.toJSON() // MOVED: Navigation controls now below applicant info
           ];
           
-          // Add applicant jump select menu if there are multiple applications
+          // Add applicant jump select menu if there are multiple applications (also moved up)
           if (allApplications.length > 1) {
             const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
             const applicantSelectRow = {
@@ -8446,6 +8444,23 @@ To fix this:
             };
             containerComponents.push(applicantSelectRow);
           }
+          
+          // Add remaining interface components after navigation
+          containerComponents.push(
+            {
+              type: 14 // Separator
+            },
+            avatarDisplayComponent, // Applicant avatar display
+            {
+              type: 10, // Text Display component  
+              content: `> **Rate this applicant (1-5)**`
+            },
+            rankingRow.toJSON(), // Ranking buttons
+            {
+              type: 14 // Separator
+            },
+            createCastingButtons(currentApp.channelId, appIndex, playerData, guildId, configId).toJSON() // Casting buttons
+          );
           
           // Add voting breakdown if there are votes
           if (votingBreakdown) {
