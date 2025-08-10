@@ -953,8 +953,8 @@ async function formatServerUsageForDiscordV2(summary) {
     fullContent += `📭 No server installations found in logs\n\n`;
   }
   
-  // Add separator divider
-  fullContent += '\n';
+  // Add text separator between sections
+  fullContent += '---\n\n';
   
   // Server rankings SECOND
   if (displayServers.length > 0) {
@@ -1023,8 +1023,8 @@ async function formatServerUsageForDiscordV2(summary) {
     fullContent += `📭 **No server activity found**\n\nNo interactions recorded in the specified period.\n\n`;
   }
   
-  // Add separator divider
-  fullContent += '\n';
+  // Add text separator between sections
+  fullContent += '---\n\n';
   
   // Server Usage Analytics THIRD (last)
   fullContent += `> ## 📈 Server Usage Analytics\n\n`;
