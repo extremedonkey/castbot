@@ -439,8 +439,16 @@ export async function handleRankingNavigation({
 }) {
   // Load data
   const playerData = await loadPlayerData();
-  const { getAllApplicationsFromData } = await import('./storage.js');
-  const allApplications = await getAllApplicationsFromData(guildId);
+  const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
+  
+  // Parse the customId to extract configId BEFORE using it
+  const navMatch = customId.match(/^ranking_(prev|next)_(\d+)(?:_(.+))?$/);
+  const extractedConfigId = navMatch ? navMatch[3] : null;
+  
+  // Use appropriate application fetching based on configId
+  const allApplications = extractedConfigId && extractedConfigId !== 'navigation' 
+    ? await getApplicationsForSeason(guildId, extractedConfigId)
+    : await getAllApplicationsFromData(guildId);
 
   // Handle "view all scores" button
   if (customId === 'ranking_view_all_scores') {
@@ -491,12 +499,12 @@ export async function handleRankingNavigation({
 
   // Handle navigation (prev/next) with configId support
   // Format: ranking_prev_{index}_{configId} or ranking_next_{index}_{configId}
-  const navMatch = customId.match(/^ranking_(prev|next)_(\d+)(?:_(.+))?$/);
+  // navMatch already parsed above for configId extraction
   if (!navMatch) {
     throw new Error(`Invalid navigation custom_id format: ${customId}`);
   }
 
-  const [, direction, currentIndexStr, extractedConfigId] = navMatch;
+  const [, direction, currentIndexStr] = navMatch;
   const currentIndex = parseInt(currentIndexStr);
   const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
   
