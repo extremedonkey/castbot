@@ -466,8 +466,9 @@ export async function handleRankingNavigation({
   const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
   
   // Parse the customId to extract configId BEFORE using it
-  const navMatch = customId.match(/^ranking_(prev|next)_(\d+)(?:_(.+))?$/);
-  const scoresMatch = customId.match(/^ranking_view_all_scores(?:_(.+))?$/); // Match view all scores pattern
+  // Handle ephemeral suffix: ranking_next_0_config_123_ephemeral
+  const navMatch = customId.match(/^ranking_(prev|next)_(\d+)(?:_(.+?))?(?:_ephemeral)?$/);
+  const scoresMatch = customId.match(/^ranking_view_all_scores(?:_(.+?))?(?:_ephemeral)?$/);
   const extractedConfigId = navMatch ? navMatch[3] : (scoresMatch ? scoresMatch[1] : null);
   
   // Use appropriate application fetching based on configId
