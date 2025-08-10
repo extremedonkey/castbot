@@ -235,9 +235,6 @@ export async function generateSeasonAppRankingUI({
       type: 10, // Text Display component
       content: `## Cast Ranking - ${seasonName} | ${guild.name}`
     },
-    {
-      type: 14 // Separator
-    },
     navRow.toJSON(), // Navigation controls above applicant info
     {
       type: 10, // Text Display component
@@ -329,17 +326,21 @@ export async function generateSeasonAppRankingUI({
     };
     // Insert select menu right after navigation buttons but before applicant info
     containerComponents.splice(-1, 0, applicantSelectRow);
+    // Add separator after the select menu
+    containerComponents.splice(-1, 0, {
+      type: 14 // Separator
+    });
+  } else {
+    // If no select menu, still add separator after navigation
+    containerComponents.splice(-1, 0, {
+      type: 14 // Separator
+    });
   }
-  
-  // Add separator between navigation and applicant info
-  containerComponents.push({
-    type: 14 // Separator
-  });
   
   // Add remaining interface components after applicant info
   containerComponents.push(
     {
-      type: 14 // Separator
+      type: 14 // Separator - single divider after applicant info
     },
     avatarDisplayComponent, // Applicant avatar display
     {
