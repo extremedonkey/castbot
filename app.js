@@ -4704,11 +4704,60 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return result;
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('personal_ranker_')) {
+      // Handle Personal Ranker button - creates ephemeral Cast Ranking interface
+      return ButtonHandlerFactory.create({
+        id: 'personal_ranker',
+        updateMessage: false, // Always create new ephemeral message
+        handler: async (context) => {
+          console.log(`🔍 START: personal_ranker - user ${context.userId}`);
+          
+          // Parse: personal_ranker_{channelId}_{appIndex}_{configId}
+          const parts = context.customId.split('_');
+          const channelId = parts[2];
+          const appIndex = parseInt(parts[3]);
+          const configId = parts.slice(4).join('_');
+          
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          
+          // Get applications and current app
+          const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
+          const allApplications = configId ? await getApplicationsForSeason(guildId, configId) : await getAllApplicationsFromData(guildId);
+          const currentApp = allApplications[appIndex];
+          
+          // Fetch applicant member
+          let applicantMember;
+          try {
+            applicantMember = await guild.members.fetch(currentApp.userId);
+          } catch (error) {
+            applicantMember = {
+              displayName: currentApp.displayName,
+              user: { username: currentApp.username },
+              displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`,
+              roles: []
+            };
+          }
+          
+          // Generate ephemeral Cast Ranking UI
+          const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
+          const result = await generateSeasonAppRankingUI({
+            guildId, userId, configId, allApplications, currentApp, appIndex, applicantMember, guild,
+            seasonName: 'Current Season',
+            playerData: await import('./storage.js').then(m => m.loadPlayerData()),
+            ephemeral: true
+          });
+          
+          console.log(`✅ SUCCESS: personal_ranker - ephemeral UI created`);
+          return result;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('ranking_prev_') || custom_id.startsWith('ranking_next_') || custom_id.startsWith('ranking_view_all_scores')) {
       // Handle ranking navigation and view all scores - USING CAST RANKING MANAGER
+      const isEphemeral = custom_id.includes('_ephemeral');
       return ButtonHandlerFactory.create({
         id: 'ranking_navigation',
-        updateMessage: true, // All ranking navigation including View All Scores should update the existing message
+        updateMessage: !isEphemeral, // Ephemeral creates new, shared updates existing
         handler: async (context) => {
           console.log(`🔍 START: ranking_navigation - user ${context.userId}, button ${context.customId}`);
           
@@ -4732,7 +4781,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             guildId,
             userId,
             guild,
-            client
+            client,
+            ephemeral: isEphemeral
           });
           
           console.log(`✅ SUCCESS: ranking_navigation - ${context.customId} completed via castRankingManager`);

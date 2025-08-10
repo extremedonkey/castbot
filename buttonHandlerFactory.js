@@ -161,6 +161,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'ranking'
   },
+  'personal_ranker': {
+    label: '🤸 Personal Ranker',
+    description: 'Open ephemeral personal Cast Ranking interface',
+    emoji: '🤸',
+    style: 'Secondary',
+    category: 'ranking'
+  },
 
   // === SAFARI MENU SYSTEM ===
   'prod_safari_menu': {

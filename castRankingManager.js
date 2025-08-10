@@ -42,7 +42,8 @@ export async function generateSeasonAppRankingUI({
   applicantMember,
   guild,
   seasonName,
-  playerData
+  playerData,
+  ephemeral = false
 }) {
   // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
   const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
@@ -72,6 +73,7 @@ export async function generateSeasonAppRankingUI({
   };
 
   // Create ranking buttons (1-5)
+  const ephemeralSuffix = ephemeral ? '_ephemeral' : '';
   const rankingButtons = [];
   const userRanking = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings?.[userId];
   
@@ -79,7 +81,7 @@ export async function generateSeasonAppRankingUI({
     const isSelected = userRanking === i;
     rankingButtons.push(
       new ButtonBuilder()
-        .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}_${configId}`)
+        .setCustomId(`rank_${i}_${currentApp.channelId}_${appIndex}_${configId}${ephemeralSuffix}`)
         .setLabel(i.toString())
         .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
         .setDisabled(isSelected)
@@ -93,12 +95,12 @@ export async function generateSeasonAppRankingUI({
   if (allApplications.length > 1) {
     navButtons.push(
       new ButtonBuilder()
-        .setCustomId(`ranking_prev_${appIndex}_${configId}`)
+        .setCustomId(`ranking_prev_${appIndex}_${configId}${ephemeralSuffix}`)
         .setLabel('◀ Previous')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(appIndex === 0),
       new ButtonBuilder()
-        .setCustomId(`ranking_next_${appIndex}_${configId}`)
+        .setCustomId(`ranking_next_${appIndex}_${configId}${ephemeralSuffix}`)
         .setLabel('Next ▶')
         .setStyle(ButtonStyle.Secondary)
         .setDisabled(appIndex === allApplications.length - 1)
@@ -108,7 +110,7 @@ export async function generateSeasonAppRankingUI({
   // Add View All Scores button (season-scoped)
   navButtons.push(
     new ButtonBuilder()
-      .setCustomId(`ranking_view_all_scores_${configId}`)
+      .setCustomId(`ranking_view_all_scores_${configId}${ephemeralSuffix}`)
       .setLabel('📊 View All Scores')
       .setStyle(ButtonStyle.Primary)
   );
@@ -418,6 +420,11 @@ export async function generateSeasonAppRankingUI({
           .setCustomId(`edit_player_notes_${currentApp.channelId}_${appIndex}_${configId}`)
           .setLabel('✏️ Edit Player Notes')
           .setStyle(ButtonStyle.Primary)
+          .toJSON(),
+        new ButtonBuilder()
+          .setCustomId(`personal_ranker_${currentApp.channelId}_${appIndex}_${configId}`)
+          .setLabel('🤸 Personal Ranker')
+          .setStyle(ButtonStyle.Secondary)
           .toJSON()
       ]
     }
@@ -430,7 +437,7 @@ export async function generateSeasonAppRankingUI({
   };
   
   return {
-    flags: (1 << 15), // IS_COMPONENTS_V2
+    flags: ephemeral ? ((1 << 15) | (1 << 6)) : (1 << 15), // IS_COMPONENTS_V2 + EPHEMERAL if personal
     components: [castRankingContainer]
   };
 }
@@ -451,7 +458,8 @@ export async function handleRankingNavigation({
   guildId,
   userId, 
   guild,
-  client
+  client,
+  ephemeral = false
 }) {
   // Load data
   const playerData = await loadPlayerData();
@@ -579,9 +587,11 @@ export async function handleRankingNavigation({
       ]
     };
     
-    // Return plain response for updateMessage pattern (no flags)
-    return {
+    return ephemeral ? {
+      flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL  
       components: [summaryContainer]
+    } : {
+      components: [summaryContainer] // Plain response for updateMessage pattern
     };
   }
 
@@ -634,7 +644,8 @@ export async function handleRankingNavigation({
     applicantMember,
     guild,
     seasonName,
-    playerData
+    playerData,
+    ephemeral
   });
 }
 
