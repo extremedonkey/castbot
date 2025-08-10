@@ -4846,7 +4846,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             applicantMember,
             guild,
             seasonName,
-            playerData: await import('./storage.js').then(m => m.loadPlayerData()).then(f => f())
+            playerData: await import('./storage.js').then(m => m.loadPlayerData())
           });
           
           console.log(`✅ SUCCESS: ranking_scores_back - restored Cast Ranking UI`);
