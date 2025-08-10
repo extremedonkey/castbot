@@ -168,6 +168,7 @@ export async function generateSeasonAppRankingUI({
   
   // Get applicant's age from playerData
   const applicantAge = playerData[guildId]?.players?.[currentApp.userId]?.age;
+  console.log(`🔍 DEBUG: Demographics - User ${currentApp.userId} age: ${applicantAge || 'not set'}`);
   
   // Get applicant's pronoun and timezone roles
   let pronounRoleId = null;
@@ -175,6 +176,7 @@ export async function generateSeasonAppRankingUI({
   
   // Check if applicantMember has roles (it should if fetched successfully)
   if (applicantMember && applicantMember.roles) {
+    console.log(`🔍 DEBUG: Demographics - Member has roles:`, applicantMember.roles);
     // Get guild's configured pronoun and timezone roles
     const guildPronouns = playerData[guildId]?.pronounRoleIDs || [];
     const guildTimezones = playerData[guildId]?.timezoneRoleIDs || [];
@@ -217,10 +219,14 @@ export async function generateSeasonAppRankingUI({
     infoParts.push(`<@&${timezoneRoleId}>`);
   }
   
+  console.log(`🔍 DEBUG: Demographics - Building info: Age=${applicantAge}, Pronoun=${pronounRoleId}, Timezone=${timezoneRoleId}`);
+  
   // Only add brackets if there's any demographic info
   if (infoParts.length > 0) {
     demographicInfo = ` (${infoParts.join(', ')})`;
   }
+  
+  console.log(`🔍 DEBUG: Demographics - Final info string: "${demographicInfo}"`);
   
   // Create Components V2 Container for Cast Ranking interface
   // IMPORTANT: This follows the current layout pattern with navigation above applicant info
