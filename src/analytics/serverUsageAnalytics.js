@@ -934,7 +934,7 @@ async function formatServerUsageForDiscordV2(summary) {
         ? server.serverName.substring(0, 25) + '...'
         : server.serverName;
       
-      fullContent += `${medal} **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} interactions ${server.activityLevel.emoji}\n`;
+      fullContent += `\`${medal} ${serverDisplay}: ${server.totalInteractions.toLocaleString()} interactions ${server.activityLevel.emoji}\`\n`;
       
       // Build feature usage display
       const featureList = [];
