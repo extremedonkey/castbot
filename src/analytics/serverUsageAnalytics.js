@@ -306,6 +306,67 @@ async function parseUserAnalyticsLog() {
 }
 
 /**
+ * Detect CastBot feature usage from log entries
+ * @param {Array} entries - Log entries for a specific server
+ * @returns {Object} Feature usage statistics
+ */
+function detectFeatureUsage(entries) {
+  const features = {
+    castlist: 0,
+    seasonApplications: 0,
+    safari: 0,
+    castRanking: 0,
+    reactForRoles: 0,
+    playerEmojis: 0,
+    vanityRoles: 0
+  };
+  
+  for (const entry of entries) {
+    const detail = entry.actionDetail.toLowerCase();
+    const customId = entry.rawLine.match(/\(([^)]+)\)$/)?.[1] || '';
+    
+    // 🖼️ Castlist - /castlist command and show_castlist buttons
+    if (entry.actionType === 'SLASH_COMMAND' && detail.includes('/castlist')) {
+      features.castlist++;
+    } else if (customId.includes('show_castlist')) {
+      features.castlist++;
+    }
+    
+    // 📝 Season Applications - season_app_* and apply_* buttons
+    if (customId.includes('season_app') || customId.includes('apply_') || customId.includes('prod_season_applications')) {
+      features.seasonApplications++;
+    }
+    
+    // 🦁 Safari - safari_* buttons, prod_safari_menu, SAFARI_* actions
+    if (customId.includes('safari_') || customId.includes('prod_safari_menu') || entry.actionType.startsWith('SAFARI_')) {
+      features.safari++;
+    }
+    
+    // 🏆 Cast Ranking - ranking_* and rank_* buttons
+    if (customId.includes('ranking_') || customId.includes('rank_') || customId.includes('season_app_ranking')) {
+      features.castRanking++;
+    }
+    
+    // 💜 React for Roles - prod_timezone_react and prod_pronoun_react buttons
+    if (customId.includes('prod_timezone_react') || customId.includes('prod_pronoun_react')) {
+      features.reactForRoles++;
+    }
+    
+    // 😀 Player Emojis - prod_create_emojis and prod_emoji_role_select buttons
+    if (customId.includes('prod_create_emojis') || customId.includes('prod_emoji_role_select')) {
+      features.playerEmojis++;
+    }
+    
+    // ✨ Vanity Roles - admin_manage_vanity_* and admin_integrated_vanity_* buttons
+    if (customId.includes('admin_manage_vanity_') || customId.includes('admin_integrated_vanity_')) {
+      features.vanityRoles++;
+    }
+  }
+  
+  return features;
+}
+
+/**
  * Calculate server usage statistics for a given time period
  * @param {Array} logEntries - Parsed log entries
  * @param {number} daysBack - Number of days to look back
@@ -345,10 +406,19 @@ function calculateServerStats(logEntries, daysBack = 7) {
   const serverStats = {};
   const userActivity = {};
   
+  // Group entries by server for feature detection
+  const serverEntries = {};
+  
   for (const entry of recentEntries) {
     const serverId = entry.server.id;
     const serverName = entry.server.name;
     const serverKey = `${serverName} (${serverId})`;
+    
+    // Initialize server entries array
+    if (!serverEntries[serverKey]) {
+      serverEntries[serverKey] = [];
+    }
+    serverEntries[serverKey].push(entry);
     
     // Initialize server stats
     if (!serverStats[serverKey]) {
@@ -361,7 +431,8 @@ function calculateServerStats(logEntries, daysBack = 7) {
         uniqueUsers: new Set(),
         lastActivity: null,
         lastActivityEntry: null,
-        dailyActivity: {}
+        dailyActivity: {},
+        features: {} // Will be populated by feature detection
       };
     }
     
@@ -390,6 +461,12 @@ function calculateServerStats(logEntries, daysBack = 7) {
     const day = new Date(entry.timestamp).toISOString().split('T')[0];
     stats.dailyActivity[day] = (stats.dailyActivity[day] || 0) + 1;
   }
+  
+  // Detect feature usage for each server
+  Object.keys(serverStats).forEach(serverKey => {
+    const entries = serverEntries[serverKey] || [];
+    serverStats[serverKey].features = detectFeatureUsage(entries);
+  });
   
   // Convert Sets to counts and calculate additional metrics
   Object.values(serverStats).forEach(stats => {
@@ -805,7 +882,39 @@ async function formatServerUsageForDiscordV2(summary) {
         : server.serverName;
       
       fullContent += `${medal} **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} interactions\n`;
-      fullContent += `   └ ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n`;
+      
+      // Build feature usage display
+      const featureList = [];
+      const features = server.features || {};
+      
+      if (features.castlist > 0) {
+        featureList.push(`🖼️ castlist (${features.castlist} uses)`);
+      }
+      if (features.seasonApplications > 0) {
+        featureList.push(`📝 season apps (${features.seasonApplications} uses)`);
+      }
+      if (features.safari > 0) {
+        featureList.push(`🦁 safari (${features.safari} uses)`);
+      }
+      if (features.castRanking > 0) {
+        featureList.push(`🏆 cast ranking (${features.castRanking} uses)`);
+      }
+      if (features.reactForRoles > 0) {
+        featureList.push(`💜 react for roles (${features.reactForRoles} uses)`);
+      }
+      if (features.playerEmojis > 0) {
+        featureList.push(`😀 player emojis (${features.playerEmojis} uses)`);
+      }
+      if (features.vanityRoles > 0) {
+        featureList.push(`✨ vanity roles (${features.vanityRoles} uses)`);
+      }
+      
+      // Display features or fallback to basic stats if no features detected
+      if (featureList.length > 0) {
+        fullContent += `   └ ${server.uniqueUserCount} users • ${featureList.join(' • ')}\n`;
+      } else {
+        fullContent += `   └ ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n`;
+      }
       
       // Add last activity if available
       if (server.lastActivityEntry) {
@@ -919,5 +1028,6 @@ export {
   formatServerUsageAsText,
   formatServerUsageForDiscordV2,
   calculateOptimalServerLimit,
-  parseRecentServerInstalls
+  parseRecentServerInstalls,
+  detectFeatureUsage
 };
