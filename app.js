@@ -526,7 +526,7 @@ async function createVotingBreakdown(channelId, playerData, guildId, guild) {
       const member = await guild.members.fetch(userId);
       const displayName = member.displayName || member.user.username;
       const stars = ':star:'.repeat(score);
-      votingText += `• @${displayName}: ||${stars} (${score}/5)||\n`;
+      votingText += `• ${displayName}: ||${stars} (${score}/5)||\n`;
     } catch (error) {
       // Fallback if can't fetch member
       votingText += `• User ${userId}: ||${':star:'.repeat(score)} (${score}/5)||\n`;
