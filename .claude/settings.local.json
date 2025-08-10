@@ -217,7 +217,10 @@
       "Bash(npm run deploy-remote-wsl:*)",
       "Bash(npm run logs-prod:*)",
       "Bash(npm run logs-prod-follow:*)",
-      "Bash(npm run status-remote-wsl:*)"
+      "Bash(npm run status-remote-wsl:*)",
+      "Read(/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1/*)",
+      "Bash(find:*)",
+      "LS(/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1)"
     ],
     "deny": []
   }

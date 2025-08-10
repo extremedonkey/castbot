@@ -540,6 +540,103 @@ async function createVotingBreakdown(channelId, playerData, guildId, guild) {
 }
 
 /**
+ * Helper function to create applicant select options for Cast Ranking navigation
+ * @param {Array} allApplications - Array of all applications
+ * @param {Object} playerData - Player data object
+ * @param {string} guildId - Guild ID
+ * @param {number} currentPage - Current page of options (0-based)
+ * @returns {Array} Array of select menu options
+ */
+function createApplicantSelectOptions(allApplications, playerData, guildId, currentPage = 0) {
+  const itemsPerPage = 24;
+  const startIdx = currentPage * itemsPerPage;
+  const endIdx = Math.min(startIdx + itemsPerPage, allApplications.length);
+  
+  const options = [];
+  
+  // Add "Previous page" option if not on first page
+  if (currentPage > 0) {
+    const prevStart = (currentPage - 1) * itemsPerPage + 1;
+    const prevEnd = currentPage * itemsPerPage;
+    options.push({
+      label: `◀ Show Applications ${prevStart}-${prevEnd}`,
+      value: `page_${currentPage - 1}`,
+      description: `View previous set of applications`,
+      emoji: { name: '📄' }
+    });
+  }
+  
+  // Add applicant options for current page
+  for (let i = startIdx; i < endIdx; i++) {
+    const app = allApplications[i];
+    const rankings = playerData[guildId]?.applications?.[app.channelId]?.rankings || {};
+    const voteCount = Object.keys(rankings).length;
+    const castingStatus = playerData[guildId]?.applications?.[app.channelId]?.castingStatus;
+    const hasNotes = !!playerData[guildId]?.applications?.[app.channelId]?.playerNotes;
+    
+    // Determine icon based on priority
+    let icon = '🗳️'; // Default: not enough votes
+    if (castingStatus === 'cast') {
+      icon = '🎬';
+    } else if (castingStatus === 'reject') {
+      icon = '🗑️';
+    } else if (voteCount >= 2) {
+      icon = '☑️';
+    }
+    
+    // Format label (max 100 chars)
+    const position = i + 1;
+    const displayName = app.displayName || 'Unknown';
+    const username = app.username || 'unknown';
+    const voteText = voteCount === 1 ? '1 vote' : `${voteCount} votes`;
+    const notesIndicator = hasNotes ? ' 💬' : '';
+    
+    // Build initial label
+    let label = `${icon} ${position}. ${displayName} (${username}) - ${voteText}${notesIndicator}`;
+    
+    // Truncate if too long (Discord limit is 100 chars)
+    if (label.length > 100) {
+      // Calculate how much space we have for username
+      const fixedParts = `${icon} ${position}. ${displayName} () - ${voteText}${notesIndicator}`;
+      const availableSpace = 100 - fixedParts.length;
+      
+      if (availableSpace > 3) {
+        const truncatedUsername = username.substring(0, availableSpace - 3) + '...';
+        label = `${icon} ${position}. ${displayName} (${truncatedUsername}) - ${voteText}${notesIndicator}`;
+      } else {
+        // If even that's too long, truncate display name too
+        const shorterFixed = `${icon} ${position}. () - ${voteText}${notesIndicator}`;
+        const totalAvailable = 100 - shorterFixed.length;
+        const halfSpace = Math.floor(totalAvailable / 2);
+        const truncatedDisplay = displayName.substring(0, halfSpace - 2) + '..';
+        const truncatedUser = username.substring(0, halfSpace - 2) + '..';
+        label = `${icon} ${position}. ${truncatedDisplay} (${truncatedUser}) - ${voteText}${notesIndicator}`;
+      }
+    }
+    
+    options.push({
+      label: label,
+      value: `${i}`, // Application index as string
+      description: `Jump to ${app.displayName}'s application`
+    });
+  }
+  
+  // Add pagination option if there are more applications
+  if (allApplications.length > endIdx) {
+    const nextStart = endIdx + 1;
+    const nextEnd = Math.min(endIdx + itemsPerPage, allApplications.length);
+    options.push({
+      label: `▶ Show Applications ${nextStart}-${nextEnd}`,
+      value: `page_${currentPage + 1}`,
+      description: `View next set of applications`,
+      emoji: { name: '📄' }
+    });
+  }
+  
+  return options;
+}
+
+/**
  * Helper function to create player notes section and edit button
  * @param {string} channelId - Application channel ID
  * @param {number} appIndex - Application index for navigation
@@ -4968,6 +5065,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             navRow.toJSON()
           ];
           
+          // Add applicant jump select menu if there are multiple applications
+          if (allApplications.length > 1) {
+            const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
+            const applicantSelectRow = {
+              type: 1, // Action Row
+              components: [{
+                type: 3, // String Select
+                custom_id: `ranking_select_${appIndex}_${configId || 'legacy'}_0`, // Include current page
+                placeholder: '🔍 Jump to applicant...',
+                options: selectOptions,
+                min_values: 1,
+                max_values: 1
+              }]
+            };
+            containerComponents.push(applicantSelectRow);
+          }
+          
           // Add voting breakdown if there are votes
           if (votingBreakdown) {
             containerComponents.push(
@@ -5284,6 +5398,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             navRow.toJSON()
           ];
           
+          // Add applicant jump select menu if there are multiple applications
+          if (allApplications.length > 1) {
+            const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
+            const applicantSelectRow = {
+              type: 1, // Action Row
+              components: [{
+                type: 3, // String Select
+                custom_id: `ranking_select_${appIndex}_${configId || 'legacy'}_0`, // Include current page
+                placeholder: '🔍 Jump to applicant...',
+                options: selectOptions,
+                min_values: 1,
+                max_values: 1
+              }]
+            };
+            containerComponents.push(applicantSelectRow);
+          }
+          
           // Add voting breakdown if there are votes
           if (votingBreakdown) {
             containerComponents.push(
@@ -5324,6 +5455,432 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           ephemeral: true
         };
       }
+      })(req, res, client);
+    } else if (custom_id.startsWith('ranking_select_')) {
+      // Handle applicant jump select menu - converted to Button Handler Factory
+      return ButtonHandlerFactory.create({
+        id: 'ranking_select',
+        updateMessage: true, // Update existing message
+        handler: async (context) => {
+          console.log(`🔍 START: ranking_select - user ${context.userId}, select ${context.customId}`);
+          
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          
+          // Check Cast Ranking permissions
+          if (!hasCastRankingPermissions(member, guildId)) {
+            return {
+              content: '❌ You need Manage Roles or Manage Channels permissions to navigate applicants.',
+              ephemeral: true
+            };
+          }
+          
+          // Parse: ranking_select_{currentIndex}_{configId}_{page}
+          const parts = context.customId.split('_');
+          const currentIndex = parseInt(parts[2]);
+          const currentPage = parseInt(parts[parts.length - 1]) || 0;
+          
+          // Extract configId (handle configs with underscores)
+          let configId = null;
+          if (parts.length > 4) {
+            configId = parts.slice(3, -1).join('_');
+          }
+          
+          const selectedValue = req.body.data.values[0];
+          console.log(`🔍 DEBUG: ranking_select - Selected value: ${selectedValue}, Current page: ${currentPage}`);
+          
+          // Load player data
+          const playerData = await loadPlayerData();
+          
+          // Get applications using season-filtered function when configId is available
+          const allApplications = configId 
+            ? await getApplicationsForSeason(guildId, configId)
+            : await getAllApplicationsFromData(guildId);
+          
+          // Check if it's a page navigation
+          if (selectedValue.startsWith('page_')) {
+            const newPage = parseInt(selectedValue.split('_')[1]);
+            console.log(`🔍 DEBUG: ranking_select - Switching to page ${newPage}`);
+            
+            // Regenerate interface with new page of select options (show first applicant of new page)
+            const newIndex = newPage * 24; // First applicant of the new page
+            const newApp = allApplications[newIndex];
+            
+            if (!newApp) {
+              return {
+                content: '❌ Error navigating to page.',
+                ephemeral: true
+              };
+            }
+            
+            // Fetch the applicant member for avatar
+            let applicantMember;
+            try {
+              applicantMember = await guild.members.fetch(newApp.userId);
+              console.log('🔍 DEBUG: Select navigation - Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
+            } catch (error) {
+              console.log('🔍 DEBUG: Select navigation - Failed to fetch member, using fallback:', error.message);
+              applicantMember = {
+                displayName: newApp.displayName,
+                user: { username: newApp.username },
+                displayAvatarURL: (options = {}) => {
+                  const size = options.size || 512;
+                  const baseUrl = newApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${newApp.userId % 5}.png`;
+                  if (baseUrl.includes('cdn.discordapp.com')) {
+                    return baseUrl.replace(/\?size=\d+/, `?size=${size}`).replace(/\.webp/, '.png');
+                  }
+                  return baseUrl;
+                }
+              };
+            }
+            
+            // Pre-fetch avatar
+            const avatarUrl = applicantMember.displayAvatarURL({ size: 512, format: 'png' });
+            console.log('🔍 DEBUG: Select navigation - Applicant avatar URL:', avatarUrl);
+            console.log('🔍 DEBUG: Select navigation - Pre-fetching applicant avatar to warm CDN cache...');
+            const prefetchStart = Date.now();
+            try {
+              await fetch(avatarUrl, { method: 'HEAD' });
+              console.log(`🔍 DEBUG: Select navigation - Applicant avatar pre-fetch completed in ${Date.now() - prefetchStart}ms`);
+            } catch (error) {
+              console.log('🔍 DEBUG: Select navigation - Avatar pre-fetch failed:', error.message);
+            }
+            
+            // Generate interface for new applicant (similar to navigation handlers)
+            const rankings = playerData[guildId]?.applications?.[newApp.channelId]?.rankings || {};
+            const userScore = rankings[userId];
+            const scores = Object.values(rankings).filter(r => r !== undefined);
+            const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 'N/A';
+            const voteCount = scores.length;
+            
+            const castingStatus = playerData[guildId]?.applications?.[newApp.channelId]?.castingStatus;
+            let castingStatusText = '';
+            if (castingStatus === 'cast') {
+              castingStatusText = '✅ Cast';
+            } else if (castingStatus === 'tentative') {
+              castingStatusText = '❓ Tentative';
+            } else if (castingStatus === 'reject') {
+              castingStatusText = '🗑️ Don\'t Cast';
+            } else {
+              castingStatusText = '⚪ Undecided';
+            }
+            
+            // Create voting breakdown
+            const votingBreakdown = await createVotingBreakdown(newApp.channelId, playerData, guildId, guild);
+            
+            // Build interface components
+            const galleryComponent = {
+              type: 12, // Media Gallery
+              items: [{
+                media: { url: avatarUrl },
+                description: `${applicantMember.displayName || applicantMember.user.username}'s avatar`
+              }]
+            };
+            
+            // Create ranking buttons
+            const rankingButtons = [];
+            for (let i = 1; i <= 5; i++) {
+              const isSelected = userScore === i;
+              rankingButtons.push(
+                new ButtonBuilder()
+                  .setCustomId(`rank_${i}_${newApp.channelId}_${newIndex}_${configId || 'legacy'}`)
+                  .setLabel(i.toString())
+                  .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+                  .setDisabled(isSelected)
+              );
+            }
+            const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
+            
+            // Create navigation buttons
+            const navButtons = [];
+            if (allApplications.length > 1) {
+              navButtons.push(
+                new ButtonBuilder()
+                  .setCustomId(`ranking_prev_${newIndex}_${configId || 'legacy'}`)
+                  .setLabel('◀ Previous')
+                  .setStyle(ButtonStyle.Secondary)
+                  .setDisabled(newIndex === 0),
+                new ButtonBuilder()
+                  .setCustomId(`ranking_next_${newIndex}_${configId || 'legacy'}`)
+                  .setLabel('Next ▶')
+                  .setStyle(ButtonStyle.Secondary)
+                  .setDisabled(newIndex === allApplications.length - 1)
+              );
+            }
+            navButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
+                .setLabel('📊 View All Scores')
+                .setStyle(ButtonStyle.Primary)
+            );
+            const navRow = new ActionRowBuilder().addComponents(navButtons);
+            
+            // Create container
+            const containerComponents = [
+              {
+                type: 10,
+                content: `## Cast Ranking | ${guild.name}`
+              },
+              {
+                type: 14
+              },
+              {
+                type: 10,
+                content: `> **Applicant ${newIndex + 1} of ${allApplications.length}**\n**Name:** ${newApp.displayName || newApp.username}\n**Average Score:** ${avgScore} (${voteCount} vote${voteCount !== 1 ? 's' : ''})\n**Your Score:** ${userScore || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${newApp.channelId}>`
+              },
+              galleryComponent,
+              {
+                type: 10,
+                content: `> **Rate this applicant (1-5)**`
+              },
+              rankingRow.toJSON(),
+              {
+                type: 14
+              },
+              createCastingButtons(newApp.channelId, newIndex, playerData, guildId, configId).toJSON(),
+              {
+                type: 14
+              },
+              navRow.toJSON()
+            ];
+            
+            // Add applicant jump select menu with NEW PAGE
+            if (allApplications.length > 1) {
+              const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, newPage);
+              const applicantSelectRow = {
+                type: 1, // Action Row
+                components: [{
+                  type: 3, // String Select
+                  custom_id: `ranking_select_${newIndex}_${configId || 'legacy'}_${newPage}`,
+                  placeholder: '🔍 Jump to applicant...',
+                  options: selectOptions,
+                  min_values: 1,
+                  max_values: 1
+                }]
+              };
+              containerComponents.push(applicantSelectRow);
+            }
+            
+            // Add voting breakdown if there are votes
+            if (votingBreakdown) {
+              containerComponents.push(
+                { type: 14 },
+                votingBreakdown
+              );
+            }
+            
+            // Add player notes section
+            const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(newApp.channelId, newIndex, playerData, guildId, configId);
+            containerComponents.push(
+              { type: 14 },
+              playerNotesDisplay,
+              playerNotesButtonRow
+            );
+            
+            const castRankingContainer = {
+              type: 17,
+              accent_color: 0x9B59B6,
+              components: containerComponents
+            };
+            
+            console.log(`✅ SUCCESS: ranking_select - navigated to page ${newPage}, applicant ${newIndex + 1}`);
+            return {
+              flags: (1 << 15),
+              components: [castRankingContainer]
+            };
+            
+          } else {
+            // Jump to selected applicant
+            const newIndex = parseInt(selectedValue);
+            const newApp = allApplications[newIndex];
+            
+            if (!newApp) {
+              return {
+                content: '❌ Application not found.',
+                ephemeral: true
+              };
+            }
+            
+            console.log(`🔍 DEBUG: ranking_select - Jumping to applicant ${newIndex + 1}: ${newApp.displayName}`);
+            
+            // Fetch the applicant member for avatar
+            let applicantMember;
+            try {
+              applicantMember = await guild.members.fetch(newApp.userId);
+              console.log('🔍 DEBUG: Select navigation - Successfully fetched applicant member:', applicantMember.displayName || applicantMember.user.username);
+            } catch (error) {
+              console.log('🔍 DEBUG: Select navigation - Failed to fetch member, using fallback:', error.message);
+              applicantMember = {
+                displayName: newApp.displayName,
+                user: { username: newApp.username },
+                displayAvatarURL: (options = {}) => {
+                  const size = options.size || 512;
+                  const baseUrl = newApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${newApp.userId % 5}.png`;
+                  if (baseUrl.includes('cdn.discordapp.com')) {
+                    return baseUrl.replace(/\?size=\d+/, `?size=${size}`).replace(/\.webp/, '.png');
+                  }
+                  return baseUrl;
+                }
+              };
+            }
+            
+            // Pre-fetch avatar
+            const avatarUrl = applicantMember.displayAvatarURL({ size: 512, format: 'png' });
+            console.log('🔍 DEBUG: Select navigation - Applicant avatar URL:', avatarUrl);
+            console.log('🔍 DEBUG: Select navigation - Pre-fetching applicant avatar to warm CDN cache...');
+            const prefetchStart = Date.now();
+            try {
+              await fetch(avatarUrl, { method: 'HEAD' });
+              console.log(`🔍 DEBUG: Select navigation - Applicant avatar pre-fetch completed in ${Date.now() - prefetchStart}ms`);
+            } catch (error) {
+              console.log('🔍 DEBUG: Select navigation - Avatar pre-fetch failed:', error.message);
+            }
+            
+            // Generate interface for selected applicant (similar to navigation handlers)
+            const rankings = playerData[guildId]?.applications?.[newApp.channelId]?.rankings || {};
+            const userScore = rankings[userId];
+            const scores = Object.values(rankings).filter(r => r !== undefined);
+            const avgScore = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 'N/A';
+            const voteCount = scores.length;
+            
+            const castingStatus = playerData[guildId]?.applications?.[newApp.channelId]?.castingStatus;
+            let castingStatusText = '';
+            if (castingStatus === 'cast') {
+              castingStatusText = '✅ Cast';
+            } else if (castingStatus === 'tentative') {
+              castingStatusText = '❓ Tentative';
+            } else if (castingStatus === 'reject') {
+              castingStatusText = '🗑️ Don\'t Cast';
+            } else {
+              castingStatusText = '⚪ Undecided';
+            }
+            
+            // Create voting breakdown
+            const votingBreakdown = await createVotingBreakdown(newApp.channelId, playerData, guildId, guild);
+            
+            // Build interface components
+            const galleryComponent = {
+              type: 12, // Media Gallery
+              items: [{
+                media: { url: avatarUrl },
+                description: `${applicantMember.displayName || applicantMember.user.username}'s avatar`
+              }]
+            };
+            
+            // Create ranking buttons
+            const rankingButtons = [];
+            for (let i = 1; i <= 5; i++) {
+              const isSelected = userScore === i;
+              rankingButtons.push(
+                new ButtonBuilder()
+                  .setCustomId(`rank_${i}_${newApp.channelId}_${newIndex}_${configId || 'legacy'}`)
+                  .setLabel(i.toString())
+                  .setStyle(isSelected ? ButtonStyle.Success : ButtonStyle.Secondary)
+                  .setDisabled(isSelected)
+              );
+            }
+            const rankingRow = new ActionRowBuilder().addComponents(rankingButtons);
+            
+            // Create navigation buttons
+            const navButtons = [];
+            if (allApplications.length > 1) {
+              navButtons.push(
+                new ButtonBuilder()
+                  .setCustomId(`ranking_prev_${newIndex}_${configId || 'legacy'}`)
+                  .setLabel('◀ Previous')
+                  .setStyle(ButtonStyle.Secondary)
+                  .setDisabled(newIndex === 0),
+                new ButtonBuilder()
+                  .setCustomId(`ranking_next_${newIndex}_${configId || 'legacy'}`)
+                  .setLabel('Next ▶')
+                  .setStyle(ButtonStyle.Secondary)
+                  .setDisabled(newIndex === allApplications.length - 1)
+              );
+            }
+            navButtons.push(
+              new ButtonBuilder()
+                .setCustomId(`ranking_view_all_scores_${configId || 'legacy'}`)
+                .setLabel('📊 View All Scores')
+                .setStyle(ButtonStyle.Primary)
+            );
+            const navRow = new ActionRowBuilder().addComponents(navButtons);
+            
+            // Create container
+            const containerComponents = [
+              {
+                type: 10,
+                content: `## Cast Ranking | ${guild.name}`
+              },
+              {
+                type: 14
+              },
+              {
+                type: 10,
+                content: `> **Applicant ${newIndex + 1} of ${allApplications.length}**\n**Name:** ${newApp.displayName || newApp.username}\n**Average Score:** ${avgScore} (${voteCount} vote${voteCount !== 1 ? 's' : ''})\n**Your Score:** ${userScore || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${newApp.channelId}>`
+              },
+              galleryComponent,
+              {
+                type: 10,
+                content: `> **Rate this applicant (1-5)**`
+              },
+              rankingRow.toJSON(),
+              {
+                type: 14
+              },
+              createCastingButtons(newApp.channelId, newIndex, playerData, guildId, configId).toJSON(),
+              {
+                type: 14
+              },
+              navRow.toJSON()
+            ];
+            
+            // Add applicant jump select menu with CURRENT PAGE
+            if (allApplications.length > 1) {
+              const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, currentPage);
+              const applicantSelectRow = {
+                type: 1, // Action Row
+                components: [{
+                  type: 3, // String Select
+                  custom_id: `ranking_select_${newIndex}_${configId || 'legacy'}_${currentPage}`,
+                  placeholder: '🔍 Jump to applicant...',
+                  options: selectOptions,
+                  min_values: 1,
+                  max_values: 1
+                }]
+              };
+              containerComponents.push(applicantSelectRow);
+            }
+            
+            // Add voting breakdown if there are votes
+            if (votingBreakdown) {
+              containerComponents.push(
+                { type: 14 },
+                votingBreakdown
+              );
+            }
+            
+            // Add player notes section
+            const [playerNotesDisplay, playerNotesButtonRow] = createPlayerNotesSection(newApp.channelId, newIndex, playerData, guildId, configId);
+            containerComponents.push(
+              { type: 14 },
+              playerNotesDisplay,
+              playerNotesButtonRow
+            );
+            
+            const castRankingContainer = {
+              type: 17,
+              accent_color: 0x9B59B6,
+              components: containerComponents
+            };
+            
+            console.log(`✅ SUCCESS: ranking_select - jumped to applicant ${newIndex + 1}`);
+            return {
+              flags: (1 << 15),
+              components: [castRankingContainer]
+            };
+          }
+        }
       })(req, res, client);
     } else if (custom_id.startsWith('cast_player_') || custom_id.startsWith('cast_tentative_') || custom_id.startsWith('cast_reject_')) {
       // Handle casting status buttons - converted to Button Handler Factory
@@ -5526,6 +6083,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             },
             navRow.toJSON()
           ];
+          
+          // Add applicant jump select menu if there are multiple applications
+          if (allApplications.length > 1) {
+            const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
+            const applicantSelectRow = {
+              type: 1, // Action Row
+              components: [{
+                type: 3, // String Select
+                custom_id: `ranking_select_${appIndex}_${configId || 'legacy'}_0`, // Include current page
+                placeholder: '🔍 Jump to applicant...',
+                options: selectOptions,
+                min_values: 1,
+                max_values: 1
+              }]
+            };
+            containerComponents.push(applicantSelectRow);
+          }
           
           // Add voting breakdown if there are votes
           if (votingBreakdown) {
@@ -7855,6 +8429,23 @@ To fix this:
             },
             navRow.toJSON() // Navigation and view all scores
           ];
+          
+          // Add applicant jump select menu if there are multiple applications
+          if (allApplications.length > 1) {
+            const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
+            const applicantSelectRow = {
+              type: 1, // Action Row
+              components: [{
+                type: 3, // String Select
+                custom_id: `ranking_select_${appIndex}_${configId}_0`, // Include current page
+                placeholder: '🔍 Jump to applicant...',
+                options: selectOptions,
+                min_values: 1,
+                max_values: 1
+              }]
+            };
+            containerComponents.push(applicantSelectRow);
+          }
           
           // Add voting breakdown if there are votes
           if (votingBreakdown) {

@@ -766,47 +766,52 @@ Target Final:        2,000-3,000 lines (78-85% reduction)
 - Better accessibility and interaction patterns
 - Maintain existing functionality while improving UX
 
-### Enhanced Server Usage Analytics Integration with Full Dump
-**Description:** Combine prod_server_usage_stats with prod_analytics_dump for comprehensive server analytics dashboard
-**Current Requirements:** Enhance existing 6-week server rankings with detailed interaction breakdowns per server
-**Example Output Format:**
+### ✅ Enhanced Server Usage Analytics Integration with Feature Detection - COMPLETED
+**Completed:** August 10, 2025
+**Description:** Comprehensive server analytics dashboard with intelligent feature detection and traffic light activity system
+**Implementation:** Extended serverUsageAnalytics.js with advanced feature detection, server install tracking, and modern Components V2 UI
+**Documentation:** Complete system documented in [docs/architecture/Analytics.md](docs/architecture/Analytics.md)
+
+**✅ Implemented Features:**
+- **🚦 Traffic Light Activity System:** 🟢 Recent (24h), 🟠 Moderate (4d), 🔴 Inactive visual indicators
+- **🔍 Intelligent Feature Detection:** Automatically detects usage of Castlist, Season Apps, Safari, Cast Ranking, R4R, Player Emojis, Vanity Roles
+- **📅 Server Install Tracking:** Latest 3-5 server installations with timestamps and owner information
+- **📊 42-Day Activity Analysis:** Extended from 6-week to configurable 42-day window
+- **🎨 Components V2 UI:** Professional Discord interface with block quote headings, code tick formatting, and refresh functionality
+- **📋 Restructured Layout:** Server Installs → Server Rankings → Usage Analytics with markdown separators
+
+**Current Output Format:**
 ```
-📈 Server Usage Analytics (Last 6 weeks)
-📊 2,847 total interactions across 12 servers
-👥 89 unique users active
+> ## 🆕 Most Recent Server Installs (Latest 3)
+📅 **EpochORG S4: Ancient Egypt** ([12:17 PM] Sun Aug 10, Mike (@mpschettig))
 
-🏆 Server Rankings
-🥇 **EpochORG S7: Rumrunners**: 1,234 interactions
-   └ 23 CastBot users • 145 commands • 1,089 button clicks
+> ## 🏆 Server Rankings
+`🥇 EmeraldORG: Fire Emblem T...: 8,042 interactions 🟢`
+   └ 38 users • 🖼️ castlist (x70) • 📝 szn apps (x22) • 🦁 safari (x3379) • 🏆 ranking (x3) • ✨ vanity roles (x2)
+   └ Last Activity: [12:38PM] Sun 10 Aug 25 | Smiles
 
-📊 **Detailed Breakdown for EpochORG S7:**
-• /castlist: 89 uses
-• /menu: 56 uses  
-• Show Default Castlist: 234 clicks
-• Production Menu: 123 clicks
-• Player Management: 89 clicks
-• Safari Buttons: 67 clicks
-• Analytics: 12 clicks
-[... continues for each server ...]
+> ## 📈 Server Usage Analytics
+📊 **Total Interactions**: 1,477
+👥 **Unique Users**: 9
+🏰 **Active Servers**: 9
+⏱️ **Period**: Last 42 days
+📈 **Showing**: Top 9 of 9 servers
 ```
 
-**Technical Design Options:**
-1. **Direct Integration Approach:** Extend existing serverUsageAnalytics.js to parse action details and generate breakdowns
-2. **Separate Module Approach:** Create detailedServerAnalytics.js that combines both analytics sources
-3. **Hybrid Display:** Keep current rankings, add optional "View Detailed Breakdown" buttons for expanded data per server
+**Technical Implementation:**
+- **Multi-format log parsing:** Supports both legacy 4-part and current 5-part log formats
+- **Safari action normalization:** Intelligent handling of Safari-specific action types
+- **Feature detection algorithms:** Pattern matching for button IDs and slash commands
+- **Character limit optimization:** Dynamic content truncation with safety buffers
+- **Performance optimizations:** Streaming log parsing and efficient timestamp handling
 
-**Implementation Considerations:**
-- Parse actionDetail field from user-analytics.log for interaction type classification
-- Create mapping system for button custom_ids to user-friendly names
-- Handle both slash commands (/castlist, /menu) and button interactions (custom_id parsing)
-- Maintain performance with large log files (6 weeks of data)
-- Consider pagination for servers with extensive interaction data
-
-**Benefits:**
-- Administrators can see exactly how users interact with CastBot per server
-- Identifies most/least popular features for development prioritization  
-- Provides granular usage patterns for server optimization
-- Enhanced troubleshooting capabilities for server-specific issues
+**Benefits Achieved:**
+- **Real-time server activity monitoring** with visual traffic light indicators
+- **Feature adoption tracking** shows exactly which CastBot features each server uses
+- **Server health assessment** through activity level calculations
+- **Installation tracking** for monitoring bot growth and new server onboarding
+- **Professional UI** using Discord's latest Components V2 architecture
+- **Enhanced troubleshooting** with detailed activity timestamps and user information
 
 ### Enhanced Application Tracking System
 **Description:** Proper season-to-application tracking with support for multiple applications across multiple seasons
