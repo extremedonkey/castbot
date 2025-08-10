@@ -5115,7 +5115,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('ranking_')) {
+    } else if (custom_id.startsWith('ranking_prev_') || custom_id.startsWith('ranking_next_') || custom_id.startsWith('ranking_view_all_scores')) {
       // Handle ranking navigation and view all scores - converted to Button Handler Factory
       return ButtonHandlerFactory.create({
         id: 'ranking_navigation',
@@ -5405,7 +5405,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               type: 1, // Action Row
               components: [{
                 type: 3, // String Select
-                custom_id: `ranking_select_${appIndex}_${configId || 'legacy'}_0`, // Include current page
+                custom_id: `ranking_select_${newIndex}_${configId || 'legacy'}_0`, // Include current page
                 placeholder: '🔍 Jump to applicant...',
                 options: selectOptions,
                 min_values: 1,
