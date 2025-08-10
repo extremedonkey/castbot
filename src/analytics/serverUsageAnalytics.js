@@ -652,17 +652,94 @@ function calculateOptimalServerLimit(rankedServers) {
 }
 
 /**
+ * Parse recent server installs from analytics log
+ * @param {number} daysBack - Number of days to look back
+ * @returns {Array} Array of recent server installs
+ */
+async function parseRecentServerInstalls(daysBack = 7) {
+  try {
+    if (!fs.existsSync(USER_ANALYTICS_LOG)) {
+      return [];
+    }
+    
+    const logData = await fs.promises.readFile(USER_ANALYTICS_LOG, 'utf8');
+    const lines = logData.split('\n').filter(line => line.trim());
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+    
+    const serverInstalls = [];
+    
+    for (const line of lines) {
+      // Look for server install announcements: "🎉🥳 **New Server Install**: `ServerName` (ID) | Owner: User"
+      if (line.includes('New Server Install') || line.includes('SERVER_INSTALL')) {
+        try {
+          // Extract timestamp from the line (various formats)
+          let timestamp = null;
+          const timestampMatch = line.match(/\[([^\]]+)\]/);
+          if (timestampMatch) {
+            timestamp = parseTimestamp(timestampMatch[1]);
+          }
+          
+          if (!timestamp || timestamp < cutoffDate) continue;
+          
+          // Extract server name and ID - format: `ServerName` (ID)
+          const serverMatch = line.match(/`([^`]+)`\s*\((\d+)\)/);
+          if (serverMatch) {
+            const [, serverName, serverId] = serverMatch;
+            
+            // Extract owner info - format: Owner: DisplayName (username) (ID)
+            const ownerMatch = line.match(/Owner:\s*([^(]+?)(?:\s*\(([^)]+)\))?(?:\s*\((\d+)\))?/);
+            let ownerInfo = 'Unknown';
+            if (ownerMatch) {
+              const [, displayName, username, ownerId] = ownerMatch;
+              if (username && username !== 'unknown') {
+                ownerInfo = `${displayName.trim()} (${username})`;
+              } else {
+                ownerInfo = displayName.trim();
+              }
+            }
+            
+            serverInstalls.push({
+              timestamp,
+              serverName,
+              serverId,
+              owner: ownerInfo,
+              rawLine: line
+            });
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse server install line:', line, parseError.message);
+        }
+      }
+    }
+    
+    // Sort by timestamp (newest first) and return last 5
+    return serverInstalls
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .slice(0, 5);
+      
+  } catch (error) {
+    console.error('Error parsing recent server installs:', error);
+    return [];
+  }
+}
+
+/**
  * Format server usage summary for Discord Components V2 display
  * @param {Object} summary - Server usage summary from generateServerUsageSummary
  * @returns {Object} Discord Components V2 response data
  */
-function formatServerUsageForDiscordV2(summary) {
+async function formatServerUsageForDiscordV2(summary) {
   const { rankedServers, totalInteractions, totalUniqueUsers, activeServers, period, insights } = summary;
+  
+  // Get recent server installs
+  const recentInstalls = await parseRecentServerInstalls(7); // Last 7 days
   
   // Calculate optimal server display limit
   const { displayServers, hasMore, estimatedLength, componentCount } = calculateOptimalServerLimit(rankedServers);
   
-  console.log(`📊 DEBUG: Components V2 Analytics - ${displayServers.length} servers, ${componentCount} components, ~${estimatedLength} chars`);
+  console.log(`📊 DEBUG: Components V2 Analytics - ${displayServers.length} servers, ${componentCount} components, ~${estimatedLength} chars, ${recentInstalls.length} recent installs`);
   
   // Helper function to generate rank emojis
   function getRankEmoji(rank) {
@@ -744,6 +821,38 @@ function formatServerUsageForDiscordV2(summary) {
     fullContent += `\n`;
   }
   
+  // Recent Server Installs section
+  if (recentInstalls.length > 0) {
+    fullContent += `🆕 **Recent Server Installs** (Last 7 days)\n\n`;
+    
+    recentInstalls.forEach((install, index) => {
+      // Format timestamp to show just date and time
+      const installDate = new Date(install.timestamp);
+      const dateStr = installDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        year: '2-digit'
+      });
+      const timeStr = installDate.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+      
+      // Truncate server name if too long
+      const serverDisplay = install.serverName.length > 30 
+        ? install.serverName.substring(0, 30) + '...'
+        : install.serverName;
+      
+      fullContent += `📅 **${serverDisplay}**\n`;
+      fullContent += `   └ ${dateStr} at ${timeStr} | Owner: ${install.owner}\n`;
+      fullContent += `\n`;
+    });
+  } else {
+    fullContent += `🆕 **Recent Server Installs** (Last 7 days)\n\n`;
+    fullContent += `📭 No new server installations in the past week\n\n`;
+  }
+  
   // Footer
   fullContent += `🕒 Generated at ${new Date(summary.generatedAt).toLocaleString('en-US', { 
     timeZone: 'UTC',
@@ -782,5 +891,6 @@ export {
   formatServerUsageForDiscord,
   formatServerUsageAsText,
   formatServerUsageForDiscordV2,
-  calculateOptimalServerLimit
+  calculateOptimalServerLimit,
+  parseRecentServerInstalls
 };
