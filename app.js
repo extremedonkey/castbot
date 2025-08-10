@@ -4823,8 +4823,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Create a synthetic ranking_view_all_scores custom_id to reuse existing logic
           const syntheticCustomId = actualConfigId ? `ranking_view_all_scores_${actualConfigId}` : 'ranking_view_all_scores';
           
-          // Use castRankingManager.handleRankingNavigation to regenerate the UI
-          const result = await castRankingManager.handleRankingNavigation({
+          // Import and use castRankingManager.handleRankingNavigation to regenerate the UI
+          const { handleRankingNavigation } = await import('./castRankingManager.js');
+          const result = await handleRankingNavigation({
             customId: syntheticCustomId,
             guildId,
             userId,
