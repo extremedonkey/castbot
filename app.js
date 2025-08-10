@@ -8327,7 +8327,7 @@ To fix this:
             };
           }
 
-          // Get first application for initial display (we'll implement pagination later)
+          // Get first application for initial display
           const currentApp = allApplications[0];
           const appIndex = 0;
           
@@ -8346,13 +8346,32 @@ To fix this:
             };
           }
           
-          // Get applicant's current avatar URL (prefer guild avatar, fallback to global avatar, then default)
-          const applicantAvatarURL = applicantMember.displayAvatarURL({ size: 512 });
-          console.log('🔍 DEBUG: Applicant avatar URL:', applicantAvatarURL);
+          // Import and use the new castRankingManager for UI generation
+          const { generateSeasonAppRankingUI } = await import('./castRankingManager.js');
           
-          // Pre-fetch avatar to warm up Discord CDN cache
-          try {
-            console.log('🔍 DEBUG: Pre-fetching applicant avatar to warm CDN cache...');
+          console.log('🔧 PHASE 2 TEST: Using castRankingManager for UI generation');
+          const uiResponse = await generateSeasonAppRankingUI({
+            guildId,
+            userId,
+            configId,
+            allApplications,
+            currentApp,
+            appIndex,
+            applicantMember,
+            guild,
+            seasonName,
+            playerData
+          });
+          
+          console.log(`✅ SUCCESS: season_app_ranking - castRankingManager generated interface`);
+          return uiResponse;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'prod_setup_tycoons') {
+      // Execute same logic as setup_tycoons slash command
+      try {
+        const guildId = req.body.guild_id;
+        const guild = await client.guilds.fetch(guildId);
             const prefetchStart = Date.now();
             await fetch(applicantAvatarURL, { method: 'HEAD' }); // HEAD request to just check if URL is ready
             const prefetchTime = Date.now() - prefetchStart;
