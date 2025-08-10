@@ -134,7 +134,6 @@ export async function generateSeasonAppRankingUI({
   
   // Create voting breakdown if there are votes - inline implementation for now
   let votingBreakdown = null;
-  const allRankings = playerData[guildId]?.applications?.[currentApp.channelId]?.rankings || {};
   const rankingEntries = Object.entries(allRankings).filter(([_, score]) => score !== undefined);
   
   if (rankingEntries.length > 0) {
