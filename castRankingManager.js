@@ -179,7 +179,9 @@ export async function generateSeasonAppRankingUI({
     console.log(`🔍 DEBUG: Demographics - Member has roles:`, applicantMember.roles);
     // Get guild's configured pronoun and timezone roles
     const guildPronouns = playerData[guildId]?.pronounRoleIDs || [];
-    const guildTimezones = playerData[guildId]?.timezoneRoleIDs || [];
+    const guildTimezones = Object.keys(playerData[guildId]?.timezones || {}); // Get timezone role IDs from keys
+    console.log(`🔍 DEBUG: Demographics - Guild timezones configured: ${guildTimezones.length} roles`);
+    console.log(`🔍 DEBUG: Demographics - Guild pronouns configured: ${guildPronouns.length} roles`);
     
     // Find if user has any of these roles
     const memberRoles = applicantMember.roles.cache ? 
@@ -198,6 +200,7 @@ export async function generateSeasonAppRankingUI({
     for (const roleId of memberRoles) {
       if (guildTimezones.includes(roleId)) {
         timezoneRoleId = roleId;
+        console.log(`🔍 DEBUG: Demographics - Found timezone role: ${roleId}`);
         break;
       }
     }
