@@ -5037,7 +5037,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
           
           // Create updated container
-          // REVERSIBLE CHANGE: Navigation controls moved below applicant info
+          // REVERSIBLE CHANGE: Navigation controls moved above applicant info
           const containerComponents = [
             {
               type: 10,
@@ -5046,14 +5046,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             {
               type: 14
             },
+            navRow.toJSON(), // MOVED: Navigation controls now above applicant info
             {
               type: 10,
               content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-            },
-            navRow.toJSON() // MOVED: Navigation controls now below applicant info
+            }
           ];
           
-          // Add applicant jump select menu if there are multiple applications (also moved up)
+          // Add applicant jump select menu if there are multiple applications (also moved above applicant info)
           if (allApplications.length > 1) {
             const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
             const applicantSelectRow = {
@@ -5067,14 +5067,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 max_values: 1
               }]
             };
-            containerComponents.push(applicantSelectRow);
+            // Insert select menu right after navigation buttons but before applicant info
+            containerComponents.splice(-1, 0, applicantSelectRow);
           }
           
-          // Add remaining interface components after navigation
+          // Add separator between navigation and applicant info
+          containerComponents.push({
+            type: 14 // Separator
+          });
+          
+          // Add remaining interface components after applicant info
           containerComponents.push(
-            {
-              type: 14
-            },
             galleryComponent,
             {
               type: 10,
@@ -5375,7 +5378,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Create voting breakdown if there are votes
           const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
           
-          // REVERSIBLE CHANGE: Navigation controls moved below applicant info
+          // REVERSIBLE CHANGE: Navigation controls moved above applicant info
           const containerComponents = [
             {
               type: 10,
@@ -5384,14 +5387,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             {
               type: 14
             },
+            navRow.toJSON(), // MOVED: Navigation controls now above applicant info
             {
               type: 10,
               content: `> **Applicant ${newIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-            },
-            navRow.toJSON() // MOVED: Navigation controls now below applicant info
+            }
           ];
           
-          // Add applicant jump select menu if there are multiple applications (also moved up)
+          // Add applicant jump select menu if there are multiple applications (also moved above applicant info)
           if (allApplications.length > 1) {
             const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
             const applicantSelectRow = {
@@ -5405,14 +5408,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 max_values: 1
               }]
             };
-            containerComponents.push(applicantSelectRow);
+            // Insert select menu right after navigation buttons but before applicant info
+            containerComponents.splice(-1, 0, applicantSelectRow);
           }
           
-          // Add remaining interface components after navigation
+          // Add separator between navigation and applicant info
+          containerComponents.push({
+            type: 14 // Separator
+          });
+          
+          // Add remaining interface components after applicant info
           containerComponents.push(
-            {
-              type: 14
-            },
             galleryComponent,
             {
               type: 10,
@@ -8412,7 +8418,7 @@ To fix this:
           const votingBreakdown = await createVotingBreakdown(currentApp.channelId, playerData, guildId, guild);
           
           // Create Components V2 Container for Cast Ranking interface
-          // REVERSIBLE CHANGE: Navigation controls moved below applicant info
+          // REVERSIBLE CHANGE: Navigation controls moved above applicant info
           const containerComponents = [
             {
               type: 10, // Text Display component
@@ -8421,14 +8427,14 @@ To fix this:
             {
               type: 14 // Separator
             },
+            navRow.toJSON(), // MOVED: Navigation controls now above applicant info
             {
               type: 10, // Text Display component
               content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
-            },
-            navRow.toJSON() // MOVED: Navigation controls now below applicant info
+            }
           ];
           
-          // Add applicant jump select menu if there are multiple applications (also moved up)
+          // Add applicant jump select menu if there are multiple applications (also moved above applicant info)
           if (allApplications.length > 1) {
             const selectOptions = createApplicantSelectOptions(allApplications, playerData, guildId, 0);
             const applicantSelectRow = {
@@ -8442,10 +8448,16 @@ To fix this:
                 max_values: 1
               }]
             };
-            containerComponents.push(applicantSelectRow);
+            // Insert select menu right after navigation buttons but before applicant info
+            containerComponents.splice(-1, 0, applicantSelectRow);
           }
           
-          // Add remaining interface components after navigation
+          // Add separator between navigation and applicant info
+          containerComponents.push({
+            type: 14 // Separator
+          });
+          
+          // Add remaining interface components after applicant info
           containerComponents.push(
             {
               type: 14 // Separator
