@@ -941,25 +941,25 @@ async function formatServerUsageForDiscordV2(summary) {
       const features = server.features || {};
       
       if (features.castlist > 0) {
-        featureList.push(`🖼️ castlist (${features.castlist} uses)`);
+        featureList.push(`🖼️ castlist (x${features.castlist})`);
       }
       if (features.seasonApplications > 0) {
-        featureList.push(`📝 szn apps (${features.seasonApplications} uses)`);
+        featureList.push(`📝 szn apps (x${features.seasonApplications})`);
       }
       if (features.safari > 0) {
-        featureList.push(`🦁 safari (${features.safari} uses)`);
+        featureList.push(`🦁 safari (x${features.safari})`);
       }
       if (features.castRanking > 0) {
-        featureList.push(`🏆 ranking (${features.castRanking} uses)`);
+        featureList.push(`🏆 ranking (x${features.castRanking})`);
       }
       if (features.reactForRoles > 0) {
-        featureList.push(`💜 r4r (${features.reactForRoles} uses)`);
+        featureList.push(`💜 r4r (x${features.reactForRoles})`);
       }
       if (features.playerEmojis > 0) {
-        featureList.push(`😀 player emojis (${features.playerEmojis} uses)`);
+        featureList.push(`😀 player emojis (x${features.playerEmojis})`);
       }
       if (features.vanityRoles > 0) {
-        featureList.push(`✨ vanity roles (${features.vanityRoles} uses)`);
+        featureList.push(`✨ vanity roles (x${features.vanityRoles})`);
       }
       
       // Display features or fallback to basic stats if no features detected
