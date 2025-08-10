@@ -4777,6 +4777,65 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           return result;
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('ranking_scores_close_')) {
+      // Handle ranking scores summary close button
+      return ButtonHandlerFactory.create({
+        id: 'ranking_scores_close',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: ranking_scores_close - user ${context.userId}`);
+          
+          // Simply delete the message by returning empty content with UPDATE_MESSAGE
+          console.log(`✅ SUCCESS: ranking_scores_close - message dismissed`);
+          return {
+            content: '', // Empty content effectively dismisses the message
+            components: [], // Remove all components
+            embeds: [] // Remove any embeds
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('ranking_scores_refresh_')) {
+      // Handle ranking scores summary refresh button
+      return ButtonHandlerFactory.create({
+        id: 'ranking_scores_refresh',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: ranking_scores_refresh - user ${context.userId}, button ${context.customId}`);
+          
+          const { guildId, userId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          
+          // Check Cast Ranking permissions
+          if (!hasCastRankingPermissions(member, guildId)) {
+            return {
+              content: '❌ You need Manage Roles or Manage Channels permissions to refresh cast ranking data.',
+              ephemeral: true
+            };
+          }
+          
+          // Extract configId from button: ranking_scores_refresh_{configId}
+          const configId = context.customId.replace('ranking_scores_refresh_', '');
+          const actualConfigId = configId === 'none' ? null : configId;
+          
+          console.log(`🔄 Refreshing ranking scores for configId: ${actualConfigId || 'all'}`);
+          
+          // Create a synthetic ranking_view_all_scores custom_id to reuse existing logic
+          const syntheticCustomId = actualConfigId ? `ranking_view_all_scores_${actualConfigId}` : 'ranking_view_all_scores';
+          
+          // Use castRankingManager.handleRankingNavigation to regenerate the UI
+          const result = await castRankingManager.handleRankingNavigation({
+            customId: syntheticCustomId,
+            guildId,
+            userId,
+            guild,
+            client
+          });
+          
+          console.log(`✅ SUCCESS: ranking_scores_refresh - data refreshed`);
+          return result;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('cast_player_') || custom_id.startsWith('cast_tentative_') || custom_id.startsWith('cast_reject_')) {
       // Handle casting status buttons - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({

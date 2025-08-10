@@ -471,10 +471,18 @@ export async function handleRankingNavigation({
   if (scoresMatch) {
     console.log(`🔍 DEBUG: Handling view all scores with configId: ${extractedConfigId || 'none'}`);
     
-    // Use the season name for display
-    const seasonName = extractedConfigId ? `Season ${extractedConfigId}` : 'Current Season';
+    // Get the proper season name from playerData
+    let seasonName = 'Current Season';
+    if (extractedConfigId) {
+      const seasonConfig = playerData[guildId]?.applicationConfigs?.[extractedConfigId];
+      if (seasonConfig && seasonConfig.seasonName) {
+        seasonName = seasonConfig.seasonName;
+      } else {
+        seasonName = `Season ${extractedConfigId}`;
+      }
+    }
     
-    let scoreSummary = `## Cast Ranking & Status Summary - ${seasonName} | ${guild.name}\n\n`;
+    let scoreSummary = `## Cast Ranking Summary\n### ${seasonName}\n\n`;
     
     // Calculate scores and casting status for each applicant
     const applicantData = allApplications.map((app, index) => {
@@ -528,12 +536,30 @@ export async function handleRankingNavigation({
     });
     
     // Add overall statistics
-    scoreSummary += `---\n### 📊 **SUMMARY**\n`;
+    scoreSummary += `### 📊 **SUMMARY**\n`;
     scoreSummary += `> **Total Applicants:** ${allApplications.length}\n`;
     scoreSummary += `> **Cast:** ${castGroups.cast.length} | **Tentative:** ${castGroups.tentative.length} | **Rejected:** ${castGroups.reject.length} | **Undecided:** ${castGroups.undecided.length}\n`;
     
     const totalScored = applicantData.filter(app => app.voteCount > 0).length;
-    scoreSummary += `> **Scored:** ${totalScored}/${allApplications.length} applicants\n`;
+    scoreSummary += `> **Scored:** ${totalScored}/${allApplications.length} applicants`;
+    
+    // ButtonBuilder and ActionRowBuilder already imported at top of file
+    
+    // Create action buttons (Close and Refresh)
+    const actionButtons = [
+      new ButtonBuilder()
+        .setCustomId(`ranking_scores_close_${extractedConfigId || 'none'}`)
+        .setLabel('Close')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('❌'),
+      new ButtonBuilder()
+        .setCustomId(`ranking_scores_refresh_${extractedConfigId || 'none'}`)
+        .setLabel('Refresh')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('🔄')
+    ];
+    
+    const actionRow = new ActionRowBuilder().addComponents(actionButtons);
     
     const summaryContainer = {
       type: 17,
@@ -542,7 +568,11 @@ export async function handleRankingNavigation({
         {
           type: 10,
           content: scoreSummary
-        }
+        },
+        {
+          type: 14 // Separator component to replace ---
+        },
+        actionRow.toJSON() // Action row with Close and Refresh buttons
       ]
     };
     

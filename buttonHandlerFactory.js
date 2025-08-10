@@ -146,6 +146,22 @@ export const BUTTON_REGISTRY = {
     category: 'testing'
   },
 
+  // === RANKING SYSTEM ===
+  'ranking_scores_close': {
+    label: 'Close',
+    description: 'Close the View All Scores summary',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'ranking'
+  },
+  'ranking_scores_refresh': {
+    label: 'Refresh',
+    description: 'Refresh the View All Scores summary data',
+    emoji: '🔄',
+    style: 'Secondary', 
+    category: 'ranking'
+  },
+
   // === SAFARI MENU SYSTEM ===
   'prod_safari_menu': {
     label: 'Safari',
