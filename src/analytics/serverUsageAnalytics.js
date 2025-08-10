@@ -306,6 +306,56 @@ async function parseUserAnalyticsLog() {
 }
 
 /**
+ * Calculate server activity level based on last activity timestamp
+ * @param {number|null} lastActivityTimestamp - Unix timestamp in milliseconds of last activity
+ * @returns {Object} Activity level info with emoji and description
+ */
+function calculateActivityLevel(lastActivityTimestamp) {
+  // Handle null/undefined timestamps (servers with no activity)
+  if (!lastActivityTimestamp || isNaN(lastActivityTimestamp)) {
+    return {
+      emoji: '🔴',
+      level: 'inactive',
+      description: 'No recent activity'
+    };
+  }
+  
+  // Get current time in milliseconds (UTC)
+  const now = Date.now();
+  
+  // Calculate time thresholds in milliseconds
+  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; // 24 hours in ms
+  const FOUR_DAYS = 4 * 24 * 60 * 60 * 1000; // 4 days in ms
+  
+  // Calculate time differences
+  const timeDiff = now - lastActivityTimestamp;
+  
+  // Add debug info for troubleshooting
+  console.log(`📊 DEBUG: Activity calculation - Now: ${new Date(now).toISOString()}, Last: ${new Date(lastActivityTimestamp).toISOString()}, Diff: ${Math.round(timeDiff / (60 * 60 * 1000))} hours`);
+  
+  // Determine activity level
+  if (timeDiff <= TWENTY_FOUR_HOURS) {
+    return {
+      emoji: '🟢',
+      level: 'recent',
+      description: 'Active within 24 hours'
+    };
+  } else if (timeDiff <= FOUR_DAYS) {
+    return {
+      emoji: '🟠', 
+      level: 'moderate',
+      description: 'Active within 4 days'
+    };
+  } else {
+    return {
+      emoji: '🔴',
+      level: 'inactive', 
+      description: 'Inactive for more than 4 days'
+    };
+  }
+}
+
+/**
  * Detect CastBot feature usage from log entries
  * @param {Array} entries - Log entries for a specific server
  * @returns {Object} Feature usage statistics
@@ -480,6 +530,9 @@ function calculateServerStats(logEntries, daysBack = 7) {
     stats.commandToButtonRatio = stats.slashCommands > 0 
       ? Math.round((stats.buttonClicks / stats.slashCommands) * 100) / 100
       : 0;
+    
+    // Calculate activity level based on last activity timestamp
+    stats.activityLevel = calculateActivityLevel(stats.lastActivity);
   });
   
   return serverStats;
@@ -881,7 +934,7 @@ async function formatServerUsageForDiscordV2(summary) {
         ? server.serverName.substring(0, 25) + '...'
         : server.serverName;
       
-      fullContent += `${medal} **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} interactions\n`;
+      fullContent += `${medal} **${serverDisplay}**: ${server.totalInteractions.toLocaleString()} interactions ${server.activityLevel.emoji}\n`;
       
       // Build feature usage display
       const featureList = [];
@@ -1041,5 +1094,6 @@ export {
   formatServerUsageForDiscordV2,
   calculateOptimalServerLimit,
   parseRecentServerInstalls,
-  detectFeatureUsage
+  detectFeatureUsage,
+  calculateActivityLevel
 };
