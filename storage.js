@@ -539,3 +539,34 @@ export async function cleanupMissingRoles(guildId, guild) {
   
   return { cleaned: cleanedCount, errors };
 }
+
+/**
+ * Get all applications for a guild from playerData
+ * @param {string} guildId - Guild ID
+ * @returns {Array} Array of application objects
+ */
+export async function getAllApplicationsFromData(guildId) {
+  const playerData = await loadPlayerData();
+  const guildApplications = playerData[guildId]?.applications || {};
+  return Object.values(guildApplications);
+}
+
+/**
+ * Get applications filtered by season configId
+ * @param {string} guildId - Guild ID
+ * @param {string} configId - Season config ID to filter by
+ * @returns {Array} Array of applications for the specified season
+ */
+export async function getApplicationsForSeason(guildId, configId) {
+  const playerData = await loadPlayerData();
+  const guildApplications = playerData[guildId]?.applications || {};
+  
+  return Object.values(guildApplications).filter(app => {
+    // Handle backward compatibility for applications without configId
+    if (!app.configId || app.configId === 'unknown') {
+      // Applications without configId are treated as legacy and excluded from season filtering
+      return false;
+    }
+    return app.configId === configId;
+  });
+}

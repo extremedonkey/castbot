@@ -50,7 +50,9 @@ import {
   getReactionMapping,
   deleteReactionMapping,
   loadAllReactionMappings,
-  cleanupOldReactionMappings
+  cleanupOldReactionMappings,
+  getAllApplicationsFromData,
+  getApplicationsForSeason
 } from './storage.js';
 import {
   createApplicationButtonModal,
@@ -432,37 +434,6 @@ import {
 import fs from 'fs';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
-
-/**
- * Helper function to get all applications from stored playerData
- * @param {string} guildId - Discord guild ID
- * @returns {Array} Array of application objects
- */
-async function getAllApplicationsFromData(guildId) {
-  const playerData = await loadPlayerData();
-  const guildApplications = playerData[guildId]?.applications || {};
-  return Object.values(guildApplications);
-}
-
-/**
- * Get applications filtered by season configId
- * @param {string} guildId - Guild ID
- * @param {string} configId - Season config ID to filter by
- * @returns {Array} Array of applications for the specified season
- */
-async function getApplicationsForSeason(guildId, configId) {
-  const playerData = await loadPlayerData();
-  const guildApplications = playerData[guildId]?.applications || {};
-  
-  return Object.values(guildApplications).filter(app => {
-    // Handle backward compatibility for applications without configId
-    if (!app.configId || app.configId === 'unknown') {
-      // Applications without configId are treated as legacy and excluded from season filtering
-      return false;
-    }
-    return app.configId === configId;
-  });
-}
 
 /**
  * Helper function to create casting status buttons
