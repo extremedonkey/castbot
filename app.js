@@ -4781,14 +4781,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Handle ranking scores summary close button
       return ButtonHandlerFactory.create({
         id: 'ranking_scores_close',
-        updateMessage: true,
+        updateMessage: false, // Create new ephemeral message instead of updating
         handler: async (context) => {
           console.log(`🔍 START: ranking_scores_close - user ${context.userId}`);
           
           // Use Components V2 pattern with minimal dismissal message (Discord requirement)
           console.log(`✅ SUCCESS: ranking_scores_close - message dismissed`);
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2 - MANDATORY
+            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
             components: [{
               type: 17, // Container - MANDATORY wrapper
               components: [{
