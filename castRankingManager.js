@@ -551,6 +551,137 @@ export async function handleRankingNavigation({
 }
 
 /**
+ * Handle ranking select menu interactions (jump to applicant)
+ * 
+ * @param {Object} params - Parameters object
+ * @param {string} params.customId - Select menu custom_id
+ * @param {Array} params.values - Selected values from the menu
+ * @param {string} params.guildId - Discord guild ID
+ * @param {string} params.userId - Current user ID
+ * @param {Object} params.guild - Discord guild object
+ * @param {Object} params.client - Discord.js client instance
+ * @returns {Object} Complete UI response object
+ */
+export async function handleRankingSelect({
+  customId,
+  values,
+  guildId,
+  userId,
+  guild,
+  client
+}) {
+  const selectedValue = values[0];
+  console.log(`🔍 DEBUG: handleRankingSelect - Selected value: ${selectedValue}`);
+  
+  // Parse: ranking_select_{currentIndex}_{configId}_{page}
+  const parts = customId.split('_');
+  const currentIndex = parseInt(parts[2]);
+  const currentPage = parseInt(parts[parts.length - 1]) || 0;
+  
+  // Extract configId (handle configs with underscores)
+  let configId = null;
+  if (parts.length > 4) {
+    configId = parts.slice(3, -1).join('_');
+  }
+  
+  // Load data
+  const playerData = await loadPlayerData();
+  const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
+  
+  // Get applications using season-filtered function when configId is available
+  const allApplications = configId 
+    ? await getApplicationsForSeason(guildId, configId)
+    : await getAllApplicationsFromData(guildId);
+  
+  // Check if it's a page navigation
+  if (selectedValue.startsWith('page_')) {
+    const newPage = parseInt(selectedValue.split('_')[1]);
+    console.log(`🔍 DEBUG: handleRankingSelect - Switching to page ${newPage}`);
+    
+    // Show first applicant of the new page
+    const newIndex = newPage * 24;
+    const currentApp = allApplications[newIndex];
+    
+    if (!currentApp) {
+      return {
+        content: '❌ Error navigating to page.',
+        ephemeral: true
+      };
+    }
+    
+    // Fetch applicant member
+    let applicantMember;
+    try {
+      applicantMember = await guild.members.fetch(currentApp.userId);
+    } catch (error) {
+      applicantMember = {
+        displayName: currentApp.displayName,
+        user: { username: currentApp.username },
+        displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`,
+        roles: []
+      };
+    }
+    
+    // Use main UI generation function
+    const seasonName = 'Current Season'; // TODO: Get actual season name
+    return await generateSeasonAppRankingUI({
+      guildId,
+      userId,
+      configId: configId || 'select',
+      allApplications,
+      currentApp,
+      appIndex: newIndex,
+      applicantMember,
+      guild,
+      seasonName,
+      playerData
+    });
+    
+  } else {
+    // Jump to selected applicant
+    const newIndex = parseInt(selectedValue);
+    const currentApp = allApplications[newIndex];
+    
+    if (!currentApp) {
+      return {
+        content: '❌ Application not found.',
+        ephemeral: true
+      };
+    }
+    
+    console.log(`🔍 DEBUG: handleRankingSelect - Jumping to applicant ${newIndex + 1}: ${currentApp.displayName}`);
+    
+    // Fetch applicant member
+    let applicantMember;
+    try {
+      applicantMember = await guild.members.fetch(currentApp.userId);
+    } catch (error) {
+      applicantMember = {
+        displayName: currentApp.displayName,
+        user: { username: currentApp.username },
+        displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`,
+        roles: []
+      };
+    }
+    
+    // Use main UI generation function
+    const seasonName = 'Current Season'; // TODO: Get actual season name
+    return await generateSeasonAppRankingUI({
+      guildId,
+      userId,
+      configId: configId || 'select',
+      allApplications,
+      currentApp,
+      appIndex: newIndex,
+      applicantMember,
+      guild,
+      seasonName,
+      playerData
+    });
+  }
+}
+
+/**
  * Handle ranking button clicks (1-5 stars) and update scores
  * 
  * @param {Object} params - Parameters object
