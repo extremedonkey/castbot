@@ -991,28 +991,11 @@ async function formatServerUsageForDiscordV2(summary) {
     fullContent += `📭 **No server activity found**\n\nNo interactions recorded in the specified period.\n\n`;
   }
   
-  // Insights section
-  if (insights.mostActive || insights.powerUsers.length > 0 || insights.highEngagement.length > 0) {
-    fullContent += `## 💡 Key Insights\n\n`;
-    
-    if (insights.mostActive) {
-      fullContent += `🔥 **Most Active**: ${insights.mostActive.serverName} (${insights.mostActive.avgDailyActivity}/day avg)\n`;
-    }
-    
-    if (insights.powerUsers.length > 0) {
-      fullContent += `👥 **High User Engagement**: ${insights.powerUsers.length} servers with 10+ active users\n`;
-    }
-    
-    if (insights.highEngagement.length > 0) {
-      fullContent += `⚡ **High Activity**: ${insights.highEngagement.length} servers with 50+ daily interactions\n`;
-    }
-    
-    fullContent += `\n`;
-  }
+  // Insights section removed per user request
   
   // Recent Server Installs section
   if (recentInstalls.length > 0) {
-    fullContent += `🆕 **Most Recent Server Installs** (Latest ${recentInstalls.length})\n\n`;
+    fullContent += `## 🆕 Most Recent Server Installs (Latest ${recentInstalls.length})\n\n`;
     
     recentInstalls.forEach((install, index) => {
       // Format timestamp to show just date and time
@@ -1038,7 +1021,7 @@ async function formatServerUsageForDiscordV2(summary) {
       fullContent += `\n`;
     });
   } else {
-    fullContent += `🆕 **Most Recent Server Installs**\n\n`;
+    fullContent += `## 🆕 Most Recent Server Installs\n\n`;
     fullContent += `📭 No server installations found in logs\n\n`;
   }
   
