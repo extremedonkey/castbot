@@ -998,17 +998,17 @@ async function formatServerUsageForDiscordV2(summary) {
     fullContent += `> ## 🆕 Most Recent Server Installs (Latest ${recentInstalls.length})\n\n`;
     
     recentInstalls.forEach((install, index) => {
-      // Format timestamp to show just date and time
+      // Format timestamp in compact format
       const installDate = new Date(install.timestamp);
-      const dateStr = installDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        year: '2-digit'
-      });
       const timeStr = installDate.toLocaleTimeString('en-US', { 
         hour: 'numeric', 
         minute: '2-digit',
         hour12: true 
+      });
+      const dayStr = installDate.toLocaleDateString('en-US', { 
+        weekday: 'short',
+        month: 'short', 
+        day: 'numeric'
       });
       
       // Truncate server name if too long
@@ -1016,9 +1016,11 @@ async function formatServerUsageForDiscordV2(summary) {
         ? install.serverName.substring(0, 30) + '...'
         : install.serverName;
       
-      fullContent += `📅 **${serverDisplay}**\n`;
-      fullContent += `   └ ${dateStr} at ${timeStr} | Owner: ${install.owner}\n`;
-      fullContent += `\n`;
+      // Extract just the username from owner string (remove @ and ID)
+      const ownerMatch = install.owner.match(/^(.+?)\s*\(@/);
+      const ownerName = ownerMatch ? ownerMatch[1] : install.owner.split(' ')[0];
+      
+      fullContent += `📅 **${serverDisplay}** ([${timeStr}] ${dayStr}, ${ownerName})\n`;
     });
   } else {
     fullContent += `> ## 🆕 Most Recent Server Installs\n\n`;
