@@ -483,15 +483,19 @@ export async function handleRankingNavigation({
     };
   }
 
-  // Handle navigation (prev/next)
-  const navMatch = customId.match(/^ranking_(prev|next)_(\d+)$/);
+  // Handle navigation (prev/next) with configId support
+  // Format: ranking_prev_{index}_{configId} or ranking_next_{index}_{configId}
+  const navMatch = customId.match(/^ranking_(prev|next)_(\d+)(?:_(.+))?$/);
   if (!navMatch) {
     throw new Error(`Invalid navigation custom_id format: ${customId}`);
   }
 
-  const [, direction, currentIndexStr] = navMatch;
+  const [, direction, currentIndexStr, extractedConfigId] = navMatch;
   const currentIndex = parseInt(currentIndexStr);
   const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+  
+  // Use extracted configId if available
+  const navConfigId = extractedConfigId || 'navigation';
   
   if (newIndex < 0 || newIndex >= allApplications.length) {
     return {
@@ -511,7 +515,8 @@ export async function handleRankingNavigation({
     applicantMember = {
       displayName: currentApp.displayName,
       user: { username: currentApp.username },
-      displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+      displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`,
+      roles: [] // Empty roles array for demographic logic
     };
   }
   
@@ -520,7 +525,7 @@ export async function handleRankingNavigation({
   return await generateSeasonAppRankingUI({
     guildId,
     userId,
-    configId: 'navigation', // Simple config ID for navigation
+    configId: navConfigId, // Use the extracted configId from button
     allApplications,
     currentApp,
     appIndex: newIndex,
@@ -595,7 +600,8 @@ export async function handleRankingButton({
     applicantMember = {
       displayName: currentApp.displayName,
       user: { username: currentApp.username },
-      displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`
+      displayAvatarURL: () => currentApp.avatarURL || `https://cdn.discordapp.com/embed/avatars/${currentApp.userId % 5}.png`,
+      roles: [] // Empty roles array for demographic logic
     };
   }
   

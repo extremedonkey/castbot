@@ -5124,7 +5124,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       })(req, res, client);
     } else if (custom_id.startsWith('ranking_prev_') || custom_id.startsWith('ranking_next_') || custom_id.startsWith('ranking_view_all_scores')) {
-      // Handle ranking navigation and view all scores - converted to Button Handler Factory
+      // Handle ranking navigation and view all scores - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({
         id: 'ranking_navigation',
         updateMessage: true, // Navigation updates existing message (but not View All Scores)
@@ -5142,29 +5142,25 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               ephemeral: true
             };
           }
-
-          // Extract configId from button custom_id
-          let configId = null;
-          if (context.customId.startsWith('ranking_view_all_scores_')) {
-            configId = context.customId.replace('ranking_view_all_scores_', '');
-          } else if (context.customId.startsWith('ranking_prev_') || context.customId.startsWith('ranking_next_')) {
-            // Extract configId from navigation buttons: ranking_prev_{appIndex}_{configId} or ranking_next_{appIndex}_{configId}
-            // Custom ID format: ranking_next_0_config_1749305698427_391415444084490240
-            const configMatch = context.customId.match(/ranking_(prev|next)_\d+_(.+)$/);
-            if (configMatch) {
-              configId = configMatch[2]; // Everything after the index
-            }
-          }
-
-          const playerData = await loadPlayerData();
           
-          // Use season-filtered applications if configId is available, otherwise fall back to all applications
-          const allApplications = configId 
-            ? await getApplicationsForSeason(guildId, configId)
-            : await getAllApplicationsFromData(guildId);
-
-          // Load season configuration for header
-          const seasonConfig = playerData[guildId]?.applicationConfigs?.[configId];
+          // Use castRankingManager for navigation
+          console.log('🔧 Using castRankingManager.handleRankingNavigation()');
+          const { handleRankingNavigation } = await import('./castRankingManager.js');
+          const result = await handleRankingNavigation({
+            customId: context.customId,
+            guildId,
+            userId,
+            guild,
+            client
+          });
+          
+          console.log(`✅ SUCCESS: ranking_navigation - ${context.customId} completed via castRankingManager`);
+          return result;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('ranking_select_DISABLED')) {
+      // REMOVED LEGACY CODE - this section disabled
+          const seasonConfig = null;
           const seasonName = seasonConfig?.seasonName || 'Unknown Season';
 
           if (context.customId.startsWith('ranking_view_all_scores')) {
