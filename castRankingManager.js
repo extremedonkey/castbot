@@ -166,6 +166,62 @@ export async function generateSeasonAppRankingUI({
     };
   }
   
+  // Get applicant's age from playerData
+  const applicantAge = playerData[guildId]?.players?.[currentApp.userId]?.age;
+  
+  // Get applicant's pronoun and timezone roles
+  let pronounRoleId = null;
+  let timezoneRoleId = null;
+  
+  // Check if applicantMember has roles (it should if fetched successfully)
+  if (applicantMember && applicantMember.roles) {
+    // Get guild's configured pronoun and timezone roles
+    const guildPronouns = playerData[guildId]?.pronounRoleIDs || [];
+    const guildTimezones = playerData[guildId]?.timezoneRoleIDs || [];
+    
+    // Find if user has any of these roles
+    const memberRoles = applicantMember.roles.cache ? 
+      Array.from(applicantMember.roles.cache.keys()) : // If it's a full member object
+      applicantMember.roles; // If it's just an array of role IDs
+    
+    // Find first matching pronoun role
+    for (const roleId of memberRoles) {
+      if (guildPronouns.includes(roleId)) {
+        pronounRoleId = roleId;
+        break;
+      }
+    }
+    
+    // Find first matching timezone role  
+    for (const roleId of memberRoles) {
+      if (guildTimezones.includes(roleId)) {
+        timezoneRoleId = roleId;
+        break;
+      }
+    }
+  }
+  
+  // Build the demographic info string
+  let demographicInfo = '';
+  const infoParts = [];
+  
+  if (applicantAge) {
+    infoParts.push(applicantAge);
+  }
+  
+  if (pronounRoleId) {
+    infoParts.push(`<@&${pronounRoleId}>`);
+  }
+  
+  if (timezoneRoleId) {
+    infoParts.push(`<@&${timezoneRoleId}>`);
+  }
+  
+  // Only add brackets if there's any demographic info
+  if (infoParts.length > 0) {
+    demographicInfo = ` (${infoParts.join(', ')})`;
+  }
+  
   // Create Components V2 Container for Cast Ranking interface
   // IMPORTANT: This follows the current layout pattern with navigation above applicant info
   const containerComponents = [
@@ -179,7 +235,7 @@ export async function generateSeasonAppRankingUI({
     navRow.toJSON(), // Navigation controls above applicant info
     {
       type: 10, // Text Display component
-      content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
+      content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}${demographicInfo}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
     }
   ];
   
