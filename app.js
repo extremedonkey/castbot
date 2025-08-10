@@ -577,9 +577,9 @@ function createApplicantSelectOptions(allApplications, playerData, guildId, curr
     // Determine icon based on priority
     let icon = '🗳️'; // Default: not enough votes
     if (castingStatus === 'cast') {
-      icon = '🎬';
+      icon = '✅';
     } else if (castingStatus === 'reject') {
-      icon = '🗑️';
+      icon = '❌';
     } else if (voteCount >= 2) {
       icon = '☑️';
     }

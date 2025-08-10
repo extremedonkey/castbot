@@ -48,8 +48,8 @@ function createApplicantSelectOptions(allApplications, playerData, guildId, curr
 
 Icons are displayed based on the following precedence (highest to lowest):
 
-1. **🎬** - `castingStatus === 'cast'` (Player cast)
-2. **🗑️** - `castingStatus === 'reject'` (Player rejected)
+1. **✅** - `castingStatus === 'cast'` (Player cast)
+2. **❌** - `castingStatus === 'reject'` (Player rejected)
 3. **☑️** - 2+ votes and no cast/reject status (Some votes)
 4. **🗳️** - <2 votes and no cast/reject status (Not enough votes)
 
@@ -63,8 +63,8 @@ Each option displays as:
 ```
 
 Example:
-- `🎬 1. John Doe (johndoe) - 5 votes 💬`
-- `🗑️ 14. Peri (sfxperi) - 5 votes 💬`
+- `✅ 1. John Doe (johndoe) - 5 votes 💬`
+- `❌ 14. Peri (sfxperi) - 5 votes 💬`
 - `🗳️ 43. Lewis (xlewisthorpx) - 1 vote 💬`
 
 ### Pagination System
