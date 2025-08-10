@@ -5098,7 +5098,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Handle ranking navigation and view all scores - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({
         id: 'ranking_navigation',
-        updateMessage: true, // Navigation updates existing message (but not View All Scores)
+        updateMessage: !custom_id.startsWith('ranking_view_all_scores'), // View All Scores creates new message, navigation updates
         handler: async (context) => {
           console.log(`🔍 START: ranking_navigation - user ${context.userId}, button ${context.customId}`);
           
