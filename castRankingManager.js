@@ -780,9 +780,11 @@ export async function handleRankingButton({
   playerData[guildId].applications[channelId].rankings[userId] = rankingScore;
   await savePlayerData(playerData);
   
-  // Get updated application data
-  const { getAllApplicationsFromData } = await import('./storage.js');
-  const allApplications = await getAllApplicationsFromData(guildId);
+  // Get updated application data using season-filtered function when configId is available
+  const { getAllApplicationsFromData, getApplicationsForSeason } = await import('./storage.js');
+  const allApplications = configId 
+    ? await getApplicationsForSeason(guildId, configId)
+    : await getAllApplicationsFromData(guildId);
   const currentApp = allApplications[appIndex];
   
   if (!currentApp) {
