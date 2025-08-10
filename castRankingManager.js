@@ -231,6 +231,18 @@ export async function generateSeasonAppRankingUI({
   
   console.log(`🔍 DEBUG: Demographics - Final info string: "${demographicInfo}"`);
   
+  // Determine name display format - use Discord mention if member is still in server, fallback if they left
+  let nameDisplay;
+  if (applicantMember.id && applicantMember.guild) {
+    // Member is still in server - use Discord mention syntax for clickable profile
+    nameDisplay = `<@${currentApp.userId}>`;
+    console.log(`🔍 DEBUG: Name Display - Using mention syntax for active member: ${currentApp.userId}`);
+  } else {
+    // Member has left server - use fallback with displayName and indicator
+    nameDisplay = `${currentApp.displayName || currentApp.username} - left server`;
+    console.log(`🔍 DEBUG: Name Display - Using fallback for left member: ${currentApp.displayName || currentApp.username}`);
+  }
+  
   // Create Components V2 Container for Cast Ranking interface
   // IMPORTANT: This follows the current layout pattern with navigation above applicant info
   const containerComponents = [
@@ -241,7 +253,7 @@ export async function generateSeasonAppRankingUI({
     navRow.toJSON(), // Navigation controls above applicant info
     {
       type: 10, // Text Display component
-      content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${currentApp.displayName || currentApp.username}${demographicInfo}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
+      content: `> **Applicant ${appIndex + 1} of ${allApplications.length}**\n**Name:** ${nameDisplay}${demographicInfo}\n**Average Score:** ${avgScore} (${rankings.length} vote${rankings.length !== 1 ? 's' : ''})\n**Your Score:** ${userRanking || 'Not rated'}\n**Casting Status:** ${castingStatusText}\n**App:** <#${currentApp.channelId}>`
     }
   ];
   
