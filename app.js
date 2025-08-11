@@ -24094,7 +24094,7 @@ Are you sure you want to continue?`;
           console.log(`⏸️ START: safari_paused_players - user ${context.userId}`);
           
           const { createPausedPlayersUI } = await import('./pausedPlayersManager.js');
-          const ui = await createPausedPlayersUI(context.guildId);
+          const ui = await createPausedPlayersUI(context.guildId, context.client);
           
           console.log(`✅ SUCCESS: safari_paused_players - showing paused players interface`);
           return ui;
@@ -24126,7 +24126,7 @@ Are you sure you want to continue?`;
           }
           
           // Return updated interface with new paused states
-          const ui = await createPausedPlayersUI(context.guildId);
+          const ui = await createPausedPlayersUI(context.guildId, context.client);
           return ui;
         }
       })(req, res, client);

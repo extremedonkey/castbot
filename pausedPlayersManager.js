@@ -163,11 +163,13 @@ export async function updatePausedPlayers(guildId, selectedUserIds, client) {
 /**
  * Create the Paused Players management interface
  * @param {string} guildId - Discord guild ID
+ * @param {Object} client - Discord client for fetching member data
  * @returns {Object} Discord Components V2 interface
  */
-export async function createPausedPlayersUI(guildId) {
+export async function createPausedPlayersUI(guildId, client = null) {
   const pausedPlayers = await getPausedPlayers(guildId);
   const safariPlayers = await getSafariPlayers(guildId);
+  const playerData = await loadPlayerData();
   
   // Build the Components V2 interface
   const components = [
@@ -183,22 +185,47 @@ export async function createPausedPlayersUI(guildId) {
     }
   ];
   
-  // Add user select if there are Safari players
+  // Add string select with only Safari players if there are any
   if (safariPlayers.length > 0) {
+    // Build options for only initialized players
+    const selectOptions = [];
+    
+    for (const userId of safariPlayers) {
+      const player = playerData[guildId]?.players?.[userId];
+      let displayName = player?.displayName || player?.username || 'Unknown Player';
+      
+      // Try to get fresh Discord data if client available
+      if (client) {
+        try {
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          displayName = member.displayName || member.user.username;
+        } catch (e) {
+          // Use cached name if Discord fetch fails
+        }
+      }
+      
+      const isPaused = pausedPlayers.includes(userId);
+      selectOptions.push({
+        label: displayName,
+        value: userId,
+        description: isPaused ? '⏸️ Currently paused' : '▶️ Currently active',
+        emoji: { name: isPaused ? '⏸️' : '▶️' },
+        default: isPaused // Pre-select if paused
+      });
+    }
+    
     components[0].components.push(
       { type: 14 }, // Separator
       {
         type: 1, // Action Row
         components: [{
-          type: 5, // User Select
+          type: 3, // String Select (instead of User Select)
           custom_id: 'safari_pause_players_select',
           placeholder: 'Select players to pause/unpause',
           min_values: 0,
           max_values: Math.min(25, safariPlayers.length), // Discord limit is 25
-          default_values: pausedPlayers.map(userId => ({
-            id: userId,
-            type: 'user'
-          }))
+          options: selectOptions
         }]
       }
     );
