@@ -19962,12 +19962,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setStyle(ButtonStyle.Primary)
             .setEmoji('👥');
           
-          // Legacy create button (grey, will be far right)
-          const legacyCreateButton = new ButtonBuilder()
-            .setCustomId('map_create')
-            .setLabel('Create Map (Legacy)')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🏗️');
+          // Legacy create button - MARKED FOR REMOVAL (map_update has replaced this)
+          // const legacyCreateButton = new ButtonBuilder()
+          //   .setCustomId('map_create')
+          //   .setLabel('Create Map (Legacy)')
+          //   .setStyle(ButtonStyle.Secondary)
+          //   .setEmoji('🏗️');
           
           // Set states based on whether map exists
           if (hasActiveMap) {
@@ -19994,11 +19994,21 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setEmoji('🔄')
             .setDisabled(!hasActiveMap); // Only enable if there's an active map
 
+          // Create paused players button
+          const { getPausedPlayers } = await import('./pausedPlayersManager.js');
+          const pausedCount = hasActiveMap ? (await getPausedPlayers(guildId)).length : 0;
+          const pausedPlayersButton = new ButtonBuilder()
+            .setCustomId('safari_paused_players')
+            .setLabel(pausedCount > 0 ? `Paused Players (${pausedCount})` : 'Paused Players')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('⏸️')
+            .setDisabled(!hasActiveMap); // Only enable if there's an active map
+
           // First row: Main map management buttons
           const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, playerLocationsButton]);
           
-          // Second row: Admin functions and legacy
-          const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, refreshAnchorsButton, legacyCreateButton]);
+          // Second row: Admin functions (map_create removed - use map_update instead)
+          const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, refreshAnchorsButton, pausedPlayersButton]);
           
           // Create back button
           const backButton = new ButtonBuilder()
@@ -20032,66 +20042,67 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
-    } else if (custom_id === 'map_create') {
-      // Handle Map Creation
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member?.user?.id || req.body.user?.id;
-        const member = req.body.member;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create maps.')) return;
-        
-        console.log(`🏗️ DEBUG: Creating map for guild ${guildId}`);
-        
-        // Defer response for long operation
-        await res.send({
-          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-        // Get guild and create map
-        const guild = await client.guilds.fetch(guildId);
-        const { createMapGrid } = await import('./mapExplorer.js');
-        const result = await createMapGrid(guild, userId);
-        
-        // Send followup with result
-        const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        
-        await fetch(followupUrl, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            content: result.message,
-            flags: InteractionResponseFlags.EPHEMERAL
-          })
-        });
-        
-      } catch (error) {
-        console.error('Error in map_create handler:', error);
-        
-        // Try to send error as followup
-        try {
-          const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-          await fetch(followupUrl, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              content: `❌ Error creating map: ${error.message}`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            })
-          });
-        } catch (followupError) {
-          console.error('Error sending followup:', followupError);
-        }
-      }
-      
+    // MAP_CREATE HANDLER REMOVED - Use map_update instead which supports both create and update
+    // } else if (custom_id === 'map_create') {
+    //   // Handle Map Creation
+    //   try {
+    //     const guildId = req.body.guild_id;
+    //     const userId = req.body.member?.user?.id || req.body.user?.id;
+    //     const member = req.body.member;
+    //     
+    //     // Check admin permissions
+    //     if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create maps.')) return;
+    //     
+    //     console.log(`🏗️ DEBUG: Creating map for guild ${guildId}`);
+    //     
+    //     // Defer response for long operation
+    //     await res.send({
+    //       type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+    //       data: {
+    //         flags: InteractionResponseFlags.EPHEMERAL
+    //       }
+    //     });
+    //     
+    //     // Get guild and create map
+    //     const guild = await client.guilds.fetch(guildId);
+    //     const { createMapGrid } = await import('./mapExplorer.js');
+    //     const result = await createMapGrid(guild, userId);
+    //     
+    //     // Send followup with result
+    //     const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    //     
+    //     await fetch(followupUrl, {
+    //       method: 'PATCH',
+    //       headers: {
+    //         'Content-Type': 'application/json',
+    //       },
+    //       body: JSON.stringify({
+    //         content: result.message,
+    //         flags: InteractionResponseFlags.EPHEMERAL
+    //       })
+    //     });
+    //     
+    //   } catch (error) {
+    //     console.error('Error in map_create handler:', error);
+    //     
+    //     // Try to send error as followup
+    //     try {
+    //       const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+    //       await fetch(followupUrl, {
+    //         method: 'PATCH',
+    //         headers: {
+    //           'Content-Type': 'application/json',
+    //         },
+    //         body: JSON.stringify({
+    //           content: `❌ Error creating map: ${error.message}`,
+    //           flags: InteractionResponseFlags.EPHEMERAL
+    //         })
+    //       });
+    //     } catch (followupError) {
+    //       console.error('Error sending followup:', followupError);
+    //     }
+    //   }
+    // 
     } else if (custom_id === 'map_update') {
       console.log('🎯 DEBUG: map_update button clicked!');
       // Handle Map Update - Show modal for Discord image URL
@@ -24069,6 +24080,55 @@ Are you sure you want to continue?`;
         });
       }
     // ==================== END MAP ADMIN HANDLERS ====================
+    
+    // ==================== START PAUSED PLAYERS HANDLERS ====================
+    } else if (custom_id === 'safari_paused_players') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_paused_players',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true, // Update instead of creating new message
+        handler: async (context) => {
+          console.log(`⏸️ START: safari_paused_players - user ${context.userId}`);
+          
+          const { createPausedPlayersUI } = await import('./pausedPlayersManager.js');
+          const ui = await createPausedPlayersUI(context.guildId);
+          
+          console.log(`✅ SUCCESS: safari_paused_players - showing paused players interface`);
+          return ui;
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'safari_pause_players_select') {
+      // Handle the user select interaction for pausing/unpausing players
+      return ButtonHandlerFactory.create({
+        id: 'safari_pause_players_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true, // Update the existing message
+        handler: async (context) => {
+          console.log(`⏸️ START: safari_pause_players_select - user ${context.userId}`);
+          
+          // Get selected user IDs from the interaction
+          const selectedUserIds = context.values || [];
+          console.log(`⏸️ Selected users to pause: ${selectedUserIds.length}`);
+          
+          // Update paused states
+          const { updatePausedPlayers, createPausedPlayersUI } = await import('./pausedPlayersManager.js');
+          const result = await updatePausedPlayers(context.guildId, selectedUserIds, context.client);
+          
+          if (result.success) {
+            console.log(`✅ SUCCESS: Paused ${result.paused}, Unpaused ${result.unpaused}`);
+          } else {
+            console.log(`❌ FAILED: ${result.message}`);
+          }
+          
+          // Return updated interface with new paused states
+          const ui = await createPausedPlayersUI(context.guildId);
+          return ui;
+        }
+      })(req, res, client);
+    // ==================== END PAUSED PLAYERS HANDLERS ====================
     
     } else if (custom_id === 'prod_add_tribe_role_select') {
       // Step 2: After role selected, show castlist selection

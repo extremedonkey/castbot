@@ -739,6 +739,22 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map_admin',
     requiresPermission: 'ManageRoles'
   },
+  'safari_paused_players': {
+    label: 'Paused Players',
+    description: 'Manage paused Safari players (remove channel access while maintaining state)',
+    emoji: '⏸️',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
+  'safari_pause_players_select': {
+    label: 'Select Paused Players',
+    description: 'User select for pausing/unpausing Safari players',
+    emoji: '⏸️',
+    style: 'Secondary',
+    category: 'safari_map_admin',
+    requiresPermission: 'ManageRoles'
+  },
   'map_player_locations': {
     label: 'Player Locations',
     description: 'View all player locations on the map',
