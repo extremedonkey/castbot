@@ -24096,6 +24096,10 @@ Are you sure you want to continue?`;
           const { createPausedPlayersUI } = await import('./pausedPlayersManager.js');
           const ui = await createPausedPlayersUI(context.guildId, context.client);
           
+          // Remove ephemeral and flags for UPDATE_MESSAGE response
+          delete ui.ephemeral;
+          delete ui.flags;
+          
           console.log(`✅ SUCCESS: safari_paused_players - showing paused players interface`);
           return ui;
         }
@@ -24127,6 +24131,11 @@ Are you sure you want to continue?`;
           
           // Return updated interface with new paused states
           const ui = await createPausedPlayersUI(context.guildId, context.client);
+          
+          // Remove ephemeral and flags for UPDATE_MESSAGE response
+          delete ui.ephemeral;
+          delete ui.flags;
+          
           return ui;
         }
       })(req, res, client);
