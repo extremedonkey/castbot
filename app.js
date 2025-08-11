@@ -19996,7 +19996,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
 
           // Create paused players button
           const { getPausedPlayers } = await import('./pausedPlayersManager.js');
-          const pausedCount = hasActiveMap ? (await getPausedPlayers(guildId)).length : 0;
+          const pausedCount = hasActiveMap ? (await getPausedPlayers(context.guildId)).length : 0;
           const pausedPlayersButton = new ButtonBuilder()
             .setCustomId('safari_paused_players')
             .setLabel(pausedCount > 0 ? `Paused Players (${pausedCount})` : 'Paused Players')
