@@ -146,17 +146,9 @@ export async function updatePausedPlayers(guildId, selectedUserIds, client) {
   // Save updated player data
   await savePlayerData(playerData);
   
-  // Log to Safari Log
-  try {
-    const { logAdminAction } = await import('./safariLogger.js');
-    await logAdminAction({
-      guildId,
-      action: 'PAUSE_PLAYERS',
-      details: `Paused: ${pausedCount}, Unpaused: ${unpausedCount}`,
-      adminId: 'System'
-    });
-  } catch (error) {
-    console.error('Error logging pause action:', error);
+  // Log the pause action
+  if (pausedCount > 0 || unpausedCount > 0) {
+    console.log(`⏸️ PAUSE_PLAYERS: Paused ${pausedCount}, Unpaused ${unpausedCount} players in guild ${guildId}`);
   }
   
   return {
