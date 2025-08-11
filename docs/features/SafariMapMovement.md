@@ -245,14 +245,44 @@ global.navigationInteractions = new Map();
 
 ## Admin Controls
 
-### Map Admin Interface (`/menu` → Production Menu → Safari → Map Explorer → Map Admin)
+### Map Admin Interface (`/menu` → Production Menu → Safari → Map Explorer)
 
-#### Player Selection
+#### Player Admin (`🧭 Player Admin`)
 - Shows dropdown of all server members
 - Displays current player status (initialized/not initialized)
 - Shows current location and stamina if initialized
 
-#### Available Actions
+#### Paused Players (`⏸️ Paused Players`)
+**Purpose**: Temporarily remove players from Safari channels while maintaining their state
+
+**When to Use**:
+- Players voted out who need to be suspended from the game
+- During tribe swaps or merges when Safari needs to pause
+- Individual player management for rule violations or AFK status
+- Mass pause for production events
+
+**Features**:
+- Shows only initialized Safari players (not all server members)
+- Visual indicators: ⏸️ for paused, ▶️ for active players
+- Multi-select up to 25 players at once
+- Instant apply - no save button needed
+- Preserves all player data: location, currency, inventory, interactions
+
+**How it Works**:
+1. Click "Paused Players" button in Map Explorer
+2. Select/deselect players from dropdown (pre-selected if already paused)
+3. System immediately updates permissions:
+   - Selected players: Lose access to their current Safari channel
+   - Deselected players: Regain access to their current location
+4. Players maintain their `currentLocation` for easy resumption
+
+**Technical Details**:
+- Data stored in `playerData.json` under `safari.isPaused`
+- Uses `removeOldChannelPermissions` to hide channels
+- Uses `grantNewChannelPermissions` to restore access
+- Batch processing with Promise.all() for performance
+
+#### Available Player Actions
 
 **1. Initialize on Map** (`map_admin_init_player`)
 ```javascript
