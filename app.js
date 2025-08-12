@@ -18998,6 +18998,42 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
       const conditionIndex = parseInt(customIdParts.pop() || '0');
       const actionId = customIdParts.join('_');
       
+      // Handle search trigger
+      if (selectedItemId === 'search_items') {
+        console.log(`🔍 SEARCH: condition_item_select - showing search modal`);
+        
+        const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
+        
+        const modal = new ModalBuilder()
+          .setCustomId(`condition_item_search_modal_${actionId}_${conditionIndex}_${currentPage}`)
+          .setTitle('Search Items');
+        
+        const searchInput = new TextInputBuilder()
+          .setCustomId('search_term')
+          .setLabel('Search for items...')
+          .setStyle(1) // Short
+          .setPlaceholder('Enter item name')
+          .setRequired(true);
+        
+        modal.addComponents(new ActionRowBuilder().addComponents(searchInput));
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+      }
+      
+      // Handle no results (matching Safari behavior)
+      if (selectedItemId === 'no_results') {
+        console.log(`ℹ️ INFO: condition_item_select - user selected no_results, ignoring gracefully`);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: [] // Keep existing message but remove components
+          }
+        });
+      }
+      
       // Load and update condition
       const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
       const allSafariContent = await loadSafariContent();
@@ -27457,6 +27493,173 @@ Are you sure you want to continue?`;
         
       } catch (error) {
         console.error('Error in safari_item_search_modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error searching items. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('condition_item_search_modal_')) {
+      // Handle item search modal for condition editor
+      try {
+        // Parse: condition_item_search_modal_actionId_conditionIndex_currentPage
+        const parts = custom_id.replace('condition_item_search_modal_', '').split('_');
+        const currentPage = parseInt(parts.pop() || '0');
+        const conditionIndex = parseInt(parts.pop() || '0');
+        const actionId = parts.join('_');
+        
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+        
+        console.log(`🔍 START: condition_item_search_modal - action ${actionId}, condition ${conditionIndex}`);
+        
+        // Extract search term
+        const searchTerm = components[0].components[0].value?.trim() || '';
+        
+        // Load and filter items
+        const { loadSafariContent } = await import('./safariManager.js');
+        const { parseTextEmoji } = await import('./utils/emojiUtils.js');
+        const safariData = await loadSafariContent();
+        const allItems = safariData[guildId]?.items || {};
+        
+        // Filter items (matching Safari logic exactly)
+        const filteredItems = {};
+        const searchLower = searchTerm.toLowerCase();
+        
+        console.log(`🔍 DEBUG: Searching for "${searchTerm}" in ${Object.keys(allItems).length} items`);
+        
+        for (const [itemId, item] of Object.entries(allItems)) {
+          if (item.name && item.name.toLowerCase().includes(searchLower)) {
+            filteredItems[itemId] = item;
+            console.log(`✅ Match found: ${item.name} (${itemId})`);
+          }
+        }
+        
+        console.log(`🔍 DEBUG: Found ${Object.keys(filteredItems).length} matching items`);
+        
+        // Get current condition to preserve operator
+        const condition = safariData[guildId]?.buttons?.[actionId]?.conditions?.[conditionIndex];
+        if (!condition) {
+          throw new Error('Condition not found during search');
+        }
+        
+        // Create item options with search results
+        const itemOptions = [];
+        
+        // ALWAYS add search option first (for refinement)
+        itemOptions.push({
+          label: `🔍 Search: "${searchTerm}"`,
+          value: 'search_items',
+          description: 'Click to search again'
+        });
+        
+        // Add filtered items (max 24)
+        Object.entries(filteredItems)
+          .slice(0, 24)
+          .forEach(([itemId, item]) => {
+            const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+            const safeCleanText = cleanText || `${item.emoji || '📦'} ${item.name || 'Unnamed Item'}`;
+            itemOptions.push({
+              label: safeCleanText.substring(0, 100),
+              value: itemId,
+              description: item.description?.substring(0, 100),
+              emoji: emoji
+            });
+          });
+        
+        // Handle no results (matching Safari exactly)
+        if (itemOptions.length === 1) { // Only search option
+          itemOptions.push({
+            label: 'No items found',
+            value: 'no_results',
+            description: `No items matching "${searchTerm}"`,
+            emoji: { name: '❌' }
+          });
+        }
+        
+        console.log(`✅ SUCCESS: condition_item_search_modal - found ${Object.keys(filteredItems).length} items`);
+        
+        // Return to condition editor with search results
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: [{
+              type: 17, // Container
+              accent_color: 0x5865f2,
+              components: [
+                {
+                  type: 10,
+                  content: `## ➕ Condition Editor\nWhen...`
+                },
+                {
+                  type: 1, // Action Row - Type selector (keep existing)
+                  components: [{
+                    type: 3,
+                    custom_id: `condition_type_select_${actionId}_${conditionIndex}_${currentPage}`,
+                    placeholder: 'Select Condition Type...',
+                    options: [
+                      { label: 'Currency', value: 'currency', emoji: { name: '🪙' }, default: condition.type === 'currency' },
+                      { label: 'Item', value: 'item', emoji: { name: '📦' }, default: true },
+                      { label: 'Role', value: 'role', emoji: { name: '👑' }, default: condition.type === 'role' }
+                    ]
+                  }]
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 10,
+                  content: `### Item Details\nWhen user...\n*Search results for "${searchTerm}"*`
+                },
+                {
+                  type: 1, // Operator buttons
+                  components: [
+                    {
+                      type: 2,
+                      custom_id: `condition_has_${actionId}_${conditionIndex}_${currentPage}_item`,
+                      label: 'Has',
+                      style: condition.operator === 'has' ? 1 : 2,
+                      emoji: { name: '✅' }
+                    },
+                    {
+                      type: 2,
+                      custom_id: `condition_not_has_${actionId}_${conditionIndex}_${currentPage}_item`,
+                      label: 'Does not have',
+                      style: condition.operator === 'not_has' ? 1 : 2,
+                      emoji: { name: '❌' }
+                    }
+                  ]
+                },
+                {
+                  type: 10,
+                  content: 'the following item...'
+                },
+                {
+                  type: 1, // Action Row - Item select with results
+                  components: [{
+                    type: 3,
+                    custom_id: `condition_item_select_${actionId}_${conditionIndex}_${currentPage}`,
+                    placeholder: 'Select an item...',
+                    options: itemOptions
+                  }]
+                },
+                {
+                  type: 1, // Back button
+                  components: [{
+                    type: 2,
+                    custom_id: `condition_manager_${actionId}_${currentPage}`,
+                    label: '← Back',
+                    style: 2,
+                    emoji: { name: '🧩' }
+                  }]
+                }
+              ]
+            }]
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in condition_item_search_modal:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {

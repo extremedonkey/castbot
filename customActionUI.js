@@ -1296,42 +1296,45 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
   // Import emoji parsing utility
   const { parseTextEmoji } = await import('./utils/emojiUtils.js');
   
-  // Item selector
-  const itemOptions = Object.entries(items).map(([itemId, item]) => {
-    // Use existing emoji parser that handles all formats properly
-    const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
-    
-    return {
-      label: cleanText || 'Unnamed Item',
-      value: itemId,
-      description: item.description?.substring(0, 100) || 'No description',
-      emoji: emoji,
-      default: condition.itemId === itemId
-    };
-  }).slice(0, 25); // Discord limit
+  // ALWAYS add search option first
+  const itemOptions = [{
+    label: '🔍 Search Items...',
+    value: 'search_items',
+    description: 'Click to search for specific items'
+  }];
   
-  if (itemOptions.length > 0) {
-    // Ensure at least one option is selected if none are
-    const hasSelection = itemOptions.some(opt => opt.default);
-    if (!hasSelection && itemOptions.length > 0) {
-      itemOptions[0].default = true;
-    }
-    
-    components.push({
-      type: 1, // Action Row
-      components: [{
-        type: 3, // String Select
-        custom_id: `condition_item_select_${actionId}_${conditionIndex}_${currentPage}`,
-        placeholder: 'Select an item...',
-        options: itemOptions
-      }]
+  // Add items (max 24 since search takes 1 slot)
+  Object.entries(items)
+    .slice(0, 24)
+    .forEach(([itemId, item]) => {
+      // Use existing emoji parser that handles all formats properly
+      const { cleanText, emoji } = parseTextEmoji(`${item.emoji || ''} ${item.name}`, '📦');
+      
+      itemOptions.push({
+        label: cleanText || 'Unnamed Item',
+        value: itemId,
+        description: item.description?.substring(0, 100) || 'No description',
+        emoji: emoji,
+        default: condition.itemId === itemId
+      });
     });
-  } else {
-    components.push({
-      type: 10,
-      content: '*No items available. Create items in Safari menu first.*'
-    });
+  
+  // Ensure at least one option is selected if none are
+  const hasSelection = itemOptions.some(opt => opt.default);
+  if (!hasSelection && itemOptions.length > 1) {
+    // Select first actual item (not search)
+    itemOptions[1].default = true;
   }
+  
+  components.push({
+    type: 1, // Action Row
+    components: [{
+      type: 3, // String Select
+      custom_id: `condition_item_select_${actionId}_${conditionIndex}_${currentPage}`,
+      placeholder: 'Select an item...',
+      options: itemOptions
+    }]
+  });
   
   return components;
 }
