@@ -210,8 +210,8 @@ export async function createPausedPlayersUI(guildId, client = null) {
         label: displayName,
         value: userId,
         description: isPaused ? '⏸️ Currently paused' : '▶️ Currently active',
-        emoji: { name: isPaused ? '⏸️' : '▶️' }
-        // Note: String selects don't support default selections like user selects
+        emoji: { name: isPaused ? '⏸️' : '▶️' },
+        default: isPaused // Pre-select if currently paused (like store multiselect)
       });
     }
     
