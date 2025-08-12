@@ -176,12 +176,13 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 ```
 
 #### Select Menus
-- **String Select** (Type 3): Custom options
-- **User Select** (Type 5): User selection
+- **String Select** (Type 3): Custom options with default selection support
+- **User Select** (Type 5): User selection with default_values
 - **Role Select** (Type 6): Role selection
 - **Mentionable Select** (Type 7): Users + roles
 - **Channel Select** (Type 8): Channel selection
 
+##### String Select (Type 3)
 ```javascript
 {
   type: 3, // String Select
@@ -192,11 +193,51 @@ Components V2 is Discord's new component system that provides enhanced layout ca
       label: "Option 1",
       value: "opt1",
       description: "Description",
-      emoji: { name: "1️⃣" }
+      emoji: { name: "1️⃣" },
+      default: true // Pre-select this option
+    },
+    {
+      label: "Option 2",
+      value: "opt2",
+      description: "Another option",
+      emoji: { name: "2️⃣" },
+      default: false // Not pre-selected
     }
   ],
-  min_values: 1,
-  max_values: 1
+  min_values: 0, // Allow deselecting all
+  max_values: 2 // Allow multiple selections
+}
+```
+
+##### String Select Default Behavior (Important Discovery)
+**CRITICAL**: Discord String Selects DO support pre-selection via the `default` property on options, contrary to some documentation. This behavior has been verified in production:
+
+```javascript
+// Pre-selecting items in a String Select
+const options = items.map(item => ({
+  label: item.name,
+  value: item.id,
+  description: item.description,
+  default: item.isSelected // ✅ This WORKS - item will be pre-selected if true
+}));
+```
+
+**Real-world Examples in CastBot:**
+- **Store Item Multi-Select** (`entityManagementUI.js:939`): Pre-selects currently stocked items
+- **Paused Players Select** (`pausedPlayersManager.js:214`): Pre-selects currently paused players
+
+##### User Select (Type 5) 
+```javascript
+{
+  type: 5, // User Select
+  custom_id: "user_select",
+  placeholder: "Select users",
+  min_values: 0,
+  max_values: 25,
+  default_values: [ // Pre-select specific users
+    { id: "391415444084490240", type: "user" },
+    { id: "123456789012345678", type: "user" }
+  ]
 }
 ```
 
