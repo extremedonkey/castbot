@@ -261,12 +261,25 @@ export async function generateSeasonAppRankingUI({
   
   // Add applicant jump select menu if there are multiple applications
   if (allApplications.length > 1) {
-    // Inline implementation of createApplicantSelectOptions for now
+    // Calculate current page based on appIndex
     const itemsPerPage = 24;
-    const startIdx = 0 * itemsPerPage;
+    const currentPage = Math.floor(appIndex / itemsPerPage);
+    const startIdx = currentPage * itemsPerPage;
     const endIdx = Math.min(startIdx + itemsPerPage, allApplications.length);
     
     const options = [];
+    
+    // Add "Previous page" option if not on first page
+    if (currentPage > 0) {
+      const prevStart = (currentPage - 1) * itemsPerPage + 1;
+      const prevEnd = currentPage * itemsPerPage;
+      options.push({
+        label: `◀ Show Applications ${prevStart}-${prevEnd}`,
+        value: `page_${currentPage - 1}`,
+        description: `View previous set of applications`,
+        emoji: { name: '📄' }
+      });
+    }
     
     // Add applicant options for current page
     for (let i = startIdx; i < endIdx; i++) {
@@ -324,7 +337,7 @@ export async function generateSeasonAppRankingUI({
       const nextEnd = Math.min(endIdx + itemsPerPage, allApplications.length);
       options.push({
         label: `▶ Show Applications ${nextStart}-${nextEnd}`,
-        value: `page_1`,
+        value: `page_${currentPage + 1}`,
         description: `View next set of applications`,
         emoji: { name: '📄' }
       });
@@ -334,7 +347,7 @@ export async function generateSeasonAppRankingUI({
       type: 1, // Action Row
       components: [{
         type: 3, // String Select
-        custom_id: `ranking_select_${appIndex}_${configId}_0`,
+        custom_id: `ranking_select_${appIndex}_${configId}_${currentPage}`,
         placeholder: '🔍 Jump to applicant...',
         options: options,
         min_values: 1,
