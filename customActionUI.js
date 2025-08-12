@@ -1319,6 +1319,22 @@ async function createItemConditionUI(condition, actionId, conditionIndex, curren
       });
     });
   
+  // Ensure selected item is in the options if it exists but wasn't in first 24
+  if (condition.itemId && !itemOptions.some(opt => opt.value === condition.itemId)) {
+    const selectedItem = items[condition.itemId];
+    if (selectedItem) {
+      // Replace last item with the selected item to ensure it shows
+      const { cleanText, emoji } = parseTextEmoji(`${selectedItem.emoji || ''} ${selectedItem.name}`, '📦');
+      itemOptions[Math.min(itemOptions.length, 24)] = {
+        label: cleanText || 'Unnamed Item',
+        value: condition.itemId,
+        description: selectedItem.description?.substring(0, 100) || 'No description',
+        emoji: emoji,
+        default: true
+      };
+    }
+  }
+  
   // Ensure at least one option is selected if none are
   const hasSelection = itemOptions.some(opt => opt.default);
   if (!hasSelection && itemOptions.length > 1) {
