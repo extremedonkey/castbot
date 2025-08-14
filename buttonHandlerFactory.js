@@ -251,6 +251,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'safari_use_item': {
+    label: 'Use Item',
+    description: 'Use a consumable item from inventory',
+    emoji: '⚡',
+    style: 'Success',
+    category: 'safari'
+  },
   'safari_customize_terms': {
     label: '⚙️ Customize Safari',
     description: 'Customize Safari terminology and settings',

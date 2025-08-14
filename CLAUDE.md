@@ -78,7 +78,7 @@ grep -B20 -A20 "fieldGroup === 'stores'" app.js
 **🚨 CRITICAL - ALWAYS follow this exact sequence:**
 1. **NEVER guess filenames** - Don't assume screenshot names or try to access them directly
 2. **Use LS tool FIRST** - Always use `LS` tool to list the screenshot directory: `/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1`
-3. **Identify latest screenshot** - Screenshots are named with timestamps, find the most recent one from the LS output
+3. **Identify latest screenshot** - Screenshots are named with timestamps (e.g., "Screenshot 2025-08-14 223800.png"). Sort by date/time to find the most recent one - the HIGHEST timestamp is the NEWEST
 4. **Read with Read tool** - Use the Read tool with the exact filename found
 
 **❌ DO NOT use bash commands like:** `ls -t "/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1"/*.png | head -1` (WSL glob pattern issues)
