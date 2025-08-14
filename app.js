@@ -17505,8 +17505,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Create quantity input modal with truncated title to fit Discord's 45 char limit
           let modalTitle = `Set ${itemName} Quantity`;
           if (modalTitle.length > 45) {
-            // Truncate item name to fit
-            const maxItemNameLength = 45 - 13; // "Set " (4) + " Quantity" (9) = 13
+            // Truncate item name to fit, accounting for ellipsis
+            const maxItemNameLength = 45 - 16; // "Set " (4) + "... Quantity" (12) = 16
             modalTitle = `Set ${itemName.substring(0, maxItemNameLength)}... Quantity`;
           }
           
