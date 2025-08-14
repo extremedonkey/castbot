@@ -54,6 +54,91 @@ export function createFieldGroupModal(entityType, entityId, fieldGroupId, curren
 function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
     const components = [];
     
+    // Special handling for new item creation - include stamina fields
+    if (itemId === 'new' && fieldGroupId === 'info') {
+        // Item Info: name, emoji & description
+        components.push({
+            type: 1, // ActionRow
+            components: [{
+                type: 4, // Text Input
+                custom_id: 'name',
+                label: 'Item Name',
+                style: 1, // Short
+                value: currentValues.name || '',
+                placeholder: 'Enter item name',
+                required: true,
+                max_length: SAFARI_LIMITS.MAX_ITEM_NAME_LENGTH
+            }]
+        });
+        
+        components.push({
+            type: 1, // ActionRow
+            components: [{
+                type: 4, // Text Input
+                custom_id: 'emoji',
+                label: 'Item Emoji',
+                style: 1, // Short
+                value: currentValues.emoji || '',
+                placeholder: 'Enter an emoji for the item',
+                required: false,
+                max_length: 100
+            }]
+        });
+        
+        components.push({
+            type: 1, // ActionRow
+            components: [{
+                type: 4, // Text Input
+                custom_id: 'description',
+                label: 'Item Description',
+                style: 2, // Paragraph
+                value: currentValues.description || '',
+                placeholder: 'Enter item description',
+                required: false,
+                max_length: SAFARI_LIMITS.MAX_ITEM_DESCRIPTION_LENGTH
+            }]
+        });
+        
+        // Add stamina boost field for new items
+        components.push({
+            type: 1, // ActionRow
+            components: [{
+                type: 4, // Text Input
+                custom_id: 'staminaBoost',
+                label: 'Stamina Boost (Optional)',
+                style: 1, // Short
+                value: '0',
+                placeholder: 'Stamina points gained (0-10)',
+                required: false,
+                max_length: 2
+            }]
+        });
+        
+        // Add base price field for new items
+        components.push({
+            type: 1, // ActionRow
+            components: [{
+                type: 4, // Text Input
+                custom_id: 'basePrice',
+                label: 'Base Price',
+                style: 1, // Short
+                value: '0',
+                placeholder: 'Enter price (0-999999)',
+                required: false,
+                max_length: 6
+            }]
+        });
+        
+        return {
+            type: InteractionResponseType.MODAL,
+            data: {
+                title: 'Create New Item',
+                custom_id: `entity_create_modal_item_info`,
+                components
+            }
+        };
+    }
+    
     switch (fieldGroupId) {
         case 'info':
             // Item Info: name, emoji & description
@@ -188,6 +273,26 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
         case 'properties':
             // Properties are handled by select menu, not modal
             return null;
+            
+        case 'stamina':
+            // Stamina: staminaBoost and consumable settings
+            components.push({
+                type: 1, // ActionRow
+                components: [{
+                    type: 4, // Text Input
+                    custom_id: 'staminaBoost',
+                    label: 'Stamina Boost',
+                    style: 1, // Short
+                    value: (currentValues.staminaBoost ?? '0').toString(),
+                    placeholder: 'Stamina points gained (0-10)',
+                    required: false,
+                    max_length: 2
+                }]
+            });
+            
+            // Note: consumable is handled as a select in the UI, not in the modal
+            // The consumable field is shared with the properties group
+            break;
     }
     
     return {
@@ -421,6 +526,7 @@ export function parseModalSubmission(modalData, fieldGroupId) {
                 case 'badOutcomeValue':
                 case 'attackValue':
                 case 'defenseValue':
+                case 'staminaBoost':
                     // Parse as number, allow empty for optional fields
                     if (value === '' || value === null || value === undefined) {
                         fields[fieldId] = null;
