@@ -73,6 +73,21 @@ export const EDIT_CONFIGS = {
       emoji: { type: 'text', maxLength: 10, required: false, label: 'Emoji', placeholder: '⚔️' },
       description: { type: 'textarea', maxLength: SAFARI_LIMITS.MAX_ITEM_DESCRIPTION_LENGTH, required: false, label: 'Description' },
       basePrice: { type: 'number', min: 0, max: 999999, required: true, label: 'Base Price' },
+      staminaBoost: { 
+        type: 'number', 
+        min: 0, 
+        max: 10, 
+        required: false, 
+        label: 'Stamina Boost',
+        placeholder: '0'
+      },
+      consumable: {
+        type: 'select',
+        options: ['No', 'Yes'],
+        required: false,
+        label: 'Consumable Item',
+        default: 'No'
+      },
       tags: { type: 'tags', maxTags: SAFARI_LIMITS.MAX_TAGS_PER_ITEM, label: 'Tags (comma separated)' }
     },
     content: {

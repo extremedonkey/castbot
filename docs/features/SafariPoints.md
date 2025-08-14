@@ -470,6 +470,10 @@ export function getDefaultPointsConfig(guildId = null) {
 4. **Progressive Disclosure**: Add complexity gradually
 5. **Monitor Usage**: Track how players interact with limits
 
+## New Feature: Stamina Items
+
+**Added August 2025**: Items can now provide stamina boosts when consumed! See [Stamina Items Documentation](StaminaItems.md) for full details on creating and using consumable stamina items.
+
 ---
 
 The Safari Points System provides a robust foundation for resource management in Discord-based games, enabling rich strategic gameplay while maintaining simplicity and performance.

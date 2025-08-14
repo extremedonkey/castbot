@@ -221,7 +221,8 @@
       "Read(/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1/*)",
       "Bash(find:*)",
       "LS(/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(git merge:*)"
     ],
     "deny": []
   }

@@ -146,6 +146,16 @@ function generateItemContent(item, customTerms, quantity = null, price = null) {
         content += '\n';
     }
     
+    // Add stamina boost info if item provides stamina
+    if (item.staminaBoost && item.staminaBoost > 0) {
+        content += '**⚡ Effects**\n';
+        content += `⚡ Stamina Boost: +${item.staminaBoost}\n`;
+        if (item.consumable === 'Yes') {
+            content += `*This item is consumed on use*\n`;
+        }
+        content += '\n';
+    }
+    
     // Add quantity info for inventory display
     if (quantity !== null) {
         content += `> \`Quantity: ${quantity}\``;
@@ -1649,6 +1659,7 @@ async function createItem(guildId, itemData, userId) {
             attackValue: itemData.attackValue || null,
             defenseValue: itemData.defenseValue || null,
             consumable: itemData.consumable || 'No', // 'Yes' or 'No'
+            staminaBoost: parseInt(itemData.staminaBoost) || 0, // Stamina points granted when consumed
             goodYieldEmoji: itemData.goodYieldEmoji || '☀️',
             badYieldEmoji: itemData.badYieldEmoji || '☄️',
             
@@ -2862,8 +2873,9 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     components.push({ type: 14 }); // Separator before first item
                 }
                 
-                // Check if item has attack value
+                // Check if item has attack value or is consumable with stamina boost
                 const hasAttack = item.attackValue !== null && item.attackValue !== undefined;
+                const isStaminaConsumable = item.consumable === 'Yes' && item.staminaBoost && item.staminaBoost > 0;
                 
                 if (hasAttack) {
                     // Calculate attacks planned using simple math: total - available
@@ -2910,8 +2922,31 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     
                     components.push(sectionComponent);
                     console.log(`⚔️ DEBUG: Added attack item ${item.name} with Section component`);
+                } else if (isStaminaConsumable) {
+                    // Stamina consumable item - add Use button
+                    const staminaItemContent = generateItemContent(item, customTerms, quantity);
+                    
+                    // Create Section component with Use button
+                    const sectionComponent = {
+                        type: 9, // Section component
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: staminaItemContent
+                            }
+                        ],
+                        accessory: {
+                            type: 2, // Button
+                            custom_id: `safari_use_item_${itemId}`,
+                            label: `Use (+${item.staminaBoost} ⚡)`,
+                            style: 3 // Success (green)
+                        }
+                    };
+                    
+                    components.push(sectionComponent);
+                    console.log(`⚡ DEBUG: Added stamina consumable ${item.name} with Use button`);
                 } else {
-                    // Non-attack item - use regular Text Display
+                    // Non-attack, non-consumable item - use regular Text Display
                     const itemContent = generateItemContent(item, customTerms, quantity);
                     
                     components.push({

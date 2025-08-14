@@ -176,7 +176,7 @@ export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
 }
 
 // Admin function to set points directly
-export async function setEntityPoints(guildId, entityId, pointType, current, max = null) {
+export async function setEntityPoints(guildId, entityId, pointType, current, max = null, allowOverMax = false) {
     const safariData = await loadSafariContent();
     
     // Ensure structure exists
@@ -189,9 +189,37 @@ export async function setEntityPoints(guildId, entityId, pointType, current, max
     
     if (max !== null) {
         points.max = Math.max(1, max); // Max must be at least 1
-        points.current = Math.min(points.current, points.max); // Current can't exceed max
+        // Only cap at max if not allowing over-max
+        if (!allowOverMax) {
+            points.current = Math.min(points.current, points.max);
+        }
     }
     
+    points.lastRegeneration = Date.now();
+    
+    safariData[guildId].entityPoints[entityId][pointType] = points;
+    await saveSafariContent(safariData);
+    
+    return points;
+}
+
+// Add bonus points that can exceed max (for consumable items)
+export async function addBonusPoints(guildId, entityId, pointType, amount) {
+    const safariData = await loadSafariContent();
+    
+    // Ensure entity points exist
+    if (!safariData[guildId]?.entityPoints?.[entityId]?.[pointType]) {
+        await initializeEntityPoints(guildId, entityId, [pointType]);
+        return await getEntityPoints(guildId, entityId, pointType);
+    }
+    
+    const points = safariData[guildId].entityPoints[entityId][pointType];
+    
+    // Add bonus points (can exceed max)
+    points.current = Math.max(0, points.current + amount);
+    
+    // Reset use timer when stamina is added
+    points.lastUse = Date.now();
     points.lastRegeneration = Date.now();
     
     safariData[guildId].entityPoints[entityId][pointType] = points;

@@ -8207,6 +8207,80 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_use_item_')) {
+      // Handle consumable item use (stamina boost)
+      return ButtonHandlerFactory.create({
+        id: 'safari_use_item',
+        handler: async (context) => {
+          const itemId = context.customId.replace('safari_use_item_', '');
+          console.log(`⚡ START: safari_use_item - user ${context.userId} using item ${itemId}`);
+          
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { addBonusPoints, getEntityPoints } = await import('./pointsManager.js');
+          
+          const playerData = await loadPlayerData();
+          const safariData = await loadSafariContent();
+          
+          // Get player's inventory
+          const player = playerData[context.guildId]?.players?.[context.userId];
+          if (!player?.safari?.inventory?.[itemId]) {
+            return {
+              content: '❌ You do not have this item in your inventory.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+          
+          // Get item data
+          const item = safariData[context.guildId]?.items?.[itemId];
+          if (!item) {
+            return {
+              content: '❌ Item not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+          
+          // Verify item is consumable and has stamina boost
+          if (item.consumable !== 'Yes' || !item.staminaBoost || item.staminaBoost <= 0) {
+            return {
+              content: '❌ This item cannot be used.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+          
+          // Get current stamina
+          const entityId = `player_${context.userId}`;
+          const currentStamina = await getEntityPoints(context.guildId, entityId, 'stamina');
+          
+          // Apply stamina boost
+          const newStamina = await addBonusPoints(context.guildId, entityId, 'stamina', item.staminaBoost);
+          
+          // Consume the item (reduce quantity by 1)
+          const inventoryItem = player.safari.inventory[itemId];
+          if (typeof inventoryItem === 'number') {
+            if (inventoryItem <= 1) {
+              delete player.safari.inventory[itemId];
+            } else {
+              player.safari.inventory[itemId] = inventoryItem - 1;
+            }
+          } else if (typeof inventoryItem === 'object') {
+            if (inventoryItem.quantity <= 1) {
+              delete player.safari.inventory[itemId];
+            } else {
+              inventoryItem.quantity -= 1;
+            }
+          }
+          
+          await savePlayerData(playerData);
+          
+          console.log(`✅ SUCCESS: safari_use_item - stamina boosted from ${currentStamina.current}/${currentStamina.max} to ${newStamina.current}/${newStamina.max}`);
+          
+          return {
+            content: `✅ **Item Used!**\n\n${item.emoji || '⚡'} You used **${item.name}** and gained **+${item.staminaBoost} stamina**!\n\n⚡ **Stamina:** ${currentStamina.current}/${currentStamina.max} → ${newStamina.current}/${newStamina.max}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_attack_target')) {
       // Handle target player selection
       try {
