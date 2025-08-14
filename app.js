@@ -15088,7 +15088,7 @@ Your server is now ready for Tycoons gameplay!`;
             
             return {
               components: [noDataContainer],
-              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+              flags: (1 << 15) // IS_COMPONENTS_V2 (removed EPHEMERAL so all can see availability)
             };
           }
           
@@ -15193,7 +15193,7 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`✅ SUCCESS: prod_availability_options - displayed analysis`);
           return {
             components: [analysisContainer],
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+            flags: (1 << 15) // IS_COMPONENTS_V2 (removed EPHEMERAL so all can see availability)
           };
         }
       })(req, res, client);
