@@ -244,6 +244,20 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'safari_store_stock': {
+    label: 'Manage Stock',
+    description: 'Manage item stock levels in stores',
+    emoji: '📊',
+    style: 'Success',
+    category: 'safari_store'
+  },
+  'stock_set': {
+    label: 'Set Stock',
+    description: 'Set stock quantity for store item',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'safari_store'
+  },
   'safari_manage_items': {
     label: '📦 Manage Items',
     description: 'Safari item management - create, edit, manage items',

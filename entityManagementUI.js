@@ -832,6 +832,13 @@ export async function createStoreItemManagementUI(options) {
                     },
                     {
                         type: 2, // Button
+                        custom_id: `safari_store_stock_${storeId}`,
+                        label: 'Manage Stock',
+                        style: 3, // Success (green)
+                        emoji: { name: '📊' }
+                    },
+                    {
+                        type: 2, // Button
                         custom_id: `safari_all_server_items_${guildId}`,
                         label: 'All Server Items',
                         style: 2,

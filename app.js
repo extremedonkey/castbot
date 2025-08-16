@@ -3835,6 +3835,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           });
         }
         
+        // Check stock availability (real-time, not button state)
+        const currentStock = typeof storeItem === 'object' ? storeItem.stock : undefined;
+        if (currentStock !== undefined && currentStock !== null) {
+          if (currentStock <= 0) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ **Out of Stock!**\n\n${item.emoji} ${item.name} is currently sold out.\n\nCheck back later or try another store!`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+        }
+        
         // Process purchase: deduct currency and add item to inventory
         const newCurrency = currentCurrency - price;
         
@@ -3875,6 +3889,30 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
         item.metadata.totalSold = (item.metadata.totalSold || 0) + 1;
         
+        // Deplete stock if not unlimited
+        if (currentStock !== undefined && currentStock !== null) {
+          // Find and update the store item's stock
+          for (let i = 0; i < store.items.length; i++) {
+            const si = store.items[i];
+            const siItemId = typeof si === 'string' ? si : si.itemId;
+            
+            if (siItemId === itemId) {
+              if (typeof store.items[i] === 'string') {
+                // Convert to object format if needed
+                store.items[i] = {
+                  itemId: itemId,
+                  stock: currentStock - 1
+                };
+              } else {
+                // Decrement stock
+                store.items[i].stock = currentStock - 1;
+              }
+              break;
+            }
+          }
+          console.log(`📦 DEBUG: Stock depleted for ${item.name} - was ${currentStock}, now ${currentStock - 1}`);
+        }
+        
         // Save all changes
         await savePlayerData(playerData);
         await saveSafariContent(safariData);
@@ -3894,10 +3932,21 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         
         const inventoryRow = new ActionRowBuilder().addComponents(inventoryButton);
         
+        // Add low stock warning if applicable
+        let stockWarning = '';
+        if (currentStock !== undefined && currentStock !== null) {
+          const remainingStock = currentStock - 1;
+          if (remainingStock === 0) {
+            stockWarning = '\n\n⚠️ **This was the last one in stock!**';
+          } else if (remainingStock <= 3 && remainingStock > 0) {
+            stockWarning = `\n\n⚠️ **Low stock warning:** Only ${remainingStock} left!`;
+          }
+        }
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙 ${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${finalQuantity}`,
+            content: `✅ **Purchase successful!**\n\n${item.emoji || '📦'} **${item.name}** purchased for 🪙 ${price} coins.\n\n🪙 **New balance:** ${newCurrency} coins\n📦 **${item.name} in inventory:** ${finalQuantity}${stockWarning}`,
             components: [inventoryRow],
             flags: InteractionResponseFlags.EPHEMERAL
           }
@@ -10223,13 +10272,29 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
+        // Filter out non-item values (search, clear_search, etc.)
+        const validItemSelections = selectedValues.filter(id => 
+          id !== 'search_entities' && id !== 'clear_search'
+        );
+        
+        // Enforce 12-item maximum
+        if (validItemSelections.length > 12) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ **Store Item Limit**\n\nStores can hold maximum 12 items.\nYou selected: ${validItemSelections.length} items\n\nPlease select 12 or fewer items.`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
         // Calculate changes
         const currentItems = store.items || [];
         const currentItemIds = new Set(currentItems.map(item => item.itemId || item));
-        const newItemIds = new Set(selectedValues);
+        const newItemIds = new Set(validItemSelections);
         
         // Items to add (in new selection but not in current)
-        const itemsToAdd = selectedValues.filter(id => !currentItemIds.has(id));
+        const itemsToAdd = validItemSelections.filter(id => !currentItemIds.has(id));
         
         // Items to remove (in current but not in new selection)
         const itemsToRemove = currentItems
@@ -10636,6 +10701,188 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_store_stock_')) {
+      // Handle stock management button - show stock UI for store items
+      return ButtonHandlerFactory.create({
+        id: 'safari_store_stock',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          try {
+            console.log(`📊 START: safari_store_stock - user ${context.userId}`);
+            
+            const storeId = context.customId.replace('safari_store_stock_', '');
+            
+            // Import Safari manager functions
+            const { loadSafariContent, getCustomTerms } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const store = safariData[context.guildId]?.stores?.[storeId];
+            const items = safariData[context.guildId]?.items || {};
+            
+            if (!store) {
+              return {
+                content: '❌ Store not found.',
+                ephemeral: true
+              };
+            }
+            
+            // Get custom terms for currency display
+            const customTerms = await getCustomTerms(context.guildId);
+            
+            // Build components array with sections for each item
+            const components = [
+              {
+                type: 10, // Text Display
+                content: `## 📊 Stock Management - ${store.name}`
+              }
+            ];
+            
+            // Add section for each item in the store
+            const storeItems = store.items || [];
+            for (const storeItem of storeItems) {
+              const itemId = typeof storeItem === 'string' ? storeItem : storeItem.itemId;
+              const item = items[itemId];
+              
+              if (!item) continue;
+              
+              // Get current stock (undefined/null = unlimited)
+              const stock = typeof storeItem === 'object' ? storeItem.stock : undefined;
+              const price = typeof storeItem === 'object' && storeItem.price ? storeItem.price : item.basePrice || 0;
+              
+              // Format stock display
+              let stockDisplay;
+              if (stock === undefined || stock === null) {
+                stockDisplay = 'Unlimited';
+              } else if (stock === 0) {
+                stockDisplay = '0 (Sold Out)';
+              } else {
+                stockDisplay = stock.toString();
+              }
+              
+              // Create section with button accessory
+              components.push({
+                type: 9, // Section
+                components: [{
+                  type: 10, // Text Display
+                  content: `**${item.emoji || '📦'} ${item.name}**\n${customTerms.currencyEmoji} ${price} ${customTerms.currencyName}\n📦 Stock: ${stockDisplay}`
+                }],
+                accessory: {
+                  type: 2, // Button
+                  custom_id: `stock_set_${storeId}::${itemId}`,
+                  label: 'Set Stock',
+                  emoji: { name: '📦' },
+                  style: 2 // Secondary (grey)
+                }
+              });
+            }
+            
+            // Add back button
+            components.push({
+              type: 1, // Action Row
+              components: [{
+                type: 2, // Button
+                custom_id: `safari_store_items_select_${storeId}`,
+                label: '← Back to Store',
+                style: 2,
+                emoji: { name: '🏪' }
+              }]
+            });
+            
+            console.log(`✅ SUCCESS: safari_store_stock - displaying ${storeItems.length} items`);
+            
+            return {
+              components: [{
+                type: 17, // Container
+                components: components
+              }],
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
+            };
+            
+          } catch (error) {
+            console.error(`❌ ERROR: safari_store_stock - ${error.message}`);
+            return {
+              content: '❌ Error loading stock management interface.',
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('stock_set_')) {
+      // Handle set stock button - show modal for individual item
+      return ButtonHandlerFactory.create({
+        id: 'stock_set',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          try {
+            console.log(`📦 START: stock_set - user ${context.userId}`);
+            
+            // Parse custom_id: stock_set_{storeId}::{itemId}
+            const idParts = context.customId.replace('stock_set_', '').split('::');
+            const storeId = idParts[0];
+            const itemId = idParts[1];
+            
+            if (!storeId || !itemId) {
+              throw new Error('Invalid stock_set custom_id format');
+            }
+            
+            // Import Safari manager functions
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const store = safariData[context.guildId]?.stores?.[storeId];
+            const item = safariData[context.guildId]?.items?.[itemId];
+            
+            if (!store || !item) {
+              return {
+                content: '❌ Store or item not found.',
+                ephemeral: true
+              };
+            }
+            
+            // Find the store item to get current stock
+            const storeItem = store.items?.find(si => 
+              (typeof si === 'string' ? si : si.itemId) === itemId
+            );
+            const currentStock = typeof storeItem === 'object' ? storeItem.stock : undefined;
+            
+            // Truncate item name if too long for modal title
+            const itemName = item.name || 'Item';
+            const truncatedName = itemName.length > 30 ? itemName.substring(0, 27) + '...' : itemName;
+            
+            // Create modal
+            const modal = {
+              title: `Stock: ${truncatedName}`,
+              custom_id: `stock_modal_${storeId}::${itemId}`,
+              components: [{
+                type: 1, // Action Row
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'stock_quantity',
+                  label: 'New store item qty (blank for unlimited)',
+                  placeholder: 'Enter quantity or leave blank for unlimited',
+                  value: currentStock?.toString() || '', // Empty string for unlimited
+                  required: false, // Allows blank submission
+                  style: 1 // Short
+                }]
+              }]
+            };
+            
+            console.log(`✅ SUCCESS: stock_set - showing modal for ${item.name}`);
+            
+            return {
+              type: InteractionResponseType.MODAL,
+              data: modal
+            };
+            
+          } catch (error) {
+            console.error(`❌ ERROR: stock_set - ${error.message}`);
+            return {
+              content: '❌ Error opening stock modal.',
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_all_server_items_')) {
       // Show all server items in ephemeral message
       try {
@@ -28339,6 +28586,182 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating store. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('stock_modal_')) {
+      // Handle stock modal submission
+      try {
+        const guildId = req.body.guild_id;
+        
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage stock.')) return;
+        
+        // Parse custom_id: stock_modal_{storeId}::{itemId}
+        const idParts = custom_id.replace('stock_modal_', '').split('::');
+        const storeId = idParts[0];
+        const itemId = idParts[1];
+        
+        if (!storeId || !itemId) {
+          throw new Error('Invalid stock_modal custom_id format');
+        }
+        
+        console.log(`📦 Processing stock modal for store ${storeId}, item ${itemId}`);
+        
+        // Extract modal value
+        const components = req.body.data.components;
+        const input = components[0].components[0].value.trim();
+        
+        // Parse and validate input
+        let newStock;
+        if (input === '') {
+          newStock = null; // Unlimited
+        } else {
+          const parsed = parseInt(input);
+          if (isNaN(parsed) || parsed < 0 || !Number.isInteger(parsed)) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Invalid stock value. Use positive whole numbers or leave blank for unlimited.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          newStock = parsed;
+        }
+        
+        // Import Safari manager functions
+        const { loadSafariContent, saveSafariContent, getCustomTerms } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const store = safariData[guildId]?.stores?.[storeId];
+        const items = safariData[guildId]?.items || {};
+        
+        if (!store) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Store not found.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Find and update the store item
+        let updated = false;
+        for (let i = 0; i < store.items.length; i++) {
+          const storeItem = store.items[i];
+          const currentItemId = typeof storeItem === 'string' ? storeItem : storeItem.itemId;
+          
+          if (currentItemId === itemId) {
+            // Convert string format to object format if needed
+            if (typeof storeItem === 'string') {
+              store.items[i] = {
+                itemId: itemId,
+                stock: newStock
+              };
+            } else {
+              // Update existing object
+              store.items[i].stock = newStock;
+            }
+            updated = true;
+            break;
+          }
+        }
+        
+        if (!updated) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Item not found in store.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Save updated data
+        await saveSafariContent(safariData);
+        
+        console.log(`✅ Updated stock for item ${itemId} to ${newStock === null ? 'unlimited' : newStock}`);
+        
+        // Get custom terms for display
+        const customTerms = await getCustomTerms(guildId);
+        
+        // Rebuild stock management UI and return as UPDATE_MESSAGE
+        const updatedComponents = [
+          {
+            type: 10, // Text Display
+            content: `## 📊 Stock Management - ${store.name}\n\n✅ Stock updated successfully!`
+          }
+        ];
+        
+        // Add section for each item in the store
+        for (const storeItem of store.items) {
+          const currentItemId = typeof storeItem === 'string' ? storeItem : storeItem.itemId;
+          const item = items[currentItemId];
+          
+          if (!item) continue;
+          
+          // Get current stock (undefined/null = unlimited)
+          const stock = typeof storeItem === 'object' ? storeItem.stock : undefined;
+          const price = typeof storeItem === 'object' && storeItem.price ? storeItem.price : item.basePrice || 0;
+          
+          // Format stock display
+          let stockDisplay;
+          if (stock === undefined || stock === null) {
+            stockDisplay = 'Unlimited';
+          } else if (stock === 0) {
+            stockDisplay = '0 (Sold Out)';
+          } else {
+            stockDisplay = stock.toString();
+          }
+          
+          // Create section with button accessory
+          updatedComponents.push({
+            type: 9, // Section
+            components: [{
+              type: 10, // Text Display
+              content: `**${item.emoji || '📦'} ${item.name}**\n${customTerms.currencyEmoji} ${price} ${customTerms.currencyName}\n📦 Stock: ${stockDisplay}`
+            }],
+            accessory: {
+              type: 2, // Button
+              custom_id: `stock_set_${storeId}::${currentItemId}`,
+              label: 'Set Stock',
+              emoji: { name: '📦' },
+              style: 2 // Secondary (grey)
+            }
+          });
+        }
+        
+        // Add back button
+        updatedComponents.push({
+          type: 1, // Action Row
+          components: [{
+            type: 2, // Button
+            custom_id: `safari_store_items_select_${storeId}`,
+            label: '← Back to Store',
+            style: 2,
+            emoji: { name: '🏪' }
+          }]
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: [{
+              type: 17, // Container
+              components: updatedComponents
+            }]
+            // Note: No flags in UPDATE_MESSAGE per ComponentsV2 docs
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in stock_modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating stock. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

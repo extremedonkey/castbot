@@ -224,6 +224,7 @@
       "Bash(cd:*)",
       "Bash(git merge:*)"
     ],
-    "deny": []
+    "deny": [],
+    "defaultMode": "acceptEdits"
   }
 }

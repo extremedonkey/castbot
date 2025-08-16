@@ -1968,13 +1968,28 @@ async function createStoreDisplay(guildId, storeId, userId) {
             const item = items[storeItem.itemId];
             if (!item) continue;
             
+            // Get stock status
+            const stock = typeof storeItem === 'object' ? storeItem.stock : undefined;
+            let stockDisplay = '';
+            let isSoldOut = false;
+            
+            if (stock !== undefined && stock !== null) {
+                if (stock === 0) {
+                    stockDisplay = '\n**🚫 SOLD OUT**';
+                    isSoldOut = true;
+                } else {
+                    stockDisplay = `\n**Stock:** ${stock} available`;
+                }
+            }
+            // If stock is undefined/null, don't display stock (unlimited)
+            
             // Item section
             const itemSection = {
                 type: 9, // Section
                 components: [
                     {
                         type: 10, // Text Display
-                        content: `## ${item.emoji} ${item.name}\n${item.description || 'No description'}\n\n**Price:** ${storeItem.price || item.basePrice} ${customTerms.currencyName}`
+                        content: `## ${item.emoji} ${item.name}\n${item.description || 'No description'}\n\n**Price:** ${storeItem.price || item.basePrice} ${customTerms.currencyName}${stockDisplay}`
                     }
                 ]
             };
@@ -1985,9 +2000,9 @@ async function createStoreDisplay(guildId, storeId, userId) {
             
             const buyButton = new ButtonBuilder()
                 .setCustomId(`safari_buy_${guildId}_${storeId}_${item.id}_${Date.now()}`)
-                .setLabel(`Buy (${price} ${customTerms.currencyName})`)
-                .setStyle(userCurrency >= price ? ButtonStyle.Success : ButtonStyle.Secondary)
-                .setDisabled(userCurrency < price);
+                .setLabel(isSoldOut ? 'Sold Out' : `Buy (${price} ${customTerms.currencyName})`)
+                .setStyle(isSoldOut ? ButtonStyle.Secondary : (userCurrency >= price ? ButtonStyle.Success : ButtonStyle.Secondary))
+                .setDisabled(userCurrency < price || isSoldOut);
             
             if (item.emoji && item.emoji.length <= 2) {
                 try {
