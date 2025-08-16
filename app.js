@@ -10199,6 +10199,91 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id === 'safari_store_management_back') {
+      // Handle back button from store item management UI
+      return ButtonHandlerFactory.create({
+        id: 'safari_store_management_back',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_store_management_back - user ${context.userId}`);
+          
+          // Import Safari manager functions
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const stores = safariData[context.guildId]?.stores || {};
+          const items = safariData[context.guildId]?.items || {};
+          
+          console.log(`🏪 DEBUG: Found ${Object.keys(stores).length} stores`);
+          
+          // Create store selection dropdown
+          const storeOptions = Object.values(stores).map(store => {
+            // Count items for this store
+            const storeItems = store.items || [];
+            const itemCount = storeItems.length;
+            
+            const emoji = store.emoji || '🏪';
+            const description = itemCount > 0 
+              ? `${itemCount} item${itemCount !== 1 ? 's' : ''}`
+              : 'No items';
+            
+            return {
+              label: store.name.substring(0, 100),
+              value: store.id,
+              description: description.substring(0, 100),
+              emoji: emoji
+            };
+          });
+          
+          const storeSelect = new StringSelectMenuBuilder()
+            .setCustomId('safari_store_items_select')
+            .setPlaceholder('Choose a store to manage items...')
+            .setMinValues(1)
+            .setMaxValues(1)
+            .addOptions(storeOptions);
+          
+          const selectRow = new ActionRowBuilder().addComponents(storeSelect);
+          
+          // Create back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('safari_manage_stores')
+            .setLabel('⬅ Back to Store Management')
+            .setStyle(ButtonStyle.Secondary);
+          
+          const backRow = new ActionRowBuilder().addComponents(backButton);
+          
+          // Create response with Components V2
+          const containerComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## 🏪 Manage Store\n\nSelect Store:`
+            },
+            {
+              type: 1, // Action Row
+              components: [storeSelect.toJSON()]
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 1, // Action Row
+              components: [backButton.toJSON()]
+            }
+          ];
+          
+          const container = {
+            type: 17, // Container
+            components: containerComponents
+          };
+          
+          console.log(`✅ SUCCESS: safari_store_management_back - showing store selection`);
+          
+          return {
+            components: [container],
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + ephemeral
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_store_items_select_')) {
       // Handle "Back to Store" button from stock management UI
       return ButtonHandlerFactory.create({

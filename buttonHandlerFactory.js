@@ -244,6 +244,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'safari_store_management_back': {
+    label: '⬅ Back to Store Management',
+    description: 'Return to store selection from item management',
+    emoji: '⬅',
+    style: 'Secondary',
+    category: 'safari'
+  },
   'safari_store_stock': {
     label: 'Manage Stock',
     description: 'Manage item stock levels in stores',
