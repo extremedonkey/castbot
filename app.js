@@ -10205,6 +10205,7 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_store_management_back',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        updateMessage: true,
         handler: async (context) => {
           console.log(`🔍 START: safari_store_management_back - user ${context.userId}`);
           
@@ -10279,8 +10280,8 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`✅ SUCCESS: safari_store_management_back - showing store selection`);
           
           return {
-            components: [container],
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + ephemeral
+            components: [container]
+            // Note: No flags needed - ButtonHandlerFactory handles UPDATE_MESSAGE automatically
           };
         }
       })(req, res, client);
