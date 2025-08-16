@@ -21331,7 +21331,16 @@ Are you sure you want to continue?`;
               const item = allItems[itemId];
               if (item) {
                 const price = storeItem.price || item.basePrice || 0;
-                itemContent += `**${index + 1}. ${item.emoji || '📦'} ${item.name}** - ${price} ${currencyEmoji}\n`;
+                // Get stock status
+                const stock = typeof storeItem === 'object' ? storeItem.stock : undefined;
+                let stockDisplay = '';
+                if (stock !== undefined && stock !== null) {
+                  stockDisplay = stock === 0 ? '\n   **🚫 SOLD OUT**' : `\n   **Stock:** ${stock} available`;
+                } else {
+                  stockDisplay = '\n   **Stock:** Unlimited';
+                }
+                
+                itemContent += `**${index + 1}. ${item.emoji || '📦'} ${item.name}** - ${price} ${currencyEmoji}${stockDisplay}\n`;
                 if (item.description) {
                   itemContent += `   *${item.description}*\n`;
                 }
@@ -21346,12 +21355,19 @@ Are you sure you want to continue?`;
             const itemId = storeItem.itemId || storeItem;
             const item = allItems[itemId];
             if (item) {
+              const price = storeItem.price || item.basePrice || 0;
+              // Check stock status
+              const stock = typeof storeItem === 'object' ? storeItem.stock : undefined;
+              const isSoldOut = stock !== undefined && stock !== null && stock === 0;
+              const insufficientFunds = currentBalance < price;
+              
               buyButtons.push({
                 type: 2,
                 custom_id: `safari_store_buy_${context.guildId}_${storeId}_${itemId}`,
-                label: `Buy ${item.name}`,
-                style: 3, // Success
-                emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || undefined) : undefined
+                label: isSoldOut ? 'Sold Out' : `Buy ${item.name}`,
+                style: isSoldOut ? 2 : 3, // Secondary (grey) for sold out, Success (green) for available
+                emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || undefined) : undefined,
+                disabled: isSoldOut || insufficientFunds
               });
             }
           });

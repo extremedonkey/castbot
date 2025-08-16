@@ -772,7 +772,15 @@ export async function createStoreItemManagementUI(options) {
         const item = allItems[itemId];
         if (item) {
             const price = storeItem.price || item.basePrice || 0;
-            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName}\n`;
+            // Add stock display
+            const stock = typeof storeItem === 'object' ? storeItem.stock : undefined;
+            let stockDisplay = '';
+            if (stock !== undefined && stock !== null) {
+                stockDisplay = stock === 0 ? ' (SOLD OUT)' : ` (Stock: ${stock})`;
+            } else {
+                stockDisplay = ' (Unlimited)';
+            }
+            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName}${stockDisplay}\n`;
         }
     });
     
