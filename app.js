@@ -3686,14 +3686,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             
             if (stock !== undefined && stock !== null) {
               if (stock === 0) {
-                stockDisplay = '\n> **Stock**: 🚫 Sold out';
+                stockDisplay = '\n> 🚫 **Stock**: Sold Out';
                 isSoldOut = true;
               } else {
-                stockDisplay = `\n> **Stock**: ${stock} available`;
+                stockDisplay = `\n> 📦 **Stock**: ${stock} available`;
               }
             } else {
               // Stock is undefined/null = unlimited
-              stockDisplay = '\n> **Stock**: Unlimited';
+              stockDisplay = '\n> 📦 **Stock**: Unlimited';
             }
             
             // Generate detailed item content using shared function
@@ -21422,9 +21422,9 @@ Are you sure you want to continue?`;
                 const stock = typeof storeItem === 'object' ? storeItem.stock : undefined;
                 let stockDisplay = '';
                 if (stock !== undefined && stock !== null) {
-                  stockDisplay = stock === 0 ? '\n   **🚫 SOLD OUT**' : `\n   **Stock:** ${stock} available`;
+                  stockDisplay = stock === 0 ? '\n   🚫 **Stock**: Sold Out' : `\n   📦 **Stock**: ${stock} available`;
                 } else {
-                  stockDisplay = '\n   **Stock:** Unlimited';
+                  stockDisplay = '\n   📦 **Stock**: Unlimited';
                 }
                 
                 itemContent += `**${index + 1}. ${item.emoji || '📦'} ${item.name}** - ${price} ${currencyEmoji}${stockDisplay}\n`;
