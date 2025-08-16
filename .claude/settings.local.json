@@ -222,7 +222,8 @@
       "Bash(find:*)",
       "LS(/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1)",
       "Bash(cd:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(code ~/my-upstream)"
     ],
     "deny": []
   }
