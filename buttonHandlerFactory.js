@@ -248,7 +248,7 @@ export const BUTTON_REGISTRY = {
     label: 'Manage Stock',
     description: 'Manage item stock levels in stores',
     emoji: '📊',
-    style: 'Success',
+    style: 'Secondary', // Changed to grey
     category: 'safari_store'
   },
   'stock_set': {

@@ -3679,8 +3679,23 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const price = storeItem.price || item?.basePrice || 0;
           
           if (item) {
+            // Get stock status
+            const stock = typeof storeItem === 'object' ? storeItem.stock : undefined;
+            let stockDisplay = '';
+            let isSoldOut = false;
+            
+            if (stock !== undefined && stock !== null) {
+              if (stock === 0) {
+                stockDisplay = '\n**🚫 SOLD OUT**';
+                isSoldOut = true;
+              } else {
+                stockDisplay = `\n**Stock:** ${stock} available`;
+              }
+            }
+            // If stock is undefined/null, don't display stock (unlimited)
+            
             // Generate detailed item content using shared function
-            const itemContent = generateItemContent(item, customTerms, null, price);
+            const itemContent = generateItemContent(item, customTerms, null, price) + stockDisplay;
             
             const itemSection = {
               type: 9, // Section component
@@ -3691,9 +3706,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               accessory: {
                 type: 2, // Button accessory
                 custom_id: `safari_store_buy_${guildId}_${storeId}_${itemId}`,
-                label: `Buy ${item.name}`.slice(0, 80),
-                style: 1,
-                emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || { name: '🛒' }) : { name: '🛒' }
+                label: isSoldOut ? 'Sold Out' : `Buy ${item.name}`.slice(0, 80),
+                style: isSoldOut ? 2 : (playerCurrency >= price ? 1 : 2), // Grey if sold out or can't afford, green if can buy
+                emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || { name: '🛒' }) : { name: '🛒' },
+                disabled: isSoldOut || playerCurrency < price
               }
             };
             
@@ -10181,6 +10197,43 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_store_items_select_')) {
+      // Handle "Back to Store" button from stock management UI
+      return ButtonHandlerFactory.create({
+        id: 'safari_store_items_select_back',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_store_items_select_back - user ${context.userId}`);
+          
+          const storeId = custom_id.replace('safari_store_items_select_', '');
+          
+          // Load store data
+          const safariData = await loadSafariContent();
+          const guildData = safariData[context.guildId] || {};
+          const store = guildData.stores?.[storeId];
+          
+          if (!store) {
+            console.error(`Store not found: ${storeId}`);
+            return {
+              content: '❌ Store not found.',
+              ephemeral: true
+            };
+          }
+          
+          // Return the store item management UI
+          const uiResponse = await createStoreItemManagementUI({
+            storeId: storeId,
+            store: store,
+            guildId: context.guildId
+          });
+          
+          console.log(`✅ SUCCESS: safari_store_items_select_back - returned to store management`);
+          
+          return {
+            ...uiResponse,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('store_items_multiselect_')) {
       // Handle multi-select store item changes
       try {

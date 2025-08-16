@@ -68,7 +68,7 @@ Stock Management UI:
   type: 2, // Button
   custom_id: `safari_store_stock_${storeId}`,
   label: 'Manage Stock',
-  style: 3, // Success (green)
+  style: 2, // Secondary (grey)
   emoji: { name: '📊' }
 }
 ```
@@ -255,7 +255,7 @@ Add to `BUTTON_REGISTRY` in `buttonHandlerFactory.js`:
   label: 'Manage Stock',
   description: 'Manage item stock levels in stores',
   emoji: '📊',
-  style: 'Success',
+  style: 'Secondary', // Grey button
   category: 'safari_store'
 },
 'stock_set': {
