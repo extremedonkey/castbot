@@ -10236,24 +10236,7 @@ Your server is now ready for Tycoons gameplay!`;
             };
           });
           
-          const storeSelect = new StringSelectMenuBuilder()
-            .setCustomId('safari_store_items_select')
-            .setPlaceholder('Choose a store to manage items...')
-            .setMinValues(1)
-            .setMaxValues(1)
-            .addOptions(storeOptions);
-          
-          const selectRow = new ActionRowBuilder().addComponents(storeSelect);
-          
-          // Create back button
-          const backButton = new ButtonBuilder()
-            .setCustomId('safari_manage_stores')
-            .setLabel('⬅ Back to Store Management')
-            .setStyle(ButtonStyle.Secondary);
-          
-          const backRow = new ActionRowBuilder().addComponents(backButton);
-          
-          // Create response with Components V2
+          // Create response with Components V2 - NO discord.js builders!
           const containerComponents = [
             {
               type: 10, // Text Display component
@@ -10261,14 +10244,26 @@ Your server is now ready for Tycoons gameplay!`;
             },
             {
               type: 1, // Action Row
-              components: [storeSelect.toJSON()]
+              components: [{
+                type: 3, // String Select (Components V2 - NOT type 6!)
+                custom_id: 'safari_store_items_select',
+                placeholder: 'Choose a store to manage items...',
+                min_values: 1,
+                max_values: 1,
+                options: storeOptions
+              }]
             },
             {
               type: 14 // Separator
             },
             {
               type: 1, // Action Row
-              components: [backButton.toJSON()]
+              components: [{
+                type: 2, // Button
+                custom_id: 'safari_manage_stores',
+                label: '⬅ Back to Store Management',
+                style: 2 // Secondary
+              }]
             }
           ];
           
