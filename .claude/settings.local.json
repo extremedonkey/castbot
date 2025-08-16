@@ -222,7 +222,9 @@
       "Bash(find:*)",
       "LS(/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1)",
       "Bash(cd:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -B 5 -A 15 \"safari_store_items_select\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 10 \"safari_manage_stores.*{\" app.js)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

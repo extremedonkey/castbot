@@ -3686,13 +3686,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             
             if (stock !== undefined && stock !== null) {
               if (stock === 0) {
-                stockDisplay = '\n**🚫 SOLD OUT**';
+                stockDisplay = '\n> **Stock**: 🚫 Sold out';
                 isSoldOut = true;
               } else {
-                stockDisplay = `\n**Stock:** ${stock} available`;
+                stockDisplay = `\n> **Stock**: ${stock} available`;
               }
+            } else {
+              // Stock is undefined/null = unlimited
+              stockDisplay = '\n> **Stock**: Unlimited';
             }
-            // If stock is undefined/null, don't display stock (unlimited)
             
             // Generate detailed item content using shared function
             const itemContent = generateItemContent(item, customTerms, null, price) + stockDisplay;
@@ -10723,7 +10725,7 @@ Your server is now ready for Tycoons gameplay!`;
             type: 1, // Action Row
             components: [{
               type: 2, // Button
-              custom_id: `safari_store_items_select`,
+              custom_id: `safari_store_management_back`,
               label: '⬅ Back to Store Management',
               style: 2
             }]
