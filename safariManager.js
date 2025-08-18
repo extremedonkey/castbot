@@ -105,7 +105,14 @@ export async function getCoordinateFromChannelId(guildId, channelId) {
  * @returns {string} Formatted content string
  */
 function generateItemContent(item, customTerms, quantity = null, price = null) {
-    let content = `## ${item.emoji || '📦'} ${item.name}\n\n${item.description || 'No description available.'}\n\n`;
+    // Sanitize emoji - remove any zero-width joiners or invalid characters
+    const emoji = (item.emoji || '📦').replace(/\u200d/g, '').trim();
+    
+    // Truncate name and description if too long
+    const name = (item.name || 'Unknown Item').substring(0, 100);
+    const description = (item.description || 'No description available.').substring(0, 500);
+    
+    let content = `## ${emoji} ${name}\n\n${description}\n\n`;
     
     // Add yield info if available
     if ((item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) || 
@@ -2917,6 +2924,11 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                         attackItemContent += `\n> 🎯 Attacks Planned: ${attacksPlanned}`;
                     }
                     
+                    // Ensure content doesn't exceed Discord's 4000 character limit
+                    if (attackItemContent.length > 3900) {
+                        attackItemContent = attackItemContent.substring(0, 3900) + '...';
+                    }
+                    
                     // Create Section component with attack button
                     const sectionComponent = {
                         type: 9, // Section component
@@ -2951,7 +2963,12 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     console.log(`⚔️ DEBUG: Added attack item ${item.name} with Section component`);
                 } else if (isStaminaConsumable) {
                     // Stamina consumable item - add Use button
-                    const staminaItemContent = generateItemContent(item, customTerms, quantity);
+                    let staminaItemContent = generateItemContent(item, customTerms, quantity);
+                    
+                    // Ensure content doesn't exceed Discord's limit
+                    if (staminaItemContent.length > 3900) {
+                        staminaItemContent = staminaItemContent.substring(0, 3900) + '...';
+                    }
                     
                     // Create Section component with Use button
                     const sectionComponent = {
@@ -2974,7 +2991,12 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     console.log(`⚡ DEBUG: Added stamina consumable ${item.name} with Use button`);
                 } else {
                     // Non-attack, non-consumable item - use regular Text Display
-                    const itemContent = generateItemContent(item, customTerms, quantity);
+                    let itemContent = generateItemContent(item, customTerms, quantity);
+                    
+                    // Ensure content doesn't exceed Discord's limit
+                    if (itemContent.length > 3900) {
+                        itemContent = itemContent.substring(0, 3900) + '...';
+                    }
                     
                     components.push({
                         type: 10, // Text Display
