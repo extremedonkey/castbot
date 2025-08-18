@@ -1288,39 +1288,64 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
                 case 'display_text': // Legacy support
                     result = await executeDisplayText(action.config, interaction);
                     
-                    // Check if next action is a follow_up_button and bundle it
-                    if (i + 1 < sortedActions.length) {
-                        const nextAction = sortedActions[i + 1];
+                    // Collect ALL consecutive follow-up buttons to bundle
+                    const followUpButtons = [];
+                    let j = i + 1;
+                    
+                    while (j < sortedActions.length) {
+                        const nextAction = sortedActions[j];
                         if (nextAction.type === ACTION_TYPES.FOLLOW_UP_BUTTON || 
                             nextAction.type === 'follow_up_button' || 
                             nextAction.type === 'follow_up') {
+                            followUpButtons.push(nextAction);
+                            j++;
+                        } else {
+                            break; // Stop when we encounter a non-follow-up action
+                        }
+                    }
+                    
+                    // If we have follow-up buttons to bundle
+                    if (followUpButtons.length > 0) {
+                        console.log(`📎 DEBUG: Bundling ${followUpButtons.length} follow_up_button(s) with display_text`);
+                        
+                        // Add separator before buttons
+                        if (result.components?.[0]?.components) {
+                            result.components[0].components.push({
+                                type: 14 // Separator
+                            });
                             
-                            console.log('📎 DEBUG: Bundling follow_up_button with display_text');
+                            // Create a single action row for all buttons (max 5, but we have max 4)
+                            const buttonComponents = [];
                             
-                            // Get the follow-up button components
-                            const followUpResult = await executeFollowUpButton(nextAction.config, guildId, interaction);
-                            
-                            // Extract the button from the follow-up result
-                            if (followUpResult.components?.[0]?.components) {
-                                const followUpComponents = followUpResult.components[0].components;
+                            for (const followUpAction of followUpButtons) {
+                                // Get the follow-up button component
+                                const followUpResult = await executeFollowUpButton(followUpAction.config, guildId, interaction);
                                 
-                                // Find the action row with the button (skip text displays and separators)
-                                const buttonRow = followUpComponents.find(comp => comp.type === 1);
-                                
-                                if (buttonRow && result.components?.[0]?.components) {
-                                    // Add separator before button
-                                    result.components[0].components.push({
-                                        type: 14 // Separator
-                                    });
+                                // Extract the button from the follow-up result
+                                if (followUpResult.components?.[0]?.components) {
+                                    const followUpComponents = followUpResult.components[0].components;
                                     
-                                    // Add the button action row to the display_text container
-                                    result.components[0].components.push(buttonRow);
+                                    // Find the action row with the button
+                                    const buttonRow = followUpComponents.find(comp => comp.type === 1);
+                                    
+                                    if (buttonRow?.components?.[0]) {
+                                        // Extract the button component itself (not the row)
+                                        buttonComponents.push(buttonRow.components[0]);
+                                    }
                                 }
                             }
                             
-                            // Skip the next action since we bundled it
-                            i++;
+                            // Add all buttons in a single action row
+                            if (buttonComponents.length > 0) {
+                                result.components[0].components.push({
+                                    type: 1, // Action Row
+                                    components: buttonComponents
+                                });
+                            }
                         }
+                        
+                        // Skip all the bundled actions
+                        i = j - 1; // Set i to the last bundled action index
                     }
                     
                     responses.push(result);
