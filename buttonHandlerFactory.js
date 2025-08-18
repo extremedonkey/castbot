@@ -169,47 +169,6 @@ export const BUTTON_REGISTRY = {
     category: 'ranking'
   },
 
-  // === DUCK DASHBOARD ===
-  'prod_duck_dashboard': {
-    label: 'Duck Dashboard',
-    description: 'View and manage duck statistics and data',
-    emoji: '🦆',
-    style: 'Primary',
-    category: 'admin'
-  },
-  
-  'duck_add_new': {
-    label: 'Add Duck',
-    description: 'Add a new duck to the system',
-    emoji: '➕',
-    style: 'Success',
-    category: 'ducks'
-  },
-  
-  'duck_view_all': {
-    label: 'View All',
-    description: 'View all ducks in the system',
-    emoji: '📋',
-    style: 'Primary',
-    category: 'ducks'
-  },
-  
-  'duck_spawn': {
-    label: 'Spawn Duck',
-    description: 'Spawn a duck in a channel',
-    emoji: '🎯',
-    style: 'Secondary',
-    category: 'ducks'
-  },
-  
-  'duck_settings': {
-    label: 'Settings',
-    description: 'Configure duck system settings',
-    emoji: '⚙️',
-    style: 'Secondary',
-    category: 'ducks'
-  },
-
   // === SAFARI MENU SYSTEM ===
   'prod_safari_menu': {
     label: 'Safari',
