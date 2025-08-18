@@ -2829,7 +2829,6 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
             return false;
         });
         console.log(`🔍 DEBUG: Filtered inventoryItems:`, inventoryItems);
-        let componentsUsed = 4; // Container + header + separator + footer action row
         
         if (inventoryItems.length === 0) {
             // Add separator before empty message
@@ -2884,12 +2883,15 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     continue;
                 }
                 
-                // Check component limit (reserve space for store buttons)
-                if (componentsUsed >= 35) { // Leave room for store buttons
+                // Check component limit - Discord allows max 40 components per container
+                // We need to count: current components + separator (if not first) + item component + separator (if not last)
+                const wouldAddComponents = 1 + (i === 0 ? 1 : 0) + (i < updatedInventoryItems.length - 1 ? 1 : 0);
+                if (components.length + wouldAddComponents > 38) { // Leave buffer for safety
                     components.push({
                         type: 10, // Text Display
-                        content: `⚠️ **Note:** You have more items, but only some can be displayed due to Discord limits.`
+                        content: `⚠️ **Note:** You have ${updatedInventoryItems.length - i} more items that cannot be displayed due to Discord limits.`
                     });
+                    console.log(`⚠️ Component limit reached at item ${i} of ${updatedInventoryItems.length}, current components: ${components.length}`);
                     break;
                 }
                 
@@ -2982,11 +2984,9 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                 }
                 
                 // Add separator after each item (but not after the last one)
-                if (i < inventoryItems.length - 1) {
+                if (i < updatedInventoryItems.length - 1) {
                     components.push({ type: 14 }); // Separator after item (not last)
                 }
-                
-                componentsUsed++;
                 
                 console.log(`📦 DEBUG: Added item ${item.name} (qty: ${quantity}) to display`);
             }

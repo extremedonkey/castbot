@@ -225,7 +225,8 @@
       "Bash(git merge:*)",
       "Bash(code ~/my-upstream)",
       "Bash(git revert:*)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(gh auth:*)"
     ],
     "deny": []
   }
