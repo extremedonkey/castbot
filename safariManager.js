@@ -108,69 +108,101 @@ function generateItemContent(item, customTerms, quantity = null, price = null) {
     // Sanitize emoji - remove any zero-width joiners or invalid characters
     const emoji = (item.emoji || '📦').replace(/\u200d/g, '').trim();
     
-    // Truncate name and description if too long
-    const name = (item.name || 'Unknown Item').substring(0, 100);
-    const description = (item.description || 'No description available.').substring(0, 500);
+    // Determine if this is for inventory display (compact mode)
+    const isInventoryDisplay = quantity !== null && price === null;
     
-    let content = `## ${emoji} ${name}\n\n${description}\n\n`;
+    // More aggressive truncation for inventory display
+    const maxNameLength = isInventoryDisplay ? 40 : 100;
+    const maxDescLength = isInventoryDisplay ? 150 : 500;
     
-    // Add yield info if available
-    if ((item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) || 
-        (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined)) {
+    const name = (item.name || 'Unknown Item').substring(0, maxNameLength);
+    let description = (item.description || 'No description available.').substring(0, maxDescLength);
+    
+    // Remove problematic characters that might cause Discord issues
+    description = description.replace(/[\u200b-\u200f\u202a-\u202e\u2060-\u206f]/g, '');
+    
+    // Use compact format for inventory
+    let content;
+    if (isInventoryDisplay) {
+        // Ultra-compact for inventory
+        content = `**${emoji} ${name}** (x${quantity})\n`;
         
-        content += '**Yield**\n';
-        
-        if (item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) {
-            const goodEmoji = item.goodYieldEmoji || customTerms.goodEventEmoji || '☀️';
-            const goodEventName = customTerms.goodEventName || 'Good Event';
-            content += `${goodEmoji} ${goodEventName}: +${item.goodOutcomeValue} ${customTerms.currencyName}\n`;
+        // Only show most essential info
+        if (description.length > 0) {
+            content += `*${description.substring(0, 100)}*\n`;
         }
         
-        if (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined) {
-            const badEmoji = item.badYieldEmoji || customTerms.badEventEmoji || '☄️';
-            const badEventName = customTerms.badEventName || 'Bad Event';
-            content += `${badEmoji} ${badEventName}: +${item.badOutcomeValue} ${customTerms.currencyName}\n`;
+        // Compact combat stats
+        const hasAttack = (item.attackValue !== null && item.attackValue !== undefined && item.attackValue > 0);
+        const hasDefense = (item.defenseValue !== null && item.defenseValue !== undefined && item.defenseValue > 0);
+        
+        if (hasAttack || hasDefense) {
+            const stats = [];
+            if (hasAttack) stats.push(`⚔️${item.attackValue}`);
+            if (hasDefense) stats.push(`🛡️${item.defenseValue}`);
+            content += `${stats.join(' ')} `;
         }
         
-        content += '\n';
+        // Compact stamina info
+        if (item.staminaBoost && item.staminaBoost > 0) {
+            content += `⚡+${item.staminaBoost} `;
+        }
+    } else {
+        // Full format for non-inventory displays
+        content = `## ${emoji} ${name}\n\n${description}\n\n`;
+        
+        // Add yield info if available
+        if ((item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) || 
+            (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined)) {
+            
+            content += '**Yield**\n';
+            
+            if (item.goodOutcomeValue !== null && item.goodOutcomeValue !== undefined) {
+                const goodEmoji = item.goodYieldEmoji || customTerms.goodEventEmoji || '☀️';
+                const goodEventName = customTerms.goodEventName || 'Good Event';
+                content += `${goodEmoji} ${goodEventName}: +${item.goodOutcomeValue} ${customTerms.currencyName}\n`;
+            }
+            
+            if (item.badOutcomeValue !== null && item.badOutcomeValue !== undefined) {
+                const badEmoji = item.badYieldEmoji || customTerms.badEventEmoji || '☄️';
+                const badEventName = customTerms.badEventName || 'Bad Event';
+                content += `${badEmoji} ${badEventName}: +${item.badOutcomeValue} ${customTerms.currencyName}\n`;
+            }
+            
+            content += '\n';
+        }
+        
+        // Add combat info if item has attack or defense values
+        const hasAttack = (item.attackValue !== null && item.attackValue !== undefined);
+        const hasDefense = (item.defenseValue !== null && item.defenseValue !== undefined);
+        
+        if (hasAttack || hasDefense) {
+            content += '**⚔️ Combat**\n';
+            if (hasAttack) content += `🗡️ Attack: ${item.attackValue}\n`;
+            if (hasDefense) content += `🛡️ Defense: ${item.defenseValue}\n`;
+            content += '\n';
+        }
+        
+        // Add stamina boost info if item provides stamina
+        if (item.staminaBoost && item.staminaBoost > 0) {
+            content += '**⚡ Effects**\n';
+            content += `⚡ Stamina Boost: +${item.staminaBoost}\n`;
+            if (item.consumable === 'Yes') {
+                content += `*This item is consumed on use*\n`;
+            }
+            content += '\n';
+        }
+        
+        // Add price info for store display
+        if (price !== null) {
+            content += `> ${customTerms.currencyEmoji} **Price:** ${price} ${customTerms.currencyName}`;
+        }
     }
     
-    // Add combat info if item has attack or defense values
-    const hasAttack = (item.attackValue !== null && item.attackValue !== undefined);
-    const hasDefense = (item.defenseValue !== null && item.defenseValue !== undefined);
-    
-    if (hasAttack || hasDefense) {
-        content += '**⚔️ Combat**\n';
-        
-        if (hasAttack) {
-            content += `🗡️ Attack: ${item.attackValue}\n`;
-        }
-        
-        if (hasDefense) {
-            content += `🛡️ Defense: ${item.defenseValue}\n`;
-        }
-        
-        content += '\n';
-    }
-    
-    // Add stamina boost info if item provides stamina
-    if (item.staminaBoost && item.staminaBoost > 0) {
-        content += '**⚡ Effects**\n';
-        content += `⚡ Stamina Boost: +${item.staminaBoost}\n`;
-        if (item.consumable === 'Yes') {
-            content += `*This item is consumed on use*\n`;
-        }
-        content += '\n';
-    }
-    
-    // Add quantity info for inventory display
-    if (quantity !== null) {
-        content += `> \`Quantity: ${quantity}\``;
-    }
-    
-    // Add price info for store display
-    if (price !== null) {
-        content += `> ${customTerms.currencyEmoji} **Price:** ${price} ${customTerms.currencyName}`;
+    // Strict content length limits to prevent Discord rejection
+    const maxLength = isInventoryDisplay ? 400 : 2000;
+    if (content.length > maxLength) {
+        content = content.substring(0, maxLength - 3) + '...';
     }
     
     return content;
@@ -2890,15 +2922,26 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     continue;
                 }
                 
-                // Check component limit - Discord allows max 40 components per container
-                // We need to count: current components + separator (if not first) + item component + separator (if not last)
-                const wouldAddComponents = 1 + (i === 0 ? 1 : 0) + (i < updatedInventoryItems.length - 1 ? 1 : 0);
-                if (components.length + wouldAddComponents > 38) { // Leave buffer for safety
+                // More conservative component limit checking
+                // Discord allows max 40 components, but we'll use 32 as safe limit
+                // Sections with buttons count as more components internally
+                const hasAttack = item.attackValue !== null && item.attackValue !== undefined;
+                const isStaminaConsumable = item.consumable === 'Yes' && item.staminaBoost && item.staminaBoost > 0;
+                const isComplexItem = hasAttack || isStaminaConsumable;
+                const componentWeight = isComplexItem ? 2 : 1;
+                
+                // Check if we have room for this item
+                if (components.length + componentWeight + 1 > 32) {
+                    // Add summary of remaining items
+                    const remainingItems = updatedInventoryItems.length - i;
+                    if (components.length > 0 && components[components.length - 1].type !== 14) {
+                        components.push({ type: 14 }); // Separator
+                    }
                     components.push({
                         type: 10, // Text Display
-                        content: `⚠️ **Note:** You have ${updatedInventoryItems.length - i} more items that cannot be displayed due to Discord limits.`
+                        content: `📦 **+${remainingItems} more items** (display limit reached)\n*Use /safari inventory command for full list*`
                     });
-                    console.log(`⚠️ Component limit reached at item ${i} of ${updatedInventoryItems.length}, current components: ${components.length}`);
+                    console.log(`⚠️ Component limit reached at item ${i} of ${updatedInventoryItems.length}, components: ${components.length}`);
                     break;
                 }
                 
@@ -2915,18 +2958,19 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     // Calculate attacks planned using simple math: total - available
                     const attacksPlanned = quantity - numAttacksAvailable;
                     
-                    // Generate item content with attack info
+                    // Generate compact item content with attack info
                     let attackItemContent = generateItemContent(item, customTerms, quantity);
                     
-                    // Add attack availability info
-                    attackItemContent += `\n> ⚔️ Attacks Available: ${numAttacksAvailable}`;
-                    if (attacksPlanned > 0) {
-                        attackItemContent += `\n> 🎯 Attacks Planned: ${attacksPlanned}`;
+                    // Add very compact attack info
+                    if (numAttacksAvailable > 0) {
+                        attackItemContent += `\n⚔️ **Ready:** ${numAttacksAvailable}/${quantity}`;
+                    } else {
+                        attackItemContent += `\n⚔️ *All attacks used*`;
                     }
                     
-                    // Ensure content doesn't exceed Discord's 4000 character limit
-                    if (attackItemContent.length > 3900) {
-                        attackItemContent = attackItemContent.substring(0, 3900) + '...';
+                    // Very strict length limit for components
+                    if (attackItemContent.length > 500) {
+                        attackItemContent = attackItemContent.substring(0, 497) + '...'
                     }
                     
                     // Create Section component with attack button
@@ -2965,9 +3009,9 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     // Stamina consumable item - add Use button
                     let staminaItemContent = generateItemContent(item, customTerms, quantity);
                     
-                    // Ensure content doesn't exceed Discord's limit
-                    if (staminaItemContent.length > 3900) {
-                        staminaItemContent = staminaItemContent.substring(0, 3900) + '...';
+                    // Very strict length limit for components
+                    if (staminaItemContent.length > 500) {
+                        staminaItemContent = staminaItemContent.substring(0, 497) + '...'
                     }
                     
                     // Create Section component with Use button
@@ -2993,9 +3037,9 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     // Non-attack, non-consumable item - use regular Text Display
                     let itemContent = generateItemContent(item, customTerms, quantity);
                     
-                    // Ensure content doesn't exceed Discord's limit
-                    if (itemContent.length > 3900) {
-                        itemContent = itemContent.substring(0, 3900) + '...';
+                    // Very strict length limit for components
+                    if (itemContent.length > 500) {
+                        itemContent = itemContent.substring(0, 497) + '...'
                     }
                     
                     components.push({
@@ -3005,9 +3049,10 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     console.log(`📦 DEBUG: Added Text Display for ${item.name} (qty: ${quantity})`);
                 }
                 
-                // Add separator after each item (but not after the last one)
-                if (i < updatedInventoryItems.length - 1) {
-                    components.push({ type: 14 }); // Separator after item (not last)
+                // Only add separator between items of same type to save components
+                // Skip separator after attack/consumable items with buttons
+                if (i < updatedInventoryItems.length - 1 && !isComplexItem) {
+                    components.push({ type: 14 }); // Separator after simple items only
                 }
                 
                 console.log(`📦 DEBUG: Added item ${item.name} (qty: ${quantity}) to display`);
