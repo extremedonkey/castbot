@@ -2898,12 +2898,25 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
             });
             
             // Add items with separators between them
+            let totalTextLength = 0; // Track total text content length
+            let itemsProcessed = 0;
+            let itemsSkipped = 0;
+            
+            // Calculate existing text length
+            for (const comp of components) {
+                if (comp.type === 10 && comp.content) { // Text Display
+                    totalTextLength += comp.content.length;
+                }
+            }
+            console.log(`📏 DEBUG: Starting with ${components.length} components, text length: ${totalTextLength} chars`);
+            
             for (let i = 0; i < updatedInventoryItems.length; i++) {
                 const [itemId, inventoryData] = updatedInventoryItems[i];
-                console.log(`🔍 DEBUG: Processing inventory item ${itemId}, data:`, inventoryData);
+                console.log(`🔍 DEBUG: Processing inventory item ${i+1}/${updatedInventoryItems.length}: ${itemId}, data:`, inventoryData);
                 const item = items[itemId];
                 if (!item) {
                     console.log(`❌ DEBUG: Item ${itemId} not found in items data - skipping`);
+                    itemsSkipped++;
                     continue;
                 }
                 
@@ -3004,7 +3017,10 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     }
                     
                     components.push(sectionComponent);
+                    totalTextLength += attackItemContent.length;
+                    itemsProcessed++;
                     console.log(`⚔️ DEBUG: Added attack item ${item.name} with Section component`);
+                    console.log(`📊 DEBUG: Item ${i+1} - Components: ${components.length}, Total text: ${totalTextLength} chars`);
                 } else if (isStaminaConsumable) {
                     // Stamina consumable item - add Use button
                     let staminaItemContent = generateItemContent(item, customTerms, quantity);
@@ -3032,7 +3048,10 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     };
                     
                     components.push(sectionComponent);
+                    totalTextLength += staminaItemContent.length;
+                    itemsProcessed++;
                     console.log(`⚡ DEBUG: Added stamina consumable ${item.name} with Use button`);
+                    console.log(`📊 DEBUG: Item ${i+1} - Components: ${components.length}, Total text: ${totalTextLength} chars`);
                 } else {
                     // Non-attack, non-consumable item - use regular Text Display
                     let itemContent = generateItemContent(item, customTerms, quantity);
