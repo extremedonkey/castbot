@@ -8163,7 +8163,8 @@ Your server is now ready for Tycoons gameplay!`;
         handler: async (context) => {
           console.log(`🥚 DEBUG: User ${context.userId} viewing inventory in guild ${context.guildId}`);
           
-          const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, context.userId, context.member);
+          // Start at page 0 when opening inventory
+          const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, context.userId, context.member, 0);
           
           console.log(`📤 DEBUG: About to send inventory response for user ${context.userId}`);
           console.log(`📋 DEBUG: Data keys: ${Object.keys(inventoryDisplay)}`);
@@ -17556,8 +17557,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const guild = await client.guilds.fetch(guildId);
         const targetMember = await guild.members.fetch(selectedUserId);
         
-        // Create inventory display for the selected player
-        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, selectedUserId, targetMember);
+        // Create inventory display for the selected player (page 0 initially)
+        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, selectedUserId, targetMember, 0);
         
         // The inventory display already has the proper structure
         // Just send it directly - it already has IS_COMPONENTS_V2 flag and ephemeral
@@ -17576,6 +17577,46 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    } else if (custom_id.startsWith('safari_inv_page_')) {
+      // Handle inventory page navigation
+      return ButtonHandlerFactory.create({
+        id: 'safari_inv_page',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: safari_inv_page - user ${context.userId}`);
+          const { guildId, userId: viewerId } = context;
+          
+          // Extract userId and page from custom_id: safari_inv_page_{userId}_{page}
+          const parts = context.customId.split('_');
+          const targetUserId = parts[3]; // safari_inv_page_{userId}_{page}
+          const targetPage = parseInt(parts[4]);
+          
+          console.log(`📄 Navigating to inventory page ${targetPage} for user ${targetUserId}`);
+          
+          // Import inventory display function
+          const { createPlayerInventoryDisplay } = await import('./safariManager.js');
+          
+          // Check if this is admin viewing another user's inventory or self-viewing
+          let targetMember = null;
+          if (targetUserId !== viewerId) {
+            // Admin viewing another user - fetch member info
+            try {
+              const guild = await client.guilds.fetch(guildId);
+              targetMember = await guild.members.fetch(targetUserId);
+            } catch (error) {
+              console.error('Error fetching target member:', error);
+            }
+          }
+          
+          // Create inventory display for the requested page
+          const inventoryDisplay = await createPlayerInventoryDisplay(guildId, targetUserId, targetMember, targetPage);
+          
+          console.log(`✅ SUCCESS: safari_inv_page - navigated to page ${targetPage}`);
+          
+          // Return the updated inventory display
+          return inventoryDisplay;
+        }
+      })(req, res, client);
     // safari_store_edit_select handler removed - functionality replaced by safari_store_manage_items
     } else if (custom_id === 'safari_item_edit_select') {
       // Handle item selection for editing - redirect to new entity management UI (MIGRATED TO FACTORY)
