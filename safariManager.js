@@ -2819,6 +2819,12 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
     try {
         console.log(`📦 DEBUG: Creating player inventory display for user ${userId} in guild ${guildId}`);
         
+        // Force simplified display for problematic user with missing items
+        if (userId === '391415444084490240') {
+            console.log(`🚨 Forcing simplified display for user ${userId} due to known inventory issues`);
+            return await createSimplifiedInventoryDisplay(guildId, userId, member);
+        }
+        
         const safariData = await loadSafariContent();
         const playerData = await loadPlayerData();
         
