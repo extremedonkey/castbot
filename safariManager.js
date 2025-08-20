@@ -2813,11 +2813,13 @@ async function getStoreBrowseButtons(guildId) {
  * Create player inventory display with Container > Section pattern
  * @param {string} guildId - Discord guild ID
  * @param {string} userId - Discord user ID
+ * @param {Object} member - Discord member object (optional)
+ * @param {number} currentPage - Current page number (0-indexed)
  * @returns {Object} Discord Components V2 response
  */
-async function createPlayerInventoryDisplay(guildId, userId, member = null) {
+async function createPlayerInventoryDisplay(guildId, userId, member = null, currentPage = 0) {
     try {
-        console.log(`📦 DEBUG: Creating player inventory display for user ${userId} in guild ${guildId}`);
+        console.log(`📦 DEBUG: Creating player inventory display for user ${userId} in guild ${guildId}, page ${currentPage}`);
         
         const safariData = await loadSafariContent();
         const playerData = await loadPlayerData();
@@ -2840,24 +2842,6 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
         console.log(`${customTerms.currencyEmoji} DEBUG: Player ${userId} has ${playerCurrency} ${customTerms.currencyName} and ${Object.keys(playerInventory).length} item types`);
         console.log(`🔍 DEBUG: Raw playerInventory:`, JSON.stringify(playerInventory, null, 2));
         
-        const components = [];
-        
-        // Header with personalized player name and custom inventory name
-        const inventoryEmoji = customTerms.inventoryEmoji || '🧰';
-        components.push({
-            type: 10, // Text Display
-            content: `# ${inventoryEmoji} ${playerDisplayName}'s ${customTerms.inventoryName}`
-        });
-        
-        // Add separator before balance
-        components.push({ type: 14 }); // Separator
-        
-        // Balance section with custom currency name
-        components.push({
-            type: 10, // Text Display
-            content: `## ${customTerms.currencyEmoji} Your Balance\n> \`${playerCurrency} ${customTerms.currencyName}\``
-        });
-        
         // Count total items and component usage - handle both number and object formats
         // Reverse order to show newest items first (most recent purchases/acquisitions)
         const inventoryItems = Object.entries(playerInventory).filter(([itemId, itemData]) => {
@@ -2869,6 +2853,44 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
             return false;
         }).reverse(); // Show newest items first
         console.log(`🔍 DEBUG: Filtered inventoryItems (newest first):`, inventoryItems);
+        
+        // Pagination calculation
+        const ITEMS_PER_PAGE = 10; // Fixed page size as requested
+        const totalItems = inventoryItems.length;
+        const totalPages = Math.max(1, Math.ceil(totalItems / ITEMS_PER_PAGE));
+        
+        const components = [];
+        
+        // Header with personalized player name and custom inventory name
+        const inventoryEmoji = customTerms.inventoryEmoji || '🧰';
+        // Add page info to header if there are multiple pages
+        const pageInfo = totalPages > 1 ? ` (Page ${currentPage + 1}/${totalPages})` : '';
+        components.push({
+            type: 10, // Text Display
+            content: `# ${inventoryEmoji} ${playerDisplayName}'s ${customTerms.inventoryName}${pageInfo}`
+        });
+        
+        // Add separator before balance
+        components.push({ type: 14 }); // Separator
+        
+        // Balance section with custom currency name
+        components.push({
+            type: 10, // Text Display
+            content: `## ${customTerms.currencyEmoji} Your Balance\n> \`${playerCurrency} ${customTerms.currencyName}\``
+        });
+        
+        // Validate and adjust current page if needed (auto-navigate to page 1 if current page is empty)
+        if (currentPage >= totalPages) {
+            currentPage = Math.max(0, totalPages - 1);
+            console.log(`📄 Auto-navigating to page ${currentPage} (max valid page)`);
+        }
+        
+        // Calculate page boundaries
+        const startIndex = currentPage * ITEMS_PER_PAGE;
+        const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalItems);
+        const pageItems = inventoryItems.slice(startIndex, endIndex);
+        
+        console.log(`📄 Pagination: Page ${currentPage + 1}/${totalPages}, showing items ${startIndex + 1}-${endIndex} of ${totalItems}`);
         
         if (inventoryItems.length === 0) {
             // Add separator before empty message

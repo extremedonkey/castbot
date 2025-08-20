@@ -547,9 +547,31 @@ async function generateServerUsageSummary(daysBack = 42) {
   const logEntries = await parseUserAnalyticsLog();
   const serverStats = calculateServerStats(logEntries, daysBack);
   
-  // Convert to array and sort by total interactions
+  // Convert to array and sort by activity level first, then by total interactions
   const rankedServers = Object.values(serverStats)
-    .sort((a, b) => b.totalInteractions - a.totalInteractions);
+    .sort((a, b) => {
+      // Define activity level priority (lower number = higher priority)
+      const activityPriority = {
+        'recent': 1,    // 🟢 Green - highest priority
+        'moderate': 2,  // 🟠 Orange - medium priority
+        'inactive': 3   // 🔴 Red - lowest priority
+      };
+      
+      // Get activity levels
+      const aLevel = a.activityLevel?.level || 'inactive';
+      const bLevel = b.activityLevel?.level || 'inactive';
+      
+      // Compare by activity level first
+      const levelDiff = activityPriority[aLevel] - activityPriority[bLevel];
+      
+      // If activity levels are different, sort by level
+      if (levelDiff !== 0) {
+        return levelDiff;
+      }
+      
+      // If activity levels are the same, sort by total interactions (descending)
+      return b.totalInteractions - a.totalInteractions;
+    });
   
   // Calculate totals and insights
   const totalInteractions = rankedServers.reduce((sum, server) => sum + server.totalInteractions, 0);
