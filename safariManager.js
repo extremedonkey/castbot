@@ -3170,6 +3170,113 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
 }
 
 /**
+ * Create a simplified, ultra-compact inventory display for problematic inventories
+ * This is used as a fallback when the full display exceeds Discord limits
+ */
+async function createSimplifiedInventoryDisplay(guildId, userId, member = null) {
+    try {
+        console.log(`🎪 Creating simplified inventory display for user ${userId}`);
+        
+        const safariData = await loadSafariContent();
+        const playerData = await loadPlayerData();
+        
+        const player = playerData[guildId]?.players?.[userId];
+        const safariPlayer = player?.safari || {};
+        const playerCurrency = safariPlayer.currency || 0;
+        const playerInventory = safariPlayer.inventory || {};
+        const items = safariData[guildId]?.items || {};
+        const customTerms = await getCustomTerms(guildId);
+        
+        console.log(`📊 Simplified inventory: ${Object.keys(playerInventory).length} item types, currency: ${playerCurrency}`);
+        
+        // Count and categorize items  
+        let attackItems = 0;
+        let consumables = 0;
+        let otherItems = 0;
+        let totalQuantity = 0;
+        const topItems = [];
+        
+        for (const [itemId, inventoryData] of Object.entries(playerInventory)) {
+            const item = items[itemId];
+            if (!item) {
+                console.log(`⚠️ Item ${itemId} not found in safariContent`);
+                continue;
+            }
+            
+            const quantity = typeof inventoryData === 'number' 
+                ? inventoryData 
+                : (inventoryData.quantity || 0);
+            
+            if (quantity <= 0) continue;
+            
+            totalQuantity += quantity;
+            
+            // Categorize
+            if (item.attackValue !== null && item.attackValue !== undefined) {
+                attackItems++;
+            } else if (item.consumable === 'Yes' && item.staminaBoost > 0) {
+                consumables++;
+            } else {
+                otherItems++;
+            }
+            
+            // Keep top 7 items by quantity for display
+            if (topItems.length < 7) {
+                const emoji = (item.emoji || '📦').replace(/\u200d/g, '').replace(/\u200b/g, '');
+                const name = (item.name || itemId).substring(0, 25);
+                topItems.push({
+                    display: `${emoji} ${name} x${quantity}`,
+                    quantity: quantity
+                });
+            }
+        }
+        
+        // Sort top items by quantity
+        topItems.sort((a, b) => b.quantity - a.quantity);
+        
+        // Build ultra-compact content
+        let content = `# 🎒 Inventory Summary\n\n`;
+        content += `**${customTerms.currencyEmoji} Balance:** ${playerCurrency} ${customTerms.currencyName}\n\n`;
+        content += `**📊 Overview:**\n`;
+        content += `Total Items: ${totalQuantity} (${Object.keys(playerInventory).length} types)\n`;
+        if (attackItems > 0) content += `⚔️ Combat: ${attackItems} types\n`;
+        if (consumables > 0) content += `⚡ Consumables: ${consumables} types\n`;
+        if (otherItems > 0) content += `📦 Other: ${otherItems} types\n`;
+        
+        if (topItems.length > 0) {
+            content += `\n**Top Items:**\n`;
+            content += topItems.map(item => item.display).join('\n');
+        }
+        
+        if (Object.keys(playerInventory).length > 7) {
+            content += `\n\n*...and ${Object.keys(playerInventory).length - 7} more item types*`;
+        }
+        
+        console.log(`📏 Simplified content length: ${content.length} chars`);
+        
+        // Create ultra-simple response
+        const response = {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+                type: 17, // Container
+                accent_color: 0xffa500, // Orange for simplified
+                components: [{
+                    type: 10, // Text Display
+                    content: content.substring(0, 1800) // Extra safe limit
+                }]
+            }]
+        };
+        
+        console.log(`✅ Created simplified inventory display successfully`);
+        return response;
+        
+    } catch (error) {
+        console.error('Error in simplified inventory display:', error);
+        throw error;
+    }
+}
+
+/**
  * Get custom terminology for a guild
  * @param {string} guildId - Discord guild ID
  * @returns {Object} Custom terms with fallbacks
