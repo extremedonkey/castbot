@@ -2819,12 +2819,6 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
     try {
         console.log(`📦 DEBUG: Creating player inventory display for user ${userId} in guild ${guildId}`);
         
-        // Force simplified display for problematic user with missing items
-        if (userId === '391415444084490240') {
-            console.log(`🚨 Forcing simplified display for user ${userId} due to known inventory issues`);
-            return await createSimplifiedInventoryDisplay(guildId, userId, member);
-        }
-        
         const safariData = await loadSafariContent();
         const playerData = await loadPlayerData();
         
@@ -2920,8 +2914,32 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                 const [itemId, inventoryData] = updatedInventoryItems[i];
                 console.log(`🔍 DEBUG: Processing inventory item ${i+1}/${updatedInventoryItems.length}: ${itemId}, data:`, inventoryData);
                 const item = items[itemId];
+                
+                // Handle missing items gracefully
                 if (!item) {
-                    console.log(`❌ DEBUG: Item ${itemId} not found in items data - skipping`);
+                    console.log(`⚠️ WARNING: Item ${itemId} not found in safariContent - creating placeholder`);
+                    
+                    // Get quantity from inventory data
+                    const quantity = typeof inventoryData === 'number' 
+                        ? inventoryData 
+                        : (inventoryData.quantity || 0);
+                    
+                    if (quantity > 0) {
+                        // Add a placeholder for the missing item
+                        components.push({
+                            type: 10, // Text Display
+                            content: `❓ **Unknown Item** (ID: ${itemId}) (x${quantity})\n*This item no longer exists in the system*`
+                        });
+                        totalTextLength += 100; // Estimate text length
+                        itemsProcessed++;
+                        console.log(`❓ Added placeholder for missing item ${itemId}`);
+                        
+                        // Add separator after missing item
+                        if (i < updatedInventoryItems.length - 1) {
+                            components.push({ type: 14 }); // Separator
+                        }
+                    }
+                    
                     itemsSkipped++;
                     continue;
                 }
