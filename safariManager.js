@@ -3065,7 +3065,10 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                         type: 10, // Text Display
                         content: itemContent
                     });
+                    totalTextLength += itemContent.length;
+                    itemsProcessed++;
                     console.log(`📦 DEBUG: Added Text Display for ${item.name} (qty: ${quantity})`);
+                    console.log(`📊 DEBUG: Item ${i+1} - Components: ${components.length}, Total text: ${totalTextLength} chars`);
                 }
                 
                 // Only add separator between items of same type to save components
@@ -3075,6 +3078,24 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                 }
                 
                 console.log(`📦 DEBUG: Added item ${item.name} (qty: ${quantity}) to display`);
+            }
+            
+            // Log final summary
+            console.log(`\n📊 INVENTORY DISPLAY SUMMARY:`);
+            console.log(`  - Items to display: ${updatedInventoryItems.length}`);
+            console.log(`  - Items processed: ${itemsProcessed}`);
+            console.log(`  - Items skipped: ${itemsSkipped}`);
+            console.log(`  - Components created: ${components.length}`);
+            console.log(`  - Total text length: ${totalTextLength} chars`);
+            console.log(`  - Text per component avg: ${Math.round(totalTextLength / Math.max(1, itemsProcessed))} chars`);
+            console.log(`  - 4000 char limit check: ${totalTextLength > 4000 ? '⚠️ EXCEEDED' : '✅ OK'}`);
+            
+            // Check if we're approaching Discord limits
+            if (totalTextLength > 3500) {
+                console.log(`⚠️ WARNING: Approaching 4000 character limit (${totalTextLength}/4000)`);
+            }
+            if (components.length > 35) {
+                console.log(`⚠️ WARNING: Approaching 40 component limit (${components.length}/40)`);
             }
         }
         
@@ -3095,8 +3116,41 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
             components: responseComponents
         };
         
-        // Debug: Log the response structure
-        console.log(`📋 DEBUG: Response structure:`, JSON.stringify(response, null, 2).substring(0, 500) + '...');
+        // Debug: Log the response structure with validation
+        const responseJSON = JSON.stringify(response, null, 2);
+        console.log(`📋 DEBUG: Response structure preview (first 500 chars):`, responseJSON.substring(0, 500) + '...');
+        console.log(`📋 DEBUG: Full response size: ${responseJSON.length} chars`);
+        
+        // Validate response structure
+        if (!response.components || !Array.isArray(response.components)) {
+            console.error(`❌ ERROR: Invalid response structure - missing or invalid components array`);
+        }
+        if (response.components.length === 0) {
+            console.error(`❌ ERROR: Empty components array`);
+        }
+        
+        // Check for any text content that might have problematic characters
+        const validateTextContent = (obj, path = '') => {
+            if (typeof obj === 'string') {
+                // Check for zero-width joiners or other problematic characters
+                if (obj.includes('\u200D')) {
+                    console.warn(`⚠️ WARNING: Zero-width joiner found in ${path}: "${obj}"`);
+                }
+                if (obj.includes('\u200B')) {
+                    console.warn(`⚠️ WARNING: Zero-width space found in ${path}: "${obj}"`);
+                }
+                if (obj.length > 1000) {
+                    console.warn(`⚠️ WARNING: Very long text content in ${path}: ${obj.length} chars`);
+                }
+            } else if (typeof obj === 'object' && obj !== null) {
+                for (const key in obj) {
+                    validateTextContent(obj[key], path ? `${path}.${key}` : key);
+                }
+            }
+        };
+        
+        validateTextContent(response, 'response');
+        console.log(`✅ DEBUG: Response validation complete`);
         
         return response;
         
