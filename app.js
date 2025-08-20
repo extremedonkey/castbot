@@ -17557,55 +17557,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         const targetMember = await guild.members.fetch(selectedUserId);
         
         // Create inventory display for the selected player
-        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, selectedUserId);
+        const inventoryDisplay = await createPlayerInventoryDisplay(guildId, selectedUserId, targetMember);
         
-        // Extract the inventory components (it's wrapped in containers already)
-        const inventoryComponents = inventoryDisplay.components;
-        
-        // Create admin header container
-        const adminContainer = {
-          type: 17, // Container component
-          accent_color: 0x9b59b6, // Purple accent color for viewing
-          components: [
-            {
-              type: 10, // Text Display component
-              content: `## 👀 Admin View: ${targetMember.displayName}'s Inventory\n\n**Player:** ${targetMember.displayName}\n**User ID:** ${selectedUserId}`
-            }
-          ]
-        };
-        
-        // Create back button container
-        const backButton = new ButtonBuilder()
-          .setCustomId('safari_view_player_inventory')
-          .setLabel('⬅ Back to Player Select')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        
-        const backContainer = {
-          type: 17, // Container component
-          accent_color: 0x9b59b6, // Purple accent color for viewing
-          components: [
-            {
-              type: 14 // Separator
-            },
-            backRow.toJSON()
-          ]
-        };
-        
-        // Combine all containers
-        const allContainers = [
-          adminContainer,
-          ...inventoryComponents,
-          backContainer
-        ];
-        
+        // The inventory display already has the proper structure
+        // Just send it directly - it already has IS_COMPONENTS_V2 flag and ephemeral
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: allContainers
-          }
+          data: inventoryDisplay
         });
         
       } catch (error) {
