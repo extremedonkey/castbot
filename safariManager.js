@@ -2964,8 +2964,7 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                 }
                 
                 // Check if item has attack value or is consumable with stamina boost
-                const hasAttack = item.attackValue !== null && item.attackValue !== undefined;
-                const isStaminaConsumable = item.consumable === 'Yes' && item.staminaBoost && item.staminaBoost > 0;
+                // (already declared above for component limit checking)
                 
                 if (hasAttack) {
                     // Calculate attacks planned using simple math: total - available
