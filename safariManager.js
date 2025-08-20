@@ -2859,6 +2859,7 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
         });
         
         // Count total items and component usage - handle both number and object formats
+        // Reverse order to show newest items first (most recent purchases/acquisitions)
         const inventoryItems = Object.entries(playerInventory).filter(([itemId, itemData]) => {
             if (typeof itemData === 'number') {
                 return itemData > 0;
@@ -2866,8 +2867,8 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                 return (itemData.quantity || 0) > 0;
             }
             return false;
-        });
-        console.log(`🔍 DEBUG: Filtered inventoryItems:`, inventoryItems);
+        }).reverse(); // Show newest items first
+        console.log(`🔍 DEBUG: Filtered inventoryItems (newest first):`, inventoryItems);
         
         if (inventoryItems.length === 0) {
             // Add separator before empty message
@@ -2888,6 +2889,7 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
             const updatedInventory = updatedPlayer?.safari?.inventory || {};
             
             // Re-filter inventory items with updated data
+            // Maintain reverse order (newest first) after reloading
             const updatedInventoryItems = Object.entries(updatedInventory).filter(([itemId, itemData]) => {
                 if (typeof itemData === 'number') {
                     return itemData > 0;
@@ -2895,7 +2897,7 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
                     return (itemData.quantity || 0) > 0;
                 }
                 return false;
-            });
+            }).reverse(); // Show newest items first
             
             // Add items with separators between them
             let totalTextLength = 0; // Track total text content length
@@ -3219,7 +3221,8 @@ async function createSimplifiedInventoryDisplay(guildId, userId, member = null) 
         let totalQuantity = 0;
         const topItems = [];
         
-        for (const [itemId, inventoryData] of Object.entries(playerInventory)) {
+        // Process items in reverse order (newest first) for simplified display
+        for (const [itemId, inventoryData] of Object.entries(playerInventory).reverse()) {
             const item = items[itemId];
             if (!item) {
                 console.log(`⚠️ Item ${itemId} not found in safariContent`);
