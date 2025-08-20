@@ -2921,6 +2921,9 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
                 return false;
             }).reverse(); // Show newest items first
             
+            // Re-calculate page items with updated inventory
+            const updatedPageItems = updatedInventoryItems.slice(startIndex, endIndex);
+            
             // Add items with separators between them
             let totalTextLength = 0; // Track total text content length
             let itemsProcessed = 0;
@@ -2934,9 +2937,10 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
             }
             console.log(`📏 DEBUG: Starting with ${components.length} components, text length: ${totalTextLength} chars`);
             
-            for (let i = 0; i < updatedInventoryItems.length; i++) {
-                const [itemId, inventoryData] = updatedInventoryItems[i];
-                console.log(`🔍 DEBUG: Processing inventory item ${i+1}/${updatedInventoryItems.length}: ${itemId}, data:`, inventoryData);
+            // Process only items for current page
+            for (let i = 0; i < updatedPageItems.length; i++) {
+                const [itemId, inventoryData] = updatedPageItems[i];
+                console.log(`🔍 DEBUG: Processing inventory item ${i+1}/${updatedPageItems.length} (item ${startIndex + i + 1}/${updatedInventoryItems.length}): ${itemId}, data:`, inventoryData);
                 const item = items[itemId];
                 
                 // Handle missing items gracefully
@@ -3154,6 +3158,90 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null, curr
         };
         
         const responseComponents = [container];
+        
+        // Add pagination buttons if there are multiple pages
+        if (totalPages > 1) {
+            const navButtons = [];
+            
+            // Smart pagination - max 5 buttons per action row
+            if (totalPages <= 5) {
+                // Show all page numbers if 5 or fewer pages
+                for (let page = 0; page < totalPages; page++) {
+                    navButtons.push({
+                        type: 2, // Button
+                        custom_id: `safari_inv_page_${userId}_${page}`,
+                        label: `${page + 1}`,
+                        style: page === currentPage ? 1 : 2, // Primary if current, Secondary otherwise
+                        disabled: page === currentPage
+                    });
+                }
+            } else {
+                // Smart pagination for more than 5 pages
+                // Pattern: [<] [prev] [current] [next] [>]
+                
+                // First page button
+                if (currentPage > 1) {
+                    navButtons.push({
+                        type: 2, // Button
+                        custom_id: `safari_inv_page_${userId}_0`,
+                        label: '«',
+                        style: 2, // Secondary
+                        disabled: false
+                    });
+                }
+                
+                // Previous page (if not adjacent to first)
+                if (currentPage > 0) {
+                    navButtons.push({
+                        type: 2, // Button
+                        custom_id: `safari_inv_page_${userId}_${currentPage - 1}`,
+                        label: `${currentPage}`, // Show previous page number
+                        style: 2, // Secondary
+                        disabled: false
+                    });
+                }
+                
+                // Current page (always show, disabled)
+                navButtons.push({
+                    type: 2, // Button
+                    custom_id: `safari_inv_page_${userId}_${currentPage}`,
+                    label: `${currentPage + 1}`,
+                    style: 1, // Primary (highlighted)
+                    disabled: true
+                });
+                
+                // Next page
+                if (currentPage < totalPages - 1) {
+                    navButtons.push({
+                        type: 2, // Button
+                        custom_id: `safari_inv_page_${userId}_${currentPage + 1}`,
+                        label: `${currentPage + 2}`, // Show next page number
+                        style: 2, // Secondary
+                        disabled: false
+                    });
+                }
+                
+                // Last page button
+                if (currentPage < totalPages - 2) {
+                    navButtons.push({
+                        type: 2, // Button
+                        custom_id: `safari_inv_page_${userId}_${totalPages - 1}`,
+                        label: '»',
+                        style: 2, // Secondary
+                        disabled: false
+                    });
+                }
+            }
+            
+            // Add navigation action row if we have buttons
+            if (navButtons.length > 0) {
+                const navRow = {
+                    type: 1, // Action Row
+                    components: navButtons.slice(0, 5) // Ensure max 5 buttons
+                };
+                responseComponents.push(navRow);
+            }
+        }
         
         console.log(`✅ DEBUG: Created inventory display with ${components.length} components`);
         console.log(`📤 DEBUG: Sending response with ${responseComponents.length} response components`);
