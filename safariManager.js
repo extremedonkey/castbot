@@ -3156,10 +3156,16 @@ async function createPlayerInventoryDisplay(guildId, userId, member = null) {
         
     } catch (error) {
         console.error('Error creating player inventory display:', error);
-        return {
-            content: '❌ Error loading your nest. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-        };
+        console.log(`🔄 Attempting simplified inventory display as fallback...`);
+        try {
+            return await createSimplifiedInventoryDisplay(guildId, userId, member);
+        } catch (fallbackError) {
+            console.error('Simplified inventory also failed:', fallbackError);
+            return {
+                content: '❌ Error loading inventory. Your inventory may be too large to display.',
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
     }
 }
 
