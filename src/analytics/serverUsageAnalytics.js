@@ -905,20 +905,31 @@ async function parseRecentServerInstalls(limit = 5) {
 }
 
 /**
- * Format server usage summary for Discord Components V2 display
+ * Format server usage summary for Discord Components V2 display with pagination
  * @param {Object} summary - Server usage summary from generateServerUsageSummary
+ * @param {number} currentPage - Current page number (0-indexed)
  * @returns {Object} Discord Components V2 response data
  */
-async function formatServerUsageForDiscordV2(summary) {
+async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   const { rankedServers, totalInteractions, totalUniqueUsers, activeServers, period, insights } = summary;
   
   // Get recent server installs (most recent 5, regardless of time)
   const recentInstalls = await parseRecentServerInstalls(5);
   
-  // Calculate optimal server display limit
-  const { displayServers, hasMore, estimatedLength, componentCount } = calculateOptimalServerLimit(rankedServers);
+  // Pagination configuration
+  const SERVERS_PER_PAGE = 10; // Fixed number of servers per page
+  const totalServers = rankedServers.length;
+  const totalPages = Math.max(1, Math.ceil(totalServers / SERVERS_PER_PAGE));
   
-  console.log(`📊 DEBUG: Components V2 Analytics - ${displayServers.length} servers, ${componentCount} components, ~${estimatedLength} chars, ${recentInstalls.length} recent installs`);
+  // Ensure current page is within bounds
+  const validPage = Math.max(0, Math.min(currentPage, totalPages - 1));
+  
+  // Get servers for current page
+  const startIndex = validPage * SERVERS_PER_PAGE;
+  const endIndex = Math.min(startIndex + SERVERS_PER_PAGE, totalServers);
+  const displayServers = rankedServers.slice(startIndex, endIndex);
+  
+  console.log(`📊 DEBUG: Server Stats Pagination - Page ${validPage + 1}/${totalPages}, showing servers ${startIndex + 1}-${endIndex} of ${totalServers}`);
   
   // Helper function to generate rank emojis
   function getRankEmoji(rank) {
@@ -931,6 +942,69 @@ async function formatServerUsageForDiscordV2(summary) {
     // For numbers 10+, combine digit emojis
     const digits = rankNum.toString().split('');
     return digits.map(digit => `${digit}️⃣`).join('');
+  }
+  
+  // Helper function to build pagination buttons (max 5 per row)
+  function buildPaginationButtons(currentPage, totalPages) {
+    const buttons = [];
+    
+    // Always add Refresh Stats button first
+    buttons.push({
+      type: 2, // Button
+      style: 4, // Danger (red)
+      emoji: { name: '📈' },
+      label: 'Refresh',
+      custom_id: 'prod_server_usage_stats'
+    });
+    
+    // If only one page, don't add pagination
+    if (totalPages <= 1) {
+      return buttons;
+    }
+    
+    // We have max 4 slots left for pagination (5 total - 1 refresh button)
+    if (totalPages <= 4) {
+      // Show all page numbers if 4 or fewer pages
+      for (let page = 0; page < totalPages; page++) {
+        buttons.push({
+          type: 2, // Button
+          custom_id: `server_stats_page_${page}`,
+          label: `${page + 1}`,
+          style: page === currentPage ? 1 : 2, // Primary if current, Secondary otherwise
+          disabled: page === currentPage
+        });
+      }
+    } else {
+      // Smart pagination for more than 4 pages
+      // Always show first, last, and current page
+      // Fill remaining slots with adjacent pages
+      
+      const pagesToShow = new Set();
+      
+      // Always include first and last
+      pagesToShow.add(0);
+      pagesToShow.add(totalPages - 1);
+      
+      // Include current page and adjacent pages
+      pagesToShow.add(currentPage);
+      if (currentPage > 0) pagesToShow.add(currentPage - 1);
+      if (currentPage < totalPages - 1) pagesToShow.add(currentPage + 1);
+      
+      // Convert to sorted array and take first 4
+      const sortedPages = Array.from(pagesToShow).sort((a, b) => a - b).slice(0, 4);
+      
+      for (const page of sortedPages) {
+        buttons.push({
+          type: 2, // Button
+          custom_id: `server_stats_page_${page}`,
+          label: page === 0 ? 'First' : page === totalPages - 1 ? 'Last' : `${page + 1}`,
+          style: page === currentPage ? 1 : 2, // Primary if current, Secondary otherwise
+          disabled: page === currentPage
+        });
+      }
+    }
+    
+    return buttons;
   }
   
   // Build a simpler Components V2 structure using only Text Display components in a flat layout
@@ -980,10 +1054,11 @@ async function formatServerUsageForDiscordV2(summary) {
   
   // Server rankings SECOND
   if (displayServers.length > 0) {
-    fullContent += `> ## 🏆 Server Rankings\n\n`;
+    fullContent += `> ## 🏆 Server Rankings (Page ${validPage + 1}/${totalPages})\n\n`;
     
-    displayServers.forEach((server, index) => {
-      const medal = getRankEmoji(index);
+    displayServers.forEach((server, pageIndex) => {
+      const actualRank = startIndex + pageIndex; // Calculate actual rank in full list
+      const medal = getRankEmoji(actualRank);
       const serverDisplay = server.serverName.length > 25 
         ? server.serverName.substring(0, 25) + '...'
         : server.serverName;
@@ -1037,10 +1112,6 @@ async function formatServerUsageForDiscordV2(summary) {
       
       fullContent += `\n`;
     });
-    
-    if (hasMore) {
-      fullContent += `📋 And ${rankedServers.length - displayServers.length} more servers...\n\n`;
-    }
   } else {
     fullContent += `📭 **No server activity found**\n\nNo interactions recorded in the specified period.\n\n`;
   }
@@ -1056,7 +1127,7 @@ async function formatServerUsageForDiscordV2(summary) {
   fullContent += `👥 **Unique Users**: ${totalUniqueUsers}\n`;
   fullContent += `🏰 **Active Servers**: ${activeServers}\n`;
   fullContent += `⏱️ **Period**: Last ${period}\n`;
-  fullContent += `📈 **Showing**: Top ${displayServers.length} of ${rankedServers.length} servers\n\n`;
+  fullContent += `📈 **Showing**: Servers ${startIndex + 1}-${endIndex} of ${totalServers} (Page ${validPage + 1}/${totalPages})\n\n`;
   
   // Insights section removed per user request
   // Footer removed per user request
@@ -1075,7 +1146,7 @@ async function formatServerUsageForDiscordV2(summary) {
         type: 10, // Text Display
         content: fullContent
       },
-      // Add separator before refresh button
+      // Add separator before buttons
       {
         type: 14, // Separator
         divider: true,
@@ -1083,13 +1154,7 @@ async function formatServerUsageForDiscordV2(summary) {
       },
       {
         type: 1, // Action Row
-        components: [{
-          type: 2, // Button
-          style: 4, // Danger (red)
-          emoji: { name: '📈' },
-          label: 'Refresh Stats',
-          custom_id: 'prod_server_usage_stats'
-        }]
+        components: buildPaginationButtons(validPage, totalPages)
       }
     ]
   });

@@ -7638,12 +7638,44 @@ Your server is now ready for Tycoons gameplay!`;
           const summary = await generateServerUsageSummary(42);
           console.log('✅ DEBUG: Summary generated, formatting for Discord...');
           
-          // Format for Discord display - use Components V2
-          const discordResponse = formatServerUsageForDiscordV2(summary);
+          // Format for Discord display - use Components V2 with page 0
+          const discordResponse = await formatServerUsageForDiscordV2(summary, 0);
           
           console.log(`✅ DEBUG: Formatted for Discord using Components V2, payload size:`, JSON.stringify(discordResponse).length, 'characters');
           
           // Return the response for deferred update
+          return discordResponse;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('server_stats_page_')) {
+      // Server stats pagination handler
+      return ButtonHandlerFactory.create({
+        id: 'server_stats_page',
+        deferred: true,
+        ephemeral: false, // Keep consistent with main stats display
+        handler: async (context) => {
+          console.log(`🔍 START: server_stats_page - user ${context.userId}`);
+          
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            console.log(`❌ ACCESS DENIED: server_stats_page - user ${context.userId} not authorized`);
+            return {
+              content: '❌ Access denied. This feature is restricted.'
+            };
+          }
+          
+          // Extract page number from custom_id
+          const parts = context.customId.split('_');
+          const targetPage = parseInt(parts[3]);
+          
+          console.log(`📊 DEBUG: Navigating to page ${targetPage + 1}`);
+          
+          // Generate fresh summary and display requested page
+          const { generateServerUsageSummary, formatServerUsageForDiscordV2 } = await import('./src/analytics/serverUsageAnalytics.js');
+          const summary = await generateServerUsageSummary(42);
+          const discordResponse = await formatServerUsageForDiscordV2(summary, targetPage);
+          
+          console.log(`✅ SUCCESS: server_stats_page - displayed page ${targetPage + 1}`);
           return discordResponse;
         }
       })(req, res, client);
