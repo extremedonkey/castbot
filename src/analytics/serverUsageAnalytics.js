@@ -1014,16 +1014,11 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   // Section 1: Recent Server Installs
   let installsContent = '';
   if (recentInstalls.length > 0) {
-    installsContent += `> ## 🆕 Most Recent Server Installs (Latest ${recentInstalls.length})\n\n`;
+    installsContent += `## 💾 Latest ${recentInstalls.length} Server Installs\n\n`;
     
     recentInstalls.forEach((install, index) => {
       // Format timestamp in compact format
       const installDate = new Date(install.timestamp);
-      const timeStr = installDate.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-      });
       const dayStr = installDate.toLocaleDateString('en-US', { 
         weekday: 'short',
         month: 'short', 
@@ -1031,8 +1026,8 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
       });
       
       // Truncate server name if too long
-      const serverDisplay = install.serverName.length > 30 
-        ? install.serverName.substring(0, 30) + '...'
+      const serverDisplay = install.serverName.length > 35 
+        ? install.serverName.substring(0, 35) + '...'
         : install.serverName;
       
       // Extract display name and username from owner string
@@ -1041,10 +1036,11 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
       const username = ownerMatch ? ownerMatch[2] : '';
       const ownerDisplay = username ? `${displayName} (${username})` : displayName;
       
-      installsContent += `📅 **${serverDisplay}** ([${timeStr}] ${dayStr}, ${ownerDisplay})\n\n`;
+      installsContent += `• \`${dayStr}\` | **${serverDisplay}** | ${ownerDisplay}\n`;
     });
+    installsContent += '\n';
   } else {
-    installsContent += `> ## 🆕 Most Recent Server Installs\n\n`;
+    installsContent += `## 💾 Latest Server Installs\n\n`;
     installsContent += `📭 No server installations found in logs\n\n`;
   }
   
@@ -1063,7 +1059,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   // Section 2: Server Rankings
   let rankingsContent = '';
   if (displayServers.length > 0) {
-    rankingsContent += `> ## 🏆 Server Rankings (Page ${validPage + 1}/${totalPages})\n\n`;
+    rankingsContent += `## 🏆 Server Rankings (Page ${validPage + 1}/${totalPages})\n\n`;
     
     displayServers.forEach((server, pageIndex) => {
       const actualRank = startIndex + pageIndex; // Calculate actual rank in full list
@@ -1139,7 +1135,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   
   // Section 3: Server Usage Analytics
   let analyticsContent = '';
-  analyticsContent += `> ## 📈 Server Usage Analytics\n\n`;
+  analyticsContent += `## 📈 Server Usage Analytics\n\n`;
   
   // Summary statistics
   analyticsContent += `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}\n`;
