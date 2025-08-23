@@ -5853,15 +5853,23 @@ To fix this:
             
             console.log(`✅ SUCCESS: ${context.customId} - toggled to ${isPass ? 'PASS' : 'FAIL'}`);
             
-            // For UPDATE_MESSAGE, we just update the button styles in place
-            // Discord will preserve the rest of the message content
-            actionRow.components = buttons; // Update with new styled buttons
+            // For UPDATE_MESSAGE with Components V2, we need to preserve the entire Container structure
+            // Update the buttons in place
+            actionRow.components = buttons;
             
-            // Return the components for UPDATE_MESSAGE
-            // ButtonHandlerFactory will handle stripping flags
-            return {
-              components: messageComponents // Return all components with updated buttons
-            };
+            // For UPDATE_MESSAGE, we need to return the entire Container
+            // Since Discord sent us a Container, we need to return the same structure
+            if (messageComponents[0]?.type === 17) {
+              // It's a Container - return it with updated buttons
+              return {
+                components: messageComponents // Return the Container with updated action row
+              };
+            } else {
+              // Legacy format - just return the action rows
+              return {
+                components: messageComponents
+              };
+            }
           } catch (error) {
             console.error(`❌ ERROR: ${context.customId} - ${error.message}`);
             return {
