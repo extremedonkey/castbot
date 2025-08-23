@@ -1,4 +1,3 @@
-// Safari Manager - Test comment for button detection
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
