@@ -235,7 +235,15 @@
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"^\\}\" safariManager.js)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"guildCreate\" app.js)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 30 \"client.on\\(''guildCreate''\" app.js)",
-      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"New Server Install\" app.js)"
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"New Server Install\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 10 \"New Server Install\" src/analytics/analyticsLogger.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -B 20 \"New Server Install\" src/analytics/analyticsLogger.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"logNewServerInstall\" --type js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -B 20 -A 5 \"logNewServerInstall.*guild\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -B 10 -A 10 \"emergency_app_reinit\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 60 \"async function createReeceStuffMenu\" app.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"emergency_app_reinit.*{\" buttonHandlerFactory.js)",
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 100 \"else if \\(custom_id === ''''emergency_app_reinit''''\\)\" app.js)"
     ],
     "deny": []
   }

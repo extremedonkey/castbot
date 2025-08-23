@@ -100,6 +100,15 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'emergency'
   },
+  'msg_test': {
+    label: 'Msg Test',
+    description: 'Test sending a message from CastBot to user',
+    emoji: '💬',
+    style: 'Primary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
   
   // Navigation
   'prod_menu_back': {
