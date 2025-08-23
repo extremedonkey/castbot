@@ -958,22 +958,25 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
     return digits.map(digit => `${digit}️⃣`).join('');
   }
   
-  // Helper function to build pagination buttons (max 5 per row)
+  // Helper function to build pagination buttons - returns action rows
   function buildPaginationButtons(currentPage, totalPages, totalServers) {
-    const buttons = [];
+    const actionRows = [];
     
-    // Always add Refresh Stats button first
-    buttons.push({
-      type: 2, // Button
-      style: 4, // Danger (red)
-      emoji: { name: '📈' },
-      label: 'Refresh',
-      custom_id: 'prod_server_usage_stats'
+    // First action row: Refresh Stats button only
+    actionRows.push({
+      type: 1, // Action Row
+      components: [{
+        type: 2, // Button
+        style: 4, // Danger (red)
+        emoji: { name: '📈' },
+        label: 'Refresh',
+        custom_id: 'prod_server_usage_stats'
+      }]
     });
     
-    // If only one page, don't add pagination
+    // If only one page, don't add pagination row
     if (totalPages <= 1) {
-      return buttons;
+      return actionRows;
     }
     
     // Helper function to generate range label for a page
@@ -983,11 +986,13 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
       return `${start}-${end}`;
     }
     
-    // We have max 4 slots left for pagination (5 total - 1 refresh button)
-    if (totalPages <= 4) {
-      // Show all page ranges if 4 or fewer pages
+    // Second action row: Pagination buttons (can now have up to 5)
+    const paginationButtons = [];
+    
+    if (totalPages <= 5) {
+      // Show all page ranges if 5 or fewer pages
       for (let page = 0; page < totalPages; page++) {
-        buttons.push({
+        paginationButtons.push({
           type: 2, // Button
           custom_id: `server_stats_page_${page}`,
           label: getRangeLabel(page),
@@ -996,7 +1001,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
         });
       }
     } else {
-      // Smart pagination for more than 4 pages
+      // Smart pagination for more than 5 pages
       // Always show first, last, and current page
       // Fill remaining slots with adjacent pages
       
@@ -1011,11 +1016,11 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
       if (currentPage > 0) pagesToShow.add(currentPage - 1);
       if (currentPage < totalPages - 1) pagesToShow.add(currentPage + 1);
       
-      // Convert to sorted array and take first 4
-      const sortedPages = Array.from(pagesToShow).sort((a, b) => a - b).slice(0, 4);
+      // Convert to sorted array and take first 5
+      const sortedPages = Array.from(pagesToShow).sort((a, b) => a - b).slice(0, 5);
       
       for (const page of sortedPages) {
-        buttons.push({
+        paginationButtons.push({
           type: 2, // Button
           custom_id: `server_stats_page_${page}`,
           label: getRangeLabel(page),
@@ -1025,7 +1030,15 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
       }
     }
     
-    return buttons;
+    // Add pagination action row if we have pagination buttons
+    if (paginationButtons.length > 0) {
+      actionRows.push({
+        type: 1, // Action Row
+        components: paginationButtons
+      });
+    }
+    
+    return actionRows;
   }
   
   // Build Components V2 structure with proper separators between sections
@@ -1180,11 +1193,9 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
     spacing: 1
   });
   
-  // Add action row with buttons
-  containerComponents.push({
-    type: 1, // Action Row
-    components: buildPaginationButtons(validPage, totalPages, totalServers)
-  });
+  // Add action rows with buttons (now returns multiple action rows)
+  const actionRows = buildPaginationButtons(validPage, totalPages, totalServers);
+  containerComponents.push(...actionRows);
   
   // Create Components V2 Container structure
   components.push({
