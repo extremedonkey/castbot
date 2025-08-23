@@ -958,25 +958,25 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
     return digits.map(digit => `${digit}️⃣`).join('');
   }
   
-  // Helper function to build pagination buttons - returns action rows
+  // Helper function to build pagination buttons - returns separate objects for pagination and refresh
   function buildPaginationButtons(currentPage, totalPages, totalServers) {
-    const actionRows = [];
-    
-    // First action row: Refresh Stats button only
-    actionRows.push({
-      type: 1, // Action Row
-      components: [{
-        type: 2, // Button
-        style: 4, // Danger (red)
-        emoji: { name: '📈' },
-        label: 'Refresh',
-        custom_id: 'prod_server_usage_stats'
-      }]
-    });
+    const result = {
+      paginationRow: null,
+      refreshRow: {
+        type: 1, // Action Row
+        components: [{
+          type: 2, // Button
+          style: 4, // Danger (red)
+          emoji: { name: '📈' },
+          label: 'Refresh',
+          custom_id: 'prod_server_usage_stats'
+        }]
+      }
+    };
     
     // If only one page, don't add pagination row
     if (totalPages <= 1) {
-      return actionRows;
+      return result;
     }
     
     // Helper function to generate range label for a page
@@ -986,7 +986,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
       return `${start}-${end}`;
     }
     
-    // Second action row: Pagination buttons (can now have up to 5)
+    // Build pagination buttons (can now have up to 5)
     const paginationButtons = [];
     
     if (totalPages <= 5) {
@@ -1032,13 +1032,13 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
     
     // Add pagination action row if we have pagination buttons
     if (paginationButtons.length > 0) {
-      actionRows.push({
+      result.paginationRow = {
         type: 1, // Action Row
         components: paginationButtons
-      });
+      };
     }
     
-    return actionRows;
+    return result;
   }
   
   // Build Components V2 structure with proper separators between sections
@@ -1186,16 +1186,29 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
     content: analyticsContent
   });
   
-  // Create Components V2 Container structure (content only, no buttons)
+  // Get button rows - pagination goes inside container, refresh goes outside
+  const buttonRows = buildPaginationButtons(validPage, totalPages, totalServers);
+  
+  // Add separator before pagination buttons (if they exist)
+  if (buttonRows.paginationRow) {
+    containerComponents.push({
+      type: 14, // Separator
+      divider: true,
+      spacing: 1
+    });
+    // Add pagination buttons INSIDE the container
+    containerComponents.push(buttonRows.paginationRow);
+  }
+  
+  // Create Components V2 Container structure (with pagination inside)
   components.push({
     type: 17, // Container
     accent_color: 0xFF0000, // Red accent bar
     components: containerComponents
   });
   
-  // Add action rows with buttons OUTSIDE the container
-  const actionRows = buildPaginationButtons(validPage, totalPages, totalServers);
-  components.push(...actionRows);
+  // Add refresh button OUTSIDE the container
+  components.push(buttonRows.refreshRow);
   
   return {
     components,
