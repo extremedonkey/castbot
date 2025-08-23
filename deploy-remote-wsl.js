@@ -143,6 +143,31 @@ async function deployToProduction() {
     logSection('🚀 Starting Production Deployment', 'header');
     log(`Target: ${SSH_TARGET}:${REMOTE_PATH}`, 'debug');
     
+    // Capture git info BEFORE deployment for notification
+    let gitCommitMessage = '';
+    let gitFilesChanged = '';
+    let gitStats = '';
+    
+    try {
+        // Get current git info for notification
+        const { execSync } = await import('child_process');
+        try {
+            // Get the last commit message from main branch
+            gitCommitMessage = execSync('git log -1 --pretty=%B origin/main', { encoding: 'utf8' }).trim();
+            // Get files that would be changed
+            gitFilesChanged = execSync('git diff HEAD..origin/main --name-only', { encoding: 'utf8' })
+                .split('\n')
+                .filter(f => f)
+                .join(',');
+            // Get change stats
+            gitStats = execSync('git diff HEAD..origin/main --stat | tail -1', { encoding: 'utf8' }).trim();
+        } catch (gitError) {
+            log('Could not get git info for notification (non-critical)', 'debug');
+        }
+    } catch (importError) {
+        // Non-critical - continue without git info
+    }
+    
     try {
         // Step 1: Check SSH connection
         logSection('Step 1: Connection Test', 'risk-low');
@@ -273,6 +298,47 @@ async function deployToProduction() {
         logSection('✅ Deployment Complete', 'success');
         log('Deployment completed successfully!', 'success');
         
+        // Send Discord notification for successful deployment
+        if (!DRY_RUN) {
+            log('🔔 Sending deployment notification to Discord...', 'info');
+            try {
+                // Set PRODUCTION=TRUE temporarily for the notification
+                const originalProd = process.env.PRODUCTION;
+                process.env.PRODUCTION = 'TRUE';
+                
+                // Build custom message based on deployment type
+                let customMessage = COMMANDS_ONLY 
+                    ? 'Production commands updated - changes will propagate within 1 hour!'
+                    : 'Production deployment successful - bot is now live with latest changes!';
+                
+                // Use the existing notify-restart script with production flag
+                const { spawn } = await import('child_process');
+                const notifyProcess = spawn('node', [
+                    'scripts/notify-restart.js',
+                    customMessage,
+                    gitCommitMessage || 'Production deployment',
+                    gitFilesChanged,
+                    gitStats
+                ], {
+                    env: { ...process.env, PRODUCTION: 'TRUE' },
+                    detached: true,
+                    stdio: 'ignore'
+                });
+                
+                notifyProcess.unref();
+                
+                // Restore original PRODUCTION value
+                process.env.PRODUCTION = originalProd;
+                
+                log('✅ Discord notification sent', 'success');
+            } catch (notifyError) {
+                log('⚠️  Could not send Discord notification (non-critical)', 'warning');
+                if (VERBOSE) {
+                    log(`Notification error: ${notifyError.message}`, 'debug');
+                }
+            }
+        }
+        
         if (!COMMANDS_ONLY) {
             log('⏰ Discord commands may take up to 1 hour to propagate globally', 'info');
             log('📊 Monitor logs: npm run logs-remote-wsl', 'info');
@@ -282,6 +348,28 @@ async function deployToProduction() {
     } catch (error) {
         logSection('❌ Deployment Failed', 'error');
         log(`Deployment failed: ${error.message}`, 'error');
+        
+        // Send Discord notification for failed deployment
+        if (!DRY_RUN) {
+            try {
+                const { spawn } = await import('child_process');
+                const notifyProcess = spawn('node', [
+                    'scripts/notify-restart.js',
+                    `❌ Production deployment FAILED: ${error.message}`,
+                    gitCommitMessage || 'Production deployment attempted',
+                    gitFilesChanged,
+                    gitStats
+                ], {
+                    env: { ...process.env, PRODUCTION: 'TRUE' },
+                    detached: true,
+                    stdio: 'ignore'
+                });
+                notifyProcess.unref();
+            } catch (notifyError) {
+                // Silent fail - error notification is not critical
+            }
+        }
+        
         log('', 'info');
         log('🔧 Immediate Recovery Steps:', 'warning');
         log('1. Check if bot is still running: npm run status-remote-wsl', 'info');

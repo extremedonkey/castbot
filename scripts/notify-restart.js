@@ -2,7 +2,7 @@
 
 /**
  * Discord Restart Notification Script
- * Sends a notification to the testing channel when the development server restarts
+ * Sends a notification to the deploy channel when the development or production server restarts
  * Usage: node notify-restart.js [custom-message]
  */
 
@@ -16,7 +16,7 @@ dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 // Configuration
 const GUILD_ID = '1331657596087566398';
-const CHANNEL_ID = '1337754151655833694'; // #🧪test channel (from logs)
+const CHANNEL_ID = '1337754151655833694'; // #💎deploy channel
 const TIMEOUT_MS = 8000; // 8 second timeout
 
 // Parse command line arguments
@@ -222,7 +222,7 @@ async function sendRestartNotification() {
         });
 
         // Build message content with new formatting
-        let messageContent = `> # \`⚠️ ${environment} Server Restart!                                                \`
+        let messageContent = `> # \`🖥️ ${environment} Server Restart!                                                \`
 
 <@391415444084490240>
 
@@ -273,11 +273,14 @@ async function sendRestartNotification() {
         }
 
         // Create the notification message with Components V2 structure using direct API
+        // Use blue accent for production, red for development
+        const accentColor = isProduction ? 0x3498db : 0xe74c3c; // Blue for prod, Red for dev
+        
         const messageData = {
             flags: (1 << 15), // IS_COMPONENTS_V2
             components: [{
                 type: 17, // Container
-                accent_color: 0xe74c3c, // Red default (not tested)
+                accent_color: accentColor,
                 components: [
                     {
                         type: 10, // Text Display
@@ -289,9 +292,9 @@ async function sendRestartNotification() {
                         components: [
                             {
                                 type: 2, // Button
-                                label: "🧪 Go to #test",
+                                label: "💎 Go to #deploy",
                                 style: 5, // Link style
-                                url: `https://discord.com/channels/1331657596087566398/1396134920954450074`
+                                url: `https://discord.com/channels/1331657596087566398/1337754151655833694`
                             },
                             {
                                 type: 2, // Button
