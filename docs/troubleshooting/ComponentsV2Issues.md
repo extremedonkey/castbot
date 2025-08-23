@@ -314,6 +314,64 @@ const { updateAnchorMessage } = await import('./mapCellUpdater.js');
 }
 ```
 
+### 6. Container Structure in Received Messages
+
+**Symptom**: Handler receives message with 1 component but can't find expected buttons/components
+
+**Root Cause**: Discord sends Components V2 messages WITH the Container wrapper (type 17) in message.components[0]
+
+**Fix**: Check for Container wrapper and access components inside it
+
+```javascript
+// ❌ WRONG - Assumes direct action rows
+const actionRow = messageComponents.find(row => row.type === 1);
+
+// ✅ CORRECT - Handles Container wrapper
+let actionRow;
+if (messageComponents[0]?.type === 17) {
+  // Components V2 Container - look inside for action rows
+  const containerComponents = messageComponents[0].components || [];
+  actionRow = containerComponents.find(row => row.type === 1);
+} else {
+  // Legacy format - direct action rows
+  actionRow = messageComponents.find(row => row.type === 1);
+}
+```
+
+**Critical Discovery**: 
+- Discord SENDS Components V2 messages WITH Container wrapper
+- For UPDATE_MESSAGE, you must RETURN the full Container structure
+- ButtonHandlerFactory needs full message object in context
+
+### 7. UPDATE_MESSAGE Response Structure
+
+**Symptom**: Button updates work in logs but Discord shows "This interaction failed"
+
+**Root Cause**: Not returning the complete Container structure for UPDATE_MESSAGE
+
+**Fix**: Return the entire Container with updated components
+
+```javascript
+// ❌ WRONG - Only returns action rows
+return {
+  components: [updatedActionRow]
+};
+
+// ✅ CORRECT - Returns full Container structure
+if (messageComponents[0]?.type === 17) {
+  // Update components in place
+  actionRow.components = updatedButtons;
+  return {
+    components: messageComponents // Full Container with updates
+  };
+}
+```
+
+**Pattern Applied To**:
+- `restart_status_passed` handler
+- `restart_status_failed` handler
+- Any button that toggles states using UPDATE_MESSAGE
+
 ## Quick Reference
 
 **Always Remember**:
@@ -323,5 +381,7 @@ const { updateAnchorMessage } = await import('./mapCellUpdater.js');
 4. **Never use content field** with Components V2 flag
 5. **Comprehensive error logging** with consistent patterns
 6. **Check working examples** like `safari_store_items_select` for reference
+7. **Discord sends Container wrapper** - Check messageComponents[0].type === 17
+8. **Return full Container for UPDATE_MESSAGE** - Not just action rows
 
 **When in doubt**: Reference existing working Components V2 implementations in the codebase rather than creating new patterns.

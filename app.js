@@ -954,7 +954,7 @@ async function createSafariMenu(guildId, userId, member) {
       .setEmoji('⚙️'),
     new ButtonBuilder()
       .setCustomId('safari_configure_log')
-      .setLabel('Safari Log')
+      .setLabel('Logs')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📊')
   ];
