@@ -1186,23 +1186,16 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
     content: analyticsContent
   });
   
-  // Add separator before buttons
-  containerComponents.push({
-    type: 14, // Separator
-    divider: true,
-    spacing: 1
-  });
-  
-  // Add action rows with buttons (now returns multiple action rows)
-  const actionRows = buildPaginationButtons(validPage, totalPages, totalServers);
-  containerComponents.push(...actionRows);
-  
-  // Create Components V2 Container structure
+  // Create Components V2 Container structure (content only, no buttons)
   components.push({
     type: 17, // Container
     accent_color: 0xFF0000, // Red accent bar
     components: containerComponents
   });
+  
+  // Add action rows with buttons OUTSIDE the container
+  const actionRows = buildPaginationButtons(validPage, totalPages, totalServers);
+  components.push(...actionRows);
   
   return {
     components,
