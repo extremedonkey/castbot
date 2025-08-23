@@ -5802,10 +5802,27 @@ To fix this:
             const messageComponents = context.message?.components || [];
             console.log(`🔍 Message has ${messageComponents.length} component row(s)`);
             
-            // Find the Action Row with our buttons (type 1)
-            const actionRow = messageComponents.find(row => row.type === 1 && row.components?.some(c => 
-              c.custom_id === 'restart_status_passed' || c.custom_id === 'restart_status_failed'
-            ));
+            // Debug: Log the actual structure
+            if (messageComponents.length > 0) {
+              console.log(`🔍 First component row type: ${messageComponents[0].type}`);
+              console.log(`🔍 Component structure:`, JSON.stringify(messageComponents[0], null, 2));
+            }
+            
+            // Find the Action Row with our buttons
+            // Note: Components V2 messages come with a Container wrapper type 17
+            let actionRow;
+            if (messageComponents[0]?.type === 17) {
+              // It's a Components V2 Container - look inside for the action row
+              const containerComponents = messageComponents[0].components || [];
+              actionRow = containerComponents.find(row => row.type === 1 && row.components?.some(c => 
+                c.custom_id === 'restart_status_passed' || c.custom_id === 'restart_status_failed'
+              ));
+            } else {
+              // Direct action rows (legacy format)
+              actionRow = messageComponents.find(row => row.type === 1 && row.components?.some(c => 
+                c.custom_id === 'restart_status_passed' || c.custom_id === 'restart_status_failed'
+              ));
+            }
             
             if (!actionRow) {
               console.error('❌ Could not find Action Row with Pass/Fail buttons');

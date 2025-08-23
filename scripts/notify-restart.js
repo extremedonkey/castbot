@@ -299,9 +299,9 @@ async function sendRestartNotification() {
                                 // Always add the channel link button first
                                 const channelButton = {
                                     type: 2, // Button
-                                    label: "💎 #deploy",
+                                    label: "🧪 #test",
                                     style: 5, // Link style
-                                    url: `https://discord.com/channels/1331657596087566398/1337754151655833694`
+                                    url: `https://discord.com/channels/1331657596087566398/1396134920954450074`
                                 };
                                 
                                 // Combine channel button with smart buttons (max 5 total)
@@ -315,9 +315,9 @@ async function sendRestartNotification() {
                                 return [
                                     {
                                         type: 2,
-                                        label: "💎 #deploy",
+                                        label: "🧪 #test",
                                         style: 5,
-                                        url: `https://discord.com/channels/1331657596087566398/1337754151655833694`
+                                        url: `https://discord.com/channels/1331657596087566398/1396134920954450074`
                                     },
                                     {
                                         type: 2,
