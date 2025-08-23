@@ -1111,8 +1111,15 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
         const timestampMatch = lastEntry.rawLine.match(/^(\[[^\]]+\] \w{3} \d{1,2} \w{3} \d{2})/);
         const timestamp = timestampMatch ? timestampMatch[1] : '[Unknown]';
         
-        // Format: └ Last Activity: [4:04PM] Sun 29 Jun 25 | Username
-        rankingsContent += `   └ Last Activity: ${timestamp} | ${lastEntry.user.displayName || lastEntry.user.username}\n`;
+        // Format: └ Last Activity: [4:04PM] Sun 29 Jun 25 | Username | Action Detail
+        let activityLine = `   └ Last Activity: ${timestamp} | ${lastEntry.user.displayName || lastEntry.user.username}`;
+        
+        // Add action detail if available
+        if (lastEntry.actionDetail && lastEntry.actionDetail.trim()) {
+          activityLine += ` | ${lastEntry.actionDetail}`;
+        }
+        
+        rankingsContent += `${activityLine}\n`;
       }
       
       rankingsContent += `\n`;
