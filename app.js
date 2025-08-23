@@ -5798,21 +5798,24 @@ To fix this:
           console.log(`🔍 START: ${context.customId} - user ${context.userId}`);
           
           try {
-            // Extract current components from the message
-            const currentComponents = context.message?.components?.[0]?.components || [];
-            console.log(`🔍 Current components count: ${currentComponents.length}`);
+            // Discord sends components as array of action rows directly (no Container wrapper in incoming messages)
+            const messageComponents = context.message?.components || [];
+            console.log(`🔍 Message has ${messageComponents.length} component row(s)`);
             
-            // Find the Action Row with buttons
-            const actionRowIndex = currentComponents.findIndex(c => c.type === 1);
-            if (actionRowIndex === -1) {
-              console.error('❌ Could not find Action Row in message');
+            // Find the Action Row with our buttons (type 1)
+            const actionRow = messageComponents.find(row => row.type === 1 && row.components?.some(c => 
+              c.custom_id === 'restart_status_passed' || c.custom_id === 'restart_status_failed'
+            ));
+            
+            if (!actionRow) {
+              console.error('❌ Could not find Action Row with Pass/Fail buttons');
               return {
                 content: '❌ Error: Button configuration issue',
                 ephemeral: true
               };
             }
             
-            const buttons = currentComponents[actionRowIndex].components;
+            const buttons = actionRow.components;
             const passButtonIndex = buttons.findIndex(b => b.custom_id === 'restart_status_passed');
             const failButtonIndex = buttons.findIndex(b => b.custom_id === 'restart_status_failed');
             
@@ -5833,14 +5836,14 @@ To fix this:
             
             console.log(`✅ SUCCESS: ${context.customId} - toggled to ${isPass ? 'PASS' : 'FAIL'}`);
             
-            // Return the entire Components V2 structure with updated styles
+            // For UPDATE_MESSAGE, we just update the button styles in place
+            // Discord will preserve the rest of the message content
+            actionRow.components = buttons; // Update with new styled buttons
+            
+            // Return the components for UPDATE_MESSAGE
+            // ButtonHandlerFactory will handle stripping flags
             return {
-              flags: (1 << 15), // IS_COMPONENTS_V2
-              components: [{
-                type: 17, // Container
-                accent_color: context.message?.components?.[0]?.accent_color, // Preserve accent color
-                components: currentComponents // Return the full components array with updated buttons
-              }]
+              components: messageComponents // Return all components with updated buttons
             };
           } catch (error) {
             console.error(`❌ ERROR: ${context.customId} - ${error.message}`);
