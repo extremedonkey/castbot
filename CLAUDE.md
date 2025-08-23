@@ -71,23 +71,27 @@ grep -B20 -A20 "fieldGroup === 'stores'" app.js
 
 **Environment:** Solo development on main branch, VS Code with WSL terminal
 
-**🔧 WSL File Access:** Windows paths (e.g., `C:\Users\...`) should be converted to WSL format (`/mnt/c/Users/...`). Windows drives are mounted under `/mnt/` - so `C:\` becomes `/mnt/c/`, `D:\` becomes `/mnt/d/`, etc.
+**🖼️ Image Access Protocol:**
 
-**📸 Screenshot Access Protocol:** When user requests the latest screenshot (phrases like "check the last screenshot", "view recent screenshot", "show latest screen capture", "what's in my newest screenshot"):
+**WSL Paths:** Windows `C:\` → WSL `/mnt/c/`
 
-**🚨 CRITICAL - ALWAYS follow this exact sequence:**
-1. **NEVER guess filenames** - Don't assume screenshot names or try to access them directly
-2. **Use LS tool FIRST** - Always use `LS` tool to list the screenshot directory: `/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1`
-3. **Identify latest screenshot** - Screenshots are named with timestamps (e.g., "Screenshot 2025-08-14 223800.png"). Sort by date/time to find the most recent one - the HIGHEST timestamp is the NEWEST
-4. **Read with Read tool** - Use the Read tool with the exact filename found
-
-**❌ DO NOT use bash commands like:** `ls -t "/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1"/*.png | head -1` (WSL glob pattern issues)
-
-**✅ CORRECT pattern:**
+**Local Screenshots:** `/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1`
+```bash
+# ALWAYS: LS first → Find latest (highest timestamp) → Read exact file
+LS /mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1
+Read /mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1/Screenshot 2025-08-14 223800.png
 ```
-1. LS path: /mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1
-2. Read file: /mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1/Screenshot 2025-07-27 061441.png
+
+**External Images (ibb.co, imgur):** 
+```bash
+# WebFetch fails on images - use curl + Read
+curl -s "URL" -o /tmp/img.png && Read /tmp/img.png
+
+# ibb.co needs extraction: 
+curl -s "https://ibb.co/ID" | grep -oE 'https://i\.ibb\.co/[^"]+\.png' | head -1
 ```
+
+**❌ NEVER:** Use bash glob patterns like `ls -t *.png` (WSL fails)
 
 ```bash
 # Start development session
