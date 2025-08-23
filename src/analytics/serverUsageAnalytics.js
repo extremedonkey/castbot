@@ -1025,7 +1025,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   // Section 1: Recent Server Installs
   let installsContent = '';
   if (recentInstalls.length > 0) {
-    installsContent += `## 💾 Latest ${recentInstalls.length} Server Installs\n\n`;
+    installsContent += `### 💾 Latest ${recentInstalls.length} Server Installs\n\n`;
     
     recentInstalls.forEach((install, index) => {
       // Format timestamp in compact format
@@ -1051,7 +1051,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
     });
     installsContent += '\n';
   } else {
-    installsContent += `## 💾 Latest Server Installs\n\n`;
+    installsContent += `### 💾 Latest Server Installs\n\n`;
     installsContent += `📭 No server installations found in logs\n\n`;
   }
   
@@ -1070,7 +1070,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   // Section 2: Server Rankings
   let rankingsContent = '';
   if (displayServers.length > 0) {
-    rankingsContent += `## 🏆 Server Rankings (Page ${validPage + 1}/${totalPages})\n\n`;
+    rankingsContent += `### 🏆 Server Rankings (Page ${validPage + 1}/${totalPages})\n\n`;
     
     displayServers.forEach((server, pageIndex) => {
       const actualRank = startIndex + pageIndex; // Calculate actual rank in full list
@@ -1153,7 +1153,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   
   // Section 3: Server Stats - Totals
   let analyticsContent = '';
-  analyticsContent += `## 📈 Server Stats - Totals\n`;
+  analyticsContent += `### 📈 Server Stats - Totals\n`;
   
   // Summary statistics on a single line with pipe separators
   analyticsContent += `📊 Interactions: ${totalInteractions.toLocaleString()} | 👥 Unique Users: ${totalUniqueUsers} | 🏰 Active Servers: ${activeServers} | ⏱️ Period: Last ${period}\n\n`;
