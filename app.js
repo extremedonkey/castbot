@@ -960,15 +960,6 @@ async function createSafariMenu(guildId, userId, member) {
       .setEmoji('📊')
   ];
   
-  // Test button in separate row
-  const testButtons = [
-    new ButtonBuilder()
-      .setCustomId('safari_test_bot_emoji')
-      .setLabel('CastBot Test')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(getBotEmoji('castbot_logo'))
-  ];
-  
   // Map Administration section buttons
   const mapAdminButtons = [
     new ButtonBuilder()
@@ -1021,7 +1012,6 @@ async function createSafariMenu(guildId, userId, member) {
   const safariDetailsRow = new ActionRowBuilder().addComponents(safariDetailsButtons);
   const mapAdminRow = new ActionRowBuilder().addComponents(mapAdminButtons);
   const legacyRow = new ActionRowBuilder().addComponents(legacyButtons);
-  const testRow = new ActionRowBuilder().addComponents(testButtons);
   
   // Create back button
   const backButton = [
@@ -1063,14 +1053,6 @@ async function createSafariMenu(guildId, userId, member) {
       content: `> **\`🕰️ Legacy\`**`
     },
     legacyRow.toJSON(),
-    {
-      type: 14 // Separator
-    },
-    {
-      type: 10, // Text Display component
-      content: `> **\`🤖 Testing\`**`
-    },
-    testRow.toJSON(),
     {
       type: 14 // Separator
     },
@@ -8565,32 +8547,6 @@ Your server is now ready for Tycoons gameplay!`;
           const interfaceData = await createSafariCustomizationUI(context.guildId, currentTerms);
           
           return interfaceData;
-        }
-      })(req, res, client);
-    } else if (custom_id === 'safari_test_bot_emoji') {
-      // Test button for CastBot logo emoji
-      return ButtonHandlerFactory.create({
-        id: 'safari_test_bot_emoji',
-        handler: async (context) => {
-          console.log(`🔍 START: safari_test_bot_emoji - user ${context.userId}`);
-          
-          const flags = (1 << 15); // IS_COMPONENTS_V2
-          const castbotEmoji = getBotEmoji('castbot_logo');
-          
-          console.log(`✅ SUCCESS: safari_test_bot_emoji - Bot emoji test completed`);
-          
-          return {
-            flags: flags,
-            components: [{
-              type: 17, // Container
-              components: [
-                {
-                  type: 10, // Text Display
-                  text: `✅ **CastBot Emoji Test Successful!**\n\nThe CastBot logo emoji is working correctly!\n\nEmoji ID: ${castbotEmoji?.id || 'Not found'}\nEnvironment: ${process.env.PRODUCTION === 'TRUE' ? 'Production' : 'Development'}`
-                }
-              ]
-            }]
-          };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_configure_log') {

@@ -286,13 +286,6 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
-  'safari_test_bot_emoji': {
-    label: 'CastBot Test',
-    description: 'Test the CastBot logo bot emoji',
-    emoji: '🤖',
-    style: 'Primary',
-    category: 'safari'
-  },
   'safari_log_toggle': {
     label: 'Toggle Safari Log',
     description: 'Enable or disable Safari logging',
