@@ -957,7 +957,11 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_configure_log')
       .setLabel('Logs')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📊'),
+      .setEmoji('📊')
+  ];
+  
+  // Test button in separate row
+  const testButtons = [
     new ButtonBuilder()
       .setCustomId('safari_test_bot_emoji')
       .setLabel('CastBot Test')
@@ -1017,6 +1021,7 @@ async function createSafariMenu(guildId, userId, member) {
   const safariDetailsRow = new ActionRowBuilder().addComponents(safariDetailsButtons);
   const mapAdminRow = new ActionRowBuilder().addComponents(mapAdminButtons);
   const legacyRow = new ActionRowBuilder().addComponents(legacyButtons);
+  const testRow = new ActionRowBuilder().addComponents(testButtons);
   
   // Create back button
   const backButton = [
@@ -1058,6 +1063,14 @@ async function createSafariMenu(guildId, userId, member) {
       content: `> **\`🕰️ Legacy\`**`
     },
     legacyRow.toJSON(),
+    {
+      type: 14 // Separator
+    },
+    {
+      type: 10, // Text Display component
+      content: `> **\`🤖 Testing\`**`
+    },
+    testRow.toJSON(),
     {
       type: 14 // Separator
     },
