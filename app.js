@@ -5808,6 +5808,28 @@ To fix this:
               console.log(`🔍 Component structure:`, JSON.stringify(messageComponents[0], null, 2));
             }
             
+            // Log test result (lightweight, non-blocking) - Nice to have feature
+            try {
+              const isPass = context.customId === 'restart_status_passed';
+              const testResult = {
+                result: isPass ? 'PASSED' : 'FAILED',
+                timestamp: new Date().toISOString(),
+                messageId: context.message?.id,
+                userId: context.userId
+              };
+              
+              // Extract commit info from message content if available
+              const containerContent = messageComponents[0]?.components?.[0]?.content || '';
+              const changeMatch = containerContent.match(/## :gem: Change\n(.+?)(?:\n|$)/);
+              if (changeMatch) {
+                testResult.change = changeMatch[1];
+              }
+              
+              console.log(`📊 TEST RESULT: ${JSON.stringify(testResult)}`);
+            } catch (err) {
+              // Silently continue - this is optional functionality
+            }
+            
             // Find the Action Row with our buttons
             // Note: Components V2 messages come with a Container wrapper type 17
             let actionRow;

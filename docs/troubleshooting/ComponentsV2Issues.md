@@ -1,5 +1,17 @@
 # Components V2 Issues & Solutions
 
+## 📍 When to Use This Document
+
+**Use this document when:**
+- You're getting "This interaction failed" errors
+- Components aren't displaying correctly  
+- You need working code examples
+- You're debugging UPDATE_MESSAGE issues
+- You want to understand Container structure
+- Discord responses are being rejected
+
+**For high-level rules and mandates**: → See [CLAUDE.md](../../CLAUDE.md)
+
 **Context**: This document captures critical technical lessons learned from implementing Safari Map Drops system, specifically related to Discord Components V2 compatibility issues.
 
 ## 🚨 Critical User Feedback

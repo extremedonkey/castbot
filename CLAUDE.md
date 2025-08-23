@@ -45,13 +45,8 @@ When working on specific features, refer to these dedicated documentation files:
 ## ⚠️ Common Discord Interaction Issues
 
 ### "This interaction failed" Errors
-**Symptom**: Immediate failure when clicking buttons, no server logs
-**Common Causes**:
-1. **UPDATE_MESSAGE with flags**: Discord rejects certain flag combinations in message updates
-2. **Malformed emojis**: Trailing zero-width joiners (e.g., `"👨‍👩‍👧‍"`)
-3. **Complex UI in simple contexts**: Using Entity Framework when a select menu is needed
-
-**Solution**: Start with the simplest pattern that works (see [DiscordInteractionPatterns.md](docs/architecture/DiscordInteractionPatterns.md))
+**Quick Causes**: UPDATE_MESSAGE flags, malformed emojis, Container structure issues
+**Full Troubleshooting**: → [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
 
 ### Pattern Matching
 **CRITICAL**: When implementing features "like X", examine X's exact implementation first:
@@ -240,41 +235,10 @@ npm run logs-prod -- --feature BUTTON --level debug
 
 **🚨 CRITICAL: ALL Discord UI must use Components V2 pattern**
 
-### ✅ Components V2 Requirements
-```javascript
-// MANDATORY: Set Components V2 flag for ALL messages
-const flags = 1 << 15; // IS_COMPONENTS_V2
-
-// ❌ FORBIDDEN: Cannot use 'content' field with Components V2
-const response = {
-  content: "Text here", // THIS WILL FAIL
-  flags: flags
-};
-
-// ✅ REQUIRED: Use Container + Text Display pattern
-const response = {
-  components: [{
-    type: 17, // Container
-    components: [
-      {
-        type: 10, // Text Display
-        text: "Your message content here"
-      },
-      {
-        type: 1, // Action Row
-        components: [/* buttons here */]
-      }
-    ]
-  }],
-  flags: flags
-};
-```
-
-**Key Rules:**
-- NEVER use `content` field with `IS_COMPONENTS_V2` flag
-- ALWAYS use Container (type 17) for visual grouping
-- Use Text Display (type 10) instead of content field
-- Reference: [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
+**Rule**: ALL UI must use Components V2 with `IS_COMPONENTS_V2` flag (1 << 15)
+**Key**: Never use 'content' field with Components V2 flag
+**Technical Details**: → [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
+**Architecture**: → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
 
 ## 🎨 UI/UX Standards (MANDATORY)
 
@@ -349,33 +313,8 @@ const response = {
 
 **🚨 CRITICAL: Discord Response Validation**
 
-**Common Response Rejection Causes:**
-1. **Empty UPDATE_MESSAGE responses** - Discord rejects completely empty content/components
-2. **Flags in UPDATE_MESSAGE** - ButtonHandlerFactory automatically strips flags for UPDATE_MESSAGE
-3. **Invalid component nesting** - Must follow Components V2 hierarchy
-4. **Missing required fields** - Discord requires specific fields per response type
-
-**✅ Safe Response Patterns:**
-```javascript
-// ✅ GOOD: Minimal dismissal message
-return {
-  flags: (1 << 15), // IS_COMPONENTS_V2
-  components: [{
-    type: 17, // Container
-    components: [{
-      type: 10, // Text Display
-      content: '✅ Action completed'
-    }]
-  }]
-};
-
-// ❌ BAD: Completely empty response
-return {
-  content: '',
-  components: [],
-  embeds: []
-};
-```
+**Common Issues**: UPDATE_MESSAGE flags, empty responses, Container structure
+**Detailed Troubleshooting**: → [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
 
 **Always update:** [docs/architecture/BUTTON_HANDLER_REGISTRY.md](docs/architecture/BUTTON_HANDLER_REGISTRY.md)
 
@@ -383,8 +322,7 @@ return {
 If a button shows "This interaction failed":
 1. Check logs for `🔍 START: button_id` - if missing, handler isn't being called
 2. Check logs for `✅ SUCCESS: button_id` - if missing, handler crashed
-3. For operations >3s, ensure `deferred: true` in factory config
-4. See troubleshooting section in [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
+3. **Full troubleshooting**: → [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
 
 ## 📋 Feature Backlog
 
