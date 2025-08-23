@@ -1,0 +1,10 @@
+[
+  {
+    "timestamp": "2025-08-23T13:59:14.698Z",
+    "type": "DM",
+    "target": "391415444084490240",
+    "status": "failed",
+    "error": "component.toJSON is not a function",
+    "executionTime": 366
+  }
+]

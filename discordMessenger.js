@@ -140,6 +140,16 @@ class DiscordMessenger {
    * @returns {Object} Result object with success status
    */
   static async sendWelcomePackage(client, guild) {
+    // TEMPORARILY DISABLED - Welcome messages are ready but not launched yet
+    console.log(`🔕 Welcome messages temporarily disabled for ${guild.name} (${guild.id})`);
+    return {
+      success: true,
+      dmSent: false,
+      channelMessageSent: false,
+      note: 'Welcome messages temporarily disabled'
+    };
+    
+    /* READY FOR LAUNCH - Uncomment when ready to enable welcome messages
     console.log(`🎉 Sending welcome package for ${guild.name} (${guild.id})`);
     
     try {
@@ -224,6 +234,7 @@ class DiscordMessenger {
         error: error.message
       };
     }
+    */
   }
   
   /**
