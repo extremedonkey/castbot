@@ -299,7 +299,7 @@ async function sendRestartNotification() {
                                 // Always add the channel link button first
                                 const channelButton = {
                                     type: 2, // Button
-                                    label: "💎 #deploy",
+                                    label: "💎 Go to #deploy",
                                     style: 5, // Link style
                                     url: `https://discord.com/channels/1331657596087566398/1337754151655833694`
                                 };
@@ -315,26 +315,27 @@ async function sendRestartNotification() {
                                 return [
                                     {
                                         type: 2,
-                                        label: "💎 #deploy",
+                                        label: "💎 Go to #deploy",
                                         style: 5,
                                         url: `https://discord.com/channels/1331657596087566398/1337754151655833694`
                                     },
                                     {
                                         type: 2,
                                         custom_id: "viral_menu",
-                                        label: "📋 Prod Menu",
+                                        label: "📋 Open Prod Menu",
                                         style: 2
                                     },
                                     {
                                         type: 2,
-                                        custom_id: "restart_status_none_failed",
-                                        label: "❌ Failed",
-                                        style: 2
+                                        custom_id: "restart_test_not_tested",
+                                        label: "⏳ Not Tested",
+                                        style: 2,
+                                        disabled: true
                                     },
                                     {
                                         type: 2,
-                                        custom_id: "restart_status_none_passed",
-                                        label: "✅ Passed",
+                                        custom_id: "restart_test_tested",
+                                        label: "✅ Tested",
                                         style: 2
                                     }
                                 ];
