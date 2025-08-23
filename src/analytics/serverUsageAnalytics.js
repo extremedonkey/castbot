@@ -575,7 +575,18 @@ async function generateServerUsageSummary(daysBack = 42) {
   
   // Calculate totals and insights
   const totalInteractions = rankedServers.reduce((sum, server) => sum + server.totalInteractions, 0);
-  const totalUniqueUsers = new Set(logEntries.map(entry => entry.user.username)).size;
+  
+  // Calculate unique users from filtered entries within the time period
+  const recentEntries = [];
+  for (const server of rankedServers) {
+    if (server.users) {
+      Object.keys(server.users).forEach(username => {
+        recentEntries.push(username);
+      });
+    }
+  }
+  const totalUniqueUsers = new Set(recentEntries).size;
+  
   const activeServers = rankedServers.filter(server => server.totalInteractions > 0).length;
   
   // Identify trends and insights
@@ -1140,12 +1151,12 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
     spacing: 1
   });
   
-  // Section 3: Server Usage Analytics
+  // Section 3: Server Stats - Totals
   let analyticsContent = '';
-  analyticsContent += `## 📈 Server Usage Analytics\n`;
+  analyticsContent += `## 📈 Server Stats - Totals\n`;
   
   // Summary statistics on a single line with pipe separators
-  analyticsContent += `📊 Total Interactions: ${totalInteractions.toLocaleString()} | 👥 Unique Users: ${totalUniqueUsers} | 🏰 Active Servers: ${activeServers} | ⏱️ Period: Last ${period}\n\n`;
+  analyticsContent += `📊 Interactions: ${totalInteractions.toLocaleString()} | 👥 Unique Users: ${totalUniqueUsers} | 🏰 Active Servers: ${activeServers} | ⏱️ Period: Last ${period}\n\n`;
   
   containerComponents.push({
     type: 10, // Text Display
