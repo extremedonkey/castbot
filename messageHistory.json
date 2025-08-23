@@ -6,5 +6,21 @@
     "status": "failed",
     "error": "component.toJSON is not a function",
     "executionTime": 366
+  },
+  {
+    "timestamp": "2025-08-23T14:07:13.230Z",
+    "type": "DM",
+    "target": "391415444084490240",
+    "status": "failed",
+    "error": "component.toJSON is not a function",
+    "executionTime": 403
+  },
+  {
+    "timestamp": "2025-08-23T14:07:17.867Z",
+    "type": "DM",
+    "target": "391415444084490240",
+    "status": "failed",
+    "error": "component.toJSON is not a function",
+    "executionTime": 4
   }
 ]

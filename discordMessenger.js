@@ -34,9 +34,9 @@ class DiscordMessenger {
       // Fetch the user
       const user = await client.users.fetch(userId);
       
-      // Format the message for Components V2 if it's a string
+      // Format the message for DMs if it's a string
       const messageData = typeof content === 'string' 
-        ? this.formatTextMessage(content)
+        ? this.formatTextMessage(content, true)  // true = isDM
         : content;
       
       // Send the DM
@@ -95,9 +95,9 @@ class DiscordMessenger {
         }
       }
       
-      // Format the message for Components V2 if it's a string
+      // Format the message for channels if it's a string
       const messageData = typeof content === 'string'
-        ? this.formatTextMessage(content)
+        ? this.formatTextMessage(content, false)  // false = not a DM
         : content;
       
       // Send the message
@@ -374,11 +374,18 @@ class DiscordMessenger {
   }
   
   /**
-   * Format a simple text message for Components V2
+   * Format a simple text message (plain for DMs, Components V2 for channels)
    * @param {string} text - Plain text to format
-   * @returns {Object} Formatted message object
+   * @param {boolean} isDM - Whether this is for a DM (default: true)
+   * @returns {Object|string} Formatted message object
    */
-  static formatTextMessage(text) {
+  static formatTextMessage(text, isDM = true) {
+    // DMs don't support Components V2, use plain content
+    if (isDM) {
+      return { content: text };
+    }
+    
+    // Channels can use Components V2
     return {
       flags: (1 << 15), // IS_COMPONENTS_V2
       components: [{
