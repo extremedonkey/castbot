@@ -858,8 +858,9 @@ async function createReeceStuffMenu() {
   const backButton = [
     new ButtonBuilder()
       .setCustomId('prod_menu_back')
-      .setLabel('⬅ Menu')
+      .setLabel('Menu')
       .setStyle(ButtonStyle.Secondary)
+      .setEmoji(getBotEmoji('castbot_logo_full'))
   ];
   
   const backRow = new ActionRowBuilder().addComponents(backButton);
@@ -1017,8 +1018,9 @@ async function createSafariMenu(guildId, userId, member) {
   const backButton = [
     new ButtonBuilder()
       .setCustomId('prod_menu_back')
-      .setLabel('⬅ Menu')
+      .setLabel('Menu')
       .setStyle(ButtonStyle.Secondary)
+      .setEmoji(getBotEmoji('castbot_logo_full'))
   ];
   
   const backRow = new ActionRowBuilder().addComponents(backButton);
@@ -3275,7 +3277,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           .setCustomId('prod_menu_back')
           .setLabel('Menu')
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji('⬅️')
+          .setEmoji(getBotEmoji('castbot_logo_full'))
       );
   }
 
@@ -6428,9 +6430,9 @@ To fix this:
             .addComponents(
               new ButtonBuilder()
                 .setCustomId('prod_menu_back')
-                .setLabel('← Back to Main Menu')
+                .setLabel('Back to Main Menu')
                 .setStyle(ButtonStyle.Secondary)
-                .setEmoji('⬅️')
+                .setEmoji(getBotEmoji('castbot_logo_full'))
             );
 
           seasonManagementComponents.push(

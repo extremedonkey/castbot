@@ -2,6 +2,21 @@
  * Bot Emoji Configuration
  * Manages application-specific emojis for CastBot Dev and Production
  * These are bot emojis that can be used in any server by the respective bot
+ * 
+ * @module botEmojis
+ * @description Centralized management for Discord application emojis
+ * 
+ * HOW TO USE:
+ * 1. Import: import { getBotEmoji } from './botEmojis.js';
+ * 2. In buttons: .setEmoji(getBotEmoji('castbot_logo'))
+ * 3. In messages: formatBotEmoji('castbot_logo') returns <:name:id>
+ * 
+ * TO ADD NEW EMOJIS:
+ * 1. Upload to Discord Developer Portal for both Dev and Prod apps
+ * 2. Add to BOT_EMOJIS object below with both IDs
+ * 3. Document in CLAUDE.md
+ * 
+ * @see CLAUDE.md for full documentation
  */
 
 // Detect if we're running in production or development
@@ -16,6 +31,12 @@ const BOT_EMOJIS = {
   castbot_logo: {
     dev: '1396087613815001129',   // CastBot-Dev application emoji
     prod: '1408700895415500911'    // CastBot production application emoji
+  },
+  
+  // CastBot Full Logo
+  castbot_logo_full: {
+    dev: '1408707094730903594',   // CastBot-Dev full logo emoji
+    prod: '1408708179227054222'    // CastBot production full logo emoji
   },
   
   // Command emoji (existing)

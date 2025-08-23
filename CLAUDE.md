@@ -185,6 +185,7 @@ npm run logs-prod -- --feature BUTTON --level debug
 - **storage.js** - JSON-based data persistence
 - **commands.js** - Slash command definitions
 - **safariManager.js** - Safari system core functionality
+- **botEmojis.js** - Bot emoji system (`getBotEmoji('castbot_logo')` for buttons)
 
 ### Data Storage
 - **playerData.json** - Player information and Safari data
