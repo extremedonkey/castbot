@@ -38,10 +38,16 @@ const SAFE_TEST_BUTTONS = {
     priority: 3
   },
   'analytics': {
-    custom_id: 'prod_server_usage_stats',
-    label: '📈 Analytics',
+    custom_id: 'reece_stuff_menu',  // The actual Analytics menu button
+    label: '🧮 Analytics',
     style: 2, // Secondary (grey)
     priority: 4
+  },
+  'server_stats': {
+    custom_id: 'prod_server_usage_stats',
+    label: '📈 Server Stats',
+    style: 2, // Secondary (grey)
+    priority: 6
   },
   'applications': {
     custom_id: 'prod_season_applications',
@@ -84,12 +90,23 @@ const FEATURE_PATTERNS = {
   ],
   analytics: [
     /analytics/i,
+    /reece_stuff/i,      // Reece stuff menu
+    /msg_test/i,         // Message test button
+    /discordMessenger/i, // Discord messaging service
+    /messaging/i,        // General messaging features
+    /sendDM/i,           // DM sending functionality
+    /sendMessage/i,      // Message sending
+    /welcome/i,          // Welcome messages
+    /notification/i,     // Notifications
+    /buttonDetection/,   // Our button detection is analytics
+    /notify-restart/     // Notification script is analytics
+  ],
+  server_stats: [
     /server.*stats/i,
     /serverUsage/,
     /prod_server_usage/,
     /analytics.*dump/,
-    /buttonDetection/,  // Our button detection is analytics
-    /notify-restart/    // Notification script is analytics
+    /server.*list/i
   ],
   applications: [
     /application/i,
