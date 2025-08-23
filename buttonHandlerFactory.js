@@ -1812,6 +1812,7 @@ export function extractButtonContext(req) {
     channelId: req.body.channel_id,
     channelName: req.body.channel?.name || 'Unknown',
     messageId: req.body.message?.id,
+    message: req.body.message, // Add full message object for UPDATE_MESSAGE handlers
     token: req.body.token,
     applicationId: req.body.application_id || process.env.APP_ID,
     customId: req.body.data?.custom_id,
