@@ -1575,77 +1575,10 @@ client.once('ready', async () => {
 client.on('guildCreate', async (guild) => {
   await ensureServerData(guild);
   
-  // Send welcome message to server owner
+  // Send welcome message using Discord Messenger service
   try {
-    console.log(`🎉 Sending welcome message for new install: ${guild.name} (${guild.id})`);
-    
-    // Fetch the guild owner
-    const owner = await guild.fetchOwner();
-    
-    // Create welcome message with embed
-    const welcomeEmbed = {
-      color: 0x00FF00,
-      title: '🎉 Welcome to CastBot!',
-      description: `Thank you for adding CastBot to **${guild.name}**!\n\nHere's how to get started:`,
-      fields: [
-        {
-          name: '🚀 Quick Start',
-          value: '• Use `/menu` to open the main menu\n• Use `/castlist` to see your server members\n• Server admins can access production tools via `/menu`',
-          inline: false
-        },
-        {
-          name: '📋 Key Features',
-          value: '• Season application management\n• Cast ranking and voting system\n• Safari adventure system\n• Player profiles and timezones',
-          inline: false
-        },
-        {
-          name: '⚙️ Admin Setup',
-          value: 'Access the Production Menu through `/menu` to:\n• Configure application systems\n• Set up cast rankings\n• Manage Safari content\n• View analytics',
-          inline: false
-        },
-        {
-          name: '💡 Need Help?',
-          value: 'Report issues at: https://github.com/anthropics/claude-code/issues',
-          inline: false
-        }
-      ],
-      footer: {
-        text: 'CastBot - Reality TV Server Management',
-        icon_url: 'https://cdn.discordapp.com/app-icons/1331671251038740611/9e13ab7c1fe0e2c59c4f55d5f1e4c303.png'
-      },
-      timestamp: new Date().toISOString()
-    };
-    
-    // Send DM to owner
-    await owner.send({
-      content: `Hello ${owner.user.username}! 👋`,
-      embeds: [welcomeEmbed]
-    });
-    
-    console.log(`✅ Welcome message sent to ${owner.user.tag} (${owner.id})`);
-    
-    // Try to send a message in the system channel if available
-    if (guild.systemChannel && guild.systemChannel.permissionsFor(guild.members.me).has('SendMessages')) {
-      const serverEmbed = {
-        color: 0x00FF00,
-        title: '👋 CastBot is here!',
-        description: 'Thank you for inviting me! Use `/menu` to get started.',
-        fields: [
-          {
-            name: 'First Steps',
-            value: '• `/menu` - Open the main interface\n• `/castlist` - View server members\n• Admins: Access Production Menu via `/menu`',
-            inline: false
-          }
-        ],
-        footer: {
-          text: 'CastBot',
-          icon_url: 'https://cdn.discordapp.com/app-icons/1331671251038740611/9e13ab7c1fe0e2c59c4f55d5f1e4c303.png'
-        }
-      };
-      
-      await guild.systemChannel.send({ embeds: [serverEmbed] });
-      console.log(`✅ Welcome message also posted in system channel`);
-    }
+    const { default: DiscordMessenger } = await import('./discordMessenger.js');
+    await DiscordMessenger.sendWelcomePackage(client, guild);
   } catch (error) {
     console.error(`❌ Failed to send welcome message for ${guild.name}:`, error);
     // Don't break the installation process if welcome message fails
@@ -7160,7 +7093,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'msg_test') {
-      // Test sending a message from CastBot to user
+      // Test sending a message from CastBot to user (USING DISCORD MESSENGER SERVICE)
       return ButtonHandlerFactory.create({
         id: 'msg_test',
         handler: async (context) => {
@@ -7175,28 +7108,15 @@ To fix this:
             };
           }
           
-          try {
-            // Get the Discord client from context
-            const { client, guildId, userId, channelId } = context;
-            
-            // Fetch the user
-            const user = await client.users.fetch(userId);
-            
-            // Send a DM to the user
-            await user.send('Hello this is test');
-            
-            console.log(`✅ SUCCESS: msg_test - message sent to user ${userId}`);
-            return {
-              content: '✅ Test message sent successfully! Check your DMs.',
-              ephemeral: true
-            };
-          } catch (error) {
-            console.error(`❌ ERROR: msg_test - failed to send message:`, error);
-            return {
-              content: `❌ Failed to send message: ${error.message}`,
-              ephemeral: true
-            };
-          }
+          // Import Discord Messenger service
+          const { default: DiscordMessenger } = await import('./discordMessenger.js');
+          
+          // Use the messaging service
+          const { client, userId } = context;
+          const result = await DiscordMessenger.sendTestMessage(client, userId);
+          
+          console.log(`✅ SUCCESS: msg_test - completed`);
+          return result.response;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
