@@ -1142,14 +1142,10 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   
   // Section 3: Server Usage Analytics
   let analyticsContent = '';
-  analyticsContent += `## 📈 Server Usage Analytics\n\n`;
+  analyticsContent += `## 📈 Server Usage Analytics\n`;
   
-  // Summary statistics
-  analyticsContent += `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}\n`;
-  analyticsContent += `👥 **Unique Users**: ${totalUniqueUsers}\n`;
-  analyticsContent += `🏰 **Active Servers**: ${activeServers}\n`;
-  analyticsContent += `⏱️ **Period**: Last ${period}\n`;
-  analyticsContent += `📈 **Showing**: Servers ${startIndex + 1}-${endIndex} of ${totalServers} (Page ${validPage + 1}/${totalPages})\n\n`;
+  // Summary statistics on a single line with pipe separators
+  analyticsContent += `📊 Total Interactions: ${totalInteractions.toLocaleString()} | 👥 Unique Users: ${totalUniqueUsers} | 🏰 Active Servers: ${activeServers} | ⏱️ Period: Last ${period}\n\n`;
   
   containerComponents.push({
     type: 10, // Text Display
