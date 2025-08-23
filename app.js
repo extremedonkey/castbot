@@ -5790,7 +5790,79 @@ To fix this:
         }
       })(req, res, client);
       
-    
+    } else if (custom_id.startsWith('restart_status_')) {
+      // Handle restart notification status buttons (Passed/Failed toggles)
+      console.log(`🔍 Restart status button clicked: ${custom_id}`);
+      
+      // Parse the current state and action from the custom_id
+      // Format: restart_status_[current]_[action]
+      // Examples: restart_status_none_passed, restart_status_passed_passed
+      const parts = custom_id.split('_');
+      const currentState = parts[2]; // none, passed, or failed
+      const action = parts[3]; // passed or failed
+      
+      // Determine new state based on action
+      let newState;
+      if (currentState === action) {
+        // Clicking the active button - toggle back to none
+        newState = 'none';
+      } else {
+        // Clicking inactive button - set to that state
+        newState = action;
+      }
+      
+      console.log(`🔍 Status transition: ${currentState} -> ${newState} (action: ${action})`);
+      
+      // Build new buttons based on state
+      const buttons = [];
+      
+      // Always add channel link button first
+      buttons.push({
+        type: 2,
+        label: "💎 #deploy",
+        style: 5, // Link
+        url: `https://discord.com/channels/1331657596087566398/1337754151655833694`
+      });
+      
+      // Add any feature buttons that were in the original message
+      // For now, just add the prod menu as placeholder
+      buttons.push({
+        type: 2,
+        custom_id: "viral_menu",
+        label: "📋 Prod Menu",
+        style: 2 // Secondary
+      });
+      
+      // Add Failed button with appropriate state
+      buttons.push({
+        type: 2,
+        custom_id: `restart_status_${newState}_failed`,
+        label: "❌ Failed",
+        style: newState === 'failed' ? 4 : 2 // Danger (red) if active, Secondary (grey) otherwise
+      });
+      
+      // Add Passed button with appropriate state
+      buttons.push({
+        type: 2,
+        custom_id: `restart_status_${newState}_passed`,
+        label: "✅ Passed",
+        style: newState === 'passed' ? 3 : 2 // Success (green) if active, Secondary (grey) otherwise
+      });
+      
+      // Update the message with new button states
+      // Since the original uses Components V2, we need to preserve that structure
+      // We update just the action row within the existing container
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: {
+          // Note: UPDATE_MESSAGE can't use flags, just update components
+          components: [{
+            type: 1, // Action Row (simplified for UPDATE_MESSAGE)
+            components: buttons
+          }]
+        }
+      });
+      
     } else if (custom_id === 'getting_started') {
       // Execute the same logic as the getting_started command
       try {

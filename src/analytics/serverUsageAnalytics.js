@@ -1179,7 +1179,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   analyticsContent += `### 📈 Server Stats - Totals\n`;
   
   // Summary statistics on a single line with pipe separators
-  analyticsContent += `📊 Interactions: ${totalInteractions.toLocaleString()} | 👥 Unique Users: ${totalUniqueUsers} | 🏰 Active Servers: ${activeServers} | ⏱️ Period: Last ${period}\n\n`;
+  analyticsContent += `📊 Interactions: ${totalInteractions.toLocaleString()} | 👥 Unique Users: ${totalUniqueUsers} | 🏰 Active Servers: ${activeServers} | ⏱️ ${period}\n\n`;
   
   containerComponents.push({
     type: 10, // Text Display
