@@ -7,6 +7,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { formatBotEmoji } from '../../botEmojis.js';
 
 const USER_ANALYTICS_LOG = './logs/user-analytics.log';
 
@@ -1044,6 +1045,12 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   // Build Components V2 structure with proper separators between sections
   const components = [];
   const containerComponents = [];
+  
+  // Add main heading above the container
+  components.push({
+    type: 10, // Text Display
+    content: `# ${formatBotEmoji('castbot_logo')} CastBot Analytics`
+  });
   
   // Section 1: Recent Server Installs
   let installsContent = '';
