@@ -965,7 +965,7 @@ async function createSafariMenu(guildId, userId, member) {
     new ButtonBuilder()
       .setCustomId('safari_test_bot_emoji')
       .setLabel('CastBot Test')
-      .setStyle(ButtonStyle.Primary)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji(getBotEmoji('castbot_logo'))
   ];
   
