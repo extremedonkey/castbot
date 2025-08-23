@@ -21,37 +21,37 @@ const SAFE_TEST_BUTTONS = {
   // Feature area -> Safe menu button mapping
   'safari': {
     custom_id: 'prod_safari_menu',
-    label: '🦁 Test Safari',
+    label: '🦁 Safari',
     style: 3, // Success (green)
     priority: 1
   },
   'ranking': {
     custom_id: 'season_app_ranking',
-    label: '🏆 Test Ranking',
+    label: '🏆 Ranking',
     style: 1, // Primary (blue)
     priority: 2
   },
   'castlist': {
     custom_id: 'show_castlist2_default',
-    label: '📋 Test Castlist',
+    label: '📋 Castlist',
     style: 2, // Secondary (grey)
     priority: 3
   },
   'analytics': {
     custom_id: 'prod_server_usage_stats',
-    label: '📈 Test Analytics',
+    label: '📈 Analytics',
     style: 2, // Secondary (grey)
     priority: 4
   },
   'applications': {
     custom_id: 'prod_season_applications',
-    label: '📝 Test Applications',
+    label: '📝 Applications',
     style: 1, // Primary (blue)
     priority: 5
   },
   'menu': {
     custom_id: 'viral_menu',
-    label: '📋 Open Prod Menu',
+    label: '📋 Prod Menu',
     style: 2, // Secondary (grey)
     priority: 10 // Lowest priority
   }
@@ -290,16 +290,15 @@ export function generateDeploymentButtons(filesChanged, commitMessage, isProduct
     const standardButtons = [
       {
         type: 2,
-        custom_id: 'restart_test_not_tested',
-        label: '⏳ Not Tested',
-        style: 2,
-        disabled: true
+        custom_id: 'restart_status_passed',
+        label: '✅ Pass',
+        style: 2 // Will start as grey
       },
       {
         type: 2,
-        custom_id: 'restart_test_tested',
-        label: '✅ Tested',
-        style: 2
+        custom_id: 'restart_status_failed',
+        label: '❌ Fail',
+        style: 2 // Will start as grey
       }
     ];
     

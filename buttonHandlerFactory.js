@@ -145,6 +145,20 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'testing'
   },
+  'restart_status_passed': {
+    label: '✅ Pass',
+    description: 'Toggle deployment test status to passed',
+    emoji: '✅',
+    style: 'Secondary',
+    category: 'testing'
+  },
+  'restart_status_failed': {
+    label: '❌ Fail',
+    description: 'Toggle deployment test status to failed',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'testing'
+  },
 
   // === RANKING SYSTEM ===
   'ranking_scores_refresh': {

@@ -5789,8 +5789,68 @@ To fix this:
           }
         }
       })(req, res, client);
-      
-    
+    } else if (custom_id === 'restart_status_passed' || custom_id === 'restart_status_failed') {
+      // Handle Pass/Fail toggle buttons from restart notifications
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true, // CRITICAL: Updates existing message instead of creating new one
+        handler: async (context) => {
+          console.log(`🔍 START: ${context.customId} - user ${context.userId}`);
+          
+          try {
+            // Extract current components from the message
+            const currentComponents = context.message?.components?.[0]?.components || [];
+            console.log(`🔍 Current components count: ${currentComponents.length}`);
+            
+            // Find the Action Row with buttons
+            const actionRowIndex = currentComponents.findIndex(c => c.type === 1);
+            if (actionRowIndex === -1) {
+              console.error('❌ Could not find Action Row in message');
+              return {
+                content: '❌ Error: Button configuration issue',
+                ephemeral: true
+              };
+            }
+            
+            const buttons = currentComponents[actionRowIndex].components;
+            const passButtonIndex = buttons.findIndex(b => b.custom_id === 'restart_status_passed');
+            const failButtonIndex = buttons.findIndex(b => b.custom_id === 'restart_status_failed');
+            
+            if (passButtonIndex === -1 || failButtonIndex === -1) {
+              console.error('❌ Could not find Pass/Fail buttons in Action Row');
+              return {
+                content: '❌ Error: Button configuration issue',
+                ephemeral: true
+              };
+            }
+            
+            // Determine which button was clicked and set styles accordingly
+            const isPass = context.customId === 'restart_status_passed';
+            
+            // Update button styles based on selection
+            buttons[passButtonIndex].style = isPass ? 3 : 2; // 3=Success(green), 2=Secondary(grey)
+            buttons[failButtonIndex].style = isPass ? 2 : 4; // 4=Danger(red), 2=Secondary(grey)
+            
+            console.log(`✅ SUCCESS: ${context.customId} - toggled to ${isPass ? 'PASS' : 'FAIL'}`);
+            
+            // Return the entire Components V2 structure with updated styles
+            return {
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [{
+                type: 17, // Container
+                accent_color: context.message?.components?.[0]?.accent_color, // Preserve accent color
+                components: currentComponents // Return the full components array with updated buttons
+              }]
+            };
+          } catch (error) {
+            console.error(`❌ ERROR: ${context.customId} - ${error.message}`);
+            return {
+              content: '❌ Error updating test status',
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
     } else if (custom_id === 'getting_started') {
       // Execute the same logic as the getting_started command
       try {
