@@ -87,7 +87,9 @@ const FEATURE_PATTERNS = {
     /server.*stats/i,
     /serverUsage/,
     /prod_server_usage/,
-    /analytics.*dump/
+    /analytics.*dump/,
+    /buttonDetection/,  // Our button detection is analytics
+    /notify-restart/    // Notification script is analytics
   ],
   applications: [
     /application/i,
