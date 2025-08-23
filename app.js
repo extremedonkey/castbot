@@ -7726,6 +7726,7 @@ Your server is now ready for Tycoons gameplay!`;
       return ButtonHandlerFactory.create({
         id: 'prod_server_usage_stats',
         deferred: true,
+        updateMessage: true, // Update existing message when used as Refresh button
         ephemeral: false, // Results should be visible
         handler: async (context) => {
           console.log(`🔍 START: prod_server_usage_stats - user ${context.userId}`);
@@ -7763,6 +7764,7 @@ Your server is now ready for Tycoons gameplay!`;
       return ButtonHandlerFactory.create({
         id: 'server_stats_page',
         deferred: true,
+        updateMessage: true, // Update existing message instead of creating new one
         ephemeral: false, // Keep consistent with main stats display
         handler: async (context) => {
           console.log(`🔍 START: server_stats_page - user ${context.userId}`);
