@@ -576,16 +576,19 @@ async function generateServerUsageSummary(daysBack = 42) {
   // Calculate totals and insights
   const totalInteractions = rankedServers.reduce((sum, server) => sum + server.totalInteractions, 0);
   
-  // Calculate unique users from filtered entries within the time period
-  const recentEntries = [];
-  for (const server of rankedServers) {
-    if (server.users) {
-      Object.keys(server.users).forEach(username => {
-        recentEntries.push(username);
-      });
+  // Get recent entries within the time period for unique user calculation
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+  const recentLogEntries = logEntries.filter(entry => {
+    // Exclude CastBot dev server
+    if (entry.server.id === '1331657596087566398') {
+      return false;
     }
-  }
-  const totalUniqueUsers = new Set(recentEntries).size;
+    return entry.timestamp && entry.timestamp >= cutoffDate;
+  });
+  
+  // Calculate unique users from filtered entries
+  const totalUniqueUsers = new Set(recentLogEntries.map(entry => entry.user.username)).size;
   
   const activeServers = rankedServers.filter(server => server.totalInteractions > 0).length;
   
