@@ -959,7 +959,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   }
   
   // Helper function to build pagination buttons (max 5 per row)
-  function buildPaginationButtons(currentPage, totalPages) {
+  function buildPaginationButtons(currentPage, totalPages, totalServers) {
     const buttons = [];
     
     // Always add Refresh Stats button first
@@ -976,14 +976,21 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
       return buttons;
     }
     
+    // Helper function to generate range label for a page
+    function getRangeLabel(page) {
+      const start = (page * SERVERS_PER_PAGE) + 1;
+      const end = Math.min((page + 1) * SERVERS_PER_PAGE, totalServers);
+      return `${start}-${end}`;
+    }
+    
     // We have max 4 slots left for pagination (5 total - 1 refresh button)
     if (totalPages <= 4) {
-      // Show all page numbers if 4 or fewer pages
+      // Show all page ranges if 4 or fewer pages
       for (let page = 0; page < totalPages; page++) {
         buttons.push({
           type: 2, // Button
           custom_id: `server_stats_page_${page}`,
-          label: `${page + 1}`,
+          label: getRangeLabel(page),
           style: page === currentPage ? 1 : 2, // Primary if current, Secondary otherwise
           disabled: page === currentPage
         });
@@ -1011,7 +1018,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
         buttons.push({
           type: 2, // Button
           custom_id: `server_stats_page_${page}`,
-          label: page === 0 ? 'First' : page === totalPages - 1 ? 'Last' : `${page + 1}`,
+          label: getRangeLabel(page),
           style: page === currentPage ? 1 : 2, // Primary if current, Secondary otherwise
           disabled: page === currentPage
         });
@@ -1176,7 +1183,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   // Add action row with buttons
   containerComponents.push({
     type: 1, // Action Row
-    components: buildPaginationButtons(validPage, totalPages)
+    components: buildPaginationButtons(validPage, totalPages, totalServers)
   });
   
   // Create Components V2 Container structure
