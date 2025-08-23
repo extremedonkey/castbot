@@ -162,6 +162,22 @@ npm run logs-prod -- --filter "user 391415444084490240"
 npm run logs-prod -- --feature BUTTON --level debug
 ```
 
+### Test Result Feedback (Pass/Fail Buttons)
+
+**Context**: Restart notifications include Pass/Fail buttons that log test results when clicked.
+
+**Log Pattern**: Look for `📊 TEST RESULT:` in logs to see testing feedback:
+```json
+📊 TEST RESULT: {"result":"PASSED","timestamp":"2025-08-23T06:36:18.850Z","messageId":"1408701025212301434","userId":"391415444084490240","change":"Add lightweight test result tracking to Pass/Fail buttons"}
+```
+
+**How to interpret**:
+- **PASSED** = The change worked as expected
+- **FAILED** = The change has issues that need fixing
+- The `change` field shows what was being tested
+
+**Note**: This is informational only - no action required unless actively debugging
+
 ## 🔧 Architecture Overview
 
 ### Core Components

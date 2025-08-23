@@ -116,6 +116,7 @@ import {
   MENU_FACTORY
 } from './buttonHandlerFactory.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
+import { getBotEmoji } from './botEmojis.js';
 import { 
   createMapGrid,
   deleteMapGrid,
@@ -956,7 +957,12 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_configure_log')
       .setLabel('Logs')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📊')
+      .setEmoji('📊'),
+    new ButtonBuilder()
+      .setCustomId('safari_test_bot_emoji')
+      .setLabel('CastBot Test')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji(getBotEmoji('castbot_logo'))
   ];
   
   // Map Administration section buttons
@@ -8546,6 +8552,32 @@ Your server is now ready for Tycoons gameplay!`;
           const interfaceData = await createSafariCustomizationUI(context.guildId, currentTerms);
           
           return interfaceData;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'safari_test_bot_emoji') {
+      // Test button for CastBot logo emoji
+      return ButtonHandlerFactory.create({
+        id: 'safari_test_bot_emoji',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_test_bot_emoji - user ${context.userId}`);
+          
+          const flags = (1 << 15); // IS_COMPONENTS_V2
+          const castbotEmoji = getBotEmoji('castbot_logo');
+          
+          console.log(`✅ SUCCESS: safari_test_bot_emoji - Bot emoji test completed`);
+          
+          return {
+            flags: flags,
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  text: `✅ **CastBot Emoji Test Successful!**\n\nThe CastBot logo emoji is working correctly!\n\nEmoji ID: ${castbotEmoji?.id || 'Not found'}\nEnvironment: ${process.env.PRODUCTION === 'TRUE' ? 'Production' : 'Development'}`
+                }
+              ]
+            }]
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_configure_log') {
@@ -20732,15 +20764,11 @@ Are you sure you want to continue?`;
             const coordData = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[coord];
             const locationName = coordData?.baseContent?.title || `Location ${coord}`;
             
-            // Determine if we're in dev or prod environment
-            const isDev = context.guildId === '1331657596087566398'; // Your test server
-            const commandEmojiId = isDev ? '1396095623815495700' : '1396098411287285942';
-            
-            // Create Enter Command button
+            // Create Enter Command button with bot emoji
             const enterCommandButton = new ButtonBuilder()
               .setCustomId(`player_enter_command_${coord}`)
               .setLabel('Enter Command')
-              .setEmoji({ id: commandEmojiId })
+              .setEmoji(getBotEmoji('command', context.guildId))
               .setStyle(2); // Secondary
             
             // Create Navigate button
