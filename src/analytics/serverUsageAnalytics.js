@@ -1007,15 +1007,14 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
     return buttons;
   }
   
-  // Build a simpler Components V2 structure using only Text Display components in a flat layout
+  // Build Components V2 structure with proper separators between sections
   const components = [];
+  const containerComponents = [];
   
-  // Create a single text block with all the content - Start with Server Installs
-  let fullContent = '';
-  
-  // Recent Server Installs section FIRST
+  // Section 1: Recent Server Installs
+  let installsContent = '';
   if (recentInstalls.length > 0) {
-    fullContent += `> ## 🆕 Most Recent Server Installs (Latest ${recentInstalls.length})\n\n`;
+    installsContent += `> ## 🆕 Most Recent Server Installs (Latest ${recentInstalls.length})\n\n`;
     
     recentInstalls.forEach((install, index) => {
       // Format timestamp in compact format
@@ -1042,19 +1041,29 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
       const username = ownerMatch ? ownerMatch[2] : '';
       const ownerDisplay = username ? `${displayName} (${username})` : displayName;
       
-      fullContent += `📅 **${serverDisplay}** ([${timeStr}] ${dayStr}, ${ownerDisplay})\n\n`;
+      installsContent += `📅 **${serverDisplay}** ([${timeStr}] ${dayStr}, ${ownerDisplay})\n\n`;
     });
   } else {
-    fullContent += `> ## 🆕 Most Recent Server Installs\n\n`;
-    fullContent += `📭 No server installations found in logs\n\n`;
+    installsContent += `> ## 🆕 Most Recent Server Installs\n\n`;
+    installsContent += `📭 No server installations found in logs\n\n`;
   }
   
-  // Add text separator between sections
-  fullContent += '---\n\n';
+  containerComponents.push({
+    type: 10, // Text Display
+    content: installsContent
+  });
   
-  // Server rankings SECOND
+  // Add separator between sections
+  containerComponents.push({
+    type: 14, // Separator
+    divider: true,
+    spacing: 1
+  });
+  
+  // Section 2: Server Rankings
+  let rankingsContent = '';
   if (displayServers.length > 0) {
-    fullContent += `> ## 🏆 Server Rankings (Page ${validPage + 1}/${totalPages})\n\n`;
+    rankingsContent += `> ## 🏆 Server Rankings (Page ${validPage + 1}/${totalPages})\n\n`;
     
     displayServers.forEach((server, pageIndex) => {
       const actualRank = startIndex + pageIndex; // Calculate actual rank in full list
@@ -1063,7 +1072,7 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
         ? server.serverName.substring(0, 25) + '...'
         : server.serverName;
       
-      fullContent += `\`${medal} ${serverDisplay}: ${server.totalInteractions.toLocaleString()} interactions ${server.activityLevel.emoji}\`\n`;
+      rankingsContent += `\`${medal} ${serverDisplay}: ${server.totalInteractions.toLocaleString()} interactions ${server.activityLevel.emoji}\`\n`;
       
       // Build feature usage display
       const featureList = [];
@@ -1093,9 +1102,9 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
       
       // Display features or fallback to basic stats if no features detected
       if (featureList.length > 0) {
-        fullContent += `   └ ${server.uniqueUserCount} users • ${featureList.join(' • ')}\n`;
+        rankingsContent += `   └ ${server.uniqueUserCount} users • ${featureList.join(' • ')}\n`;
       } else {
-        fullContent += `   └ ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n`;
+        rankingsContent += `   └ ${server.uniqueUserCount} users • ${server.slashCommands} commands • ${server.buttonClicks} buttons\n`;
       }
       
       // Add last activity if available
@@ -1107,56 +1116,61 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
         const timestamp = timestampMatch ? timestampMatch[1] : '[Unknown]';
         
         // Format: └ Last Activity: [4:04PM] Sun 29 Jun 25 | Username
-        fullContent += `   └ Last Activity: ${timestamp} | ${lastEntry.user.displayName || lastEntry.user.username}\n`;
+        rankingsContent += `   └ Last Activity: ${timestamp} | ${lastEntry.user.displayName || lastEntry.user.username}\n`;
       }
       
-      fullContent += `\n`;
+      rankingsContent += `\n`;
     });
   } else {
-    fullContent += `📭 **No server activity found**\n\nNo interactions recorded in the specified period.\n\n`;
+    rankingsContent += `📭 **No server activity found**\n\nNo interactions recorded in the specified period.\n\n`;
   }
   
-  // Add text separator between sections
-  fullContent += '---\n\n';
+  containerComponents.push({
+    type: 10, // Text Display
+    content: rankingsContent
+  });
   
-  // Server Usage Analytics THIRD (last)
-  fullContent += `> ## 📈 Server Usage Analytics\n\n`;
+  // Add separator between sections
+  containerComponents.push({
+    type: 14, // Separator
+    divider: true,
+    spacing: 1
+  });
+  
+  // Section 3: Server Usage Analytics
+  let analyticsContent = '';
+  analyticsContent += `> ## 📈 Server Usage Analytics\n\n`;
   
   // Summary statistics
-  fullContent += `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}\n`;
-  fullContent += `👥 **Unique Users**: ${totalUniqueUsers}\n`;
-  fullContent += `🏰 **Active Servers**: ${activeServers}\n`;
-  fullContent += `⏱️ **Period**: Last ${period}\n`;
-  fullContent += `📈 **Showing**: Servers ${startIndex + 1}-${endIndex} of ${totalServers} (Page ${validPage + 1}/${totalPages})\n\n`;
+  analyticsContent += `📊 **Total Interactions**: ${totalInteractions.toLocaleString()}\n`;
+  analyticsContent += `👥 **Unique Users**: ${totalUniqueUsers}\n`;
+  analyticsContent += `🏰 **Active Servers**: ${activeServers}\n`;
+  analyticsContent += `⏱️ **Period**: Last ${period}\n`;
+  analyticsContent += `📈 **Showing**: Servers ${startIndex + 1}-${endIndex} of ${totalServers} (Page ${validPage + 1}/${totalPages})\n\n`;
   
-  // Insights section removed per user request
-  // Footer removed per user request
+  containerComponents.push({
+    type: 10, // Text Display
+    content: analyticsContent
+  });
   
-  // Trim content to fit Discord's 4000 character limit
-  if (fullContent.length > 3800) {
-    fullContent = fullContent.substring(0, 3800) + '\n\n... (content truncated)';
-  }
+  // Add separator before buttons
+  containerComponents.push({
+    type: 14, // Separator
+    divider: true,
+    spacing: 1
+  });
   
-  // Create Components V2 structure with Container, text content, separators, and refresh button
+  // Add action row with buttons
+  containerComponents.push({
+    type: 1, // Action Row
+    components: buildPaginationButtons(validPage, totalPages)
+  });
+  
+  // Create Components V2 Container structure
   components.push({
     type: 17, // Container
     accent_color: 0xFF0000, // Red accent bar
-    components: [
-      {
-        type: 10, // Text Display
-        content: fullContent
-      },
-      // Add separator before buttons
-      {
-        type: 14, // Separator
-        divider: true,
-        spacing: 1
-      },
-      {
-        type: 1, // Action Row
-        components: buildPaginationButtons(validPage, totalPages)
-      }
-    ]
+    components: containerComponents
   });
   
   return {
