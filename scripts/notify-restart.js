@@ -10,6 +10,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { DiscordRequest } from '../utils.js';
+import { generateDeploymentButtons } from './buttonDetection.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -289,33 +290,57 @@ async function sendRestartNotification() {
                     { type: 14 }, // Separator
                     {
                         type: 1, // Action Row
-                        components: [
-                            {
-                                type: 2, // Button
-                                label: "💎 Go to #deploy",
-                                style: 5, // Link style
-                                url: `https://discord.com/channels/1331657596087566398/1337754151655833694`
-                            },
-                            {
-                                type: 2, // Button
-                                custom_id: "viral_menu",
-                                label: "📋 Open Prod Menu",
-                                style: 2 // Secondary (grey)
-                            },
-                            {
-                                type: 2, // Button
-                                custom_id: "restart_test_not_tested",
-                                label: "⏳ Not Tested",
-                                style: 2, // Secondary (grey)
-                                disabled: true // Start inactive
-                            },
-                            {
-                                type: 2, // Button
-                                custom_id: "restart_test_tested", 
-                                label: "✅ Tested",
-                                style: 2 // Secondary (grey) - starts active
+                        components: (() => {
+                            try {
+                                // Generate smart buttons based on changes
+                                console.log('🔍 Generating smart deployment buttons...');
+                                const smartButtons = generateDeploymentButtons(filesChanged, commitMessage, isProduction);
+                                
+                                // Always add the channel link button first
+                                const channelButton = {
+                                    type: 2, // Button
+                                    label: "💎 Go to #deploy",
+                                    style: 5, // Link style
+                                    url: `https://discord.com/channels/1331657596087566398/1337754151655833694`
+                                };
+                                
+                                // Combine channel button with smart buttons (max 5 total)
+                                const allButtons = [channelButton, ...smartButtons].slice(0, 5);
+                                console.log(`🔍 Using ${allButtons.length} buttons: ${allButtons.map(b => b.label).join(', ')}`);
+                                return allButtons;
+                                
+                            } catch (error) {
+                                console.log(`🔍 Button generation failed, using defaults: ${error.message}`);
+                                // Fallback to original buttons if smart detection fails
+                                return [
+                                    {
+                                        type: 2,
+                                        label: "💎 Go to #deploy",
+                                        style: 5,
+                                        url: `https://discord.com/channels/1331657596087566398/1337754151655833694`
+                                    },
+                                    {
+                                        type: 2,
+                                        custom_id: "viral_menu",
+                                        label: "📋 Open Prod Menu",
+                                        style: 2
+                                    },
+                                    {
+                                        type: 2,
+                                        custom_id: "restart_test_not_tested",
+                                        label: "⏳ Not Tested",
+                                        style: 2,
+                                        disabled: true
+                                    },
+                                    {
+                                        type: 2,
+                                        custom_id: "restart_test_tested",
+                                        label: "✅ Tested",
+                                        style: 2
+                                    }
+                                ];
                             }
-                        ]
+                        })()
                     }
                 ]
             }]
