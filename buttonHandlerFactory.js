@@ -266,7 +266,7 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
   'safari_configure_log': {
-    label: '📊 Safari Log',
+    label: '📊 Logs',
     description: 'Configure Safari Log channel and settings',
     emoji: '📊',
     style: 'Secondary',
