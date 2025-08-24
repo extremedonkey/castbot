@@ -15853,24 +15853,45 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'prod_add_tribe') {
-      // Step 1: Role selection for tribe
+      // Step 1: Role selection for tribe - Using ComponentsV2 Container
       try {
-        // Use Discord.js RoleSelectMenuBuilder for better compatibility
-        const roleSelect = new RoleSelectMenuBuilder()
-          .setCustomId('prod_add_tribe_role_select')
-          .setPlaceholder('Select the role of the tribe you want to add to the castlist')
-          .setMinValues(1)
-          .setMaxValues(1);
-
-        const row = new ActionRowBuilder()
-          .addComponents(roleSelect);
+        // Create ComponentsV2 container following LEAN Menu Design Standards
+        const addTribeContainer = {
+          type: 17, // Container (MANDATORY for ComponentsV2)
+          accent_color: 0xE67E22, // Orange accent to match tribe management theme
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## CastBot | Add Tribe to Castlist`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display
+              content: `Please select the role corresponding to the tribe you want to add to the castlist.\n\nIf you have not yet created the tribe role, please do so from the Discord roles menu.\n\n⚠️ **Note:** You can add your tribes to the castlist before players have been assigned the tribes, however they'll appear blank if any spectator views the castlist.`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 1, // ActionRow
+              components: [{
+                type: 8, // Role Select
+                custom_id: 'prod_add_tribe_role_select',
+                placeholder: 'Select the role of the tribe to add',
+                min_values: 1,
+                max_values: 1
+              }]
+            }
+          ]
+        };
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '## Select tribe to add to castlist\n\nPlease select the role corresponding to the tribe you want to add to the castlist. If you have not yet created the tribe role, please do so from the discord roles menu.\n\nYou can add your tribes to the castlist before players have been assigned the tribes, however they\'ll appear blank if any spectator views the castlist.',
-            components: [row.toJSON()],
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [addTribeContainer]
           }
         });
         
@@ -15893,11 +15914,30 @@ Your server is now ready for Tycoons gameplay!`;
         const tribes = playerData[guildId]?.tribes || {};
         
         if (Object.keys(tribes).length === 0) {
+          // Create ComponentsV2 container for empty state
+          const emptyContainer = {
+            type: 17, // Container
+            accent_color: 0xE67E22, // Orange accent
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## CastBot | Clear Tribe`
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 10, // Text Display
+                content: `No tribes found to clear.\n\nAdd some tribes first using **Add Tribe**.`
+              }
+            ]
+          };
+          
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '## Clear Tribe\n\nNo tribes found to clear. Add some tribes first using **Add Tribe**.',
-              flags: InteractionResponseFlags.EPHEMERAL
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+              components: [emptyContainer]
             }
           });
         }
@@ -15930,15 +15970,44 @@ Your server is now ready for Tycoons gameplay!`;
           .setMaxValues(1)
           .addOptions(options.slice(0, 25)); // Discord limit
 
-        const row = new ActionRowBuilder()
-          .addComponents(stringSelect);
+        // Create ComponentsV2 container following LEAN Menu Design Standards
+        const clearTribeContainer = {
+          type: 17, // Container (MANDATORY for ComponentsV2)
+          accent_color: 0xE67E22, // Orange accent to match tribe management theme
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## CastBot | Clear Tribe`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display
+              content: `Select the tribe you want to remove from the castlist.\n\n⚠️ **Note:** This will remove it from CastBot but won't delete the Discord role.`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 1, // ActionRow
+              components: [{
+                type: 3, // String Select
+                custom_id: 'prod_clear_tribe_select',
+                placeholder: 'Select tribe to clear from castlist',
+                min_values: 1,
+                max_values: 1,
+                options: options.slice(0, 25) // Discord limit
+              }]
+            }
+          ]
+        };
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '## Clear Tribe\n\nSelect the tribe you want to remove from the castlist. This will remove it from CastBot but won\'t delete the Discord role.',
-            components: [row.toJSON()],
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [clearTribeContainer]
           }
         });
         
