@@ -869,13 +869,27 @@ async function createReeceStuffMenu() {
   
   const backRow = new ActionRowBuilder().addComponents(backButton);
   
-  // Build container components
+  // Build container components with section headers
   const containerComponents = [
     {
       type: 10, // Text Display component
-      content: `## CastBot Analytics`
+      content: `## CastBot | Analytics & Admin`
+    },
+    {
+      type: 14 // Separator
+    },
+    {
+      type: 10, // Text Display component
+      content: `> **\`📊 Analytics Tools\`**`
     },
     analyticsRow1.toJSON(), // Analytics buttons row 1
+    {
+      type: 14 // Separator
+    },
+    {
+      type: 10, // Text Display component
+      content: `> **\`🛠️ Admin Functions\`**`
+    },
     analyticsRow2.toJSON(), // Analytics buttons row 2
     {
       type: 14 // Separator
