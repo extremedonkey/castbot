@@ -1181,12 +1181,12 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
     spacing: 1
   });
   
-  // Section 3: Server Stats - Totals
+  // Section 3: Server Stats - Totals with period in header
   let analyticsContent = '';
-  analyticsContent += `### 📈 Server Stats - Totals\n`;
+  analyticsContent += `### 📈 Server Stats - Totals (${period})\n`;
   
-  // Summary statistics on a single line with pipe separators
-  analyticsContent += `📊 Interactions: ${totalInteractions.toLocaleString()} | 👥 Unique Users: ${totalUniqueUsers} | 🏰 Active Servers: ${activeServers} | ⏱️ ${period}\n`;
+  // Summary statistics on a single line with pipe separators - removed Active Servers and period
+  analyticsContent += `📊 Interactions: ${totalInteractions.toLocaleString()} | 👥 Unique Users: ${totalUniqueUsers}\n`;
   
   // Calculate activity level breakdown
   const activityBreakdown = {
