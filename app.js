@@ -6128,18 +6128,44 @@ To fix this:
           
           // Always show setup button - removed first run vs subsequent run detection
           console.log(`✅ SUCCESS: prod_setup - showing setup interface`);
-          return {
-            content: '# Setup\n\nClick the Setup button to create/configure pronoun and timezone roles for your server.\n\n💡 This setup can be run multiple times safely - existing roles will be detected and added to CastBot.',
+          
+          // Create ComponentsV2 container following LEAN Menu Design Standards
+          const setupContainer = {
+            type: 17, // Container (MANDATORY for ComponentsV2)
+            accent_color: 0x3498DB, // Blue for standard menus
             components: [
-              new ActionRowBuilder()
-                .addComponents(
-                  new ButtonBuilder()
-                    .setCustomId('setup_castbot')
-                    .setLabel('Run Setup')
-                    .setStyle(ButtonStyle.Primary)
-                    .setEmoji('⚙️')
-                )
+              {
+                type: 10, // Text Display
+                content: `## CastBot | Initial Setup`
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 10, // Text Display
+                content: `Click the Setup button to create/configure pronoun and timezone roles for your server.\n\n💡 This setup can be run multiple times safely - existing roles will be detected and added to CastBot.`
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 1, // ActionRow
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: 'setup_castbot',
+                    label: 'Run Setup',
+                    style: 1, // Primary
+                    emoji: { name: '⚙️' }
+                  }
+                ]
+              }
             ]
+          };
+          
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2 (MANDATORY)
+            components: [setupContainer]
           };
         }
       })(req, res, client);
