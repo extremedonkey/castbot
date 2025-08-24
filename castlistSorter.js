@@ -55,12 +55,11 @@ function sortByPlacements(members, rankings) {
     const userId = member.user?.id || member.id;
     
     if (rankings[userId]) {
-      // Add placement data to ranked members
-      ranked.push({
-        ...member,
-        placement: parseInt(rankings[userId].placement),
-        displayPrefix: `${rankings[userId].placement}) ` // e.g., "1) "
-      });
+      // Preserve the original member object and add properties directly
+      // This maintains Discord.js object structure
+      member.placement = parseInt(rankings[userId].placement);
+      member.displayPrefix = `${rankings[userId].placement}) `; // e.g., "1) "
+      ranked.push(member);
     } else {
       // Keep unranked members as-is
       unranked.push(member);
