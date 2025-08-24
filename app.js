@@ -6155,7 +6155,7 @@ To fix this:
                     type: 2, // Button
                     custom_id: 'setup_castbot',
                     label: 'Run Setup',
-                    style: 1, // Primary
+                    style: 3, // Success (Green)
                     emoji: { name: '⚙️' }
                   }
                 ]
