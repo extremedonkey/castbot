@@ -244,7 +244,10 @@
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 60 \"async function createReeceStuffMenu\" app.js)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"emergency_app_reinit.*{\" buttonHandlerFactory.js)",
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n -A 100 \"else if \\(custom_id === ''''emergency_app_reinit''''\\)\" app.js)",
-      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"NEW SERVER INSTALLED\" app.js)"
+      "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"NEW SERVER INSTALLED\" app.js)",
+      "Read(//home/reece/**)",
+      "Bash(source ~/.bashrc)",
+      "Bash(git rev-list:*)"
     ],
     "deny": []
   }

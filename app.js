@@ -24597,6 +24597,12 @@ Are you sure you want to continue?`;
             description: 'Recommended if you don\'t know what you\'re doing',
             value: 'default',
             emoji: { name: '✅' }
+          },
+          {
+            label: 'Alumni Season Placements',
+            description: 'Create castlist showing placements for a past season',
+            value: 'alumni_placements',
+            emoji: { name: '🏆' }
           }
         ];
         
@@ -24734,6 +24740,60 @@ Are you sure you want to continue?`;
                 max_length: 50,
                 required: true,
                 placeholder: 'e.g. Winners, Production, Alumni'
+              }
+            ]
+          });
+        }
+        
+        // Show additional placement fields for alumni_placements type
+        if (selectedCastlist === 'alumni_placements') {
+          // Add 3rd place ID
+          modal.components.push({
+            type: 1, // Action Row
+            components: [
+              {
+                type: 4, // Text Input
+                custom_id: 'third_place_id',
+                label: '3rd Place ID',
+                style: 1, // Short
+                min_length: 17,
+                max_length: 20,
+                required: false,
+                placeholder: 'ID of the user who came third'
+              }
+            ]
+          });
+          
+          // Add 2nd place ID
+          modal.components.push({
+            type: 1, // Action Row
+            components: [
+              {
+                type: 4, // Text Input
+                custom_id: 'second_place_id',
+                label: '2nd Place ID',
+                style: 1, // Short
+                min_length: 17,
+                max_length: 20,
+                required: false,
+                placeholder: 'ID of the user who came second'
+              }
+            ]
+          });
+          
+          // Add 1st place ID  
+          modal.components.push({
+            type: 1, // Action Row
+            components: [
+              {
+                type: 4, // Text Input
+                custom_id: 'first_place_id',
+                label: '1st Place ID',
+                style: 1, // Short
+                min_length: 17,
+                max_length: 20,
+                required: false,
+                placeholder: 'ID of the user who came first'
               }
             ]
           });
@@ -26797,6 +26857,29 @@ Are you sure you want to continue?`;
         let finalCastlist = selectedCastlist;
         if (selectedCastlist === 'new_custom' && customCastlistName) {
           finalCastlist = customCastlistName; // Preserve capitalization and spaces like /add_tribe command
+        } else if (selectedCastlist === 'alumni_placements') {
+          // For alumni placements, use the role name as the castlist name
+          finalCastlist = role.name;
+        }
+        
+        // Extract placement data if this is an alumni_placements type
+        let rankings = {};
+        if (selectedCastlist === 'alumni_placements') {
+          // Extract the placement IDs from modal components
+          const thirdPlaceId = components[1]?.components[0]?.value?.trim() || null;
+          const secondPlaceId = components[2]?.components[0]?.value?.trim() || null;
+          const firstPlaceId = components[3]?.components[0]?.value?.trim() || null;
+          
+          // Build rankings object
+          if (firstPlaceId) {
+            rankings[firstPlaceId] = { placement: "1" };
+          }
+          if (secondPlaceId) {
+            rankings[secondPlaceId] = { placement: "2" };
+          }
+          if (thirdPlaceId) {
+            rankings[thirdPlaceId] = { placement: "3" };
+          }
         }
         
         // Load player data and check for conflicts
@@ -26829,7 +26912,7 @@ Are you sure you want to continue?`;
         }
         
         // Update tribe data (replicating add_tribe logic but without player emoji generation)
-        playerData[guildId].tribes[roleId] = {
+        const tribeData = {
           emoji: emojiValue,
           castlist: finalCastlist,
           showPlayerEmojis: false, // Always false per new specification
@@ -26838,11 +26921,38 @@ Are you sure you want to continue?`;
           analyticsAdded: Date.now()
         };
         
+        // Add alumni placements specific fields
+        if (selectedCastlist === 'alumni_placements') {
+          tribeData.type = 'alumni_placements';
+          tribeData.rankings = rankings;
+        }
+        
+        playerData[guildId].tribes[roleId] = tribeData;
+        
         // Save data
         await savePlayerData(playerData);
         
         const emojiDisplay = emojiValue ? ` with emoji ${emojiValue}` : '';
         const castlistDisplay = finalCastlist === 'default' ? 'default castlist' : `"${finalCastlist}" castlist`;
+        
+        // Build success message content
+        let successContent = `**${role.name}** has been added to the ${castlistDisplay}${emojiDisplay}.\n\n`;
+        
+        if (selectedCastlist === 'alumni_placements') {
+          const placementCount = Object.keys(rankings).length;
+          successContent += `🏆 **Alumni Season Placements Created**\n`;
+          successContent += `Added ${placementCount} placement${placementCount !== 1 ? 's' : ''}:\n`;
+          
+          // Show the placements that were added
+          for (const [userId, data] of Object.entries(rankings)) {
+            const placement = data.placement;
+            const medal = placement === "1" ? "🥇" : placement === "2" ? "🥈" : "🥉";
+            successContent += `${medal} Place ${placement}: <@${userId}>\n`;
+          }
+          successContent += `\nYou can add more placements later using the entity management system.`;
+        } else {
+          successContent += `Players can now view this tribe in the castlist once members are assigned to the role.`;
+        }
         
         // Create ComponentsV2 container for success message
         const successContainer = {
@@ -26858,7 +26968,7 @@ Are you sure you want to continue?`;
             },
             {
               type: 10, // Text Display
-              content: `**${role.name}** has been added to the ${castlistDisplay}${emojiDisplay}.\n\nPlayers can now view this tribe in the castlist once members are assigned to the role.`
+              content: successContent
             }
           ]
         };
