@@ -819,7 +819,7 @@ async function createReeceStuffMenu() {
     new ButtonBuilder()
       .setCustomId('prod_live_analytics')
       .setLabel('Print Logs')
-      .setStyle(ButtonStyle.Danger)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪵'),
     new ButtonBuilder()
       .setCustomId('prod_server_usage_stats')
