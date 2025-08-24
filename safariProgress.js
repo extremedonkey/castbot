@@ -579,16 +579,38 @@ export async function createGlobalItemsUI(guildId, client = null) {
   // Load data
   const safariData = await loadSafariContent();
   const playerData = await loadPlayerData();
-  const guildData = safariData[guildId] || {};
-  const activeMapId = guildData.maps?.active;
   
+  // First try to get data for the specific guild
+  let guildData = safariData[guildId] || {};
+  let activeMapId = guildData.maps?.active;
+  
+  // If no map found for this guild, find first guild with an active map
+  // This allows production team to view from any channel
+  if (!activeMapId || !guildData.maps?.[activeMapId]) {
+    console.log(`📍 No map for guild ${guildId}, searching for any guild with active map...`);
+    
+    // Find first guild with an active map
+    for (const searchGuildId in safariData) {
+      if (searchGuildId === '/* Guild ID */' || !safariData[searchGuildId]) continue;
+      
+      const searchGuildData = safariData[searchGuildId];
+      if (searchGuildData.maps?.active && searchGuildData.maps[searchGuildData.maps.active]) {
+        console.log(`✅ Found active map in guild ${searchGuildId}`);
+        guildData = searchGuildData;
+        activeMapId = searchGuildData.maps.active;
+        break;
+      }
+    }
+  }
+  
+  // If still no map found, return error
   if (!activeMapId || !guildData.maps?.[activeMapId]) {
     return {
       components: [{
         type: 17, // Container
         components: [{
           type: 10, // Text Display
-          content: '❌ No active safari map found for this server.'
+          content: '❌ No active safari map found.'
         }]
       }],
       flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
