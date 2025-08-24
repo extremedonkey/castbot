@@ -1186,7 +1186,23 @@ async function formatServerUsageForDiscordV2(summary, currentPage = 0) {
   analyticsContent += `### 📈 Server Stats - Totals\n`;
   
   // Summary statistics on a single line with pipe separators
-  analyticsContent += `📊 Interactions: ${totalInteractions.toLocaleString()} | 👥 Unique Users: ${totalUniqueUsers} | 🏰 Active Servers: ${activeServers} | ⏱️ ${period}\n\n`;
+  analyticsContent += `📊 Interactions: ${totalInteractions.toLocaleString()} | 👥 Unique Users: ${totalUniqueUsers} | 🏰 Active Servers: ${activeServers} | ⏱️ ${period}\n`;
+  
+  // Calculate activity level breakdown
+  const activityBreakdown = {
+    recent: 0,    // 🟢 ≤1d
+    moderate: 0,  // 🟠 ≤4d
+    inactive: 0   // 🔴 ≥4d
+  };
+  
+  // Count servers by activity level
+  rankedServers.forEach(server => {
+    const level = server.activityLevel?.level || 'inactive';
+    activityBreakdown[level]++;
+  });
+  
+  // Add activity breakdown on new line
+  analyticsContent += `\`🟢 ≤1d\` ${activityBreakdown.recent} servers | \`🟠 ≤4d\` ${activityBreakdown.moderate} servers | \`🔴 ≥4d\` ${activityBreakdown.inactive} servers\n\n`;
   
   containerComponents.push({
     type: 10, // Text Display
