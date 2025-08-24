@@ -814,7 +814,7 @@ async function createReeceStuffMenu() {
     new ButtonBuilder()
       .setCustomId('prod_analytics_dump')
       .setLabel('Server List')
-      .setStyle(ButtonStyle.Danger)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧵'),
     new ButtonBuilder()
       .setCustomId('prod_live_analytics')
@@ -824,7 +824,7 @@ async function createReeceStuffMenu() {
     new ButtonBuilder()
       .setCustomId('prod_server_usage_stats')
       .setLabel('Server Stats')
-      .setStyle(ButtonStyle.Danger)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('📈')
   ];
 
