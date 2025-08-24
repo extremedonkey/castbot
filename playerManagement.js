@@ -334,7 +334,7 @@ export async function createPlayerManagementUI(options) {
   if (mode === PlayerManagementMode.ADMIN) {
     menuRow.components.push(new ButtonBuilder()
       .setCustomId('prod_menu_back')
-      .setLabel('⬅️ Menu')
+      .setLabel('◀️ Menu')
       .setStyle(ButtonStyle.Secondary));
   }
 
