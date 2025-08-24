@@ -1142,10 +1142,14 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
     };
   } else {
     // Single page tribe or ideal/no-separators scenario
+    // Import the sorting function to handle alumni placements
+    const { sortCastlistMembers } = await import('./castlistSorter.js');
+    const sortedMembers = sortCastlistMembers([...currentTribe.members], currentTribe);
+    
     pageInfo = {
       currentPage: 0,
       totalPages: 1,
-      playersOnPage: currentTribe.members
+      playersOnPage: sortedMembers
     };
   }
   
