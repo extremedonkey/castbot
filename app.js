@@ -1176,12 +1176,8 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
       ]
     };
   } else {
-    // Sort members by display name
-    const sortedMembers = [...pageInfo.playersOnPage].sort((a, b) => 
-      a.displayName.localeCompare(b.displayName)
-    );
-    
-    pageInfo.playersOnPage = sortedMembers;
+    // Members are already sorted by the appropriate method (alphabetical or by placement)
+    // No additional sorting needed here
     
     tribeSection = await createTribeSection(
       currentTribe,

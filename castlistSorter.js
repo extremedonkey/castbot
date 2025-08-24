@@ -71,9 +71,10 @@ function sortByPlacements(members, rankings) {
   ranked.sort((a, b) => a.placement - b.placement);
   
   // Sort unranked members alphabetically
+  // Handle Discord.js member objects which may have displayName as a property or need to fallback
   unranked.sort((a, b) => {
-    const nameA = a.displayName || a.user?.username || '';
-    const nameB = b.displayName || b.user?.username || '';
+    const nameA = a.displayName || a.nickname || a.user?.username || a.username || '';
+    const nameB = b.displayName || b.nickname || b.user?.username || b.username || '';
     return nameA.localeCompare(nameB);
   });
   
@@ -89,8 +90,8 @@ function sortByPlacements(members, rankings) {
  */
 function sortAlphabetical(members, reverse = false) {
   return members.sort((a, b) => {
-    const nameA = a.displayName || a.user?.username || '';
-    const nameB = b.displayName || b.user?.username || '';
+    const nameA = a.displayName || a.nickname || a.user?.username || a.username || '';
+    const nameB = b.displayName || b.nickname || b.user?.username || b.username || '';
     const result = nameA.localeCompare(nameB);
     return reverse ? -result : result;
   });
