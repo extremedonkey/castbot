@@ -809,8 +809,13 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
  * Create Reece Stuff submenu interface (admin-only special features)
  */
 async function createReeceStuffMenu() {
-  // Analytics section buttons
+  // Analytics section buttons - Server Stats first, Toggle Channel Logs last
   const analyticsButtons = [
+    new ButtonBuilder()
+      .setCustomId('prod_server_usage_stats')
+      .setLabel('Server Stats')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📈'),
     new ButtonBuilder()
       .setCustomId('prod_analytics_dump')
       .setLabel('Server List')
@@ -822,19 +827,14 @@ async function createReeceStuffMenu() {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪵'),
     new ButtonBuilder()
-      .setCustomId('prod_server_usage_stats')
-      .setLabel('Server Stats')
+      .setCustomId('prod_toggle_live_analytics')
+      .setLabel('Toggle Channel Logs')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📈')
+      .setEmoji('🔃')
   ];
 
   // Admin Tools section buttons
   const adminToolsButtons = [
-    new ButtonBuilder()
-      .setCustomId('prod_toggle_live_analytics')
-      .setLabel('Toggle Channel Logs')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔃'),
     new ButtonBuilder()
       .setCustomId('test_role_hierarchy')
       .setLabel('Test Role Hierarchy')
@@ -843,7 +843,7 @@ async function createReeceStuffMenu() {
     new ButtonBuilder()
       .setCustomId('msg_test')
       .setLabel('Msg Test')
-      .setStyle(ButtonStyle.Primary)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('💬')
   ];
 
