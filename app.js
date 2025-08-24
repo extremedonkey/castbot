@@ -24626,15 +24626,44 @@ Are you sure you want to continue?`;
           .setMaxValues(1)
           .addOptions(options.slice(0, 25)); // Discord limit
 
-        const row = new ActionRowBuilder()
-          .addComponents(stringSelect);
+        // Create ComponentsV2 container following LEAN Menu Design Standards
+        const selectCastlistContainer = {
+          type: 17, // Container (MANDATORY for ComponentsV2)
+          accent_color: 0xE67E22, // Orange accent to match tribe management theme
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## CastBot | Select Castlist`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display
+              content: `**Role selected:** <@&${selectedRoleId}>\n\nNow choose which castlist to add this tribe to:`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 1, // ActionRow
+              components: [{
+                type: 3, // String Select
+                custom_id: `prod_add_tribe_castlist_select_${selectedRoleId}`,
+                placeholder: 'Select castlist',
+                min_values: 1,
+                max_values: 1,
+                options: options.slice(0, 25) // Discord limit
+              }]
+            }
+          ]
+        };
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `## Select Castlist\n\nRole selected: <@&${selectedRoleId}>\n\nNow choose which castlist to add this tribe to:`,
-            components: [row.toJSON()],
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [selectCastlistContainer]
           }
         });
         
@@ -26815,11 +26844,30 @@ Are you sure you want to continue?`;
         const emojiDisplay = emojiValue ? ` with emoji ${emojiValue}` : '';
         const castlistDisplay = finalCastlist === 'default' ? 'default castlist' : `"${finalCastlist}" castlist`;
         
+        // Create ComponentsV2 container for success message
+        const successContainer = {
+          type: 17, // Container (MANDATORY for ComponentsV2)
+          accent_color: 0x2ECC71, // Green accent for success
+          components: [
+            {
+              type: 10, // Text Display
+              content: `## ✅ CastBot | Tribe Added Successfully`
+            },
+            {
+              type: 14 // Separator
+            },
+            {
+              type: 10, // Text Display
+              content: `**${role.name}** has been added to the ${castlistDisplay}${emojiDisplay}.\n\nPlayers can now view this tribe in the castlist once members are assigned to the role.`
+            }
+          ]
+        };
+        
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `## ✅ Tribe Added Successfully!\n\n**${role.name}** has been added to the ${castlistDisplay}${emojiDisplay}.\n\nPlayers can now view this tribe in the castlist once members are assigned to the role.`,
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [successContainer]
           }
         });
         
