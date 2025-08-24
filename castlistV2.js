@@ -11,6 +11,7 @@ import {
     getPlayer 
 } from './storage.js';
 import { capitalize } from './utils.js';
+import { sortCastlistMembers } from './castlistSorter.js';
 
 /**
  * Components V2 Castlist Module for CastBot
@@ -68,13 +69,16 @@ function determineDisplayScenario(tribes) {
  * @returns {Object} Pagination information
  */
 function calculateTribePages(tribe, members) {
+    // Sort members according to tribe type (alumni_placements, etc.)
+    const sortedMembers = sortCastlistMembers([...members], tribe);
+    
     // Simplified: Always allow 8 players per page with separators
     const maxPlayersPerPage = 8;
-    const totalPages = Math.ceil(members.length / maxPlayersPerPage);
+    const totalPages = Math.ceil(sortedMembers.length / maxPlayersPerPage);
     
     // Distribute players across pages (higher count on first page for odd distributions)
     const pages = [];
-    let remainingMembers = [...members];
+    let remainingMembers = [...sortedMembers];
     
     for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
         const remainingPages = totalPages - pageIndex;
@@ -84,7 +88,7 @@ function calculateTribePages(tribe, members) {
         remainingMembers = remainingMembers.slice(membersForThisPage);
     }
     
-    console.log(`Tribe ${tribe.name}: ${members.length} players across ${totalPages} pages`);
+    console.log(`Tribe ${tribe.name}: ${sortedMembers.length} players across ${totalPages} pages`);
     console.log(`Page distribution: ${pages.map(p => p.length).join(', ')} players`);
     
     return {
@@ -178,12 +182,14 @@ function reorderTribes(tribes, userId = null, strategy = "default", castlistName
  * @returns {Object} Player card section component
  */
 function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji) {
+    // Check if member has a placement prefix (from alumni_placements sorting)
+    const prefix = member.displayPrefix || '';
     const displayName = capitalize(member.displayName);
     const age = playerData?.age || '';
     const emoji = (showEmoji && playerData?.emojiCode) ? playerData.emojiCode : '';
     
-    // Combine all info, filtering out empty values
-    const nameWithEmoji = emoji ? `${emoji} **${displayName}**` : `**${displayName}**`;
+    // Combine all info, filtering out empty values, including placement prefix
+    const nameWithEmoji = emoji ? `${emoji} **${prefix}${displayName}**` : `**${prefix}${displayName}**`;
     
     // Build info array and filter out empty values
     const infoElements = [pronouns, age, timezone].filter(info => info && info.trim() !== '');
@@ -241,7 +247,7 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
             media: {
                 url: member.user.displayAvatarURL({ size: 128, extension: 'png' })
             },
-            description: `${displayName}'s avatar`
+            description: `${prefix}${displayName}'s avatar`
         }
     };
 }
