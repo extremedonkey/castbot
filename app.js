@@ -14499,7 +14499,7 @@ Your server is now ready for Tycoons gameplay!`;
                 {
                   type: 1, // Action Row
                   components: [{
-                    type: 8, // Role Select (Components V2)
+                    type: 6, // Role Select (Type 6 per ComponentsV2.md)
                     custom_id: `safari_role_update_${context.guildId}_${actionId}_${actionIndex}`,
                     placeholder: 'Select a role for this action',
                     min_values: 1,
@@ -15877,7 +15877,7 @@ Your server is now ready for Tycoons gameplay!`;
             {
               type: 1, // ActionRow
               components: [{
-                type: 8, // Role Select
+                type: 6, // Role Select (Type 6 per ComponentsV2.md)
                 custom_id: 'prod_add_tribe_role_select',
                 placeholder: 'Select the role of the tribe to add',
                 min_values: 1,
