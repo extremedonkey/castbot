@@ -6156,7 +6156,7 @@ To fix this:
                     custom_id: 'setup_castbot',
                     label: 'Run Setup',
                     style: 1, // Primary (Blue)
-                    emoji: { name: '🔧' }
+                    emoji: { name: '🪛' }
                   }
                 ]
               }
