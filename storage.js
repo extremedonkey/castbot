@@ -156,12 +156,10 @@ export async function getGuildTribes(guildId, castlist = 'default') {
   if (data[guildId]?.tribes) {
     Object.entries(data[guildId].tribes).forEach(([roleId, tribeData]) => {
       if (tribeData.castlist === castlist) {
+        // Include ALL tribe data to support new features like type and rankings
         tribes.push({
           roleId,
-          emoji: tribeData.emoji,
-          color: tribeData.color, // Make sure we include the color property
-          castlist: tribeData.castlist,
-          showPlayerEmojis: tribeData.showPlayerEmojis // Include the emoji visibility setting
+          ...tribeData // Include all fields for extensibility (type, rankings, etc.)
         });
       }
     });
