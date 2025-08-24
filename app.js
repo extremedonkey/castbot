@@ -809,8 +809,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
  * Create Reece Stuff submenu interface (admin-only special features)
  */
 async function createReeceStuffMenu() {
-  // Create analytics action buttons (split into rows due to 5-button limit)
-  const analyticsButtonsRow1 = [
+  // Analytics section buttons
+  const analyticsButtons = [
     new ButtonBuilder()
       .setCustomId('prod_analytics_dump')
       .setLabel('Server List')
@@ -828,7 +828,8 @@ async function createReeceStuffMenu() {
       .setEmoji('📈')
   ];
 
-  const analyticsButtonsRow2 = [
+  // Admin Tools section buttons
+  const adminToolsButtons = [
     new ButtonBuilder()
       .setCustomId('prod_toggle_live_analytics')
       .setLabel('Toggle Channel Logs')
@@ -840,6 +841,15 @@ async function createReeceStuffMenu() {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🔧'),
     new ButtonBuilder()
+      .setCustomId('msg_test')
+      .setLabel('Msg Test')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('💬')
+  ];
+
+  // Danger Zone section buttons
+  const dangerZoneButtons = [
+    new ButtonBuilder()
       .setCustomId('nuke_roles')
       .setLabel('Nuke Roles')
       .setStyle(ButtonStyle.Danger)
@@ -848,16 +858,12 @@ async function createReeceStuffMenu() {
       .setCustomId('emergency_app_reinit')
       .setLabel('Emergency App Re-Init')
       .setStyle(ButtonStyle.Danger)
-      .setEmoji('🚨'),
-    new ButtonBuilder()
-      .setCustomId('msg_test')
-      .setLabel('Msg Test')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('💬')
+      .setEmoji('🚨')
   ];
   
-  const analyticsRow1 = new ActionRowBuilder().addComponents(analyticsButtonsRow1);
-  const analyticsRow2 = new ActionRowBuilder().addComponents(analyticsButtonsRow2);
+  const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
+  const adminToolsRow = new ActionRowBuilder().addComponents(adminToolsButtons);
+  const dangerZoneRow = new ActionRowBuilder().addComponents(dangerZoneButtons);
   
   // Create back button
   const backButton = [
@@ -880,17 +886,25 @@ async function createReeceStuffMenu() {
     },
     {
       type: 10, // Text Display component
-      content: `> **\`📊 Analytics Tools\`**`
+      content: `> **\`📊 Analytics\`**`
     },
-    analyticsRow1.toJSON(), // Analytics buttons row 1
+    analyticsRow.toJSON(), // Analytics buttons
     {
       type: 14 // Separator
     },
     {
       type: 10, // Text Display component
-      content: `> **\`🛠️ Admin Functions\`**`
+      content: `> **\`🔧 Admin Tools\`**`
     },
-    analyticsRow2.toJSON(), // Analytics buttons row 2
+    adminToolsRow.toJSON(), // Admin tools buttons
+    {
+      type: 14 // Separator
+    },
+    {
+      type: 10, // Text Display component
+      content: `> **\`☢️ Danger Zone\`**`
+    },
+    dangerZoneRow.toJSON(), // Danger zone buttons
     {
       type: 14 // Separator
     },
