@@ -7938,9 +7938,16 @@ Your server is now ready for Tycoons gameplay!`;
             responseLines.push('');
           }
 
-          console.log(`✅ SUCCESS: prod_server_usage_stats - completed with ${responseLines.length} lines`);
+          // Join response and truncate if necessary to avoid Discord's 2000 char limit
+          let response = responseLines.join('\n');
+          if (response.length > 1990) {
+            response = response.substring(0, 1987) + '...';
+            console.log(`⚠️ Response truncated from ${responseLines.join('\n').length} to 1990 characters`);
+          }
+          
+          console.log(`✅ SUCCESS: test_role_hierarchy - completed with ${responseLines.length} lines`);
           return {
-            content: responseLines.join('\n')
+            content: response
           };
         }
       })(req, res, client);
