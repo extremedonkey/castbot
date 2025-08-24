@@ -116,7 +116,7 @@ import {
   MENU_FACTORY
 } from './buttonHandlerFactory.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
-import { getBotEmoji } from './botEmojis.js';
+import { getBotEmoji, formatBotEmoji } from './botEmojis.js';
 import { 
   createMapGrid,
   deleteMapGrid,
@@ -752,7 +752,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   const containerComponents = [
     {
       type: 10, // Text Display component
-      content: `## CastBot | Production Menu`
+      content: `## ${formatBotEmoji('castbot_logo')} CastBot | Production Menu`
     },
     {
       type: 14 // Separator after title
