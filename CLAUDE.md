@@ -30,6 +30,8 @@ When working on specific features, refer to these dedicated documentation files:
 
 **🏆 CAST RANKING:** Applicant scoring, voting, and navigation → [docs/features/CastRanking.md](docs/features/CastRanking.md) | [Navigation System](docs/features/CastRankingNavigation.md)
 
+**🥇 CASTLIST V3 - ALUMNI PLACEMENTS:** Player ranking display system (MVP) → [docs/features/CastlistV3-AlumniPlacements.md](docs/features/CastlistV3-AlumniPlacements.md)
+
 **🎨 COMPONENTS V2:** Discord UI architecture (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
 
 **🔧 ENTITY/EDIT FRAMEWORK:** Universal UI system for content management → [docs/architecture/EntityEditFramework.md](docs/architecture/EntityEditFramework.md)
