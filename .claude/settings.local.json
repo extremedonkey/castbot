@@ -247,7 +247,8 @@
       "Bash(/home/reece/.npm-global/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg -n \"NEW SERVER INSTALLED\" app.js)",
       "Read(//home/reece/**)",
       "Bash(source ~/.bashrc)",
-      "Bash(git rev-list:*)"
+      "Bash(git rev-list:*)",
+      "Read(//tmp/**)"
     ],
     "deny": []
   }

@@ -2,487 +2,167 @@
 
 This file provides guidance to Claude Code when working with CastBot. This is a high-level navigation document - follow the references to detailed documentation.
 
-## 🚀 Development Workflow
+## 🔴 Production Safety - NEVER Do These
 
-**MANDATORY:** Follow our standard agile-devops workflow documented in [docs/workflow/DevWorkflow.md](docs/workflow/DevWorkflow.md)
+1. **Use unapproved PM2 commands** (see approved list below)
+2. **Modify production without explicit permission**
+3. **Use `pm2 delete` followed by `pm2 start`** - This loses environment context
+4. **Create new PM2 processes** with `pm2 start app.js --args` 
+5. **Ignore "Discord client public key" errors** - Environment not loaded
 
-**Definition of Done:** Every feature must complete the checklist in [docs/workflow/DefinitionOfDone.md](docs/workflow/DefinitionOfDone.md)
+## 🚀 Quick Start
 
-## 📚 Feature Documentation
-
-When working on specific features, refer to these dedicated documentation files:
-
-**🦁 SAFARI SYSTEM:** Dynamic content, buttons, currency, stores → [docs/features/Safari.md](docs/features/Safari.md) | [Index](docs/features/safari/README.md)
-
-**🗺️ SAFARI MAP EXPLORER:** Map building, grid systems, exploration → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
-
-**⚡ SAFARI POINTS SYSTEM:** Resource management, stamina, regeneration → [docs/features/SafariPoints.md](docs/features/SafariPoints.md)
-
-**🚶 SAFARI MAP MOVEMENT:** Player movement, permissions, exploration → [docs/features/SafariMapMovement.md](docs/features/SafariMapMovement.md)
-
-**🚀 SAFARI PROGRESS:** Admin overview of map state, actions, conditions, and claim tracking → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
-
-**👥 PLAYER LOCATION MANAGER:** Centralized location tracking for all player interactions (MANDATORY) → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
-
-**💬 WHISPER SYSTEM:** Private player-to-player messaging at locations → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)
-
-**📋 SEASON APPLICATION BUILDER:** Application systems, applicant management → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
-
-**🏆 CAST RANKING:** Applicant scoring, voting, and navigation → [docs/features/CastRanking.md](docs/features/CastRanking.md) | [Navigation System](docs/features/CastRankingNavigation.md)
-
-**🥇 CASTLIST V3 - ALUMNI PLACEMENTS:** Player ranking display system (MVP) → [docs/features/CastlistV3-AlumniPlacements.md](docs/features/CastlistV3-AlumniPlacements.md)
-
-**🎨 COMPONENTS V2:** Discord UI architecture (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
-
-**🔧 ENTITY/EDIT FRAMEWORK:** Universal UI system for content management → [docs/architecture/EntityEditFramework.md](docs/architecture/EntityEditFramework.md)
-
-**📊 ANALYTICS:** Logging and analytics system → [docs/architecture/Analytics.md](docs/architecture/Analytics.md)
-
-**📝 LOGGING:** Logging standards and utilities → [docs/architecture/LoggingStandards.md](docs/architecture/LoggingStandards.md)
-
-**⚠️ DISCORD PATTERNS:** Common patterns and pitfalls → [docs/architecture/DiscordInteractionPatterns.md](docs/architecture/DiscordInteractionPatterns.md)
-
-**🔀 CONDITIONAL LOGIC:** Complete system redesign with visual UI → [docs/implementation/SafariConditionalLogicPlan.md](docs/implementation/SafariConditionalLogicPlan.md) | [Implementation Guide](docs/implementation/ConditionalLogicImplementation.md)
-
-## ⚠️ Common Discord Interaction Issues
-
-### "This interaction failed" Errors
-**Quick Causes**: UPDATE_MESSAGE flags, malformed emojis, Container structure issues
-**Full Troubleshooting**: → [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
-
-### Pattern Matching
-**CRITICAL**: When implementing features "like X", examine X's exact implementation first:
+### Development Workflow
 ```bash
-# Find how stores field group works
-grep -B20 -A20 "fieldGroup === 'stores'" app.js
+./scripts/dev/dev-start.sh      # Start development session
+./scripts/dev/dev-restart.sh    # Your new "save" - use after EVERY code change
+./scripts/dev/dev-status.sh     # Check status
+./scripts/dev/dev-stop.sh       # Clean shutdown
 ```
 
-**🚨 PLAYER LOCATION FEATURES**: For ANY feature involving player locations, proximity, or interactions:
-- **ALWAYS** use PlayerLocationManager module (`playerLocationManager.js`)
-- **NEVER** access player location data directly
-- **QUICK REF**: [PlayerLocationSystem.md](docs/quick-reference/PlayerLocationSystem.md) | **FULL API**: [PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
+**🚨 MANDATORY:** Run `./scripts/dev/dev-restart.sh` after ANY code changes
 
-## 🛠️ Critical Development Information
+### Production Deployment
 
-### Primary Development Workflow
+**🚨 CRITICAL: NEVER deploy without explicit user permission!**
 
-**Environment:** Solo development on main branch, VS Code with WSL terminal
+**✅ APPROVED PM2 COMMANDS:**
+- `pm2 restart castbot-pm` - Safe, preserves environment
+- `pm2 reload castbot-pm` - Zero-downtime restart  
+- `pm2 logs` - Read-only, always safe
+- `pm2 status/list/info` - Read-only monitoring
 
-**🖼️ Image Access Protocol:**
+**🔴 FORBIDDEN PM2 COMMANDS:**
+- `pm2 delete` then `pm2 start` - Loses environment context
+- `pm2 start app.js` with arguments - Creates duplicate processes
+- `pm2 scale` - Untested, may lose state
+- `pm2 resurrect` after delete - Incomplete state restoration
 
-**WSL Paths:** Windows `C:\` → WSL `/mnt/c/`
-
-**Local Screenshots:** `/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1`
+**Deployment Commands (REQUIRE PERMISSION):**
 ```bash
-# ALWAYS: LS first → Find latest (highest timestamp) → Read exact file
-LS /mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1
-Read /mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1/Screenshot 2025-08-14 223800.png
+npm run deploy-remote-wsl      # Full deployment - uses pm2 restart internally
+npm run deploy-commands-wsl    # Commands only (lower risk)
+npm run deploy-remote-wsl-dry  # Preview changes (SAFE - no permission needed)
 ```
 
-**External Images (ibb.co, imgur):** 
+### Production Monitoring
 ```bash
-# WebFetch fails on images - use curl + Read
-curl -s "URL" -o /tmp/img.png && Read /tmp/img.png
-
-# ibb.co needs extraction: 
-curl -s "https://ibb.co/ID" | grep -oE 'https://i\.ibb\.co/[^"]+\.png' | head -1
+npm run logs-prod              # Last 100 lines
+npm run logs-prod-follow       # Real-time streaming
+npm run logs-prod-errors       # Error logs only
+npm run logs-prod -- --filter "user ID"  # Filtered logs
 ```
 
-**❌ NEVER:** Use bash glob patterns like `ls -t *.png` (WSL fails)
+## ⚠️ Production Environment Variables
 
-```bash
-# Start development session
-./scripts/dev/dev-start.sh [optional-commit-message]
+**CRITICAL**: Production relies on `.env` file being loaded by dotenv
+- PM2 does NOT preserve env vars in its saved state
+- After system reboot: ALWAYS verify with `pm2 logs` for errors
+- If "You must specify a Discord client public key" error appears: Environment not loaded
+- Recovery: Use `pm2 restart castbot-pm` from correct directory
 
-# Your new "save" command - use frequently!
-./scripts/dev/dev-restart.sh [optional-commit-message]
+## 📚 Feature Documentation Index
 
-# Check status
-./scripts/dev/dev-status.sh
+**Core Systems:**
+- **🦁 SAFARI SYSTEM** → [docs/features/Safari.md](docs/features/Safari.md)
+- **📋 SEASON APPLICATIONS** → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
+- **🏆 CAST RANKING** → [docs/features/CastRanking.md](docs/features/CastRanking.md)
+- **🥇 CASTLIST V3** → [docs/features/CastlistV3-AlumniPlacements.md](docs/features/CastlistV3-AlumniPlacements.md)
 
-# Clean shutdown
-./scripts/dev/dev-stop.sh
-```
+**Safari Subsystems:**
+- **MAP EXPLORER** → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
+- **POINTS SYSTEM** → [docs/features/SafariPoints.md](docs/features/SafariPoints.md)
+- **MAP MOVEMENT** → [docs/features/SafariMapMovement.md](docs/features/SafariMapMovement.md)
+- **SAFARI PROGRESS** → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
+- **PLAYER LOCATIONS** → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
+- **WHISPER SYSTEM** → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)
 
-**🚨 CRITICAL Protocol - RESTART AFTER EVERY CODE CHANGE:**
-- **MANDATORY:** Run `./scripts/dev/dev-restart.sh` after ANY code changes
-- **INFORM** the user that dev has been restarted so they can test
-- **This ensures** immediate testing without manual intervention
-- **DO NOT** use `npm run dev` - use the restart script only
+**Architecture & Standards:**
+- **🎨 COMPONENTS V2** (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
+- **🔘 BUTTON HANDLER FACTORY** (MANDATORY) → [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
+- **📐 LEAN MENU DESIGN** → [docs/ui/LeanMenuDesign.md](docs/ui/LeanMenuDesign.md)
+- **🔧 ENTITY/EDIT FRAMEWORK** → [docs/architecture/EntityEditFramework.md](docs/architecture/EntityEditFramework.md)
+- **📊 ANALYTICS** → [docs/architecture/Analytics.md](docs/architecture/Analytics.md)
+- **📝 LOGGING STANDARDS** → [docs/architecture/LoggingStandards.md](docs/architecture/LoggingStandards.md)
 
-**⚠️ IMPORTANT:** The restart script handles git commits, Discord notifications, and proper app restart
+## 🛠️ Development Standards
 
-### 🚨 MANDATORY: Button Handler Factory Pattern
+### Mandatory Patterns
 
-**ALL Discord buttons MUST use the ButtonHandlerFactory pattern** - no exceptions. This standard was implemented and is strictly enforced.
-
-**❌ FORBIDDEN**: Legacy button handlers like:
-```javascript
-if (custom_id === 'my_button') {
-  // Direct handler - NOT ALLOWED
-}
-```
-
-**✅ REQUIRED**: ButtonHandlerFactory pattern:
+**Button Handler Factory** - ALL buttons MUST use this pattern:
 ```javascript
 } else if (custom_id === 'my_button') {
   return ButtonHandlerFactory.create({
     id: 'my_button',
-    handler: async (context) => {
-      // Your code here
-    }
+    handler: async (context) => { /* your code */ }
   })(req, res, client);
+}
 ```
 
-**Documentation**: [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
+**Components V2** - ALL UI MUST use `IS_COMPONENTS_V2` flag (1 << 15)
 
-### Production Deployment
-
-**🚨 CRITICAL: NEVER deploy to production without explicit user permission!**
-- **NEVER** run deployment commands without asking first
-- You can **recommend** deployment when fixes are ready
-- You can **strongly recommend** deployment for critical fixes
-- Always wait for explicit approval like "deploy to prod" or "yes, deploy"
-
+**Pattern Matching** - When implementing "like X", examine X's implementation first:
 ```bash
-npm run deploy-remote-wsl      # Full deployment (HIGH RISK) - REQUIRES PERMISSION
-npm run deploy-commands-wsl    # Commands only (lower risk) - REQUIRES PERMISSION
-npm run deploy-remote-wsl-dry  # Preview changes (SAFE) - No permission needed
+grep -B20 -A20 "feature_pattern" app.js
 ```
 
-### Production Log Reading
+### Image Access (WSL)
+- Screenshots: `/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1`
+- External: `curl -s "URL" -o /tmp/img.png && Read /tmp/img.png`
 
-```bash
-npm run logs-prod              # Last 100 lines
-npm run logs-prod-follow       # Real-time log streaming
-npm run logs-prod-errors       # Only error logs
-npm run logs-prod-safari       # Only Safari feature logs
-npm run logs-prod-stats        # Log statistics and analysis
+### Workflow Requirements
+- **Definition of Done**: [docs/workflow/DefinitionOfDone.md](docs/workflow/DefinitionOfDone.md)
+- **Dev Workflow**: [docs/workflow/DevWorkflow.md](docs/workflow/DevWorkflow.md)
 
-# Advanced filtering
-npm run logs-prod -- --filter "user 391415444084490240"
-npm run logs-prod -- --feature BUTTON --level debug
-```
+## 📐 app.js Organization
 
-### Test Result Feedback (Pass/Fail Buttons)
+### Golden Rule: app.js is a ROUTER, not a PROCESSOR
 
-**Context**: Restart notifications include Pass/Fail buttons that log test results when clicked.
+**✅ BELONGS in app.js:**
+- Express/Discord initialization
+- Route handlers (`/interactions`)
+- Button routing (`if custom_id === ...`)
+- Top-level error handling
+- Basic permission checks
 
-**Log Pattern**: Look for `📊 TEST RESULT:` in logs to see testing feedback:
-```json
-📊 TEST RESULT: {"result":"PASSED","timestamp":"2025-08-23T06:36:18.850Z","messageId":"1408701025212301434","userId":"391415444084490240","change":"Add lightweight test result tracking to Pass/Fail buttons"}
-```
+**❌ MOVE to modules:**
+- Feature implementations
+- Data processing
+- UI component builders
+- Business logic
+- Helper functions >20 lines
 
-**How to interpret**:
-- **PASSED** = The change worked as expected
-- **FAILED** = The change has issues that need fixing
-- The `change` field shows what was being tested
+**Size Targets:**
+- Functions: Max 30 lines
+- Handler blocks: Max 10 lines
+- Total file: <5,000 lines (currently 21,000+)
 
-**Note**: This is informational only - no action required unless actively debugging
+## ⚠️ Troubleshooting
 
-## 🔧 Architecture Overview
+**"This interaction failed" errors:**
+- Quick causes: UPDATE_MESSAGE flags, malformed emojis, Container structure
+- Full guide: [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
 
-### Core Components
-- **app.js** - Main entry point, handles Discord interactions
-- **storage.js** - JSON-based data persistence
-- **commands.js** - Slash command definitions
-- **safariManager.js** - Safari system core functionality
-- **botEmojis.js** - Bot emoji system (`getBotEmoji('castbot_logo')` for buttons)
-
-### Data Storage
-- **playerData.json** - Player information and Safari data
-- **safariContent.json** - Safari buttons, items, shops, attack queues
-
-### Key Patterns
-- Work on main branch (solo development)
-- Use existing patterns in codebase
-- **MANDATORY: Discord Components V2** - ALL UI must use Components V2 pattern (see architecture docs)
-- Centralized error handling via errorHandler.js
-
-## 📐 app.js Organization Rules
-
-### **🎯 The Golden Rule: app.js should be a ROUTER, not a PROCESSOR**
-
-### **♻️ Code Reusability Rule: Make things as reusable as possible whilst considering prompts, aim to put minimal code in app.js**
-
-### **❌ SHOULD NOT go in app.js:**
-
-1. **Complete feature implementations** - Like Safari system logic, castlist processing, player management
-2. **Data processing utilities** - Emoji handling, role calculations, member field processing
-3. **Reusable UI components** - Button builders, modal creators, complex response formatters
-4. **Business logic** - Entity management, field validation, content transformations
-5. **Helper functions >20 lines** - Complex calculations, data transformations
-6. **Static configuration** - Button registries, menu definitions, style constants
-
-### **✅ SHOULD go in app.js:**
-
-1. **Express server setup** - App initialization, middleware, port configuration
-2. **Discord client initialization** - Client setup, basic event handlers
-3. **Route handlers** - `/interactions` endpoint, verification handlers
-4. **Button handler routing** - The `if (custom_id === 'button')` routing logic only
-5. **Top-level interaction dispatch** - Slash command routing, component type routing
-6. **Error handling wrappers** - Top-level try/catch for interactions
-7. **Permission checks** - Basic authorization before routing to handlers
-
-### **📏 Size Guidelines:**
-
-- **Functions**: Max 30 lines in app.js
-- **Handler blocks**: Max 10 lines (should call external functions)
-- **Total file**: Target <5,000 lines (currently 21,000+)
-
-### **✅ Good Pattern:**
-```javascript
-} else if (custom_id === 'safari_button') {
-  return ButtonHandlerFactory.create({
-    id: 'safari_button',
-    handler: safariHandlers.handleButton
-  })(req, res, client);
-}
-```
-
-### **❌ Bad Pattern:**
-```javascript
-} else if (custom_id === 'safari_button') {
-  const safariContent = await loadSafariContent();
-  const processedData = transformSafariData(safariContent);
-  const uiComponents = buildSafariUI(processedData);
-  // ... 50 more lines of processing
-}
-```
-
-## 🎨 Discord Components V2 (MANDATORY)
-
-**🚨 CRITICAL: ALL Discord UI must use Components V2 pattern**
-
-**Rule**: ALL UI must use Components V2 with `IS_COMPONENTS_V2` flag (1 << 15)
-**Key**: Never use 'content' field with Components V2 flag
-**Technical Details**: → [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
-**Architecture**: → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
-
-## 🎨 UI/UX Standards (MANDATORY)
-
-**🚨 CRITICAL: Follow these UI/UX standards for all Discord interactions**
-
-### ✅ Ephemeral Message Requirements
-- **ALWAYS set `ephemeral: true`** - ALL Discord responses should be ephemeral unless explicitly stated otherwise
-- **Prevents channel clutter** - Admin interfaces should not be visible to regular users
-- **Privacy protection** - Configuration interfaces contain sensitive information
-
-### ✅ Menu Dismissal Standards  
-- **ALWAYS dismiss previous menus** when opening new entities/interfaces
-- **Example**: When clicking a button that opens a new entity, dismiss the current ephemeral message
-- **Prevents UI clutter** - Users should only see the current active interface
-- **Implementation**: Use `UPDATE_MESSAGE` with minimal content or component removal
-
-### ✅ Navigation Flow Standards
-- **Forward navigation**: Dismiss previous → Show new interface
-- **Backward navigation**: Return to parent interface (dismiss current)
-- **Save/Complete actions**: Dismiss current → Return to parent interface
-- **Cancel actions**: Dismiss current → Return to parent interface
-
-## 📐 LEAN Menu Design Standards (MANDATORY)
-
-**🎯 Philosophy**: Maximize information density while maintaining clarity and visual hierarchy
-
-### ✅ Menu Structure Pattern
-```javascript
-// LEAN Menu Template - Copy this pattern for ALL menus
-const containerComponents = [
-  { type: 10, content: `## CastBot | Menu Title` },     // Header
-  { type: 14 },                                         // Separator
-  { type: 10, content: `> **\`📊 Section Name\`**` },  // Section header
-  actionRow1.toJSON(),                                  // Buttons (max 5)
-  { type: 14 },                                         // Separator between sections
-  { type: 10, content: `> **\`🔧 Next Section\`**` },  // Next section
-  actionRow2.toJSON(),                                  // More buttons
-  { type: 14 },                                         // Final separator
-  navigationRow.toJSON()                                // Navigation buttons
-];
-```
-
-### ✅ Section Organization Rules
-- **Group by function**: Analytics together, admin tools together, danger actions together
-- **Progressive disclosure**: Most-used → Least-used → Dangerous
-- **Section headers**: Use `> **\`📊 Section Name\`**` format (backticks for emphasis)
-- **Maximum 3-4 sections** per menu to prevent scrolling
-- **5 buttons max** per ActionRow (Discord hard limit)
-
-### ✅ Button Styling Hierarchy
-```javascript
-ButtonStyle.Primary   // Main actions, primary features
-ButtonStyle.Secondary // Standard actions, navigation
-ButtonStyle.Success   // Positive actions, confirmations  
-ButtonStyle.Danger    // Destructive actions ONLY
-ButtonStyle.Link      // External links only
-```
-
-### ✅ Space Optimization Techniques
-1. **Concise labels**: "Server Stats" not "View Server Statistics"
-2. **Single emoji per button**: 📊 not 📊📈📉
-3. **No empty rows**: Every ActionRow must have buttons
-4. **Combine related actions**: One "Manage X" button instead of separate Create/Edit/Delete
-5. **Use dividers sparingly**: Only between logical sections
-
-### ✅ Visual Hierarchy
-```
-## Title                    // H2 for main title
-> **`📊 Section`**         // Quoted, bold, backticked sections
-Regular button text         // Standard button labels
--# Credit line             // Small text for credits/notes
-```
-
-### ✅ Container Configuration
-```javascript
-const menuContainer = {
-  type: 17,                          // Container type (MANDATORY)
-  accent_color: 0x3498DB,           // Blue for standard, 0xe74c3c for danger
-  components: containerComponents   // Array of components
-};
-
-return {
-  flags: (1 << 15),                 // IS_COMPONENTS_V2 (MANDATORY)
-  components: [menuContainer]
-};
-```
-
-### ❌ Anti-Patterns to Avoid
-- **Sparse layouts**: Don't use one button per row unless necessary
-- **Redundant text**: Don't repeat menu name in every section
-- **Excessive dividers**: Don't separate every single button
-- **Mixed metaphors**: Keep emoji themes consistent within sections
-- **Nested menus beyond 2 levels**: Flatten navigation where possible
-
-### 📏 Size Guidelines
-- **Menu height**: Aim for 5-8 visible rows without scrolling
-- **Button text**: 2-3 words ideal, 4 words maximum
-- **Section headers**: 1-3 words with single emoji
-- **Total components**: Stay under 20 components per container
-
-### 🎯 Example: Analytics Menu (Optimal LEAN Design)
-```
-## CastBot | Analytics & Admin
-━━━━━━━━━━━━━━━━━━━━━━
-> **`📊 Analytics`**
-[Server List] [Print Logs] [Server Stats]
-━━━━━━━━━━━━━━━━━━━━━━
-> **`🔧 Admin Tools`**  
-[Toggle Logs] [Test Roles] [Msg Test]
-━━━━━━━━━━━━━━━━━━━━━━
-> **`☢️ Danger Zone`**
-[Nuke Roles] [Emergency Re-Init]
-━━━━━━━━━━━━━━━━━━━━━━
-[⬅ Menu]
-```
-**Result**: 9 buttons + navigation in just 5 ActionRows with clear visual separation
-
-## 🚀 Discord Button Implementation
-
-**🚨 CRITICAL: Button Handler Factory is MANDATORY for ALL buttons** 
-
-**STEP 1:** **ALWAYS** read [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md) before implementing ANY button
-
-**STEP 2:** **NO EXCEPTIONS** - Every single button MUST use the Button Handler Factory pattern:
-
-**🚨 IMPORTANT:** If a button shows as [🪨 LEGACY] instead of [✨ FACTORY], it means the button is NOT properly registered in BUTTON_REGISTRY. ALL buttons must be registered first.
-
-### ✅ New Button Handler Template (MANDATORY)
-```javascript
-// 1. ADD TO BUTTON_REGISTRY (buttonHandlerFactory.js)
-'your_button_id': {
-  label: 'Button Text',
-  description: 'What this button does',
-  emoji: '🔥',
-  style: 'Primary',
-  category: 'feature_name'
-}
-
-// 2. CREATE HANDLER (app.js)
-} else if (custom_id === 'your_button_id') {
-  return ButtonHandlerFactory.create({
-    id: 'your_button_id',
-    requiresPermission: PermissionFlagsBits.ManageRoles, // Optional
-    permissionName: 'Manage Roles',
-    handler: async (context) => {
-      // 🚨 MANDATORY LOGGING PATTERN - prevents "This interaction failed" confusion
-      console.log(`🔍 START: your_button_id - user ${context.userId}`);
-      
-      // Your logic here - context has guildId, userId, member, etc.
-      
-      console.log(`✅ SUCCESS: your_button_id - completed`);
-      return {
-        content: 'Success!',
-        ephemeral: true
-      };
-    }
-  })(req, res, client);
-}
-```
-
-### ✅ Natural Language Benefits
-- You can now say "analytics button" instead of hunting for IDs
-- `ButtonRegistry.search('emergency')` finds emergency-related buttons
-- `ButtonRegistry.findByLabel('Server Stats')` returns exact button
-
-**🚨 CRITICAL: 5-Button Limit** - Action Rows can contain maximum 5 buttons (ComponentsV2.md line 61)
-
-**🚨 CRITICAL: Discord Response Validation**
-
-**Common Issues**: UPDATE_MESSAGE flags, empty responses, Container structure
-**Detailed Troubleshooting**: → [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
-
-**Always update:** [docs/architecture/BUTTON_HANDLER_REGISTRY.md](docs/architecture/BUTTON_HANDLER_REGISTRY.md)
-
-### 🚨 Button Testing Protocol
-If a button shows "This interaction failed":
-1. Check logs for `🔍 START: button_id` - if missing, handler isn't being called
-2. Check logs for `✅ SUCCESS: button_id` - if missing, handler crashed
-3. **Full troubleshooting**: → [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
-
-## 📋 Feature Backlog
-
-See [BACKLOG.md](BACKLOG.md) for prioritized feature requests and user stories.
-
-**High Priority:**
-- 🔄 Phase 2A: Button Handler Factory System → [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
-- Enhanced tribe ordering features
-- Safari Phase 2 features
+**Common Issues:**
+- Button not working → Check BUTTON_REGISTRY registration
+- Missing variables → Ensure context extraction
+- Permission errors → Use BigInt for permission checks
+- Menu crashes → Check 5-button limit per ActionRow
+- String Select limits → Maximum 25 options
 
 ## 🎯 Available Commands
 
-### Player Commands
-- `/menu` - Main player interface for age, pronouns, timezone
-- `/castlist` - Display dynamic castlist with player information
+**Player Commands:**
+- `/menu` - Main player interface
+- `/castlist` - Display dynamic castlist
 
-### Admin Commands
-Most admin functionality accessed via `/menu` → Production Menu
+**Admin Commands:**
+- Most functionality via `/menu` → Production Menu
 
-## 🔍 Quick Reference
+## 📋 Feature Backlog
 
-### When to Create New Documentation
-- **Simple feature** → Document in BACKLOG.md
-- **Complex feature** → Create dedicated .md file in docs/features/
-- **Always** → Update references in this file
-
-### Common Issues
-- **Button not working** → Check dynamic handler exclusions
-- **Missing variables** → Ensure context extraction at handler start
-- **Permission errors** → Use BigInt for permission checks
-- **Menu crashes** → Check 5-button limit per Action Row (see ComponentsV2.md line 61)
-- **"Interaction failed" with UPDATE_MESSAGE** → Check flag compatibility and response format
-- **String Select option limits** → Discord String Selects have maximum 25 options (ComponentsV2.md line 185-201)
-- **Complex UI requests** → Start with existing simple patterns before building complex systems
-
-### Development Best Practices
-1. Follow existing code patterns
-2. Add comprehensive logging (see DoD)
-3. Test on mobile Discord
-4. Handle errors gracefully
-5. Update documentation immediately
+See [BACKLOG.md](BACKLOG.md) for prioritized features and user stories.
 
 ---
 
-For detailed information on any topic, follow the documentation references above. This file serves as your navigation guide to the comprehensive CastBot documentation.
-
-## Memories
-
-- What are we memorizing
+For detailed information on any topic, follow the documentation references above.
