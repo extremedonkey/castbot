@@ -868,7 +868,12 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
           // Format executed actions
           const actions = safariContent.executedActions.map(action => {
             if (action.type === 'display_text' && action.config) {
-              return `Display Text: "${action.config.title || 'No title'}" - ${action.config.content || 'No content'}`;
+              // Truncate display text content if too long
+              let content = action.config.content || 'No content';
+              if (content.length > 200) {
+                content = content.substring(0, 200) + '... [truncated]';
+              }
+              return `Display Text: "${action.config.title || 'No title'}" - ${content}`;
             }
             return `${action.type}: ${JSON.stringify(action.config || {})}`;
           }).join('\n> ');
@@ -898,6 +903,12 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     
     // Send to Safari log channel
     console.log(`🔍 Safari Log Debug: Sending log message to channel ${safariLogChannel.name}:`, logMessage);
+    
+    // Truncate message if it exceeds Discord's 2000 character limit
+    if (logMessage.length > 1900) {
+      logMessage = logMessage.substring(0, 1900) + '\n... [Message truncated due to length]';
+      console.log('⚠️ Safari Log: Message truncated from', logMessage.length, 'to 1900 characters');
+    }
     
     await safariLogChannel.send(logMessage);
     
