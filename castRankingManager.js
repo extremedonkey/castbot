@@ -262,7 +262,7 @@ export async function generateSeasonAppRankingUI({
   // Add applicant jump select menu if there are multiple applications
   if (allApplications.length > 1) {
     // Calculate current page based on appIndex
-    const itemsPerPage = 24;
+    const itemsPerPage = 23;
     const currentPage = Math.floor(appIndex / itemsPerPage);
     const startIdx = currentPage * itemsPerPage;
     const endIdx = Math.min(startIdx + itemsPerPage, allApplications.length);
@@ -712,7 +712,7 @@ export async function handleRankingSelect({
     console.log(`🔍 DEBUG: handleRankingSelect - Switching to page ${newPage}`);
     
     // Show first applicant of the new page
-    const newIndex = newPage * 24;
+    const newIndex = newPage * 23;
     const currentApp = allApplications[newIndex];
     
     if (!currentApp) {
