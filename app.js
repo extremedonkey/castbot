@@ -6143,7 +6143,7 @@ To fix this:
               },
               {
                 type: 10, // Text Display
-                content: `Click the Setup button to create/configure pronoun and timezone roles for your server.\n\n💡 This setup can be run multiple times safely - existing roles will be detected and added to CastBot.`
+                content: `Click the button below to set up CastBot. This will add Pronoun and Timezone roles to your server, and set up CastBot to use those roles, allowing prod and players to set their own pronouns, timezones and age for the castlists.\n\n💡 This setup can be run multiple times safely. If you already have pronoun roles in your server, CastBot will detect them and use them.`
               },
               {
                 type: 14 // Separator
