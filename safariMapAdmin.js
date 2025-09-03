@@ -109,26 +109,36 @@ async function createPlayerViewUI(guildId, userId) {
   // Build status display
   let statusText = `## 🛡️ Player Admin: <@${userId}>\n\n`;
   
-  if (activeMap) {
-    statusText += `📍 **Current Location:** ${currentLocation}\n`;
-    statusText += `⚡ **Stamina:** ${stamina.current}/${stamina.maximum}\n`;
-    statusText += `🗺️ **Explored Cells:** ${exploredCount}\n`;
-    
-    if (lastMove) {
-      const moveTime = new Date(lastMove.timestamp).toLocaleString();
-      statusText += `🕒 **Last Move:** ${lastMove.from} → ${lastMove.to} (${moveTime})\n`;
-    }
-    
-    statusText += `\n💰 **${customTerms.currencyName}:** ${safari.currency || 0} ${customTerms.currencyEmoji}\n`;
+  // Show Safari status if initialized
+  if (safari && Object.keys(safari).length > 0) {
+    statusText += `💰 **${customTerms.currencyName}:** ${safari.currency || 0} ${customTerms.currencyEmoji}\n`;
     statusText += `📦 **Items in ${customTerms.inventoryName}:** ${Object.keys(safari.items || {}).length}\n`;
+    
+    // Show map-specific info if available
+    if (activeMap && playerMapData) {
+      statusText += `\n📍 **Current Location:** ${currentLocation}\n`;
+      statusText += `⚡ **Stamina:** ${stamina.current}/${stamina.maximum}\n`;
+      statusText += `🗺️ **Explored Cells:** ${exploredCount}\n`;
+      
+      if (lastMove) {
+        const moveTime = new Date(lastMove.timestamp).toLocaleString();
+        statusText += `🕒 **Last Move:** ${lastMove.from} → ${lastMove.to} (${moveTime})\n`;
+      }
+    } else if (activeMap) {
+      statusText += `\n⚠️ **Not placed on map yet**\n`;
+    }
+  } else {
+    statusText += `⚠️ **Player not initialized in Safari system**\n`;
   }
   
   // Build management buttons
   const buttons = [];
   
-  // Row 1: Map management
+  // Row 1: Map management (only show if map exists and player is initialized)
   const mapButtons = [];
-  if (!playerMapData) {
+  const isInitialized = player.safari !== undefined;
+  
+  if (!isInitialized) {
     mapButtons.push({
       type: 2, // Button
       custom_id: `safari_init_player_${userId}`,
@@ -136,7 +146,7 @@ async function createPlayerViewUI(guildId, userId) {
       style: 3, // Success
       emoji: { name: '🚀' }
     });
-  } else {
+  } else if (activeMap && playerMapData) {
     mapButtons.push({
       type: 2, // Button
       custom_id: `map_admin_move_player_${userId}`,
