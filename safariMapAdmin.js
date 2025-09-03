@@ -146,30 +146,34 @@ async function createPlayerViewUI(guildId, userId) {
       style: 3, // Success
       emoji: { name: '🚀' }
     });
-  } else if (activeMap && playerMapData) {
+  } else if (activeMap) {
+    // Show place/move button based on whether player is on the map
     mapButtons.push({
       type: 2, // Button
       custom_id: `map_admin_move_player_${userId}`,
-      label: 'Move Player',
+      label: playerMapData ? 'Move Player' : 'Place on Map',
       style: 1, // Primary
       emoji: { name: '📍' }
     });
     
-    mapButtons.push({
-      type: 2, // Button
-      custom_id: `map_admin_grant_stamina_${userId}`,
-      label: 'Set Stamina',
-      style: 3, // Success
-      emoji: { name: '⚡' }
-    });
-    
-    mapButtons.push({
-      type: 2, // Button
-      custom_id: `map_admin_reset_explored_${userId}`,
-      label: 'Reset Explored',
-      style: 4, // Danger
-      emoji: { name: '🔄' }
-    });
+    // Only show these buttons if player is already on the map
+    if (playerMapData) {
+      mapButtons.push({
+        type: 2, // Button
+        custom_id: `map_admin_grant_stamina_${userId}`,
+        label: 'Set Stamina',
+        style: 3, // Success
+        emoji: { name: '⚡' }
+      });
+      
+      mapButtons.push({
+        type: 2, // Button
+        custom_id: `map_admin_reset_explored_${userId}`,
+        label: 'Reset Explored',
+        style: 4, // Danger
+        emoji: { name: '🔄' }
+      });
+    }
   }
   
   if (mapButtons.length > 0) {
