@@ -370,31 +370,52 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
  * Move player to specific coordinate
  */
 export async function movePlayerToCoordinate(guildId, userId, coordinate, client = null) {
-  // Use the unified movement system with admin options
-  const { movePlayer, getMovementDisplay } = await import('./mapMovement.js');
-  const { DiscordRequest } = await import('./utils.js');
+  // Check if player is already on the map
+  const playerData = await loadPlayerData();
+  const safariData = await loadSafariContent();
+  const activeMapId = safariData[guildId]?.maps?.active;
   
-  const result = await movePlayer(guildId, userId, coordinate, client, {
-    bypassStamina: true,
-    adminMove: true
-  });
+  if (!activeMapId) {
+    throw new Error('❌ No active map in this server');
+  }
   
-  if (!result.success) {
-    throw new Error(result.message);
+  const player = playerData[guildId]?.players?.[userId];
+  const playerMapData = player?.safari?.mapProgress?.[activeMapId];
+  
+  let result;
+  
+  // If player not on map yet, initialize them first
+  if (!playerMapData) {
+    logger.info('MAP_ADMIN', 'Placing player on map for first time', { guildId, userId, coordinate });
+    await initializePlayerOnMap(guildId, userId, coordinate);
+    
+    // For initial placement, we're done - no need to call movePlayer
+    result = { success: true, message: 'Player placed on map successfully' };
+  } else {
+    // Player already on map, use normal movement system
+    const { movePlayer } = await import('./mapMovement.js');
+    
+    result = await movePlayer(guildId, userId, coordinate, client, {
+      bypassStamina: true,
+      adminMove: true
+    });
+    
+    if (!result.success) {
+      throw new Error(result.message);
+    }
   }
   
   // Send notification to player in their new channel
   if (client) {
     try {
-      const safariData = await loadSafariContent();
-      const activeMapId = safariData[guildId]?.maps?.active;
       const mapData = safariData[guildId].maps[activeMapId];
       const newChannelId = mapData.coordinates[coordinate]?.channelId;
       
-      if (newChannelId) {
-        // Get movement display for channel message
-        const { getMovementDisplay } = await import('./mapMovement.js');
-        const movementDisplay = await getMovementDisplay(guildId, userId, coordinate, false);
+      if (newChannelId) {        
+        // Determine message based on whether this was initial placement or move
+        const messageContent = !playerMapData 
+          ? `🎉 **Welcome to the Map!**\n\n<@${userId}> You have been placed at coordinate **${coordinate}** by the Production team.`
+          : `📍 **Admin Move**\n\n<@${userId}> You have been moved by the Production team to coordinate **${coordinate}**.`;
         
         // Create a notification with Navigate button
         const notificationMessage = {
@@ -405,7 +426,7 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
             components: [
               {
                 type: 10, // Text Display
-                content: `📍 **Admin Move**\n\n<@${userId}> You have been moved by the Production team to coordinate **${coordinate}**.`
+                content: messageContent
               },
               {
                 type: 1, // Action Row
@@ -422,6 +443,7 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
         };
         
         // Send the notification with movement options to the channel
+        const { DiscordRequest } = await import('./utils.js');
         await DiscordRequest(`channels/${newChannelId}/messages`, {
           method: 'POST',
           body: notificationMessage
@@ -433,19 +455,17 @@ export async function movePlayerToCoordinate(guildId, userId, coordinate, client
     }
   }
   
-  logger.info('MAP_ADMIN', 'Player moved by admin', { 
+  logger.info('MAP_ADMIN', playerMapData ? 'Player moved by admin' : 'Player placed on map by admin', { 
     guildId, 
     userId, 
-    from: result.oldCoordinate,
+    from: playerMapData?.currentLocation || 'N/A',
     to: coordinate 
   });
   
   // Return updated map progress for UI
-  const playerData = await loadPlayerData();
-  const safariDataForReturn = await loadSafariContent();
-  const player = playerData[guildId]?.players?.[userId];
-  const activeMapId = safariDataForReturn[guildId]?.maps?.active;
-  return player?.safari?.mapProgress?.[activeMapId];
+  const updatedPlayerData = await loadPlayerData();
+  const updatedPlayer = updatedPlayerData[guildId]?.players?.[userId];
+  return updatedPlayer?.safari?.mapProgress?.[activeMapId];
 }
 
 /**
