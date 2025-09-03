@@ -3,7 +3,8 @@
     "allow": [
       "Bash(./scripts/dev/dev-restart.sh:*)",
       "Bash(npm run deploy-remote-wsl:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Read(/tmp/**)"
     ],
     "deny": [],
     "ask": []

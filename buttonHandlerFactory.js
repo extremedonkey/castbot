@@ -691,9 +691,9 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management'
   },
 
-  // Safari Map Admin
+  // Safari Player Admin
   'safari_map_admin': {
-    label: 'Map Admin',
+    label: 'Player Admin',
     description: 'Admin panel for managing player map states',
     emoji: '🛡️',
     style: 'Danger',
@@ -895,7 +895,7 @@ export const BUTTON_REGISTRY = {
     type: 'select_menu'
   },
 
-  // Map Admin Player Management
+  // Player Admin - Player Management
   'map_admin_add_item_*': {
     label: 'Add Item',
     description: 'Add items to player inventory',

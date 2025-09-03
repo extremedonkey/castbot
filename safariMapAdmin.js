@@ -1,5 +1,5 @@
 /**
- * Safari Map Admin Panel
+ * Safari Player Admin Panel
  * Admin interface for managing player map states using Entity Edit Framework
  */
 
@@ -52,7 +52,7 @@ function createUserSelectUI(guildId) {
       components: [
         {
           type: 10, // Text Display
-          content: `## 🛡️ Safari Map Admin Panel\n\n` +
+          content: `## 🛡️ Safari Player Admin Panel\n\n` +
                   `Select a player to manage their map state:`
         },
         {
@@ -107,11 +107,9 @@ async function createPlayerViewUI(guildId, userId) {
   const lastMove = playerMapData?.movementHistory?.slice(-1)[0];
   
   // Build status display
-  let statusText = `## 🛡️ Map Admin: <@${userId}>\n\n`;
+  let statusText = `## 🛡️ Player Admin: <@${userId}>\n\n`;
   
-  if (!activeMap) {
-    statusText += `⚠️ **No active map in this server**\n\n`;
-  } else {
+  if (activeMap) {
     statusText += `📍 **Current Location:** ${currentLocation}\n`;
     statusText += `⚡ **Stamina:** ${stamina.current}/${stamina.maximum}\n`;
     statusText += `🗺️ **Explored Cells:** ${exploredCount}\n`;

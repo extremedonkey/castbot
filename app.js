@@ -4379,6 +4379,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_all_server_items_') &&
         !custom_id.startsWith('safari_progress_') &&
         !custom_id.startsWith('safari_inv_page_') &&  // Exclude inventory pagination buttons
+        !custom_id.startsWith('safari_init_player_') &&  // Exclude player initialization button
         custom_id !== 'safari_map_init_player' &&
         custom_id !== 'safari_post_select_button' &&
         custom_id !== 'safari_confirm_reset_game' && 
