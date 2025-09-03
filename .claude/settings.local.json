@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(./scripts/dev/dev-restart.sh:*)",
-      "Bash(npm run deploy-remote-wsl:*)"
+      "Bash(npm run deploy-remote-wsl:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
