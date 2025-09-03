@@ -3838,13 +3838,17 @@ async function getEligiblePlayersFixed(guildId, client = null) {
         console.log(`🔍 DEBUG: Found ${Object.keys(players).length} total players in guild`);
         
         for (const [userId, data] of Object.entries(players)) {
-            const safari = data.safari || {};
+            // Check if player has been initialized in Safari system
+            const safari = data.safari;
+            if (!safari) continue; // Skip non-initialized players
+            
             const currency = safari.currency || 0;
             const inventory = safari.inventory || {};
             const hasInventory = Object.keys(inventory).length > 0 && Object.values(inventory).some(item => getItemQuantity(item) > 0);
             
-            console.log(`🔍 DEBUG: Player ${userId}: currency=${currency}, inventory=${JSON.stringify(inventory)}, hasInventory=${hasInventory}`);
+            console.log(`🔍 DEBUG: Player ${userId}: initialized=true, currency=${currency}, hasInventory=${hasInventory}`);
             
+            // Safari-initialized players with currency or items are eligible for round results
             if (currency >= 1 || hasInventory) {
                 // Check cache first for consistent player names within the same request
                 let playerName = playerNameCache.get(userId);

@@ -133,8 +133,8 @@ async function createPlayerViewUI(guildId, userId) {
   if (!playerMapData) {
     mapButtons.push({
       type: 2, // Button
-      custom_id: `map_admin_init_player_${userId}`,
-      label: 'Initialize on Map',
+      custom_id: `safari_init_player_${userId}`,
+      label: 'Initialize Safari',
       style: 3, // Success
       emoji: { name: '🚀' }
     });
@@ -264,28 +264,28 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
     regenConfig: 'hourly' // Regenerate 1 stamina per hour
   };
   
-  // Get active map
+  // Get active map (optional - no longer required)
   const activeMapId = safariData[guildId]?.maps?.active;
-  if (!activeMapId) {
-    throw new Error('No active map in this server');
-  }
   
-  // Initialize map progress
-  player.safari.mapProgress[activeMapId] = {
-    currentLocation: coordinate,
-    exploredCoordinates: [coordinate],
-    itemsFound: [],
-    movementHistory: [{
-      from: null,
-      to: coordinate,
-      timestamp: new Date().toISOString()
-    }]
-  };
+  // Only initialize map progress if a map exists
+  if (activeMapId) {
+    // Initialize map progress
+    player.safari.mapProgress[activeMapId] = {
+      currentLocation: coordinate,
+      exploredCoordinates: [coordinate],
+      itemsFound: [],
+      movementHistory: [{
+        from: null,
+        to: coordinate,
+        timestamp: new Date().toISOString()
+      }]
+    };
+  }
   
   await savePlayerData(playerData);
   
-  // If client is provided, also initialize using the movement system for proper permission handling
-  if (client) {
+  // If client is provided AND map exists, initialize movement system
+  if (client && activeMapId) {
     const { initializePlayerOnMap: initMovementSystem, getMovementDisplay } = await import('./mapMovement.js');
     const { DiscordRequest } = await import('./utils.js');
     

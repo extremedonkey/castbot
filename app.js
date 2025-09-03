@@ -23722,15 +23722,15 @@ Are you sure you want to continue?`;
         });
       }
       
-    } else if (custom_id.startsWith('map_admin_init_player_')) {
-      // Initialize player on map
+    } else if (custom_id.startsWith('safari_init_player_')) {
+      // Initialize player in Safari system (works with or without maps)
       return ButtonHandlerFactory.create({
-        id: 'map_admin_init_player',
+        id: 'safari_init_player',
         deferred: true,
         ephemeral: true,
         handler: async (context) => {
           const targetUserId = context.customId.split('_').pop();
-          console.log(`🛡️ START: map_admin_init_player for user ${targetUserId}`);
+          console.log(`🛡️ START: safari_init_player for user ${targetUserId}`);
           
           const { initializePlayerOnMap, createMapAdminUI } = await import('./safariMapAdmin.js');
           
@@ -23744,7 +23744,7 @@ Are you sure you want to continue?`;
               mode: 'player_view'
             });
             
-            console.log(`✅ SUCCESS: map_admin_init_player - initialized user ${targetUserId}`);
+            console.log(`✅ SUCCESS: safari_init_player - initialized user ${targetUserId}`);
             return ui;
             
           } catch (error) {

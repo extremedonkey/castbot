@@ -114,6 +114,12 @@ grep -B20 -A20 "feature_pattern" app.js
 - **Definition of Done**: [docs/workflow/DefinitionOfDone.md](docs/workflow/DefinitionOfDone.md)
 - **Dev Workflow**: [docs/workflow/DevWorkflow.md](docs/workflow/DevWorkflow.md)
 
+### Tools Without Permission Required
+**Claude can execute these without asking:**
+- `grep` commands and all Grep tool usage
+- `./scripts/dev/dev-restart.sh` 
+- `npm run deploy-remote-wsl-dry` (preview only)
+
 ## 📐 app.js Organization
 
 ### Golden Rule: app.js is a ROUTER, not a PROCESSOR

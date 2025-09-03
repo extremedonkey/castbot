@@ -372,17 +372,21 @@ export async function createPlayerManagementUI(options) {
       // Check if user is eligible for Safari inventory access
       if (targetMember && client) {
         try {
-          // Check if player has been initialized on the map by an admin
-          const { loadSafariContent } = await import('./safariManager.js');
+          // Check if player has been initialized in Safari system
+          const { loadSafariContent, getCoordinateFromChannelId } = await import('./safariManager.js');
+          const { loadPlayerData } = await import('./storage.js');
           const safariData = await loadSafariContent();
+          const playerData = await loadPlayerData();
           
-          // Player is initialized if they have an entity entry with stamina points
-          const entityId = `player_${targetMember.id}`;
-          const isInitialized = safariData[guildId]?.entityPoints?.[entityId] !== undefined;
+          // Player is initialized if they have Safari data structure
+          const isInitialized = playerData[guildId]?.players?.[targetMember.id]?.safari !== undefined;
+          const activeMapId = safariData[guildId]?.maps?.active;
+          const playerMapData = activeMapId ? playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId] : null;
+          const hasMapLocation = playerMapData?.currentLocation !== undefined;
           
-          console.log(`🔍 Safari button check for ${targetMember.displayName}: initialized=${isInitialized}, entityId=${entityId}`);
+          console.log(`🔍 Safari button check for ${targetMember.displayName}: initialized=${isInitialized}, hasMap=${hasMapLocation}`);
           
-          // Only show Safari buttons if player has been initialized by admin
+          // Only show Safari buttons if player has been initialized
           if (isInitialized) {
             // Get custom terms for inventory name and emoji
             const customTerms = await getCustomTerms(guildId);
@@ -394,52 +398,46 @@ export async function createPlayerManagementUI(options) {
               .setStyle(ButtonStyle.Secondary)
               .setEmoji(customTerms.inventoryEmoji || '🧰'); // Use custom inventory emoji
             
-            // Create Navigate button (check if player is on map)
-            const { getCoordinateFromChannelId } = await import('./safariManager.js');
-            const { loadPlayerData } = await import('./storage.js');
-            const playerData = await loadPlayerData();
-            const activeMapId = safariData[guildId]?.maps?.active;
-            const playerMapData = playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId];
-            
-            const navigateButton = new ButtonBuilder()
-              .setCustomId(`safari_navigate_${userId}_${playerMapData?.currentLocation || 'none'}`)
-              .setLabel('Navigate')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('🗺️')
-              .setDisabled(!playerMapData); // Disabled if not initialized
-            
-            // Create Location Actions button
-            // Use channelId parameter passed from the interaction context
-            const currentCoordinate = channelId ? await getCoordinateFromChannelId(guildId, channelId) : null;
-            
-            // Add suffix for prod menu to control ephemeral behavior
-            const prodSuffix = title === 'CastBot | My Profile' ? '_prod' : '';
-            const locationActionsButton = new ButtonBuilder()
-              .setCustomId(currentCoordinate ? `map_location_display_${currentCoordinate}${prodSuffix}` : 'map_location_display_none')
-              .setLabel('Location')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('⚓')
-              .setDisabled(!currentCoordinate); // Disabled if not in a map channel
-            
-            // Create inventory row with Navigate, inventory, Location Actions, then store buttons
+            // Create inventory row components
             const inventoryComponents = [];
             
-            // For production menu (My Profile), replace Navigate with Location Actions
-            if (title === 'CastBot | My Profile') {
-              // Only add Location Actions button for production menu
-              if (currentCoordinate) {
-                inventoryComponents.push(locationActionsButton);
-              }
-            } else {
-              // Regular player menu: only add Navigate button if in a map channel
-              if (currentCoordinate) {
+            // Only create map-specific buttons if player has a map location
+            if (hasMapLocation) {
+              const navigateButton = new ButtonBuilder()
+                .setCustomId(`safari_navigate_${userId}_${playerMapData.currentLocation}`)
+                .setLabel('Navigate')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🗺️');
+              
+              // Create Location Actions button
+              // Use channelId parameter passed from the interaction context
+              const currentCoordinate = channelId ? await getCoordinateFromChannelId(guildId, channelId) : null;
+              
+              // Add suffix for prod menu to control ephemeral behavior
+              const prodSuffix = title === 'CastBot | My Profile' ? '_prod' : '';
+              const locationActionsButton = new ButtonBuilder()
+                .setCustomId(currentCoordinate ? `map_location_display_${currentCoordinate}${prodSuffix}` : 'map_location_display_none')
+                .setLabel('Location')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⚓')
+                .setDisabled(!currentCoordinate); // Disabled if not in a map channel
+              
+              // For production menu (My Profile), replace Navigate with Location Actions
+              if (title === 'CastBot | My Profile') {
+                // Only add Location Actions button for production menu
+                if (currentCoordinate) {
+                  inventoryComponents.push(locationActionsButton);
+                }
+              } else {
+                // Regular player menu: add Navigate button and Location Actions if in a map channel
                 inventoryComponents.push(navigateButton);
-                // Also add Location Actions button when in a map location
-                inventoryComponents.push(locationActionsButton);
+                if (currentCoordinate) {
+                  inventoryComponents.push(locationActionsButton);
+                }
               }
             }
             
-            // Always add inventory button
+            // Always add inventory button for initialized players
             inventoryComponents.push(inventoryButton);
             
             inventoryRow = {

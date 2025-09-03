@@ -836,12 +836,12 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_map_admin'
   },
-  'map_admin_init_player_*': {
-    label: 'Initialize on Map',
-    description: 'Initialize player at starting position',
+  'safari_init_player_*': {
+    label: 'Initialize Safari',
+    description: 'Initialize player in Safari system',
     emoji: '🚀',
     style: 'Success',
-    category: 'safari_map_admin'
+    category: 'safari_admin'
   },
   'map_admin_move_player_*': {
     label: 'Move Player',
