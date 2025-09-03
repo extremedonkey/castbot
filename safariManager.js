@@ -65,6 +65,50 @@ function clearPlayerNameCache() {
 }
 
 /**
+ * Migrate existing players to Safari system
+ * This ensures any players with existing data are properly initialized
+ */
+async function migrateExistingPlayersToSafari(guildId) {
+    try {
+        const playerData = await loadPlayerData();
+        const players = playerData[guildId]?.players || {};
+        let migrated = 0;
+        
+        for (const [userId, data] of Object.entries(players)) {
+            // Check if player has any data but no Safari structure
+            if (!data.safari && (data.currency !== undefined || data.inventory !== undefined)) {
+                // Initialize Safari structure
+                initializePlayerSafari(playerData, guildId, userId);
+                
+                // Migrate existing currency and inventory if present
+                if (data.currency !== undefined) {
+                    playerData[guildId].players[userId].safari.currency = data.currency;
+                    delete data.currency; // Clean up old field
+                }
+                
+                if (data.inventory !== undefined) {
+                    playerData[guildId].players[userId].safari.inventory = data.inventory;
+                    delete data.inventory; // Clean up old field
+                }
+                
+                migrated++;
+                console.log(`🔄 Migrated player ${userId} to Safari system`);
+            }
+        }
+        
+        if (migrated > 0) {
+            await savePlayerData(playerData);
+            console.log(`✅ Migrated ${migrated} players to Safari system for guild ${guildId}`);
+        }
+        
+        return migrated;
+    } catch (error) {
+        console.error('Error migrating players to Safari:', error);
+        return 0;
+    }
+}
+
+/**
  * Safari Manager Module for CastBot - MVP2
  * Handles dynamic content creation, button management, action execution,
  * store systems, inventory management, and conditional actions
@@ -6566,6 +6610,8 @@ export {
     scheduleAttack,
     createOrUpdateAttackUI,
     getEligiblePlayersFixed,
+    // Migration helper
+    migrateExistingPlayersToSafari,
     // Universal Object Format Functions
     getItemQuantity,
     setItemQuantity,
