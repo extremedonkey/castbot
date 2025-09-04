@@ -23750,7 +23750,8 @@ Are you sure you want to continue?`;
           const backButton = new ButtonBuilder()
             .setCustomId('safari_menu')
             .setLabel('← Safari')
-            .setStyle(ButtonStyle.Secondary);
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🦁');
           
           const backRow = new ActionRowBuilder().addComponents([backButton]);
           
@@ -23758,7 +23759,11 @@ Are you sure you want to continue?`;
           const containerComponents = [
             {
               type: 10, // Text Display
-              content: `## CastBot | Safari Rounds`
+              content: `## ⏳ Safari Rounds`
+            },
+            {
+              type: 10, // Text Display
+              content: `Safari Rounds allows you to add a turn-based element to your Safari, which can be used to run cycles over 24 hour challenges or as part of a more elaborate Safari Design system. Rounds will allow items which have yields to accrue currency, and player attacks / defense actions to be executed when Round Results are revealed.`
             },
             { type: 14 }, // Separator
             {
@@ -23780,7 +23785,7 @@ Are you sure you want to continue?`;
           console.log(`✅ SUCCESS: safari_rounds_menu - displayed`);
           
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
+            flags: (1 << 15) | 64, // IS_COMPONENTS_V2 | EPHEMERAL
             components: [{
               type: 17, // Container
               accent_color: 0x3498DB, // Blue
