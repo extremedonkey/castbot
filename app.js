@@ -808,12 +808,21 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
  * Create Reece Stuff submenu interface (admin-only special features)
  */
 async function createReeceStuffMenu(guildId) {
-  // Check if there's an active map for the Delete Map button
+  // Load data to check what exists for this guild
   const { loadSafariContent } = await import('./safariManager.js');
+  const { loadPlayerData } = await import('./storage.js');
+  
   const safariData = await loadSafariContent();
+  const playerData = await loadPlayerData();
+  
+  // Check if there's data to delete
   const guildMaps = safariData[guildId]?.maps || {};
   const activeMapId = guildMaps.active;
   const hasActiveMap = activeMapId && guildMaps[activeMapId];
+  const hasSafariData = !!safariData[guildId];
+  const hasPlayerData = !!playerData[guildId];
+  
+  console.log(`📊 Reece menu data check - Guild ${guildId}: Map: ${hasActiveMap}, Safari: ${hasSafariData}, Player: ${hasPlayerData}`);
   
   // Analytics section buttons - Server Stats first, Toggle Channel Logs last
   const analyticsButtons = [
@@ -877,12 +886,14 @@ async function createReeceStuffMenu(guildId) {
       .setCustomId('nuke_player_data')
       .setLabel('Nuke playerData')
       .setStyle(ButtonStyle.Danger)
-      .setEmoji('☢️'),
+      .setEmoji('☢️')
+      .setDisabled(!hasPlayerData),  // Disable if no playerData exists
     new ButtonBuilder()
       .setCustomId('nuke_safari_content')
       .setLabel('Nuke safariContent')
       .setStyle(ButtonStyle.Danger)
       .setEmoji('☢️')
+      .setDisabled(!hasSafariData)  // Disable if no safariContent exists
   ];
   
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
