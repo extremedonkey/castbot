@@ -20744,27 +20744,63 @@ Are you sure you want to continue?`;
       })(req, res, client);
       
     } else if (custom_id === 'map_delete_confirm') {
+      // Check if we're deleting from within a map channel BEFORE creating handler
+      const { loadSafariContent } = await import('./safariManager.js');
+      const safariData = await loadSafariContent();
+      const guildId = req.body.guild_id;
+      const channelId = req.body.channel_id;
+      const activeMapId = safariData[guildId]?.maps?.active;
+      const mapData = safariData[guildId]?.maps?.[activeMapId];
+      
+      let isInMapChannel = false;
+      if (mapData?.category) {
+        // Check if current channel is in the map category
+        const channel = await client.channels.fetch(channelId).catch(() => null);
+        isInMapChannel = channel && channel.parentId === mapData.category;
+      }
+      
       // Handle confirmed map deletion - the actual deletion
       return ButtonHandlerFactory.create({
         id: 'map_delete_confirm',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        deferred: true, // Long operation
+        // Only use deferred if NOT in a map channel
+        deferred: !isInMapChannel,
         ephemeral: true,
         handler: async (context) => {
-          console.log(`🗑️ START: map_delete_confirm - user ${context.userId}`);
+          console.log(`🗑️ START: map_delete_confirm - user ${context.userId}, channel ${context.channelId}, isInMapChannel: ${isInMapChannel}`);
           
-          // Get guild and delete map (this now includes action cleanup)
-          const guild = await context.client.guilds.fetch(context.guildId);
-          const { deleteMapGrid } = await import('./mapExplorer.js');
-          const result = await deleteMapGrid(guild);
-          
-          console.log(`✅ SUCCESS: map_delete_confirm - deletion completed`);
-          
-          return {
-            content: result.message,
-            ephemeral: true
-          };
+          if (isInMapChannel) {
+            // If we're in a map channel, send immediate response before deletion
+            // Schedule deletion to happen after response is sent
+            setTimeout(async () => {
+              try {
+                const guild = await context.client.guilds.fetch(context.guildId);
+                const { deleteMapGrid } = await import('./mapExplorer.js');
+                await deleteMapGrid(guild);
+                console.log(`✅ Map deletion completed (from map channel)`);
+              } catch (error) {
+                console.error(`❌ Error during map deletion: ${error.message}`);
+              }
+            }, 1000); // 1 second delay to ensure response is sent
+            
+            return {
+              content: '🗑️ **Map deletion initiated!**\n\nThis channel will be deleted momentarily...',
+              ephemeral: true
+            };
+          } else {
+            // Not in a map channel, proceed normally with deferred response
+            const guild = await context.client.guilds.fetch(context.guildId);
+            const { deleteMapGrid } = await import('./mapExplorer.js');
+            const result = await deleteMapGrid(guild);
+            
+            console.log(`✅ SUCCESS: map_delete_confirm - deletion completed`);
+            
+            return {
+              content: result.message,
+              ephemeral: true
+            };
+          }
         }
       })(req, res, client);
       
