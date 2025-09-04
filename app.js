@@ -7174,6 +7174,141 @@ To fix this:
           return result.response;
         }
       })(req, res, client);
+    } else if (custom_id === 'nuke_player_data') {
+      // Nuke playerData for current guild - shows confirmation dialog
+      return ButtonHandlerFactory.create({
+        id: 'nuke_player_data',
+        handler: async (context) => {
+          console.log(`☢️ NUKE DATA WARNING: Guild ${context.guildId}, User ${context.userId}`);
+          
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            console.log(`❌ ACCESS DENIED: nuke_player_data - user ${context.userId} not authorized`);
+            return {
+              content: 'Access denied. This feature is restricted.',
+              ephemeral: true
+            };
+          }
+          
+          // Get guild info for confirmation message
+          const playerData = await loadPlayerData();
+          const guildData = playerData[context.guildId];
+          const serverName = guildData?.serverName || 'Unknown Server';
+          
+          // Create confirmation UI using Components V2 container pattern
+          const confirmationContainer = {
+            type: 17, // Container
+            components: [
+              {
+                type: 11, // Section
+                components: [
+                  {
+                    type: 2, // Header
+                    text: {
+                      content: '☢️ **DANGER ZONE - DATA NUKE**'
+                    }
+                  }
+                ]
+              },
+              {
+                type: 11, // Section 
+                components: [
+                  {
+                    type: 5, // Paragraph
+                    text: {
+                      content: `⚠️ **WARNING**: This action will **PERMANENTLY DELETE** all playerData for:\n\n**Server:** ${serverName}\n**Guild ID:** ${context.guildId}\n\n**This will remove:**\n• All Safari data (currency, inventory, map progress)\n• All player configurations\n• All season data\n• All analytics data\n• **EVERYTHING** stored for this guild\n\n**This action CANNOT be undone!**`
+                    }
+                  }
+                ]
+              },
+              {
+                type: 14, // Button Group
+                components: [
+                  {
+                    type: 2, // Button
+                    style: 4, // Danger
+                    label: 'Yes, Nuke All Data',
+                    custom_id: 'nuke_player_data_confirm',
+                    emoji: { name: '⚠️' }
+                  },
+                  {
+                    type: 2, // Button
+                    style: 2, // Secondary
+                    label: 'Cancel',
+                    custom_id: 'nuke_player_data_cancel',
+                    emoji: { name: '❌' }
+                  }
+                ]
+              }
+            ]
+          };
+          
+          return {
+            content: '',
+            ephemeral: true,
+            components: [confirmationContainer]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'nuke_player_data_confirm') {
+      // Confirm and execute the data nuke
+      return ButtonHandlerFactory.create({
+        id: 'nuke_player_data_confirm',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`☢️ NUKE DATA CONFIRMED: Guild ${context.guildId}, User ${context.userId}`);
+          
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            console.log(`❌ ACCESS DENIED: nuke_player_data_confirm - user ${context.userId} not authorized`);
+            return {
+              content: 'Access denied. This feature is restricted.',
+              ephemeral: true,
+              components: []
+            };
+          }
+          
+          // Load playerData
+          const playerData = await loadPlayerData();
+          const serverName = playerData[context.guildId]?.serverName || 'Unknown Server';
+          
+          // Clear all data for this guild
+          if (playerData[context.guildId]) {
+            console.log(`☢️ NUKING DATA for guild ${context.guildId} (${serverName})`);
+            delete playerData[context.guildId];
+            
+            // Save the cleared data
+            await savePlayerData(playerData);
+            
+            return {
+              content: `☢️ **DATA NUKED SUCCESSFULLY**\n\nAll data for **${serverName}** (Guild ID: ${context.guildId}) has been permanently deleted.\n\nThe guild has been completely reset to a blank state.`,
+              ephemeral: true,
+              components: []
+            };
+          } else {
+            return {
+              content: `⚠️ No data found for guild ${context.guildId}. Nothing to nuke.`,
+              ephemeral: true,
+              components: []
+            };
+          }
+        }
+      })(req, res, client);
+    } else if (custom_id === 'nuke_player_data_cancel') {
+      // Cancel the data nuke operation
+      return ButtonHandlerFactory.create({
+        id: 'nuke_player_data_cancel',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`❌ NUKE DATA CANCELLED: Guild ${context.guildId}, User ${context.userId}`);
+          
+          return {
+            content: '❌ **Data nuke cancelled**\n\nNo data was deleted. The guild data remains intact.',
+            ephemeral: true,
+            components: []
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
       // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
