@@ -220,7 +220,7 @@ async function createPlayerViewUI(guildId, userId) {
       {
         type: 2, // Button
         custom_id: 'map_admin_select_new',
-        label: 'Select Different Player',
+        label: 'Change Player',
         style: 2, // Secondary
         emoji: { name: '👤' }
       }
