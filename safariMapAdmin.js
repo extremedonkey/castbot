@@ -197,11 +197,11 @@ async function createPlayerViewUI(guildId, userId) {
       },
       {
         type: 2, // Button
-        custom_id: `map_admin_edit_items_${userId}`,
-        label: 'Edit Items (WIP - use main items menu)',
+        custom_id: `map_admin_view_inventory_${userId}`,
+        label: `Player ${customTerms.inventoryName}`,
         style: 2, // Secondary
-        emoji: { name: '📦' },
-        disabled: true
+        emoji: { name: customTerms.inventoryEmoji || '🧰' },
+        disabled: !isInitialized // Disable if player not initialized in Safari
       },
       {
         type: 2, // Button

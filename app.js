@@ -1023,11 +1023,6 @@ async function createSafariMenu(guildId, userId, member) {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📦'),
     new ButtonBuilder()
-      .setCustomId('safari_view_player_inventory')
-      .setLabel('Player Inventory')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔎'),
-    new ButtonBuilder()
       .setCustomId('safari_customize_terms')
       .setLabel('Safari Settings')
       .setStyle(ButtonStyle.Secondary)
@@ -23968,6 +23963,45 @@ Are you sure you want to continue?`;
             console.error('Error resetting exploration:', error);
             return {
               content: `❌ Error: ${error.message}`,
+              ephemeral: true
+            };
+          }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_admin_view_inventory_')) {
+      // Show player inventory directly (no user selection needed)
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_view_inventory',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          try {
+            const targetUserId = context.customId.split('_').pop();
+            console.log(`🧰 START: map_admin_view_inventory for user ${targetUserId}`);
+            
+            // Import inventory display function
+            const { createPlayerInventoryDisplay } = await import('./safariManager.js');
+            
+            // Get the player member object
+            const guild = await context.client.guilds.fetch(context.guildId);
+            const member = await guild.members.fetch(targetUserId).catch(() => null);
+            
+            // Create inventory display directly
+            const inventoryDisplay = await createPlayerInventoryDisplay(
+              context.guildId,
+              targetUserId,
+              member,
+              0 // Start at page 0
+            );
+            
+            console.log(`✅ SUCCESS: map_admin_view_inventory - showing inventory`);
+            
+            return inventoryDisplay;
+          } catch (error) {
+            console.error(`❌ ERROR: map_admin_view_inventory - ${error.message}`);
+            return {
+              content: `❌ Error viewing inventory: ${error.message}`,
               ephemeral: true
             };
           }
