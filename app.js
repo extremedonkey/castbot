@@ -1010,7 +1010,7 @@ async function createSafariMenu(guildId, userId, member) {
     roundResultsLabel = 'Results'; // Fallback
   }
   
-  // Safari Details section buttons
+  // Safari Administration section buttons (renamed from Safari Details)
   const safariDetailsButtons = [
     new ButtonBuilder()
       .setCustomId('safari_manage_stores')
@@ -1022,6 +1022,11 @@ async function createSafariMenu(guildId, userId, member) {
       .setLabel('Items')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📦'),
+    new ButtonBuilder()
+      .setCustomId('safari_map_admin')
+      .setLabel('Player Admin')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🧭'),
     new ButtonBuilder()
       .setCustomId('safari_customize_terms')
       .setLabel('Safari Settings')
@@ -1039,10 +1044,6 @@ async function createSafariMenu(guildId, userId, member) {
     new ButtonBuilder()
       .setCustomId('safari_map_explorer')
       .setLabel('🗺️ Map Admin')
-      .setStyle(ButtonStyle.Secondary),
-    new ButtonBuilder()
-      .setCustomId('safari_map_admin')
-      .setLabel('🧭 Player Admin')
       .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('safari_location_editor')
@@ -1108,7 +1109,7 @@ async function createSafariMenu(guildId, userId, member) {
     },
     {
       type: 10, // Text Display component
-      content: `> **\`🦁 Safari Details\`**`
+      content: `> **\`🦁 Safari Administration\`**`
     },
     safariDetailsRow.toJSON(),
     {
