@@ -101,8 +101,7 @@ import {
   canBotManageRole,
   canBotManageRoles,
   generateHierarchyWarning,
-  testRoleHierarchy,
-  nukeRoles
+  testRoleHierarchy
 } from './roleManager.js';
 import { 
   createPlayerInventoryDisplay,
@@ -8049,50 +8048,33 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_roles') {
-      // Nuke all CastBot roles for testing (MIGRATED TO FACTORY - DEFERRED PATTERN)
+      // Nuke Discord roles for current guild - shows confirmation dialog (DELEGATED TO MODULE)
       return ButtonHandlerFactory.create({
         id: 'nuke_roles',
-        deferred: true,
-        ephemeral: true,
+        updateMessage: true,
         handler: async (context) => {
-          // Security check - only allow specific Discord ID
-          if (context.userId !== '391415444084490240') {
-            return {
-              content: 'Access denied. This feature is restricted.'
-            };
-          }
-
-          console.log('💥 DEBUG: Starting role nuke...');
-          
-          // Run the nuke function
-          const nukeResults = await nukeRoles(context.guildId, context.client);
-          
-          // Create comprehensive response
-          const responseLines = [
-            '# 💥 Nuke Roles Complete',
-            '',
-            `**Server Reset Status:** ${nukeResults.success ? 'Success ✅' : 'Failed ❌'}`,
-            '',
-            '## Results:',
-            `**Roles Deleted:** ${nukeResults.rolesDeleted}`,
-            `**Pronouns Cleared:** ${nukeResults.pronounsCleared}`, 
-            `**Timezones Cleared:** ${nukeResults.timezonesCleared}`,
-            ''
-          ];
-
-          if (nukeResults.errors.length > 0) {
-            responseLines.push('## Errors:');
-            nukeResults.errors.forEach(error => {
-              responseLines.push(`❌ ${error}`);
-            });
-            responseLines.push('');
-          }
-
-          responseLines.push('🎯 **Next Step:** Run `/menu` → Production Menu → Setup to test fresh server behavior!');
-
-          return {
-            content: responseLines.join('\n')
-          };
+          const { handleNukeRequest } = await import('./dataNuker.js');
+          return handleNukeRequest('roles', context);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'nuke_roles_confirm') {
+      // Confirm and execute the roles nuke (DELEGATED TO MODULE)
+      return ButtonHandlerFactory.create({
+        id: 'nuke_roles_confirm',
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleNukeConfirm } = await import('./dataNuker.js');
+          return handleNukeConfirm('roles', context);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'nuke_roles_cancel') {
+      // Cancel the roles nuke operation (DELEGATED TO MODULE)
+      return ButtonHandlerFactory.create({
+        id: 'nuke_roles_cancel',
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleNukeCancel } = await import('./dataNuker.js');
+          return handleNukeCancel(context);
         }
       })(req, res, client);
     } else if (custom_id === 'safari_create_button') {

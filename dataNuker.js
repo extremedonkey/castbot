@@ -6,10 +6,12 @@
  * 
  * Currently supports:
  * - playerData: All guild data from playerData.json
- * - safariContent: All Safari data from safariContent.json (coming soon)
+ * - safariContent: All Safari data from safariContent.json
+ * - roles: All CastBot-managed Discord roles
  */
 
 import { loadPlayerData, savePlayerData } from './storage.js';
+import { nukeRoles } from './roleManager.js';
 
 /**
  * Data type configurations
@@ -59,6 +61,38 @@ const DATA_CONFIGS = {
     deleteData: (data, guildId) => {
       delete data[guildId];
       return data;
+    }
+  },
+  roles: {
+    displayName: 'Discord Roles',
+    warningItems: [
+      'All timezone roles (PST, EST, GMT, etc.)',
+      'All pronoun roles created by CastBot',
+      'All temporary event/season roles',
+      'Stored pronoun and timezone configurations',
+      '**ALL** CastBot-managed Discord roles'
+    ],
+    note: 'This will DELETE actual Discord roles from your server. User data in playerData.json is preserved.',
+    requiresClient: true, // Special flag - needs Discord client
+    loadFunction: async () => {
+      // For roles, we don't load from a file, just return empty object
+      return {};
+    },
+    saveFunction: async () => {
+      // No save operation for roles
+      return true;
+    },
+    getServerName: async (data, guildId) => {
+      const playerData = await loadPlayerData();
+      return playerData[guildId]?.serverName || 'Unknown Server';
+    },
+    deleteData: async (data, guildId, context) => {
+      // For roles, we need to call the nukeRoles function
+      if (!context?.client) {
+        throw new Error('Discord client required for role operations');
+      }
+      const results = await nukeRoles(guildId, context.client);
+      return results;
     }
   }
 };
@@ -238,9 +272,55 @@ export async function handleNukeConfirm(dataType, context) {
     };
   }
   
-  // Load data
+  // Get server name
+  const serverName = await Promise.resolve(config.getServerName({}, context.guildId));
+  
+  // Special handling for roles
+  if (dataType === 'roles') {
+    console.log(`☢️ NUKING ROLES for guild ${context.guildId} (${serverName})`);
+    
+    try {
+      // Execute the role nuke
+      const results = await config.deleteData({}, context.guildId, context);
+      
+      // Create custom success UI for roles
+      return {
+        type: 17, // Container
+        components: [
+          {
+            type: 10, // Text Display
+            content: [
+              `☢️ **ROLES NUKED SUCCESSFULLY**`,
+              ``,
+              `Server: **${serverName}** (Guild ID: ${context.guildId})`,
+              ``,
+              `**Results:**`,
+              `• Roles Deleted: **${results.rolesDeleted}**`,
+              `• Pronouns Cleared: **${results.pronounsCleared}**`,
+              `• Timezones Cleared: **${results.timezonesCleared}**`,
+              results.errors.length > 0 ? `\n**Errors:**\n${results.errors.map(e => `• ${e}`).join('\n')}` : '',
+              ``,
+              `🎯 **Next Step:** Run \`/menu\` → Production Menu → Setup to configure fresh roles!`
+            ].filter(Boolean).join('\n')
+          }
+        ]
+      };
+    } catch (error) {
+      console.error(`❌ ERROR nuking roles: ${error.message}`);
+      return {
+        type: 17, // Container
+        components: [
+          {
+            type: 10, // Text Display
+            content: `❌ **Error nuking roles:** ${error.message}`
+          }
+        ]
+      };
+    }
+  }
+  
+  // Standard handling for file-based data
   const data = await config.loadFunction();
-  const serverName = await Promise.resolve(config.getServerName(data, context.guildId));
   
   // Check if data exists for this guild
   if (data[context.guildId]) {
