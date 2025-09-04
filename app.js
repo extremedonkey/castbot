@@ -7205,29 +7205,21 @@ To fix this:
             type: 17, // Container
             components: [
               {
-                type: 11, // Section
-                components: [
-                  {
-                    type: 2, // Header
-                    text: {
-                      content: '☢️ **DANGER ZONE - DATA NUKE**'
-                    }
-                  }
-                ]
+                type: 10, // Text Display
+                content: '☢️ **DANGER ZONE - DATA NUKE**'
               },
               {
-                type: 11, // Section 
-                components: [
-                  {
-                    type: 5, // Paragraph
-                    text: {
-                      content: `⚠️ **WARNING**: This action will **PERMANENTLY DELETE** all playerData for:\n\n**Server:** ${serverName}\n**Guild ID:** ${context.guildId}\n\n**This will remove:**\n• All Safari data (currency, inventory, map progress)\n• All player configurations\n• All season data\n• All analytics data\n• **EVERYTHING** stored for this guild\n\n**This action CANNOT be undone!**`
-                    }
-                  }
-                ]
+                type: 14 // Separator
               },
               {
-                type: 14, // Button Group
+                type: 10, // Text Display
+                content: `⚠️ **WARNING**: This action will **PERMANENTLY DELETE** all playerData for:\n\n**Server:** ${serverName}\n**Guild ID:** ${context.guildId}\n\n**This will remove:**\n• All Safari data (currency, inventory, map progress)\n• All player configurations\n• All season data\n• All analytics data\n• **EVERYTHING** stored for this guild\n\n**This action CANNOT be undone!**`
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 1, // Action Row
                 components: [
                   {
                     type: 2, // Button
