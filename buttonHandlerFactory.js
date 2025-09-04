@@ -125,6 +125,31 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'nuke_safari_content': {
+    label: 'Nuke safariContent',
+    description: 'Clear all guild Safari data from safariContent.json (DANGER ZONE)',
+    emoji: '☢️',
+    style: 'Danger',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'nuke_safari_content_confirm': {
+    label: 'Yes, Nuke All Safari Data',
+    description: 'Confirm complete Safari data wipe for this guild',
+    emoji: '⚠️',
+    style: 'Danger',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'nuke_safari_content_cancel': {
+    label: 'Cancel Safari Nuke',
+    description: 'Cancel Safari data nuke operation',
+    emoji: '❌',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
   'msg_test': {
     label: 'Msg Test',
     description: 'Test sending a message from CastBot to user',
@@ -1656,9 +1681,11 @@ export const MENU_FACTORY = {
     layout: [
       // Row 1: Analytics Functions
       ['prod_analytics_dump', 'prod_live_analytics', 'prod_server_usage_stats'],
-      // Row 2: Admin Functions - Danger Zone
-      ['prod_toggle_live_analytics', 'test_role_hierarchy', 'nuke_roles', 'emergency_app_reinit', 'nuke_player_data'],
-      // Row 3: Navigation
+      // Row 2: Admin Functions
+      ['prod_toggle_live_analytics', 'test_role_hierarchy', 'nuke_roles'],
+      // Row 3: Danger Zone - Data Nukes
+      ['emergency_app_reinit', 'nuke_player_data', 'nuke_safari_content'],
+      // Row 4: Navigation
       ['prod_menu_back']
     ],
     maxButtonsPerRow: 5,

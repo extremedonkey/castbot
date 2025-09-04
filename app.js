@@ -7209,6 +7209,36 @@ To fix this:
           return handleNukeCancel(context);
         }
       })(req, res, client);
+    } else if (custom_id === 'nuke_safari_content') {
+      // Nuke safariContent for current guild - shows confirmation dialog (DELEGATED TO MODULE)
+      return ButtonHandlerFactory.create({
+        id: 'nuke_safari_content',
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleNukeRequest } = await import('./dataNuker.js');
+          return handleNukeRequest('safariContent', context);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'nuke_safariContent_confirm') {
+      // Confirm and execute the Safari data nuke (DELEGATED TO MODULE)
+      return ButtonHandlerFactory.create({
+        id: 'nuke_safariContent_confirm',
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleNukeConfirm } = await import('./dataNuker.js');
+          return handleNukeConfirm('safariContent', context);
+        }
+      })(req, res, client);
+    } else if (custom_id === 'nuke_safariContent_cancel') {
+      // Cancel the Safari data nuke operation (DELEGATED TO MODULE)
+      return ButtonHandlerFactory.create({
+        id: 'nuke_safariContent_cancel',
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleNukeCancel } = await import('./dataNuker.js');
+          return handleNukeCancel(context);
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
       // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);

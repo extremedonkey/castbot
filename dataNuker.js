@@ -51,9 +51,10 @@ const DATA_CONFIGS = {
       const { saveSafariContent } = await import('./safariManager.js');
       return saveSafariContent(data);
     },
-    getServerName: (data, guildId) => {
+    getServerName: async (data, guildId) => {
       // Try to get from playerData as safari doesn't store server names
-      return 'Current Server';
+      const playerData = await loadPlayerData();
+      return playerData[guildId]?.serverName || 'Unknown Server';
     },
     deleteData: (data, guildId) => {
       delete data[guildId];
@@ -202,7 +203,7 @@ export async function handleNukeRequest(dataType, context) {
   
   // Load data to get server name
   const data = await config.loadFunction();
-  const serverName = config.getServerName(data, context.guildId);
+  const serverName = await Promise.resolve(config.getServerName(data, context.guildId));
   
   // Create and return confirmation UI
   const confirmationContainer = createNukeConfirmationUI(dataType, context.guildId, serverName);
@@ -239,7 +240,7 @@ export async function handleNukeConfirm(dataType, context) {
   
   // Load data
   const data = await config.loadFunction();
-  const serverName = config.getServerName(data, context.guildId);
+  const serverName = await Promise.resolve(config.getServerName(data, context.guildId));
   
   // Check if data exists for this guild
   if (data[context.guildId]) {
