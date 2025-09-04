@@ -763,7 +763,13 @@ async function executeUpdateCurrency(config, userId, guildId, interaction) {
     
     console.log(`${customTerms.currencyEmoji} DEBUG: Executing currency update: ${config.amount} for user ${userId}`);
     
-    const newBalance = await updateCurrency(guildId, userId, config.amount);
+    const context = {
+        username: interaction?.user?.username || 'Unknown',
+        displayName: interaction?.member?.displayName || interaction?.user?.username || 'Unknown',
+        source: 'update_currency',
+        channelName: interaction?.channel?.name || null
+    };
+    const newBalance = await updateCurrency(guildId, userId, config.amount, context);
     
     let message = config.message || `Currency updated!`;
     
@@ -4001,7 +4007,13 @@ async function processPlayerRound(guildId, userId, eventType, customTerms, playe
         
         // Update player currency
         if (netChange !== 0) {
-            await updateCurrency(guildId, userId, netChange);
+            const context = {
+                username: playerName || 'Unknown',
+                displayName: playerName || 'Unknown',
+                source: `${eventType} round`,
+                channelName: null
+            };
+            await updateCurrency(guildId, userId, netChange, context);
         }
         
         // Consume items if needed

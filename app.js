@@ -4448,7 +4448,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             applicationId: context.applicationId,
             client: context.client,
             member: context.member, // Pass the full member object for role checks
-            channelName: context.channelName // Pass channel name for logging
+            channelName: context.channelName, // Pass channel name for logging
+            user: context.member?.user || { id: context.userId }, // Pass user information with at minimum the userId
+            channel: { name: context.channelName } // Pass channel information for logging
           };
           
           const result = await executeButtonActions(guildId, buttonId, context.userId, interactionData);
