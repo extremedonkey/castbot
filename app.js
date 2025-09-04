@@ -8379,11 +8379,18 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`🎨 DEBUG: Sending modern display with ${roundData.data.components?.length || 0} components${roundData.data.content ? ' and content message' : ''}`);
           
           // Return the round data - factory will handle webhook followup
-          return {
+          // Don't include content field if Components V2 flag is set
+          const response = {
             flags: roundData.data.flags || 0,
-            content: roundData.data.content,
             components: roundData.data.components
           };
+          
+          // Only add content if NOT using Components V2
+          if (!(roundData.data.flags & (1 << 15))) {
+            response.content = roundData.data.content;
+          }
+          
+          return response;
         }
       })(req, res, client);
     } else if (custom_id === 'safari_confirm_reset_game') {

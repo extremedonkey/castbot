@@ -3696,11 +3696,21 @@ async function processRoundResults(guildId, channelId, client) {
         console.log(`👥 DEBUG: Found ${eligiblePlayers.length} eligible players`);
         
         if (eligiblePlayers.length === 0) {
+            console.log('⚠️ DEBUG: No eligible players found - returning Components V2 error message');
             return {
                 type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
                 data: {
-                    content: `# Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n*No eligible players found. Players need currency ≥ 1 or items in inventory to participate.*\n\n💡 **Tip:** Use the "Restock Players" button after resetting to seed test data.`,
-                    flags: (1 << 15) // IS_COMPONENTS_V2 for consistency
+                    flags: (1 << 15), // IS_COMPONENTS_V2
+                    components: [{
+                        type: 17, // Container
+                        accent_color: 0xe74c3c, // Red for warning
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: `# Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n*No eligible players found. Players need currency ≥ 1 or items in inventory to participate.*\n\n💡 **Tip:** Use the "Restock Players" button after resetting to seed test data.`
+                            }
+                        ]
+                    }]
                 }
             };
         }
