@@ -28570,7 +28570,24 @@ Are you sure you want to continue?`;
         // Set currency directly in player data
         const playerData = await loadPlayerData();
         if (!playerData[guildId]?.players?.[targetUserId]?.safari) {
-          throw new Error('Player safari data not found');
+          console.log(`⚠️ Player ${targetUserId} not initialized in Safari - showing error message`);
+          // Return Components V2 error message
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+              components: [{
+                type: 17, // Container
+                accent_color: 0xe74c3c, // Red for error
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `# ❌ Player Not Initialized\n\nThis player hasn't been initialized in the Safari system yet.\n\n**To fix this:**\n1. Use the **Initialize Safari** button in Player Admin\n2. Or have the player use any Safari feature to auto-initialize\n\nOnce initialized, you can edit their ${playerData[guildId]?.customTerms?.currencyName || 'currency'}.`
+                  }
+                ]
+              }]
+            }
+          });
         }
         
         playerData[guildId].players[targetUserId].safari.currency = amount;
@@ -28590,11 +28607,21 @@ Are you sure you want to continue?`;
         
       } catch (error) {
         console.error('Error in map_admin_currency_modal:', error);
+        // Return Components V2 error message for any other errors
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `❌ Error: ${error.message}`,
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [{
+              type: 17, // Container
+              accent_color: 0xe74c3c, // Red for error
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `# ❌ Error Processing Request\n\nAn error occurred while updating the currency.\n\n**Error:** ${error.message}\n\nPlease try again or contact support if the issue persists.`
+                }
+              ]
+            }]
           }
         });
       }

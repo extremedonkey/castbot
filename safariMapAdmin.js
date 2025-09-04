@@ -192,7 +192,8 @@ async function createPlayerViewUI(guildId, userId) {
         custom_id: `map_admin_edit_currency_${userId}`,
         label: `Edit ${customTerms.currencyName}`,
         style: 2, // Secondary
-        emoji: { name: customTerms.currencyEmoji || '💰' }
+        emoji: { name: customTerms.currencyEmoji || '💰' },
+        disabled: !isInitialized // Disable if player not initialized in Safari
       },
       {
         type: 2, // Button
