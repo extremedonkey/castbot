@@ -71,9 +71,9 @@ function createUserSelectUI(guildId) {
           components: [{
             type: 2, // Button
             custom_id: 'safari_map_explorer',
-            label: 'Back to Map Explorer',
+            label: '← Map Explorer',
             style: 2,
-            emoji: { name: '◀️' }
+            emoji: { name: '🗺️' }
           }]
         }
       ]
@@ -213,7 +213,7 @@ async function createPlayerViewUI(guildId, userId) {
     ]
   });
   
-  // Row 3: Navigation
+  // Row 3: Navigation - Select Different Player
   buttons.push({
     type: 1, // Action Row
     components: [
@@ -223,13 +223,23 @@ async function createPlayerViewUI(guildId, userId) {
         label: 'Select Different Player',
         style: 2, // Secondary
         emoji: { name: '👤' }
-      },
+      }
+    ]
+  });
+  
+  // Add separator before Map Explorer button
+  buttons.push({ type: 14 }); // Separator
+  
+  // Row 4: Back to Map Explorer (separate row)
+  buttons.push({
+    type: 1, // Action Row
+    components: [
       {
         type: 2, // Button
         custom_id: 'safari_map_explorer',
-        label: 'Back to Map Explorer',
+        label: '← Map Explorer',
         style: 2, // Secondary
-        emoji: { name: '◀️' }
+        emoji: { name: '🗺️' }
       }
     ]
   });
