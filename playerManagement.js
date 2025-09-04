@@ -352,6 +352,7 @@ export async function createPlayerManagementUI(options) {
   } else {
     // Player mode (Player Menu): Add castlist buttons outside the container (unless hidden)
     let castlistRows = [];
+    let globalStoreRows = [];
     let inventoryRow = null;
     
     if (!hideBottomButtons) {
@@ -367,6 +368,47 @@ export async function createPlayerManagementUI(options) {
             .setLabel('📋 Castlist')
             .setStyle(ButtonStyle.Primary)]
         }];
+      }
+      
+      // Add global store buttons
+      const { loadSafariContent } = await import('./safariManager.js');
+      const safariData = await loadSafariContent();
+      const globalStores = safariData[guildId]?.globalStores || [];
+      const stores = safariData[guildId]?.stores || {};
+      
+      if (globalStores.length > 0) {
+        const storeButtons = [];
+        let currentRow = [];
+        
+        for (const storeId of globalStores) {
+          const store = stores[storeId];
+          if (!store) continue;
+          
+          const button = new ButtonBuilder()
+            .setCustomId(`safari_store_browse_${guildId}_${storeId}`)
+            .setLabel(store.name.slice(0, 80))
+            .setStyle(ButtonStyle.Primary)
+            .setEmoji(store.emoji || '🏪');
+          
+          currentRow.push(button);
+          
+          // Max 5 buttons per row
+          if (currentRow.length === 5) {
+            globalStoreRows.push({
+              type: 1, // ActionRow
+              components: currentRow
+            });
+            currentRow = [];
+          }
+        }
+        
+        // Add remaining buttons
+        if (currentRow.length > 0) {
+          globalStoreRows.push({
+            type: 1, // ActionRow
+            components: currentRow
+          });
+        }
       }
       
       // Check if user is eligible for Safari inventory access
@@ -477,9 +519,10 @@ export async function createPlayerManagementUI(options) {
       finalComponents.push(applicationContinueRow);
     }
     
-    // Add castlist and inventory buttons if not hidden
+    // Add castlist, global stores, and inventory buttons if not hidden
     if (!hideBottomButtons) {
       finalComponents.push(...castlistRows);
+      finalComponents.push(...globalStoreRows); // Add global store buttons
       if (inventoryRow) {
         finalComponents.push(inventoryRow);
       }

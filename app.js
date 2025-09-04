@@ -23752,13 +23752,32 @@ Are you sure you want to continue?`;
           // Import Discord.js components
           const { ButtonBuilder, ActionRowBuilder, ButtonStyle } = await import('discord.js');
           
-          // Round Management buttons
+          // Get global stores count
+          const globalStores = safariData[context.guildId]?.globalStores || [];
+          
+          // Round Management buttons (first row)
           const roundManagementButtons = [
             new ButtonBuilder()
               .setCustomId('safari_round_results')
               .setLabel(roundResultsLabel)
-              .setStyle(ButtonStyle.Primary) // Changed to blue
+              .setStyle(ButtonStyle.Primary) // Blue
               .setEmoji('🎲'),
+            new ButtonBuilder()
+              .setCustomId('safari_global_stores')
+              .setLabel('Add Global Store')
+              .setStyle(ButtonStyle.Secondary) // Grey
+              .setEmoji('🏪')
+          ];
+          
+          const roundManagementRow = new ActionRowBuilder().addComponents(roundManagementButtons);
+          
+          // Additional management buttons (second row)
+          const additionalButtons = [
+            new ButtonBuilder()
+              .setCustomId('safari_restock_players')
+              .setLabel('Restock Players')
+              .setStyle(ButtonStyle.Success) // Green
+              .setEmoji('🪣'),
             new ButtonBuilder()
               .setCustomId('safari_schedule_results')
               .setLabel('Schedule Results')
@@ -23766,7 +23785,7 @@ Are you sure you want to continue?`;
               .setEmoji('📅')
           ];
           
-          const roundManagementRow = new ActionRowBuilder().addComponents(roundManagementButtons);
+          const additionalRow = new ActionRowBuilder().addComponents(additionalButtons);
           
           // Back button
           const backButton = new ButtonBuilder()
@@ -23791,8 +23810,8 @@ Are you sure you want to continue?`;
             {
               type: 10, // Text Display
               content: currentRound === 4 
-                ? `**Status:** Round 3 Complete - Ready to reset`
-                : `**Current Round:** ${currentRound} | **Players Initialized:** ${initializedPlayers}`
+                ? `**Status:** Round 3 Complete - Ready to reset | **Global Stores:** ${globalStores.length}`
+                : `**Current Round:** ${currentRound} | **Players Initialized:** ${initializedPlayers} | **Global Stores:** ${globalStores.length}`
             },
             { type: 14 }, // Separator
             {
@@ -23800,6 +23819,7 @@ Are you sure you want to continue?`;
               content: `> **\`🎮 Round Management\`**`
             },
             roundManagementRow.toJSON(),
+            additionalRow.toJSON(),
             { type: 14 }, // Separator
             backRow.toJSON()
           ];
@@ -23813,6 +23833,123 @@ Are you sure you want to continue?`;
               accent_color: 0x3498DB, // Blue
               components: containerComponents
             }]
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'safari_global_stores') {
+      // Handle global store management button
+      return ButtonHandlerFactory.create({
+        id: 'safari_global_stores',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🏪 START: safari_global_stores - user ${context.userId}`);
+          
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const stores = safariData[context.guildId]?.stores || {};
+          
+          if (Object.keys(stores).length === 0) {
+            return {
+              content: '❌ No stores available. Create stores first using Safari > Store Management.',
+              ephemeral: true
+            };
+          }
+          
+          // Get currently selected global stores
+          const globalStores = safariData[context.guildId]?.globalStores || [];
+          
+          // Create store options for select menu
+          const storeOptions = Object.values(stores).map(store => ({
+            label: store.name,
+            value: store.id,
+            description: `${store.items?.length || 0} items`,
+            emoji: store.emoji ? { name: store.emoji } : undefined,
+            default: globalStores.includes(store.id)
+          }));
+          
+          const { StringSelectMenuBuilder, ActionRowBuilder } = await import('discord.js');
+          
+          const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('global_stores_select')
+            .setPlaceholder('Select stores to show in player menus...')
+            .setMinValues(0)
+            .setMaxValues(Math.min(storeOptions.length, 10)) // Limit to 10 global stores
+            .addOptions(storeOptions.slice(0, 25));
+            
+          const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+          
+          // Create container components
+          const container = {
+            type: 17, // Container
+            accent_color: 0x3498db,
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 🏪 Global Store Management\n\nSelect stores to make available in all player menus.\nPlayers will see these stores when using /menu.\n\n⚠️ **Limit:** Maximum 10 global stores (Discord button limits)`
+              },
+              { type: 14 }, // Separator
+              selectRow.toJSON()
+            ]
+          };
+          
+          console.log(`✅ SUCCESS: safari_global_stores - showing store selector`);
+          
+          return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [container]
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'global_stores_select') {
+      // Handle global store selection
+      return ButtonHandlerFactory.create({
+        id: 'global_stores_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectedStores = context.values || [];
+          
+          console.log(`🏪 START: global_stores_select - stores: ${selectedStores.join(', ')}`);
+          
+          // Load and update safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          
+          // Initialize guild data if needed
+          if (!safariData[context.guildId]) {
+            safariData[context.guildId] = {};
+          }
+          
+          // Update global stores
+          safariData[context.guildId].globalStores = selectedStores;
+          await saveSafariContent(safariData);
+          
+          console.log(`✅ SUCCESS: global_stores_select - updated ${selectedStores.length} global stores`);
+          
+          // Return success message
+          const storeNames = selectedStores.map(storeId => {
+            const store = safariData[context.guildId]?.stores?.[storeId];
+            return store ? `${store.emoji || '🏪'} ${store.name}` : storeId;
+          }).join('\n');
+          
+          const container = {
+            type: 17, // Container
+            accent_color: 0x27ae60, // Green for success
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## ✅ Global Stores Updated\n\n**${selectedStores.length} store${selectedStores.length !== 1 ? 's' : ''} selected:**\n${storeNames || '*(None)*'}\n\nThese stores will now appear in all player menus.`
+              }
+            ]
+          };
+          
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2 only
+            components: [container]
           };
         }
       })(req, res, client);
