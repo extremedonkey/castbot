@@ -387,7 +387,7 @@ export async function createPlayerManagementUI(options) {
           const button = new ButtonBuilder()
             .setCustomId(`safari_store_browse_${guildId}_${storeId}`)
             .setLabel(store.name.slice(0, 80))
-            .setStyle(ButtonStyle.Primary)
+            .setStyle(ButtonStyle.Secondary)  // Grey style for global stores
             .setEmoji(store.emoji || '🏪');
           
           currentRow.push(button);
