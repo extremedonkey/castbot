@@ -53,7 +53,7 @@ function createUserSelectUI(guildId) {
         {
           type: 10, // Text Display
           content: `## 🧭 Player Admin\n\n` +
-                  `Select a player to manage their map state:`
+                  `Select a player to manage their details such as Gold, Items, Map Location and more!`
         },
         {
           type: 1, // Action Row
