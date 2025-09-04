@@ -23704,7 +23704,8 @@ Are you sure you want to continue?`;
           console.log(`⏳ START: safari_rounds_menu - user ${context.userId}`);
           
           // Load Safari data to get current round info
-          const { loadSafariContent, loadPlayerData } = await import('./dataManager.js');
+          const { loadSafariContent } = await import('./safariManager.js');
+          const { loadPlayerData } = await import('./storage.js');
           const safariData = await loadSafariContent();
           const playerData = await loadPlayerData();
           

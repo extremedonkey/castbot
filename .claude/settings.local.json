@@ -6,7 +6,9 @@
       "Bash(grep:*)",
       "Read(/tmp/**)",
       "Bash(git log:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Read(//tmp/**)",
+      "Bash(./scripts/dev/dev-status.sh:*)"
     ],
     "deny": [],
     "ask": []
