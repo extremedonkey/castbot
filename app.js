@@ -7258,9 +7258,17 @@ To fix this:
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
             console.log(`❌ ACCESS DENIED: nuke_player_data_confirm - user ${context.userId} not authorized`);
+            // Return a properly formatted Components V2 response for UPDATE_MESSAGE
             return {
-              content: 'Access denied. This feature is restricted.',
-              components: []
+              components: [{
+                type: 17, // Container
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: 'Access denied. This feature is restricted.'
+                  }
+                ]
+              }]
             };
           }
           
@@ -7276,14 +7284,30 @@ To fix this:
             // Save the cleared data
             await savePlayerData(playerData);
             
+            // Return a properly formatted Components V2 response for UPDATE_MESSAGE
             return {
-              content: `☢️ **DATA NUKED SUCCESSFULLY**\n\nAll playerData.json entries for **${serverName}** (Guild ID: ${context.guildId}) have been permanently deleted.\n\nThe guild has been completely reset to a blank state in playerData.json.`,
-              components: []
+              components: [{
+                type: 17, // Container
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `☢️ **DATA NUKED SUCCESSFULLY**\n\nAll playerData.json entries for **${serverName}** (Guild ID: ${context.guildId}) have been permanently deleted.\n\nThe guild has been completely reset to a blank state in playerData.json.`
+                  }
+                ]
+              }]
             };
           } else {
+            // Return a properly formatted Components V2 response for UPDATE_MESSAGE
             return {
-              content: `⚠️ No data found for guild ${context.guildId} in playerData.json. Nothing to nuke.`,
-              components: []
+              components: [{
+                type: 17, // Container
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `⚠️ No data found for guild ${context.guildId} in playerData.json. Nothing to nuke.`
+                  }
+                ]
+              }]
             };
           }
         }
@@ -7296,9 +7320,17 @@ To fix this:
         handler: async (context) => {
           console.log(`❌ NUKE DATA CANCELLED: Guild ${context.guildId}, User ${context.userId}`);
           
+          // Return a properly formatted Components V2 response for UPDATE_MESSAGE
           return {
-            content: '❌ **Data nuke cancelled**\n\nNo data was deleted. The guild data remains intact.',
-            components: []
+            components: [{
+              type: 17, // Container
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: '❌ **Data nuke cancelled**\n\nNo data was deleted. The guild data remains intact.'
+                }
+              ]
+            }]
           };
         }
       })(req, res, client);

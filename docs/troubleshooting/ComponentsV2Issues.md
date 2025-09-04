@@ -369,6 +369,12 @@ return {
   components: [updatedActionRow]
 };
 
+// ❌ WRONG - Using content with empty components for UPDATE_MESSAGE
+return {
+  content: 'Success message',
+  components: []
+};
+
 // ✅ CORRECT - Returns full Container structure
 if (messageComponents[0]?.type === 17) {
   // Update components in place
@@ -377,11 +383,31 @@ if (messageComponents[0]?.type === 17) {
     components: messageComponents // Full Container with updates
   };
 }
+
+// ✅ CORRECT - For text-only UPDATE_MESSAGE responses
+return {
+  components: [{
+    type: 17, // Container
+    components: [
+      {
+        type: 10, // Text Display
+        content: 'Your success or error message here'
+      }
+    ]
+  }]
+};
 ```
+
+**Critical Rule for UPDATE_MESSAGE**:
+- ALWAYS return Components V2 Container structure
+- NEVER use plain `content` field with `components: []`
+- For text-only responses, wrap content in Container > Text Display
 
 **Pattern Applied To**:
 - `restart_status_passed` handler
 - `restart_status_failed` handler
+- `nuke_player_data_confirm` handler
+- `nuke_player_data_cancel` handler
 - Any button that toggles states using UPDATE_MESSAGE
 
 ## Quick Reference
