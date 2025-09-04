@@ -822,7 +822,13 @@ async function createReeceStuffMenu(guildId) {
   const hasSafariData = !!safariData[guildId];
   const hasPlayerData = !!playerData[guildId];
   
-  console.log(`📊 Reece menu data check - Guild ${guildId}: Map: ${hasActiveMap}, Safari: ${hasSafariData}, Player: ${hasPlayerData}`);
+  // Check if there are roles to nuke
+  // 1. Check if pronouns or timezones exist in playerData
+  const hasPronounRoles = playerData[guildId]?.pronounRoleIDs?.length > 0;
+  const hasTimezoneRoles = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
+  const hasRolesInData = hasPronounRoles || hasTimezoneRoles;
+  
+  console.log(`📊 Reece menu data check - Guild ${guildId}: Map: ${hasActiveMap}, Safari: ${hasSafariData}, Player: ${hasPlayerData}, Roles: ${hasRolesInData}`);
   
   // Analytics section buttons - Server Stats first, Toggle Channel Logs last
   const analyticsButtons = [
@@ -876,7 +882,8 @@ async function createReeceStuffMenu(guildId) {
       .setCustomId('nuke_roles')
       .setLabel('Nuke Roles')
       .setStyle(ButtonStyle.Danger)
-      .setEmoji('💥'),
+      .setEmoji('💥')
+      .setDisabled(!hasRolesInData),
     new ButtonBuilder()
       .setCustomId('emergency_app_reinit')
       .setLabel('Emergency App Re-Init')
