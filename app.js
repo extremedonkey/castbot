@@ -24061,7 +24061,7 @@ Are you sure you want to continue?`;
               components: [
                 {
                   type: 10, // Text Display
-                  content: `# 🚧 Edit Items - Coming Soon!\n\nThis feature is currently under development.\n\n**In the meantime:**\nPlease use the **Safari Menu → Items** option to manage player inventories.\n\nThis dedicated interface will provide a streamlined way to edit player items directly from the Player Admin panel.`
+                  content: `# 🚧 Edit Player Items - Coming Soon!\n\nThis feature is currently under development, and will allow you to easily edit multiple different items for a specific player in one interface.\n\n**In the meantime:**\nPlease use the **Safari Menu → Items → Player Qty** button to manage items for a specific player. You'll need to select each item first, then the player.`
                 },
                 { type: 14 }, // Separator
                 {

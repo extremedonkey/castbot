@@ -52,7 +52,7 @@ function createUserSelectUI(guildId) {
       components: [
         {
           type: 10, // Text Display
-          content: `## 🛡️ Safari Player Admin Panel\n\n` +
+          content: `## 🧭 Player Admin\n\n` +
                   `Select a player to manage their map state:`
         },
         {
@@ -70,10 +70,10 @@ function createUserSelectUI(guildId) {
           type: 1, // Action Row
           components: [{
             type: 2, // Button
-            custom_id: 'safari_map_explorer',
-            label: '← Map Explorer',
+            custom_id: 'prod_safari_menu',
+            label: '← Safari',
             style: 2,
-            emoji: { name: '🗺️' }
+            emoji: { name: '🦁' }
           }]
         }
       ]
@@ -107,7 +107,10 @@ async function createPlayerViewUI(guildId, userId) {
   const lastMove = playerMapData?.movementHistory?.slice(-1)[0];
   
   // Build status display
-  let statusText = `## 🛡️ Player Admin: <@${userId}>\n\n`;
+  let statusText = `## 🧭 Player Admin\n\n`;
+  
+  // Show player info
+  statusText += `**Player:** <@${userId}>\n\n`;
   
   // Show Safari status if initialized
   if (safari && Object.keys(safari).length > 0) {
@@ -238,16 +241,16 @@ async function createPlayerViewUI(guildId, userId) {
   // Add separator before Map Explorer button
   buttons.push({ type: 14 }); // Separator
   
-  // Row 4: Back to Map Explorer (separate row)
+  // Row 4: Back to Safari (separate row)
   buttons.push({
     type: 1, // Action Row
     components: [
       {
         type: 2, // Button
-        custom_id: 'safari_map_explorer',
-        label: '← Map Explorer',
+        custom_id: 'prod_safari_menu',
+        label: '← Safari',
         style: 2, // Secondary
-        emoji: { name: '🗺️' }
+        emoji: { name: '🦁' }
       }
     ]
   });
