@@ -8058,10 +8058,11 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_roles_confirm') {
-      // Confirm and execute the roles nuke (DELEGATED TO MODULE)
+      // Confirm and execute the roles nuke - uses deferred due to deletion time (DELEGATED TO MODULE)
       return ButtonHandlerFactory.create({
         id: 'nuke_roles_confirm',
-        updateMessage: true,
+        deferred: true,
+        ephemeral: true,
         handler: async (context) => {
           const { handleNukeConfirm } = await import('./dataNuker.js');
           return handleNukeConfirm('roles', context);

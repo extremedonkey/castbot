@@ -283,38 +283,26 @@ export async function handleNukeConfirm(dataType, context) {
       // Execute the role nuke
       const results = await config.deleteData({}, context.guildId, context);
       
-      // Create custom success UI for roles
+      // Create custom success message for roles (deferred response doesn't use Container)
       return {
-        type: 17, // Container
-        components: [
-          {
-            type: 10, // Text Display
-            content: [
-              `☢️ **ROLES NUKED SUCCESSFULLY**`,
-              ``,
-              `Server: **${serverName}** (Guild ID: ${context.guildId})`,
-              ``,
-              `**Results:**`,
-              `• Roles Deleted: **${results.rolesDeleted}**`,
-              `• Pronouns Cleared: **${results.pronounsCleared}**`,
-              `• Timezones Cleared: **${results.timezonesCleared}**`,
-              results.errors.length > 0 ? `\n**Errors:**\n${results.errors.map(e => `• ${e}`).join('\n')}` : '',
-              ``,
-              `🎯 **Next Step:** Run \`/menu\` → Production Menu → Setup to configure fresh roles!`
-            ].filter(Boolean).join('\n')
-          }
-        ]
+        content: [
+          `☢️ **ROLES NUKED SUCCESSFULLY**`,
+          ``,
+          `Server: **${serverName}** (Guild ID: ${context.guildId})`,
+          ``,
+          `**Results:**`,
+          `• Roles Deleted: **${results.rolesDeleted}**`,
+          `• Pronouns Cleared: **${results.pronounsCleared}**`,
+          `• Timezones Cleared: **${results.timezonesCleared}**`,
+          results.errors.length > 0 ? `\n**Errors:**\n${results.errors.map(e => `• ${e}`).join('\n')}` : '',
+          ``,
+          `🎯 **Next Step:** Run \`/menu\` → Production Menu → Setup to configure fresh roles!`
+        ].filter(Boolean).join('\n')
       };
     } catch (error) {
       console.error(`❌ ERROR nuking roles: ${error.message}`);
       return {
-        type: 17, // Container
-        components: [
-          {
-            type: 10, // Text Display
-            content: `❌ **Error nuking roles:** ${error.message}`
-          }
-        ]
+        content: `❌ **Error nuking roles:** ${error.message}`
       };
     }
   }
