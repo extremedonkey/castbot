@@ -3707,7 +3707,7 @@ async function processRoundResults(guildId, channelId, client) {
                         components: [
                             {
                                 type: 10, // Text Display
-                                content: `# Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n*No eligible players found. Players need currency ≥ 1 or items in inventory to participate.*\n\n💡 **Tip:** Use the "Restock Players" button after resetting to seed test data.`
+                                content: `# No Safari Players Initialized\n\nNo eligible players found. Use the **Player Admin > Initialize Safari** button to initialize.`
                             }
                         ]
                     }]
