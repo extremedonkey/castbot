@@ -7183,6 +7183,7 @@ To fix this:
       // Nuke playerData for current guild - shows confirmation dialog
       return ButtonHandlerFactory.create({
         id: 'nuke_player_data',
+        updateMessage: true, // Update the existing reece_stuff_menu message
         handler: async (context) => {
           console.log(`☢️ NUKE DATA WARNING: Guild ${context.guildId}, User ${context.userId}`);
           
@@ -7242,7 +7243,6 @@ To fix this:
           
           return {
             content: '',
-            ephemeral: true,
             components: [confirmationContainer]
           };
         }
