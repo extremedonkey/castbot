@@ -38,13 +38,16 @@ type: 13  // WRONG - Invalid separator
 
 ### Development Workflow
 ```bash
-./scripts/dev/dev-start.sh      # Start development session
-./scripts/dev/dev-restart.sh    # Your new "save" - use after EVERY code change
-./scripts/dev/dev-status.sh     # Check status
-./scripts/dev/dev-stop.sh       # Clean shutdown
+./scripts/dev/dev-start.sh                  # Start development session
+./scripts/dev/dev-restart.sh "commit msg"   # Restart with meaningful commit message
+./scripts/dev/dev-status.sh                 # Check status
+./scripts/dev/dev-stop.sh                   # Clean shutdown
 ```
 
-**🚨 MANDATORY:** Run `./scripts/dev/dev-restart.sh` after ANY code changes
+**🚨 MANDATORY:** Run `./scripts/dev/dev-restart.sh` with descriptive message after ANY code changes
+- **ALWAYS provide commit message**: `./scripts/dev/dev-restart.sh "Fix safari button logic"`
+- **Include Discord notification for big changes**: `./scripts/dev/dev-restart.sh "Fix safari" "Safari navigation working!"`
+- **This replaces manual saves** - commit message helps track what changed
 
 ### Production Deployment
 
