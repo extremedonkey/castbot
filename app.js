@@ -7189,20 +7189,20 @@ To fix this:
           return handleNukeRequest('playerData', context);
         }
       })(req, res, client);
-    } else if (custom_id === 'nuke_player_data_confirm') {
+    } else if (custom_id === 'nuke_playerData_confirm') {
       // Confirm and execute the data nuke (DELEGATED TO MODULE)
       return ButtonHandlerFactory.create({
-        id: 'nuke_player_data_confirm',
+        id: 'nuke_playerData_confirm',
         updateMessage: true,
         handler: async (context) => {
           const { handleNukeConfirm } = await import('./dataNuker.js');
           return handleNukeConfirm('playerData', context);
         }
       })(req, res, client);
-    } else if (custom_id === 'nuke_player_data_cancel') {
+    } else if (custom_id === 'nuke_playerData_cancel') {
       // Cancel the data nuke operation (DELEGATED TO MODULE)
       return ButtonHandlerFactory.create({
-        id: 'nuke_player_data_cancel',
+        id: 'nuke_playerData_cancel',
         updateMessage: true,
         handler: async (context) => {
           const { handleNukeCancel } = await import('./dataNuker.js');
