@@ -7213,7 +7213,7 @@ To fix this:
               },
               {
                 type: 10, // Text Display
-                content: `⚠️ **WARNING**: This action will **PERMANENTLY DELETE** all playerData for:\n\n**Server:** ${serverName}\n**Guild ID:** ${context.guildId}\n\n**This will remove:**\n• All Safari data (currency, inventory, map progress)\n• All player configurations\n• All season data\n• All analytics data\n• **EVERYTHING** stored for this guild\n\n**This action CANNOT be undone!**`
+                content: `⚠️ **WARNING**: This action will **PERMANENTLY DELETE** all data from playerData.json for:\n\n**Server:** ${serverName}\n**Guild ID:** ${context.guildId}\n\n**This will remove from playerData.json:**\n• All Season Application Data (season questions, player applications)\n• All Player Data (age, pronoun, timezone, etc)\n• All Safari Data (currency, inventory, map progress)\n• Analytics version info stored in playerData.json\n• **EVERYTHING** stored for this guild in playerData.json\n\n**Note:** This only affects playerData.json. Other files (safariContent.json, etc) are NOT affected.\n\n**This action CANNOT be undone!**`
               },
               {
                 type: 14 // Separator
@@ -7260,7 +7260,6 @@ To fix this:
             console.log(`❌ ACCESS DENIED: nuke_player_data_confirm - user ${context.userId} not authorized`);
             return {
               content: 'Access denied. This feature is restricted.',
-              ephemeral: true,
               components: []
             };
           }
@@ -7278,14 +7277,12 @@ To fix this:
             await savePlayerData(playerData);
             
             return {
-              content: `☢️ **DATA NUKED SUCCESSFULLY**\n\nAll data for **${serverName}** (Guild ID: ${context.guildId}) has been permanently deleted.\n\nThe guild has been completely reset to a blank state.`,
-              ephemeral: true,
+              content: `☢️ **DATA NUKED SUCCESSFULLY**\n\nAll playerData.json entries for **${serverName}** (Guild ID: ${context.guildId}) have been permanently deleted.\n\nThe guild has been completely reset to a blank state in playerData.json.`,
               components: []
             };
           } else {
             return {
-              content: `⚠️ No data found for guild ${context.guildId}. Nothing to nuke.`,
-              ephemeral: true,
+              content: `⚠️ No data found for guild ${context.guildId} in playerData.json. Nothing to nuke.`,
               components: []
             };
           }
@@ -7301,7 +7298,6 @@ To fix this:
           
           return {
             content: '❌ **Data nuke cancelled**\n\nNo data was deleted. The guild data remains intact.',
-            ephemeral: true,
             components: []
           };
         }

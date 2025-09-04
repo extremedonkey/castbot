@@ -10,6 +10,30 @@ This file provides guidance to Claude Code when working with CastBot. This is a 
 4. **Create new PM2 processes** with `pm2 start app.js --args` 
 5. **Ignore "Discord client public key" errors** - Environment not loaded
 
+## 🔴 CRITICAL: Components V2 Types - ALWAYS USE THESE
+
+**YOU MUST USE THESE EXACT TYPES - NO EXCEPTIONS:**
+```javascript
+// ✅ VALID Components V2 Types:
+type: 17  // Container (wrapper for all components)
+type: 10  // Text Display (for content/text)
+type: 14  // Separator (visual divider)
+type: 1   // Action Row (contains buttons/selects)
+type: 2   // Button (inside Action Row)
+type: 3   // String Select (NOT type 6!)
+
+// ❌ INVALID/WRONG Types (DO NOT USE):
+type: 11  // NOT VALID - No "Section" type
+type: 5   // NOT VALID - No "Paragraph" type  
+type: 6   // WRONG - Legacy string select
+type: 13  // WRONG - Invalid separator
+```
+
+**UPDATE_MESSAGE Rules:**
+- NEVER include `ephemeral: true` in UPDATE_MESSAGE responses
+- NEVER include `flags` field in UPDATE_MESSAGE responses
+- Always return the full Container structure
+
 ## 🚀 Quick Start
 
 ### Development Workflow
