@@ -807,7 +807,14 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
 /**
  * Create Reece Stuff submenu interface (admin-only special features)
  */
-async function createReeceStuffMenu() {
+async function createReeceStuffMenu(guildId) {
+  // Check if there's an active map for the Delete Map button
+  const { loadSafariContent } = await import('./safariManager.js');
+  const safariData = await loadSafariContent();
+  const guildMaps = safariData[guildId]?.maps || {};
+  const activeMapId = guildMaps.active;
+  const hasActiveMap = activeMapId && guildMaps[activeMapId];
+  
   // Analytics section buttons - Server Stats first, Toggle Channel Logs last
   const analyticsButtons = [
     new ButtonBuilder()
@@ -847,7 +854,15 @@ async function createReeceStuffMenu() {
   ];
 
   // Danger Zone section buttons
+  const deleteMapButton = new ButtonBuilder()
+    .setCustomId('map_delete')
+    .setLabel('Delete Map')
+    .setStyle(ButtonStyle.Danger)
+    .setEmoji('🗑️')
+    .setDisabled(!hasActiveMap);  // Disable if no active map
+  
   const dangerZoneButtons = [
+    deleteMapButton,  // First button in the row
     new ButtonBuilder()
       .setCustomId('nuke_roles')
       .setLabel('Nuke Roles')
@@ -7284,7 +7299,7 @@ To fix this:
           }
           
           // Create Reece Stuff submenu
-          const reeceMenuData = await createReeceStuffMenu();
+          const reeceMenuData = await createReeceStuffMenu(context.guildId);
           
           console.log(`✅ SUCCESS: reece_stuff_menu - completed`);
           return {
