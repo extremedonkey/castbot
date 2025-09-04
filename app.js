@@ -8407,7 +8407,7 @@ Your server is now ready for Tycoons gameplay!`;
         const result = await resetGameData(guildId);
         
         // Log the action
-        await logInteraction(req.body, 'safari_confirm_reset_game', { guildId });
+        await logInteraction('BUTTON_CLICK', 'safari_confirm_reset_game', req.body, { guildId });
         
         return res.send(result);
         
@@ -8439,7 +8439,7 @@ Your server is now ready for Tycoons gameplay!`;
         const result = await restockPlayers(guildId, client);
         
         // Log the action
-        await logInteraction(req.body, 'safari_restock_players', { guildId });
+        await logInteraction('BUTTON_CLICK', 'safari_restock_players', req.body, { guildId });
         
         return res.send(result);
         
