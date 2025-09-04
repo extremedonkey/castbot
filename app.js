@@ -858,7 +858,12 @@ async function createReeceStuffMenu() {
       .setCustomId('emergency_app_reinit')
       .setLabel('Emergency App Re-Init')
       .setStyle(ButtonStyle.Danger)
-      .setEmoji('🚨')
+      .setEmoji('🚨'),
+    new ButtonBuilder()
+      .setCustomId('nuke_player_data')
+      .setLabel('Nuke playerData')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('☢️')
   ];
   
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
