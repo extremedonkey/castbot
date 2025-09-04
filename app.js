@@ -863,6 +863,11 @@ async function createReeceStuffMenu() {
       .setCustomId('nuke_player_data')
       .setLabel('Nuke playerData')
       .setStyle(ButtonStyle.Danger)
+      .setEmoji('☢️'),
+    new ButtonBuilder()
+      .setCustomId('nuke_safari_content')
+      .setLabel('Nuke safariContent')
+      .setStyle(ButtonStyle.Danger)
       .setEmoji('☢️')
   ];
   
