@@ -24044,12 +24044,48 @@ Are you sure you want to continue?`;
       }
       
     } else if (custom_id.startsWith('map_admin_edit_items_')) {
-      // Show comprehensive player inventory editor
+      // Show coming soon message for Edit Items
       return ButtonHandlerFactory.create({
         id: 'map_admin_edit_items',
         handler: async (context) => {
           const targetUserId = context.customId.split('_').pop();
-          console.log(`🛡️ START: map_admin_edit_items - comprehensive inventory editor for user ${targetUserId}`);
+          console.log(`📦 START: map_admin_edit_items - coming soon message for user ${targetUserId}`);
+          
+          // Return coming soon message with Components V2
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [{
+              type: 17, // Container
+              accent_color: 0x5865f2, // Blue accent
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `# 🚧 Edit Items - Coming Soon!\n\nThis feature is currently under development.\n\n**In the meantime:**\nPlease use the **Safari Menu → Items** option to manage player inventories.\n\nThis dedicated interface will provide a streamlined way to edit player items directly from the Player Admin panel.`
+                },
+                { type: 14 }, // Separator
+                {
+                  type: 1, // Action Row
+                  components: [{
+                    type: 2, // Button
+                    custom_id: `map_admin_user_select_continue_${targetUserId}`,
+                    label: 'Back to Player Admin',
+                    style: 2, // Secondary
+                    emoji: { name: '⬅️' }
+                  }]
+                }
+              ]
+            }]
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('map_admin_edit_items_DEPRECATED_')) {
+      // DEPRECATED - Old comprehensive player inventory editor code
+      return ButtonHandlerFactory.create({
+        id: 'map_admin_edit_items_deprecated',
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛡️ START: map_admin_edit_items_deprecated - comprehensive inventory editor for user ${targetUserId}`);
           
           // Import necessary functions
           const { loadSafariContent, getCustomTerms, getItemQuantity } = await import('./safariManager.js');

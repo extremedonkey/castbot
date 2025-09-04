@@ -198,7 +198,7 @@ async function createPlayerViewUI(guildId, userId) {
       {
         type: 2, // Button
         custom_id: `map_admin_view_inventory_${userId}`,
-        label: `Player ${customTerms.inventoryName}`,
+        label: 'View Items',
         style: 2, // Secondary
         emoji: { name: customTerms.inventoryEmoji || '🧰' },
         disabled: !isInitialized // Disable if player not initialized in Safari
@@ -209,7 +209,7 @@ async function createPlayerViewUI(guildId, userId) {
         label: 'Edit Items',
         style: 2, // Secondary
         emoji: { name: '📦' },
-        disabled: true // WIP - Coming soon
+        disabled: !isInitialized // Active but shows coming soon message
       },
       {
         type: 2, // Button
