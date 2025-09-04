@@ -807,7 +807,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
 /**
  * Create Reece Stuff submenu interface (admin-only special features)
  */
-async function createReeceStuffMenu(guildId) {
+async function createReeceStuffMenu(guildId, channelId = null) {
   // Load data to check what exists for this guild
   const { loadSafariContent } = await import('./safariManager.js');
   const { loadPlayerData } = await import('./storage.js');
@@ -828,7 +828,10 @@ async function createReeceStuffMenu(guildId) {
   const hasTimezoneRoles = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
   const hasRolesInData = hasPronounRoles || hasTimezoneRoles;
   
-  console.log(`📊 Reece menu data check - Guild ${guildId}: Map: ${hasActiveMap}, Safari: ${hasSafariData}, Player: ${hasPlayerData}, Roles: ${hasRolesInData}`);
+  // Check if this channel has an application (for Emergency App Re-Init)
+  const isApplicationChannel = channelId && !!playerData[guildId]?.applications?.[channelId];
+  
+  console.log(`📊 Reece menu data check - Guild ${guildId}: Map: ${hasActiveMap}, Safari: ${hasSafariData}, Player: ${hasPlayerData}, Roles: ${hasRolesInData}, AppChannel: ${isApplicationChannel}`);
   
   // Analytics section buttons - Server Stats first, Toggle Channel Logs last
   const analyticsButtons = [
@@ -888,7 +891,8 @@ async function createReeceStuffMenu(guildId) {
       .setCustomId('emergency_app_reinit')
       .setLabel('Emergency App Re-Init')
       .setStyle(ButtonStyle.Danger)
-      .setEmoji('🚨'),
+      .setEmoji('🚨')
+      .setDisabled(!isApplicationChannel),
     new ButtonBuilder()
       .setCustomId('nuke_player_data')
       .setLabel('Nuke playerData')
@@ -7317,7 +7321,7 @@ To fix this:
           }
           
           // Create Reece Stuff submenu
-          const reeceMenuData = await createReeceStuffMenu(context.guildId);
+          const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
           
           console.log(`✅ SUCCESS: reece_stuff_menu - completed`);
           return {
