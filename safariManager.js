@@ -3908,8 +3908,8 @@ async function getEligiblePlayersFixed(guildId, client = null) {
             
             console.log(`🔍 DEBUG: Player ${userId}: initialized=true, currency=${currency}, hasInventory=${hasInventory}`);
             
-            // Safari-initialized players with currency or items are eligible for round results
-            if (currency >= 1 || hasInventory) {
+            // All safari-initialized players are eligible for round results
+            if (true) { // Include all safari-initialized players
                 // Check cache first for consistent player names within the same request
                 let playerName = playerNameCache.get(userId);
                 
