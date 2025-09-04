@@ -205,6 +205,14 @@ async function createPlayerViewUI(guildId, userId) {
       },
       {
         type: 2, // Button
+        custom_id: `map_admin_edit_items_${userId}`,
+        label: 'Edit Items',
+        style: 2, // Secondary
+        emoji: { name: '📦' },
+        disabled: true // WIP - Coming soon
+      },
+      {
+        type: 2, // Button
         custom_id: `map_admin_view_raw_${userId}`,
         label: 'View Raw Data',
         style: 2, // Secondary
