@@ -8384,6 +8384,7 @@ Your server is now ready for Tycoons gameplay!`;
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         deferred: true,
+        ephemeral: false,  // Round results should be visible to all players
         handler: async (context) => {
           console.log(`🎨 DEBUG: Processing round results for guild ${context.guildId} in channel ${context.channelId}`);
           
