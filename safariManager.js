@@ -3854,7 +3854,7 @@ function createResetInterface() {
     return {
         type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
         data: {
-            flags: (1 << 15) | 64, // IS_COMPONENTS_V2 + EPHEMERAL
+            flags: (1 << 15), // IS_COMPONENTS_V2 (non-ephemeral)
             components: [{
                 type: 17, // Container
                 accent_color: 0xed4245, // Red

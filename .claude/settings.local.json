@@ -4,7 +4,9 @@
       "Bash(./scripts/dev/dev-restart.sh:*)",
       "Bash(npm run deploy-remote-wsl:*)",
       "Bash(grep:*)",
-      "Read(/tmp/**)"
+      "Read(/tmp/**)",
+      "Bash(git log:*)",
+      "Bash(git show:*)"
     ],
     "deny": [],
     "ask": []

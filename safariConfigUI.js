@@ -86,13 +86,6 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
                 },
                 {
                     type: 2, // Button
-                    custom_id: 'safari_schedule_results',
-                    label: 'Schedule Results',
-                    style: 1, // Primary (blue)
-                    emoji: { name: '📅' }
-                },
-                {
-                    type: 2, // Button
                     custom_id: 'safari_config_reset_defaults',
                     label: 'Reset to Defaults',
                     style: 4, // Danger

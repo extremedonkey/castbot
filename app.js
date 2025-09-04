@@ -1028,15 +1028,10 @@ async function createSafariMenu(guildId, userId, member) {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧭'),
     new ButtonBuilder()
-      .setCustomId('safari_customize_terms')
-      .setLabel('Safari Settings')
+      .setCustomId('safari_rounds_menu')
+      .setLabel('Rounds')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️'),
-    new ButtonBuilder()
-      .setCustomId('safari_configure_log')
-      .setLabel('Logs')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📊')
+      .setEmoji('⏳')
   ];
   
   // Map Administration section buttons
@@ -1062,8 +1057,18 @@ async function createSafariMenu(guildId, userId, member) {
       .setEmoji('🚀')
   ];
   
-  // Legacy section buttons
-  const legacyButtons = [
+  // Advanced Configuration section buttons (formerly Legacy)
+  const advancedConfigButtons = [
+    new ButtonBuilder()
+      .setCustomId('safari_customize_terms')
+      .setLabel('Safari Settings')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⚙️'),
+    new ButtonBuilder()
+      .setCustomId('safari_configure_log')
+      .setLabel('Logs')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📊'),
     new ButtonBuilder()
       .setCustomId('safari_manage_currency')
       .setLabel('Manage Currency')
@@ -1073,12 +1078,7 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_player_inventory')
       .setLabel(inventoryLabel)
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧺'),
-    new ButtonBuilder()
-      .setCustomId('safari_round_results')
-      .setLabel(roundResultsLabel)
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🎨')
+      .setEmoji('🧺')
   ];
   
   // TODO: Flag for deletion - Check if safari_manage_safari_buttons handler is still needed
@@ -1086,7 +1086,7 @@ async function createSafariMenu(guildId, userId, member) {
   
   const safariDetailsRow = new ActionRowBuilder().addComponents(safariDetailsButtons);
   const mapAdminRow = new ActionRowBuilder().addComponents(mapAdminButtons);
-  const legacyRow = new ActionRowBuilder().addComponents(legacyButtons);
+  const advancedConfigRow = new ActionRowBuilder().addComponents(advancedConfigButtons);
   
   // Create back button
   const backButton = [
@@ -1125,9 +1125,9 @@ async function createSafariMenu(guildId, userId, member) {
     },
     {
       type: 10, // Text Display component
-      content: `> **\`🕰️ Legacy\`**`
+      content: `> **\`🕐 Advanced Configuration\`**`
     },
-    legacyRow.toJSON(),
+    advancedConfigRow.toJSON(),
     {
       type: 14 // Separator
     },
@@ -23691,6 +23691,100 @@ Are you sure you want to continue?`;
           return {
             ...ui,
             ephemeral: true
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'safari_rounds_menu') {
+      return ButtonHandlerFactory.create({
+        id: 'safari_rounds_menu',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`⏳ START: safari_rounds_menu - user ${context.userId}`);
+          
+          // Load Safari data to get current round info
+          const { loadSafariContent, loadPlayerData } = await import('./dataManager.js');
+          const safariData = await loadSafariContent();
+          const playerData = await loadPlayerData();
+          
+          const guildData = safariData[context.guildId] || {};
+          const safariConfig = guildData.safariConfig || {};
+          const currentRound = safariConfig.currentRound || 1;
+          
+          // Count initialized players
+          const guildPlayers = playerData[context.guildId]?.players || {};
+          const initializedPlayers = Object.values(guildPlayers).filter(p => p.safariInitialized).length;
+          
+          // Dynamic button label for Round Results
+          let roundResultsLabel;
+          if (currentRound >= 1 && currentRound <= 3) {
+            roundResultsLabel = `Reveal Round ${currentRound} Results`;
+          } else if (currentRound === 4) {
+            roundResultsLabel = 'Reset Game';
+          } else {
+            roundResultsLabel = 'Reveal Results';
+          }
+          
+          // Import Discord.js components
+          const { ButtonBuilder, ActionRowBuilder, ButtonStyle } = await import('discord.js');
+          
+          // Round Management buttons
+          const roundManagementButtons = [
+            new ButtonBuilder()
+              .setCustomId('safari_round_results')
+              .setLabel(roundResultsLabel)
+              .setStyle(ButtonStyle.Primary) // Changed to blue
+              .setEmoji('🎲'),
+            new ButtonBuilder()
+              .setCustomId('safari_schedule_results')
+              .setLabel('Schedule Results')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('📅')
+          ];
+          
+          const roundManagementRow = new ActionRowBuilder().addComponents(roundManagementButtons);
+          
+          // Back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('safari_menu')
+            .setLabel('← Safari')
+            .setStyle(ButtonStyle.Secondary);
+          
+          const backRow = new ActionRowBuilder().addComponents([backButton]);
+          
+          // Build Components V2 response
+          const containerComponents = [
+            {
+              type: 10, // Text Display
+              content: `## CastBot | Safari Rounds`
+            },
+            { type: 14 }, // Separator
+            {
+              type: 10, // Text Display
+              content: currentRound === 4 
+                ? `**Status:** Round 3 Complete - Ready to reset`
+                : `**Current Round:** ${currentRound} | **Players Initialized:** ${initializedPlayers}`
+            },
+            { type: 14 }, // Separator
+            {
+              type: 10, // Text Display
+              content: `> **\`🎮 Round Management\`**`
+            },
+            roundManagementRow.toJSON(),
+            { type: 14 }, // Separator
+            backRow.toJSON()
+          ];
+          
+          console.log(`✅ SUCCESS: safari_rounds_menu - displayed`);
+          
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [{
+              type: 17, // Container
+              accent_color: 0x3498DB, // Blue
+              components: containerComponents
+            }]
           };
         }
       })(req, res, client);
