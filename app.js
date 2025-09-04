@@ -23713,9 +23713,9 @@ Are you sure you want to continue?`;
           const safariConfig = guildData.safariConfig || {};
           const currentRound = safariConfig.currentRound || 1;
           
-          // Count initialized players
+          // Count initialized players - those with safari data
           const guildPlayers = playerData[context.guildId]?.players || {};
-          const initializedPlayers = Object.values(guildPlayers).filter(p => p.safariInitialized).length;
+          const initializedPlayers = Object.values(guildPlayers).filter(p => p.safari).length;
           
           // Dynamic button label for Round Results
           let roundResultsLabel;
@@ -23763,7 +23763,7 @@ Are you sure you want to continue?`;
             },
             {
               type: 10, // Text Display
-              content: `Safari Rounds allows you to add a turn-based element to your Safari, which can be used to run cycles over 24 hour challenges or as part of a more elaborate Safari Design system. Rounds will allow items which have yields to accrue currency, and player attacks / defense actions to be executed when Round Results are revealed.`
+              content: `Safari Rounds is an optional feature which allows you to add a turn-based element to your Safari, which can be used to run cycles over 24 hour challenges or as part of a more elaborate Safari Design system.\n\nRounds will allow items which have yields to accrue currency, and player attacks / defence actions to be executed when Round Results are revealed.`
             },
             { type: 14 }, // Separator
             {
