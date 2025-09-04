@@ -7297,6 +7297,25 @@ To fix this:
           };
         }
       })(req, res, client);
+    } else if (custom_id === 'safari_menu') {
+      // Handle Safari menu button (back button from various Safari submenus)
+      return ButtonHandlerFactory.create({
+        id: 'safari_menu',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log('🦁 DEBUG: Returning to Safari menu');
+          
+          // Create Safari submenu
+          const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
+          
+          return {
+            ...safariMenuData,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'reece_stuff_menu') {
       // Handle Reece Stuff submenu - special admin features (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
