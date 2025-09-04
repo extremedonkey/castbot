@@ -9,7 +9,7 @@
  * - safariContent: All Safari data from safariContent.json (coming soon)
  */
 
-import { loadPlayerData, savePlayerData } from './dataManager.js';
+import { loadPlayerData, savePlayerData } from './storage.js';
 
 /**
  * Data type configurations
@@ -25,7 +25,7 @@ const DATA_CONFIGS = {
       '**EVERYTHING** stored for this guild in playerData.json'
     ],
     note: 'This only affects playerData.json. Other files (safariContent.json, etc) are NOT affected.',
-    loadFunction: loadPlayerData,
+    loadFunction: () => loadPlayerData(), // Call without guildId to get all data
     saveFunction: savePlayerData,
     getServerName: (data, guildId) => data[guildId]?.serverName || 'Unknown Server',
     deleteData: (data, guildId) => {
