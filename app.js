@@ -20368,29 +20368,32 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
         
-        // Load the entity to update metadata
-        const { loadEntity, saveEntity } = await import('./entityManager.js');
-        const entity = await loadEntity(guildId, entityType, entityId);
+        // Load safari data to update item metadata directly
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
         
-        if (!entity) {
-          throw new Error('Entity not found');
+        // Ensure the item exists
+        if (!safariData[guildId]?.items?.[entityId]) {
+          throw new Error('Item not found');
         }
         
+        const item = safariData[guildId].items[entityId];
+        
         // Ensure metadata exists
-        if (!entity.metadata) {
-          entity.metadata = {};
+        if (!item.metadata) {
+          item.metadata = {};
         }
         
         // Update defaultItem in metadata
         if (defaultItemValue === 'Yes') {
-          entity.metadata.defaultItem = 'Yes';
+          item.metadata.defaultItem = 'Yes';
         } else {
           // Remove the field if set to No to keep data clean
-          delete entity.metadata.defaultItem;
+          delete item.metadata.defaultItem;
         }
         
-        // Save the entity
-        await saveEntity(guildId, entityType, entityId, entity);
+        // Save the updated data
+        await saveSafariContent(safariData);
         
         // Refresh UI
         const { createEntityManagementUI } = await import('./entityManagementUI.js');
