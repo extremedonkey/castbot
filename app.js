@@ -1924,10 +1924,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
    * See https://discord.com/developers/docs/interactions/application-commands#slash-commands
    */
   if (type === InteractionType.APPLICATION_COMMAND) {
-    const rawName = data.name;
-    const name = rawName.replace(/^dev_/, '');
+    const name = data.name;
 
-    console.log(`Received command: ${rawName}`);
+    console.log(`Received command: ${name}`);
 
     // Analytics logging for slash commands
     const user = req.body.member?.user || req.body.user;

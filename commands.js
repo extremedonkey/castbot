@@ -10,23 +10,13 @@ const ADMIN_ANY = (
 	PermissionFlagsBits.Administrator
 ).toString();
 
-const args = process.argv.slice(2);
-const isGuild = args.includes('guild');
-const guildId = isGuild ? process.env.DEV_GUILD_ID : undefined;
+// Production mode check (for logging only)
 const isProduction = process.env.PRODUCTION === 'TRUE';
-
-// Helper to optionally prepend dev_
-function maybePrependDev(baseName) {
-	// In production mode, never prepend dev_
-	if (isProduction) return baseName;
-	// Otherwise use existing guild-based logic!
-	return isGuild ? `dev_${baseName}` : baseName;
-}
 
 // Active commands - Only CASTLIST and MENU
 
 const CASTLIST_COMMAND = {
-	name: maybePrependDev('castlist'),
+	name: 'castlist',
 	description: 'Display your CastBot castlist(s).',
 	type: 1,
 	options: [
@@ -48,7 +38,7 @@ const CASTLIST_COMMAND = {
 
 // Unified menu command that shows player menu for regular users, admin menu for admins
 const MENU_COMMAND = {
-	name: maybePrependDev('menu'),
+	name: 'menu',
 	description: 'View Castbot menu to access all features.',
 	type: 1
 };
@@ -61,15 +51,8 @@ const ALL_COMMANDS = [
 
 console.log('Registering commands with:');
 console.log('APP_ID:', process.env.APP_ID);
-console.log('guildId:', guildId);
 console.log('Production mode:', isProduction);
-console.log('Registering commands:', ALL_COMMANDS.map(c => c.name).join(', '));
-
-// Only register commands for guild in dev mode, globally in production
-if (isProduction && isGuild) {
-	console.log('Skipping guild registration in production mode');
-	process.exit(0);
-}
+console.log('Commands available:', ALL_COMMANDS.map(c => c.name).join(', '));
 
 // Just export the commands
 export { ALL_COMMANDS };

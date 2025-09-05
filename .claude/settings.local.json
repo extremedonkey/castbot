@@ -9,7 +9,11 @@
       "Bash(git show:*)",
       "Read(//tmp/**)",
       "Bash(./scripts/dev/dev-status.sh:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "Bash(echo:*)",
+      "Bash(npm run deploy-commands:*)",
+      "Bash(PRODUCTION=TRUE npm run deploy-commands)"
     ],
     "deny": [],
     "ask": []
