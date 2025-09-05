@@ -150,6 +150,15 @@ async function createPlayerViewUI(guildId, userId) {
       emoji: { name: '🚀' }
     });
   } else if (activeMap) {
+    // Add De-initialize button first (to the left)
+    mapButtons.push({
+      type: 2, // Button
+      custom_id: `safari_deinit_player_${userId}`,
+      label: 'De-initialize',
+      style: 4, // Danger
+      emoji: { name: '🛬' }
+    });
+    
     // Show place/move button based on whether player is on the map
     mapButtons.push({
       type: 2, // Button
@@ -177,6 +186,15 @@ async function createPlayerViewUI(guildId, userId) {
         emoji: { name: '🔄' }
       });
     }
+  } else if (isInitialized) {
+    // Player is initialized but no map exists - still show de-initialize button
+    mapButtons.push({
+      type: 2, // Button
+      custom_id: `safari_deinit_player_${userId}`,
+      label: 'De-initialize Safari',
+      style: 4, // Danger
+      emoji: { name: '🛬' }
+    });
   }
   
   if (mapButtons.length > 0) {

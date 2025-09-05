@@ -24154,6 +24154,120 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('safari_deinit_player_')) {
+      // Show de-initialization warning dialog
+      return ButtonHandlerFactory.create({
+        id: 'safari_deinit_player',
+        updateMessage: true,
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🛬 START: safari_deinit_player warning for user ${targetUserId}`);
+          
+          const { createDeinitWarningUI, getDeinitializationInfo } = await import('./safariDeinitialization.js');
+          const { loadSafariContent } = await import('./safariManager.js');
+          
+          try {
+            // Check if player can be de-initialized
+            const info = await getDeinitializationInfo(context.guildId, targetUserId);
+            if (!info.canDeinit) {
+              return {
+                content: `❌ ${info.reason}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              };
+            }
+            
+            // Get player name for display
+            const guild = await context.client.guilds.fetch(context.guildId);
+            const member = await guild.members.fetch(targetUserId);
+            const playerName = member.displayName || member.user?.username || 'Unknown Player';
+            
+            // Check if there's an active map
+            const safariData = await loadSafariContent();
+            const hasMap = !!safariData[context.guildId]?.maps?.active;
+            
+            // Return warning dialog
+            return createDeinitWarningUI(context.guildId, targetUserId, playerName, hasMap);
+            
+          } catch (error) {
+            console.error('Error showing de-init warning:', error);
+            return {
+              content: `❌ Error: ${error.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('safari_deinit_confirm_')) {
+      // Confirm and execute de-initialization
+      return ButtonHandlerFactory.create({
+        id: 'safari_deinit_confirm',
+        updateMessage: true,
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`⚠️ CONFIRMED: Executing safari_deinit for user ${targetUserId}`);
+          
+          const { deinitializePlayer, createDeinitSuccessUI } = await import('./safariDeinitialization.js');
+          
+          try {
+            // Get player name before deletion
+            const guild = await context.client.guilds.fetch(context.guildId);
+            const member = await guild.members.fetch(targetUserId);
+            const playerName = member.displayName || member.user?.username || 'Unknown Player';
+            
+            // Execute de-initialization
+            const result = await deinitializePlayer(context.guildId, targetUserId, context.client);
+            
+            if (result.success) {
+              console.log(`✅ SUCCESS: De-initialized player ${targetUserId}`);
+              return createDeinitSuccessUI(targetUserId, playerName, result.backup);
+            } else {
+              return {
+                content: `❌ De-initialization failed: ${result.message}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              };
+            }
+            
+          } catch (error) {
+            console.error('Error during de-initialization:', error);
+            return {
+              content: `❌ Critical error: ${error.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('safari_map_admin_player_')) {
+      // Return to player admin view (used as cancel from de-init warning)
+      return ButtonHandlerFactory.create({
+        id: 'safari_map_admin_player',
+        updateMessage: true,
+        handler: async (context) => {
+          const targetUserId = context.customId.split('_').pop();
+          console.log(`🔙 Returning to player admin view for ${targetUserId}`);
+          
+          const { createMapAdminUI } = await import('./safariMapAdmin.js');
+          
+          try {
+            const ui = await createMapAdminUI({
+              guildId: context.guildId,
+              userId: targetUserId,
+              mode: 'player_view'
+            });
+            
+            return ui;
+            
+          } catch (error) {
+            console.error('Error returning to player admin:', error);
+            return {
+              content: `❌ Error: ${error.message}`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+        }
+      })(req, res, client);
+      
     } else if (custom_id.startsWith('map_admin_move_player_')) {
       // Show coordinate input modal
       try {

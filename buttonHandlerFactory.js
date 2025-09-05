@@ -910,6 +910,20 @@ export const BUTTON_REGISTRY = {
     style: 'Success',
     category: 'safari_admin'
   },
+  'safari_deinit_player_*': {
+    label: 'De-initialize Safari',
+    description: 'Remove player from Safari system with warning',
+    emoji: '🛬',
+    style: 'Danger',
+    category: 'safari_admin'
+  },
+  'safari_deinit_confirm_*': {
+    label: 'Confirm De-initialization',
+    description: 'Confirm removal of player Safari data',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'safari_admin'
+  },
   'map_admin_move_player_*': {
     label: 'Move Player',
     description: 'Move player to specific coordinate',
