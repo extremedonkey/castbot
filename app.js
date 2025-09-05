@@ -4392,6 +4392,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_round_') &&
         !custom_id.startsWith('safari_edit_properties_') &&
         !custom_id.startsWith('safari_test_button_') &&
+        !custom_id.startsWith('safari_deinit_player_') &&
+        !custom_id.startsWith('safari_deinit_confirm_') &&
         !custom_id.startsWith('safari_delete_button_') &&
         !custom_id.startsWith('safari_confirm_delete_button_') &&
         !custom_id.startsWith('safari_confirm_delete_store_') &&
