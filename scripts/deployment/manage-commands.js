@@ -21,16 +21,12 @@ import { ALL_COMMANDS } from '../../commands.js';
 
 // Configuration
 const APP_ID = process.env.APP_ID;
-// DEV_GUILD_ID deprecated - keeping for backward compatibility only
-const DEV_GUILD_ID = process.env.DEV_GUILD_ID;
-const IS_PRODUCTION = process.env.PRODUCTION === 'TRUE';
 
 // Parse command line arguments
 const args = process.argv.slice(2);
 const CLEAN_ONLY = args.includes('--clean-only');
 const VERIFY_ONLY = args.includes('--verify-only');
 const ANALYZE_ONLY = args.includes('--analyze-only') || args.includes('--dry-run');
-const VERBOSE = args.includes('--verbose') || args.includes('-v');
 
 // Utility functions
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -46,9 +42,6 @@ function log(message, level = 'info') {
     }[level] || '📋';
     
     console.log(`${prefix} ${message}`);
-    if (VERBOSE && level === 'debug') {
-        console.log(`   [${timestamp}]`);
-    }
 }
 
 async function rateLimitAwareRequest(endpoint, options, retries = 3) {
@@ -290,7 +283,6 @@ async function verifyCommands() {
 async function main() {
     try {
         log('=== CastBot Command Management ===', 'info');
-        log(`Environment: ${IS_PRODUCTION ? 'PRODUCTION' : 'DEVELOPMENT'}`, 'info');
         log(`App ID: ${APP_ID}`, 'debug');
         log('', 'info');
         
@@ -345,11 +337,7 @@ async function main() {
             log('📝 Global commands may take up to 1 hour to propagate', 'info');
         }
         
-        // Future automation hooks
-        if (process.env.DEPLOYMENT_WEBHOOK) {
-            // Hook for future AWS deployment automation
-            log('Sending deployment notification...', 'debug');
-        }
+        // Future automation hooks could go here
         
         process.exit(0);
         
@@ -362,10 +350,6 @@ async function main() {
             log('Permission denied! Make sure the bot has proper permissions', 'error');
         } else if (error.message.includes('404')) {
             log('Resource not found! Check your APP_ID', 'error');
-        }
-        
-        if (VERBOSE) {
-            console.error('Full error details:', error);
         }
         
         process.exit(1);

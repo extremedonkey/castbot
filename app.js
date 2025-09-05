@@ -37,7 +37,6 @@ import {
   getPlayer, 
   saveAllPlayerData,
   getGuildTribes,
-  updateGuildTribes,
   savePlayerData,    // Add this import
   getGuildPronouns,  // Add this import
   updateGuildPronouns, // Add this import
