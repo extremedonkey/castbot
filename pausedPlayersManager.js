@@ -260,3 +260,159 @@ export async function createPausedPlayersUI(guildId, client = null) {
     ephemeral: true
   };
 }
+
+/**
+ * Pause a single player - removes map channel permissions
+ * Extracted logic from bulk pause function for individual use
+ */
+export async function pauseSinglePlayer(guildId, userId, client) {
+  const playerData = await loadPlayerData();
+  const safariData = await loadSafariContent();
+  const activeMapId = safariData[guildId]?.maps?.active;
+  
+  if (!activeMapId) {
+    return {
+      success: false,
+      message: 'No active map found'
+    };
+  }
+  
+  const player = playerData[guildId]?.players?.[userId];
+  if (!player?.safari) {
+    return {
+      success: false,
+      message: 'Player not initialized in Safari'
+    };
+  }
+  
+  // Already paused
+  if (player.safari.isPaused === true) {
+    return {
+      success: false,
+      message: 'Player is already paused'
+    };
+  }
+  
+  const mapData = safariData[guildId].maps[activeMapId];
+  const currentLocation = player.safari.mapProgress?.[activeMapId]?.currentLocation;
+  
+  // Update pause status
+  player.safari.isPaused = true;
+  
+  // Remove channel permissions if player is at a location
+  if (currentLocation && mapData.coordinates[currentLocation]?.channelId) {
+    const channelId = mapData.coordinates[currentLocation].channelId;
+    
+    try {
+      const guild = await client.guilds.fetch(guildId);
+      const member = await guild.members.fetch(userId);
+      const channel = await guild.channels.fetch(channelId);
+      
+      if (channel) {
+        await channel.permissionOverwrites.edit(member, {
+          [PermissionFlagsBits.ViewChannel]: false,
+          [PermissionFlagsBits.SendMessages]: false
+        });
+        
+        logger.info('PAUSE_PLAYER', `Paused ${member.displayName} at ${currentLocation}`, {
+          guildId,
+          userId,
+          location: currentLocation
+        });
+      }
+    } catch (error) {
+      logger.error('PAUSE_PLAYER', 'Error removing permissions', {
+        guildId,
+        userId,
+        error: error.message
+      });
+      // Still save the paused state even if permissions fail
+    }
+  }
+  
+  // Save updated player data
+  await savePlayerData(playerData);
+  
+  return {
+    success: true,
+    location: currentLocation || 'Unknown'
+  };
+}
+
+/**
+ * Unpause a single player - restores map channel permissions
+ * Extracted logic from bulk unpause function for individual use
+ */
+export async function unpauseSinglePlayer(guildId, userId, client) {
+  const playerData = await loadPlayerData();
+  const safariData = await loadSafariContent();
+  const activeMapId = safariData[guildId]?.maps?.active;
+  
+  if (!activeMapId) {
+    return {
+      success: false,
+      message: 'No active map found'
+    };
+  }
+  
+  const player = playerData[guildId]?.players?.[userId];
+  if (!player?.safari) {
+    return {
+      success: false,
+      message: 'Player not initialized in Safari'
+    };
+  }
+  
+  // Not paused
+  if (player.safari.isPaused !== true) {
+    return {
+      success: false,
+      message: 'Player is not paused'
+    };
+  }
+  
+  const mapData = safariData[guildId].maps[activeMapId];
+  const currentLocation = player.safari.mapProgress?.[activeMapId]?.currentLocation;
+  
+  // Update pause status
+  player.safari.isPaused = false;
+  
+  // Restore channel permissions if player is at a location
+  if (currentLocation && mapData.coordinates[currentLocation]?.channelId) {
+    const channelId = mapData.coordinates[currentLocation].channelId;
+    
+    try {
+      const guild = await client.guilds.fetch(guildId);
+      const member = await guild.members.fetch(userId);
+      const channel = await guild.channels.fetch(channelId);
+      
+      if (channel) {
+        await channel.permissionOverwrites.edit(member, {
+          [PermissionFlagsBits.ViewChannel]: true,
+          [PermissionFlagsBits.SendMessages]: true
+        });
+        
+        logger.info('UNPAUSE_PLAYER', `Unpaused ${member.displayName} at ${currentLocation}`, {
+          guildId,
+          userId,
+          location: currentLocation
+        });
+      }
+    } catch (error) {
+      logger.error('UNPAUSE_PLAYER', 'Error restoring permissions', {
+        guildId,
+        userId,
+        error: error.message
+      });
+      // Still save the unpaused state even if permissions fail
+    }
+  }
+  
+  // Save updated player data
+  await savePlayerData(playerData);
+  
+  return {
+    success: true,
+    location: currentLocation || 'Unknown'
+  };
+}

@@ -159,6 +159,18 @@ async function createPlayerViewUI(guildId, userId) {
       emoji: { name: '🛬' }
     });
     
+    // Add Pause/Unpause button if player is on the map
+    if (playerMapData) {
+      const isPaused = player.safari?.isPaused === true;
+      mapButtons.push({
+        type: 2, // Button
+        custom_id: isPaused ? `safari_unpause_player_${userId}` : `safari_pause_player_${userId}`,
+        label: isPaused ? 'Unpause Player' : 'Pause Player',
+        style: 2, // Secondary/Grey
+        emoji: { name: isPaused ? '⏯️' : '⏸️' }
+      });
+    }
+    
     // Show place/move button based on whether player is on the map
     mapButtons.push({
       type: 2, // Button

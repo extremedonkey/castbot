@@ -15,7 +15,9 @@
       "Bash(npm run deploy-commands:*)",
       "Bash(PRODUCTION=TRUE npm run deploy-commands)",
       "Bash(npm run logs-prod:*)",
-      "Bash(npm run analyze-commands:*)"
+      "Bash(npm run analyze-commands:*)",
+      "Bash(npm run verify-commands:*)",
+      "Bash(npm run clean-commands:*)"
     ],
     "deny": [],
     "ask": []

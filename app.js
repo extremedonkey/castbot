@@ -4393,6 +4393,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_test_button_') &&
         !custom_id.startsWith('safari_deinit_player_') &&
         !custom_id.startsWith('safari_deinit_confirm_') &&
+        !custom_id.startsWith('safari_pause_player_') &&
+        !custom_id.startsWith('safari_unpause_player_') &&
         !custom_id.startsWith('safari_delete_button_') &&
         !custom_id.startsWith('safari_confirm_delete_button_') &&
         !custom_id.startsWith('safari_confirm_delete_store_') &&
@@ -24262,6 +24264,124 @@ Are you sure you want to continue?`;
             return {
               content: `❌ Error: ${error.message}`,
               flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('safari_pause_player_')) {
+      // Pause a single player
+      return ButtonHandlerFactory.create({
+        id: 'safari_pause_player',
+        updateMessage: true,
+        handler: async (context) => {
+          try {
+            const targetUserId = context.customId.split('_').pop();
+            console.log(`⏸️ START: safari_pause_player for user ${targetUserId}`);
+            
+            const { pauseSinglePlayer } = await import('./pausedPlayersManager.js');
+            
+            // Pause the player
+            const result = await pauseSinglePlayer(context.guildId, targetUserId, context.client);
+            
+            if (result.success) {
+              console.log(`✅ SUCCESS: Paused player ${targetUserId} at ${result.location}`);
+              
+              // Return updated Player Admin UI with new button state
+              const { createMapAdminUI } = await import('./safariMapAdmin.js');
+              const updatedUI = await createMapAdminUI({
+                guildId: context.guildId,
+                userId: targetUserId,
+                mode: 'player_view'
+              });
+              
+              // Remove flags for UPDATE_MESSAGE
+              delete updatedUI.flags;
+              delete updatedUI.ephemeral;
+              
+              return updatedUI;
+            } else {
+              return {
+                components: [{
+                  type: 17, // Container
+                  accent_color: 0xed4245, // Red for error
+                  components: [{
+                    type: 10, // Text Display
+                    content: `❌ **Failed to pause player**: ${result.message}`
+                  }]
+                }]
+              };
+            }
+          } catch (error) {
+            console.error('Error in safari_pause_player handler:', error);
+            return {
+              components: [{
+                type: 17, // Container
+                accent_color: 0xed4245,
+                components: [{
+                  type: 10, // Text Display
+                  content: '❌ An error occurred while pausing the player.'
+                }]
+              }]
+            };
+          }
+        }
+      })(req, res, client);
+      
+    } else if (custom_id.startsWith('safari_unpause_player_')) {
+      // Unpause a single player
+      return ButtonHandlerFactory.create({
+        id: 'safari_unpause_player',
+        updateMessage: true,
+        handler: async (context) => {
+          try {
+            const targetUserId = context.customId.split('_').pop();
+            console.log(`⏯️ START: safari_unpause_player for user ${targetUserId}`);
+            
+            const { unpauseSinglePlayer } = await import('./pausedPlayersManager.js');
+            
+            // Unpause the player
+            const result = await unpauseSinglePlayer(context.guildId, targetUserId, context.client);
+            
+            if (result.success) {
+              console.log(`✅ SUCCESS: Unpaused player ${targetUserId} at ${result.location}`);
+              
+              // Return updated Player Admin UI with new button state
+              const { createMapAdminUI } = await import('./safariMapAdmin.js');
+              const updatedUI = await createMapAdminUI({
+                guildId: context.guildId,
+                userId: targetUserId,
+                mode: 'player_view'
+              });
+              
+              // Remove flags for UPDATE_MESSAGE
+              delete updatedUI.flags;
+              delete updatedUI.ephemeral;
+              
+              return updatedUI;
+            } else {
+              return {
+                components: [{
+                  type: 17, // Container
+                  accent_color: 0xed4245, // Red for error
+                  components: [{
+                    type: 10, // Text Display
+                    content: `❌ **Failed to unpause player**: ${result.message}`
+                  }]
+                }]
+              };
+            }
+          } catch (error) {
+            console.error('Error in safari_unpause_player handler:', error);
+            return {
+              components: [{
+                type: 17, // Container
+                accent_color: 0xed4245,
+                components: [{
+                  type: 10, // Text Display
+                  content: '❌ An error occurred while unpausing the player.'
+                }]
+              }]
             };
           }
         }

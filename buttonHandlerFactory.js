@@ -924,6 +924,20 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'safari_admin'
   },
+  'safari_pause_player_*': {
+    label: 'Pause Player',
+    description: 'Temporarily remove player from map channel',
+    emoji: '⏸️',
+    style: 'Secondary',
+    category: 'safari_admin'
+  },
+  'safari_unpause_player_*': {
+    label: 'Unpause Player',
+    description: 'Restore player access to map channel',
+    emoji: '⏯️',
+    style: 'Secondary',
+    category: 'safari_admin'
+  },
   'map_admin_move_player_*': {
     label: 'Move Player',
     description: 'Move player to specific coordinate',
