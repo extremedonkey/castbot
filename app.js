@@ -30080,6 +30080,35 @@ Are you sure you want to continue?`;
           updates.inventoryEmoji = emoji.name || '🧰';
         }
         
+        // Validate and parse defaultStartingCurrencyValue if present
+        if (updates.defaultStartingCurrencyValue !== undefined) {
+          const value = String(updates.defaultStartingCurrencyValue).trim();
+          
+          // Check if it's a valid whole number
+          if (!/^\d+$/.test(value)) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Default Starting Currency must be a whole number (e.g., 100, 250, 1000)',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          const parsed = parseInt(value, 10);
+          if (isNaN(parsed) || parsed < 0 || parsed > 100000) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Default Starting Currency must be between 0 and 100,000',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+          
+          updates.defaultStartingCurrencyValue = parsed;
+        }
+        
         // Update Safari settings using existing function
         const { updateCustomTerms } = await import('./safariManager.js');
         const success = await updateCustomTerms(guildId, updates);

@@ -580,8 +580,9 @@ async function getCurrency(guildId, userId) {
  * @param {Object} playerData - Player data object to modify
  * @param {string} guildId - Guild ID
  * @param {string} userId - User ID
+ * @param {number} defaultCurrency - Optional default currency value (defaults to 0)
  */
-function initializePlayerSafari(playerData, guildId, userId) {
+function initializePlayerSafari(playerData, guildId, userId, defaultCurrency = 0) {
     // Initialize guild structure
     if (!playerData[guildId]) {
         playerData[guildId] = { players: {}, tribes: {}, timezones: {} };
@@ -595,7 +596,7 @@ function initializePlayerSafari(playerData, guildId, userId) {
     // Initialize complete safari structure with all required fields
     if (!playerData[guildId].players[userId].safari) {
         playerData[guildId].players[userId].safari = {
-            currency: 0,
+            currency: defaultCurrency,
             history: [],
             lastInteraction: Date.now(),
             achievements: [],
@@ -3478,6 +3479,7 @@ async function getCustomTerms(guildId) {
             inventoryName: config.inventoryName || 'Nest',
             currencyEmoji: config.currencyEmoji || '🪙',
             inventoryEmoji: config.inventoryEmoji || '🧰',
+            defaultStartingCurrencyValue: config.defaultStartingCurrencyValue || 100,
             
             // Game settings - Challenge Game Logic
             round1GoodProbability: config.round1GoodProbability || null,
@@ -3568,6 +3570,9 @@ async function updateCustomTerms(guildId, terms) {
         }
         if (terms.inventoryEmoji !== undefined) {
             safariData[guildId].safariConfig.inventoryEmoji = terms.inventoryEmoji || '🧰';
+        }
+        if (terms.defaultStartingCurrencyValue !== undefined) {
+            safariData[guildId].safariConfig.defaultStartingCurrencyValue = parseInt(terms.defaultStartingCurrencyValue) || 100;
         }
         
         // Update game settings - Challenge Game Logic
@@ -4822,6 +4827,9 @@ async function resetGameData(guildId) {
             console.log(`🗑️ DEBUG: Cleared all attack queues for guild ${guildId}`);
         }
         
+        // Get default starting currency value
+        const defaultCurrency = safariData[guildId].safariConfig.defaultStartingCurrencyValue || 100;
+        
         await saveSafariContent(safariData);
         
         // Clear all player currency and inventories
@@ -4831,7 +4839,7 @@ async function resetGameData(guildId) {
         let playersReset = 0;
         for (const [userId, data] of Object.entries(players)) {
             if (data.safari) {
-                data.safari.currency = 0;
+                data.safari.currency = defaultCurrency;
                 data.safari.inventory = {};
                 data.safari.history = [];
                 data.safari.storeHistory = []; // Clear purchase history for clean per-game audit trails
@@ -4853,7 +4861,7 @@ async function resetGameData(guildId) {
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `# Game Reset Complete\n\n**${playersReset} players** have been reset:\n• All currency set to 0\n• All inventories cleared\n• Game ready to start (Round 0)\n\nUse the **Rounds** menu to start the game when ready!`
+                            content: `# Game Reset Complete\n\n**${playersReset} players** have been reset:\n• All currency set to ${defaultCurrency}\n• All inventories cleared\n• Game ready to start (Round 0)\n\nUse the **Rounds** menu to start the game when ready!`
                         },
                         {
                             type: 1, // Action Row

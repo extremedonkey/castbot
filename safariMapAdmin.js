@@ -309,9 +309,12 @@ export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', 
   const playerData = await loadPlayerData();
   const safariData = await loadSafariContent();
   
+  // Get default starting currency from config
+  const defaultCurrency = safariData[guildId]?.safariConfig?.defaultStartingCurrencyValue || 100;
+  
   // Use universal safari initialization to ensure ALL required fields exist
   const { initializePlayerSafari } = await import('./safariManager.js');
-  initializePlayerSafari(playerData, guildId, userId);
+  initializePlayerSafari(playerData, guildId, userId, defaultCurrency);
   
   const player = playerData[guildId].players[userId];
   // Ensure map-specific structures exist
