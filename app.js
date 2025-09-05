@@ -23762,7 +23762,7 @@ Are you sure you want to continue?`;
           
           const guildData = safariData[context.guildId] || {};
           const safariConfig = guildData.safariConfig || {};
-          const currentRound = safariConfig.currentRound || 1;
+          const currentRound = safariConfig.currentRound;
           
           // Count initialized players - those with safari data
           const guildPlayers = playerData[context.guildId]?.players || {};
