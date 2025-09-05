@@ -505,6 +505,37 @@ export function createConsumableSelect(itemId, currentValue = 'No') {
 }
 
 /**
+ * Create default item select component for items
+ * @param {string} itemId - Item ID
+ * @param {string} currentValue - Current default item value
+ * @returns {Object} ActionRow with select menu
+ */
+export function createDefaultItemSelect(itemId, currentValue = 'No') {
+    return {
+        type: 1, // ActionRow
+        components: [{
+            type: 3, // String Select
+            custom_id: `entity_defaultitem_select_item_${itemId}`,
+            placeholder: 'Select default item status',
+            options: [
+                {
+                    label: 'No',
+                    value: 'No',
+                    description: 'Not granted on initialization/reset',
+                    default: currentValue === 'No' || !currentValue
+                },
+                {
+                    label: 'Yes - 1x Granted on Initialization/Reset',
+                    value: 'Yes',
+                    description: 'Players receive 1x when initialized or game resets',
+                    default: currentValue === 'Yes'
+                }
+            ]
+        }]
+    };
+}
+
+/**
  * Parse modal submission data
  * @param {Object} modalData - Modal submission data
  * @param {string} fieldGroupId - Field group ID

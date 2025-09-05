@@ -367,6 +367,9 @@ function createEntityDisplay(entity, entityType, safariConfig) {
             if (entity.consumable) {
                 lines.push(`**Consumable**: ${entity.consumable}`);
             }
+            if (entity.metadata?.defaultItem === 'Yes') {
+                lines.push(`**Default Item**: Yes`);
+            }
             break;
             
         case 'store':
@@ -547,7 +550,7 @@ export function getFieldGroups(entityType) {
                 info: { label: 'Item Info', emoji: '📝', fields: ['name', 'description'] },
                 financials: { label: 'Financials', emoji: '💰', fields: ['basePrice', 'goodOutcomeValue', 'badOutcomeValue'] },
                 battle: { label: 'Battle', emoji: '⚔️', fields: ['attackValue', 'defenseValue'] },
-                properties: { label: 'Consumable', emoji: '🍏', fields: ['consumable'] },
+                properties: { label: 'Persistence', emoji: '🍏', fields: ['consumable', 'defaultItem'] },
                 stamina: { label: 'Stamina', emoji: '⚡', fields: ['staminaBoost', 'consumable'] }
             };
         case 'store':

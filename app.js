@@ -18747,7 +18747,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             if (!entity) throw new Error('Entity not found');
             
             const { createEntityManagementUI } = await import('./entityManagementUI.js');
-            const { createConsumableSelect } = await import('./fieldEditors.js');
+            const { createConsumableSelect, createDefaultItemSelect } = await import('./fieldEditors.js');
             
             const uiResponse = await createEntityManagementUI({
               entityType: entityType,
@@ -18758,8 +18758,24 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               mode: 'edit'
             });
             
-            // Add consumable select in the correct position (before the second separator)
+            // Get current defaultItem value from metadata
+            const defaultItemValue = entity.metadata?.defaultItem || 'No';
+            
+            // Create the UI components to add
+            const consumableText = {
+              type: 10, // Text Display
+              content: '**Consumable?**'
+            };
+            
             const consumableSelect = createConsumableSelect(entityId, entity.consumable);
+            
+            const defaultItemText = {
+              type: 10, // Text Display
+              content: '**Starting Item (x1)?**'
+            };
+            
+            const defaultItemSelect = createDefaultItemSelect(entityId, defaultItemValue);
+            
             const containerComponents = uiResponse.components[0].components;
             
             // Find the position of the second separator (before Done button)
@@ -18771,8 +18787,13 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               }
             }
             
-            // Insert the consumable select before the separator
-            containerComponents.splice(insertIndex, 0, consumableSelect);
+            // Insert all components in order before the separator
+            containerComponents.splice(insertIndex, 0, 
+              consumableText, 
+              consumableSelect, 
+              defaultItemText, 
+              defaultItemSelect
+            );
             
             return {
               ...uiResponse,
@@ -20331,6 +20352,68 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error updating consumable property.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id.startsWith('entity_defaultitem_select_')) {
+      // Handle default item select for items
+      try {
+        const parts = custom_id.split('_');
+        const entityType = parts[3];
+        const entityId = parts.slice(4).join('_');
+        const guildId = req.body.guild_id;
+        const defaultItemValue = data.values[0];
+        
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
+        
+        // Load the entity to update metadata
+        const { loadEntity, saveEntity } = await import('./entityManager.js');
+        const entity = await loadEntity(guildId, entityType, entityId);
+        
+        if (!entity) {
+          throw new Error('Entity not found');
+        }
+        
+        // Ensure metadata exists
+        if (!entity.metadata) {
+          entity.metadata = {};
+        }
+        
+        // Update defaultItem in metadata
+        if (defaultItemValue === 'Yes') {
+          entity.metadata.defaultItem = 'Yes';
+        } else {
+          // Remove the field if set to No to keep data clean
+          delete entity.metadata.defaultItem;
+        }
+        
+        // Save the entity
+        await saveEntity(guildId, entityType, entityId, entity);
+        
+        // Refresh UI
+        const { createEntityManagementUI } = await import('./entityManagementUI.js');
+        const uiResponse = await createEntityManagementUI({
+          entityType: entityType,
+          guildId: guildId,
+          selectedId: entityId,
+          activeFieldGroup: null,
+          searchTerm: '',
+          mode: 'edit'
+        });
+        
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+        
+      } catch (error) {
+        console.error('Error updating default item:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error updating default item property.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

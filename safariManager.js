@@ -634,6 +634,81 @@ function initializePlayerSafari(playerData, guildId, userId, defaultCurrency = 0
 }
 
 /**
+ * Get all default items for a guild
+ * @param {string} guildId - Discord guild ID
+ * @returns {Array} Array of item IDs marked as default
+ */
+async function getDefaultItems(guildId) {
+    try {
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        const defaultItems = [];
+        
+        for (const [itemId, item] of Object.entries(items)) {
+            // Check if item exists and is marked as default
+            if (item && item.metadata?.defaultItem === 'Yes') {
+                defaultItems.push(itemId);
+            }
+        }
+        
+        console.log(`📦 DEBUG: Found ${defaultItems.length} default items for guild ${guildId}`);
+        return defaultItems;
+    } catch (error) {
+        console.error('Error getting default items:', error);
+        return [];
+    }
+}
+
+/**
+ * Grant default items to a player
+ * @param {Object} playerData - Player data object
+ * @param {string} guildId - Discord guild ID
+ * @param {string} userId - Discord user ID
+ */
+async function grantDefaultItems(playerData, guildId, userId) {
+    try {
+        const defaultItems = await getDefaultItems(guildId);
+        
+        if (defaultItems.length === 0) {
+            return;
+        }
+        
+        // Ensure player has safari.inventory
+        if (!playerData[guildId]?.players?.[userId]?.safari?.inventory) {
+            console.warn(`⚠️ Cannot grant default items - player ${userId} has no inventory`);
+            return;
+        }
+        
+        const inventory = playerData[guildId].players[userId].safari.inventory;
+        
+        // Double-check items still exist before granting
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        let itemsGranted = 0;
+        
+        for (const itemId of defaultItems) {
+            // Verify item still exists (graceful handling if deleted)
+            if (!items[itemId]) {
+                console.warn(`⚠️ Default item ${itemId} no longer exists, skipping`);
+                continue;
+            }
+            
+            // Add 1x of each default item
+            if (!inventory[itemId]) {
+                inventory[itemId] = 1;
+            } else {
+                inventory[itemId] += 1;
+            }
+            itemsGranted++;
+        }
+        
+        console.log(`🎁 Granted ${itemsGranted} default items to player ${userId}`);
+    } catch (error) {
+        console.error('Error granting default items:', error);
+    }
+}
+
+/**
  * Update player currency
  * @param {string} guildId - Discord guild ID
  * @param {string} userId - Discord user ID
@@ -4625,36 +4700,22 @@ async function restockPlayers(guildId, client) {
             const oldCurrency = playerData[guildId].players[userId].safari.currency || 0;
             playerData[guildId].players[userId].safari.currency = restockAmount;
             
-            // Add randomized items (0-8 of each type) for rapid testing
-            if (!playerData[guildId].players[userId].safari.inventory) {
-                playerData[guildId].players[userId].safari.inventory = {};
-            }
+            // Clear and reinitialize inventory
+            playerData[guildId].players[userId].safari.inventory = {};
             
-            // Define the 4 item types for testing
-            const itemTypes = [
-                { id: 'nurturer_361363', name: 'Nurturer', emoji: '🐣' },
-                { id: 'territory_forager_404120', name: 'Territory Forager', emoji: '🦖' },
-                { id: 'nest_guardian_461600', name: 'Nest Guardian', emoji: '🦕' },
-                { id: 'raider_499497', name: 'Raider', emoji: '🦎' }
-            ];
+            // Grant default items
+            await grantDefaultItems(playerData, guildId, userId);
             
+            // Get list of items added for display
             const playerInventoryItems = [];
+            const inventory = playerData[guildId].players[userId].safari.inventory || {};
+            const safariData = await loadSafariContent();
+            const items = safariData[guildId]?.items || {};
             
-            for (const item of itemTypes) {
-                const randomQuantity = Math.floor(Math.random() * 9); // 0-8 items
-                
-                if (randomQuantity > 0) {
-                    // For raiders, numAttacksAvailable equals quantity (consumable attack item)
-                    // For others, numAttacksAvailable is 0 (non-consumable or defense items)
-                    const numAttacksAvailable = item.id === 'raider_499497' ? randomQuantity : 0;
-                    
-                    playerData[guildId].players[userId].safari.inventory[item.id] = {
-                        quantity: randomQuantity,
-                        numAttacksAvailable: numAttacksAvailable
-                    };
-                    
-                    playerInventoryItems.push(`${randomQuantity}x ${item.name}`);
-                    console.log(`🎲 DEBUG: Added ${randomQuantity}x ${item.name} to ${userId} (attacks: ${numAttacksAvailable})`);
+            for (const [itemId, quantity] of Object.entries(inventory)) {
+                const item = items[itemId];
+                if (item) {
+                    playerInventoryItems.push(`${quantity}x ${item.name || itemId}`);
                 }
             }
             
@@ -4704,65 +4765,6 @@ async function restockPlayers(guildId, client) {
             console.log(`🪣 DEBUG: Restocked player ${userId}: ${oldCurrency} → ${restockAmount}`);
         }
         
-        // 🚀 BLEEDING EDGE HACKY MVP: Auto-schedule random attacks for Round 1 testing
-        const safariData = await loadSafariContent();
-        if (!safariData[guildId]) safariData[guildId] = {};
-        if (!safariData[guildId].safariConfig) safariData[guildId].safariConfig = {};
-        
-        const currentRound = safariData[guildId].safariConfig.currentRound || 1;
-        console.log(`🎯 DEBUG: HACKY MVP - Current round: ${currentRound}`);
-        
-        if (currentRound === 1) {
-            console.log(`🎯 DEBUG: HACKY MVP - Auto-scheduling random attacks for Round 1!`);
-            
-            // Get all player IDs for random targeting
-            const allPlayerIds = Object.keys(playerData[guildId].players);
-            let totalAttacksScheduled = 0;
-            
-            // Initialize attack queue for round 1
-            if (!safariData[guildId].attackQueue) safariData[guildId].attackQueue = {};
-            if (!safariData[guildId].attackQueue.round1) safariData[guildId].attackQueue.round1 = [];
-            
-            for (const userId of safariPlayers) {
-                const raiders = playerData[guildId].players[userId].safari.inventory['raider_499497'];
-                if (raiders && raiders.numAttacksAvailable > 0) {
-                    // Get random targets (exclude the attacker)
-                    const targets = allPlayerIds.filter(id => id !== userId && safariPlayers.includes(id));
-                    
-                    if (targets.length === 0) {
-                        console.log(`⚠️ DEBUG: No valid targets for ${userId}, skipping attacks`);
-                        continue;
-                    }
-                    
-                    console.log(`⚔️ DEBUG: Scheduling ${raiders.numAttacksAvailable} attacks for ${userId}`);
-                    
-                    for (let i = 0; i < raiders.numAttacksAvailable; i++) {
-                        const randomTarget = targets[Math.floor(Math.random() * targets.length)];
-                        
-                        // Add to attack queue - PURE RANDOM CHAOS
-                        safariData[guildId].attackQueue.round1.push({
-                            attackingPlayer: userId,
-                            defendingPlayer: randomTarget,
-                            itemId: 'raider_499497',
-                            attacksPlanned: 1,
-                            totalDamage: 25  // Raiders do 25 damage each
-                        });
-                        
-                        totalAttacksScheduled++;
-                        console.log(`🎲 DEBUG: Attack ${i + 1}: ${userId} → ${randomTarget} (25 damage)`);
-                    }
-                    
-                    // Consume all attacks (they're scheduled now)
-                    playerData[guildId].players[userId].safari.inventory['raider_499497'].numAttacksAvailable = 0;
-                }
-            }
-            
-            console.log(`🎯 DEBUG: HACKY MVP - Scheduled ${totalAttacksScheduled} random attacks for Round 1!`);
-            
-            // Save attack queue
-            await saveSafariContent(safariData);
-        }
-        
         // Save updated player data
         await savePlayerData(playerData);
         
@@ -4778,7 +4780,7 @@ async function restockPlayers(guildId, client) {
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `# 🪣 Players Restocked\n\n**${playersRestocked} safari players** have been restocked to **${restockAmount} ${customTerms.currencyName}**:\n\n${playerDetails.join('\n')}\n\n✅ All players are ready for the next round!`
+                            content: `# 🪣 Players Restocked\n\n**${playersRestocked} safari players** have been restocked:\n• Currency set to **${restockAmount} ${customTerms.currencyName}**\n• Default items granted\n\n${playerDetails.join('\n')}\n\n✅ All players are ready for the next round!`
                         }
                     ]
                 }]
@@ -4843,6 +4845,10 @@ async function resetGameData(guildId) {
                 data.safari.inventory = {};
                 data.safari.history = [];
                 data.safari.storeHistory = []; // Clear purchase history for clean per-game audit trails
+                
+                // Grant default items after clearing inventory
+                await grantDefaultItems(playerData, guildId, userId);
+                
                 playersReset++;
             }
         }
@@ -6583,6 +6589,7 @@ export {
     getCurrency,
     updateCurrency,
     initializePlayerSafari,
+    grantDefaultItems,
     generateCustomId,
     generateButtonId,
     loadSafariContent,
