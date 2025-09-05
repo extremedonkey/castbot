@@ -115,7 +115,7 @@ async function createPlayerViewUI(guildId, userId) {
   // Show Safari status if initialized
   if (safari && Object.keys(safari).length > 0) {
     statusText += `💰 **${customTerms.currencyName}:** ${safari.currency || 0} ${customTerms.currencyEmoji}\n`;
-    statusText += `📦 **Items in ${customTerms.inventoryName}:** ${Object.keys(safari.items || {}).length}\n`;
+    statusText += `📦 **Items in ${customTerms.inventoryName}:** ${Object.keys(safari.inventory || {}).length}\n`;
     
     // Show map-specific info if available
     if (activeMap && playerMapData) {
