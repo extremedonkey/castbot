@@ -24162,13 +24162,12 @@ Are you sure you want to continue?`;
         id: 'safari_deinit_player',
         updateMessage: true,
         handler: async (context) => {
-          const targetUserId = context.customId.split('_').pop();
-          console.log(`🛬 START: safari_deinit_player warning for user ${targetUserId}`);
-          
-          const { createDeinitWarningUI, getDeinitializationInfo } = await import('./safariDeinitialization.js');
-          const { loadSafariContent } = await import('./safariManager.js');
-          
           try {
+            const targetUserId = context.customId.split('_').pop();
+            console.log(`🛬 START: safari_deinit_player warning for user ${targetUserId}`);
+            
+            const { createDeinitWarningUI, getDeinitializationInfo } = await import('./safariDeinitialization.js');
+            const { loadSafariContent } = await import('./safariManager.js');
             // Check if player can be de-initialized
             const info = await getDeinitializationInfo(context.guildId, targetUserId);
             if (!info.canDeinit) {
@@ -24206,12 +24205,11 @@ Are you sure you want to continue?`;
         id: 'safari_deinit_confirm',
         updateMessage: true,
         handler: async (context) => {
-          const targetUserId = context.customId.split('_').pop();
-          console.log(`⚠️ CONFIRMED: Executing safari_deinit for user ${targetUserId}`);
-          
-          const { deinitializePlayer, createDeinitSuccessUI } = await import('./safariDeinitialization.js');
-          
           try {
+            const targetUserId = context.customId.split('_').pop();
+            console.log(`⚠️ CONFIRMED: Executing safari_deinit for user ${targetUserId}`);
+            
+            const { deinitializePlayer, createDeinitSuccessUI } = await import('./safariDeinitialization.js');
             // Get player name before deletion
             const guild = await context.client.guilds.fetch(context.guildId);
             const member = await guild.members.fetch(targetUserId);

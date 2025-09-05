@@ -13,7 +13,6 @@
 
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { loadSafariContent } from './safariManager.js';
-import { clearPlayerLocation } from './playerLocationManager.js';
 import { PermissionFlagsBits } from 'discord.js';
 import { logger } from './logger.js';
 
@@ -206,8 +205,7 @@ export async function deinitializePlayer(guildId, userId, client = null) {
         // Remove channel permissions
         await removeChannelPermissions(guildId, userId, playerMapData.currentCoordinate, client);
         
-        // Clear player location from location manager
-        await clearPlayerLocation(guildId, userId);
+        // Location will be cleared when safari data is deleted
       }
     }
     
