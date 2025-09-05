@@ -103,6 +103,8 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 - **SAFARI PROGRESS** → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
 - **PLAYER LOCATIONS** → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
 - **WHISPER SYSTEM** → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)
+- **GLOBAL STORES** (NEW) → Permanent stores in player /menu
+- **ROUNDS MENU** (NEW) → Dedicated round management interface
 
 **Architecture & Standards:**
 - **🎨 COMPONENTS V2** (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
@@ -125,6 +127,19 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
   })(req, res, client);
 }
 ```
+
+**🚨 CRITICAL: Button Registration** - ALL buttons MUST be in BUTTON_REGISTRY:
+```javascript
+// In buttonHandlerFactory.js BUTTON_REGISTRY:
+'my_button': {
+  label: 'My Button',
+  description: 'What this button does',
+  emoji: '🔘',
+  style: 'Primary',
+  category: 'feature_name'
+}
+```
+Missing registration causes "This interaction failed" errors!
 
 **Components V2** - ALL UI MUST use `IS_COMPONENTS_V2` flag (1 << 15)
 
@@ -177,11 +192,14 @@ grep -B20 -A20 "feature_pattern" app.js
 - Full guide: [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
 
 **Common Issues:**
-- Button not working → Check BUTTON_REGISTRY registration
+- Button not working → Check BUTTON_REGISTRY registration (CRITICAL!)
 - Missing variables → Ensure context extraction
-- Permission errors → Use BigInt for permission checks
+- Permission errors → Use BigInt for permission checks  
 - Menu crashes → Check 5-button limit per ActionRow
 - String Select limits → Maximum 25 options
+- Invalid emoji format → Use Unicode (🍎) not shortcuts (:apple:)
+- Round results ephemeral → Set `ephemeral: false` in ButtonHandlerFactory
+- Double handler execution → Missing BUTTON_REGISTRY entry
 
 ## 🎯 Available Commands
 

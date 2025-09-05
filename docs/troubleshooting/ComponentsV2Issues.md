@@ -408,7 +408,80 @@ return {
 - `restart_status_failed` handler
 - `nuke_player_data_confirm` handler
 - `nuke_player_data_cancel` handler
+- `safari_round_results` handler (non-ephemeral results)
+- `safari_global_stores` handler (store selection)
 - Any button that toggles states using UPDATE_MESSAGE
+
+### 8. Button Not Registered in BUTTON_REGISTRY
+
+**Symptom**: "This interaction failed" error immediately when clicking button, logs show handler executing twice
+
+**Root Cause**: Button not registered in BUTTON_REGISTRY causing ButtonHandlerFactory to not handle it properly
+
+**Fix**: Add button to BUTTON_REGISTRY in buttonHandlerFactory.js
+
+```javascript
+// ❌ WRONG - Button not in registry
+} else if (custom_id === 'safari_global_stores') {
+  return ButtonHandlerFactory.create({
+    // Handler executes twice, Discord rejects response
+  });
+}
+
+// ✅ CORRECT - Add to BUTTON_REGISTRY first
+// In buttonHandlerFactory.js:
+'safari_global_stores': {
+  label: 'Add Global Store',
+  description: 'Select stores to appear in all player menus',
+  emoji: '🏪',
+  style: 'Secondary',
+  category: 'safari'
+}
+```
+
+**Critical Discovery**:
+- ButtonHandlerFactory requires ALL buttons to be in BUTTON_REGISTRY
+- Missing registration causes double execution and Discord errors
+- Dynamic pattern buttons (with *) still need base pattern registered
+
+### 9. Invalid Emoji Format in Data
+
+**Symptom**: "This interaction failed" or Discord silently rejects responses with no error
+
+**Root Cause**: Using text-based emoji shortcuts (:apple:) instead of proper Unicode or emoji objects
+
+**Fix**: Convert all emojis to proper Unicode format
+
+```javascript
+// ❌ WRONG - Invalid emoji formats
+{
+  "emoji": ":apple:",  // Text shortcut format
+  "emoji": ":worm:",   // Not valid for Discord
+  "emoji": ":leaves:"  // Will cause silent failures
+}
+
+// ✅ CORRECT - Unicode emoji format
+{
+  "emoji": "🍎",  // Proper Unicode
+  "emoji": "🪱",  // Direct emoji
+  "emoji": "🍃"   // Will work correctly
+}
+
+// ✅ ALSO CORRECT - Discord emoji object
+{
+  "emoji": {
+    "id": "1234567890",
+    "name": "custom_emoji",
+    "animated": false
+  }
+}
+```
+
+**Where to Check**:
+- safariContent.json for store/item emojis
+- Button definitions in handlers
+- Any user-configurable emoji fields
+- Imported data from external sources
 
 ## Quick Reference
 
@@ -421,5 +494,7 @@ return {
 6. **Check working examples** like `safari_store_items_select` for reference
 7. **Discord sends Container wrapper** - Check messageComponents[0].type === 17
 8. **Return full Container for UPDATE_MESSAGE** - Not just action rows
+9. **Register all buttons in BUTTON_REGISTRY** - Even dynamic pattern handlers
+10. **Use proper emoji formats** - Unicode or Discord objects, never :shortcut: format
 
 **When in doubt**: Reference existing working Components V2 implementations in the codebase rather than creating new patterns.

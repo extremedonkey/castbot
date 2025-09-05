@@ -361,6 +361,24 @@ async function executeComponent(componentId, userId, interaction) {
 - **Visual Map Editor**: Image upload with auto-grid coordinate system
 
 ### MVP5 - Points System & Movement ✅ COMPLETE (January 2025)
+
+### MVP6 - Safari Rounds & Global Stores ✅ COMPLETE (January 2025)
+**Features:**
+- **Safari Rounds Menu**: Dedicated menu for round-based game management
+- **Non-Ephemeral Round Results**: Results visible to all players, not just command user
+- **Player Eligibility Fix**: All safari-initialized players included regardless of currency
+- **Global Store System**: Permanent stores accessible from player /menu command
+- **Menu Reorganization**: Moved legacy features to "Advanced Configuration" submenu
+
+**Implementation:**
+- ✅ `safari_rounds_menu` handler with LEAN design principles
+- ✅ Non-ephemeral flag properly set for round results
+- ✅ `getEligiblePlayersFixed()` includes all safari players
+- ✅ Global stores selection and persistence in `safariContent.json`
+- ✅ Player menu integration with ActionRow overflow handling
+- ✅ Button style updates (grey for global stores)
+
+### MVP7 - Points System & Movement (Completed Earlier)
 **Features:**
 - **Points Management System**: Flexible resource system for stamina, HP, mana, etc.
 - **Map Movement System**: Grid-based exploration with stamina limitations
@@ -389,16 +407,25 @@ async function executeComponent(componentId, userId, interaction) {
 ### Production Menu Integration
 ```
 📋 Production Menu
-├── 🦁 Safari (MVP2 Enhanced)
+├── 🦁 Safari (MVP2 Enhanced - Reorganized January 2025)
 │   ├── Row 1: Core Functions
 │   │   ├── 📝 Create Custom Button
 │   │   ├── 📤 Post Custom Button
 │   │   ├── 📊 View All Buttons
-│   │   └── 💎 My Status (NEW)
+│   │   └── 💎 My Status
 │   ├── Row 2: Admin & Management
 │   │   ├── 💰 Manage Currency
-│   │   ├── 🏪 Manage Shops (NEW)
-│   │   └── 📦 Manage Items (NEW)
+│   │   ├── 🏪 Manage Shops
+│   │   └── 📦 Manage Items
+│   ├── Row 3: Game Management
+│   │   ├── ⏳ Rounds (NEW - January 2025)
+│   │   │   ├── 🎲 Round Results (Non-Ephemeral)
+│   │   │   ├── 🔄 Restock Players
+│   │   │   ├── 👥 Round Schedule  
+│   │   │   └── 🏪 Add Global Store
+│   │   └── 🕐 Advanced Configuration
+│   │       ├── ⚙️ Safari Settings
+│   │       └── 📜 Logs
 │   └── ⬅ Back to Menu
 ```
 
@@ -848,6 +875,11 @@ The Safari Round Results system has been completely redesigned to provide player
    - Clear Skies: Uses `goodOutcomeValue` from item definitions
    - Asteroid Strike: Uses `badOutcomeValue` from item definitions
 3. **Currency Updates**: Player balances increased by total income
+4. **Player Eligibility** (Fixed January 2025):
+   - All safari-initialized players included in results
+   - No minimum currency requirement
+   - Players with 0 currency still receive round results
+   - Ensures all active players see their outcomes
 
 **Phase 2: Combat Resolution**
 1. **Attack Queue Processing**: All attacks for current round processed simultaneously
@@ -2307,7 +2339,85 @@ function findMatchingAction(command, coordinate, guildId) {
 - Clean migration path from button to modal triggers
 - Maintains all existing Safari functionality
 
+## Global Store System (January 2025)
+
+### Overview
+
+The Global Store System allows Production team members to designate specific Safari stores as "permanent" globally accessible stores that appear in all player menus (/menu). This feature enhances player engagement by providing consistent access to important stores regardless of location.
+
+### Features
+
+- **Store Selection Interface**: Production menu button "Add Global Store" opens store selector
+- **Multi-Store Support**: Select multiple stores to appear globally
+- **Player Menu Integration**: Global stores appear as grey buttons in player menu
+- **ActionRow Management**: Automatic overflow handling (max 5 buttons per row)
+- **Persistent Storage**: Global store selections saved in `safariContent.json`
+- **Non-Ephemeral Display**: Store interfaces visible to all players
+
+### Technical Implementation
+
+#### Data Structure
+```json
+{
+  "guildId": {
+    "globalStores": ["store_id_1", "store_id_2"],
+    "shops": {
+      "store_id_1": {
+        "name": "General Store",
+        "emoji": "🏪"
+      }
+    }
+  }
+}
+```
+
+#### Player Menu Generation
+```javascript
+// In playerManagement.js
+const globalStores = safariData[guildId]?.globalStores || [];
+for (const storeId of globalStores) {
+  const store = safariData[guildId]?.shops?.[storeId];
+  if (store) {
+    buttons.push({
+      type: 2, // Button
+      custom_id: `safari_store_browse_${storeId}`,
+      label: store.name,
+      emoji: parseEmoji(store.emoji),
+      style: ButtonStyle.Secondary // Grey style
+    });
+  }
+}
+```
+
+#### Handler Pattern
+- `safari_global_stores` → Opens store selection interface
+- `global_stores_select` → Updates global store list
+- Reuses existing `safari_store_browse_*` handlers
+
+### UI/UX Design
+
+- Grey button style distinguishes global stores from other menu options
+- Store selector uses existing `map_stores_select` pattern
+- Maximum 25 stores in selector (Discord limit)
+- Clear visual hierarchy in player menu
+
 ## Implementation History
+
+### SAFARI ROUNDS & GLOBAL STORES ✅ COMPLETE (January 2025)
+
+**Major Menu Reorganization:**
+- **⏳ Safari Rounds Menu**: New dedicated menu for round-based game management
+- **🏪 Global Store System**: Production-selected stores accessible from player /menu
+- **🕐 Advanced Configuration**: Renamed from "Legacy", contains Safari Settings & Logs
+- **Non-Ephemeral Round Results**: Fixed to be visible to all players
+- **Player Eligibility Fix**: All safari-initialized players included in results
+
+**Technical Achievements:**
+- Fixed Components V2 compliance issues throughout Safari system
+- Resolved button registration issues causing "This interaction failed" errors
+- Fixed invalid emoji formats in safariContent.json
+- Implemented proper ActionRow overflow handling for player menus
+- Added proper ephemeral flag handling for UPDATE_MESSAGE responses
 
 ### SAFARI ATTACK SYSTEM ✅ MVP3 COMPLETE
 
