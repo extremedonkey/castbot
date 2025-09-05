@@ -226,15 +226,15 @@ export async function deinitializePlayer(guildId, userId, client = null) {
     if (activeMapId && client) {
       const playerMapData = playerData[guildId].players[userId].safari?.mapProgress?.[activeMapId];
       
-      if (playerMapData?.currentCoordinate) {
-        logger.info('DEINIT', `Player has map data, removing from coordinate ${playerMapData.currentCoordinate}`, {
+      if (playerMapData?.currentLocation) {
+        logger.info('DEINIT', `Player has map data, removing from coordinate ${playerMapData.currentLocation}`, {
           guildId,
           userId,
-          coordinate: playerMapData.currentCoordinate
+          coordinate: playerMapData.currentLocation
         });
         
         // Remove channel permissions
-        await removeChannelPermissions(guildId, userId, playerMapData.currentCoordinate, client);
+        await removeChannelPermissions(guildId, userId, playerMapData.currentLocation, client);
         
         // Location will be cleared when safari data is deleted
       } else {
@@ -339,7 +339,7 @@ export async function getDeinitializationInfo(guildId, userId) {
       currency: safari.currency || 0,
       itemCount: safari.inventory ? Object.keys(safari.inventory).length : 0,
       hasMapProgress: !!playerMapData,
-      currentLocation: playerMapData?.currentCoordinate || null,
+      currentLocation: playerMapData?.currentLocation || null,
       exploredCount: playerMapData?.exploredCoordinates?.length || 0,
       historyCount: safari.history?.length || 0
     }
