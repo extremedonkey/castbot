@@ -155,16 +155,41 @@ async function removeChannelPermissions(guildId, userId, coordinate, client) {
     if (coordinate && mapData.coordinates[coordinate]?.channelId) {
       const channel = await guild.channels.fetch(mapData.coordinates[coordinate].channelId);
       if (channel) {
-        await channel.permissionOverwrites.edit(member, {
-          [PermissionFlagsBits.ViewChannel]: false,
-          [PermissionFlagsBits.SendMessages]: false
+        logger.info('DEINIT', `Attempting to remove permissions for ${member.displayName} from channel ${channel.name}`, {
+          guildId,
+          userId,
+          coordinate,
+          channelId: channel.id
         });
-        logger.info('DEINIT', `Removed channel permissions for ${member.displayName} from ${coordinate}`, {
+        
+        // Explicitly deny permissions to prevent access through role/everyone permissions
+        await channel.permissionOverwrites.edit(userId, {
+          [PermissionFlagsBits.ViewChannel]: false,
+          [PermissionFlagsBits.SendMessages]: false,
+          [PermissionFlagsBits.ReadMessageHistory]: false
+        });
+        
+        logger.info('DEINIT', `Successfully removed channel permissions for ${member.displayName} from ${coordinate}`, {
+          guildId,
+          userId,
+          coordinate,
+          channelName: channel.name
+        });
+      } else {
+        logger.warn('DEINIT', `Channel not found for coordinate ${coordinate}`, {
           guildId,
           userId,
           coordinate
         });
       }
+    } else {
+      logger.warn('DEINIT', `No channel ID found for coordinate ${coordinate}`, {
+        guildId,
+        userId,
+        coordinate,
+        hasCoordinate: !!coordinate,
+        hasChannelId: !!mapData.coordinates[coordinate]?.channelId
+      });
     }
   } catch (error) {
     logger.error('DEINIT', 'Error removing channel permissions', {
@@ -202,10 +227,22 @@ export async function deinitializePlayer(guildId, userId, client = null) {
       const playerMapData = playerData[guildId].players[userId].safari?.mapProgress?.[activeMapId];
       
       if (playerMapData?.currentCoordinate) {
+        logger.info('DEINIT', `Player has map data, removing from coordinate ${playerMapData.currentCoordinate}`, {
+          guildId,
+          userId,
+          coordinate: playerMapData.currentCoordinate
+        });
+        
         // Remove channel permissions
         await removeChannelPermissions(guildId, userId, playerMapData.currentCoordinate, client);
         
         // Location will be cleared when safari data is deleted
+      } else {
+        logger.info('DEINIT', 'Player has no current coordinate on map', {
+          guildId,
+          userId,
+          hasMapProgress: !!playerMapData
+        });
       }
     }
     
