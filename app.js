@@ -8440,7 +8440,16 @@ Your server is now ready for Tycoons gameplay!`;
         const result = await resetGameData(guildId);
         
         // Log the action
-        await logInteraction('BUTTON_CLICK', 'safari_confirm_reset_game', req.body, { guildId });
+        await logInteraction(
+          req.body.member.user.id,
+          guildId,
+          'BUTTON_CLICK',
+          'safari_confirm_reset_game',
+          req.body.member.user.username,
+          'Unknown Server',
+          null,
+          req.body.channel?.name || null
+        );
         
         return res.send(result);
         
@@ -8472,7 +8481,16 @@ Your server is now ready for Tycoons gameplay!`;
         const result = await restockPlayers(guildId, client);
         
         // Log the action
-        await logInteraction('BUTTON_CLICK', 'safari_restock_players', req.body, { guildId });
+        await logInteraction(
+          req.body.member.user.id,
+          guildId,
+          'BUTTON_CLICK',
+          'safari_restock_players',
+          req.body.member.user.username,
+          'Unknown Server',
+          null,
+          req.body.channel?.name || null
+        );
         
         return res.send(result);
         
