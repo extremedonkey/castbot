@@ -209,6 +209,7 @@ grep -B20 -A20 "feature_pattern" app.js
 - Invalid emoji format → Use Unicode (🍎) not shortcuts (:apple:)
 - Round results ephemeral → Set `ephemeral: false` in ButtonHandlerFactory
 - Double handler execution → Missing BUTTON_REGISTRY entry
+- Button shows "[🪨 LEGACY]" in logs → Not registered in BUTTON_REGISTRY
 
 ## 🎯 Available Commands
 

@@ -282,6 +282,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'safari_confirm_reset_game': {
+    label: 'Confirm Reset',
+    description: 'Confirm Safari game data reset',
+    emoji: '🔄',
+    style: 'Danger',
+    category: 'safari'
+  },
   
   // Safari Global Store Management
   'safari_global_stores': {

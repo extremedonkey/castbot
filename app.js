@@ -8423,46 +8423,46 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'safari_confirm_reset_game') {
-      // Handle game reset confirmation
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to reset the game.')) return;
-        
-        console.log(`🔄 DEBUG: Confirming game reset for guild ${guildId}`);
-        
-        // Import Safari manager functions
-        const { resetGameData } = await import('./safariManager.js');
-        
-        // Reset game data and get the result response
-        const result = await resetGameData(guildId);
-        
-        // Log the action
-        await logInteraction(
-          req.body.member.user.id,
-          guildId,
-          'BUTTON_CLICK',
-          'safari_confirm_reset_game',
-          req.body.member.user.username,
-          'Unknown Server',
-          null,
-          req.body.channel?.name || null
-        );
-        
-        return res.send(result);
-        
-      } catch (error) {
-        console.error('Error in safari_confirm_reset_game:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error resetting game data. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
+      return ButtonHandlerFactory.create({
+        id: 'safari_confirm_reset_game',
+        handler: async (context) => {
+          // Check admin permissions
+          const hasPermission = context.member?.permissions && 
+            (BigInt(context.member.permissions) & BigInt(PERMISSIONS.MANAGE_ROLES)) !== 0n;
+          
+          if (!hasPermission) {
+            return {
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ You need Manage Roles permission to reset the game.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            };
           }
-        });
-      }
+          
+          console.log(`🔄 DEBUG: Confirming game reset for guild ${context.guildId}`);
+          
+          // Import Safari manager functions
+          const { resetGameData } = await import('./safariManager.js');
+          
+          // Reset game data and get the result response
+          const result = await resetGameData(context.guildId);
+          
+          // Log the action
+          await logInteraction(
+            context.userId,
+            context.guildId,
+            'BUTTON_CLICK',
+            'safari_confirm_reset_game',
+            context.username,
+            'Unknown Server',
+            null,
+            context.channelName || null
+          );
+          
+          return result;
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_restock_players') {
       // Handle Restock Players - Set all eligible players currency to 100
       try {
