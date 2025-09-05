@@ -53,6 +53,13 @@ type: 13  // WRONG - Invalid separator
 
 **🚨 CRITICAL: NEVER deploy without explicit user permission!**
 
+**📝 CORRECT DEPLOYMENT PROCESS:**
+1. **ALWAYS use WSL deployment scripts** - NOT git commands directly
+2. **Dry run first**: `npm run deploy-remote-wsl-dry` (SAFE - no permission needed)
+3. **Get permission** from user before actual deployment
+4. **Deploy**: `npm run deploy-remote-wsl` (pulls from GitHub, restarts PM2)
+5. **Check logs**: `npm run logs-prod` to verify successful deployment
+
 **✅ APPROVED PM2 COMMANDS:**
 - `pm2 restart castbot-pm` - Safe, preserves environment
 - `pm2 reload castbot-pm` - Zero-downtime restart  
@@ -67,10 +74,12 @@ type: 13  // WRONG - Invalid separator
 
 **Deployment Commands (REQUIRE PERMISSION):**
 ```bash
-npm run deploy-remote-wsl      # Full deployment - uses pm2 restart internally
+npm run deploy-remote-wsl      # Full deployment - pulls from GitHub, restarts PM2
 npm run deploy-commands-wsl    # Commands only (lower risk)
 npm run deploy-remote-wsl-dry  # Preview changes (SAFE - no permission needed)
 ```
+
+**🔴 NEVER use `git push` directly for production** - The deployment script handles GitHub pulls
 
 ### Production Monitoring
 ```bash

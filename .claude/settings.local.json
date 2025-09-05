@@ -13,7 +13,8 @@
       "Bash(node:*)",
       "Bash(echo:*)",
       "Bash(npm run deploy-commands:*)",
-      "Bash(PRODUCTION=TRUE npm run deploy-commands)"
+      "Bash(PRODUCTION=TRUE npm run deploy-commands)",
+      "Bash(npm run logs-prod:*)"
     ],
     "deny": [],
     "ask": []

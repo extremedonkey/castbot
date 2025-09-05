@@ -84,9 +84,9 @@ The bot provides several essential features for ORG hosts and players:
 
 CastBot uses Discord's slash command system. To register commands:
 
-To register the global and guild-specific slash commands, run the following PowerShell script:
-```powershell
-.\registerslashcommands.ps1
+To register slash commands with Discord:
+```bash
+npm run deploy-commands
 ```
 
 ## Development Workflow
@@ -245,11 +245,11 @@ npm run status-remote              # Check production status
 
 3. **Environment Variables**
    ```
-   DISCORD_TOKEN=dev_bot_token
+   DISCORD_TOKEN=your_bot_token
    APP_ID=1328366050848411658  # CastBot-Dev
    PRODUCTION=FALSE
    PORT=3000
-   DEV_GUILD_ID=1331657596087566398
+   # DEV_GUILD_ID no longer needed - removed dev_ prefix system
    ```
 
 #### Phase 3: Workflow Transition
@@ -455,15 +455,11 @@ npm run verify-commands    # Verify current command registration status
 
 **Behavior by Environment:**
 
-**Development Mode (`PRODUCTION=FALSE`):**
-- Deploys `dev_` prefixed commands to your dev guild (immediate availability)
-- Deploys normal commands globally for testing across multiple servers
-- Automatically cleans up duplicates and conflicts
-
-**Production Mode (`PRODUCTION=TRUE`):**
-- Deploys only normal commands globally
-- Removes any dev_ commands from global scope
-- Ensures clean production environment
+**Command Deployment:**
+- Commands are deployed globally to all servers
+- May take up to 1 hour to propagate
+- Only two commands: `/menu` and `/castlist`
+- All features accessible through the `/menu` interface
 
 ### Remote Production Deployment
 
