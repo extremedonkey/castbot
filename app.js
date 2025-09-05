@@ -1711,8 +1711,9 @@ app.use((req, res, next) => {
 // Serve static files from img directory for map images
 app.use('/img', express.static('./img'));
 
-// Update handleSetTribe function to properly handle role options
-async function handleSetTribe(guildId, roleIdOrOption, options) {
+// REMOVED: handleSetTribe function - only used by removed add_tribe command
+// This functionality is now available via /menu → Production Menu → Tribes
+/* async function handleSetTribe(guildId, roleIdOrOption, options) {
   const guild = await client.guilds.fetch(guildId);
   
   // Extract actual role ID from either direct ID or role option
@@ -1862,7 +1863,7 @@ async function handleSetTribe(guildId, roleIdOrOption, options) {
     isNew: true, // Always true now that we save before checking existing
     colorMessage
   };
-}
+} */
 
 // Keep track of processed interactions to prevent duplicates
 const processedInteractions = new Map();
@@ -1988,8 +1989,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       );
     }
 
-    // Update the readOnlyCommands array to use new command names
-    const readOnlyCommands = ['castlist', 'castlist2', 'player_set_age', 'player_set_pronouns','player_set_timezone', 'menu'];  // Updated from set_age
+    // Only castlist and menu are open commands - all others removed
+    const readOnlyCommands = ['castlist', 'menu'];
     if (!readOnlyCommands.includes(name)) {
       const hasPerms = await hasRequiredPermissions(req.body.guild_id, req.body.member.user.id);
       if (!hasPerms) {
@@ -2333,7 +2334,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     }
   }
   return;
-} else if (name === 'clear_tribe') {
+// REMOVED: clear_tribe command - functionality moved to /menu → Production Menu → Tribes
+} else if (false && name === 'clear_tribe') {
     try {
       console.log('Processing /clear_tribe command');
       await res.send({
@@ -2469,7 +2471,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     }
     return;
 // REMOVED: set_players_age command - functionality moved to /menu system
-    } else if (name === 'pronouns_add') {     // Changed from addpronouns
+    // REMOVED: pronouns_add command - functionality moved to /menu → Production Menu → Pronouns & Timezones
+    } else if (false && name === 'pronouns_add') {     // Changed from addpronouns
       try {
         console.log('Processing pronouns_add command');
         await res.send({
@@ -2595,7 +2598,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         });
       }
-    } else if (name === 'timezones_add') {    // Changed from addtimezone
+    // REMOVED: timezones_add command - functionality moved to /menu → Production Menu → Pronouns & Timezones
+    } else if (false && name === 'timezones_add') {    // Changed from addtimezone
   try {
     console.log('Processing addtimezone command');
     const guildId = req.body.guild_id;
@@ -2692,7 +2696,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
     });
   }
-} else if (name === 'timezones_remove') {
+// REMOVED: timezones_remove command - functionality moved to /menu → Production Menu → Pronouns & Timezones
+} else if (false && name === 'timezones_remove') {
   try {
     console.log('Processing timezones_remove command');
     await res.send({
@@ -2861,7 +2866,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
-} else if (name === 'add_tribe') {  // Changed from set_tribe
+// REMOVED: add_tribe command - functionality moved to /menu → Production Menu → Tribes
+} else if (false && name === 'add_tribe') {  // Changed from set_tribe
   try {
     await res.send({
       type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
@@ -3171,7 +3177,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
 
-} else if (name === 'pronouns_remove') {
+// REMOVED: pronouns_remove command - functionality moved to /menu → Production Menu → Pronouns & Timezones
+} else if (false && name === 'pronouns_remove') {
       try {
         console.log('Processing pronouns_remove command');
         await res.send({
@@ -3236,7 +3243,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
       return;
 // ...existing code...
-} else if (name === 'setup_castbot') {  // Changed from role_generator
+// REMOVED: setup_castbot command - functionality moved to /menu → Production Menu → Initial Setup
+} else if (false && name === 'setup_castbot') {  // Changed from role_generator
   try {
     console.log('🔍 DEBUG: Processing setup_castbot slash command');
     await res.send({
@@ -3277,7 +3285,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     });
   }
   return;
-} else if (name === 'apply_button') {
+// REMOVED: apply_button command - functionality moved to /menu → Season Applications
+} else if (false && name === 'apply_button') {
   try {
     console.log('Processing apply_button command');
     
