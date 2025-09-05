@@ -370,44 +370,50 @@ export async function createPlayerManagementUI(options) {
         }];
       }
       
-      // Add global store buttons
+      // Add global store buttons (only if not Round 0)
       const { loadSafariContent } = await import('./safariManager.js');
       const safariData = await loadSafariContent();
-      const globalStores = safariData[guildId]?.globalStores || [];
-      const stores = safariData[guildId]?.stores || {};
+      const safariConfig = safariData[guildId]?.safariConfig || {};
+      const currentRound = safariConfig.currentRound;
       
-      if (globalStores.length > 0) {
-        const storeButtons = [];
-        let currentRow = [];
+      // Only show global stores if currentRound exists and is not 0
+      if (currentRound && currentRound !== 0) {
+        const globalStores = safariData[guildId]?.globalStores || [];
+        const stores = safariData[guildId]?.stores || {};
         
-        for (const storeId of globalStores) {
-          const store = stores[storeId];
-          if (!store) continue;
+        if (globalStores.length > 0) {
+          const storeButtons = [];
+          let currentRow = [];
           
-          const button = new ButtonBuilder()
-            .setCustomId(`safari_store_browse_${guildId}_${storeId}`)
-            .setLabel(store.name.slice(0, 80))
-            .setStyle(ButtonStyle.Secondary)  // Grey style for global stores
-            .setEmoji(store.emoji || '🏪');
+          for (const storeId of globalStores) {
+            const store = stores[storeId];
+            if (!store) continue;
+            
+            const button = new ButtonBuilder()
+              .setCustomId(`safari_store_browse_${guildId}_${storeId}`)
+              .setLabel(store.name.slice(0, 80))
+              .setStyle(ButtonStyle.Secondary)  // Grey style for global stores
+              .setEmoji(store.emoji || '🏪');
+            
+            currentRow.push(button);
+            
+            // Max 5 buttons per row
+            if (currentRow.length === 5) {
+              globalStoreRows.push({
+                type: 1, // ActionRow
+                components: currentRow
+              });
+              currentRow = [];
+            }
+          }
           
-          currentRow.push(button);
-          
-          // Max 5 buttons per row
-          if (currentRow.length === 5) {
+          // Add remaining buttons
+          if (currentRow.length > 0) {
             globalStoreRows.push({
               type: 1, // ActionRow
               components: currentRow
             });
-            currentRow = [];
           }
-        }
-        
-        // Add remaining buttons
-        if (currentRow.length > 0) {
-          globalStoreRows.push({
-            type: 1, // ActionRow
-            components: currentRow
-          });
         }
       }
       
@@ -426,10 +432,10 @@ export async function createPlayerManagementUI(options) {
           const playerMapData = activeMapId ? playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId] : null;
           const hasMapLocation = playerMapData?.currentLocation !== undefined;
           
-          console.log(`🔍 Safari button check for ${targetMember.displayName}: initialized=${isInitialized}, hasMap=${hasMapLocation}`);
+          console.log(`🔍 Safari button check for ${targetMember.displayName}: initialized=${isInitialized}, hasMap=${hasMapLocation}, round=${currentRound}`);
           
-          // Only show Safari buttons if player has been initialized
-          if (isInitialized) {
+          // Only show Safari buttons if player has been initialized AND not Round 0
+          if (isInitialized && currentRound && currentRound !== 0) {
             // Get custom terms for inventory name and emoji
             const customTerms = await getCustomTerms(guildId);
             

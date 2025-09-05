@@ -3653,20 +3653,39 @@ async function processRoundResults(guildId, channelId, client) {
         }
         
         const safariConfig = safariData[guildId].safariConfig;
-        const currentRound = safariConfig.currentRound || 1;
+        const currentRound = safariConfig.currentRound;
         
         console.log(`🎲 DEBUG: Current round: ${currentRound}`);
+        
+        // Handle Round 0 (or undefined) - Start Game without results
+        if (!currentRound || currentRound === 0) {
+            console.log('🎮 DEBUG: Round 0 detected - starting game silently');
+            safariConfig.currentRound = 1;
+            await saveSafariContent(safariData);
+            
+            // Return silent success - no results to display
+            return {
+                type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+                data: {
+                    flags: (1 << 15) | 64, // IS_COMPONENTS_V2 + EPHEMERAL
+                    components: [{
+                        type: 17, // Container
+                        accent_color: 0x2ecc71, // Green for success
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: `✅ Game started successfully. Round 1 is now active.`
+                            }
+                        ]
+                    }]
+                }
+            };
+        }
         
         // If currentRound == 4, show reset interface
         if (currentRound === 4) {
             console.log('🔄 DEBUG: Game completed (currentRound=4), showing reset interface');
             return createResetInterface();
-        }
-        
-        // If no currentRound exists, set to 1
-        if (!safariConfig.currentRound) {
-            safariConfig.currentRound = 1;
-            await saveSafariContent(safariData);
         }
         
         // Get custom terms for event names/probabilities
@@ -3867,14 +3886,14 @@ function createResetInterface() {
                 components: [
                     {
                         type: 10, // Text Display
-                        content: `# Reset to round 1?\n\nAll player currency will be reset to 0, all player item purchases cleared, and all round data will be cleared`
+                        content: `# Reset Game?\n\nAll player currency will be reset to 0, all player item purchases cleared, and all round data will be cleared`
                     },
                     {
                         type: 1, // Action Row
                         components: [{
                             type: 2, // Button
                             custom_id: 'safari_confirm_reset_game',
-                            label: 'Reset to Round 1',
+                            label: 'Reset Game',
                             style: 4, // Danger
                             emoji: { name: '⚠️' }
                         }]
@@ -4789,7 +4808,7 @@ async function resetGameData(guildId) {
             safariData[guildId].safariConfig = {};
         }
         
-        safariData[guildId].safariConfig.currentRound = 1;
+        safariData[guildId].safariConfig.currentRound = 0;
         safariData[guildId].safariConfig.lastRoundTimestamp = Date.now();
         
         // Clear round history if it exists
@@ -4822,7 +4841,7 @@ async function resetGameData(guildId) {
         
         await savePlayerData(playerData);
         
-        console.log(`✅ DEBUG: Reset complete - ${playersReset} players reset to round 1`);
+        console.log(`✅ DEBUG: Reset complete - ${playersReset} players reset, game returned to round 0`);
         
         return {
             type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
@@ -4834,7 +4853,7 @@ async function resetGameData(guildId) {
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `# Game Reset Complete\n\n**${playersReset} players** have been reset:\n• All currency set to 0\n• All inventories cleared\n• Game returned to Round 1\n\nThe Safari challenge can now begin again!`
+                            content: `# Game Reset Complete\n\n**${playersReset} players** have been reset:\n• All currency set to 0\n• All inventories cleared\n• Game ready to start (Round 0)\n\nUse the **Rounds** menu to start the game when ready!`
                         },
                         {
                             type: 1, // Action Row

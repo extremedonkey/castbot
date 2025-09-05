@@ -23770,7 +23770,9 @@ Are you sure you want to continue?`;
           
           // Dynamic button label for Round Results
           let roundResultsLabel;
-          if (currentRound >= 1 && currentRound <= 3) {
+          if (!currentRound || currentRound === 0) {
+            roundResultsLabel = 'Start Game';
+          } else if (currentRound >= 1 && currentRound <= 3) {
             roundResultsLabel = `Reveal Round ${currentRound} Results`;
           } else if (currentRound === 4) {
             roundResultsLabel = 'Reset Game';
@@ -23840,6 +23842,8 @@ Are you sure you want to continue?`;
               type: 10, // Text Display
               content: currentRound === 4 
                 ? `**Status:** Round 3 Complete - Ready to reset | **Global Stores:** ${globalStores.length}`
+                : (!currentRound || currentRound === 0)
+                ? `**Status:** Game Not Started | **Players Initialized:** ${initializedPlayers} | **Global Stores:** ${globalStores.length}`
                 : `**Current Round:** ${currentRound} | **Players Initialized:** ${initializedPlayers} | **Global Stores:** ${globalStores.length}`
             },
             { type: 14 }, // Separator
