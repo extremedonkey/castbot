@@ -14,7 +14,8 @@
       "Bash(echo:*)",
       "Bash(npm run deploy-commands:*)",
       "Bash(PRODUCTION=TRUE npm run deploy-commands)",
-      "Bash(npm run logs-prod:*)"
+      "Bash(npm run logs-prod:*)",
+      "Bash(npm run analyze-commands:*)"
     ],
     "deny": [],
     "ask": []
