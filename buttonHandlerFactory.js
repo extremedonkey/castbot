@@ -274,6 +274,15 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
   
+  // Safari Rounds Management
+  'safari_rounds_menu': {
+    label: 'Rounds',
+    description: 'Manage Safari rounds and game progression',
+    emoji: '⏳',
+    style: 'Secondary',
+    category: 'safari'
+  },
+  
   // Safari Global Store Management
   'safari_global_stores': {
     label: 'Add Global Store',
