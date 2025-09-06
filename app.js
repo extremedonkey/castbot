@@ -24088,7 +24088,6 @@ Are you sure you want to continue?`;
           const roleOptions = Array.from(selectableRoles.values()).slice(0, 25).map(role => ({
             label: role.name,
             value: role.id,
-            description: `${role.members?.size || 0} members`,
             default: priorityRoles.includes(role.id)
           }));
           
@@ -24153,11 +24152,43 @@ Are you sure you want to continue?`;
       })(req, res, client);
       
     } else if (custom_id === 'safari_result_ordering_select') {
-      // Store selected roles temporarily (handled by subsequent save/cancel)
+      // Update the message to reflect the selected roles
       const selectedRoles = req.body.data.values || [];
       console.log(`📊 DEBUG: safari_result_ordering_select - ${selectedRoles.length} roles selected`);
       
-      // Return DEFERRED_UPDATE_MESSAGE to acknowledge the interaction without changing anything
+      // Get the existing message components
+      const message = req.body.message;
+      const messageComponents = message?.components || [];
+      
+      // Update the select menu options to reflect the new selection
+      if (messageComponents[0]?.type === 17) {
+        const containerComponents = messageComponents[0].components || [];
+        
+        // Find and update the select menu
+        for (let i = 0; i < containerComponents.length; i++) {
+          const comp = containerComponents[i];
+          if (comp.type === 1 && comp.components?.[0]?.type === 3) {
+            // Update the default property for all options
+            const selectMenu = comp.components[0];
+            if (selectMenu.options) {
+              selectMenu.options.forEach(option => {
+                option.default = selectedRoles.includes(option.value);
+              });
+            }
+            break;
+          }
+        }
+        
+        // Return the updated message
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            components: messageComponents
+          }
+        });
+      }
+      
+      // Fallback if structure not found
       return res.send({
         type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
       });
