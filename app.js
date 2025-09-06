@@ -24342,11 +24342,25 @@ Are you sure you want to continue?`;
           
           // Get all initialized players (those with safari data)
           const initializedPlayers = [];
+          const guild = await client.guilds.fetch(guildId);
+          
           for (const [userId, data] of Object.entries(guildPlayers)) {
             if (data.safari) {
+              // Try to get fresh name from Discord
+              let playerName = `Player ${userId.slice(-4)}`;
+              try {
+                const member = await guild.members.fetch(userId);
+                if (member) {
+                  playerName = member.displayName || member.user?.globalName || member.user?.username || playerName;
+                }
+              } catch (e) {
+                // Fallback to stored data if Discord lookup fails
+                playerName = data.globalName || data.displayName || data.username || playerName;
+              }
+              
               initializedPlayers.push({
                 userId,
-                playerName: data.globalName || data.displayName || data.username || `Player ${userId.slice(-4)}`,
+                playerName,
                 currency: data.safari.currency || 0
               });
             }
