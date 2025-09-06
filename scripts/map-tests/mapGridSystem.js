@@ -84,18 +84,18 @@ export class MapGridSystem {
             case 'letters-numbers':
             default:
                 // Parse Excel-style columns (A, Z, AA, AB, etc.)
-                let x = 0;
+                let colIndex = 0;
                 let colPart = upperLabel.match(/^[A-Z]+/)[0];
                 let rowPart = upperLabel.match(/\d+$/)[0];
                 
                 // Convert column letters to index
                 for (let i = 0; i < colPart.length; i++) {
-                    x = x * 26 + (colPart.charCodeAt(i) - 65 + 1);
+                    colIndex = colIndex * 26 + (colPart.charCodeAt(i) - 65 + 1);
                 }
-                x -= 1; // Convert to 0-based index
+                colIndex -= 1; // Convert to 0-based index
                 
-                const y = parseInt(rowPart) - 1;
-                return { x, y };
+                const rowIndex = parseInt(rowPart) - 1;
+                return { x: colIndex, y: rowIndex };
         }
     }
 
