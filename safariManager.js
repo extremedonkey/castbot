@@ -6333,11 +6333,16 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         flags: (1 << 15), // IS_COMPONENTS_V2
-                        components: firstMessageComponents,
-                        wait: true // Get message back
+                        components: firstMessageComponents
                     })
                 });
-                firstMessage = await response.json();
+                
+                // Check response but don't parse as JSON for scheduled posts
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Webhook post failed: ${errorText}`);
+                }
+                firstMessage = { id: 'scheduled', success: true };
                 console.log(`✅ DEBUG: Posted first message via webhook for scheduled execution`);
                 
                 // Clean up webhook after a delay
@@ -6432,11 +6437,16 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             flags: (1 << 15), // IS_COMPONENTS_V2
-                            components: messageComponents,
-                            wait: true // Get message back
+                            components: messageComponents
                         })
                     });
-                    message = await response.json();
+                    
+                    // Check response but don't parse as JSON for scheduled posts
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`Webhook post ${i + 1} failed: ${errorText}`);
+                    }
+                    message = { id: `scheduled_${i + 1}`, success: true };
                     console.log(`✅ DEBUG: Posted message ${i + 1} via webhook for scheduled execution`);
                 } else {
                     // For interaction-based execution, use webhook followup
