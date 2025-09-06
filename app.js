@@ -20368,32 +20368,39 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES)) return;
         
-        // Load safari data to update item metadata directly
-        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
+        // Use the Entity Manager to properly update the item
+        const { updateEntityFields } = await import('./entityManager.js');
         
-        // Ensure the item exists
-        if (!safariData[guildId]?.items?.[entityId]) {
-          throw new Error('Item not found');
-        }
-        
-        const item = safariData[guildId].items[entityId];
-        
-        // Ensure metadata exists
-        if (!item.metadata) {
-          item.metadata = {};
-        }
-        
-        // Update defaultItem in metadata
+        // Update the metadata.defaultItem field
+        const updates = {};
         if (defaultItemValue === 'Yes') {
-          item.metadata.defaultItem = 'Yes';
+          updates['metadata.defaultItem'] = 'Yes';
         } else {
-          // Remove the field if set to No to keep data clean
-          delete item.metadata.defaultItem;
+          // To remove the field, we need to load and update the full entity
+          const { loadEntity } = await import('./entityManager.js');
+          const entity = await loadEntity(guildId, entityType, entityId);
+          
+          if (!entity) {
+            throw new Error('Entity not found');
+          }
+          
+          // Ensure metadata exists
+          if (!entity.metadata) {
+            entity.metadata = {};
+          }
+          
+          // Remove the defaultItem field
+          delete entity.metadata.defaultItem;
+          
+          // Use updateEntity to save the modified entity
+          const { updateEntity } = await import('./entityManager.js');
+          await updateEntity(guildId, entityType, entityId, entity);
         }
         
-        // Save the updated data
-        await saveSafariContent(safariData);
+        // Only update if setting to Yes (for clean removal we handled above)
+        if (defaultItemValue === 'Yes') {
+          await updateEntityFields(guildId, entityType, entityId, updates);
+        }
         
         // Refresh UI
         const { createEntityManagementUI } = await import('./entityManagementUI.js');

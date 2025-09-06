@@ -5059,17 +5059,20 @@ async function addAttackToQueue(guildId, attackRecord) {
                                 playerData[guildId]?.players?.[attackRecord.defendingPlayer]?.username || 
                                 'Unknown Defender';
             
+            // Get attacker's current location
+            const attackerLocation = playerData[guildId]?.players?.[attackRecord.attackingPlayer]?.safari?.currentLocation || 
+                                    playerData[guildId]?.players?.[attackRecord.attackingPlayer]?.safari?.currentCoordinate || 
+                                    'Unknown Location';
+            
             await logAttack({
                 guildId,
                 attackerId: attackRecord.attackingPlayer,
                 attackerName,
-                defenderId: attackRecord.defendingPlayer,
-                defenderName,
-                itemId: attackRecord.itemId,
-                itemName: attackRecord.itemName,
-                quantity: attackRecord.attacksPlanned,
-                totalDamage: attackRecord.totalDamage,
-                round: round
+                targetId: attackRecord.defendingPlayer,  // Changed from defenderId to targetId
+                targetName: defenderName,  // Changed from defenderName to targetName
+                location: attackerLocation,  // Added location field
+                result: `Scheduled ${attackRecord.attacksPlanned}x ${attackRecord.itemName} for ${attackRecord.totalDamage} damage in Round ${round}`,
+                channelName: null  // Will be determined by logger
             });
         } catch (logError) {
             console.error('Failed to log attack:', logError);
