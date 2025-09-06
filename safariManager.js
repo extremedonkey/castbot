@@ -6295,12 +6295,15 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token) {
                 throw new Error(`First message exceeds character limit: ${firstCharCount}/4000`);
             }
             
-            const firstMessage = await channel.send({
-                flags: (1 << 15), // IS_COMPONENTS_V2
-                components: firstMessageComponents
+            const firstFollowup = await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
+                method: 'POST',
+                body: {
+                    flags: (1 << 15), // IS_COMPONENTS_V2
+                    components: firstMessageComponents
+                }
             });
-            messages.push(firstMessage);
-            console.log(`✅ DEBUG: Sent first message with header and ${playerChunks[0]?.length || 0} players`);
+            messages.push(firstFollowup);
+            console.log(`✅ DEBUG: Sent first followup message with header and ${playerChunks[0]?.length || 0} players`);
             
             // Send remaining chunks
             for (let i = 1; i < playerChunks.length; i++) {
