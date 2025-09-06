@@ -24324,6 +24324,7 @@ Are you sure you want to continue?`;
         id: 'safari_player_status',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        deferResponse: true, // Defer the response to handle longer processing
         handler: async (context) => {
           console.log(`🏋️ START: safari_player_status - user ${context.userId}`);
           
@@ -24342,19 +24343,37 @@ Are you sure you want to continue?`;
           
           // Get all initialized players (those with safari data)
           const initializedPlayers = [];
-          const guild = await client.guilds.fetch(guildId);
           
+          // Collect all user IDs first
+          const userIds = [];
           for (const [userId, data] of Object.entries(guildPlayers)) {
             if (data.safari) {
-              // Try to get fresh name from Discord
+              userIds.push(userId);
+            }
+          }
+          
+          // Batch fetch all members at once
+          const guild = await client.guilds.fetch(guildId);
+          let members = new Map();
+          try {
+            // Fetch all members in one go - much faster than individual fetches
+            const fetchedMembers = await guild.members.fetch({ user: userIds });
+            members = fetchedMembers;
+          } catch (e) {
+            console.log(`⚠️ DEBUG: Batch member fetch failed, will use stored data`);
+          }
+          
+          // Now process each player with the fetched member data
+          for (const [userId, data] of Object.entries(guildPlayers)) {
+            if (data.safari) {
               let playerName = `Player ${userId.slice(-4)}`;
-              try {
-                const member = await guild.members.fetch(userId);
-                if (member) {
-                  playerName = member.displayName || member.user?.globalName || member.user?.username || playerName;
-                }
-              } catch (e) {
-                // Fallback to stored data if Discord lookup fails
+              
+              // Try to get from batch-fetched members first
+              const member = members.get(userId);
+              if (member) {
+                playerName = member.displayName || member.user?.globalName || member.user?.username || playerName;
+              } else {
+                // Fallback to stored data if not in batch fetch
                 playerName = data.globalName || data.displayName || data.username || playerName;
               }
               
