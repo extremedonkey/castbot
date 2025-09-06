@@ -6745,14 +6745,17 @@ async function createPlayerResultCards(guildId, eligiblePlayers, roundData, cust
 async function createPlayerResultCard(player, roundData, customTerms, items, attacksReceived, balanceChange) {
     try {
         const { isGoodEvent, eventName, eventEmoji } = roundData;
+        const currencyEmoji = customTerms.currencyEmoji || '🪙';
+        const currencyName = customTerms.currencyName || 'coins';
         
-        // Combine all content into a single Text Display - ULTRA COMPACT FORMAT
-        let content = `# ${getPlayerEmoji(player.playerName)} ${player.playerName}\n`;
-        content += `> ## \`1. Balance at the start of Round Results\`\n`;
-        content += `**${customTerms.currencyName || 'Currency'}**\n`;
-        content += `${balanceChange.starting} ${customTerms.currencyName || 'coins'}\n\n`;
+        // Start with player name and emoji
+        let content = `${getPlayerEmoji(player.playerName)} ${player.playerName}\n`;
         
-        // Income section
+        // Section 1: Opening balance
+        content += `### \`1. Opening balance start of Round Results\`\n`;
+        content += `${currencyEmoji} ${balanceChange.starting} ${currencyName}\n\n`;
+        
+        // Section 2: Income from round
         const incomeBreakdown = formatIncomeBreakdown(
             player, 
             items, 
@@ -6763,7 +6766,7 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
         );
         content += incomeBreakdown + '\n\n';
         
-        // Combat section - pass player inventory for defense calculation
+        // Section 3: Combat damage
         const combatResults = formatCombatResults(
             attacksReceived, 
             items, 
@@ -6772,14 +6775,15 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
         );
         content += combatResults + '\n\n';
         
-        // Final balance - ULTRA COMPACT: no emoji, no parentheses display
-        content += `Final: ${balanceChange.ending}${customTerms.currencyEmoji}`;
+        // Section 4: Closing balance
+        content += `### \`4. Closing balance end of Round Results\`\n`;
+        content += `${currencyEmoji} ${balanceChange.ending} ${currencyName}`;
         
         // Add character count for debugging
         const charCount = content.length;
         content += `\n-# ${charCount}`;
         
-        // Create container with accent color based on change - SINGLE COMPONENT
+        // Create container with accent color based on change
         const change = balanceChange.change;
         const accentColor = change > 0 ? 0x27ae60 : change < 0 ? 0xe74c3c : 0x95a5a6; // Green/Red/Gray
         
@@ -6820,13 +6824,16 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
  */
 function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji, customTerms) {
     try {
-        let content = `## 📈 INCOME\n${eventEmoji} ${eventName}\n\n`;
+        const currencyEmoji = customTerms.currencyEmoji || '🪙';
+        
+        let content = `### \`2. Plus: Income from round\`\n`;
+        content += `${eventEmoji} ${eventName}\n\n`;
         
         const inventory = player.inventory || {};
         const inventoryItems = Object.entries(inventory);
         
         if (inventoryItems.length === 0) {
-            content += `Total: 0${customTerms.currencyEmoji}`;
+            content += `Total: +${currencyEmoji}0`;
             return content;
         }
         
@@ -6856,20 +6863,22 @@ function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji
         }
         
         if (incomeItems.length === 0) {
-            content += `Total: 0${customTerms.currencyEmoji}`;
+            content += `Total: +${currencyEmoji}0`;
         } else {
-            // Format each income item - ULTRA COMPACT: emoji quantity×value: total
+            // Format each income item: emoji quantityxvalue: +currencyEmojiTotal
             for (const item of incomeItems) {
-                content += `${item.emoji} ${item.quantity}x${item.unitValue}: ${item.totalValue}${customTerms.currencyEmoji}\n`;
+                const sign = item.totalValue >= 0 ? '+' : '';
+                content += `${item.emoji} ${item.quantity}x${item.unitValue}: ${sign}${currencyEmoji}${Math.abs(item.totalValue)}\n`;
             }
-            content += `\nTotal: ${totalIncome}${customTerms.currencyEmoji}`;
+            const totalSign = totalIncome >= 0 ? '+' : '';
+            content += `\nTotal: ${totalSign}${currencyEmoji}${Math.abs(totalIncome)}`;
         }
         
         return content;
         
     } catch (error) {
         console.error('Error formatting income breakdown:', error);
-        return '## 📈 INCOME\n❌ Error';
+        return `### \`2. Plus: Income from round\`\n❌ Error`;
     }
 }
 
@@ -6883,10 +6892,35 @@ function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji
  */
 function formatCombatResults(attacksReceived, items, customTerms, playerInventory = {}) {
     try {
-        let content = '## ⚔️ COMBAT\n';
+        const currencyEmoji = customTerms.currencyEmoji || '🪙';
+        let content = `### \`3. Less: Damage from attacks\`\n`;
         
         if (attacksReceived.length === 0) {
-            content += `Combat Damage: 0${customTerms.currencyEmoji}`;
+            // No attacks received - only show if there's defense
+            const defenseValue = calculateTotalDefense(playerInventory, items);
+            if (defenseValue > 0) {
+                // Show defense even with no attacks
+                const defenseItems = {};
+                for (const [itemId, itemData] of Object.entries(playerInventory)) {
+                    const item = items[itemId];
+                    if (!item || !item.defenseValue) continue;
+                    
+                    const quantity = typeof itemData === 'object' ? itemData.quantity : itemData;
+                    const itemKey = item.emoji || '🛡️';
+                    if (!defenseItems[itemKey]) {
+                        defenseItems[itemKey] = { quantity: 0, unitDefense: item.defenseValue, totalDefense: 0 };
+                    }
+                    defenseItems[itemKey].quantity += quantity;
+                    defenseItems[itemKey].totalDefense += quantity * item.defenseValue;
+                }
+                
+                const defenseSummary = Object.entries(defenseItems)
+                    .map(([emoji, data]) => `${emoji}🛡️ ${data.quantity}x${data.unitDefense} (${data.totalDefense})`)
+                    .join(' ');
+                
+                content += `No attacks - ${defenseSummary}\n`;
+            }
+            content += `Combat Damage: ${currencyEmoji}0`;
             return content;
         }
         
@@ -6928,12 +6962,12 @@ function formatCombatResults(attacksReceived, items, customTerms, playerInventor
             defenseItems[itemKey].totalDefense += itemDefense;
         }
         
-        // Format attack summary - ULTRA COMPACT: emoji🗡️ quantity×damage (total)
+        // Format attack summary: emoji⚔️ quantity×damage (total)
         const attackSummary = Object.entries(attackItems)
-            .map(([emoji, data]) => `${emoji}🗡️ ${data.quantity}x${data.unitDamage} (${data.totalDamage})`)
+            .map(([emoji, data]) => `${emoji}⚔️ ${data.quantity}x${data.unitDamage} (${data.totalDamage})`)
             .join(' ');
         
-        // Format defense summary - ULTRA COMPACT: emoji🛡️ quantity×defense (total)
+        // Format defense summary: emoji🛡️ quantity×defense (total)
         const defenseSummary = Object.entries(defenseItems)
             .map(([emoji, data]) => `${emoji}🛡️ ${data.quantity}x${data.unitDefense} (${data.totalDefense})`)
             .join(' ');
@@ -6947,14 +6981,27 @@ function formatCombatResults(attacksReceived, items, customTerms, playerInventor
         
         // Calculate net damage (attack - defense, minimum 0 for display)
         const netDamage = Math.max(0, totalAttackDamage - totalDefense);
-        content += `Combat Damage: ${netDamage > 0 ? '-' : ''}${netDamage}${customTerms.currencyEmoji}`;
+        // Only show minus sign if damage is greater than 0
+        content += `Combat Damage: ${netDamage > 0 ? '-' : ''}${currencyEmoji}${netDamage}`;
         
         return content;
         
     } catch (error) {
         console.error('Error formatting combat results:', error);
-        return '## ⚔️ COMBAT\n❌ Error';
+        return `### \`3. Less: Damage from attacks\`\n❌ Error`;
     }
+}
+
+// Helper function to calculate total defense
+function calculateTotalDefense(playerInventory, items) {
+    let totalDefense = 0;
+    for (const [itemId, itemData] of Object.entries(playerInventory)) {
+        const item = items[itemId];
+        if (!item || !item.defenseValue) continue;
+        const quantity = typeof itemData === 'object' ? itemData.quantity : itemData;
+        totalDefense += quantity * item.defenseValue;
+    }
+    return totalDefense;
 }
 
 /**
