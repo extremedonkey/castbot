@@ -6315,13 +6315,40 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
             firstMessageComponents.push(debugContainer);
             
             let firstMessage;
+            let webhookUrl; // Store webhook URL for scheduled execution
+            
             if (isScheduled) {
-                // For scheduled execution, post directly to channel
+                // For scheduled execution, create a webhook to post Components V2
                 const channel = await client.channels.fetch(channelId);
-                firstMessage = await channel.send({
-                    components: firstMessageComponents
+                const webhook = await channel.createWebhook({
+                    name: 'Safari Round Results',
+                    reason: 'Scheduled Safari round results execution'
                 });
-                console.log(`✅ DEBUG: Posted first message to channel for scheduled execution`);
+                webhookUrl = webhook.url;
+                console.log(`🌐 DEBUG: Created webhook for scheduled execution`);
+                
+                // Post via webhook to support Components V2
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        flags: (1 << 15), // IS_COMPONENTS_V2
+                        components: firstMessageComponents,
+                        wait: true // Get message back
+                    })
+                });
+                firstMessage = await response.json();
+                console.log(`✅ DEBUG: Posted first message via webhook for scheduled execution`);
+                
+                // Clean up webhook after a delay
+                setTimeout(async () => {
+                    try {
+                        await webhook.delete('Cleanup after scheduled results');
+                        console.log(`🧹 DEBUG: Cleaned up webhook ${webhook.id}`);
+                    } catch (err) {
+                        console.error(`⚠️ Could not delete webhook:`, err);
+                    }
+                }, 5000);
             } else {
                 // For interaction-based execution, use webhook followup
                 firstMessage = await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
@@ -6399,12 +6426,18 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                 // Send message based on execution type
                 let message;
                 if (isScheduled) {
-                    // For scheduled execution, post directly to channel
-                    const channel = await client.channels.fetch(channelId);
-                    message = await channel.send({
-                        components: messageComponents
+                    // For scheduled execution, use the same webhook
+                    const response = await fetch(webhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            flags: (1 << 15), // IS_COMPONENTS_V2
+                            components: messageComponents,
+                            wait: true // Get message back
+                        })
                     });
-                    console.log(`✅ DEBUG: Posted message ${i + 1} to channel for scheduled execution`);
+                    message = await response.json();
+                    console.log(`✅ DEBUG: Posted message ${i + 1} via webhook for scheduled execution`);
                 } else {
                     // For interaction-based execution, use webhook followup
                     message = await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
@@ -6432,11 +6465,21 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
             // Post non-ephemeral error message
             try {
                 if (isScheduled) {
-                    // For scheduled execution, post directly to channel
+                    // For scheduled execution, create a simple webhook for error message
                     const channel = await client.channels.fetch(channelId);
-                    await channel.send({
-                        content: `❌ **Error Posting Round Results**\n\n${sendError.message}\n\nPlease contact an administrator to resolve this issue.`
+                    const errorWebhook = await channel.createWebhook({
+                        name: 'Safari Error',
+                        reason: 'Error posting scheduled results'
                     });
+                    await fetch(errorWebhook.url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            content: `❌ **Error Posting Round Results**\n\n${sendError.message}\n\nPlease contact an administrator to resolve this issue.`
+                        })
+                    });
+                    // Clean up error webhook
+                    setTimeout(() => errorWebhook.delete().catch(() => {}), 1000);
                 } else {
                     // For interaction-based execution, use webhook followup
                     await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {

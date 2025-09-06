@@ -1517,75 +1517,21 @@ async function executeSafariRoundResults(channelId, guildId) {
     
     // Process round results using the same backend logic as manual execution
     // Pass null for token and include isScheduled flag with channelId
+    // The processRoundResults function now handles webhook creation internally for scheduled execution
     const roundData = await processRoundResults(guildId, null, client, { isScheduled: true, channelId });
     
-    // Check if round data is null (successful execution)
+    // Check if round data is null (successful execution via webhook in createRoundResultsV2)
     if (roundData === null) {
-      console.log(`✅ DEBUG: Scheduled Safari round results executed successfully`);
+      console.log(`✅ DEBUG: Scheduled Safari round results executed successfully via webhook`);
       return;
     }
     
-    console.log(`🎨 DEBUG: Scheduled execution got round data with ${roundData?.data?.components?.length || 0} components`);
-    
-    // Send the full Safari results display using webhook (same as manual execution)
-    const channel = await client.channels.fetch(channelId);
-    if (channel && roundData.data.components) {
-      console.log(`📤 DEBUG: Sending scheduled Safari results to channel ${channelId} via webhook`);
-      
-      try {
-        // Create a temporary webhook for posting the results (same mechanism as manual execution)
-        const webhook = await channel.createWebhook({
-          name: 'Safari Results',
-          reason: 'Scheduled Safari round results execution'
-        });
-        
-        console.log(`🌐 DEBUG: Created temporary webhook ${webhook.id} for scheduled results`);
-        
-        // Use the webhook to post the full Safari display (exact same as manual execution)
-        const webhookResponse = await fetch(webhook.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            flags: roundData.data.flags,
-            components: roundData.data.components
-          })
-        });
-        
-        if (webhookResponse.ok) {
-          console.log(`✅ DEBUG: Scheduled Safari results posted via webhook successfully`);
-        } else {
-          const errorText = await webhookResponse.text();
-          console.error(`❌ DEBUG: Webhook post failed:`, errorText);
-        }
-        
-        // Clean up the temporary webhook
-        setTimeout(async () => {
-          try {
-            await webhook.delete('Scheduled Safari results posted, cleaning up');
-            console.log(`🗑️ DEBUG: Temporary webhook ${webhook.id} deleted`);
-          } catch (cleanupError) {
-            console.log(`⚠️ DEBUG: Could not delete temporary webhook: ${cleanupError.message}`);
-          }
-        }, 5000); // Delete after 5 seconds
-        
-      } catch (webhookError) {
-        console.error(`❌ DEBUG: Failed to create webhook for scheduled results:`, webhookError);
-        
-        // Fallback to simple message if webhook fails
-        await channel.send({
-          content: `🎯 **Round ${roundData.data.currentRound || 'Results'} Complete!**\n\n` +
-                   `✅ **Safari round results processed automatically**\n` +
-                   `⚠️ **Full display unavailable - check 📦 View Player Inventory for details**`
-        });
-      }
-      
-    } else {
-      console.log(`⚠️ DEBUG: Channel not found or no round data to send`);
+    // If we get here with roundData, something went wrong
+    if (roundData?.data?.content) {
+      console.error(`❌ DEBUG: Scheduled execution returned error:`, roundData.data.content);
     }
     
-    console.log(`✅ DEBUG: Scheduled Safari round results completed successfully`);
+    console.log(`✅ DEBUG: Scheduled Safari round results completed`);
   } catch (error) {
     console.error(`❌ ERROR: Failed to execute scheduled Safari round results:`, error);
     
@@ -1593,9 +1539,22 @@ async function executeSafariRoundResults(channelId, guildId) {
     try {
       const channel = await client.channels.fetch(channelId);
       if (channel) {
-        await channel.send({
-          content: '❌ **ERROR**: Scheduled Safari round results failed to execute. Please run the command manually.'
+        // Create a webhook for error message to avoid Discord.js format issues
+        const errorWebhook = await channel.createWebhook({
+          name: 'Safari Error',
+          reason: 'Scheduled Safari error notification'
         });
+        
+        await fetch(errorWebhook.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: '❌ **ERROR**: Scheduled Safari round results failed to execute. Please run the command manually.'
+          })
+        });
+        
+        // Clean up webhook
+        setTimeout(() => errorWebhook.delete().catch(() => {}), 1000);
       }
     } catch (channelError) {
       console.error(`❌ ERROR: Could not send error message to channel:`, channelError);
