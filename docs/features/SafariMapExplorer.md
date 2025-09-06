@@ -18,18 +18,19 @@ This document serves as the source of truth for the Safari Map Explorer feature 
 ## Feature Overview
 
 The Safari Map Explorer allows:
-- Players to upload map images to the bot
-- Automatic grid overlay and coordinate system generation (A1, B2, C3, etc.)
-- Creation of Discord channels for each grid coordinate
-- Players exploring the map by moving between grid channels
-- Visual feedback showing explored vs unexplored areas
+- **Admins to upload custom map images via Discord CDN URLs** ✅ IMPLEMENTED
+- Automatic grid overlay and coordinate system generation (A1, B2, C3, etc.) ✅ IMPLEMENTED
+- Creation of Discord channels for each grid coordinate ✅ IMPLEMENTED
+- Players exploring the map by moving between grid channels ✅ IMPLEMENTED
+- Visual feedback showing explored vs unexplored areas (fog of war) ✅ IMPLEMENTED
 
 ### Core User Flow
-1. Admin uploads a map image via Discord
-2. Bot processes the image and overlays a grid
-3. Bot returns the gridded map to confirm coordinates
+1. Admin uploads image to Discord, copies CDN URL
+2. Admin uses "Create/Update Map" button and pastes URL
+3. Bot downloads image and overlays a 7x7 grid
 4. Bot creates Discord channels for each coordinate
-5. Players explore by moving between coordinate channels
+5. Bot generates fog of war maps for each location
+6. Players explore by moving between coordinate channels
 
 ## Technical Architecture Options
 
@@ -71,26 +72,30 @@ The Safari Map Explorer allows:
 - Potential costs
 - Privacy concerns with user uploads
 
-## Image Upload/Download Methods
+## Image Upload Process (CURRENT IMPLEMENTATION)
 
-### Method 1: Discord Attachment Upload (Recommended)
-```javascript
-// In slash command or message handler
-const attachment = interaction.options.getAttachment('map');
-if (attachment.contentType?.startsWith('image/')) {
-    const imageBuffer = await fetch(attachment.url).then(res => res.buffer());
-    // Process image...
-}
-```
+### Current Method: Discord CDN URL via Modal
 
-**Pros:**
-- Native Discord functionality
-- Familiar to users
-- No external hosting needed
+1. **Admin uploads image to any Discord channel**
+   - Can be done in any server/channel they have access to
+   - Right-click image → "Copy Link" to get CDN URL
+   - URL format: `https://cdn.discordapp.com/attachments/...`
 
-**Cons:**
-- Discord CDN URLs expire
-- Size limitations (8MB for non-Nitro users)
+2. **Admin clicks "Create/Update Map" button**
+   - Opens modal requesting Discord CDN URL
+   - Pastes the copied URL
+   - Bot validates URL format
+
+3. **Bot processes the image**
+   - Downloads image from Discord CDN
+   - Applies 7x7 grid overlay
+   - Generates fog of war versions
+   - Creates Discord channels
+
+**Current Limitations:**
+- Only accepts Discord CDN URLs (security measure)
+- Fixed 7x7 grid size
+- Hardcoded grid parameters (see MapGridScaling.md)
 
 ### Method 2: URL-Based Upload
 ```javascript
@@ -366,22 +371,24 @@ async function moveToCoordinate(guildId, userId, coordinate) {
 ## Enhanced Grid Cell Data Structure Design
 
 ### Current Implementation Status
-✅ **Grid Generation:** Complete - can overlay grids on pre-defined server images
-✅ **Coordinate System:** Complete - supports multiple schemas and programmatic reference
-✅ **Grid Rendering:** Can render full maps with grid overlay (e.g., map_grid_10x10.png)
-✅ **Tile Extraction:** Proven capability to extract individual grid cells from maps
+✅ **Custom Image Upload:** Complete - admins can upload any Discord CDN image URL
+✅ **Grid Generation:** Complete - overlays 7x7 grid on custom images
+✅ **Coordinate System:** Complete - standard letter-number format (A1-G7)
+✅ **Fog of War:** Complete - each location shows only visible cell, others fogged
 ✅ **Map Creation System:** Complete - generates maps and Discord infrastructure
+✅ **Map Update System:** Complete - can replace existing map image
 ✅ **Data Storage:** Complete - integrated with Safari system via safariContent.json
 ✅ **UI Integration:** Complete - Map Explorer added to Safari menu system
 ✅ **Player Movement:** Complete - full navigation system with Navigate button pattern
 ✅ **Permission Management:** Complete - automatic channel access control
 ✅ **Admin Controls:** Complete - Map Admin interface for player management
+⚠️ **Grid Scaling:** Hardcoded parameters - needs dynamic scaling based on image size
 🔄 **Cell Content Management:** Next phase - editing individual cell content
 
 ### Technical Capabilities
 
 #### Core Grid System
-- **Base Map:** Using pre-defined `img/map.png` as source image for all generated maps
+- **Custom Maps:** Accepts any Discord CDN image URL for map creation
 - **Grid Overlay:** MapGridSystem class generates grids of various sizes (5x5, 8x8, 10x10, 12x12)
 - **Recommended Style:** Thick grid lines (4px) with white borders for maximum visibility
 - **Coordinate System:** Standard letter-number format (A1-E5 for 5x5 grid)
@@ -395,7 +402,7 @@ async function moveToCoordinate(guildId, userId, coordinate) {
 
 #### File Storage & Organization
 - **Map Storage:** `img/{guildId}/map_{gridSize}x{gridSize}_{timestamp}.png`
-- **Base Image:** Always uses `img/map.png` as the source (hardcoded for MVP)
+- **Custom Images:** Downloads and processes user-provided Discord CDN URLs
 - **Directory Structure:** Guild-specific folders for organized map storage
 - **Tile Storage:** Future capability for `img/{guildId}/tiles/` individual cell images
 
@@ -408,10 +415,10 @@ async function moveToCoordinate(guildId, userId, coordinate) {
 - **Channel Creation:** One Discord channel per grid coordinate in 🗺️ Map category
 
 #### 2. Grid Specifications
-- **Recommended Size:** 5x5 (25 cells) for most servers
-- **Maximum Size:** 8x8 (64 cells) - larger grids become unwieldy
-- **Coordinate System:** Standard letter-number (A1-E5 for 5x5)
-- **Base Map:** Using hardcoded `img/map.png` for initial implementation
+- **Fixed Size:** 7x7 (49 cells) grid for all maps
+- **Coordinate System:** Standard letter-number (A1-G7)
+- **Image Source:** Custom Discord CDN URLs provided by admins
+- **Grid Parameters:** Currently hardcoded (see MapGridScaling.md for improvement plans)
 
 #### 3. Player State Management
 - **Shared Base Content:** All players see same cell descriptions
@@ -484,10 +491,10 @@ These will extend the existing Safari action system without breaking current fun
 ## Implementation Roadmap
 
 ### Phase 1: Core Image Processing ✅ COMPLETED
-1. ✅ Implement image upload command
-2. ✅ Add grid overlay functionality
-3. ✅ Return processed image to user
-4. ✅ Store map metadata
+1. ✅ Implement custom image upload via Discord CDN URL
+2. ✅ Add grid overlay functionality with 7x7 grid
+3. ✅ Generate fog of war maps for each coordinate
+4. ✅ Store map metadata and CDN URLs
 
 ### Navigation Implementation Architecture
 
@@ -525,17 +532,21 @@ graph TD
 ### Phase 2A: Basic Map Creation & Management ✅ COMPLETED
 
 #### Core Implementation
-1. ✅ **UI Integration:** Added Map Explorer button to Safari menu (Row 2, Position 5)
-2. ✅ **Interface Design:** Created Map Explorer submenu with state management
-3. ✅ **Map Generation:** Implemented Create Map functionality
-4. ✅ **Map Deletion:** Implemented Delete Map functionality
-5. ✅ **Data Persistence:** Integrated with Safari content system
+1. ✅ **UI Integration:** Added Map Explorer button to Safari menu
+2. ✅ **Custom Upload:** Create/Update Map button with modal for Discord URL
+3. ✅ **Map Generation:** Downloads custom image and applies grid
+4. ✅ **Map Update:** Can replace existing map image
+5. ✅ **Map Deletion:** Complete cleanup of channels and data
+6. ✅ **Data Persistence:** Integrated with Safari content system
 
-#### Create Map Process (Detailed)
-- ✅ Generates 5x5 grid overlay on hardcoded `img/map.png`
-- ✅ Saves processed image to `img/{guildId}/map_5x5_{timestamp}.png`
+#### Create Map Process (Current)
+- ✅ Downloads image from Discord CDN URL
+- ✅ Generates 7x7 grid overlay on custom image
+- ✅ Saves processed image to `img/{guildId}/map_7x7_{timestamp}.png`
 - ✅ Creates Discord category "🗺️ Map Explorer" 
-- ✅ Creates 25 channels (#a1 through #e5) with proper rate limiting
+- ✅ Creates 49 channels (#a1 through #g7) with rate limiting
+- ✅ Generates fog of war map for each coordinate
+- ✅ Posts anchor messages with navigation buttons
 - ✅ Stores complete map data structure in `safariContent.json`
 - ✅ Progress reporting during channel creation process
 - ✅ Error handling and recovery for interrupted operations
@@ -639,13 +650,22 @@ graph TD
 - **Permission Overwrites**: Limited to 500 per channel
   - Solution: Use role-based permissions for groups
 
-### Map Creation File Size Limitations
+### Known Issues & Limitations
+
+#### Grid Scaling Problem
+- **Issue**: Grid parameters (border, line width, font size) are hardcoded
+  - **Symptom**: Small images have oversized text, large images have tiny text
+  - **Root Cause**: Fixed values regardless of image dimensions
+  - **Solution**: Implement dynamic scaling (see MapGridScaling.md)
+  - **Current Values**: borderSize: 80, lineWidth: 4, fontSize: 40
+
+#### Map Creation File Size Limitations
 - **Large Image Files**: Maps with large file sizes can cause deployment aborts
   - **Symptom**: Dev restart/deployment process fails silently during file upload
   - **Root Cause**: Image files exceeding upload limits during git push operations
-  - **Solution**: Compress images or use external hosting for large map files
+  - **Solution**: Compress images or use Discord CDN hosting
   - **Prevention**: Add file size validation in map upload process
-  - **Workaround**: Use smaller source images or optimize PNG compression before upload
+  - **Workaround**: Use smaller source images or optimize PNG compression
 
 ### Image Processing
 - **Memory Usage**: Large images can consume significant memory

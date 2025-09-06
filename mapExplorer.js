@@ -267,11 +267,14 @@ async function createFogOfWarMap(fullMapPath, gridSystem, visibleCoord, allCoord
 }
 
 /**
- * Creates a map grid for the guild
+ * LEGACY: Creates a map grid for the guild using hardcoded map.png
+ * @deprecated Use createMapGridWithCustomImage instead
  * @param {Guild} guild - Discord guild object
  * @param {string} userId - User ID creating the map
  * @returns {Object} Result with success status and message
  */
+// COMMENTED OUT - Legacy hardcoded map functionality replaced by custom image upload
+/*
 async function createMapGrid(guild, userId) {
   try {
     console.log(`🏗️ Creating map grid for guild ${guild.id}`);
@@ -514,6 +517,7 @@ async function createMapGrid(guild, userId) {
     };
   }
 }
+*/
 
 /**
  * Deletes the map grid for the guild
@@ -1408,4 +1412,5 @@ export async function getBlacklistedCoordinates(guildId) {
 }
 
 // Export functions
-export { createMapGrid, deleteMapGrid, createMapExplorerMenu, updateMapImage, createMapGridWithCustomImage, loadSafariContent, saveSafariContent };
+// createMapGrid removed - legacy hardcoded map functionality replaced by createMapGridWithCustomImage
+export { deleteMapGrid, createMapExplorerMenu, updateMapImage, createMapGridWithCustomImage, loadSafariContent, saveSafariContent };
