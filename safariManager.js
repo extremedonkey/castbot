@@ -6295,6 +6295,18 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                 throw new Error(`First message exceeds character limit: ${firstCharCount}/4000`);
             }
             
+            // Add debug text component showing total character count
+            const debugContainer = {
+                type: 17, // Container
+                components: [
+                    {
+                        type: 10, // Text Display
+                        content: `-#${firstCharCount}`
+                    }
+                ]
+            };
+            firstMessageComponents.push(debugContainer);
+            
             const firstFollowup = await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
                 method: 'POST',
                 body: {
@@ -6353,6 +6365,18 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                         console.log(`⚠️ DEBUG: Skipping inventory button - would exceed component limit`);
                     }
                 }
+                
+                // Add debug text component showing total character count
+                const debugContainer = {
+                    type: 17, // Container
+                    components: [
+                        {
+                            type: 10, // Text Display
+                            content: `-#${chunkCharCount}`
+                        }
+                    ]
+                };
+                messageComponents.push(debugContainer);
                 
                 // Send followup message via webhook
                 const followupResponse = await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
@@ -6485,6 +6509,10 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
         
         // Final balance - ULTRA COMPACT: no emoji, no parentheses display
         content += `Final: ${balanceChange.ending}${customTerms.currencyEmoji}`;
+        
+        // Add character count for debugging
+        const charCount = content.length;
+        content += `\n-#${charCount}`;
         
         // Create container with accent color based on change - SINGLE COMPONENT
         const change = balanceChange.change;
