@@ -165,8 +165,7 @@ async function removeChannelPermissions(guildId, userId, coordinate, client) {
         // Explicitly deny permissions to prevent access through role/everyone permissions
         await channel.permissionOverwrites.edit(userId, {
           [PermissionFlagsBits.ViewChannel]: false,
-          [PermissionFlagsBits.SendMessages]: false,
-          [PermissionFlagsBits.ReadMessageHistory]: false
+          [PermissionFlagsBits.SendMessages]: false
         });
         
         logger.info('DEINIT', `Successfully removed channel permissions for ${member.displayName} from ${coordinate}`, {
