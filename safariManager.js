@@ -6407,17 +6407,17 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                 throw new Error(`First message exceeds character limit: ${firstCharCount}/4000`);
             }
             
-            // Add debug text component showing total character count
-            const debugContainer = {
-                type: 17, // Container
-                components: [
-                    {
-                        type: 10, // Text Display
-                        content: `-# ${firstCharCount}`
-                    }
-                ]
-            };
-            firstMessageComponents.push(debugContainer);
+            // Debug text component showing total character count (commented out for now)
+            // const debugContainer = {
+            //     type: 17, // Container
+            //     components: [
+            //         {
+            //             type: 10, // Text Display
+            //             content: `-# ${firstCharCount}`
+            //         }
+            //     ]
+            // };
+            // firstMessageComponents.push(debugContainer);
             
             let firstMessage;
             let webhookUrl; // Store webhook URL for scheduled execution
