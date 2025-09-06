@@ -7202,7 +7202,8 @@ export {
     createPlayerResultCard,
     formatIncomeBreakdown,
     formatCombatResults,
-    getPlayerEmoji
+    getPlayerEmoji,
+    sortPlayersForResults
 };
 
 /**

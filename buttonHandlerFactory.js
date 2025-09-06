@@ -463,6 +463,13 @@ export const BUTTON_REGISTRY = {
     category: 'safari',
     type: 'select_menu'
   },
+  'safari_player_status': {
+    label: '🏋️ Player Status',
+    description: 'Display all player balances grouped by priority roles',
+    emoji: '🏋️',
+    style: 'Secondary',
+    category: 'safari'
+  },
   'safari_player_inventory': {
     label: '📦 Player Inventory',
     description: 'Show current user Safari inventory',

@@ -23888,15 +23888,20 @@ Are you sure you want to continue?`;
               .setStyle(ButtonStyle.Primary) // Blue
               .setEmoji('🎲'),
             new ButtonBuilder()
+              .setCustomId('safari_schedule_results')
+              .setLabel('Schedule Results')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('📅'),
+            new ButtonBuilder()
               .setCustomId('safari_result_ordering')
               .setLabel('Result Ordering')
               .setStyle(ButtonStyle.Secondary) // Grey
               .setEmoji('📊'),
             new ButtonBuilder()
-              .setCustomId('safari_global_stores')
-              .setLabel('Add Global Store')
+              .setCustomId('safari_player_status')
+              .setLabel('Player Status')
               .setStyle(ButtonStyle.Secondary) // Grey
-              .setEmoji('🏪')
+              .setEmoji('🏋️')
           ];
           
           const roundManagementRow = new ActionRowBuilder().addComponents(roundManagementButtons);
@@ -23909,10 +23914,10 @@ Are you sure you want to continue?`;
               .setStyle(ButtonStyle.Success) // Green
               .setEmoji('🪣'),
             new ButtonBuilder()
-              .setCustomId('safari_schedule_results')
-              .setLabel('Schedule Results')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('📅')
+              .setCustomId('safari_global_stores')
+              .setLabel('Add Global Store')
+              .setStyle(ButtonStyle.Secondary) // Grey
+              .setEmoji('🏪')
           ];
           
           const additionalRow = new ActionRowBuilder().addComponents(additionalButtons);
@@ -24309,6 +24314,106 @@ Are you sure you want to continue?`;
           
           return {
             components: [container]
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'safari_player_status') {
+      // Display all player balances grouped by priority roles
+      return ButtonHandlerFactory.create({
+        id: 'safari_player_status',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🏋️ START: safari_player_status - user ${context.userId}`);
+          
+          // Load all necessary data
+          const { loadSafariContent, sortPlayersForResults } = await import('./safariManager.js');
+          const { loadPlayerData } = await import('./storage.js');
+          const safariData = await loadSafariContent();
+          const playerData = await loadPlayerData();
+          
+          const guildId = context.guildId;
+          const guildPlayers = playerData[guildId]?.players || {};
+          const priorityRoles = safariData[guildId]?.priorityRoles || [];
+          const customTerms = safariData[guildId]?.safariConfig?.customTerms || {};
+          const currencyEmoji = customTerms.currencyEmoji || '🪙';
+          const currencyName = customTerms.currencyName || 'coins';
+          
+          // Get all initialized players (those with safari data)
+          const initializedPlayers = [];
+          for (const [userId, data] of Object.entries(guildPlayers)) {
+            if (data.safari) {
+              initializedPlayers.push({
+                userId,
+                playerName: data.globalName || data.displayName || data.username || `Player ${userId.slice(-4)}`,
+                currency: data.safari.currency || 0
+              });
+            }
+          }
+          
+          if (initializedPlayers.length === 0) {
+            return {
+              content: '❌ No players have been initialized in Safari yet.',
+              ephemeral: true
+            };
+          }
+          
+          // Sort players by priority roles if configured
+          const sortedData = await sortPlayersForResults(initializedPlayers, priorityRoles, client, guildId);
+          
+          // Build the display content
+          let content = '# Player Balances\n\n';
+          
+          // Helper function to get status emoji based on currency
+          const getStatusEmoji = (currency) => {
+            if (currency <= 10) return '✅';
+            if (currency <= 25) return '⁉️';
+            return '❌';
+          };
+          
+          if (sortedData.groups) {
+            // Display by role groups
+            for (const [roleId, roleData] of Object.entries(sortedData.groups.roleGroups)) {
+              content += `## <@&${roleId}>\n`;
+              for (const player of roleData.players) {
+                const emoji = getStatusEmoji(player.currency);
+                content += `* ${emoji} ${player.playerName} - ${currencyEmoji} ${player.currency} ${currencyName}\n`;
+              }
+              content += '\n';
+            }
+            
+            // Display unassigned players if any
+            if (sortedData.groups.unassigned && sortedData.groups.unassigned.length > 0) {
+              content += `## Other Players\n`;
+              for (const player of sortedData.groups.unassigned) {
+                const emoji = getStatusEmoji(player.currency);
+                content += `* ${emoji} ${player.playerName} - ${currencyEmoji} ${player.currency} ${currencyName}\n`;
+              }
+            }
+          } else {
+            // No priority roles configured - display all players
+            for (const player of sortedData.sorted) {
+              const emoji = getStatusEmoji(player.currency);
+              content += `* ${emoji} ${player.playerName} - ${currencyEmoji} ${player.currency} ${currencyName}\n`;
+            }
+          }
+          
+          console.log(`✅ SUCCESS: safari_player_status - displayed ${initializedPlayers.length} players`);
+          
+          // Return non-ephemeral Components V2 response
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2 (non-ephemeral)
+            components: [{
+              type: 17, // Container
+              accent_color: 0x3498db, // Blue
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: content
+                }
+              ]
+            }]
           };
         }
       })(req, res, client);
