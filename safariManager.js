@@ -6377,28 +6377,75 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
         }
         
         // Split player cards into chunks of 8 ACTUAL PLAYERS per message
-        // Role headers don't count toward the player limit
+        // Keep role headers with their associated players
         const PLAYERS_PER_MESSAGE = 8;
         const playerChunks = [];
         let currentChunk = [];
         let playersInCurrentChunk = 0;
         
+        // First, group cards into role groups (header + players)
+        const groups = [];
+        let currentGroup = null;
+        
         for (const card of playerCards) {
-            // Check if this is a role header (has content starting with "> #")
             const isRoleHeader = card.components?.[0]?.content?.startsWith("> #");
             
             if (isRoleHeader) {
-                // Always include role headers, they don't count toward player limit
-                currentChunk.push(card);
+                // Start a new group with this header
+                if (currentGroup) {
+                    groups.push(currentGroup);
+                }
+                currentGroup = {
+                    header: card,
+                    players: []
+                };
             } else {
                 // This is a player card
+                if (currentGroup) {
+                    currentGroup.players.push(card);
+                } else {
+                    // No current group (no role headers), create a standalone player group
+                    groups.push({
+                        header: null,
+                        players: [card]
+                    });
+                }
+            }
+        }
+        
+        // Add the last group if it exists
+        if (currentGroup) {
+            groups.push(currentGroup);
+        }
+        
+        // Now chunk the groups, keeping headers with their players
+        for (const group of groups) {
+            const groupPlayerCount = group.players.length;
+            
+            // Check if adding this group would exceed the limit
+            if (playersInCurrentChunk > 0 && playersInCurrentChunk + groupPlayerCount > PLAYERS_PER_MESSAGE) {
+                // This group won't fit in current chunk, start a new one
+                playerChunks.push(currentChunk);
+                currentChunk = [];
+                playersInCurrentChunk = 0;
+            }
+            
+            // Add the group header if it exists
+            if (group.header) {
+                currentChunk.push(group.header);
+            }
+            
+            // Add the group's players
+            for (const player of group.players) {
                 if (playersInCurrentChunk >= PLAYERS_PER_MESSAGE) {
-                    // Current chunk is full, start a new one
+                    // We've hit the limit mid-group, need to split the group
                     playerChunks.push(currentChunk);
                     currentChunk = [];
                     playersInCurrentChunk = 0;
+                    // Note: The remaining players from this group will go into the next chunk
+                    // without their header, which is acceptable for very large groups
                 }
-                currentChunk.push(card);
+                currentChunk.push(player);
                 playersInCurrentChunk++;
             }
         }
