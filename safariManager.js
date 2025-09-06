@@ -3720,7 +3720,7 @@ async function resetCustomTerms(guildId) {
  * Process Round Results - Challenge Game Logic Core Engine
  * Handles event determination, player earnings/losses, and round progression
  */
-async function processRoundResults(guildId, token, client) {
+async function processRoundResults(guildId, token, client, options = {}) {
     try {
         console.log(`🏅 DEBUG: Starting round results processing for guild ${guildId}`);
         
@@ -3935,11 +3935,11 @@ async function processRoundResults(guildId, token, client) {
             
             // Use modern display for Round 3 - show final results with rankings
             console.log('🏆 DEBUG: Round 3 completed, creating final results display');
-            return await createRoundResultsV2(guildId, roundData, customTerms, token, client);
+            return await createRoundResultsV2(guildId, roundData, customTerms, token, client, options);
         }
         
         // Return modern round results display (will post multiple messages)
-        return await createRoundResultsV2(guildId, roundData, customTerms, token, client);
+        return await createRoundResultsV2(guildId, roundData, customTerms, token, client, options);
         
     } catch (error) {
         console.error('Error processing round results:', error);
@@ -6178,7 +6178,7 @@ async function clearCorruptedAttacks(guildId) {
  * @param {Object} customTerms - Custom terminology
  * @returns {Object} Discord response object
  */
-async function createRoundResultsV2(guildId, roundData, customTerms, token, client) {
+async function createRoundResultsV2(guildId, roundData, customTerms, token, client, options = {}) {
     try {
         console.log('🎨 DEBUG: Creating V2 round results display with multi-message approach');
         console.log('🎨 DEBUG: Round data:', { 
@@ -6209,9 +6209,16 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
             throw new Error('No balance changes in round data');
         }
         
-        // Validate token is present
-        if (!token) {
-            throw new Error('Interaction token not provided');
+        // Check if this is a scheduled execution or interaction-based
+        const isScheduled = options.isScheduled || false;
+        const channelId = options.channelId;
+        
+        // Validate required parameters based on execution type
+        if (!isScheduled && !token) {
+            throw new Error('Interaction token not provided for non-scheduled execution');
+        }
+        if (isScheduled && !channelId) {
+            throw new Error('Channel ID not provided for scheduled execution');
         }
         
         console.log('🎨 DEBUG: Creating player result cards...');
@@ -6307,15 +6314,26 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
             };
             firstMessageComponents.push(debugContainer);
             
-            const firstFollowup = await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
-                method: 'POST',
-                body: {
-                    flags: (1 << 15), // IS_COMPONENTS_V2
+            let firstMessage;
+            if (isScheduled) {
+                // For scheduled execution, post directly to channel
+                const channel = await client.channels.fetch(channelId);
+                firstMessage = await channel.send({
                     components: firstMessageComponents
-                }
-            });
-            messages.push(firstFollowup);
-            console.log(`✅ DEBUG: Sent first followup message with header and ${playerChunks[0]?.length || 0} players`);
+                });
+                console.log(`✅ DEBUG: Posted first message to channel for scheduled execution`);
+            } else {
+                // For interaction-based execution, use webhook followup
+                firstMessage = await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
+                    method: 'POST',
+                    body: {
+                        flags: (1 << 15), // IS_COMPONENTS_V2
+                        components: firstMessageComponents
+                    }
+                });
+                console.log(`✅ DEBUG: Sent first followup message via webhook`);
+            }
+            messages.push(firstMessage);
             
             // Send remaining chunks
             for (let i = 1; i < playerChunks.length; i++) {
@@ -6378,16 +6396,28 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                 };
                 messageComponents.push(debugContainer);
                 
-                // Send followup message via webhook
-                const followupResponse = await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
-                    method: 'POST',
-                    body: {
-                        flags: (1 << 15), // IS_COMPONENTS_V2
+                // Send message based on execution type
+                let message;
+                if (isScheduled) {
+                    // For scheduled execution, post directly to channel
+                    const channel = await client.channels.fetch(channelId);
+                    message = await channel.send({
                         components: messageComponents
-                    }
-                });
-                messages.push(followupResponse);
-                console.log(`✅ DEBUG: Sent followup message ${i + 1} with ${chunk.length} players${isLastChunk ? ' (last chunk)' : ''}`);
+                    });
+                    console.log(`✅ DEBUG: Posted message ${i + 1} to channel for scheduled execution`);
+                } else {
+                    // For interaction-based execution, use webhook followup
+                    message = await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
+                        method: 'POST',
+                        body: {
+                            flags: (1 << 15), // IS_COMPONENTS_V2
+                            components: messageComponents
+                        }
+                    });
+                    console.log(`✅ DEBUG: Sent followup message ${i + 1} via webhook`);
+                }
+                messages.push(message);
+                console.log(`✅ DEBUG: Message ${i + 1} with ${chunk.length} players${isLastChunk ? ' (last chunk)' : ''}`);
             }
             
             console.log(`🎉 DEBUG: Successfully sent ${messages.length} messages for round results`);
@@ -6399,16 +6429,25 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
         } catch (sendError) {
             console.error('❌ Error sending round results messages:', sendError);
             
-            // Post non-ephemeral error message via followup
+            // Post non-ephemeral error message
             try {
-                await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
-                    method: 'POST',
-                    body: {
+                if (isScheduled) {
+                    // For scheduled execution, post directly to channel
+                    const channel = await client.channels.fetch(channelId);
+                    await channel.send({
                         content: `❌ **Error Posting Round Results**\n\n${sendError.message}\n\nPlease contact an administrator to resolve this issue.`
-                    }
-                });
+                    });
+                } else {
+                    // For interaction-based execution, use webhook followup
+                    await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
+                        method: 'POST',
+                        body: {
+                            content: `❌ **Error Posting Round Results**\n\n${sendError.message}\n\nPlease contact an administrator to resolve this issue.`
+                        }
+                    });
+                }
             } catch (errorPostError) {
-                console.error('Failed to post error message via followup:', errorPostError);
+                console.error('Failed to post error message:', errorPostError);
             }
             
             throw sendError;

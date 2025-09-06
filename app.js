@@ -1516,9 +1516,16 @@ async function executeSafariRoundResults(channelId, guildId) {
     const { processRoundResults } = await import('./safariManager.js');
     
     // Process round results using the same backend logic as manual execution
-    const roundData = await processRoundResults(guildId, channelId, client, true); // Pass flag for V2 mode
+    // Pass null for token and include isScheduled flag with channelId
+    const roundData = await processRoundResults(guildId, null, client, { isScheduled: true, channelId });
     
-    console.log(`🎨 DEBUG: Scheduled execution got round data with ${roundData.data.components?.length || 0} components`);
+    // Check if round data is null (successful execution)
+    if (roundData === null) {
+      console.log(`✅ DEBUG: Scheduled Safari round results executed successfully`);
+      return;
+    }
+    
+    console.log(`🎨 DEBUG: Scheduled execution got round data with ${roundData?.data?.components?.length || 0} components`);
     
     // Send the full Safari results display using webhook (same as manual execution)
     const channel = await client.channels.fetch(channelId);
