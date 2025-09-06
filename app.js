@@ -23860,6 +23860,11 @@ Are you sure you want to continue?`;
               .setStyle(ButtonStyle.Primary) // Blue
               .setEmoji('🎲'),
             new ButtonBuilder()
+              .setCustomId('safari_result_ordering')
+              .setLabel('Result Ordering')
+              .setStyle(ButtonStyle.Secondary) // Grey
+              .setEmoji('📊'),
+            new ButtonBuilder()
               .setCustomId('safari_global_stores')
               .setLabel('Add Global Store')
               .setStyle(ButtonStyle.Secondary) // Grey
@@ -24048,6 +24053,202 @@ Are you sure you want to continue?`;
           
           return {
             flags: (1 << 15), // IS_COMPONENTS_V2 only
+            components: [container]
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'safari_result_ordering') {
+      // Handle result ordering configuration
+      return ButtonHandlerFactory.create({
+        id: 'safari_result_ordering',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`📊 START: safari_result_ordering - user ${context.userId}`);
+          
+          // Get all server roles
+          const guild = await client.guilds.fetch(context.guildId);
+          const roles = await guild.roles.fetch();
+          
+          // Filter out @everyone and bot roles
+          const selectableRoles = roles.filter(role => 
+            role.id !== context.guildId && // Not @everyone
+            !role.managed && // Not bot-managed
+            role.name !== '@everyone'
+          ).sort((a, b) => b.position - a.position); // Sort by position (highest first)
+          
+          // Load current priority roles configuration
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const priorityRoles = safariData[context.guildId]?.priorityRoles || [];
+          
+          // Create role options for select menu
+          const roleOptions = Array.from(selectableRoles.values()).slice(0, 25).map(role => ({
+            label: role.name,
+            value: role.id,
+            description: `${role.members?.size || 0} members`,
+            default: priorityRoles.includes(role.id)
+          }));
+          
+          if (roleOptions.length === 0) {
+            return {
+              content: '❌ No selectable roles found in this server.',
+              ephemeral: true
+            };
+          }
+          
+          const { StringSelectMenuBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = await import('discord.js');
+          
+          const selectMenu = new StringSelectMenuBuilder()
+            .setCustomId('safari_result_ordering_select')
+            .setPlaceholder('Select roles for priority ordering...')
+            .setMinValues(0)
+            .setMaxValues(Math.min(roleOptions.length, 25))
+            .addOptions(roleOptions);
+            
+          const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+          
+          // Create save/cancel buttons
+          const saveButton = new ButtonBuilder()
+            .setCustomId('safari_result_ordering_save')
+            .setLabel('Save')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('✅');
+            
+          const cancelButton = new ButtonBuilder()
+            .setCustomId('safari_result_ordering_cancel')
+            .setLabel('Cancel')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('❌');
+            
+          const buttonRow = new ActionRowBuilder().addComponents(saveButton, cancelButton);
+          
+          // Store selected values in context for save handler
+          context.selectedRoles = [];
+          
+          // Create container
+          const container = {
+            type: 17, // Container
+            accent_color: 0x3498db,
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## 📊 Result Ordering Configuration\n\nSelect roles to prioritize in round results.\nPlayers with these roles will appear first, grouped by role.\n\n**Currently selected:** ${priorityRoles.length} role${priorityRoles.length !== 1 ? 's' : ''}`
+              },
+              { type: 14 }, // Separator
+              selectRow.toJSON(),
+              buttonRow.toJSON()
+            ]
+          };
+          
+          console.log(`✅ SUCCESS: safari_result_ordering - displayed configuration UI`);
+          
+          return {
+            flags: (1 << 15) | 64, // IS_COMPONENTS_V2 | EPHEMERAL
+            components: [container]
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'safari_result_ordering_select') {
+      // Store selected roles temporarily (handled by subsequent save/cancel)
+      const selectedRoles = req.body.data.values || [];
+      console.log(`📊 DEBUG: safari_result_ordering_select - ${selectedRoles.length} roles selected`);
+      
+      // Return DEFERRED_UPDATE_MESSAGE to acknowledge the interaction without changing anything
+      return res.send({
+        type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
+      });
+      
+    } else if (custom_id === 'safari_result_ordering_save') {
+      // Save the role ordering configuration
+      return ButtonHandlerFactory.create({
+        id: 'safari_result_ordering_save',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`💾 START: safari_result_ordering_save - user ${context.userId}`);
+          
+          // Get selected roles from the message components
+          const messageComponents = context.message?.components || [];
+          let selectedRoles = [];
+          
+          // Find the select menu and get its selected values
+          if (messageComponents[0]?.type === 17) {
+            const containerComponents = messageComponents[0].components || [];
+            const selectRow = containerComponents.find(comp => comp.type === 1 && comp.components?.[0]?.type === 3);
+            
+            if (selectRow?.components?.[0]?.options) {
+              selectedRoles = selectRow.components[0].options
+                .filter(opt => opt.default)
+                .map(opt => opt.value);
+            }
+          }
+          
+          // Load and update safari data
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          
+          if (!safariData[context.guildId]) {
+            safariData[context.guildId] = {};
+          }
+          
+          // Update priority roles
+          safariData[context.guildId].priorityRoles = selectedRoles;
+          await saveSafariContent(safariData);
+          
+          console.log(`✅ SUCCESS: safari_result_ordering_save - saved ${selectedRoles.length} priority roles`);
+          
+          // Get role names for confirmation
+          const guild = await client.guilds.fetch(context.guildId);
+          const roles = await guild.roles.fetch();
+          const roleNames = selectedRoles.map(roleId => {
+            const role = roles.get(roleId);
+            return role ? `@${role.name}` : roleId;
+          }).join('\n');
+          
+          // Return success message
+          const container = {
+            type: 17, // Container
+            accent_color: 0x27ae60, // Green for success
+            components: [
+              {
+                type: 10, // Text Display
+                content: `## ✅ Result Ordering Updated\n\n**${selectedRoles.length} role${selectedRoles.length !== 1 ? 's' : ''} configured:**\n${roleNames || '*(Default chronological ordering)*'}\n\nRound results will now display players in these roles first.`
+              }
+            ]
+          };
+          
+          return {
+            components: [container]
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'safari_result_ordering_cancel') {
+      // Cancel the ordering configuration
+      return ButtonHandlerFactory.create({
+        id: 'safari_result_ordering_cancel',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`❌ START: safari_result_ordering_cancel - user ${context.userId}`);
+          
+          const container = {
+            type: 17, // Container
+            accent_color: 0x95a5a6, // Grey for cancelled
+            components: [
+              {
+                type: 10, // Text Display
+                content: '## ❌ Result Ordering Cancelled\n\nNo changes were made to the result ordering configuration.'
+              }
+            ]
+          };
+          
+          console.log(`✅ SUCCESS: safari_result_ordering_cancel - configuration cancelled`);
+          
+          return {
             components: [container]
           };
         }

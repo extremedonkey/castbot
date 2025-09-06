@@ -3717,6 +3717,101 @@ async function resetCustomTerms(guildId) {
 }
 
 /**
+ * Sort players for round results based on priority roles
+ * @param {Array} eligiblePlayers - Array of player objects from getEligiblePlayersFixed
+ * @param {Array} priorityRoles - Array of role IDs to prioritize
+ * @param {Object} client - Discord client for fetching guild/member data
+ * @param {string} guildId - Guild ID
+ * @returns {Object} Object with sorted players grouped by role
+ */
+async function sortPlayersForResults(eligiblePlayers, priorityRoles, client, guildId) {
+    // If no priority roles configured, return original list
+    if (!priorityRoles || priorityRoles.length === 0) {
+        return {
+            sorted: eligiblePlayers,
+            groups: null
+        };
+    }
+    
+    try {
+        // Fetch guild and members
+        const guild = await client.guilds.fetch(guildId);
+        await guild.members.fetch(); // Ensure all members are cached
+        
+        // Create groups for each priority role
+        const roleGroups = {};
+        const unassigned = [];
+        const processedPlayers = new Set();
+        
+        // Process each priority role in order
+        for (const roleId of priorityRoles) {
+            const role = guild.roles.cache.get(roleId);
+            if (!role) continue; // Role deleted, skip silently
+            
+            roleGroups[roleId] = {
+                name: role.name,
+                color: role.color,
+                players: []
+            };
+            
+            // Find players with this role
+            for (const player of eligiblePlayers) {
+                // Skip if already assigned to a higher priority role
+                if (processedPlayers.has(player.userId)) continue;
+                
+                try {
+                    const member = guild.members.cache.get(player.userId);
+                    if (member && member.roles.cache.has(roleId)) {
+                        roleGroups[roleId].players.push(player);
+                        processedPlayers.add(player.userId);
+                    }
+                } catch (err) {
+                    // Member not found, skip silently
+                    console.log(`⚠️ Member ${player.userId} not found, skipping`);
+                }
+            }
+            
+            // Remove empty groups
+            if (roleGroups[roleId].players.length === 0) {
+                delete roleGroups[roleId];
+            }
+        }
+        
+        // Add remaining players to unassigned
+        for (const player of eligiblePlayers) {
+            if (!processedPlayers.has(player.userId)) {
+                unassigned.push(player);
+            }
+        }
+        
+        // Combine all groups into sorted array
+        const sorted = [];
+        for (const roleId of priorityRoles) {
+            if (roleGroups[roleId]) {
+                sorted.push(...roleGroups[roleId].players);
+            }
+        }
+        sorted.push(...unassigned);
+        
+        return {
+            sorted,
+            groups: {
+                roleGroups,
+                unassigned: unassigned.length > 0 ? unassigned : null
+            }
+        };
+        
+    } catch (error) {
+        console.error(`⚠️ Error sorting players by roles:`, error);
+        // On any error, return original list
+        return {
+            sorted: eligiblePlayers,
+            groups: null
+        };
+    }
+}
+
+/**
  * Process Round Results - Challenge Game Logic Core Engine
  * Handles event determination, player earnings/losses, and round progression
  */
@@ -3798,8 +3893,15 @@ async function processRoundResults(guildId, token, client, options = {}) {
         console.log(`🎯 DEBUG: Event roll: ${randomRoll.toFixed(1)}% - ${eventType.toUpperCase()} event: ${eventName}`);
         
         // Get eligible players (currency >= 1 OR any inventory items)
-        const eligiblePlayers = await getEligiblePlayersFixed(guildId, client);
-        console.log(`👥 DEBUG: Found ${eligiblePlayers.length} eligible players`);
+        const eligiblePlayersUnsorted = await getEligiblePlayersFixed(guildId, client);
+        console.log(`👥 DEBUG: Found ${eligiblePlayersUnsorted.length} eligible players`);
+        
+        // Apply role-based sorting if configured
+        const priorityRoles = safariData[guildId]?.priorityRoles || [];
+        const sortResult = await sortPlayersForResults(eligiblePlayersUnsorted, priorityRoles, client, guildId);
+        const eligiblePlayers = sortResult.sorted;
+        const roleGroups = sortResult.groups;
+        console.log(`📊 DEBUG: Applied role sorting with ${priorityRoles.length} priority roles`);
         
         if (eligiblePlayers.length === 0) {
             console.log('⚠️ DEBUG: No eligible players found - returning Components V2 error message');
@@ -3906,6 +4008,7 @@ async function processRoundResults(guildId, token, client, options = {}) {
             eventName,
             eventEmoji,
             eligiblePlayers,
+            roleGroups, // Add role groups for display formatting
             attacksByDefender: attacksByDefender || {},
             playerBalanceChanges: {}
         };
@@ -6194,6 +6297,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
             eventName, 
             eventEmoji,
             eligiblePlayers,
+            roleGroups,
             attacksByDefender,
             playerBalanceChanges 
         } = roundData;
@@ -6223,15 +6327,16 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
         
         console.log('🎨 DEBUG: Creating player result cards...');
         
-        // Create player result cards
+        // Create player result cards with role headers if applicable
         const playerCards = await createPlayerResultCards(
             guildId, 
             eligiblePlayers, 
             roundData, 
-            customTerms
+            customTerms,
+            roleGroups // Pass role groups for header creation
         );
         
-        console.log(`🎨 DEBUG: Created ${playerCards.length} player cards`);
+        console.log(`🎨 DEBUG: Created ${playerCards.length} player cards (including role headers)`);
         
         // Create header container
         const headerContainer = {
@@ -6524,9 +6629,10 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
  * @param {Array} eligiblePlayers - Array of eligible players
  * @param {Object} roundData - Round processing results
  * @param {Object} customTerms - Custom terminology
+ * @param {Object|null} roleGroups - Role groups for header creation
  * @returns {Array} Array of player card containers
  */
-async function createPlayerResultCards(guildId, eligiblePlayers, roundData, customTerms) {
+async function createPlayerResultCards(guildId, eligiblePlayers, roundData, customTerms, roleGroups = null) {
     try {
         const cards = [];
         const { 
@@ -6541,16 +6647,81 @@ async function createPlayerResultCards(guildId, eligiblePlayers, roundData, cust
         const safariData = await loadSafariContent();
         const items = safariData[guildId]?.items || {};
         
-        for (const player of eligiblePlayers) {
-            const card = await createPlayerResultCard(
-                player, 
-                roundData, 
-                customTerms, 
-                items,
-                attacksByDefender[player.userId] || [],
-                playerBalanceChanges[player.userId] || { starting: 0, ending: 0, change: 0 }
-            );
-            cards.push(card);
+        // If we have role groups, create cards with role headers
+        if (roleGroups && roleGroups.roleGroups) {
+            const processedPlayers = new Set();
+            
+            // Process each role group
+            for (const [roleId, roleData] of Object.entries(roleGroups.roleGroups)) {
+                // Add role header container
+                const roleHeader = {
+                    type: 17, // Container
+                    accent_color: roleData.color || 0x95a5a6, // Use role color or default grey
+                    components: [
+                        {
+                            type: 10, // Text Display
+                            content: `## 👥 @${roleData.name}\n*${roleData.players.length} player${roleData.players.length !== 1 ? 's' : ''}*`
+                        }
+                    ]
+                };
+                cards.push(roleHeader);
+                
+                // Add player cards for this role
+                for (const player of roleData.players) {
+                    const card = await createPlayerResultCard(
+                        player, 
+                        roundData, 
+                        customTerms, 
+                        items,
+                        attacksByDefender[player.userId] || [],
+                        playerBalanceChanges[player.userId] || { starting: 0, ending: 0, change: 0 }
+                    );
+                    cards.push(card);
+                    processedPlayers.add(player.userId);
+                }
+            }
+            
+            // Add unassigned players (if any)
+            if (roleGroups.unassigned && roleGroups.unassigned.length > 0) {
+                // Add header for unassigned players
+                const unassignedHeader = {
+                    type: 17, // Container
+                    accent_color: 0x7f8c8d, // Darker grey for unassigned
+                    components: [
+                        {
+                            type: 10, // Text Display
+                            content: `## 📋 Other Players\n*${roleGroups.unassigned.length} player${roleGroups.unassigned.length !== 1 ? 's' : ''}*`
+                        }
+                    ]
+                };
+                cards.push(unassignedHeader);
+                
+                // Add unassigned player cards
+                for (const player of roleGroups.unassigned) {
+                    const card = await createPlayerResultCard(
+                        player, 
+                        roundData, 
+                        customTerms, 
+                        items,
+                        attacksByDefender[player.userId] || [],
+                        playerBalanceChanges[player.userId] || { starting: 0, ending: 0, change: 0 }
+                    );
+                    cards.push(card);
+                }
+            }
+        } else {
+            // No role groups - create cards in original order
+            for (const player of eligiblePlayers) {
+                const card = await createPlayerResultCard(
+                    player, 
+                    roundData, 
+                    customTerms, 
+                    items,
+                    attacksByDefender[player.userId] || [],
+                    playerBalanceChanges[player.userId] || { starting: 0, ending: 0, change: 0 }
+                );
+                cards.push(card);
+            }
         }
         
         return cards;

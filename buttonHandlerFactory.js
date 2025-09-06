@@ -434,6 +434,35 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'safari_result_ordering': {
+    label: 'Result Ordering',
+    description: 'Configure ordering of Safari round results by Discord roles',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'safari'
+  },
+  'safari_result_ordering_save': {
+    label: 'Save Ordering',
+    description: 'Save role-based result ordering configuration',
+    emoji: '✅',
+    style: 'Success',
+    category: 'safari'
+  },
+  'safari_result_ordering_cancel': {
+    label: 'Cancel',
+    description: 'Cancel result ordering changes',
+    emoji: '❌',
+    style: 'Secondary',
+    category: 'safari'
+  },
+  'safari_result_ordering_select': {
+    label: 'Result Ordering Select',
+    description: 'Select roles for result ordering',
+    emoji: '📊',
+    style: 'Secondary',
+    category: 'safari',
+    type: 'select_menu'
+  },
   'safari_player_inventory': {
     label: '📦 Player Inventory',
     description: 'Show current user Safari inventory',
