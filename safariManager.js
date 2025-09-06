@@ -3798,7 +3798,7 @@ async function processRoundResults(guildId, token) {
         console.log(`🎯 DEBUG: Event roll: ${randomRoll.toFixed(1)}% - ${eventType.toUpperCase()} event: ${eventName}`);
         
         // Get eligible players (currency >= 1 OR any inventory items)
-        const eligiblePlayers = await getEligiblePlayersFixed(guildId, client);
+        const eligiblePlayers = await getEligiblePlayersFixed(guildId);
         console.log(`👥 DEBUG: Found ${eligiblePlayers.length} eligible players`);
         
         if (eligiblePlayers.length === 0) {
@@ -3887,7 +3887,7 @@ async function processRoundResults(guildId, token) {
         
         // Load player data for attack processing
         const playerData = await loadPlayerData();
-        const { attackResults, attackQueue, attacksByDefender } = await processAttackQueue(guildId, currentRound, playerData, items, client);
+        const { attackResults, attackQueue, attacksByDefender } = await processAttackQueue(guildId, currentRound, playerData, items);
         
         // Consume attack items for completed attacks
         const consumptionResults = await consumeAttackItems(attackQueue, playerData, guildId, items);
