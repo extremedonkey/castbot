@@ -3720,7 +3720,7 @@ async function resetCustomTerms(guildId) {
  * Process Round Results - Challenge Game Logic Core Engine
  * Handles event determination, player earnings/losses, and round progression
  */
-async function processRoundResults(guildId, token) {
+async function processRoundResults(guildId, token, client) {
     try {
         console.log(`🏅 DEBUG: Starting round results processing for guild ${guildId}`);
         
@@ -3798,7 +3798,7 @@ async function processRoundResults(guildId, token) {
         console.log(`🎯 DEBUG: Event roll: ${randomRoll.toFixed(1)}% - ${eventType.toUpperCase()} event: ${eventName}`);
         
         // Get eligible players (currency >= 1 OR any inventory items)
-        const eligiblePlayers = await getEligiblePlayersFixed(guildId);
+        const eligiblePlayers = await getEligiblePlayersFixed(guildId, client);
         console.log(`👥 DEBUG: Found ${eligiblePlayers.length} eligible players`);
         
         if (eligiblePlayers.length === 0) {
@@ -3887,7 +3887,7 @@ async function processRoundResults(guildId, token) {
         
         // Load player data for attack processing
         const playerData = await loadPlayerData();
-        const { attackResults, attackQueue, attacksByDefender } = await processAttackQueue(guildId, currentRound, playerData, items);
+        const { attackResults, attackQueue, attacksByDefender } = await processAttackQueue(guildId, currentRound, playerData, items, client);
         
         // Consume attack items for completed attacks
         const consumptionResults = await consumeAttackItems(attackQueue, playerData, guildId, items);
@@ -3935,11 +3935,11 @@ async function processRoundResults(guildId, token) {
             
             // Use modern display for Round 3 - show final results with rankings
             console.log('🏆 DEBUG: Round 3 completed, creating final results display');
-            return await createRoundResultsV2(guildId, roundData, customTerms, token);
+            return await createRoundResultsV2(guildId, roundData, customTerms, token, client);
         }
         
         // Return modern round results display (will post multiple messages)
-        return await createRoundResultsV2(guildId, roundData, customTerms, token);
+        return await createRoundResultsV2(guildId, roundData, customTerms, token, client);
         
     } catch (error) {
         console.error('Error processing round results:', error);
@@ -6178,7 +6178,7 @@ async function clearCorruptedAttacks(guildId) {
  * @param {Object} customTerms - Custom terminology
  * @returns {Object} Discord response object
  */
-async function createRoundResultsV2(guildId, roundData, customTerms, token) {
+async function createRoundResultsV2(guildId, roundData, customTerms, token, client) {
     try {
         console.log('🎨 DEBUG: Creating V2 round results display with multi-message approach');
         console.log('🎨 DEBUG: Round data:', { 
@@ -6368,23 +6368,9 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token) {
             
             console.log(`🎉 DEBUG: Successfully sent ${messages.length} messages for round results`);
             
-            // Return success response for the deferred interaction
-            return {
-                type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
-                data: {
-                    flags: (1 << 15) | 64, // IS_COMPONENTS_V2 + EPHEMERAL
-                    components: [{
-                        type: 17, // Container
-                        accent_color: 0x2ecc71, // Green for success
-                        components: [
-                            {
-                                type: 10, // Text Display
-                                content: `✅ Round ${currentRound} results posted successfully (${messages.length} messages, ${eligiblePlayers.length} players).`
-                            }
-                        ]
-                    }]
-                }
-            };
+            // Return null to indicate we've already handled the response via followups
+            // This prevents ButtonHandlerFactory from trying to update the deferred response
+            return null;
             
         } catch (sendError) {
             console.error('❌ Error sending round results messages:', sendError);

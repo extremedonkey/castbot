@@ -8402,10 +8402,17 @@ Your server is now ready for Tycoons gameplay!`;
           // Import Safari manager functions
           const { processRoundResults } = await import('./safariManager.js');
           
-          // Process round results using modern display - pass token for webhook followups
-          const roundData = await processRoundResults(context.guildId, context.token);
+          // Process round results using modern display - pass token and client for player names
+          const roundData = await processRoundResults(context.guildId, context.token, context.client);
           
-          console.log(`🎨 DEBUG: Sending modern display with ${roundData.data.components?.length || 0} components${roundData.data.content ? ' and content message' : ''}`);
+          // If roundData is null, it means the function already handled sending the response
+          if (roundData === null) {
+            console.log(`🎨 DEBUG: Round results handled via followup messages`);
+            return null; // Tell factory not to send another response
+          }
+          
+          // Otherwise return the error response
+          console.log(`🎨 DEBUG: Sending error response with ${roundData?.data?.components?.length || 0} components${roundData?.data?.content ? ' and content message' : ''}`);
           
           // Return the round data - factory will handle webhook followup
           // Don't include content field if Components V2 flag is set
