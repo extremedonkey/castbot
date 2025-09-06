@@ -3934,11 +3934,11 @@ async function processRoundResults(guildId, channelId, client) {
             
             // Use modern display for Round 3 - show final results with rankings
             console.log('🏆 DEBUG: Round 3 completed, creating final results display');
-            return await createRoundResultsV2(guildId, roundData, customTerms);
+            return await createRoundResultsV2(guildId, roundData, customTerms, channelId, client);
         }
         
-        // Return modern round results display
-        return await createRoundResultsV2(guildId, roundData, customTerms);
+        // Return modern round results display (will post multiple messages)
+        return await createRoundResultsV2(guildId, roundData, customTerms, channelId, client);
         
     } catch (error) {
         console.error('Error processing round results:', error);
@@ -6177,9 +6177,9 @@ async function clearCorruptedAttacks(guildId) {
  * @param {Object} customTerms - Custom terminology
  * @returns {Object} Discord response object
  */
-async function createRoundResultsV2(guildId, roundData, customTerms) {
+async function createRoundResultsV2(guildId, roundData, customTerms, channelId, client) {
     try {
-        console.log('🎨 DEBUG: Creating V2 round results display');
+        console.log('🎨 DEBUG: Creating V2 round results display with multi-message approach');
         console.log('🎨 DEBUG: Round data:', { 
             currentRound: roundData.currentRound, 
             eligiblePlayersCount: roundData.eligiblePlayers?.length,
@@ -6207,11 +6207,10 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
             throw new Error('No balance changes in round data');
         }
         
-        // Round 1 specific debugging
-        if (currentRound === 1) {
-            console.log(`🎯 DEBUG: ROUND 1 SPECIFIC - Eligible players: ${eligiblePlayers.length}`);
-            console.log(`🎯 DEBUG: ROUND 1 SPECIFIC - Balance changes keys: ${Object.keys(playerBalanceChanges).length}`);
-            console.log(`🎯 DEBUG: ROUND 1 SPECIFIC - Attacks by defender keys: ${Object.keys(attacksByDefender || {}).length}`);
+        // Get the channel to post messages to
+        const channel = await client.channels.fetch(channelId);
+        if (!channel) {
+            throw new Error('Channel not found');
         }
         
         console.log('🎨 DEBUG: Creating player result cards...');
@@ -6238,58 +6237,161 @@ async function createRoundResultsV2(guildId, roundData, customTerms) {
             ]
         };
         
-        // Combine header with player cards
-        const allComponents = [headerContainer, ...playerCards];
-        
-        // Component limit safeguard - Discord has a 40 component limit per message
-        const componentCount = allComponents.length;
-        console.log(`🔢 DEBUG: Total components before buttons: ${componentCount}`);
-        console.log(`🔢 DEBUG: Component breakdown - Header: 1, Player cards: ${playerCards.length}, Total: ${componentCount}`);
-        console.log(`🔢 DEBUG: Eligible players count: ${eligiblePlayers.length}`);
-        console.log(`🔢 DEBUG: Current round: ${currentRound}`);
-        
-        // Check if we can add the inventory button (need to stay under 40 total components)
-        const canAddButton = componentCount < 39; // Leave room for button container (1 more component)
-        
-        if (componentCount > 39) { // No room for any buttons
-            console.log(`⚠️ WARNING: Component count ${componentCount} at Discord limit of 40`);
-            console.log(`🔄 DEBUG: Too many players for V2 display with buttons, showing without buttons`);
+        // Helper function to count components recursively
+        function countComponentsRecursively(components) {
+            let count = 0;
+            for (const component of components) {
+                count++; // Count this component
+                if (component.components) {
+                    count += countComponentsRecursively(component.components);
+                }
+            }
+            return count;
         }
         
-        // Add navigation buttons only if we have room
-        if (canAddButton) {
-            console.log(`✅ DEBUG: Adding inventory button (${componentCount + 1} total components)`);
-            const buttonContainer = {
-                type: 17, // Container
-                accent_color: 0x3498db, // Blue
-                components: [
-                    {
-                        type: 1, // Action Row
+        // Helper function to check character limit
+        function checkCharacterLimit(components) {
+            let totalChars = 0;
+            for (const component of components) {
+                if (component.content) {
+                    totalChars += component.content.length;
+                }
+                if (component.components) {
+                    totalChars += checkCharacterLimit(component.components);
+                }
+            }
+            return totalChars;
+        }
+        
+        // Split player cards into chunks of 8 players per message
+        const PLAYERS_PER_MESSAGE = 8;
+        const playerChunks = [];
+        for (let i = 0; i < playerCards.length; i += PLAYERS_PER_MESSAGE) {
+            playerChunks.push(playerCards.slice(i, i + PLAYERS_PER_MESSAGE));
+        }
+        
+        console.log(`📦 DEBUG: Split ${playerCards.length} players into ${playerChunks.length} messages (${PLAYERS_PER_MESSAGE} per message)`);
+        
+        // Send messages
+        const messages = [];
+        
+        try {
+            // First message: Header + first chunk of players
+            const firstMessageComponents = [headerContainer];
+            if (playerChunks.length > 0) {
+                firstMessageComponents.push(...playerChunks[0]);
+            }
+            
+            // Validate component count and character limit
+            const firstComponentCount = countComponentsRecursively(firstMessageComponents);
+            const firstCharCount = checkCharacterLimit(firstMessageComponents);
+            console.log(`📊 DEBUG: First message - ${firstComponentCount} components, ${firstCharCount} characters`);
+            
+            if (firstComponentCount > 40) {
+                throw new Error(`First message exceeds component limit: ${firstComponentCount}/40`);
+            }
+            if (firstCharCount > 4000) {
+                throw new Error(`First message exceeds character limit: ${firstCharCount}/4000`);
+            }
+            
+            const firstMessage = await channel.send({
+                flags: (1 << 15), // IS_COMPONENTS_V2
+                components: firstMessageComponents
+            });
+            messages.push(firstMessage);
+            console.log(`✅ DEBUG: Sent first message with header and ${playerChunks[0]?.length || 0} players`);
+            
+            // Send remaining chunks
+            for (let i = 1; i < playerChunks.length; i++) {
+                const chunk = playerChunks[i];
+                const isLastChunk = i === playerChunks.length - 1;
+                
+                // Validate component count and character limit
+                const chunkComponentCount = countComponentsRecursively(chunk);
+                const chunkCharCount = checkCharacterLimit(chunk);
+                console.log(`📊 DEBUG: Message ${i + 1} - ${chunkComponentCount} components, ${chunkCharCount} characters`);
+                
+                if (chunkComponentCount > 40) {
+                    throw new Error(`Message ${i + 1} exceeds component limit: ${chunkComponentCount}/40`);
+                }
+                if (chunkCharCount > 4000) {
+                    throw new Error(`Message ${i + 1} exceeds character limit: ${chunkCharCount}/4000`);
+                }
+                
+                // Add inventory button to last message if it's the last chunk
+                const messageComponents = [...chunk];
+                if (isLastChunk) {
+                    const buttonContainer = {
+                        type: 17, // Container
+                        accent_color: 0x3498db, // Blue
                         components: [
                             {
-                                type: 2, // Button
-                                custom_id: 'safari_player_inventory',
-                                label: customTerms.inventoryName,
-                                style: 1, // Primary (blue)
-                                emoji: { name: customTerms.inventoryEmoji || '🧰' } // Use custom inventory emoji
+                                type: 1, // Action Row
+                                components: [
+                                    {
+                                        type: 2, // Button
+                                        custom_id: 'safari_player_inventory',
+                                        label: customTerms.inventoryName,
+                                        style: 1, // Primary (blue)
+                                        emoji: { name: customTerms.inventoryEmoji || '🧰' }
+                                    }
+                                ]
                             }
                         ]
+                    };
+                    
+                    // Check if adding button would exceed limits
+                    const withButtonCount = countComponentsRecursively([...messageComponents, buttonContainer]);
+                    if (withButtonCount <= 40) {
+                        messageComponents.push(buttonContainer);
+                        console.log(`✅ DEBUG: Added inventory button to last message`);
+                    } else {
+                        console.log(`⚠️ DEBUG: Skipping inventory button - would exceed component limit`);
                     }
-                ]
+                }
+                
+                const message = await channel.send({
+                    flags: (1 << 15), // IS_COMPONENTS_V2
+                    components: messageComponents
+                });
+                messages.push(message);
+                console.log(`✅ DEBUG: Sent message ${i + 1} with ${chunk.length} players${isLastChunk ? ' (last chunk)' : ''}`);
+            }
+            
+            console.log(`🎉 DEBUG: Successfully sent ${messages.length} messages for round results`);
+            
+            // Return success response for the deferred interaction
+            return {
+                type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+                data: {
+                    flags: (1 << 15) | 64, // IS_COMPONENTS_V2 + EPHEMERAL
+                    components: [{
+                        type: 17, // Container
+                        accent_color: 0x2ecc71, // Green for success
+                        components: [
+                            {
+                                type: 10, // Text Display
+                                content: `✅ Round ${currentRound} results posted successfully (${messages.length} messages, ${eligiblePlayers.length} players).`
+                            }
+                        ]
+                    }]
+                }
             };
             
-            allComponents.push(buttonContainer);
-        } else {
-            console.log(`⚠️ DEBUG: Skipping inventory button - would exceed component limit (${componentCount + 1} > 40)`);
-        }
-        
-        return {
-            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
-            data: {
-                flags: (1 << 15), // IS_COMPONENTS_V2
-                components: allComponents
+        } catch (sendError) {
+            console.error('❌ Error sending round results messages:', sendError);
+            
+            // Post non-ephemeral error message to channel
+            try {
+                await channel.send({
+                    content: `❌ **Error Posting Round Results**\n\n${sendError.message}\n\nPlease contact an administrator to resolve this issue.`
+                });
+            } catch (errorPostError) {
+                console.error('Failed to post error message to channel:', errorPostError);
             }
-        };
+            
+            throw sendError;
+        }
         
     } catch (error) {
         console.error('Error creating V2 round results:', error);
