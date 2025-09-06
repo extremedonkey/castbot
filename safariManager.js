@@ -6660,7 +6660,7 @@ async function createPlayerResultCards(guildId, eligiblePlayers, roundData, cust
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `## 👥 @${roleData.name}\n*${roleData.players.length} player${roleData.players.length !== 1 ? 's' : ''}*`
+                            content: `> # <@&${roleId}>\n\`${roleData.players.length} player${roleData.players.length !== 1 ? 's' : ''}\``
                         }
                     ]
                 };
@@ -6690,7 +6690,7 @@ async function createPlayerResultCards(guildId, eligiblePlayers, roundData, cust
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `## 📋 Other Players\n*${roleGroups.unassigned.length} player${roleGroups.unassigned.length !== 1 ? 's' : ''}*`
+                            content: `> # Other Players\n\`${roleGroups.unassigned.length} player${roleGroups.unassigned.length !== 1 ? 's' : ''}\``
                         }
                     ]
                 };
