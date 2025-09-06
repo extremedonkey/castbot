@@ -6301,7 +6301,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                 components: [
                     {
                         type: 10, // Text Display
-                        content: `-#${firstCharCount}`
+                        content: `-# ${firstCharCount}`
                     }
                 ]
             };
@@ -6372,7 +6372,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                     components: [
                         {
                             type: 10, // Text Display
-                            content: `-#${chunkCharCount}`
+                            content: `-# ${chunkCharCount}`
                         }
                     ]
                 };
@@ -6512,7 +6512,7 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
         
         // Add character count for debugging
         const charCount = content.length;
-        content += `\n-#${charCount}`;
+        content += `\n-# ${charCount}`;
         
         // Create container with accent color based on change - SINGLE COMPONENT
         const change = balanceChange.change;
