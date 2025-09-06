@@ -116,7 +116,6 @@ import {
 import { createEntityManagementUI } from './entityManagementUI.js';
 import { getBotEmoji, formatBotEmoji } from './botEmojis.js';
 import { 
-  createMapGrid,
   deleteMapGrid,
   createMapExplorerMenu 
 } from './mapExplorer.js';
