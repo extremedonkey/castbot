@@ -973,7 +973,9 @@ async function updateMapImage(guild, userId, mapUrl) {
     
     // Initialize grid system with the new map
     const gridSystem = new MapGridSystem(tempMapPath, {
-      gridSize: mapData.gridSize,
+      gridWidth: mapData.gridWidth || mapData.gridSize || 7,
+      gridHeight: mapData.gridHeight || mapData.gridSize || 7,
+      gridSize: mapData.gridSize, // Keep for backwards compatibility
       borderSize: 80,
       lineWidth: 4,
       fontSize: 40,
@@ -1209,7 +1211,9 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     const outputPath = path.join(guildDir, `${mapId}.png`);
     
     const gridSystem = new MapGridSystem(tempMapPath, {
-      gridSize: Math.max(gridWidth, gridHeight), // Use larger dimension for MapGridSystem
+      gridWidth: gridWidth,
+      gridHeight: gridHeight,
+      gridSize: Math.max(gridWidth, gridHeight), // Keep for backwards compatibility
       borderSize: 80,
       lineWidth: 4,
       fontSize: 40,

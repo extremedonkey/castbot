@@ -10,6 +10,8 @@ export class MapGridSystem {
         this.imagePath = imagePath;
         this.options = {
             gridSize: options.gridSize || 10,
+            gridWidth: options.gridWidth || options.gridSize || 10,
+            gridHeight: options.gridHeight || options.gridSize || 10,
             borderSize: options.borderSize || 80,
             lineWidth: options.lineWidth || 3,
             fontSize: options.fontSize || 36,
@@ -32,18 +34,15 @@ export class MapGridSystem {
     async initialize() {
         this.metadata = await sharp(this.imagePath).metadata();
         
-        // Verify square image
-        if (this.metadata.width !== this.metadata.height) {
-            throw new Error('Image must have equal width and height dimensions');
-        }
+        // No longer require square image - support rectangular grids
         
-        this.cellWidth = this.metadata.width / this.options.gridSize;
-        this.cellHeight = this.metadata.height / this.options.gridSize;
+        this.cellWidth = this.metadata.width / this.options.gridWidth;
+        this.cellHeight = this.metadata.height / this.options.gridHeight;
         this.totalWidth = this.metadata.width + (this.options.borderSize * 2);
         this.totalHeight = this.metadata.height + (this.options.borderSize * 2);
         
         console.log(`✅ Initialized grid system for ${this.metadata.width}x${this.metadata.height} image`);
-        console.log(`   Grid: ${this.options.gridSize}x${this.options.gridSize}, Cell size: ${Math.round(this.cellWidth)}x${Math.round(this.cellHeight)}px`);
+        console.log(`   Grid: ${this.options.gridWidth}x${this.options.gridHeight}, Cell size: ${Math.round(this.cellWidth)}x${Math.round(this.cellHeight)}px`);
     }
 
     /**
@@ -57,7 +56,14 @@ export class MapGridSystem {
                 return `${String.fromCharCode(97 + x)}${y + 1}`;
             case 'letters-numbers':
             default:
-                return `${String.fromCharCode(65 + x)}${y + 1}`;
+                // Support Excel-style columns for wide grids
+                let column = '';
+                let colIndex = x;
+                while (colIndex >= 0) {
+                    column = String.fromCharCode(65 + (colIndex % 26)) + column;
+                    colIndex = Math.floor(colIndex / 26) - 1;
+                }
+                return `${column}${y + 1}`;
         }
     }
 
@@ -77,9 +83,19 @@ export class MapGridSystem {
                 return { x: chessX, y: chessY };
             case 'letters-numbers':
             default:
-                const letterX = upperLabel.charCodeAt(0) - 65;
-                const letterY = parseInt(upperLabel.slice(1)) - 1;
-                return { x: letterX, y: letterY };
+                // Parse Excel-style columns (A, Z, AA, AB, etc.)
+                let x = 0;
+                let colPart = upperLabel.match(/^[A-Z]+/)[0];
+                let rowPart = upperLabel.match(/\d+$/)[0];
+                
+                // Convert column letters to index
+                for (let i = 0; i < colPart.length; i++) {
+                    x = x * 26 + (colPart.charCodeAt(i) - 65 + 1);
+                }
+                x -= 1; // Convert to 0-based index
+                
+                const y = parseInt(rowPart) - 1;
+                return { x, y };
         }
     }
 
@@ -132,7 +148,7 @@ export class MapGridSystem {
      * Generate SVG for the grid
      */
     generateGridSVG() {
-        const { gridSize, borderSize, lineWidth, fontSize, gridColor, borderColor } = this.options;
+        const { gridWidth, gridHeight, borderSize, lineWidth, fontSize, gridColor, borderColor } = this.options;
         
         return `
             <svg width="${this.totalWidth}" height="${this.totalHeight}" xmlns="http://www.w3.org/2000/svg">
@@ -157,7 +173,7 @@ export class MapGridSystem {
      * Generate SVG overlay only (no background or embedded image)
      */
     generateGridOverlaySVG() {
-        const { gridSize, borderSize, lineWidth, fontSize, gridColor, borderColor } = this.options;
+        const { gridWidth, gridHeight, borderSize, lineWidth, fontSize, gridColor, borderColor } = this.options;
         
         return `
             <svg width="${this.totalWidth}" height="${this.totalHeight}" xmlns="http://www.w3.org/2000/svg">
@@ -177,11 +193,11 @@ export class MapGridSystem {
      * Generate grid lines SVG
      */
     generateGridLines() {
-        const { gridSize, borderSize, lineWidth, gridColor } = this.options;
+        const { gridWidth, gridHeight, borderSize, lineWidth, gridColor } = this.options;
         let lines = '';
         
         // Vertical lines
-        for (let i = 0; i <= gridSize; i++) {
+        for (let i = 0; i <= gridWidth; i++) {
             lines += `
                 <line x1="${borderSize + (i * this.cellWidth)}" y1="${borderSize}" 
                       x2="${borderSize + (i * this.cellWidth)}" y2="${borderSize + this.metadata.height}" 
@@ -190,7 +206,7 @@ export class MapGridSystem {
         }
         
         // Horizontal lines
-        for (let i = 0; i <= gridSize; i++) {
+        for (let i = 0; i <= gridHeight; i++) {
             lines += `
                 <line x1="${borderSize}" y1="${borderSize + (i * this.cellHeight)}" 
                       x2="${borderSize + this.metadata.width}" y2="${borderSize + (i * this.cellHeight)}" 
@@ -205,12 +221,12 @@ export class MapGridSystem {
      * Generate coordinate labels SVG
      */
     generateCoordinateLabels() {
-        const { gridSize, borderSize, fontSize, labelStyle } = this.options;
+        const { gridWidth, gridHeight, borderSize, fontSize, labelStyle } = this.options;
         let labels = '';
         
-        for (let i = 0; i < gridSize; i++) {
+        // Column labels
+        for (let i = 0; i < gridWidth; i++) {
             const colLabel = this.getCoordinateLabel(i, 0).split(/\d/)[0];
-            const rowLabel = (i + 1).toString();
             
             // Column labels (top)
             if (labelStyle === 'boxed') {
@@ -234,6 +250,11 @@ export class MapGridSystem {
                     ${colLabel}
                 </text>
             `;
+        }
+        
+        // Row labels
+        for (let i = 0; i < gridHeight; i++) {
+            const rowLabel = (i + 1).toString();
             
             // Row labels (left)
             if (labelStyle === 'boxed') {
