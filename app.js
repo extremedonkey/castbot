@@ -20761,6 +20761,10 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const safariData = await loadSafariContent();
           const hasActiveMap = safariData[context.guildId]?.maps?.active;
           
+          // Get existing map dimensions if updating
+          const activeMapId = safariData[context.guildId]?.maps?.active;
+          const existingMap = activeMapId ? safariData[context.guildId]?.maps?.[activeMapId] : null;
+          
           const modal = new ModalBuilder()
             .setCustomId('map_update_modal')
             .setTitle(hasActiveMap ? 'Update Map Image' : 'Create Map with Custom Image');
@@ -20774,8 +20778,32 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setMinLength(20)
             .setMaxLength(500);
             
-          const actionRow = new ActionRowBuilder().addComponents(urlInput);
-          modal.addComponents(actionRow);
+          // Add row input (height)
+          const rowInput = new TextInputBuilder()
+            .setCustomId('map_rows')
+            .setLabel('Number of Map Rows')
+            .setStyle(1) // Short
+            .setRequired(true)
+            .setPlaceholder('Enter how many rows you want in your map')
+            .setValue(existingMap?.gridHeight?.toString() || existingMap?.gridSize?.toString() || '7')
+            .setMinLength(1)
+            .setMaxLength(3);
+            
+          // Add column input (width)
+          const colInput = new TextInputBuilder()
+            .setCustomId('map_columns')
+            .setLabel('Number of Map Columns')
+            .setStyle(1) // Short
+            .setRequired(true)
+            .setPlaceholder('Enter how many columns you want in your map')
+            .setValue(existingMap?.gridWidth?.toString() || existingMap?.gridSize?.toString() || '7')
+            .setMinLength(1)
+            .setMaxLength(3);
+            
+          const actionRow1 = new ActionRowBuilder().addComponents(urlInput);
+          const actionRow2 = new ActionRowBuilder().addComponents(rowInput);
+          const actionRow3 = new ActionRowBuilder().addComponents(colInput);
+          modal.addComponents(actionRow1, actionRow2, actionRow3);
           
           console.log(`✅ SUCCESS: map_update - modal created`);
           
@@ -32283,8 +32311,10 @@ Are you sure you want to continue?`;
         const guildId = req.body.guild_id;
         const userId = req.body.member?.user?.id || req.body.user?.id;
         const mapUrl = components[0].components[0].value?.trim();
+        const mapRows = parseInt(components[1].components[0].value?.trim());
+        const mapColumns = parseInt(components[2].components[0].value?.trim());
         
-        console.log(`🔄 DEBUG: Map update modal submitted - guild: ${guildId}, url: ${mapUrl}`);
+        console.log(`🔄 DEBUG: Map update modal submitted - guild: ${guildId}, url: ${mapUrl}, dimensions: ${mapColumns}x${mapRows}`);
         
         // Basic URL validation
         if (!mapUrl || !mapUrl.startsWith('https://cdn.discordapp.com/attachments/')) {
@@ -32292,6 +32322,29 @@ Are you sure you want to continue?`;
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
               content: '❌ Please provide a valid Discord CDN URL (must start with https://cdn.discordapp.com/attachments/)',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Validate dimensions
+        if (isNaN(mapRows) || isNaN(mapColumns) || mapRows < 3 || mapRows > 100 || mapColumns < 3 || mapColumns > 100) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Map dimensions must be between 3 and 100 for both rows and columns.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Validate total channel count
+        const totalChannels = mapRows * mapColumns;
+        if (totalChannels > 400) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ ${mapColumns}x${mapRows} = ${totalChannels} channels exceeds the 400 channel limit.`,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -32309,6 +32362,31 @@ Are you sure you want to continue?`;
         const { loadSafariContent } = await import('./safariManager.js');
         const safariData = await loadSafariContent();
         const hasActiveMap = safariData[guildId]?.maps?.active;
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const existingMap = activeMapId ? safariData[guildId]?.maps?.[activeMapId] : null;
+        
+        // If updating, check if dimensions changed
+        if (hasActiveMap && existingMap) {
+          // Get existing dimensions (with backwards compatibility)
+          const existingWidth = existingMap.gridWidth || existingMap.gridSize || 7;
+          const existingHeight = existingMap.gridHeight || existingMap.gridSize || 7;
+          
+          if (mapColumns !== existingWidth || mapRows !== existingHeight) {
+            // Dimensions changed - block the update
+            const followupUrl = `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+            await fetch(followupUrl, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                content: `❌ Map dimensions cannot be changed (current: ${existingWidth}x${existingHeight}, requested: ${mapColumns}x${mapRows}).\n\nTo use different dimensions, delete the existing map first.`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              })
+            });
+            return;
+          }
+        }
         
         const guild = await client.guilds.fetch(guildId);
         let result;
@@ -32319,10 +32397,10 @@ Are you sure you want to continue?`;
           const { updateMapImage } = await import('./mapExplorer.js');
           result = await updateMapImage(guild, userId, mapUrl);
         } else {
-          // Create new map with custom image
-          console.log(`🏗️ Creating new map with custom image for guild ${guildId}`);
+          // Create new map with custom image and dimensions
+          console.log(`🏗️ Creating new map with custom image for guild ${guildId} - dimensions: ${mapColumns}x${mapRows}`);
           const { createMapGridWithCustomImage } = await import('./mapExplorer.js');
-          result = await createMapGridWithCustomImage(guild, userId, mapUrl);
+          result = await createMapGridWithCustomImage(guild, userId, mapUrl, mapColumns, mapRows);
         }
         
         // Send followup with result

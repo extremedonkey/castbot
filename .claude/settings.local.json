@@ -17,7 +17,8 @@
       "Bash(npm run logs-prod:*)",
       "Bash(npm run analyze-commands:*)",
       "Bash(npm run verify-commands:*)",
-      "Bash(npm run clean-commands:*)"
+      "Bash(npm run clean-commands:*)",
+      "Read(///**)"
     ],
     "deny": [],
     "ask": []

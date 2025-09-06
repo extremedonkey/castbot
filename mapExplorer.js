@@ -15,6 +15,72 @@ import MapGridSystem from './scripts/map-tests/mapGridSystem.js';
 import { loadSafariContent, saveSafariContent } from './safariManager.js';
 
 /**
+ * Convert column index to Excel-style column label (0=A, 25=Z, 26=AA, etc.)
+ * @param {number} index - Zero-based column index
+ * @returns {string} Excel-style column label
+ */
+function getExcelColumn(index) {
+  let column = '';
+  while (index >= 0) {
+    column = String.fromCharCode(65 + (index % 26)) + column;
+    index = Math.floor(index / 26) - 1;
+  }
+  return column;
+}
+
+/**
+ * Convert Excel-style column label to column index
+ * @param {string} column - Excel-style column label (A, AA, etc.)
+ * @returns {number} Zero-based column index
+ */
+function parseExcelColumn(column) {
+  let index = 0;
+  for (let i = 0; i < column.length; i++) {
+    index = index * 26 + (column.charCodeAt(i) - 64);
+  }
+  return index - 1;
+}
+
+/**
+ * Generate coordinate string from x,y position
+ * @param {number} x - Column index (0-based)
+ * @param {number} y - Row index (0-based)
+ * @returns {string} Coordinate string (e.g., "A1", "AA10")
+ */
+function generateCoordinate(x, y) {
+  return `${getExcelColumn(x)}${y + 1}`;
+}
+
+/**
+ * Parse coordinate string to x,y position
+ * @param {string} coord - Coordinate string (e.g., "A1", "AA10")
+ * @returns {{x: number, y: number}} Zero-based x,y position
+ */
+function parseCoordinate(coord) {
+  const match = coord.match(/^([A-Z]+)(\d+)$/);
+  if (!match) {
+    throw new Error(`Invalid coordinate: ${coord}`);
+  }
+  const x = parseExcelColumn(match[1]);
+  const y = parseInt(match[2]) - 1;
+  return { x, y };
+}
+
+/**
+ * Get grid dimensions with backwards compatibility
+ * @param {Object} mapData - Map data object
+ * @returns {{width: number, height: number}} Grid dimensions
+ */
+function getGridDimensions(mapData) {
+  if (mapData.gridWidth && mapData.gridHeight) {
+    return { width: mapData.gridWidth, height: mapData.gridHeight };
+  }
+  // Fallback for old maps
+  const gridSize = mapData.gridSize || 7;
+  return { width: gridSize, height: gridSize };
+}
+
+/**
  * Upload image to Discord and get CDN URL by sending it to a channel
  * @param {Guild} guild - Discord guild object
  * @param {string} imagePath - Path to image file
@@ -325,7 +391,9 @@ async function createMapGrid(guild, userId) {
     const outputPath = path.join(guildDir, `${mapId}.png`);
     
     const gridSystem = new MapGridSystem(mapPath, {
-      gridSize: gridSize,
+      gridWidth: gridWidth,
+      gridHeight: gridHeight,
+      gridSize: Math.max(gridWidth, gridHeight), // Keep for backwards compatibility
       borderSize: 80,
       lineWidth: 4,
       fontSize: 40,
@@ -440,7 +508,9 @@ async function createMapGrid(guild, userId) {
     const mapData = {
       id: mapId,
       name: 'Adventure Island',
-      gridSize: gridSize,
+      gridWidth: gridWidth,
+      gridHeight: gridHeight,
+      gridSize: Math.max(gridWidth, gridHeight), // Keep for backwards compatibility
       imageFile: outputPath.replace(__dirname + '/', ''),
       discordImageUrl: discordImageUrl, // Store Discord CDN URL
       category: category.id,
@@ -477,7 +547,7 @@ async function createMapGrid(guild, userId) {
         },
         buttons: [],
         hiddenCommands: {},
-        navigation: generateNavigation(coord, gridSize),
+        navigation: generateNavigation(coord, gridWidth || 7, gridHeight || 7),
         cellType: 'unexplored',
         discovered: false,
         specialEvents: [],
@@ -500,7 +570,7 @@ async function createMapGrid(guild, userId) {
     progressMessages.push('✅ Fog of war maps posted to all channels');
     
     progressMessages.push(`🎉 **Map creation complete!**`);
-    progressMessages.push(`• Grid Size: ${gridSize}x${gridSize}`);
+    progressMessages.push(`• Grid Size: ${gridWidth || 7}x${gridHeight || 7}`);
     progressMessages.push(`• Total Locations: ${coordinates.length}`);
     progressMessages.push(`• Category: ${category.name}`);
     
@@ -654,43 +724,47 @@ async function deleteMapGrid(guild) {
 
 /**
  * Generate navigation options for a coordinate
- * @param {string} coord - Coordinate like "A1"
- * @param {number} gridSize - Size of the grid
+ * @param {string} coord - Coordinate like "A1" or "AA1"
+ * @param {number} gridWidth - Width of the grid (columns)
+ * @param {number} gridHeight - Height of the grid (rows)
  * @returns {Object} Navigation options
  */
-function generateNavigation(coord, gridSize) {
-  const x = coord.charCodeAt(0) - 65;
-  const y = parseInt(coord.slice(1)) - 1;
+function generateNavigation(coord, gridWidth, gridHeight) {
+  const { x, y } = parseCoordinate(coord);
   
   const nav = {
     north: null,
     east: null,
     south: null,
-    west: null
+    west: null,
+    northeast: null,
+    northwest: null,
+    southeast: null,
+    southwest: null
   };
   
   // North (y - 1)
   if (y > 0) {
     nav.north = {
-      to: `${String.fromCharCode(65 + x)}${y}`,
+      to: generateCoordinate(x, y - 1),
       visible: true,
       blocked: false
     };
   }
   
   // East (x + 1)
-  if (x < gridSize - 1) {
+  if (x < gridWidth - 1) {
     nav.east = {
-      to: `${String.fromCharCode(66 + x)}${y + 1}`,
+      to: generateCoordinate(x + 1, y),
       visible: true,
       blocked: false
     };
   }
   
   // South (y + 1)
-  if (y < gridSize - 1) {
+  if (y < gridHeight - 1) {
     nav.south = {
-      to: `${String.fromCharCode(65 + x)}${y + 2}`,
+      to: generateCoordinate(x, y + 1),
       visible: true,
       blocked: false
     };
@@ -699,7 +773,43 @@ function generateNavigation(coord, gridSize) {
   // West (x - 1)
   if (x > 0) {
     nav.west = {
-      to: `${String.fromCharCode(64 + x)}${y + 1}`,
+      to: generateCoordinate(x - 1, y),
+      visible: true,
+      blocked: false
+    };
+  }
+  
+  // Northeast
+  if (y > 0 && x < gridWidth - 1) {
+    nav.northeast = {
+      to: generateCoordinate(x + 1, y - 1),
+      visible: true,
+      blocked: false
+    };
+  }
+  
+  // Northwest
+  if (y > 0 && x > 0) {
+    nav.northwest = {
+      to: generateCoordinate(x - 1, y - 1),
+      visible: true,
+      blocked: false
+    };
+  }
+  
+  // Southeast
+  if (y < gridHeight - 1 && x < gridWidth - 1) {
+    nav.southeast = {
+      to: generateCoordinate(x + 1, y + 1),
+      visible: true,
+      blocked: false
+    };
+  }
+  
+  // Southwest
+  if (y < gridHeight - 1 && x > 0) {
+    nav.southwest = {
+      to: generateCoordinate(x - 1, y + 1),
       visible: true,
       blocked: false
     };
@@ -1027,11 +1137,13 @@ async function updateMapImage(guild, userId, mapUrl) {
  * @param {Guild} guild - Discord guild object
  * @param {string} userId - User ID creating the map
  * @param {string} mapUrl - Discord CDN URL of the map image
+ * @param {number} gridWidth - Number of columns (default 7)
+ * @param {number} gridHeight - Number of rows (default 7)
  * @returns {Object} Result with success status and message
  */
-async function createMapGridWithCustomImage(guild, userId, mapUrl) {
+async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7, gridHeight = 7) {
   try {
-    console.log(`🏗️ Creating map grid with custom image for guild ${guild.id}`);
+    console.log(`🏗️ Creating map grid with custom image for guild ${guild.id} - dimensions: ${gridWidth}x${gridHeight}`);
     
     // Load safari content data
     let safariData = await loadSafariContent();
@@ -1066,7 +1178,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
     }
     
     let progressMessages = [];
-    progressMessages.push('🏗️ Starting map creation with custom image...');
+    progressMessages.push(`🏗️ Starting map creation with custom image (${gridWidth}x${gridHeight})...`);
     
     // Download the custom map image
     progressMessages.push('📥 Downloading custom map image...');
@@ -1082,9 +1194,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
     progressMessages.push(`✅ Image downloaded: ${metadata.width}x${metadata.height} pixels`);
     
     // Generate map data
-    const gridSize = 7; // 7x7 grid
     const timestamp = Date.now();
-    const mapId = `map_${gridSize}x${gridSize}_${timestamp}`;
+    const mapId = `map_${gridWidth}x${gridHeight}_${timestamp}`;
     
     // Create directory for guild images if it doesn't exist
     const guildDir = path.join(__dirname, 'img', guild.id);
@@ -1098,7 +1209,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
     const outputPath = path.join(guildDir, `${mapId}.png`);
     
     const gridSystem = new MapGridSystem(tempMapPath, {
-      gridSize: gridSize,
+      gridSize: Math.max(gridWidth, gridHeight), // Use larger dimension for MapGridSystem
       borderSize: 80,
       lineWidth: 4,
       fontSize: 40,
@@ -1162,21 +1273,47 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
     
     progressMessages.push(`✅ Created category: ${category.name}`);
     
-    // Generate coordinate list for 7x7 grid
+    // Generate coordinate list for custom grid
     const coordinates = [];
-    for (let y = 0; y < gridSize; y++) {
-      for (let x = 0; x < gridSize; x++) {
-        const coord = `${String.fromCharCode(65 + x)}${y + 1}`;
+    for (let y = 0; y < gridHeight; y++) {
+      for (let x = 0; x < gridWidth; x++) {
+        const coord = generateCoordinate(x, y);
         coordinates.push(coord);
       }
     }
     
-    // Create channels with rate limiting
+    // Create channels with rate limiting and category splitting
     const channels = {};
+    const categories = [category]; // Start with the first category
+    let currentCategory = category;
+    let channelsInCurrentCategory = 0;
+    const MAX_CHANNELS_PER_CATEGORY = 49; // Leave room for one extra channel
+    
     progressMessages.push(`📍 Creating ${coordinates.length} channels...`);
     
     for (let i = 0; i < coordinates.length; i++) {
       const coord = coordinates[i];
+      
+      // Check if we need a new category
+      if (channelsInCurrentCategory >= MAX_CHANNELS_PER_CATEGORY) {
+        const groupNumber = Math.floor(i / MAX_CHANNELS_PER_CATEGORY) + 1;
+        progressMessages.push(`📂 Creating new category: Map Explorer - Group ${groupNumber}`);
+        
+        currentCategory = await guild.channels.create({
+          name: `🗺️ Map Explorer - Group ${groupNumber}`,
+          type: ChannelType.GuildCategory,
+          permissionOverwrites: [
+            {
+              id: guild.roles.everyone.id,
+              deny: [PermissionFlagsBits.ViewChannel]
+            }
+          ]
+        });
+        
+        categories.push(currentCategory);
+        channelsInCurrentCategory = 0;
+        progressMessages.push(`✅ Created category: ${currentCategory.name}`);
+      }
       
       // Rate limiting: 5 channels per 5 seconds
       if (i > 0 && i % 5 === 0) {
@@ -1188,7 +1325,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
         const channel = await guild.channels.create({
           name: coord.toLowerCase(),
           type: ChannelType.GuildText,
-          parent: category.id,
+          parent: currentCategory.id,
           topic: `Map location ${coord} - Use buttons to explore!`,
           permissionOverwrites: [
             {
@@ -1199,6 +1336,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
         });
         
         channels[coord] = channel.id;
+        channelsInCurrentCategory++;
         console.log(`Created channel #${coord.toLowerCase()} (${i + 1}/${coordinates.length})`);
         
         if ((i + 1) % 5 === 0 || i === coordinates.length - 1) {
@@ -1214,10 +1352,13 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
     const mapData = {
       id: mapId,
       name: 'Adventure Island',
-      gridSize: gridSize,
+      gridWidth: gridWidth,
+      gridHeight: gridHeight,
+      gridSize: Math.max(gridWidth, gridHeight), // Keep for backwards compatibility
       imageFile: outputPath.replace(__dirname + '/', ''),
       discordImageUrl: discordImageUrl, // Store Discord CDN URL
       category: category.id,
+      categories: categories.map(cat => cat.id), // Store all category IDs
       createdAt: new Date().toISOString(),
       createdBy: userId,
       coordinates: {},
@@ -1251,7 +1392,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
         },
         buttons: [],
         hiddenCommands: {},
-        navigation: generateNavigation(coord, gridSize),
+        navigation: generateNavigation(coord, gridWidth || 7, gridHeight || 7),
         cellType: 'unexplored',
         discovered: false,
         specialEvents: [],
@@ -1274,7 +1415,7 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl) {
     progressMessages.push('✅ Fog of war maps posted to all channels');
     
     progressMessages.push(`🎉 **Map creation complete!**`);
-    progressMessages.push(`• Grid Size: ${gridSize}x${gridSize}`);
+    progressMessages.push(`• Grid Size: ${gridWidth || 7}x${gridHeight || 7}`);
     progressMessages.push(`• Total Locations: ${coordinates.length}`);
     progressMessages.push(`• Category: ${category.name}`);
     progressMessages.push(`• Custom Image: Used`);
