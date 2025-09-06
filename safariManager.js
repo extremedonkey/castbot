@@ -6749,7 +6749,7 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
         const currencyName = customTerms.currencyName || 'coins';
         
         // Start with player name and emoji
-        let content = `${getPlayerEmoji(player.playerName)} ${player.playerName}\n`;
+        let content = `## > \`${getPlayerEmoji(player.playerName)} ${player.playerName}\`\n`;
         
         // Section 1: Opening balance
         content += `### \`1. Opening balance start of Round Results\`\n`;
@@ -6779,9 +6779,9 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
         content += `### \`4. Closing balance end of Round Results\`\n`;
         content += `${currencyEmoji} ${balanceChange.ending} ${currencyName}`;
         
-        // Add character count for debugging
-        const charCount = content.length;
-        content += `\n-# ${charCount}`;
+        // Character count for debugging (commented out for now)
+        // const charCount = content.length;
+        // content += `\n-# ${charCount}`;
         
         // Create container with accent color based on change
         const change = balanceChange.change;
@@ -6825,6 +6825,7 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
 function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji, customTerms) {
     try {
         const currencyEmoji = customTerms.currencyEmoji || '🪙';
+        const currencyName = customTerms.currencyName || 'coins';
         
         let content = `### \`2. Plus: Income from round\`\n`;
         content += `${eventEmoji} ${eventName}\n\n`;
@@ -6833,7 +6834,7 @@ function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji
         const inventoryItems = Object.entries(inventory);
         
         if (inventoryItems.length === 0) {
-            content += `Total: +${currencyEmoji}0`;
+            content += `Total: +${currencyEmoji}0 ${currencyName}`;
             return content;
         }
         
@@ -6863,15 +6864,15 @@ function formatIncomeBreakdown(player, items, isGoodEvent, eventName, eventEmoji
         }
         
         if (incomeItems.length === 0) {
-            content += `Total: +${currencyEmoji}0`;
+            content += `Total: +${currencyEmoji}0 ${currencyName}`;
         } else {
             // Format each income item: emoji quantityxvalue: +currencyEmojiTotal
             for (const item of incomeItems) {
                 const sign = item.totalValue >= 0 ? '+' : '';
-                content += `${item.emoji} ${item.quantity}x${item.unitValue}: ${sign}${currencyEmoji}${Math.abs(item.totalValue)}\n`;
+                content += `${item.emoji} ${item.quantity}x${item.unitValue}: ${sign}${currencyEmoji}${Math.abs(item.totalValue)} ${currencyName}\n`;
             }
             const totalSign = totalIncome >= 0 ? '+' : '';
-            content += `\nTotal: ${totalSign}${currencyEmoji}${Math.abs(totalIncome)}`;
+            content += `\nTotal: ${totalSign}${currencyEmoji}${Math.abs(totalIncome)} ${currencyName}`;
         }
         
         return content;
