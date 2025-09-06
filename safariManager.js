@@ -6748,7 +6748,9 @@ async function createPlayerResultCard(player, roundData, customTerms, items, att
         
         // Combine all content into a single Text Display - ULTRA COMPACT FORMAT
         let content = `# ${getPlayerEmoji(player.playerName)} ${player.playerName}\n`;
-        content += `Start: ${balanceChange.starting}${customTerms.currencyEmoji}\n\n`;
+        content += `> ## \`1. Balance at the start of Round Results\`\n`;
+        content += `**${customTerms.currencyName || 'Currency'}**\n`;
+        content += `${balanceChange.starting} ${customTerms.currencyName || 'coins'}\n\n`;
         
         // Income section
         const incomeBreakdown = formatIncomeBreakdown(
