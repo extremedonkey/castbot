@@ -10,6 +10,7 @@ import {
     InteractionResponseType,
     InteractionResponseFlags
 } from 'discord-interactions';
+import { DiscordRequest } from './utils.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { initializeGuildSafariData } from './safariInitialization.js';
 import { 
@@ -3719,7 +3720,7 @@ async function resetCustomTerms(guildId) {
  * Process Round Results - Challenge Game Logic Core Engine
  * Handles event determination, player earnings/losses, and round progression
  */
-async function processRoundResults(guildId, channelId, client) {
+async function processRoundResults(guildId, token) {
     try {
         console.log(`🏅 DEBUG: Starting round results processing for guild ${guildId}`);
         
@@ -3934,11 +3935,11 @@ async function processRoundResults(guildId, channelId, client) {
             
             // Use modern display for Round 3 - show final results with rankings
             console.log('🏆 DEBUG: Round 3 completed, creating final results display');
-            return await createRoundResultsV2(guildId, roundData, customTerms, channelId, client);
+            return await createRoundResultsV2(guildId, roundData, customTerms, token);
         }
         
         // Return modern round results display (will post multiple messages)
-        return await createRoundResultsV2(guildId, roundData, customTerms, channelId, client);
+        return await createRoundResultsV2(guildId, roundData, customTerms, token);
         
     } catch (error) {
         console.error('Error processing round results:', error);
@@ -6177,13 +6178,14 @@ async function clearCorruptedAttacks(guildId) {
  * @param {Object} customTerms - Custom terminology
  * @returns {Object} Discord response object
  */
-async function createRoundResultsV2(guildId, roundData, customTerms, channelId, client) {
+async function createRoundResultsV2(guildId, roundData, customTerms, token) {
     try {
         console.log('🎨 DEBUG: Creating V2 round results display with multi-message approach');
         console.log('🎨 DEBUG: Round data:', { 
             currentRound: roundData.currentRound, 
             eligiblePlayersCount: roundData.eligiblePlayers?.length,
-            hasBalanceChanges: Object.keys(roundData.playerBalanceChanges || {}).length
+            hasBalanceChanges: Object.keys(roundData.playerBalanceChanges || {}).length,
+            token: token ? 'present' : 'missing'
         });
         
         const { 
@@ -6207,10 +6209,9 @@ async function createRoundResultsV2(guildId, roundData, customTerms, channelId, 
             throw new Error('No balance changes in round data');
         }
         
-        // Get the channel to post messages to
-        const channel = await client.channels.fetch(channelId);
-        if (!channel) {
-            throw new Error('Channel not found');
+        // Validate token is present
+        if (!token) {
+            throw new Error('Interaction token not provided');
         }
         
         console.log('🎨 DEBUG: Creating player result cards...');
@@ -6350,12 +6351,16 @@ async function createRoundResultsV2(guildId, roundData, customTerms, channelId, 
                     }
                 }
                 
-                const message = await channel.send({
-                    flags: (1 << 15), // IS_COMPONENTS_V2
-                    components: messageComponents
+                // Send followup message via webhook
+                const followupResponse = await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
+                    method: 'POST',
+                    body: {
+                        flags: (1 << 15), // IS_COMPONENTS_V2
+                        components: messageComponents
+                    }
                 });
-                messages.push(message);
-                console.log(`✅ DEBUG: Sent message ${i + 1} with ${chunk.length} players${isLastChunk ? ' (last chunk)' : ''}`);
+                messages.push(followupResponse);
+                console.log(`✅ DEBUG: Sent followup message ${i + 1} with ${chunk.length} players${isLastChunk ? ' (last chunk)' : ''}`);
             }
             
             console.log(`🎉 DEBUG: Successfully sent ${messages.length} messages for round results`);
@@ -6381,13 +6386,16 @@ async function createRoundResultsV2(guildId, roundData, customTerms, channelId, 
         } catch (sendError) {
             console.error('❌ Error sending round results messages:', sendError);
             
-            // Post non-ephemeral error message to channel
+            // Post non-ephemeral error message via followup
             try {
-                await channel.send({
-                    content: `❌ **Error Posting Round Results**\n\n${sendError.message}\n\nPlease contact an administrator to resolve this issue.`
+                await DiscordRequest(`webhooks/${process.env.APP_ID}/${token}`, {
+                    method: 'POST',
+                    body: {
+                        content: `❌ **Error Posting Round Results**\n\n${sendError.message}\n\nPlease contact an administrator to resolve this issue.`
+                    }
                 });
             } catch (errorPostError) {
-                console.error('Failed to post error message to channel:', errorPostError);
+                console.error('Failed to post error message via followup:', errorPostError);
             }
             
             throw sendError;

@@ -8402,8 +8402,8 @@ Your server is now ready for Tycoons gameplay!`;
           // Import Safari manager functions
           const { processRoundResults } = await import('./safariManager.js');
           
-          // Process round results using modern display
-          const roundData = await processRoundResults(context.guildId, context.channelId, client);
+          // Process round results using modern display - pass token for webhook followups
+          const roundData = await processRoundResults(context.guildId, context.token);
           
           console.log(`🎨 DEBUG: Sending modern display with ${roundData.data.components?.length || 0} components${roundData.data.content ? ' and content message' : ''}`);
           
