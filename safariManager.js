@@ -6376,14 +6376,40 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
             return totalChars;
         }
         
-        // Split player cards into chunks of 8 players per message
+        // Split player cards into chunks of 8 ACTUAL PLAYERS per message
+        // Role headers don't count toward the player limit
         const PLAYERS_PER_MESSAGE = 8;
         const playerChunks = [];
-        for (let i = 0; i < playerCards.length; i += PLAYERS_PER_MESSAGE) {
-            playerChunks.push(playerCards.slice(i, i + PLAYERS_PER_MESSAGE));
+        let currentChunk = [];
+        let playersInCurrentChunk = 0;
+        
+        for (const card of playerCards) {
+            // Check if this is a role header (has content starting with "> #")
+            const isRoleHeader = card.components?.[0]?.content?.startsWith("> #");
+            
+            if (isRoleHeader) {
+                // Always include role headers, they don't count toward player limit
+                currentChunk.push(card);
+            } else {
+                // This is a player card
+                if (playersInCurrentChunk >= PLAYERS_PER_MESSAGE) {
+                    // Current chunk is full, start a new one
+                    playerChunks.push(currentChunk);
+                    currentChunk = [];
+                    playersInCurrentChunk = 0;
+                }
+                currentChunk.push(card);
+                playersInCurrentChunk++;
+            }
         }
         
-        console.log(`📦 DEBUG: Split ${playerCards.length} players into ${playerChunks.length} messages (${PLAYERS_PER_MESSAGE} per message)`);
+        // Add the last chunk if it has any content
+        if (currentChunk.length > 0) {
+            playerChunks.push(currentChunk);
+        }
+        
+        const totalPlayers = playerCards.filter(card => !card.components?.[0]?.content?.startsWith("> #")).length;
+        console.log(`📦 DEBUG: Split ${totalPlayers} players (${playerCards.length} total components) into ${playerChunks.length} messages`);
         
         // Send messages
         const messages = [];
