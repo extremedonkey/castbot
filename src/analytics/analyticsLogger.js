@@ -857,7 +857,10 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         break;
         
       case 'SAFARI_ATTACK':
-        logMessage = `⚔️ **ATTACK** | [${timestamp}] | <@${safariContent.attackerId}> attacked <@${safariContent.targetId}> at **${safariContent.location}**${channelDisplay}\n> Result: ${safariContent.result}`;
+        // Extract round number from the result string if available
+        const roundMatch = safariContent.result?.match(/Round (\d+)/);
+        const roundNumber = roundMatch ? roundMatch[1] : 'Unknown';
+        logMessage = `⚔️ **ATTACK** | [${timestamp}] | <@${safariContent.attackerId}> scheduled an attack for <@${safariContent.targetId}> in Round ${roundNumber}${channelDisplay}\n> Result: ${safariContent.result}`;
         break;
         
       case 'SAFARI_CUSTOM_ACTION':
