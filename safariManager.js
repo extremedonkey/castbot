@@ -6521,17 +6521,17 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
                     }
                 }
                 
-                // Add debug text component showing total character count
-                const debugContainer = {
-                    type: 17, // Container
-                    components: [
-                        {
-                            type: 10, // Text Display
-                            content: `-# ${chunkCharCount}`
-                        }
-                    ]
-                };
-                messageComponents.push(debugContainer);
+                // Debug text component showing total character count (commented out for now)
+                // const debugContainer = {
+                //     type: 17, // Container
+                //     components: [
+                //         {
+                //             type: 10, // Text Display
+                //             content: `-# ${chunkCharCount}`
+                //         }
+                //     ]
+                // };
+                // messageComponents.push(debugContainer);
                 
                 // Send message based on execution type
                 let message;
