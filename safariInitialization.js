@@ -21,6 +21,7 @@ const DEFAULT_SAFARI_CONFIG = {
     round1GoodProbability: 70,
     round2GoodProbability: 50,
     round3GoodProbability: 30,
+    totalRounds: 3, // New: configurable number of rounds (default 3)
     currentRound: 1,
     lastRoundTimestamp: null
 };
@@ -236,6 +237,14 @@ async function validateSafariConfig(guildId, currentConfig, customConfig = {}) {
         // Initialize currentRound if not set
         if (!updatedConfig.currentRound || updatedConfig.currentRound < 1) {
             updatedConfig.currentRound = 1;
+            updated = true;
+        }
+        
+        // Migration: Handle existing games with currentRound === 4 (old complete state)
+        if (!updatedConfig.totalRounds && updatedConfig.currentRound === 4) {
+            // Game was complete under old system, set totalRounds to 3 (maintain state)
+            updatedConfig.totalRounds = 3;
+            console.log(`📝 DEBUG: Migrated guild ${guildId} - was in complete state, set totalRounds=3`);
             updated = true;
         }
         

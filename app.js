@@ -999,10 +999,11 @@ async function createSafariMenu(guildId, userId, member) {
   const inventoryLabel = `My ${inventoryName}`;
   
   // Create dynamic round results button labels
+  const totalRounds = safariConfig.totalRounds || 3; // Default to 3 rounds
   let roundResultsLabel;
-  if (currentRound >= 1 && currentRound <= 3) {
+  if (currentRound >= 1 && currentRound <= totalRounds) {
     roundResultsLabel = `Round ${currentRound} Results`;
-  } else if (currentRound === 4) {
+  } else if (currentRound > totalRounds) {
     roundResultsLabel = 'Reset Game';
   } else {
     roundResultsLabel = 'Results'; // Fallback
@@ -23857,6 +23858,7 @@ Are you sure you want to continue?`;
           const guildData = safariData[context.guildId] || {};
           const safariConfig = guildData.safariConfig || {};
           const currentRound = safariConfig.currentRound;
+          const totalRounds = safariConfig.totalRounds || 3; // Default to 3 rounds
           
           // Count initialized players - those with safari data
           const guildPlayers = playerData[context.guildId]?.players || {};
@@ -23866,9 +23868,9 @@ Are you sure you want to continue?`;
           let roundResultsLabel;
           if (!currentRound || currentRound === 0) {
             roundResultsLabel = 'Start Game';
-          } else if (currentRound >= 1 && currentRound <= 3) {
+          } else if (currentRound >= 1 && currentRound <= totalRounds) {
             roundResultsLabel = `Reveal Round ${currentRound} Results`;
-          } else if (currentRound === 4) {
+          } else if (currentRound > totalRounds) {
             roundResultsLabel = 'Reset Game';
           } else {
             roundResultsLabel = 'Reveal Results';
@@ -23917,7 +23919,12 @@ Are you sure you want to continue?`;
               .setCustomId('safari_global_stores')
               .setLabel('Add Global Store')
               .setStyle(ButtonStyle.Secondary) // Grey
-              .setEmoji('🏪')
+              .setEmoji('🏪'),
+            new ButtonBuilder()
+              .setCustomId('safari_configure_rounds')
+              .setLabel('Configure Rounds')
+              .setStyle(ButtonStyle.Secondary) // Grey
+              .setEmoji('⚙️')
           ];
           
           const additionalRow = new ActionRowBuilder().addComponents(additionalButtons);
@@ -23944,11 +23951,11 @@ Are you sure you want to continue?`;
             { type: 14 }, // Separator
             {
               type: 10, // Text Display
-              content: currentRound === 4 
-                ? `**Status:** Round 3 Complete - Ready to reset | **Global Stores:** ${globalStores.length}`
+              content: currentRound > totalRounds 
+                ? `**Status:** Round ${totalRounds} Complete - Ready to reset | **Total Rounds:** ${totalRounds} | **Global Stores:** ${globalStores.length}`
                 : (!currentRound || currentRound === 0)
-                ? `**Status:** Game Not Started | **Players Initialized:** ${initializedPlayers} | **Global Stores:** ${globalStores.length}`
-                : `**Current Round:** ${currentRound} | **Players Initialized:** ${initializedPlayers} | **Global Stores:** ${globalStores.length}`
+                ? `**Status:** Game Not Started | **Total Rounds:** ${totalRounds} | **Players Initialized:** ${initializedPlayers} | **Global Stores:** ${globalStores.length}`
+                : `**Current Round:** ${currentRound} of ${totalRounds} | **Players Initialized:** ${initializedPlayers} | **Global Stores:** ${globalStores.length}`
             },
             { type: 14 }, // Separator
             {
@@ -24036,6 +24043,51 @@ Are you sure you want to continue?`;
           return {
             flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
             components: [container]
+          };
+        }
+      })(req, res, client);
+      
+    } else if (custom_id === 'safari_configure_rounds') {
+      // Handle Configure Rounds button - shows modal for setting total rounds
+      return ButtonHandlerFactory.create({
+        id: 'safari_configure_rounds',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`⚙️ START: safari_configure_rounds - user ${context.userId}`);
+          
+          // Load current config
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const safariConfig = safariData[context.guildId]?.safariConfig || {};
+          const currentTotalRounds = safariConfig.totalRounds || 3;
+          
+          // Create and send modal
+          const { InteractionResponseType } = await import('discord-interactions');
+          const { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = await import('discord.js');
+          
+          const modal = new ModalBuilder()
+            .setCustomId('safari_rounds_config_modal')
+            .setTitle('Configure Number of Rounds');
+          
+          const roundsInput = new TextInputBuilder()
+            .setCustomId('total_rounds_input')
+            .setLabel('Number of Rounds')
+            .setPlaceholder('Enter number of rounds per game (minimum 1)')
+            .setValue(currentTotalRounds.toString())
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMinLength(1)
+            .setMaxLength(3);
+          
+          const firstActionRow = new ActionRowBuilder().addComponents(roundsInput);
+          modal.addComponents(firstActionRow);
+          
+          console.log(`✅ SUCCESS: safari_configure_rounds - showing modal`);
+          
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
           };
         }
       })(req, res, client);
@@ -31641,6 +31693,104 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: `❌ Import failed: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+      
+    } else if (custom_id === 'safari_rounds_config_modal') {
+      // Handle rounds configuration modal submission
+      try {
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const member = req.body.member;
+        
+        // Security check - require ManageRoles permission
+        if (!member?.permissions || !(BigInt(member.permissions) & PermissionFlagsBits.ManageRoles)) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ You need Manage Roles permission to configure Safari rounds.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        console.log(`⚙️ DEBUG: Processing rounds configuration for guild ${guildId} by user ${userId}`);
+        
+        // Extract the total rounds value from modal
+        const totalRoundsInput = data.components[0]?.components[0]?.value;
+        const newTotalRounds = parseInt(totalRoundsInput);
+        
+        // Validate input
+        if (isNaN(newTotalRounds) || newTotalRounds < 1) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Invalid input. Number of rounds must be at least 1.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Load current Safari data
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        
+        // Initialize guild data if needed
+        if (!safariData[guildId]) {
+          safariData[guildId] = { safariConfig: {} };
+        }
+        if (!safariData[guildId].safariConfig) {
+          safariData[guildId].safariConfig = {};
+        }
+        
+        const safariConfig = safariData[guildId].safariConfig;
+        const currentRound = safariConfig.currentRound || 0;
+        const oldTotalRounds = safariConfig.totalRounds || 3;
+        
+        // Validation logic based on current game state
+        if (currentRound > newTotalRounds && currentRound <= oldTotalRounds) {
+          // Trying to reduce rounds below current round while game is in progress
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ You have a game currently in progress on round ${currentRound} and are attempting to reduce the Total Rounds to ${newTotalRounds}. Finish your current game and reset the game first before changing Total Rounds.`,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Update totalRounds
+        safariConfig.totalRounds = newTotalRounds;
+        await saveSafariContent(safariData);
+        
+        console.log(`✅ DEBUG: Updated totalRounds from ${oldTotalRounds} to ${newTotalRounds} for guild ${guildId}`);
+        
+        // Determine status message
+        let statusMessage = '';
+        if (currentRound === 0 || !currentRound) {
+          statusMessage = `\n\nThe game is not started, so this change will take effect when you start the game.`;
+        } else if (currentRound > oldTotalRounds) {
+          statusMessage = `\n\n⚠️ The game was previously completed. You can now continue with additional rounds or reset the game.`;
+        } else if (currentRound <= newTotalRounds) {
+          statusMessage = `\n\nThe game is currently on round ${currentRound} of ${newTotalRounds}.`;
+        }
+        
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `✅ Successfully updated the number of rounds from **${oldTotalRounds}** to **${newTotalRounds}**.${statusMessage}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+        
+      } catch (error) {
+        console.error('Error in rounds configuration modal handler:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Configuration failed: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

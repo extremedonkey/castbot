@@ -298,6 +298,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'safari_configure_rounds': {
+    label: 'Configure Rounds',
+    description: 'Configure the number of rounds per Safari game',
+    emoji: '⚙️',
+    style: 'Secondary',
+    category: 'safari'
+  },
   'global_stores_select': {
     label: 'Select Global Stores',
     description: 'String select menu for choosing global stores',

@@ -3540,6 +3540,60 @@ async function createSimplifiedInventoryDisplay(guildId, userId, member = null) 
 }
 
 /**
+ * Calculate round probability using linear interpolation
+ * For N rounds, interpolates between start, mid, and end probabilities
+ * @param {number} currentRound - Current round number (1-based)
+ * @param {number} totalRounds - Total number of rounds
+ * @param {Object} config - Safari configuration with probability settings
+ * @returns {number} Calculated probability for the current round
+ */
+function calculateRoundProbability(currentRound, totalRounds, config) {
+    // Get probabilities from config or use defaults
+    const startProb = config.round1GoodProbability || 70;
+    const midProb = config.round2GoodProbability || 50;
+    const endProb = config.round3GoodProbability || 30;
+    
+    // Handle edge cases
+    if (totalRounds === 1) {
+        // Single round game: use end probability (most challenging)
+        return endProb;
+    }
+    
+    if (totalRounds === 2) {
+        // Two round game: interpolate between start and end
+        if (currentRound === 1) return startProb;
+        if (currentRound === 2) return endProb;
+    }
+    
+    // For 3+ rounds: interpolate using piecewise linear interpolation
+    if (totalRounds === 3) {
+        // Original behavior for backwards compatibility
+        if (currentRound === 1) return startProb;
+        if (currentRound === 2) return midProb;
+        if (currentRound === 3) return endProb;
+    }
+    
+    // For 4+ rounds: interpolate between start, mid, and end
+    const midRound = Math.ceil(totalRounds / 2);
+    
+    if (currentRound === 1) {
+        return startProb;
+    } else if (currentRound === totalRounds) {
+        return endProb;
+    } else if (currentRound === midRound) {
+        return midProb;
+    } else if (currentRound < midRound) {
+        // Interpolate between start and mid
+        const progress = (currentRound - 1) / (midRound - 1);
+        return Math.round(startProb - (startProb - midProb) * progress);
+    } else {
+        // Interpolate between mid and end
+        const progress = (currentRound - midRound) / (totalRounds - midRound);
+        return Math.round(midProb - (midProb - endProb) * progress);
+    }
+}
+
+/**
  * Get custom terminology for a guild
  * @param {string} guildId - Discord guild ID
  * @returns {Object} Custom terms with fallbacks
@@ -3572,6 +3626,7 @@ async function getCustomTerms(guildId) {
             
             // Game state
             currentRound: config.currentRound || 1,
+            totalRounds: config.totalRounds || 3, // Default to 3 rounds for backwards compatibility
             lastRoundTimestamp: config.lastRoundTimestamp || null
         };
     } catch (error) {
@@ -3598,6 +3653,7 @@ async function getCustomTerms(guildId) {
             
             // Game state fallbacks
             currentRound: 1,
+            totalRounds: 3, // Default to 3 rounds
             lastRoundTimestamp: null
         };
     }
@@ -3858,28 +3914,18 @@ async function processRoundResults(guildId, token, client, options = {}) {
             };
         }
         
-        // If currentRound == 4, show reset interface
-        if (currentRound === 4) {
-            console.log('🔄 DEBUG: Game completed (currentRound=4), showing reset interface');
+        // Get custom terms including totalRounds
+        const customTerms = await getCustomTerms(guildId);
+        const totalRounds = customTerms.totalRounds || 3;
+        
+        // If currentRound > totalRounds, show reset interface (game completed)
+        if (currentRound > totalRounds) {
+            console.log(`🔄 DEBUG: Game completed (currentRound=${currentRound} > totalRounds=${totalRounds}), showing reset interface`);
             return createResetInterface();
         }
         
-        // Get custom terms for event names/probabilities
-        const customTerms = await getCustomTerms(guildId);
-        
-        // Get round-specific good event probability
-        let goodEventProbability = 75; // Default for round 1
-        switch (currentRound) {
-            case 1:
-                goodEventProbability = customTerms.round1GoodProbability || 75;
-                break;
-            case 2:
-                goodEventProbability = customTerms.round2GoodProbability || 50;
-                break;
-            case 3:
-                goodEventProbability = customTerms.round3GoodProbability || 25;
-                break;
-        }
+        // Get round-specific good event probability using interpolation
+        const goodEventProbability = calculateRoundProbability(currentRound, totalRounds, customTerms);
         
         console.log(`📊 DEBUG: Round ${currentRound} probabilities - Good: ${goodEventProbability}%`);
         
@@ -4004,6 +4050,7 @@ async function processRoundResults(guildId, token, client, options = {}) {
         // Prepare round data for display functions
         const roundData = {
             currentRound,
+            totalRounds, // Add totalRounds for display
             isGoodEvent: eventType === 'good',
             eventName,
             eventEmoji,
@@ -4027,17 +4074,17 @@ async function processRoundResults(guildId, token, client, options = {}) {
         }
         
         // Advance to next round or complete game
-        if (currentRound < 3) {
+        if (currentRound < totalRounds) {
             // Advance to next round
             safariConfig.currentRound = currentRound + 1;
             await saveSafariContent(safariData);
         } else {
-            // Round 3 completed - show detailed results with final rankings and set to round 4 (reset state)
-            safariConfig.currentRound = 4;
+            // Final round completed - show detailed results with final rankings and set to complete state
+            safariConfig.currentRound = totalRounds + 1;
             await saveSafariContent(safariData);
             
-            // Use modern display for Round 3 - show final results with rankings
-            console.log('🏆 DEBUG: Round 3 completed, creating final results display');
+            // Use modern display for final round - show final results with rankings
+            console.log(`🏆 DEBUG: Round ${totalRounds} completed, creating final results display`);
             return await createRoundResultsV2(guildId, roundData, customTerms, token, client, options);
         }
         
@@ -4371,9 +4418,9 @@ async function storeRoundResult(guildId, roundResult) {
         
         // Build next round message
         let nextRoundMsg = '';
-        if (currentRound < 3) {
-            nextRoundMsg = `\n**Next:** Round ${currentRound + 1}`;
-            if (currentRound === 2) {
+        if (currentRound < totalRounds) {
+            nextRoundMsg = `\n**Next:** Round ${currentRound + 1} of ${totalRounds}`;
+            if (currentRound === totalRounds - 1) {
                 nextRoundMsg += ' (Final Round)';
             }
         } else {
@@ -6292,7 +6339,8 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
         });
         
         const { 
-            currentRound, 
+            currentRound,
+            totalRounds,
             isGoodEvent, 
             eventName, 
             eventEmoji,
@@ -6345,7 +6393,7 @@ async function createRoundResultsV2(guildId, roundData, customTerms, token, clie
             components: [
                 {
                     type: 10, // Text Display
-                    content: `# 🎲 Round ${currentRound} Results\n\n## ${eventEmoji} ${eventName}\n\n**${eligiblePlayers.length} players participated** | **Total balance changes calculated below**`
+                    content: `# 🎲 Round ${currentRound}${totalRounds ? ` of ${totalRounds}` : ''} Results\n\n## ${eventEmoji} ${eventName}\n\n**${eligiblePlayers.length} players participated** | **Total balance changes calculated below**`
                 }
             ]
         };
