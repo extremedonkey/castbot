@@ -976,6 +976,7 @@ async function createSafariMenu(guildId, userId, member) {
   let inventoryName = 'Nest'; // Default
   let inventoryEmoji = '🧰'; // Default emoji
   let currentRound = 1; // Default round
+  let totalRounds = 3; // Default total rounds
   
   try {
     const { loadSafariContent } = await import('./safariManager.js');
@@ -991,6 +992,10 @@ async function createSafariMenu(guildId, userId, member) {
     if (guildConfig?.currentRound) {
       currentRound = guildConfig.currentRound;
     }
+    // Get total rounds
+    if (guildConfig?.totalRounds) {
+      totalRounds = guildConfig.totalRounds;
+    }
   } catch (error) {
     console.error('Error loading safari config:', error);
   }
@@ -999,7 +1004,6 @@ async function createSafariMenu(guildId, userId, member) {
   const inventoryLabel = `My ${inventoryName}`;
   
   // Create dynamic round results button labels
-  const totalRounds = safariConfig.totalRounds || 3; // Default to 3 rounds
   let roundResultsLabel;
   if (currentRound >= 1 && currentRound <= totalRounds) {
     roundResultsLabel = `Round ${currentRound} Results`;
