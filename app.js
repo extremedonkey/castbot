@@ -25994,6 +25994,23 @@ Are you sure you want to continue?`;
         
         // Show additional placement fields for alumni_placements type
         if (selectedCastlist === 'alumni_placements') {
+          // Add season name field
+          modal.components.push({
+            type: 1, // Action Row
+            components: [
+              {
+                type: 4, // Text Input
+                custom_id: 'season_name',
+                label: 'Season Name (Optional)',
+                style: 1, // Short
+                min_length: 1,
+                max_length: 100,
+                required: false,
+                placeholder: 'e.g., LOSTvivor S2: We\'ve got to go back'
+              }
+            ]
+          });
+          
           // Add 3rd place ID
           modal.components.push({
             type: 1, // Action Row
@@ -28111,11 +28128,28 @@ Are you sure you want to continue?`;
         
         // Extract placement data if this is an alumni_placements type
         let rankings = {};
+        let seasonId = null;
+        let seasonName = null;
+        
         if (selectedCastlist === 'alumni_placements') {
-          // Extract the placement IDs from modal components
-          const thirdPlaceId = components[1]?.components[0]?.value?.trim() || null;
-          const secondPlaceId = components[2]?.components[0]?.value?.trim() || null;
-          const firstPlaceId = components[3]?.components[0]?.value?.trim() || null;
+          // Extract season name from modal (accounting for new field)
+          const seasonNameInput = components[1]?.components[0]?.value?.trim() || null;
+          
+          // Extract the placement IDs from modal components (shifted by 1 due to season field)
+          const thirdPlaceId = components[2]?.components[0]?.value?.trim() || null;
+          const secondPlaceId = components[3]?.components[0]?.value?.trim() || null;
+          const firstPlaceId = components[4]?.components[0]?.value?.trim() || null;
+          
+          // Create season if name was provided
+          if (seasonNameInput) {
+            const { createSeason } = await import('./storage.js');
+            seasonId = await createSeason(guildId, {
+              name: seasonNameInput,
+              userId: req.body.member.user.id,
+              source: 'alumni_castlist'
+            });
+            seasonName = seasonNameInput;
+          }
           
           // Build rankings object
           if (firstPlaceId) {
@@ -28172,6 +28206,14 @@ Are you sure you want to continue?`;
         if (selectedCastlist === 'alumni_placements') {
           tribeData.type = 'alumni_placements';
           tribeData.rankings = rankings;
+          if (seasonId) {
+            tribeData.seasonId = seasonId;
+            tribeData.seasonName = seasonName;
+            
+            // Link season to tribe
+            const { linkSeasonToEntity } = await import('./storage.js');
+            await linkSeasonToEntity(guildId, seasonId, 'tribes', roleId);
+          }
         }
         
         playerData[guildId].tribes[roleId] = tribeData;
@@ -28188,6 +28230,9 @@ Are you sure you want to continue?`;
         if (selectedCastlist === 'alumni_placements') {
           const placementCount = Object.keys(rankings).length;
           successContent += `🏆 **Alumni Season Placements Created**\n`;
+          if (seasonName) {
+            successContent += `📅 **Season:** ${seasonName}\n`;
+          }
           successContent += `Added ${placementCount} placement${placementCount !== 1 ? 's' : ''}:\n`;
           
           // Show the placements that were added

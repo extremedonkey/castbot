@@ -276,7 +276,10 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     const tribeHeaderText = `${tribe.emoji || ''} **${tribe.name}** ${tribe.emoji || ''}`.trim();
     const paginationText = totalPages > 1 ? ` \`${currentPage + 1}/${totalPages}\`` : '';
     
-    const combinedHeaderContent = `${castlistDisplay}\n${tribeHeaderText}${paginationText}`;
+    // Add season name if available (for alumni placements with seasons)
+    const seasonText = tribe.seasonName ? `\n📅 **Season:** ${tribe.seasonName}` : '';
+    
+    const combinedHeaderContent = `${castlistDisplay}\n${tribeHeaderText}${paginationText}${seasonText}`;
     
     // Create tribe header as simple Text Display (not Section to avoid accessory requirement)
     const tribeHeader = {

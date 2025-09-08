@@ -568,3 +568,235 @@ export async function getApplicationsForSeason(guildId, configId) {
     return app.configId === configId;
   });
 }
+
+/**
+ * Create a new season in the unified season registry
+ * @param {string} guildId - Guild ID
+ * @param {Object} seasonData - Season data including name, userId, source
+ * @returns {string} The created season ID
+ */
+export async function createSeason(guildId, seasonData) {
+  const playerData = await loadPlayerData();
+  const guildData = playerData[guildId] || {};
+  
+  if (!guildData.seasons) {
+    guildData.seasons = {};
+  }
+  
+  const seasonId = `season_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  guildData.seasons[seasonId] = {
+    id: seasonId,
+    name: seasonData.name,
+    createdAt: Date.now(),
+    createdBy: seasonData.userId,
+    source: seasonData.source || 'manual',
+    archived: false,
+    linkedEntities: {
+      applicationConfigs: [],
+      tribes: [],
+      castRankings: []
+    }
+  };
+  
+  playerData[guildId] = guildData;
+  await savePlayerData(playerData);
+  
+  console.log(`📅 Created new season: ${seasonData.name} (${seasonId}) from ${seasonData.source}`);
+  return seasonId;
+}
+
+/**
+ * Get all seasons for a guild
+ * @param {string} guildId - Guild ID
+ * @returns {Array} Array of season objects
+ */
+export async function getAllSeasons(guildId) {
+  const playerData = await loadPlayerData();
+  const guildData = playerData[guildId] || {};
+  const seasons = guildData.seasons || {};
+  
+  // Also check for seasons in applicationConfigs for backwards compatibility
+  const applicationConfigs = guildData.applicationConfigs || {};
+  const configSeasons = [];
+  
+  for (const [configId, config] of Object.entries(applicationConfigs)) {
+    if (config.seasonId && !seasons[config.seasonId]) {
+      // Create season entry from config for backwards compatibility
+      configSeasons.push({
+        id: config.seasonId,
+        name: config.seasonName || 'Unknown Season',
+        source: 'application_builder',
+        createdAt: 0,
+        archived: false,
+        linkedEntities: {
+          applicationConfigs: [configId],
+          tribes: [],
+          castRankings: []
+        }
+      });
+    }
+  }
+  
+  return [...Object.values(seasons), ...configSeasons];
+}
+
+/**
+ * Get a specific season
+ * @param {string} guildId - Guild ID
+ * @param {string} seasonId - Season ID
+ * @returns {Object|null} Season object or null if not found
+ */
+export async function getSeason(guildId, seasonId) {
+  const seasons = await getAllSeasons(guildId);
+  return seasons.find(s => s.id === seasonId) || null;
+}
+
+/**
+ * Link a season to an entity (tribe, config, etc.)
+ * @param {string} guildId - Guild ID
+ * @param {string} seasonId - Season ID
+ * @param {string} entityType - Type of entity (tribes, applicationConfigs, castRankings)
+ * @param {string} entityId - Entity ID
+ */
+export async function linkSeasonToEntity(guildId, seasonId, entityType, entityId) {
+  const playerData = await loadPlayerData();
+  const guildData = playerData[guildId] || {};
+  
+  if (!guildData.seasons) {
+    guildData.seasons = {};
+  }
+  
+  // Ensure season exists
+  let season = guildData.seasons[seasonId];
+  if (!season) {
+    // Check if it's from applicationConfigs
+    const configs = guildData.applicationConfigs || {};
+    const config = Object.values(configs).find(c => c.seasonId === seasonId);
+    if (config) {
+      // Create season entry for backwards compatibility
+      season = {
+        id: seasonId,
+        name: config.seasonName || 'Unknown Season',
+        source: 'application_builder',
+        createdAt: Date.now(),
+        archived: false,
+        linkedEntities: {
+          applicationConfigs: [],
+          tribes: [],
+          castRankings: []
+        }
+      };
+      guildData.seasons[seasonId] = season;
+    } else {
+      console.warn(`⚠️ Cannot link to non-existent season: ${seasonId}`);
+      return;
+    }
+  }
+  
+  if (season.linkedEntities[entityType] && !season.linkedEntities[entityType].includes(entityId)) {
+    season.linkedEntities[entityType].push(entityId);
+    playerData[guildId] = guildData;
+    await savePlayerData(playerData);
+    console.log(`🔗 Linked ${entityType}:${entityId} to season ${seasonId}`);
+  }
+}
+
+/**
+ * Archive a season (soft delete)
+ * @param {string} guildId - Guild ID
+ * @param {string} seasonId - Season ID
+ * @returns {boolean} True if archived, false if has dependencies
+ */
+export async function archiveSeason(guildId, seasonId) {
+  const playerData = await loadPlayerData();
+  const season = playerData[guildId]?.seasons?.[seasonId];
+  
+  if (!season) {
+    console.warn(`⚠️ Cannot archive non-existent season: ${seasonId}`);
+    return false;
+  }
+  
+  // Check for active dependencies
+  const dependencies = [];
+  if (season.linkedEntities.applicationConfigs?.length > 0) {
+    dependencies.push(`${season.linkedEntities.applicationConfigs.length} application configs`);
+  }
+  if (season.linkedEntities.tribes?.length > 0) {
+    dependencies.push(`${season.linkedEntities.tribes.length} castlist tribes`);
+  }
+  if (season.linkedEntities.castRankings?.length > 0) {
+    dependencies.push(`${season.linkedEntities.castRankings.length} cast rankings`);
+  }
+  
+  if (dependencies.length > 0) {
+    console.log(`⚠️ Cannot archive season with dependencies: ${dependencies.join(', ')}`);
+    return false;
+  }
+  
+  season.archived = true;
+  season.archivedAt = Date.now();
+  await savePlayerData(playerData);
+  
+  console.log(`📦 Archived season: ${season.name} (${seasonId})`);
+  return true;
+}
+
+/**
+ * Migrate existing seasons to unified registry
+ * @param {string} guildId - Guild ID
+ */
+export async function migrateToUnifiedSeasons(guildId) {
+  const playerData = await loadPlayerData();
+  const guildData = playerData[guildId] || {};
+  
+  // Initialize seasons registry if not exists
+  if (!guildData.seasons) {
+    guildData.seasons = {};
+  }
+  
+  let migrated = 0;
+  
+  // Migrate from applicationConfigs
+  const configs = guildData.applicationConfigs || {};
+  for (const [configId, config] of Object.entries(configs)) {
+    if (config.seasonId && !guildData.seasons[config.seasonId]) {
+      guildData.seasons[config.seasonId] = {
+        id: config.seasonId,
+        name: config.seasonName || 'Unknown Season',
+        source: 'application_builder',
+        createdAt: Date.now(),
+        createdBy: null,
+        archived: false,
+        linkedEntities: {
+          applicationConfigs: [configId],
+          tribes: [],
+          castRankings: []
+        }
+      };
+      migrated++;
+    } else if (config.seasonId && guildData.seasons[config.seasonId]) {
+      // Link existing season to config
+      if (!guildData.seasons[config.seasonId].linkedEntities.applicationConfigs.includes(configId)) {
+        guildData.seasons[config.seasonId].linkedEntities.applicationConfigs.push(configId);
+      }
+    }
+  }
+  
+  // Future: Migrate alumni castlists with seasons
+  const tribes = guildData.tribes || {};
+  for (const [tribeId, tribe] of Object.entries(tribes)) {
+    if (tribe.seasonId && guildData.seasons[tribe.seasonId]) {
+      if (!guildData.seasons[tribe.seasonId].linkedEntities.tribes.includes(tribeId)) {
+        guildData.seasons[tribe.seasonId].linkedEntities.tribes.push(tribeId);
+      }
+    }
+  }
+  
+  if (migrated > 0) {
+    playerData[guildId] = guildData;
+    await savePlayerData(playerData);
+    console.log(`🔄 Migrated ${migrated} seasons to unified registry for guild ${guildId}`);
+  }
+  
+  return migrated;
+}
