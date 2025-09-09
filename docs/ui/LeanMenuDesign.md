@@ -6,7 +6,7 @@
 ```javascript
 // LEAN Menu Template - Copy this pattern for ALL menus
 const containerComponents = [
-  { type: 10, content: `## Menu Title | Key Features` },   // Header (e.g. "🦁 Safari | Idol Hunts, Challenges & More")
+  { type: 10, content: `## Menu Title | Key Features` },   // Header (e.g. "## 🦁 Safari | Idol Hunts, Challenges & More")
   { type: 14 },                                            // Separator
   { type: 10, content: `> **\`📊 Section Name\`**` },     // Section header
   actionRow1.toJSON(),                                     // Buttons (max 5)

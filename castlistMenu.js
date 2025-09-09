@@ -29,7 +29,7 @@ export async function createCastlistMenu(guildId) {
         components: [
           {
             type: 10, // Text Display
-            content: '# 📋 Castlists | Easily create Castlists!'
+            content: '## 📋 Castlists | OG Tribes, Swaps, Alumni, Winners and more!'
           },
           {
             type: 14 // Separator
