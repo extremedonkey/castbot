@@ -70,7 +70,7 @@ function getStageName(stage) {
 export async function createSeasonSelector(guildId, options = {}) {
   const {
     customId = 'entity_select_seasons',
-    placeholder = 'Select a season to manage...',
+    placeholder = 'Select your season...',
     includeCreateNew = true,
     showArchived = false,
     filterStage = null

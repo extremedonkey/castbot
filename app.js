@@ -6506,7 +6506,7 @@ To fix this:
           const { createSeasonSelector } = await import('./seasonSelector.js');
           const seasonSelectDropdown = await createSeasonSelector(guildId, {
             customId: 'entity_select_seasons',
-            placeholder: 'Select a season to manage applications for...',
+            // Uses default placeholder: 'Select your season...'
             includeCreateNew: true,
             showArchived: false
           });
@@ -6517,7 +6517,7 @@ To fix this:
           const seasonManagementComponents = [
             {
               type: 10, // Text Display
-              content: `## Manage Season Applications | ${guild.name}`
+              content: `## Season Applications | Create & Manage your Casting Process!`
             },
             {
               type: 14 // Separator
