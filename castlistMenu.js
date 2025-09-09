@@ -5,6 +5,7 @@ import {
 } from './seasonSelector.js';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
 import { savePlayerData } from './storage.js';
+import { formatBotEmoji } from './botEmojis.js';
 
 /**
  * Creates the season selection menu UI
@@ -29,7 +30,7 @@ export async function createCastlistMenu(guildId) {
         components: [
           {
             type: 10, // Text Display
-            content: '## :castbot_logo: CastBot | Select Season'
+            content: `## ${formatBotEmoji('castbot_logo')} CastBot | Select Season`
           },
           {
             type: 14 // Separator
