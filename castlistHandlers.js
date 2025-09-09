@@ -7,7 +7,6 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';
 import { createCastlistHub, CastlistButtonType } from './castlistHub.js';
 import { castlistManager } from './castlistManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
-import { sendCastlist2Response } from './castlistV2.js';
 
 /**
  * Handle castlist selection from dropdown
@@ -248,7 +247,7 @@ export function handleShowCastlist(req, res, client, custom_id) {
         };
       }
       
-      // Use the first tribe for now (later we could let user select)
+      // Get the first tribe using this castlist
       const tribeId = tribesUsingCastlist[0];
       const tribe = playerData[context.guildId]?.tribes?.[tribeId];
       
@@ -259,19 +258,25 @@ export function handleShowCastlist(req, res, client, custom_id) {
         };
       }
       
-      // Use sendCastlist2Response to post the castlist
-      const castlistResponse = await sendCastlist2Response(
-        context.member,
-        context.guild,
-        playerData,
-        context.guildId,
-        tribeId, // Use first tribe ID
-        0, // Start at page 0
-        context.channelId,
-        false // Not application context
-      );
+      // For now, just show basic castlist info
+      // TODO: Integrate with proper castlist display system
+      const members = await castlistManager.getCastlistMembers(context.guildId, castlistId);
       
-      return castlistResponse;
+      return {
+        embeds: [{
+          title: `${castlist.metadata?.emoji || '📋'} ${castlist.name}`,
+          description: castlist.metadata?.description || 'Castlist',
+          fields: [{
+            name: `Members (${members.length})`,
+            value: members.length > 0 
+              ? members.slice(0, 10).map(m => `<@${m.playerId}>`).join('\n') + 
+                (members.length > 10 ? `\n... and ${members.length - 10} more` : '')
+              : 'No members yet',
+            inline: false
+          }],
+          color: 0x9b59b6
+        }]
+      };
     }
   })(req, res, client);
 }
