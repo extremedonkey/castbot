@@ -38,7 +38,7 @@ MenuBuilder.registerMenu(id, config)        // Register new menu
 ### 3. Legacy Tracking System
 Provides visibility into migration progress:
 ```
-MENU DEBUG: Building main_menu [🎯 MENUSYSTEM]        // Using new system
+MENU DEBUG: Building main_menu [🛸 MENUSYSTEM]        // Using new system
 MENU DEBUG: Legacy menu at prod_manage_tribes [⚱️ MENULEGACY]  // Needs migration
 MENU DEBUG: Unknown menu invalid_id [⚠️ UNREGISTERED] // Not in registry
 ```

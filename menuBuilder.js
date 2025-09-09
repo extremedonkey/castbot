@@ -37,7 +37,7 @@ export class MenuBuilder {
    * @returns {Object} Menu container following Components V2 format
    */
   static async create(menuId, context) {
-    console.log(`MENU DEBUG: Building ${menuId} [🎯 MENUSYSTEM]`);
+    console.log(`MENU DEBUG: Building ${menuId} [🛸 MENUSYSTEM]`);
     
     const menuConfig = MENU_REGISTRY[menuId];
     if (!menuConfig) {
