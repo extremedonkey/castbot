@@ -7,9 +7,8 @@ import { InteractionResponseType, InteractionResponseFlags } from 'discord-inter
 import { savePlayerData } from './storage.js';
 
 /**
- * Creates the main Castlist menu UI following LEAN Menu Design
- * This will eventually integrate with castlistV2.js for display
- * and support CastlistV3 season integration features
+ * Creates the season selection menu UI
+ * This appears when users click "Change Szn" in the Production Menu header
  */
 export async function createCastlistMenu(guildId) {
   // Import season selector with Castlist-specific options
@@ -26,11 +25,11 @@ export async function createCastlistMenu(guildId) {
       {
         type: 17, // Container
         custom_id: 'castlist_main_menu',
-        title: '📋 Castlists',
+        title: 'Select Season',
         components: [
           {
             type: 10, // Text Display
-            content: '## 📋 Castlists | OG Tribes, Swaps, Alumni, Winners and more!'
+            content: '## :castbot_logo: CastBot | Select Season'
           },
           {
             type: 14 // Separator
