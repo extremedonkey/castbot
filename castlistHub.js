@@ -286,6 +286,12 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setLabel('Order')
       .setStyle(activeButton === CastlistButtonType.ORDER ? ButtonStyle.Primary : ButtonStyle.Secondary)
       .setEmoji('🔄')
+      .setDisabled(!enabled),
+    new ButtonBuilder()
+      .setCustomId(`castlist_swap_merge${suffix}`)
+      .setLabel('Swap/Merge')
+      .setStyle(activeButton === CastlistButtonType.SWAP_MERGE ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setEmoji('🔀')
       .setDisabled(!enabled)
   );
   
@@ -319,6 +325,9 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
     
     case CastlistButtonType.ADD_TRIBE:
       // Create role select for adding/removing tribes
+      // Get tribes currently using this castlist
+      const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
+      
       return {
         type: 1, // ActionRow
         components: [{
@@ -326,7 +335,11 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
           custom_id: `castlist_tribe_select_${castlist.id}`,
           placeholder: 'Select roles to add/remove as tribes...',
           min_values: 0,
-          max_values: 25 // Discord limit
+          max_values: 25, // Discord limit
+          default_values: tribesUsingCastlist.map(roleId => ({
+            id: roleId,
+            type: 'role'
+          }))
         }]
       };
     
@@ -387,6 +400,13 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
             }
           ]
         }]
+      };
+    
+    case CastlistButtonType.SWAP_MERGE:
+      // Placeholder for Swap/Merge functionality
+      return {
+        type: 10, // Text Display
+        content: '-# 🔀 Swap/Merge functionality coming soon...\n-# This will allow you to create new castlists from selected roles'
       };
     
     default:

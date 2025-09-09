@@ -35,9 +35,9 @@ export function handleCastlistSelect(req, res, client) {
 export function handleCastlistButton(req, res, client, custom_id) {
   // Parse the custom_id to extract action and castlistId
   const parts = custom_id.split('_');
-  const action = parts[1]; // view, edit, add, or order
-  const subAction = parts[2]; // info or tribe (for edit_info and add_tribe)
-  const castlistId = subAction === 'info' || subAction === 'tribe' 
+  const action = parts[1]; // view, edit, add, order, or swap
+  const subAction = parts[2]; // info, tribe, or merge (for edit_info, add_tribe, swap_merge)
+  const castlistId = (subAction === 'info' || subAction === 'tribe' || subAction === 'merge')
     ? parts.slice(3).join('_') 
     : parts.slice(2).join('_');
   
@@ -47,6 +47,7 @@ export function handleCastlistButton(req, res, client, custom_id) {
   else if (action === 'edit' && subAction === 'info') buttonType = 'edit_info';
   else if (action === 'add' && subAction === 'tribe') buttonType = 'add_tribe';
   else if (action === 'order') buttonType = 'order';
+  else if (action === 'swap' && subAction === 'merge') buttonType = 'swap_merge';
   
   return ButtonHandlerFactory.create({
     id: custom_id,
