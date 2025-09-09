@@ -671,16 +671,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setEmoji('🧑‍🤝‍🧑')
   ];
   
-  // Add Castlist button only for specific user (after Players)
-  if (userId === '391415444084490240') {
-    adminButtons.push(
-      new ButtonBuilder()
-        .setCustomId('prod_castlist_menu')
-        .setLabel('Castlist')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('📋')
-    );
-  }
+  // Castlist button removed - now using Change Season in header
   
   // Add remaining management buttons
   adminButtons.push(
@@ -773,8 +764,20 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Build container components array with pagination support
   const containerComponents = [
     {
-      type: 10, // Text Display component
-      content: `## ${formatBotEmoji('castbot_logo')} CastBot | Production Menu`
+      type: 9, // Section with accessory
+      components: [
+        {
+          type: 10, // Text Display component
+          content: `## ${formatBotEmoji('castbot_logo')} CastBot | Production Menu`
+        }
+      ],
+      accessory: {
+        type: 2, // Button
+        custom_id: 'prod_change_season',
+        label: 'Change Szn',
+        style: 2, // Secondary
+        emoji: { name: '🔃' }
+      }
     },
     {
       type: 14 // Separator after title
@@ -7268,27 +7271,27 @@ To fix this:
           return handleNukeCancel(context);
         }
       })(req, res, client);
-    } else if (custom_id === 'prod_castlist_menu') {
-      // Handle Castlist menu - new V3 menu for managing castlists
+    } else if (custom_id === 'prod_change_season') {
+      // Handle Change Season - allows setting the active season for the server
       return ButtonHandlerFactory.create({
-        id: 'prod_castlist_menu',
+        id: 'prod_change_season',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          console.log(`🔍 START: prod_castlist_menu - user ${context.userId}`);
-          MenuBuilder.trackLegacyMenu('prod_castlist_menu', 'Castlist management menu (NEW)');
+          console.log(`🔍 START: prod_change_season - user ${context.userId}`);
+          MenuBuilder.trackLegacyMenu('prod_change_season', 'Change active season menu');
           
           // Security check - only allow specific Discord ID for now
           if (context.userId !== '391415444084490240') {
-            console.log(`❌ ACCESS DENIED: prod_castlist_menu - user ${context.userId} not authorized`);
+            console.log(`❌ ACCESS DENIED: prod_change_season - user ${context.userId} not authorized`);
             return {
               content: 'Access denied. This feature is in development.',
               ephemeral: true
             };
           }
           
-          // Use extracted Castlist menu module
-          console.log(`✅ SUCCESS: prod_castlist_menu - showing Castlist menu`);
+          // Show season selector to change active season
+          console.log(`✅ SUCCESS: prod_change_season - showing season selector`);
           
           const menuData = await createCastlistMenu(context.guildId);
           

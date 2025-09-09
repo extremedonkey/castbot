@@ -243,10 +243,10 @@ export const BUTTON_REGISTRY = {
   },
 
   // === PRODUCTION MENU ITEMS ===
-  'prod_castlist_menu': {
-    label: 'Castlist',
-    description: 'Castlist management menu (V3)',
-    emoji: '📋',
+  'prod_change_season': {
+    label: 'Change Szn',
+    description: 'Change the active season for the server',
+    emoji: '🔃',
     style: 'Secondary',
     category: 'production_menu',
     restrictedUser: '391415444084490240' // Restricted to Reece during development
