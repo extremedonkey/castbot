@@ -659,13 +659,18 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Create admin control buttons (reorganized)
   const adminButtons = [
     new ButtonBuilder()
+      .setCustomId('prod_setup')
+      .setLabel('Initial Setup')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🪛'),
+    new ButtonBuilder()
       .setCustomId('admin_manage_player')
       .setLabel('Players')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧑‍🤝‍🧑')
   ];
   
-  // Add Castlist button only for specific user
+  // Add Castlist button only for specific user (after Players)
   if (userId === '391415444084490240') {
     adminButtons.push(
       new ButtonBuilder()
@@ -678,11 +683,6 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   
   // Add remaining management buttons
   adminButtons.push(
-    new ButtonBuilder()
-      .setCustomId('prod_setup')
-      .setLabel('Initial Setup')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('🪛'),
     new ButtonBuilder()
       .setCustomId('prod_manage_tribes')
       .setLabel('Tribes')

@@ -118,6 +118,7 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 **Architecture & Standards:**
 - **🎨 COMPONENTS V2** (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
 - **🔘 BUTTON HANDLER FACTORY** (MANDATORY) → [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
+- **🎯 MENU SYSTEM ARCHITECTURE** (NEW) → [docs/architecture/MenuSystemArchitecture.md](docs/architecture/MenuSystemArchitecture.md)
 - **📐 LEAN MENU DESIGN** → [docs/ui/LeanMenuDesign.md](docs/ui/LeanMenuDesign.md)
 - **🔧 ENTITY/EDIT FRAMEWORK** → [docs/architecture/EntityEditFramework.md](docs/architecture/EntityEditFramework.md)
 - **📊 ANALYTICS** → [docs/architecture/Analytics.md](docs/architecture/Analytics.md)
@@ -150,6 +151,21 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 ```
 Missing registration causes "This interaction failed" errors!
 
+**Menu System Architecture** - Track and migrate menus systematically:
+```javascript
+// Track legacy menus for migration visibility
+MenuBuilder.trackLegacyMenu('menu_location', 'Menu description');
+
+// Future: Create menus from registry
+const menu = await MenuBuilder.create('menu_id', context);
+```
+
+**🚨 CRITICAL: Menu Standards** - Follow these patterns:
+- **NEVER build menus inline** - Use MenuBuilder patterns
+- **ALWAYS track legacy menus** - Add tracking calls for visibility
+- **FOLLOW LeanMenuDesign.md** - Visual/UX standards
+- **CHECK logs for menu usage** - `grep "MENULEGACY"` shows what needs migration
+
 **Components V2** - ALL UI MUST use `IS_COMPONENTS_V2` flag (1 << 15)
 
 **Pattern Matching** - When implementing "like X", examine X's implementation first:
@@ -172,6 +188,12 @@ grep -B20 -A20 "feature_pattern" app.js
 - `npm run deploy-remote-wsl-dry` (preview only)
 
 ## 📐 app.js Organization
+
+### Key Imports
+```javascript
+import { MenuBuilder } from './menuBuilder.js';  // Menu system architecture
+import { ButtonHandlerFactory } from './buttonHandlerFactory.js';  // Button management
+```
 
 ### Golden Rule: app.js is a ROUTER, not a PROCESSOR
 
@@ -210,6 +232,8 @@ grep -B20 -A20 "feature_pattern" app.js
 - Round results ephemeral → Set `ephemeral: false` in ButtonHandlerFactory
 - Double handler execution → Missing BUTTON_REGISTRY entry
 - Button shows "[🪨 LEGACY]" in logs → Not registered in BUTTON_REGISTRY
+- Menu shows "[🪨 MENULEGACY]" in logs → Needs migration to MenuBuilder
+- Menu not tracking → Add `MenuBuilder.trackLegacyMenu()` call
 
 ## 🎯 Available Commands
 
