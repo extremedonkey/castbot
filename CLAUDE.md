@@ -115,9 +115,10 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 - **🏆 CAST RANKING** → [docs/features/CastRanking.md](docs/features/CastRanking.md)
 
 **Safari Subsystems:**
-- **MAP EXPLORER** → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
+- **MAP SYSTEM** → [docs/features/SafariMapSystem.md](docs/features/SafariMapSystem.md) - User/admin guide
+- **MAP TECHNICAL** → [docs/features/SafariMapTechnical.md](docs/features/SafariMapTechnical.md) - Developer reference
+- **MAP ISSUES** → [docs/features/SafariMapIssues.md](docs/features/SafariMapIssues.md) - Known issues & roadmap
 - **POINTS SYSTEM** → [docs/features/SafariPoints.md](docs/features/SafariPoints.md)
-- **MAP MOVEMENT** → [docs/features/SafariMapMovement.md](docs/features/SafariMapMovement.md)
 - **SAFARI PROGRESS** → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
 - **PLAYER LOCATIONS** → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
 - **WHISPER SYSTEM** → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)
