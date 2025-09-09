@@ -242,6 +242,16 @@ export const BUTTON_REGISTRY = {
     category: 'ranking'
   },
 
+  // === PRODUCTION MENU ITEMS ===
+  'prod_castlist_menu': {
+    label: 'Castlist',
+    description: 'Castlist management menu (V3)',
+    emoji: '📋',
+    style: 'Secondary',
+    category: 'production_menu',
+    restrictedUser: '391415444084490240' // Restricted to Reece during development
+  },
+  
   // === SAFARI MENU SYSTEM ===
   'prod_safari_menu': {
     label: 'Safari',

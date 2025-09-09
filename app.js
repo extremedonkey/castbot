@@ -79,6 +79,7 @@ import {
   extractCastlistData,
   createCastlistRows
 } from './castlistV2.js';
+import { MenuBuilder } from './menuBuilder.js';
 import {
   PlayerManagementMode,
   PlayerButtonType,
@@ -635,6 +636,9 @@ function hasCastRankingPermissions(member, guildId) {
  * @returns {Object} Production menu response object
  */
 async function createProductionMenuInterface(guild, playerData, guildId, userId = null) {
+  // Track legacy menu usage
+  MenuBuilder.trackLegacyMenu('createProductionMenuInterface', 'Main production menu');
+  
   // Extract castlist data using reusable function
   const { allCastlists, castlistTribes } = extractCastlistData(playerData, guildId);
 
@@ -655,15 +659,30 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Create admin control buttons (reorganized)
   const adminButtons = [
     new ButtonBuilder()
+      .setCustomId('admin_manage_player')
+      .setLabel('Players')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🧑‍🤝‍🧑')
+  ];
+  
+  // Add Castlist button only for specific user
+  if (userId === '391415444084490240') {
+    adminButtons.push(
+      new ButtonBuilder()
+        .setCustomId('prod_castlist_menu')
+        .setLabel('Castlist')
+        .setStyle(ButtonStyle.Secondary)
+        .setEmoji('📋')
+    );
+  }
+  
+  // Add remaining management buttons
+  adminButtons.push(
+    new ButtonBuilder()
       .setCustomId('prod_setup')
       .setLabel('Initial Setup')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('🪛'),
-    new ButtonBuilder()
-      .setCustomId('admin_manage_player')
-      .setLabel('Players')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧑‍🤝‍🧑'),
     new ButtonBuilder()
       .setCustomId('prod_manage_tribes')
       .setLabel('Tribes')
@@ -673,13 +692,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('prod_manage_pronouns_timezones')
       .setLabel('Pronouns & Timezones')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💜'),
-    new ButtonBuilder()
-      .setCustomId('prod_availability')
-      .setLabel('Availability')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🕐')
-  ];
+      .setEmoji('💜')
+  );
   
   // Live Analytics button moved to Reece Stuff submenu
   
@@ -696,12 +710,21 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('prod_safari_menu')
       .setLabel('Safari')
       .setStyle(ButtonStyle.Success)
-      .setEmoji('🦁')
+      .setEmoji('🦁'),
+    new ButtonBuilder()
+      .setCustomId('prod_player_menu')
+      .setLabel('🪪 Player Profile')
+      .setStyle(ButtonStyle.Secondary)
   ];
   
-  // Add special buttons only for specific user (Reece)
+  const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
+  
+  // Create new action row for Analytics, Availability, and Need Help
+  const adminActionButtons2 = [];
+  
+  // Add Analytics button only for specific user (Reece)
   if (userId === '391415444084490240') {
-    adminActionButtons.push(
+    adminActionButtons2.push(
       new ButtonBuilder()
         .setCustomId('reece_stuff_menu')
         .setLabel('Analytics')
@@ -710,16 +733,17 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
   
-  // Add Player Profile button after Reece Stuff
-  adminActionButtons.push(
+  // Add Availability button
+  adminActionButtons2.push(
     new ButtonBuilder()
-      .setCustomId('prod_player_menu')
-      .setLabel('🪪 Player Profile')
+      .setCustomId('prod_availability')
+      .setLabel('Availability')
       .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🕐')
   );
   
-  // Add Need Help button at the end
-  adminActionButtons.push(
+  // Add Need Help button
+  adminActionButtons2.push(
     new ButtonBuilder()
       .setLabel('Need Help?')
       .setStyle(ButtonStyle.Link)
@@ -727,7 +751,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setURL('https://discord.gg/H7MpJEjkwT')
   );
   
-  const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
+  const adminActionRow2 = new ActionRowBuilder().addComponents(adminActionButtons2);
   
   /**
    * Validate container component limits to prevent Discord API errors
@@ -775,6 +799,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       content: `> **\`💎 Advanced Features\`**`
     },
     adminActionRow.toJSON(), // New administrative action buttons
+    adminActionRow2.toJSON(), // Additional action buttons (Analytics, Availability, Help)
     {
       type: 14 // Separator before credit
     },
@@ -6047,6 +6072,7 @@ To fix this:
       }
     } else if (custom_id === 'admin_manage_player') {
       // Admin player management - use new modular system
+      MenuBuilder.trackLegacyMenu('admin_manage_player', 'Admin player management interface');
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
@@ -6198,6 +6224,7 @@ To fix this:
       })(req, res, client);
     } else if (custom_id === 'prod_manage_pronouns_timezones') {
       // Show pronouns/timezones management menu
+      MenuBuilder.trackLegacyMenu('prod_manage_pronouns_timezones', 'Pronouns & Timezones submenu');
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
@@ -6293,6 +6320,7 @@ To fix this:
         id: 'prod_availability',
         handler: async (context) => {
           console.log(`🔍 START: prod_availability - user ${context.userId}`);
+          MenuBuilder.trackLegacyMenu('prod_availability', 'Availability management submenu');
           
           const { guildId, channelId } = context;
           
@@ -6354,6 +6382,7 @@ To fix this:
       })(req, res, client);
     } else if (custom_id === 'prod_manage_tribes') {
       // Show tribe management menu
+      MenuBuilder.trackLegacyMenu('prod_manage_tribes', 'Tribes management submenu');
       try {
         const guildId = req.body.guild_id;
         const guild = await client.guilds.fetch(guildId);
@@ -6433,6 +6462,7 @@ To fix this:
         id: 'season_management_menu',
         handler: async (context) => {
           console.log(`🔍 START: season_management_menu - user ${context.userId}`);
+          MenuBuilder.trackLegacyMenu('season_management_menu', 'Season applications management menu');
           
           const { guildId, userId, channelId, client } = context;
           const guild = await client.guilds.fetch(guildId);
@@ -7260,6 +7290,33 @@ To fix this:
           return handleNukeCancel(context);
         }
       })(req, res, client);
+    } else if (custom_id === 'prod_castlist_menu') {
+      // Handle Castlist menu - new V3 menu for managing castlists
+      return ButtonHandlerFactory.create({
+        id: 'prod_castlist_menu',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: prod_castlist_menu - user ${context.userId}`);
+          MenuBuilder.trackLegacyMenu('prod_castlist_menu', 'Castlist management menu (NEW)');
+          
+          // Security check - only allow specific Discord ID for now
+          if (context.userId !== '391415444084490240') {
+            console.log(`❌ ACCESS DENIED: prod_castlist_menu - user ${context.userId} not authorized`);
+            return {
+              content: 'Access denied. This feature is in development.',
+              ephemeral: true
+            };
+          }
+          
+          // Simple hello world for now
+          console.log(`✅ SUCCESS: prod_castlist_menu - showing hello world`);
+          return {
+            content: 'Hello World! 🎉\n\nCastlist menu coming soon. This will be the new interface for managing castlists.',
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
       // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
@@ -7271,6 +7328,7 @@ To fix this:
         updateMessage: shouldUpdateMessage,
         handler: async (context) => {
           console.log('🦁 DEBUG: Creating Safari submenu');
+          MenuBuilder.trackLegacyMenu('prod_safari_menu', 'Safari game management menu');
           
           // Create Safari submenu
           const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
@@ -7309,6 +7367,7 @@ To fix this:
         updateMessage: shouldUpdateMessage,
         handler: async (context) => {
           console.log(`🔍 START: reece_stuff_menu - user ${context.userId}`);
+          MenuBuilder.trackLegacyMenu('reece_stuff_menu', 'Analytics and admin tools menu');
           
           // Security check - only allow specific Discord ID
           if (context.userId !== '391415444084490240') {
@@ -10348,6 +10407,7 @@ Your server is now ready for Tycoons gameplay!`;
     // safari_store_manage_existing handler removed - functionality replaced by safari_store_manage_items
     } else if (custom_id === 'safari_store_manage_items') {
       // MVP2 Sprint 1: Manage store items (add/remove items from stores)
+      MenuBuilder.trackLegacyMenu('safari_store_manage_items', 'Safari store items management');
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
@@ -24059,6 +24119,7 @@ Are you sure you want to continue?`;
         permissionName: 'Manage Roles',
         handler: async (context) => {
           console.log(`⚙️ START: safari_configure_rounds - user ${context.userId}`);
+          MenuBuilder.trackLegacyMenu('safari_configure_rounds', 'Safari rounds configuration modal');
           
           // Load current config
           const { loadSafariContent } = await import('./safariManager.js');

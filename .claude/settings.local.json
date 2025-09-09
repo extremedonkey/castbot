@@ -18,7 +18,8 @@
       "Bash(npm run analyze-commands:*)",
       "Bash(npm run verify-commands:*)",
       "Bash(npm run clean-commands:*)",
-      "Read(///**)"
+      "Read(///**)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []
