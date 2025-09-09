@@ -4666,12 +4666,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('show_castlist2_')) {
-      // Handle posting castlist to channel from Castlist Hub (NEW)
+    } else if (custom_id.startsWith('show_castlist2_') && !custom_id.includes('virtual_')) {
+      // Handle posting castlist to channel from Castlist Hub (NEW - real castlists only)
       const { handleShowCastlist } = await import('./castlistHandlers.js');
       return handleShowCastlist(req, res, client, custom_id);
     } else if (custom_id.startsWith('show_castlist2')) {
-      // Extract castlist name from custom_id if present (LEGACY)
+      // Extract castlist name from custom_id if present - handles virtual castlists
       const castlistMatch = custom_id.match(/^show_castlist2(?:_(.+))?$/);
       const requestedCastlist = castlistMatch?.[1] || 'default';
       
