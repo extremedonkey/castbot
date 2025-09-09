@@ -7309,11 +7309,81 @@ To fix this:
             };
           }
           
-          // Simple hello world for now
-          console.log(`✅ SUCCESS: prod_castlist_menu - showing hello world`);
+          // Blank LEAN menu implementation
+          console.log(`✅ SUCCESS: prod_castlist_menu - showing LEAN menu template`);
+          
+          // Following LeanMenuDesign.md standards exactly
+          const row1 = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('castlist_placeholder_1')
+                .setLabel('View All')
+                .setStyle(ButtonStyle.Primary)
+                .setEmoji('👁️'),
+              new ButtonBuilder()
+                .setCustomId('castlist_placeholder_2')
+                .setLabel('Add New')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('➕'),
+              new ButtonBuilder()
+                .setCustomId('castlist_placeholder_3')
+                .setLabel('Edit')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('✏️')
+            );
+          
+          const row2 = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('castlist_placeholder_4')
+                .setLabel('Alumni')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('🎓'),
+              new ButtonBuilder()
+                .setCustomId('castlist_placeholder_5')
+                .setLabel('Import')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('📥'),
+              new ButtonBuilder()
+                .setCustomId('castlist_placeholder_6')
+                .setLabel('Export')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('📤')
+            );
+          
+          const navigationRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_menu_back')
+                .setLabel('Back to Menu')
+                .setStyle(ButtonStyle.Secondary)
+                .setEmoji('⬅️')
+            );
+          
+          // LEAN Menu Template - exact pattern from LeanMenuDesign.md
+          const containerComponents = [
+            { type: 10, content: `## CastBot | Castlist Management` },     // Header
+            { type: 14 },                                                  // Separator
+            { type: 10, content: `> **\`📊 View & Manage\`**` },          // Section header
+            row1.toJSON(),                                                 // Buttons (max 5)
+            { type: 14 },                                                  // Separator between sections
+            { type: 10, content: `> **\`🔧 Advanced Options\`**` },       // Next section
+            row2.toJSON(),                                                 // More buttons
+            { type: 14 },                                                  // Final separator
+            navigationRow.toJSON(),                                        // Navigation buttons
+            { type: 14 },                                                  // Separator before credit
+            { type: 10, content: `-# Work in progress - buttons are placeholders` }  // Credit line
+          ];
+          
+          const menuContainer = {
+            type: 17,                          // Container type (MANDATORY)
+            accent_color: 0x9b59b6,            // Purple for castlists
+            components: containerComponents     // Array of components
+          };
+          
           return {
-            content: 'Hello World! 🎉\n\nCastlist menu coming soon. This will be the new interface for managing castlists.',
-            ephemeral: true
+            flags: (1 << 15),                  // IS_COMPONENTS_V2 (MANDATORY)
+            components: [menuContainer]
           };
         }
       })(req, res, client);
