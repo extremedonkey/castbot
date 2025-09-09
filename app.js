@@ -4673,7 +4673,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     } else if (custom_id.startsWith('show_castlist2')) {
       // Extract castlist name from custom_id if present - handles virtual castlists
       const castlistMatch = custom_id.match(/^show_castlist2(?:_(.+))?$/);
-      const requestedCastlist = castlistMatch?.[1] || 'default';
+      let requestedCastlist = castlistMatch?.[1] || 'default';
+      
+      // Decode virtual castlist IDs back to their names
+      if (requestedCastlist.startsWith('virtual_')) {
+        const base64 = requestedCastlist.replace('virtual_', '');
+        // Add back padding if needed
+        const paddedBase64 = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+        // Decode from base64 (reverse the URL-safe replacements)
+        const normalBase64 = paddedBase64
+          .replace(/-/g, '+')
+          .replace(/_/g, '/');
+        requestedCastlist = Buffer.from(normalBase64, 'base64').toString('utf-8');
+        console.log(`Decoded virtual castlist ID to: ${requestedCastlist}`);
+      }
       
       console.log('Button clicked, processing castlist2 for:', requestedCastlist);
       
