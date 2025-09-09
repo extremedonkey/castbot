@@ -6,15 +6,15 @@
 ```javascript
 // LEAN Menu Template - Copy this pattern for ALL menus
 const containerComponents = [
-  { type: 10, content: `## CastBot | Menu Title` },     // Header
-  { type: 14 },                                         // Separator
-  { type: 10, content: `> **\`📊 Section Name\`**` },  // Section header
-  actionRow1.toJSON(),                                  // Buttons (max 5)
-  { type: 14 },                                         // Separator between sections
-  { type: 10, content: `> **\`🔧 Next Section\`**` },  // Next section
-  actionRow2.toJSON(),                                  // More buttons
-  { type: 14 },                                         // Final separator
-  navigationRow.toJSON()                                // Navigation buttons
+  { type: 10, content: `## Menu Title | Key Features` },   // Header (e.g. "🦁 Safari | Idol Hunts, Challenges & More")
+  { type: 14 },                                            // Separator
+  { type: 10, content: `> **\`📊 Section Name\`**` },     // Section header
+  actionRow1.toJSON(),                                     // Buttons (max 5)
+  { type: 14 },                                            // Separator between sections
+  { type: 10, content: `> **\`🔧 Next Section\`**` },     // Next section
+  actionRow2.toJSON(),                                     // More buttons
+  { type: 14 },                                            // Separator before navigation
+  navigationRow.toJSON()                                   // Navigation buttons
 ];
 ```
 
@@ -24,13 +24,17 @@ const containerComponents = [
 - **Section headers**: Use `> **\`📊 Section Name\`**` format (backticks for emphasis)
 - **Maximum 3-4 sections** per menu to prevent scrolling
 - **5 buttons max** per ActionRow (Discord hard limit)
+- **Button Grouping Patterns**:
+  - CRUD operations together (View, Add, Edit, Delete)
+  - Data operations together (Import, Export, Backup)
+  - Navigation together (submenus, external links)
 
 ## ✅ Button Styling Hierarchy
 ```javascript
-ButtonStyle.Primary   // Main actions, primary features
-ButtonStyle.Secondary // Standard actions, navigation
-ButtonStyle.Success   // Positive actions, confirmations  
-ButtonStyle.Danger    // Destructive actions ONLY
+ButtonStyle.Primary   // Main actions, primary features, blue color
+ButtonStyle.Secondary // Standard actions, navigation, grey color
+ButtonStyle.Success   // Positive actions, confirmations, green color
+ButtonStyle.Danger    // Destructive actions ONLY, red color
 ButtonStyle.Link      // External links only
 ```
 
@@ -58,9 +62,19 @@ const menuContainer = {
 };
 
 return {
-  flags: (1 << 15),                 // IS_COMPONENTS_V2 (MANDATORY)
+  flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,  // IS_COMPONENTS_V2 + Ephemeral (typical for menus)
   components: [menuContainer]
 };
+```
+
+### Accent Color Guidelines
+```javascript
+0x3498DB  // Blue - Standard menus
+0x9b59b6  // Purple - Castlists/rankings  
+0x27ae60  // Green - Success/positive actions
+0xe74c3c  // Red - Danger/destructive actions
+0xf39c12  // Orange - Warning/caution
+// Discord role color - When menu relates to specific role
 ```
 
 ## ❌ Anti-Patterns to Avoid
@@ -72,29 +86,38 @@ return {
 
 ## 📏 Size Guidelines
 - **Menu height**: Aim for 5-8 visible rows without scrolling
-- **Button text**: 2-3 words ideal, 4 words maximum
+- **Button text**: 1-2 words ideal, 3 words maximum
 - **Section headers**: 1-3 words with single emoji
-- **Total components**: Stay under 20 components per container
+- **Total components**: Stay under 40 components per container (Discord limit per ComponentsV2.md)
+- **Component Budget**: With separators and text, typically ~20-25 usable slots
 
 ## 🔙 Navigation Standards
-- **Back Button**: Always use consistent format
-  - Custom ID: `prod_menu_back` (for production menu) or `{parent}_back`
-  - Label: `Back to Menu` or `Back to {Parent}`
-  - Style: `ButtonStyle.Secondary`
-  - Emoji: `⬅️`
-  - Position: Separate navigation row at bottom
-- **Example**:
+- **Back Button Format**:
+  - **To Main Menu**: `← Menu` (no emoji, just arrow + "Menu")
+  - **To Feature Menu**: `🦁 Safari` (feature emoji + name)
+  - Custom ID: `prod_menu_back` or `{feature}_back`
+  - Style: Always `ButtonStyle.Secondary` (grey)
+  - Position: Bottom-left, after separator
+  
+- **Examples**:
   ```javascript
+  // Back to main production menu
   new ButtonBuilder()
     .setCustomId('prod_menu_back')
-    .setLabel('Back to Menu')
+    .setLabel('← Menu')  // Just arrow + Menu
     .setStyle(ButtonStyle.Secondary)
-    .setEmoji('⬅️')
+  
+  // Back to Safari menu (2nd level)
+  new ButtonBuilder()
+    .setCustomId('safari_menu_back')
+    .setLabel('Safari')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('🦁')  // Feature emoji
   ```
 
 ## 🎯 Example: Analytics Menu (Optimal LEAN Design)
 ```
-## CastBot | Analytics & Admin
+## 📊 Analytics | Server Stats & Admin Tools
 ━━━━━━━━━━━━━━━━━━━━━━
 > **`📊 Analytics`**
 [Server List] [Print Logs] [Server Stats]
@@ -105,6 +128,6 @@ return {
 > **`☢️ Danger Zone`**
 [Nuke Roles] [Emergency Re-Init]
 ━━━━━━━━━━━━━━━━━━━━━━
-[⬅ Menu]
+[← Menu]
 ```
 **Result**: 9 buttons + navigation in just 5 ActionRows with clear visual separation

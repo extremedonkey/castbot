@@ -7309,10 +7309,10 @@ To fix this:
             };
           }
           
-          // Blank LEAN menu implementation
+          // Updated LEAN menu implementation following revised standards
           console.log(`✅ SUCCESS: prod_castlist_menu - showing LEAN menu template`);
           
-          // Following LeanMenuDesign.md standards exactly
+          // Following revised LeanMenuDesign.md standards
           const row1 = new ActionRowBuilder()
             .addComponents(
               new ButtonBuilder()
@@ -7355,24 +7355,23 @@ To fix this:
             .addComponents(
               new ButtonBuilder()
                 .setCustomId('prod_menu_back')
-                .setLabel('Back to Menu')
+                .setLabel('← Menu')  // Updated per navigation standards
                 .setStyle(ButtonStyle.Secondary)
-                .setEmoji('⬅️')
+                // No emoji for main menu back button
             );
           
-          // LEAN Menu Template - exact pattern from LeanMenuDesign.md
+          // LEAN Menu Template - following revised documentation
           const containerComponents = [
-            { type: 10, content: `## CastBot | Castlist Management` },     // Header
-            { type: 14 },                                                  // Separator
-            { type: 10, content: `> **\`📊 View & Manage\`**` },          // Section header
-            row1.toJSON(),                                                 // Buttons (max 5)
-            { type: 14 },                                                  // Separator between sections
-            { type: 10, content: `> **\`🔧 Advanced Options\`**` },       // Next section
-            row2.toJSON(),                                                 // More buttons
-            { type: 14 },                                                  // Final separator
-            navigationRow.toJSON(),                                        // Navigation buttons
-            { type: 14 },                                                  // Separator before credit
-            { type: 10, content: `-# Work in progress - buttons are placeholders` }  // Credit line
+            { type: 10, content: `## 📋 Castlist | Dynamic Lists & Alumni Tracking` },  // Updated header format
+            { type: 14 },                                                                // Separator
+            { type: 10, content: `> **\`📊 View & Manage\`**` },                       // Section header
+            row1.toJSON(),                                                              // Buttons (max 5)
+            { type: 14 },                                                                // Separator between sections
+            { type: 10, content: `> **\`🔧 Advanced Options\`**` },                    // Next section
+            row2.toJSON(),                                                              // More buttons
+            { type: 14 },                                                                // Separator before navigation
+            navigationRow.toJSON()                                                       // Navigation buttons
+            // Removed work-in-progress credit line and extra separator per feedback
           ];
           
           const menuContainer = {
@@ -7382,7 +7381,7 @@ To fix this:
           };
           
           return {
-            flags: (1 << 15),                  // IS_COMPONENTS_V2 (MANDATORY)
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,  // IS_COMPONENTS_V2 + Ephemeral
             components: [menuContainer]
           };
         }
