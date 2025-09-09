@@ -21,24 +21,22 @@ export async function createCastlistMenu(guildId) {
 
   return {
     flags: 1 << 15, // IS_COMPONENTS_V2
-    custom_id: 'castlist_main_menu',
-    title: '📋 Castlists',
     components: [
       {
         type: 17, // Container
-        children: [
+        custom_id: 'castlist_main_menu',
+        title: '📋 Castlists',
+        components: [
           {
             type: 10, // Text Display
-            text: {
-              content: '# 📋 Castlists | Easily create Castlists!'
-            }
+            content: '# 📋 Castlists | Easily create Castlists!'
           },
           {
             type: 14 // Separator
           },
           {
             type: 1, // Action Row
-            components: [seasonSelector]
+            components: [seasonSelector.toJSON()]
           }
         ]
       }

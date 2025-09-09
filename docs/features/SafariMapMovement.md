@@ -7,11 +7,13 @@ The Safari Map Movement System enables players to explore grid-based maps with s
 ### Current Implementation Status (January 2025)
 
 ✅ **Core Movement System** - Complete with 8-directional movement
+✅ **Non-Square Map Support** - Proper boundary checking for rectangular grids
 ✅ **Navigation UI** - Navigate button pattern with ephemeral movement options
 ✅ **Permission Management** - Automatic channel access control with proper ordering
 ✅ **Stamina Integration** - Points-based movement limitation with regeneration
 ✅ **Admin Controls** - Full player management and positioning tools
 ✅ **Message Management** - Smart UI updates to prevent stale interactions
+✅ **Dynamic Grid Support** - Works with any map size from 1x1 to 100x100
 🔄 **Cell Content** - Next phase for interactive location content
 
 ## Table of Contents
@@ -59,6 +61,24 @@ B2 (↖️ Northwest)  B3 (⬆️ North)   B4 (↗️ Northeast)
 C2 (⬅️ West)       C3 (current)    C4 (➡️ East)
 D2 (↙️ Southwest)  D3 (⬇️ South)   D4 (↘️ Southeast)
 ```
+
+#### Non-Square Map Behavior
+
+For non-square maps, movement properly respects the actual grid boundaries:
+
+**Example: 3x1 Horizontal Map (A1, B1, C1)**
+- From A1: Can only move East to B1
+- From B1: Can move West to A1 or East to C1
+- From C1: Can only move West to B1
+
+**Example: 1x3 Vertical Map (A1, A2, A3)**
+- From A1: Can only move South to A2
+- From A2: Can move North to A1 or South to A3
+- From A3: Can only move North to A2
+
+**Example: 2x2 Small Map**
+- From A1: Can move East (B1), South (A2), or Southeast (B2)
+- All diagonal moves respect both width and height boundaries
 
 ### Movement Process
 

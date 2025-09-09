@@ -97,6 +97,83 @@ The Safari Points System provides flexible resource management for pacing player
 
 For detailed documentation, see [Safari Points System](SafariPoints.md) and [Map Movement System](SafariMapMovement.md).
 
+## Map Explorer System
+
+The Safari Map Explorer transforms Discord into an interactive grid-based exploration system where players physically move between Discord channels representing map coordinates.
+
+### Core Capabilities (January 2025)
+
+#### Map Creation & Management
+- **Custom Images**: Upload any Discord CDN image URL as your map
+- **Flexible Grid Sizes**: Support for 1x1 to 100x100 grids (max 400 total cells)
+- **Non-Square Maps**: Full support for rectangular grids (e.g., 3x1, 5x10, 20x5)
+- **Dynamic Updates**: Replace map images without losing player progress or data
+- **No Hardcoded Maps**: All maps are custom-created by admins (legacy hardcoded system retired)
+
+#### Grid Specifications
+- **Minimum Size**: 1x1 (single cell for testing/special features)
+- **Maximum Size**: Limited by Discord's 500 channel limit (typically 400 cells max)
+- **Coordinate System**: Dynamic letter-number format
+  - Standard: A1-Z99 for most maps
+  - Extended: AA1, AB1, etc. for wide maps (>26 columns)
+- **Visual Overlay**: Grid lines with coordinate labels on custom images
+
+#### Movement & Navigation
+- **8-Directional Movement**: Cardinal and diagonal directions where valid
+- **Boundary Awareness**: Proper edge detection for non-square maps
+- **Stamina Integration**: Configurable movement costs (default: 1 stamina/move)
+- **Permission Management**: Automatic channel access control
+- **Navigate Button Pattern**: Clean ephemeral UI for movement selection
+
+#### Examples of Supported Maps
+- **1x1 Map**: Single location, no movement (testing/special events)
+- **3x1 Horizontal**: Linear path (A1 → B1 → C1)
+- **1x5 Vertical**: Vertical journey (A1 → A2 → A3 → A4 → A5)
+- **2x2 Mini Map**: Four locations with full movement
+- **10x10 Standard**: Classic 100-location exploration
+- **20x5 Wide Map**: Horizontal emphasis with 100 locations
+- **5x20 Tall Map**: Vertical emphasis with 100 locations
+
+### Technical Implementation
+
+#### File Organization
+```
+img/{guildId}/
+  map_{width}x{height}_{timestamp}.png  # Processed map with grid
+  map_{width}x{height}_{timestamp}_updated.png  # Updated versions
+```
+
+#### Data Structure
+Maps are stored in `safariContent.json` with full metadata:
+- Grid dimensions (width and height stored separately)
+- Channel mappings for each coordinate
+- Player locations and exploration history
+- Custom content per coordinate (future)
+
+#### Discord Infrastructure
+- **Category**: "🗺️ Map Explorer" for all map channels
+- **Channels**: One per coordinate (#a1, #b2, etc.)
+- **Rate Limiting**: 5 channels per 5 seconds during creation
+- **Permissions**: VIEW_CHANNEL only for current player location
+
+### Current Limitations
+- **Visual Scaling**: Grid line thickness and font sizes are fixed (see MapGridScaling.md)
+- **Resize Restriction**: Maps cannot be resized after creation
+- **Channel Limit**: Discord's 500 channel limit restricts very large maps
+- **Image Source**: Only Discord CDN URLs accepted (security measure)
+
+### Admin Controls
+- **Create/Update Map**: Modal for image URL and dimensions
+- **Delete Map**: Complete cleanup of channels and data
+- **Player Management**: Move players, reset positions, track locations
+- **Blacklist Coordinates**: Restrict access to specific map cells
+
+For complete technical documentation, see:
+- [Safari Map Explorer](SafariMapExplorer.md) - Full system documentation
+- [Map Movement System](SafariMapMovement.md) - Movement mechanics
+- [Map Grid Scaling](MapGridScaling.md) - Visual scaling improvements
+- [Player Location Manager](PlayerLocationManager.md) - Location tracking
+
 ## Data Structures
 
 ### safariContent.json
