@@ -309,7 +309,7 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
         type: 1, // ActionRow
         components: [
           new ButtonBuilder()
-            .setCustomId(`show_castlist2_${castlist.id}`)
+            .setCustomId(`show_castlist2_${castlist.name}`)
             .setLabel('Post Castlist to Channel')
             .setStyle(ButtonStyle.Success)
             .setEmoji('📋')
