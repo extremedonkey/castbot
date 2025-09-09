@@ -111,8 +111,8 @@ export async function getValidMoves(currentCoordinate, movementSchema = 'adjacen
         southeast: { col: col + 1, row: row + 1, direction: '↘️ Southeast' }
     };
     
-    // Get the actual grid size for this guild's map
-    const gridSize = guildId ? await getMapGridSize(guildId) : 7; // Default to 7x7 if no guildId provided
+    // Get the actual grid dimensions for this guild's map
+    const gridDimensions = guildId ? await getMapGridDimensions(guildId) : { width: 7, height: 7 };
     
     // Import isCoordinateBlacklisted to check for restricted coordinates
     const { isCoordinateBlacklisted } = await import('./mapExplorer.js');
@@ -125,8 +125,8 @@ export async function getValidMoves(currentCoordinate, movementSchema = 'adjacen
     for (const direction of directionsToCheck) {
         const move = moves[direction];
         
-        // Check if move is within grid bounds using dynamic grid size
-        if (move.col >= 0 && move.col < gridSize && move.row >= 0 && move.row < gridSize) {
+        // Check if move is within grid bounds using proper width and height
+        if (move.col >= 0 && move.col < gridDimensions.width && move.row >= 0 && move.row < gridDimensions.height) {
             const coordinate = String.fromCharCode(65 + move.col) + (move.row + 1);
             
             // Check if coordinate is blacklisted
@@ -396,8 +396,8 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
     let description = '';
     let actionRows = [];
     
-    // Get grid size for bounds checking
-    const gridSize = await getMapGridSize(guildId);
+    // Get grid dimensions for bounds checking
+    const gridDimensions = await getMapGridDimensions(guildId);
     const col = coordinate.charCodeAt(0) - 65; // A=0, B=1, etc.
     const row = parseInt(coordinate.substring(1)) - 1; // 1-based to 0-based
     
@@ -410,7 +410,7 @@ export async function getMovementDisplay(guildId, userId, coordinate) {
     
     // Helper to create button for direction
     const createButton = (dir, dirLabel, targetCol, targetRow) => {
-        const isOutOfBounds = targetCol < 0 || targetCol >= gridSize || targetRow < 0 || targetRow >= gridSize;
+        const isOutOfBounds = targetCol < 0 || targetCol >= gridDimensions.width || targetRow < 0 || targetRow >= gridDimensions.height;
         const targetCoordinate = !isOutOfBounds ? String.fromCharCode(65 + targetCol) + (targetRow + 1) : null;
         
         if (movesByDirection[dir] && !isOutOfBounds) {
@@ -579,12 +579,24 @@ export async function initializePlayerOnMap(guildId, userId, startingCoordinate,
     };
 }
 
-// Get grid size for active map
-export async function getMapGridSize(guildId) {
+// Get grid dimensions for active map
+export async function getMapGridDimensions(guildId) {
     const safariData = await loadSafariContent();
-    const activeMap = safariData[guildId]?.maps?.active;
+    const activeMapId = safariData[guildId]?.maps?.active;
     
-    if (!activeMap) return 7; // Default to 7x7
+    if (!activeMapId) return { width: 7, height: 7 }; // Default to 7x7
     
-    return safariData[guildId].maps[activeMap]?.gridSize || 7;
+    const activeMap = safariData[guildId].maps[activeMapId];
+    
+    // Support both new (gridWidth/gridHeight) and old (gridSize) formats
+    const width = activeMap?.gridWidth || activeMap?.gridSize || 7;
+    const height = activeMap?.gridHeight || activeMap?.gridSize || 7;
+    
+    return { width, height };
+}
+
+// Legacy function for backward compatibility
+export async function getMapGridSize(guildId) {
+    const dimensions = await getMapGridDimensions(guildId);
+    return Math.max(dimensions.width, dimensions.height); // Return the larger dimension
 }
