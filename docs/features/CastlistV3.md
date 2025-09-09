@@ -166,50 +166,120 @@ Using Entity Edit Framework patterns:
 
 ## 🔄 Migration Strategy
 
-### Backwards Compatibility
+### Virtual Entity Adapter Pattern
+Instead of forcing immediate migration, we use a **virtualization layer** that makes old string-based castlists appear as entities:
+
 ```javascript
-// Phase 1: Dual support
-function getCastlistForTribe(tribe) {
-  // New system first
-  if (tribe.castlistId) {
-    return getCastlistById(tribe.castlistId);
+class CastlistVirtualAdapter {
+  async getAllCastlists(guildId) {
+    const castlists = new Map();
+    
+    // 1. Load REAL castlist entities (new system)
+    const realCastlists = playerData[guildId]?.castlistConfigs || {};
+    for (const [id, castlist] of Object.entries(realCastlists)) {
+      castlists.set(id, { ...castlist, isVirtual: false });
+    }
+    
+    // 2. Scan tribes for string-based castlists (old system)
+    const tribes = playerData[guildId]?.tribes || {};
+    const virtualCastlists = new Map();
+    
+    for (const [roleId, tribe] of Object.entries(tribes)) {
+      if (tribe.castlist && tribe.castlist !== 'default') {
+        // Generate consistent virtual ID
+        const virtualId = `virtual_${Buffer.from(tribe.castlist).toString('base64')}`;
+        
+        if (!virtualCastlists.has(virtualId)) {
+          // Create virtual entity that LOOKS real
+          virtualCastlists.set(virtualId, {
+            id: virtualId,
+            name: tribe.castlist,
+            type: tribe.type || 'legacy',
+            isVirtual: true,  // Flag for special handling
+            tribes: [roleId],
+            settings: {
+              sortStrategy: tribe.type === 'alumni_placements' ? 'placements' : 'alphabetical'
+            }
+          });
+        } else {
+          // Add tribe to existing virtual castlist
+          virtualCastlists.get(virtualId).tribes.push(roleId);
+        }
+      }
+    }
+    
+    // 3. Merge (skip virtual if real version exists)
+    for (const [id, virtualCastlist] of virtualCastlists) {
+      const realExists = [...castlists.values()].some(c => 
+        c.name === virtualCastlist.name && !c.isVirtual
+      );
+      if (!realExists) {
+        castlists.set(id, virtualCastlist);
+      }
+    }
+    
+    return castlists;
   }
-  // Fall back to legacy
-  return { name: tribe.castlist, type: 'legacy' };
 }
 ```
 
-### Auto-Migration
+### Lazy Migration (Materialization)
+Virtual castlists become real entities only when edited:
+
 ```javascript
-// On load, detect and migrate legacy castlists
-async function migrateLegacyCastlists(guildId) {
-  const tribes = getGuildTribes(guildId);
-  const legacyCastlists = new Map();
+async materializeCastlist(guildId, virtualId) {
+  const virtual = await this.getCastlist(guildId, virtualId);
+  if (!virtual.isVirtual) return virtualId;
   
-  // Group by castlist name
-  tribes.forEach(tribe => {
-    if (tribe.castlist && !tribe.castlistId) {
-      if (!legacyCastlists.has(tribe.castlist)) {
-        legacyCastlists.set(tribe.castlist, []);
-      }
-      legacyCastlists.get(tribe.castlist).push(tribe.roleId);
-    }
-  });
+  // Create real entity from virtual
+  const realId = `castlist_${Date.now()}_system`;
+  const realCastlist = {
+    ...virtual,
+    id: realId,
+    isVirtual: false,
+    createdAt: Date.now(),
+    createdBy: 'migration'
+  };
   
-  // Create proper entities
-  for (const [name, roleIds] of legacyCastlists) {
-    const castlistId = await createCastlist(guildId, {
-      name,
-      type: 'legacy_migrated',
-      tribes: roleIds
-    });
-    
-    // Update tribes
-    roleIds.forEach(roleId => {
-      linkTribeToCastlist(guildId, roleId, castlistId);
-    });
+  // Save real entity
+  if (!playerData[guildId].castlistConfigs) {
+    playerData[guildId].castlistConfigs = {};
   }
+  playerData[guildId].castlistConfigs[realId] = realCastlist;
+  
+  // Update tribes to point to real ID
+  for (const tribeId of virtual.tribes) {
+    playerData[guildId].tribes[tribeId].castlistId = realId;
+    // Keep old string during transition for safety
+  }
+  
+  return realId;
 }
+```
+
+### Benefits of Virtual Adapter
+1. **Zero Breaking Changes**: Old Tribes menu continues working
+2. **Immediate Availability**: New Castlist menu sees all castlists
+3. **Gradual Migration**: Only migrates when user interacts
+4. **Rollback Safety**: Both fields maintained during transition
+5. **User Transparent**: Users don't notice the technical migration
+
+### Migration Phases
+
+#### Phase 1: Read-Only Virtual Layer
+- Display old castlists as virtual entities
+- No data changes required
+- Both old and new UIs work
+
+#### Phase 2: Materialization on Edit
+- When user edits virtual castlist → convert to real
+- Transparent to user
+- Maintains backwards compatibility
+
+#### Phase 3: Gradual Deprecation
+- Eventually remove old Tribes menu
+- All castlists migrated through natural usage
+- Clean data model achieved
 ```
 
 ## 💡 Key Innovations
