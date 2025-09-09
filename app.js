@@ -7287,52 +7287,48 @@ To fix this:
             };
           }
           
-          // EXPERIMENTAL: Create ONE Section with THREE Text Display components
-          // Testing if Section can render multiple (up to 3) Text Display children as per docs
-          const textDisplayComponents = members.map((member, index) => {
+          // EXPERIMENTAL: Demonstrate that Sections only work with ONE child component
+          // Despite docs claiming "1-3 child components", Discord only accepts ONE
+          
+          // Combine all player info into ONE Text Display (working approach)
+          const combinedPlayerInfo = members.map(member => {
             const player = guildPlayers[member.user.id];
             const placement = player?.placement || 'N/A';
             const tribe = player?.tribe || 'None';
             
-            // Create simple player info for this test
-            const playerInfo = `**${member.displayName}**\n` +
-                              `Placement: ${placement}\n` +
-                              `Tribe: ${tribe}`;
-            
-            // Return a Text Display component for this player
-            return {
-              type: 10, // Text Display
-              content: playerInfo
-            };
-          });
+            return `**${member.displayName}**\n` +
+                   `Placement: ${placement}\n` +
+                   `Tribe: ${tribe}`;
+          }).join('\n\n');
           
-          console.log(`🧪 Created ${textDisplayComponents.length} Text Display components for Section`);
-          
-          // Create ONE Section with up to THREE Text Display components (docs say 1-3 allowed)
-          const experimentalSection = {
+          // Create Section with ONE Text Display (this works)
+          const workingSection = {
             type: 9, // Section
-            components: textDisplayComponents // Array of Text Display components (max 3)
-            // NO accessory - testing pure multiple Text Displays
+            components: [{
+              type: 10, // Text Display
+              content: `### Working Section (ONE child):\n\n${combinedPlayerInfo}`
+            }]
           };
           
-          console.log(`🧪 Created Section with ${textDisplayComponents.length} Text Display children`);
+          console.log(`🧪 Created Section with ONE Text Display child (working approach)`);
           
           // Build the response with Container
           const containerComponents = [
             {
               type: 10, // Text Display for header
-              content: '## 🧪 EXPERIMENTAL CASTLIST TEST\n\n' +
-                      '**Testing Section with Multiple Text Display Components**\n' +
-                      'Docs say Section can have 1-3 child components. Testing with 3 Text Displays.\n' +
-                      '⚠️ **This is temporary experimental code - DELETE AFTER TESTING**'
+              content: '## 🧪 SECTION LIMITATION CONFIRMED\n\n' +
+                      '**Discovery: Sections only support ONE child component**\n' +
+                      'Documentation claims "1-3 child components" but Discord rejects multiple.\n' +
+                      '⚠️ **This experimental test confirms the limitation**'
             },
             { type: 14 }, // Separator
-            experimentalSection, // Single Section with multiple Text Display children
+            workingSection, // Section with ONE Text Display (works)
             { type: 14 }, // Separator
             {
               type: 10, // Text Display for footer
-              content: `*Section contains ${textDisplayComponents.length} Text Display components as children*\n` +
-                      `*Testing if they render as columns or stack vertically*`
+              content: `✅ **Result**: Section works with ONE Text Display child\n` +
+                      `❌ **Failed**: Multiple Text Display children cause "interaction failed"\n` +
+                      `📝 **Documented**: Added to ComponentsV2Issues.md as known limitation`
             }
           ];
           

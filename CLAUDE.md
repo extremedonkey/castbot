@@ -24,12 +24,13 @@ type: 14  // Separator (visual divider)
 type: 1   // Action Row (contains buttons/selects)
 type: 2   // Button (inside Action Row)
 type: 3   // String Select (NOT type 6!)
+type: 9   // Section (with ONE child component only!)
+type: 11  // Thumbnail (as Section accessory)
 
 // ❌ INVALID/WRONG Types (DO NOT USE):
-type: 11  // NOT VALID - No "Section" type
 type: 5   // NOT VALID - No "Paragraph" type  
-type: 6   // WRONG - Legacy string select
-type: 13  // WRONG - Invalid separator
+type: 6   // WRONG - Legacy string select (use type 3)
+type: 13  // WRONG - Invalid separator (use type 14)
 ```
 
 **UPDATE_MESSAGE Rules:**
