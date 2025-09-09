@@ -218,67 +218,6 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
   })(req, res, client);
 }
 
-/**
- * Handle posting castlist to channel
- */
-export function handleShowCastlist(req, res, client, custom_id) {
-  const castlistId = custom_id.replace('show_castlist2_', '');
-  
-  return ButtonHandlerFactory.create({
-    id: custom_id,
-    handler: async (context) => {
-      console.log(`📋 Posting castlist ${castlistId} to channel`);
-      
-      const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
-      if (!castlist) {
-        return {
-          content: 'Castlist not found!',
-          ephemeral: true
-        };
-      }
-      
-      const playerData = await loadPlayerData();
-      const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
-      
-      if (tribesUsingCastlist.length === 0) {
-        return {
-          content: 'No tribes are using this castlist. Add a tribe first!',
-          ephemeral: true
-        };
-      }
-      
-      // Get the first tribe using this castlist
-      const tribeId = tribesUsingCastlist[0];
-      const tribe = playerData[context.guildId]?.tribes?.[tribeId];
-      
-      if (!tribe) {
-        return {
-          content: 'No tribes are using this castlist. Add a tribe first!',
-          ephemeral: true
-        };
-      }
-      
-      // Get members from the castlist rankings
-      const members = castlist.rankings || [];
-      
-      return {
-        embeds: [{
-          title: `${castlist.metadata?.emoji || '📋'} ${castlist.name}`,
-          description: castlist.metadata?.description || 'Castlist',
-          fields: [{
-            name: `Members (${members.length})`,
-            value: members.length > 0 
-              ? members.slice(0, 10).map(m => `<@${m.playerId}>`).join('\n') + 
-                (members.length > 10 ? `\n... and ${members.length - 10} more` : '')
-              : 'No members yet',
-            inline: false
-          }],
-          color: 0x9b59b6
-        }]
-      };
-    }
-  })(req, res, client);
-}
 
 /**
  * Handle Edit Info modal submission
