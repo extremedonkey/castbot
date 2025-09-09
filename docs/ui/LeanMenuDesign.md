@@ -76,6 +76,22 @@ return {
 - **Section headers**: 1-3 words with single emoji
 - **Total components**: Stay under 20 components per container
 
+## 🔙 Navigation Standards
+- **Back Button**: Always use consistent format
+  - Custom ID: `prod_menu_back` (for production menu) or `{parent}_back`
+  - Label: `Back to Menu` or `Back to {Parent}`
+  - Style: `ButtonStyle.Secondary`
+  - Emoji: `⬅️`
+  - Position: Separate navigation row at bottom
+- **Example**:
+  ```javascript
+  new ButtonBuilder()
+    .setCustomId('prod_menu_back')
+    .setLabel('Back to Menu')
+    .setStyle(ButtonStyle.Secondary)
+    .setEmoji('⬅️')
+  ```
+
 ## 🎯 Example: Analytics Menu (Optimal LEAN Design)
 ```
 ## CastBot | Analytics & Admin
