@@ -761,6 +761,12 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     return true;
   }
   
+  // Check for active season to display in header
+  const activeSeason = playerData[guildId]?.activeSeason;
+  const menuTitle = activeSeason?.name 
+    ? `## ${formatBotEmoji('castbot_logo')} CastBot | ${activeSeason.name}`
+    : `## ${formatBotEmoji('castbot_logo')} CastBot | Production Menu`;
+  
   // Build container components array with pagination support
   const containerComponents = [
     {
@@ -768,7 +774,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       components: [
         {
           type: 10, // Text Display component
-          content: `## ${formatBotEmoji('castbot_logo')} CastBot | Production Menu`
+          content: menuTitle
         }
       ],
       accessory: {

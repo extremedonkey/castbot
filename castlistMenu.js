@@ -4,6 +4,7 @@ import {
   getSeasonStageName 
 } from './seasonSelector.js';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
+import { savePlayerData } from './storage.js';
 
 /**
  * Creates the main Castlist menu UI following LEAN Menu Design
@@ -72,12 +73,24 @@ export async function handleCastlistSeasonSelect(context, playerData) {
     };
   }
 
-  // Phase 1: Just print what was selected
+  // Save the active season to playerData
+  if (!playerData[guildId]) {
+    playerData[guildId] = {};
+  }
+  playerData[guildId].activeSeason = {
+    id: selectedValue,
+    name: season.seasonName,
+    stage: season.currentStage || 'planning'
+  };
+  
+  await savePlayerData(playerData);
+
+  // Provide feedback about the selection
   const stageEmoji = getSeasonStageEmoji(season.currentStage || 'planning');
   const stageName = getSeasonStageName(season.currentStage || 'planning');
   
   return {
-    content: `✅ Selected season:\n**${season.seasonName}**\n${stageEmoji} Stage: ${stageName}\n\n*Phase 2 will show castlist creation options here...*`,
+    content: `✅ Active season set to:\n**${season.seasonName}**\n${stageEmoji} Stage: ${stageName}\n\n*This season will now be used as the default for all season-related features.*`,
     flags: InteractionResponseFlags.EPHEMERAL
   };
 }

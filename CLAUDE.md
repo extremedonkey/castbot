@@ -99,6 +99,12 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 
 ## 📚 Feature Documentation Index
 
+**🚧 Current Work in Progress:**
+- **ACTIVE SEASON SYSTEM** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)
+- **CASTLIST V3 INTEGRATION** → [docs/features/CastlistV3-SeasonIntegration.md](docs/features/CastlistV3-SeasonIntegration.md)
+- **SEASON SELECTOR** → Reusable component in `seasonSelector.js`
+- **CHANGE SEASON BUTTON** → Production Menu header accessory
+
 **Core Systems:**
 - **🦁 SAFARI SYSTEM** → [docs/features/Safari.md](docs/features/Safari.md)
 - **📋 SEASON APPLICATIONS** → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
