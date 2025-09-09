@@ -288,10 +288,10 @@ export function handleEditInfoModal(req, res, client, custom_id) {
   const castlistId = custom_id.replace('castlist_edit_info_modal_', '');
   const components = req.body.data.components;
   
-  return ButtonHandlerFactory.create({
-    id: custom_id,
-    updateMessage: true,
-    handler: async (context) => {
+  // Don't use ButtonHandlerFactory for modal submissions - handle directly
+  return (async () => {
+    try {
+      const guildId = req.body.guild_id;
       console.log(`📋 Updating castlist info for ${castlistId}`);
       
       // Extract form values
@@ -300,7 +300,7 @@ export function handleEditInfoModal(req, res, client, custom_id) {
       const newDescription = components[2].components[0].value?.trim() || '';
       
       // Update the castlist
-      await castlistManager.updateCastlist(context.guildId, castlistId, {
+      await castlistManager.updateCastlist(guildId, castlistId, {
         name: newName,
         metadata: {
           emoji: newEmoji,
@@ -311,12 +311,26 @@ export function handleEditInfoModal(req, res, client, custom_id) {
       console.log(`✅ Updated castlist ${castlistId}: name="${newName}", emoji="${newEmoji}"`);
       
       // Refresh the UI with the castlist still selected
-      const hubData = await createCastlistHub(context.guildId, {
+      const hubData = await createCastlistHub(guildId, {
         selectedCastlistId: castlistId,
         activeButton: null // Clear active button after modal
       });
       
-      return hubData;
+      // Send UPDATE_MESSAGE response to keep the container open
+      return res.send({
+        type: 7, // InteractionResponseType.UPDATE_MESSAGE
+        data: hubData
+      });
+      
+    } catch (error) {
+      console.error('Error updating castlist info:', error);
+      return res.send({
+        type: 4, // InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE
+        data: {
+          content: '❌ Error updating castlist info',
+          flags: 64 // EPHEMERAL
+        }
+      });
     }
-  })(req, res, client);
+  })();
 }

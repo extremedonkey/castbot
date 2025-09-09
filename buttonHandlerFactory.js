@@ -159,6 +159,16 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  // EXPERIMENTAL: Delete after testing Components V2 Section behavior
+  'castlist_test': {
+    label: 'Castlist Test',
+    description: 'EXPERIMENTAL: Test multiple Text Display components in Section',
+    emoji: '🧪',
+    style: 'Primary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'testing'
+  },
   
   // Navigation
   'prod_menu_back': {
