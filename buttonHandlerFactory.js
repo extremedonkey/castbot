@@ -285,6 +285,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'castlist'
   },
+  'show_castlist2': {
+    label: 'Post Castlist',
+    description: 'Post castlist to channel',
+    emoji: '📋',
+    style: 'Success',
+    category: 'castlist'
+  },
   'castlist_sort': {
     label: 'Sort Strategy',
     description: 'Select castlist sort strategy',

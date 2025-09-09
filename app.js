@@ -4659,8 +4659,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('show_castlist2_')) {
+      // Handle posting castlist to channel from Castlist Hub (NEW)
+      const { handleShowCastlist } = await import('./castlistHandlers.js');
+      return handleShowCastlist(req, res, client, custom_id);
     } else if (custom_id.startsWith('show_castlist2')) {
-      // Extract castlist name from custom_id if present
+      // Extract castlist name from custom_id if present (LEGACY)
       const castlistMatch = custom_id.match(/^show_castlist2(?:_(.+))?$/);
       const requestedCastlist = castlistMatch?.[1] || 'default';
       
@@ -7403,14 +7407,6 @@ To fix this:
       // Handle tribe role selection
       const { handleCastlistTribeSelect } = await import('./castlistHandlers.js');
       return handleCastlistTribeSelect(req, res, client, custom_id);
-    } else if (custom_id.startsWith('show_castlist2_')) {
-      // Handle posting castlist to channel from Castlist Hub
-      const { handleShowCastlist } = await import('./castlistHandlers.js');
-      return handleShowCastlist(req, res, client, custom_id);
-    } else if (custom_id.startsWith('castlist_edit_info_modal_')) {
-      // Handle castlist Edit Info modal submission
-      const { handleEditInfoModal } = await import('./castlistHandlers.js');
-      return handleEditInfoModal(req, res, client, custom_id);
     } else if (custom_id === 'prod_safari_menu') {
       // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
@@ -32994,6 +32990,11 @@ Are you sure you want to continue?`;
           }
         });
       }
+      
+    } else if (custom_id.startsWith('castlist_edit_info_modal_')) {
+      // Handle castlist Edit Info modal submission
+      const { handleEditInfoModal } = await import('./castlistHandlers.js');
+      return handleEditInfoModal(req, res, client, custom_id);
       
     } else {
       console.log(`⚠️ DEBUG: Unhandled MODAL_SUBMIT custom_id: ${custom_id}`);
