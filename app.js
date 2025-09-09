@@ -20978,7 +20978,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const confirmationText = `## ⚠️ Delete Entire Map
           
 **Map:** ${mapData.name || 'Adventure Map'}
-**Grid Size:** ${mapData.gridSize}x${mapData.gridSize}
+**Grid Size:** ${mapData.gridWidth || mapData.gridSize || 7}x${mapData.gridHeight || mapData.gridSize || 7}
 **Coordinates:** ${coordinateCount} locations
 **Custom Actions:** ${actionCount} actions
 
