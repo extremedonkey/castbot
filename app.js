@@ -32795,18 +32795,29 @@ Are you sure you want to continue?`;
         }
         
         // Validate dimensions
-        if (isNaN(mapRows) || isNaN(mapColumns) || mapRows < 3 || mapRows > 100 || mapColumns < 3 || mapColumns > 100) {
+        if (isNaN(mapRows) || isNaN(mapColumns) || mapRows < 1 || mapRows > 100 || mapColumns < 1 || mapColumns > 100) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Map dimensions must be between 3 and 100 for both rows and columns.',
+              content: '❌ Map dimensions must be between 1 and 100 for both rows and columns.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+        
+        // Validate minimum total tiles (must have at least 3 tiles total)
+        const totalChannels = mapRows * mapColumns;
+        if (totalChannels < 3) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `❌ Map must have at least 3 tiles total. Your ${mapColumns}x${mapRows} map has only ${totalChannels} tile${totalChannels === 1 ? '' : 's'}.`,
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
         
         // Validate total channel count
-        const totalChannels = mapRows * mapColumns;
         if (totalChannels > 400) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
