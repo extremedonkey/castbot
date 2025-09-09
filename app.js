@@ -7309,80 +7309,12 @@ To fix this:
             };
           }
           
-          // Updated LEAN menu implementation following revised standards
-          console.log(`✅ SUCCESS: prod_castlist_menu - showing LEAN menu template`);
-          
-          // Following revised LeanMenuDesign.md standards
-          const row1 = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('castlist_placeholder_1')
-                .setLabel('View All')
-                .setStyle(ButtonStyle.Primary)
-                .setEmoji('👁️'),
-              new ButtonBuilder()
-                .setCustomId('castlist_placeholder_2')
-                .setLabel('Add New')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('➕'),
-              new ButtonBuilder()
-                .setCustomId('castlist_placeholder_3')
-                .setLabel('Edit')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('✏️')
-            );
-          
-          const row2 = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('castlist_placeholder_4')
-                .setLabel('Alumni')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('🎓'),
-              new ButtonBuilder()
-                .setCustomId('castlist_placeholder_5')
-                .setLabel('Import')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('📥'),
-              new ButtonBuilder()
-                .setCustomId('castlist_placeholder_6')
-                .setLabel('Export')
-                .setStyle(ButtonStyle.Secondary)
-                .setEmoji('📤')
-            );
-          
-          const navigationRow = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_menu_back')
-                .setLabel('← Menu')  // Updated per navigation standards
-                .setStyle(ButtonStyle.Secondary)
-                // No emoji for main menu back button
-            );
-          
-          // LEAN Menu Template - following revised documentation
-          const containerComponents = [
-            { type: 10, content: `## 📋 Castlist | Dynamic Lists & Alumni Tracking` },  // Updated header format
-            { type: 14 },                                                                // Separator
-            { type: 10, content: `> **\`📊 View & Manage\`**` },                       // Section header
-            row1.toJSON(),                                                              // Buttons (max 5)
-            { type: 14 },                                                                // Separator between sections
-            { type: 10, content: `> **\`🔧 Advanced Options\`**` },                    // Next section
-            row2.toJSON(),                                                              // More buttons
-            { type: 14 },                                                                // Separator before navigation
-            navigationRow.toJSON()                                                       // Navigation buttons
-            // Removed work-in-progress credit line and extra separator per feedback
-          ];
-          
-          const menuContainer = {
-            type: 17,                          // Container type (MANDATORY)
-            accent_color: 0x9b59b6,            // Purple for castlists
-            components: containerComponents     // Array of components
-          };
+          // TODO: Implement real Castlist menu with season selector
+          console.log(`✅ SUCCESS: prod_castlist_menu - showing placeholder`);
           
           return {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,  // IS_COMPONENTS_V2 + Ephemeral
-            components: [menuContainer]
+            content: '🚧 Castlist menu under construction - implementing season selector integration',
+            flags: InteractionResponseFlags.EPHEMERAL
           };
         }
       })(req, res, client);
@@ -32805,17 +32737,8 @@ Are you sure you want to continue?`;
           });
         }
         
-        // Validate minimum total tiles (must have at least 3 tiles total)
+        // Calculate total channel count first
         const totalChannels = mapRows * mapColumns;
-        if (totalChannels < 3) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `❌ Map must have at least 3 tiles total. Your ${mapColumns}x${mapRows} map has only ${totalChannels} tile${totalChannels === 1 ? '' : 's'}.`,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
         
         // Validate total channel count
         if (totalChannels > 400) {
