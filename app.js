@@ -7286,11 +7286,91 @@ To fix this:
             };
           }
           
-          // TODO: Implement real Castlist menu with season selector
-          console.log(`✅ SUCCESS: prod_castlist_menu - showing placeholder`);
+          // Build Castlist menu with season selector
+          console.log(`✅ SUCCESS: prod_castlist_menu - showing Castlist menu`);
+          
+          // Import our reusable season selector
+          const { createSeasonSelector } = await import('./seasonSelector.js');
+          
+          // Create season selector with custom options for castlists
+          const seasonSelectDropdown = await createSeasonSelector(context.guildId, {
+            customId: 'castlist_season_select',
+            placeholder: 'Select a season for your castlist...',
+            includeCreateNew: true,
+            showArchived: false
+          });
+          
+          const selectRow = new ActionRowBuilder().addComponents(seasonSelectDropdown);
+          
+          // Build navigation row
+          const navigationRow = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('prod_menu_back')
+                .setLabel('← Menu')
+                .setStyle(ButtonStyle.Secondary)
+            );
+          
+          // Build menu following LEAN standards
+          const containerComponents = [
+            { type: 10, content: `## 📋 Castlists | Easily create Castlists!` },  // Header
+            { type: 14 },                                                         // Separator
+            selectRow.toJSON(),                                                  // Season selector
+            { type: 14 },                                                         // Separator before navigation
+            navigationRow.toJSON()                                               // Navigation buttons
+          ];
+          
+          const menuContainer = {
+            type: 17,                          // Container type (MANDATORY)
+            accent_color: 0x9b59b6,            // Purple for castlists
+            components: containerComponents     // Array of components
+          };
           
           return {
-            content: '🚧 Castlist menu under construction - implementing season selector integration',
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,  // IS_COMPONENTS_V2 + Ephemeral
+            components: [menuContainer]
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'castlist_season_select') {
+      // Handle season selection in Castlist menu
+      return ButtonHandlerFactory.create({
+        id: 'castlist_season_select',
+        handler: async (context) => {
+          console.log(`🔍 START: castlist_season_select - user ${context.userId}`);
+          
+          const selectedValue = context.values[0];
+          console.log(`📋 DEBUG: Castlist season selected - Value: ${selectedValue}`);
+          
+          // For now, just print what was selected
+          let responseMessage = '';
+          
+          if (selectedValue === 'create_new_season') {
+            responseMessage = `🆕 You selected: Create New Season\n\nThis will open a modal to create a new season (not yet implemented).`;
+          } else if (selectedValue === 'view_more_seasons') {
+            responseMessage = `📦 You selected: View More Seasons\n\nThis would show archived/additional seasons (not yet implemented).`;
+          } else if (selectedValue === 'none') {
+            responseMessage = `❌ No seasons available\n\nCreate a season first to continue.`;
+          } else {
+            // An actual season was selected - get its details
+            const playerData = await loadPlayerData();
+            const season = playerData[context.guildId]?.applicationConfigs?.[selectedValue];
+            
+            if (season) {
+              responseMessage = `✅ You selected season:\n\n` +
+                `**Name:** ${season.seasonName}\n` +
+                `**ID:** ${selectedValue}\n` +
+                `**Stage:** ${season.stage || 'planning'}\n` +
+                `**Last Updated:** ${new Date(season.lastUpdated || season.createdAt || 0).toLocaleDateString()}\n\n` +
+                `Next step: This will show castlist creation options for this season.`;
+            } else {
+              responseMessage = `❌ Season not found: ${selectedValue}`;
+            }
+          }
+          
+          // Return simple text response for now
+          return {
+            content: responseMessage,
             flags: InteractionResponseFlags.EPHEMERAL
           };
         }

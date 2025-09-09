@@ -1194,6 +1194,13 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'entity_management'
   },
+  'castlist_season_select': {
+    label: 'Castlist Season Selection',
+    description: 'Select a season for castlist management',
+    emoji: '📋',
+    style: 'Secondary',
+    category: 'castlist'
+  },
   'entity_field_group': {
     label: 'Field Group Edit',
     description: 'Handle field group button click for editing',
