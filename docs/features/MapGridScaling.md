@@ -1,5 +1,12 @@
 # Safari Map Grid Scaling Documentation
 
+## Update: Non-Square Map Support
+
+As of January 2025, the Safari Map system now supports:
+- **Flexible grid dimensions**: Any size from 1x1 to 100x100
+- **Non-square maps**: Full support for rectangular grids (e.g., 3x1, 5x10)
+- **Dynamic coordinate generation**: Properly handles wide maps with extended column labels (AA, AB, etc.)
+
 ## Current Issue
 
 The Safari Map system currently uses **fixed grid parameters** regardless of the image dimensions:
@@ -18,10 +25,11 @@ In `mapExplorer.js`, all three map creation/update functions use hardcoded value
 
 ```javascript
 const gridSystem = new MapGridSystem(mapPath, {
-  gridSize: gridSize,
-  borderSize: 80,      // Fixed value
-  lineWidth: 4,        // Fixed value  
-  fontSize: 40,        // Fixed value
+  gridWidth: mapColumns,   // Now supports separate width
+  gridHeight: mapRows,     // Now supports separate height
+  borderSize: 80,          // Still fixed value
+  lineWidth: 4,            // Still fixed value  
+  fontSize: 40,            // Still fixed value
   labelStyle: 'standard'
 });
 ```
@@ -35,10 +43,11 @@ const gridSystem = new MapGridSystem(mapPath, {
  * Calculate optimal grid parameters based on image dimensions
  * @param {number} imageWidth - Width of the source image in pixels
  * @param {number} imageHeight - Height of the source image in pixels
- * @param {number} gridSize - Number of grid cells (e.g., 7 for 7x7)
+ * @param {number} gridColumns - Number of horizontal grid cells
+ * @param {number} gridRows - Number of vertical grid cells
  * @returns {Object} Optimized grid parameters
  */
-function calculateOptimalGridParameters(imageWidth, imageHeight, gridSize) {
+function calculateOptimalGridParameters(imageWidth, imageHeight, gridColumns, gridRows) {
   const avgDimension = (imageWidth + imageHeight) / 2;
   
   // Scale parameters based on image size
@@ -53,8 +62,11 @@ function calculateOptimalGridParameters(imageWidth, imageHeight, gridSize) {
     // Line width scales logarithmically (thinner for larger images)
     lineWidth: Math.round(Math.min(Math.max(2 + Math.log2(scaleFactor) * 1.5, 2), 8)),
     
-    // Font size based on cell size (roughly 1/3 of cell height)
-    fontSize: Math.round(Math.min(Math.max((avgDimension / gridSize) * 0.15, 20), 80)),
+    // Font size based on cell size (using the smaller dimension for better fit)
+    fontSize: Math.round(Math.min(Math.max(
+      Math.min(imageWidth / gridColumns, imageHeight / gridRows) * 0.15, 
+      20
+    ), 80)),
     
     labelStyle: 'standard'
   };
@@ -71,11 +83,13 @@ const metadata = await sharp(imageBuffer).metadata();
 const optimalParams = calculateOptimalGridParameters(
   metadata.width, 
   metadata.height, 
-  gridSize
+  mapColumns,
+  mapRows
 );
 
 const gridSystem = new MapGridSystem(tempMapPath, {
-  gridSize: gridSize,
+  gridWidth: mapColumns,
+  gridHeight: mapRows,
   ...optimalParams
 });
 ```
@@ -113,20 +127,25 @@ const gridSystem = new MapGridSystem(tempMapPath, {
 
 ## Additional Considerations
 
-### Square vs Non-Square Images
-Currently, the system requires square images. For non-square support:
+### Non-Square Images (NOW SUPPORTED)
+The system now fully supports non-square images and non-square grids:
 ```javascript
-// Use the smaller dimension to maintain aspect ratio
-const minDimension = Math.min(imageWidth, imageHeight);
-const scaleFactor = minDimension / BASE_SIZE;
+// Calculate based on both dimensions independently
+const cellWidth = imageWidth / gridColumns;
+const cellHeight = imageHeight / gridRows;
+const minCellDimension = Math.min(cellWidth, cellHeight);
+
+// Scale font to fit in the smaller cell dimension
+const fontSize = Math.round(minCellDimension * 0.15);
 ```
 
-### Grid Size Impact
+### Grid Density Impact
 Larger grids (more cells) need smaller fonts to fit labels:
 ```javascript
-// Adjust font size inversely with grid density
-const gridDensityFactor = 7 / gridSize; // Base on 7x7 grid
-fontSize = Math.round(fontSize * gridDensityFactor);
+// Adjust font size based on total cell count
+const totalCells = gridColumns * gridRows;
+const densityFactor = Math.sqrt(49 / totalCells); // Base on 7x7 grid
+fontSize = Math.round(fontSize * densityFactor);
 ```
 
 ### User Preferences
@@ -148,12 +167,20 @@ const userPrefs = {
 
 ## Testing Recommendations
 
-Test with various image sizes:
-- Minimum: 300x300 (Discord emoji size)
-- Small: 500x500
-- Medium: 1000x1000
-- Large: 2000x2000
-- Maximum: 4000x4000 (typical camera photo)
+Test with various image sizes and aspect ratios:
+- Square maps: 500x500, 1000x1000, 2000x2000
+- Wide maps: 1500x500, 2000x800, 3000x1000
+- Tall maps: 500x1500, 800x2000, 1000x3000
+- Extreme aspect ratios: 3000x300 (10:1), 300x3000 (1:10)
+- Minimum sizes: 100x100, 200x50, 50x200
+
+Test with various grid configurations:
+- Minimum: 1x1 (single cell)
+- Linear: 1x3, 3x1, 1x10
+- Small: 2x2, 3x3, 2x5
+- Standard: 5x5, 7x7, 10x10
+- Large: 20x20, 15x30
+- Maximum: Up to 400 total cells
 
 Verify:
 - Labels remain readable at all sizes

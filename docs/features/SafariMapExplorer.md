@@ -19,18 +19,22 @@ This document serves as the source of truth for the Safari Map Explorer feature 
 
 The Safari Map Explorer allows:
 - **Admins to upload custom map images via Discord CDN URLs** ✅ IMPLEMENTED
+- **Dynamic grid sizes from 1x1 to 100x100** ✅ IMPLEMENTED (no longer fixed to 7x7)
+- **Non-square map support** ✅ IMPLEMENTED (e.g., 3x1, 1x5, 2x10)
 - Automatic grid overlay and coordinate system generation (A1, B2, C3, etc.) ✅ IMPLEMENTED
 - Creation of Discord channels for each grid coordinate ✅ IMPLEMENTED
 - Players exploring the map by moving between grid channels ✅ IMPLEMENTED
 - Visual feedback showing explored vs unexplored areas (fog of war) ✅ IMPLEMENTED
+- **Map updates without deletion** ✅ IMPLEMENTED (replace image while preserving data)
 
 ### Core User Flow
 1. Admin uploads image to Discord, copies CDN URL
 2. Admin uses "Create/Update Map" button and pastes URL
-3. Bot downloads image and overlays a 7x7 grid
-4. Bot creates Discord channels for each coordinate
-5. Bot generates fog of war maps for each location
-6. Players explore by moving between coordinate channels
+3. Admin specifies desired grid dimensions (e.g., 5x5, 3x1, 10x8)
+4. Bot downloads image and overlays the specified grid
+5. Bot creates Discord channels for each coordinate
+6. Bot generates fog of war maps for each location
+7. Players explore by moving between coordinate channels
 
 ## Technical Architecture Options
 
@@ -82,9 +86,11 @@ The Safari Map Explorer allows:
    - URL format: `https://cdn.discordapp.com/attachments/...`
 
 2. **Admin clicks "Create/Update Map" button**
-   - Opens modal requesting Discord CDN URL
-   - Pastes the copied URL
-   - Bot validates URL format
+   - Opens modal requesting:
+     - Discord CDN URL
+     - Number of columns (1-100)
+     - Number of rows (1-100)
+   - Bot validates URL format and dimensions
 
 3. **Bot processes the image**
    - Downloads image from Discord CDN
@@ -94,8 +100,9 @@ The Safari Map Explorer allows:
 
 **Current Limitations:**
 - Only accepts Discord CDN URLs (security measure)
-- Fixed 7x7 grid size
-- Hardcoded grid parameters (see MapGridScaling.md)
+- Maximum 400 total channels (Discord limitation)
+- Hardcoded grid visual parameters (see MapGridScaling.md)
+- Maps cannot be resized after creation (must delete and recreate)
 
 ### Method 2: URL-Based Upload
 ```javascript
@@ -254,7 +261,8 @@ async function moveToCoordinate(guildId, userId, coordinate) {
             "name": "Treasure Island",
             "guildId": "123456789",
             "imageUrl": "https://...",
-            "gridSize": 10,
+            "gridWidth": 10,
+            "gridHeight": 10,
             "coordinates": {
                 "A1": {
                     "channelId": "987654321",
@@ -382,7 +390,9 @@ async function moveToCoordinate(guildId, userId, coordinate) {
 ✅ **Player Movement:** Complete - full navigation system with Navigate button pattern
 ✅ **Permission Management:** Complete - automatic channel access control
 ✅ **Admin Controls:** Complete - Map Admin interface for player management
-⚠️ **Grid Scaling:** Hardcoded parameters - needs dynamic scaling based on image size
+⚠️ **Grid Visual Scaling:** Hardcoded parameters - needs dynamic scaling based on image size
+✅ **Dynamic Grid Dimensions:** Maps can be any size from 1x1 to 100x100
+✅ **Non-Square Maps:** Full support for rectangular grids
 🔄 **Cell Content Management:** Next phase - editing individual cell content
 
 ### Technical Capabilities
@@ -415,8 +425,12 @@ async function moveToCoordinate(guildId, userId, coordinate) {
 - **Channel Creation:** One Discord channel per grid coordinate in 🗺️ Map category
 
 #### 2. Grid Specifications
-- **Fixed Size:** 7x7 (49 cells) grid for all maps
-- **Coordinate System:** Standard letter-number (A1-G7)
+- **Flexible Size:** 1x1 to 100x100 grids (maximum 400 total cells)
+- **Non-Square Support:** Any rectangular dimension (e.g., 3x1, 5x10, 2x2)
+- **Minimum Requirements:** No minimum (even 1x1 maps supported for testing)
+- **Coordinate System:** Dynamic letter-number based on dimensions
+  - Columns: A-Z, then AA-AZ, BA-BZ, etc.
+  - Rows: 1-100
 - **Image Source:** Custom Discord CDN URLs provided by admins
 - **Grid Parameters:** Currently hardcoded (see MapGridScaling.md for improvement plans)
 
@@ -541,10 +555,10 @@ graph TD
 
 #### Create Map Process (Current)
 - ✅ Downloads image from Discord CDN URL
-- ✅ Generates 7x7 grid overlay on custom image
-- ✅ Saves processed image to `img/{guildId}/map_7x7_{timestamp}.png`
+- ✅ Generates custom-sized grid overlay (e.g., 5x5, 3x1, 10x8)
+- ✅ Saves processed image to `img/{guildId}/map_{width}x{height}_{timestamp}.png`
 - ✅ Creates Discord category "🗺️ Map Explorer" 
-- ✅ Creates 49 channels (#a1 through #g7) with rate limiting
+- ✅ Creates channels for each coordinate with rate limiting
 - ✅ Generates fog of war map for each coordinate
 - ✅ Posts anchor messages with navigation buttons
 - ✅ Stores complete map data structure in `safariContent.json`
@@ -568,9 +582,10 @@ graph TD
 - ✅ **Documentation:** Button handlers registered in BUTTON_HANDLER_REGISTRY.md
 
 #### MapGridSystem Capabilities
-- ✅ **Grid Generation:** Supports 5x5, 8x8, 10x10, 12x12 grids
+- ✅ **Grid Generation:** Supports any size from 1x1 to 100x100
+- ✅ **Non-Square Grids:** Full support for rectangular maps (width ≠ height)
 - ✅ **Styling Options:** Customizable border size, line width, fonts, colors
-- ✅ **Coordinate Systems:** Standard (A1-E5), chess-style (a1-e5), numbers-only (1-1 to 5-5)
+- ✅ **Coordinate Systems:** Standard (A1-Z99), extended for wide maps (AA1, AB1, etc.)
 - ✅ **Programmatic Access:** Coordinate ↔ pixel conversion functions
 - ✅ **Marker System:** Can highlight specific cells and draw on coordinates
 - ✅ **Tile Extraction:** Proven capability to extract individual grid cells
@@ -584,7 +599,8 @@ graph TD
       "map_5x5_1704236400000": {
         "id": "map_5x5_1704236400000",
         "name": "Adventure Island",
-        "gridSize": 5,
+        "gridWidth": 5,
+        "gridHeight": 5,
         "imageFile": "img/391415444084490240/map_5x5_1704236400000.png",
         "category": "1234567890",
         "coordinates": {

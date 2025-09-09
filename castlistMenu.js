@@ -1,5 +1,8 @@
-import { createSeasonSelector } from './seasonSelector.js';
-import { getSeasonStageEmoji, getSeasonStageName } from './utils.js';
+import { 
+  createSeasonSelector,
+  getSeasonStageEmoji, 
+  getSeasonStageName 
+} from './seasonSelector.js';
 import { InteractionResponseType, InteractionResponseFlags } from 'discord-interactions';
 
 /**

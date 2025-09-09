@@ -14,7 +14,7 @@ import { loadPlayerData } from './storage.js';
  * @param {string} stage - Season lifecycle stage
  * @returns {string} Emoji representing the stage
  */
-function getStageEmoji(stage) {
+export function getSeasonStageEmoji(stage) {
   const stageEmojis = {
     'planning': '📝',
     'applications': '📝',
@@ -37,7 +37,7 @@ function getStageEmoji(stage) {
  * @param {string} stage - Season lifecycle stage
  * @returns {string} Human-readable stage name
  */
-function getStageName(stage) {
+export function getSeasonStageName(stage) {
   const stageNames = {
     'planning': 'Planning',
     'applications': 'Applications Open',
@@ -119,8 +119,8 @@ export async function createSeasonSelector(guildId, options = {}) {
   // Add existing seasons
   showingSeasons.forEach(([configId, season]) => {
     const stage = season.stage || 'planning';
-    const emoji = getStageEmoji(stage);
-    const stageName = getStageName(stage);
+    const emoji = getSeasonStageEmoji(stage);
+    const stageName = getSeasonStageName(stage);
     const lastUpdate = new Date(season.lastUpdated || season.createdAt || 0);
     
     seasonOptions.push({
@@ -212,7 +212,7 @@ export async function getAllSeasons(guildId) {
     ...season,
     stage: season.stage || 'planning',
     stageName: getStageName(season.stage || 'planning'),
-    stageEmoji: getStageEmoji(season.stage || 'planning')
+    stageEmoji: getSeasonStageEmoji(season.stage || 'planning')
   }));
 }
 
