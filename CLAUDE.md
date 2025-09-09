@@ -191,6 +191,13 @@ grep -B20 -A20 "feature_pattern" app.js
 - **Definition of Done**: [docs/workflow/DefinitionOfDone.md](docs/workflow/DefinitionOfDone.md)
 - **Dev Workflow**: [docs/workflow/DevWorkflow.md](docs/workflow/DevWorkflow.md)
 
+### Background Tasks for Efficiency
+**🚀 Use background processes when possible:**
+- Run development servers, watchers, and build processes in background using `run_in_background: true`
+- Examples: `npx tailwind --watch`, `./scripts/dev/dev-start.sh`, log monitoring
+- This allows Claude to continue working on other tasks while processes run
+- Monitor output with BashOutput and kill with KillBash when needed
+
 ### Tools Without Permission Required
 **Claude can execute these without asking:**
 - `grep` commands and all Grep tool usage

@@ -906,7 +906,14 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('msg_test')
       .setLabel('Msg Test')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💬')
+      .setEmoji('💬'),
+    // EXPERIMENTAL: Testing multiple Text Display components in Section
+    // DELETE THIS AFTER TESTING - This is temporary for Components V2 research
+    new ButtonBuilder()
+      .setCustomId('castlist_test')
+      .setLabel('Castlist Test')
+      .setStyle(ButtonStyle.Primary)  // Blue to indicate experimental
+      .setEmoji('🧪')  // Test tube emoji for experimental
   ];
 
   // Danger Zone section buttons
@@ -7224,6 +7231,117 @@ To fix this:
           
           console.log(`✅ SUCCESS: msg_test - completed`);
           return result.response;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'castlist_test') {
+      // EXPERIMENTAL: Test rendering castlist with multiple Text Display components in Section
+      // DELETE THIS AFTER TESTING - This is temporary for Components V2 research
+      // This tests if Sections can render multiple Text Display components as columns
+      return ButtonHandlerFactory.create({
+        id: 'castlist_test',
+        handler: async (context) => {
+          console.log(`🧪 EXPERIMENTAL: castlist_test - user ${context.userId}`);
+          
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            console.log(`❌ ACCESS DENIED: castlist_test - user ${context.userId} not authorized`);
+            return {
+              content: 'Access denied. This feature is restricted.',
+              ephemeral: true
+            };
+          }
+          
+          // Import castlist functions
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          
+          // Get player list from this guild
+          const guildPlayers = playerData[context.guildId]?.players || {};
+          const playerIds = Object.keys(guildPlayers).slice(0, 3); // Test with first 3 players
+          
+          if (playerIds.length === 0) {
+            return {
+              content: '⚠️ No players found in this guild to test with.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`🧪 Testing with ${playerIds.length} players`);
+          
+          // Fetch guild and members
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const members = [];
+          for (const playerId of playerIds) {
+            try {
+              const member = await guild.members.fetch(playerId);
+              members.push(member);
+            } catch (err) {
+              console.log(`Could not fetch member ${playerId}: ${err.message}`);
+            }
+          }
+          
+          if (members.length === 0) {
+            return {
+              content: '⚠️ Could not fetch any guild members for testing.',
+              ephemeral: true
+            };
+          }
+          
+          // EXPERIMENTAL: Create Section with multiple Text Display components
+          // Instead of one Text Display with all info, we create separate Text Display for each player
+          const textDisplayComponents = members.map(member => {
+            const player = guildPlayers[member.user.id];
+            const placement = player?.placement || 'N/A';
+            const tribe = player?.tribe || 'None';
+            
+            // Create simple player info for this test
+            const playerInfo = `**${member.displayName}**\n` +
+                              `Placement: ${placement}\n` +
+                              `Tribe: ${tribe}`;
+            
+            return {
+              type: 10, // Text Display
+              content: playerInfo
+            };
+          });
+          
+          console.log(`🧪 Created ${textDisplayComponents.length} Text Display components`);
+          
+          // Create the experimental Section with multiple Text Display children
+          const experimentalSection = {
+            type: 9, // Section
+            components: textDisplayComponents // Array of Text Display components
+          };
+          
+          // Build the response with Container
+          const response = {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            ephemeral: true,
+            components: [{
+              type: 17, // Container
+              accent_color: 0xFF00FF, // Magenta to indicate experimental
+              components: [
+                {
+                  type: 10, // Text Display for header
+                  content: '## 🧪 EXPERIMENTAL CASTLIST TEST\n\n' +
+                          '**Testing Multiple Text Display Components in a Section**\n' +
+                          'This is testing if Section components can render multiple Text Display children.\n' +
+                          '⚠️ **This is temporary experimental code - DELETE AFTER TESTING**'
+                },
+                { type: 14 }, // Separator
+                experimentalSection, // Our experimental Section with multiple Text Displays
+                { type: 14 }, // Separator
+                {
+                  type: 10, // Text Display for footer
+                  content: `*Rendered ${members.length} players as separate Text Display components*\n` +
+                          `*Normal castlist would combine these into one Text Display*`
+                }
+              ]
+            }]
+          };
+          
+          console.log(`✅ EXPERIMENTAL: castlist_test - completed`);
+          return response;
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_player_data') {
