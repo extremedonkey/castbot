@@ -39,7 +39,7 @@ MenuBuilder.registerMenu(id, config)        // Register new menu
 Provides visibility into migration progress:
 ```
 MENU DEBUG: Building main_menu [🎯 MENUSYSTEM]        // Using new system
-MENU DEBUG: Legacy menu at prod_manage_tribes [🪨 MENULEGACY]  // Needs migration
+MENU DEBUG: Legacy menu at prod_manage_tribes [⚱️ MENULEGACY]  // Needs migration
 MENU DEBUG: Unknown menu invalid_id [⚠️ UNREGISTERED] // Not in registry
 ```
 
@@ -133,16 +133,17 @@ Current menus requiring migration (tracked via MenuBuilder.trackLegacyMenu):
 
 | Menu | Location | Status | Priority |
 |------|----------|--------|----------|
-| Main Production Menu | `createProductionMenuInterface` | 🪨 Legacy | High |
-| Tribes Management | `prod_manage_tribes` | 🪨 Legacy | High |
-| Pronouns & Timezones | `prod_manage_pronouns_timezones` | 🪨 Legacy | Medium |
-| Availability | `prod_availability` | 🪨 Legacy | Low |
-| Season Management | `season_management_menu` | 🪨 Legacy | Medium |
-| Safari Menu | `prod_safari_menu` | 🪨 Legacy | High |
-| Analytics Menu | `reece_stuff_menu` | 🪨 Legacy | Low |
-| Player Management | `admin_manage_player` | 🪨 Legacy | Medium |
-| Safari Rounds Config | `safari_configure_rounds` | 🪨 Legacy | Low |
-| Safari Store Items | `safari_store_manage_items` | 🪨 Legacy | Low |
+| Main Production Menu | `createProductionMenuInterface` | ⚱️ Legacy | High |
+| Tribes Management | `prod_manage_tribes` | ⚱️ Legacy | High |
+| Pronouns & Timezones | `prod_manage_pronouns_timezones` | ⚱️ Legacy | Medium |
+| Availability | `prod_availability` | ⚱️ Legacy | Low |
+| Season Management | `season_management_menu` | ⚱️ Legacy | Medium |
+| Safari Menu | `prod_safari_menu` | ⚱️ Legacy | High |
+| Analytics Menu | `reece_stuff_menu` | ⚱️ Legacy | Low |
+| Player Management | `admin_manage_player` | ⚱️ Legacy | Medium |
+| Safari Rounds Config | `safari_configure_rounds` | ⚱️ Legacy | Low |
+| Safari Store Items | `safari_store_manage_items` | ⚱️ Legacy | Low |
+| Castlist Menu | `prod_castlist_menu` | ⚱️ Legacy | High |
 
 ## Natural Language Interface
 

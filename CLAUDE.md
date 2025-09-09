@@ -232,7 +232,7 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';  // Button man
 - Round results ephemeral → Set `ephemeral: false` in ButtonHandlerFactory
 - Double handler execution → Missing BUTTON_REGISTRY entry
 - Button shows "[🪨 LEGACY]" in logs → Not registered in BUTTON_REGISTRY
-- Menu shows "[🪨 MENULEGACY]" in logs → Needs migration to MenuBuilder
+- Menu shows "[⚱️ MENULEGACY]" in logs → Needs migration to MenuBuilder
 - Menu not tracking → Add `MenuBuilder.trackLegacyMenu()` call
 
 ## 🎯 Available Commands

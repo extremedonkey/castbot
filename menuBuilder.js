@@ -27,7 +27,7 @@ export class MenuBuilder {
    * @param {string} description - Human-readable description of the menu
    */
   static trackLegacyMenu(location, description) {
-    console.log(`MENU DEBUG: Legacy menu at ${location} - ${description} [🪨 MENULEGACY]`);
+    console.log(`MENU DEBUG: Legacy menu at ${location} - ${description} [⚱️ MENULEGACY]`);
   }
 
   /**
