@@ -1,12 +1,25 @@
 /**
  * Castlist Management Hub - Central UI for all castlist operations
- * Following LEAN Menu Design standards
+ * Following Player Management UI pattern with hot-swappable interface
  */
 
 import { ButtonBuilder, StringSelectMenuBuilder, ActionRowBuilder } from 'discord.js';
 import { ButtonStyle } from 'discord-api-types/v10';
 import { castlistManager } from './castlistManager.js';
 import { loadPlayerData } from './storage.js';
+
+/**
+ * Button types for castlist management
+ */
+export const CastlistButtonType = {
+  VIEW: 'view',
+  EDIT_INFO: 'edit_info',
+  ADD_TRIBE: 'add_tribe',
+  CUSTOMIZE: 'customize',
+  EDIT_PLAYERS: 'edit_players',
+  SWAP_MERGE: 'swap_merge',
+  ORDER: 'order'
+};
 
 /**
  * Create the main Castlist Management Hub menu
@@ -16,8 +29,8 @@ import { loadPlayerData } from './storage.js';
  */
 export async function createCastlistHub(guildId, options = {}) {
   const {
-    mode = 'list', // 'list', 'create', 'edit', 'view'
     selectedCastlistId = null,
+    activeButton = null,
     showVirtual = true
   } = options;
   
@@ -27,216 +40,157 @@ export async function createCastlistHub(guildId, options = {}) {
   // Get migration stats
   const stats = await castlistManager.getMigrationStats(guildId);
   
-  // Build components based on mode
-  const containerComponents = [];
+  // Build container
+  const container = {
+    type: 17, // Container
+    accent_color: 0x9b59b6, // Purple for castlists
+    components: []
+  };
   
   // Header
-  containerComponents.push({
+  container.components.push({
     type: 10, // Text Display
     content: `## 📋 Castlists | Manage All Cast Lists\n-# ${stats.total} castlists (${stats.real} managed, ${stats.virtual} legacy)`
   });
   
-  if (mode === 'list') {
-    // Build castlist list view
-    containerComponents.push({ type: 14 }); // Separator
-    
-    // Your Castlists section
-    containerComponents.push({
-      type: 10,
-      content: `> **\`📊 Your Castlists\`**`
-    });
-    
-    // Create select menu for castlists
-    const selectMenu = new StringSelectMenuBuilder()
-      .setCustomId('castlist_select')
-      .setPlaceholder('Select a castlist to manage...')
-      .setMinValues(1)
-      .setMaxValues(1);
-    
-    // Sort castlists: real first, then virtual
-    const sortedCastlists = [...allCastlists.values()].sort((a, b) => {
-      if (a.isVirtual !== b.isVirtual) {
-        return a.isVirtual ? 1 : -1; // Real first
-      }
-      return a.name.localeCompare(b.name);
-    });
-    
-    // Add castlists to select menu (max 25)
-    let addedCount = 0;
-    for (const castlist of sortedCastlists) {
-      if (addedCount >= 25) break;
-      
-      // Skip virtual if not showing
-      if (castlist.isVirtual && !showVirtual) continue;
-      
-      const emoji = castlist.metadata?.emoji || '📋';
-      const label = castlist.isVirtual ? `${castlist.name} [Legacy]` : castlist.name;
-      const description = castlist.metadata?.description || 
-        (castlist.isVirtual ? 'Legacy castlist - click to upgrade' : 'Managed castlist');
-      
-      selectMenu.addOptions({
-        label: label.substring(0, 100),
-        value: castlist.id.substring(0, 100),
-        description: description.substring(0, 100),
-        emoji: emoji
-      });
-      
-      addedCount++;
+  // Separator
+  container.components.push({ type: 14 });
+  
+  // Castlist dropdown select
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId('castlist_select')
+    .setPlaceholder('Select a castlist to manage...')
+    .setMinValues(0) // Allow deselection
+    .setMaxValues(1);
+  
+  // Sort castlists: real first, then virtual
+  const sortedCastlists = [...allCastlists.values()].sort((a, b) => {
+    if (a.isVirtual !== b.isVirtual) {
+      return a.isVirtual ? 1 : -1; // Real first
     }
+    return a.name.localeCompare(b.name);
+  });
+  
+  // Add castlists to select menu (max 25)
+  let addedCount = 0;
+  for (const castlist of sortedCastlists) {
+    if (addedCount >= 25) break;
     
-    // If no castlists, add placeholder
-    if (addedCount === 0) {
-      selectMenu.addOptions({
-        label: 'No castlists found',
-        value: 'none',
-        description: 'Create your first castlist below'
-      });
-      selectMenu.setDisabled(true);
-    }
+    // Skip virtual if not showing
+    if (castlist.isVirtual && !showVirtual) continue;
     
-    const selectRow = new ActionRowBuilder().addComponents(selectMenu);
-    containerComponents.push(selectRow.toJSON());
+    const emoji = castlist.metadata?.emoji || '📋';
+    const label = castlist.isVirtual ? `${castlist.name} [Legacy]` : castlist.name;
+    const description = castlist.metadata?.description || 
+      (castlist.isVirtual ? 'Legacy castlist - click to upgrade' : 'Managed castlist');
     
-    // Create New section
-    containerComponents.push({ type: 14 }); // Separator
-    containerComponents.push({
-      type: 10,
-      content: `> **\`➕ Create New\`**`
+    selectMenu.addOptions({
+      label: label.substring(0, 100),
+      value: castlist.id.substring(0, 100),
+      description: description.substring(0, 100),
+      emoji: emoji
     });
     
-    const createButtons = new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId('castlist_create_season')
-          .setLabel('From Season')
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji('🎭'),
-        new ButtonBuilder()
-          .setCustomId('castlist_create_role')
-          .setLabel('From Role')
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji('👥'),
-        new ButtonBuilder()
-          .setCustomId('castlist_create_custom')
-          .setLabel('Custom')
-          .setStyle(ButtonStyle.Primary)
-          .setEmoji('✨'),
-        new ButtonBuilder()
-          .setCustomId('castlist_import')
-          .setLabel('Import')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('📥')
-      );
-    containerComponents.push(createButtons.toJSON());
-    
-    // Tools section
-    containerComponents.push({ type: 14 }); // Separator
-    containerComponents.push({
-      type: 10,
-      content: `> **\`🔧 Tools\`**`
+    addedCount++;
+  }
+  
+  // If no castlists, add placeholder
+  if (addedCount === 0) {
+    selectMenu.addOptions({
+      label: 'No castlists found',
+      value: 'none',
+      description: 'Create your first castlist'
     });
-    
-    const toolButtons = new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId('castlist_templates')
-          .setLabel('Templates')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('📑'),
-        new ButtonBuilder()
-          .setCustomId('castlist_export')
-          .setLabel('Export')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('📤'),
-        new ButtonBuilder()
-          .setCustomId('castlist_settings')
-          .setLabel('Settings')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('⚙️'),
-        new ButtonBuilder()
-          .setCustomId('castlist_migration')
-          .setLabel(`Migrate (${stats.virtual})`)
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('🔄')
-          .setDisabled(stats.virtual === 0)
-      );
-    containerComponents.push(toolButtons.toJSON());
-    
-  } else if (mode === 'view' && selectedCastlistId) {
-    // View specific castlist
+    selectMenu.setDisabled(true);
+  }
+  
+  // Preserve selection if we have one
+  if (selectedCastlistId && selectedCastlistId !== 'none') {
+    selectMenu.setDisabled(false); // Ensure it's enabled
+    // Note: Discord doesn't support default_values on StringSelectMenu, only UserSelect/RoleSelect
+  }
+  
+  const selectRow = new ActionRowBuilder().addComponents(selectMenu);
+  container.components.push(selectRow.toJSON());
+  
+  // If a castlist is selected, show details and management options
+  if (selectedCastlistId && selectedCastlistId !== 'none') {
     const castlist = await castlistManager.getCastlist(guildId, selectedCastlistId);
     
-    if (!castlist) {
-      containerComponents.push({
-        type: 10,
-        content: '❌ Castlist not found'
-      });
-    } else {
-      containerComponents.push({ type: 14 }); // Separator
+    if (castlist) {
+      // Separator
+      container.components.push({ type: 14 });
       
-      // Castlist info
-      containerComponents.push({
-        type: 10,
-        content: `> **\`${castlist.metadata?.emoji || '📋'} ${castlist.name}\`**\n` +
-          `-# ${castlist.metadata?.description || 'No description'}\n` +
-          `-# Type: ${castlist.type} | Created: <t:${Math.floor(castlist.createdAt / 1000)}:R>` +
-          (castlist.isVirtual ? '\n-# ⚠️ Legacy castlist - will be upgraded on first edit' : '')
-      });
-      
-      // Get tribes using this castlist
-      const tribes = await castlistManager.getTribesUsingCastlist(guildId, selectedCastlistId);
-      
-      if (tribes.length > 0) {
-        containerComponents.push({
-          type: 10,
-          content: `\n> **\`🏕️ Used by ${tribes.length} tribe${tribes.length !== 1 ? 's' : ''}\`**`
-        });
+      // Castlist details section
+      const detailsSection = await createCastlistDetailsSection(guildId, castlist);
+      if (detailsSection) {
+        container.components.push(detailsSection);
       }
       
-      // Settings
-      containerComponents.push({ type: 14 }); // Separator
-      containerComponents.push({
-        type: 10,
-        content: `> **\`⚙️ Settings\`**\n` +
-          `• Sort Strategy: ${castlist.settings?.sortStrategy || 'alphabetical'}\n` +
-          `• Show Rankings: ${castlist.settings?.showRankings ? 'Yes' : 'No'}\n` +
-          `• Max Display: ${castlist.settings?.maxDisplay || 25}\n` +
-          `• Visibility: ${castlist.settings?.visibility || 'public'}`
-      });
+      // Separator before buttons
+      container.components.push({ type: 14 });
       
-      // Action buttons
-      containerComponents.push({ type: 14 }); // Separator
-      const actionButtons = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId(`castlist_edit_${castlist.id}`)
-            .setLabel('Edit')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('✏️')
-            .setDisabled(false), // Always allow edit (will materialize if virtual)
-          new ButtonBuilder()
-            .setCustomId(`castlist_rankings_${castlist.id}`)
-            .setLabel('Rankings')
-            .setStyle(ButtonStyle.Primary)
-            .setEmoji('🏆'),
-          new ButtonBuilder()
-            .setCustomId(`castlist_link_tribe_${castlist.id}`)
-            .setLabel('Link Tribe')
-            .setStyle(ButtonStyle.Success)
-            .setEmoji('🔗'),
-          new ButtonBuilder()
-            .setCustomId(`castlist_delete_${castlist.id}`)
-            .setLabel('Delete')
-            .setStyle(ButtonStyle.Danger)
-            .setEmoji('🗑️')
-            .setDisabled(castlist.isVirtual) // Can't delete virtual
-        );
-      containerComponents.push(actionButtons.toJSON());
+      // Management buttons
+      const managementButtons = createManagementButtons(
+        castlist.id,
+        true, // enabled
+        activeButton,
+        castlist.isVirtual
+      );
+      container.components.push(managementButtons.toJSON());
+      
+      // Separator before hot-swappable area
+      container.components.push({ type: 14 });
+      
+      // Hot-swappable interface based on active button
+      const hotSwapInterface = await createHotSwappableInterface(
+        guildId,
+        castlist,
+        activeButton
+      );
+      if (hotSwapInterface) {
+        container.components.push(hotSwapInterface);
+      } else if (!activeButton) {
+        // Show placeholder when no button is active
+        container.components.push({
+          type: 1, // ActionRow
+          components: [{
+            type: 3, // String Select
+            custom_id: 'castlist_action_inactive',
+            placeholder: 'Click a button above to configure...',
+            min_values: 0,
+            max_values: 1,
+            disabled: true,
+            options: [{ label: 'No action selected', value: 'none' }]
+          }]
+        });
+      }
     }
+  } else {
+    // No castlist selected - show disabled buttons
+    container.components.push({ type: 14 });
+    
+    const disabledButtons = createManagementButtons(null, false, null, false);
+    container.components.push(disabledButtons.toJSON());
+    
+    // Disabled placeholder
+    container.components.push({ type: 14 });
+    container.components.push({
+      type: 1, // ActionRow
+      components: [{
+        type: 3, // String Select
+        custom_id: 'castlist_action_pending',
+        placeholder: 'Select a castlist first...',
+        min_values: 0,
+        max_values: 1,
+        disabled: true,
+        options: [{ label: 'No castlist selected', value: 'none' }]
+      }]
+    });
   }
   
   // Navigation
-  containerComponents.push({ type: 14 }); // Separator
+  container.components.push({ type: 14 });
   const navButtons = new ActionRowBuilder()
     .addComponents(
       new ButtonBuilder()
@@ -244,30 +198,200 @@ export async function createCastlistHub(guildId, options = {}) {
         .setLabel('← Menu')
         .setStyle(ButtonStyle.Secondary)
     );
-  
-  if (mode !== 'list') {
-    navButtons.addComponents(
-      new ButtonBuilder()
-        .setCustomId('castlist_hub_main')
-        .setLabel('← Castlists')
-        .setStyle(ButtonStyle.Secondary)
-        .setEmoji('📋')
-    );
-  }
-  
-  containerComponents.push(navButtons.toJSON());
-  
-  // Build container
-  const container = {
-    type: 17, // Container
-    accent_color: 0x9b59b6, // Purple for castlists
-    components: containerComponents
-  };
+  container.components.push(navButtons.toJSON());
   
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
     components: [container]
   };
+}
+
+/**
+ * Create castlist details section
+ * @param {string} guildId - The guild ID
+ * @param {Object} castlist - The castlist object
+ * @returns {Object} Details section component
+ */
+async function createCastlistDetailsSection(guildId, castlist) {
+  const playerData = await loadPlayerData();
+  const tribes = playerData[guildId]?.tribes || {};
+  
+  // Get tribes using this castlist
+  const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlist.id);
+  
+  // Build tribes display
+  let tribesDisplay = '';
+  if (tribesUsingCastlist.length > 0) {
+    const tribesList = tribesUsingCastlist.map(roleId => {
+      const tribe = tribes[roleId];
+      if (!tribe) return null;
+      
+      // Get tribe emoji (default to 🏕️ if not set)
+      const emoji = tribe.emoji || '🏕️';
+      return `${emoji} <@&${roleId}>`;
+    }).filter(Boolean);
+    
+    tribesDisplay = tribesList.join('\n');
+  } else {
+    tribesDisplay = '-# No tribes currently using this castlist';
+  }
+  
+  // Build the details section
+  const content = `> **\`${castlist.metadata?.emoji || '📋'} ${castlist.name}\`**\n` +
+    `-# ${castlist.metadata?.description || 'No description'}\n` +
+    `-# Type: ${castlist.type} | Created: <t:${Math.floor((castlist.createdAt || Date.now()) / 1000)}:R>` +
+    (castlist.isVirtual ? '\n-# ⚠️ Legacy castlist - will be upgraded on first edit' : '') +
+    `\n\n**Tribes Using This Castlist:**\n${tribesDisplay}`;
+  
+  return {
+    type: 10, // Text Display
+    content: content
+  };
+}
+
+/**
+ * Create management buttons
+ * @param {string} castlistId - The castlist ID
+ * @param {boolean} enabled - Whether buttons are enabled
+ * @param {string} activeButton - Which button is active
+ * @param {boolean} isVirtual - Whether castlist is virtual
+ * @returns {ActionRowBuilder} Button row
+ */
+function createManagementButtons(castlistId, enabled = true, activeButton = null, isVirtual = false) {
+  const buttonRow1 = new ActionRowBuilder();
+  const suffix = castlistId ? `_${castlistId}` : '';
+  
+  // Row 1: View, Edit Info, Add Tribe, Customize
+  buttonRow1.addComponents(
+    new ButtonBuilder()
+      .setCustomId(`castlist_view${suffix}`)
+      .setLabel('View')
+      .setStyle(activeButton === CastlistButtonType.VIEW ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setEmoji('👁️')
+      .setDisabled(!enabled),
+    new ButtonBuilder()
+      .setCustomId(`castlist_edit_info${suffix}`)
+      .setLabel('Edit Info')
+      .setStyle(activeButton === CastlistButtonType.EDIT_INFO ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setEmoji('✏️')
+      .setDisabled(!enabled),
+    new ButtonBuilder()
+      .setCustomId(`castlist_add_tribe${suffix}`)
+      .setLabel('Add Tribe')
+      .setStyle(activeButton === CastlistButtonType.ADD_TRIBE ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setEmoji('🏕️')
+      .setDisabled(!enabled),
+    new ButtonBuilder()
+      .setCustomId(`castlist_order${suffix}`)
+      .setLabel('Order')
+      .setStyle(activeButton === CastlistButtonType.ORDER ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setEmoji('🔄')
+      .setDisabled(!enabled)
+  );
+  
+  return buttonRow1;
+}
+
+/**
+ * Create hot-swappable interface based on active button
+ * @param {string} guildId - The guild ID
+ * @param {Object} castlist - The castlist object
+ * @param {string} activeButton - The active button type
+ * @returns {Object|null} Hot-swap interface component
+ */
+async function createHotSwappableInterface(guildId, castlist, activeButton) {
+  if (!activeButton) return null;
+  
+  switch (activeButton) {
+    case CastlistButtonType.VIEW:
+      // Create button to post castlist
+      return {
+        type: 1, // ActionRow
+        components: [
+          new ButtonBuilder()
+            .setCustomId(`show_castlist2_${castlist.id}`)
+            .setLabel('Post Castlist to Channel')
+            .setStyle(ButtonStyle.Success)
+            .setEmoji('📋')
+            .toJSON()
+        ]
+      };
+    
+    case CastlistButtonType.ADD_TRIBE:
+      // Create role select for adding/removing tribes
+      return {
+        type: 1, // ActionRow
+        components: [{
+          type: 6, // Role Select
+          custom_id: `castlist_tribe_select_${castlist.id}`,
+          placeholder: 'Select roles to add/remove as tribes...',
+          min_values: 0,
+          max_values: 25 // Discord limit
+        }]
+      };
+    
+    case CastlistButtonType.ORDER:
+      // Create sort strategy select
+      const currentStrategy = castlist.settings?.sortStrategy || 'alphabetical';
+      
+      return {
+        type: 1, // ActionRow
+        components: [{
+          type: 3, // String Select
+          custom_id: `castlist_sort_${castlist.id}`,
+          placeholder: 'Select sort order...',
+          min_values: 1,
+          max_values: 1,
+          options: [
+            {
+              label: 'Alphabetical (A-Z)',
+              value: 'alphabetical',
+              description: 'Sort players by name',
+              emoji: { name: '🔤' },
+              default: currentStrategy === 'alphabetical'
+            },
+            {
+              label: 'Reverse Alphabetical (Z-A)',
+              value: 'reverse_alpha',
+              description: 'Sort players by name in reverse',
+              emoji: { name: '🔤' },
+              default: currentStrategy === 'reverse_alpha'
+            },
+            {
+              label: 'Placements',
+              value: 'placements',
+              description: 'Sort by ranking (1st, 2nd, 3rd...)',
+              emoji: { name: '🏆' },
+              default: currentStrategy === 'placements'
+            },
+            {
+              label: 'Age',
+              value: 'age',
+              description: 'Sort by player age',
+              emoji: { name: '🎂' },
+              default: currentStrategy === 'age'
+            },
+            {
+              label: 'Timezone',
+              value: 'timezone',
+              description: 'Sort by timezone offset',
+              emoji: { name: '🌍' },
+              default: currentStrategy === 'timezone'
+            },
+            {
+              label: 'Join Date',
+              value: 'join_date',
+              description: 'Sort by server join date',
+              emoji: { name: '📅' },
+              default: currentStrategy === 'join_date'
+            }
+          ]
+        }]
+      };
+    
+    default:
+      return null;
+  }
 }
 
 /**

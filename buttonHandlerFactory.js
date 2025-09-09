@@ -257,6 +257,48 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'castlist'
   },
+  'castlist_view': {
+    label: 'View',
+    description: 'View and post castlist to channel',
+    emoji: '👁️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_edit_info': {
+    label: 'Edit Info',
+    description: 'Edit castlist name and emoji',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_add_tribe': {
+    label: 'Add Tribe',
+    description: 'Add or remove tribes from castlist',
+    emoji: '🏕️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_order': {
+    label: 'Order',
+    description: 'Change castlist sort order',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_sort': {
+    label: 'Sort Strategy',
+    description: 'Select castlist sort strategy',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_tribe_select': {
+    label: 'Tribe Select',
+    description: 'Select tribes for castlist',
+    emoji: '🏕️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
   'castlist_create_season': {
     label: 'From Season',
     description: 'Create castlist from season applications',

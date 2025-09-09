@@ -7374,20 +7374,13 @@ To fix this:
         id: 'castlist_select',
         updateMessage: true,
         handler: async (context) => {
-          const selectedCastlistId = context.body.data.values[0];
-          console.log(`📋 Castlist selected: ${selectedCastlistId}`);
-          
-          if (selectedCastlistId === 'none') {
-            return {
-              content: 'No castlists available. Create one to get started!',
-              ephemeral: true
-            };
-          }
+          const selectedCastlistId = context.body.data.values?.[0];
+          console.log(`📋 Castlist selected: ${selectedCastlistId || 'none'}`);
           
           const { createCastlistHub } = await import('./castlistHub.js');
           const hubData = await createCastlistHub(context.guildId, {
-            mode: 'view',
-            selectedCastlistId
+            selectedCastlistId: selectedCastlistId || null,
+            activeButton: null // Reset active button on new selection
           });
           
           return hubData;
@@ -7407,6 +7400,177 @@ To fix this:
           const wizardData = await createCastlistWizard(context.guildId, createType);
           
           return wizardData;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('castlist_view_') || 
+               custom_id.startsWith('castlist_edit_info_') || 
+               custom_id.startsWith('castlist_add_tribe_') || 
+               custom_id.startsWith('castlist_order_')) {
+      // Handle castlist management buttons
+      const parts = custom_id.split('_');
+      const action = parts[1]; // view, edit, add, or order
+      const subAction = parts[2]; // info or tribe (for edit_info and add_tribe)
+      const castlistId = subAction === 'info' || subAction === 'tribe' 
+        ? parts.slice(3).join('_') 
+        : parts.slice(2).join('_');
+      
+      // Determine button type
+      let buttonType = null;
+      if (action === 'view') buttonType = 'view';
+      else if (action === 'edit' && subAction === 'info') buttonType = 'edit_info';
+      else if (action === 'add' && subAction === 'tribe') buttonType = 'add_tribe';
+      else if (action === 'order') buttonType = 'order';
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📋 Castlist action: ${buttonType} for ${castlistId}`);
+          
+          const { createCastlistHub, CastlistButtonType } = await import('./castlistHub.js');
+          const hubData = await createCastlistHub(context.guildId, {
+            selectedCastlistId: castlistId,
+            activeButton: buttonType // Set the active button
+          });
+          
+          return hubData;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('castlist_sort_')) {
+      // Handle sort strategy selection
+      const castlistId = custom_id.replace('castlist_sort_', '');
+      const newSortStrategy = req.body.data.values[0];
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📋 Updating sort strategy for ${castlistId} to ${newSortStrategy}`);
+          
+          const { castlistManager } = await import('./castlistManager.js');
+          
+          // Update the castlist's sort strategy
+          await castlistManager.updateCastlist(context.guildId, castlistId, {
+            settings: { sortStrategy: newSortStrategy }
+          });
+          
+          // Refresh the UI with the Order button still active
+          const { createCastlistHub } = await import('./castlistHub.js');
+          const hubData = await createCastlistHub(context.guildId, {
+            selectedCastlistId: castlistId,
+            activeButton: 'order' // Keep Order button active
+          });
+          
+          return hubData;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('castlist_tribe_select_')) {
+      // Handle tribe role selection
+      const castlistId = custom_id.replace('castlist_tribe_select_', '');
+      const selectedRoles = req.body.data.values || [];
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📋 Updating tribes for ${castlistId}: ${selectedRoles.length} roles selected`);
+          
+          const { castlistManager } = await import('./castlistManager.js');
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          
+          const playerData = await loadPlayerData();
+          const tribes = playerData[context.guildId]?.tribes || {};
+          
+          // Get current tribes using this castlist
+          const currentTribes = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
+          
+          // Remove castlist from tribes that are no longer selected
+          for (const tribeId of currentTribes) {
+            if (!selectedRoles.includes(tribeId)) {
+              await castlistManager.unlinkTribeFromCastlist(context.guildId, tribeId);
+            }
+          }
+          
+          // Add castlist to newly selected tribes
+          for (const roleId of selectedRoles) {
+            if (!currentTribes.includes(roleId)) {
+              // Initialize tribe if it doesn't exist
+              if (!tribes[roleId]) {
+                tribes[roleId] = {
+                  name: `Tribe ${roleId}`,
+                  emoji: '🏕️',
+                  type: 'default'
+                };
+              }
+              
+              // Link to castlist
+              await castlistManager.linkTribeToCastlist(context.guildId, roleId, castlistId);
+            }
+          }
+          
+          // Save changes
+          await savePlayerData(playerData);
+          
+          // Refresh the UI with Add Tribe button still active
+          const { createCastlistHub } = await import('./castlistHub.js');
+          const hubData = await createCastlistHub(context.guildId, {
+            selectedCastlistId: castlistId,
+            activeButton: 'add_tribe' // Keep Add Tribe button active
+          });
+          
+          return hubData;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('show_castlist2_')) {
+      // Handle posting castlist to channel from Castlist Hub
+      const castlistId = custom_id.replace('show_castlist2_', '');
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        handler: async (context) => {
+          console.log(`📋 Posting castlist ${castlistId} to channel`);
+          
+          const { castlistManager } = await import('./castlistManager.js');
+          const { sendCastlist2Response } = await import('./castlistV2.js');
+          const { loadPlayerData } = await import('./storage.js');
+          
+          const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
+          if (!castlist) {
+            return {
+              content: 'Castlist not found!',
+              ephemeral: true
+            };
+          }
+          
+          const playerData = await loadPlayerData();
+          
+          // Get tribes using this castlist
+          const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
+          
+          // Find the first tribe to display (or use a default)
+          const tribeId = tribesUsingCastlist[0];
+          const tribe = playerData[context.guildId]?.tribes?.[tribeId];
+          
+          if (!tribe) {
+            return {
+              content: 'No tribes are using this castlist. Add a tribe first!',
+              ephemeral: true
+            };
+          }
+          
+          // Use sendCastlist2Response to post the castlist
+          const castlistResponse = await sendCastlist2Response(
+            context.member,
+            context.guild,
+            playerData,
+            context.guildId,
+            tribeId, // Use first tribe ID
+            0, // Start at page 0
+            context.channelId,
+            false // Not application context
+          );
+          
+          return castlistResponse;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
