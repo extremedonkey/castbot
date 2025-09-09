@@ -6484,9 +6484,10 @@ To fix this:
           const applicationConfigs = guildData.applicationConfigs || {};
           
           // Migrate configs without seasonId/seasonName
+          // Note: seasonId is somewhat redundant with config ID but kept for backwards compatibility
           for (const [configId, config] of Object.entries(applicationConfigs)) {
             if (!config.seasonId || !config.seasonName) {
-              // Generate UUID-based season ID
+              // Generate UUID-based season ID (legacy migration)
               const seasonId = `season_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
               const seasonName = config.buttonText || `Season ${Object.keys(applicationConfigs).length}`;
               
@@ -6501,38 +6502,14 @@ To fix this:
             await savePlayerData(playerData);
           }
 
-          // Create season options for dropdown
-          const seasonOptions = [];
-          
-          // Add "Create New Season" option first
-          seasonOptions.push({
-            label: '➕ Create New Season',
-            value: 'create_new_season',
-            emoji: { name: '✨' },
-            description: 'Start a new application season'
+          // Use our new reusable season selector
+          const { createSeasonSelector } = await import('./seasonSelector.js');
+          const seasonSelectDropdown = await createSeasonSelector(guildId, {
+            customId: 'entity_select_seasons',
+            placeholder: 'Select a season to manage applications for...',
+            includeCreateNew: true,
+            showArchived: false
           });
-
-          // Add existing seasons sorted by lastUpdated (most recent first)
-          Object.entries(applicationConfigs)
-            .sort(([, a], [, b]) => (b.lastUpdated || b.createdAt || 0) - (a.lastUpdated || a.createdAt || 0))
-            .forEach(([configId, config]) => {
-              seasonOptions.push({
-                label: `📝 ${config.seasonName}`,
-                value: configId,
-                description: `Updated: ${new Date(config.lastUpdated || config.createdAt).toLocaleDateString()}`
-              });
-            });
-
-          // Limit to Discord's 25 option max
-          if (seasonOptions.length > 25) {
-            seasonOptions.splice(25);
-          }
-
-          // Create Safari-style management interface
-          const seasonSelectDropdown = new StringSelectMenuBuilder()
-            .setCustomId('entity_select_seasons')
-            .setPlaceholder('Select a season to manage applications for...')
-            .addOptions(seasonOptions);
 
           const selectRow = new ActionRowBuilder().addComponents(seasonSelectDropdown);
 
@@ -6548,14 +6525,14 @@ To fix this:
             selectRow.toJSON()
           ];
 
-          // Add Back to Main Menu button
+          // Add Back to Main Menu button (following LEAN standards)
           const backRow = new ActionRowBuilder()
             .addComponents(
               new ButtonBuilder()
                 .setCustomId('prod_menu_back')
-                .setLabel('← Back to Main Menu')
+                .setLabel('← Menu')
                 .setStyle(ButtonStyle.Secondary)
-                .setEmoji('⬅️')
+                // No emoji for main menu back button per LeanMenuDesign.md
             );
 
           seasonManagementComponents.push(
