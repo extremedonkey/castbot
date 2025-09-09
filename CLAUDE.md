@@ -1,5 +1,8 @@
 # CLAUDE.md
 
+**🌿 Current Branch: `castlistV3`** - Working on Castlist V3 redesign
+**📝 Git Note**: User needs assistance with git operations and production deployment (merging, etc.)
+
 This file provides guidance to Claude Code when working with CastBot. This is a high-level navigation document - follow the references to detailed documentation.
 
 ## 🔴 Production Safety - NEVER Do These
@@ -99,9 +102,10 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 
 ## 📚 Feature Documentation Index
 
-**🚧 Current Work in Progress:**
+**🚧 Current Work in Progress (castlistV3 branch):**
+- **🎯 CASTLIST V3 REDESIGN** → [docs/features/CastlistV3.md](docs/features/CastlistV3.md) - Complete castlist system overhaul
 - **ACTIVE SEASON SYSTEM** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)
-- **CASTLIST V3 INTEGRATION** → [docs/features/CastlistV3-SeasonIntegration.md](docs/features/CastlistV3-SeasonIntegration.md)
+- **SEASON INTEGRATION** → [docs/features/CastlistV3-SeasonIntegration.md](docs/features/CastlistV3-SeasonIntegration.md)
 - **SEASON SELECTOR** → Reusable component in `seasonSelector.js`
 - **CHANGE SEASON BUTTON** → Production Menu header accessory
 
@@ -109,7 +113,6 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 - **🦁 SAFARI SYSTEM** → [docs/features/Safari.md](docs/features/Safari.md)
 - **📋 SEASON APPLICATIONS** → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
 - **🏆 CAST RANKING** → [docs/features/CastRanking.md](docs/features/CastRanking.md)
-- **🥇 CASTLIST V3** → [docs/features/CastlistV3-AlumniPlacements.md](docs/features/CastlistV3-AlumniPlacements.md)
 
 **Safari Subsystems:**
 - **MAP EXPLORER** → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
