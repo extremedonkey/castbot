@@ -242,6 +242,78 @@ export const BUTTON_REGISTRY = {
     category: 'ranking'
   },
 
+  // === CASTLIST HUB ===
+  'castlist_hub_main': {
+    label: 'Castlist Hub',
+    description: 'Open the Castlist Management Hub',
+    emoji: '📋',
+    style: 'Primary',
+    category: 'castlist'
+  },
+  'castlist_select': {
+    label: 'Select Castlist',
+    description: 'Select a castlist to view or manage',
+    emoji: '📋',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_create_season': {
+    label: 'From Season',
+    description: 'Create castlist from season applications',
+    emoji: '🎭',
+    style: 'Primary',
+    category: 'castlist'
+  },
+  'castlist_create_role': {
+    label: 'From Role',
+    description: 'Import castlist from Discord role',
+    emoji: '👥',
+    style: 'Primary',
+    category: 'castlist'
+  },
+  'castlist_create_custom': {
+    label: 'Custom',
+    description: 'Create a custom castlist',
+    emoji: '✨',
+    style: 'Primary',
+    category: 'castlist'
+  },
+  'castlist_import': {
+    label: 'Import',
+    description: 'Import castlist from file',
+    emoji: '📥',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_templates': {
+    label: 'Templates',
+    description: 'Browse castlist templates',
+    emoji: '📑',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_export': {
+    label: 'Export',
+    description: 'Export castlist data',
+    emoji: '📤',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_settings': {
+    label: 'Settings',
+    description: 'Castlist system settings',
+    emoji: '⚙️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_migration': {
+    label: 'Migrate',
+    description: 'Migrate legacy castlists to entities',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+
   // === PRODUCTION MENU ITEMS ===
   'prod_change_season': {
     label: 'Change Szn',

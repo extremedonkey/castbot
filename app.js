@@ -660,6 +660,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Create admin control buttons (reorganized)
   const adminButtons = [
     new ButtonBuilder()
+      .setCustomId('castlist_hub_main')
+      .setLabel('Castlists')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('📋'),
+    new ButtonBuilder()
       .setCustomId('prod_setup')
       .setLabel('Initial Setup')
       .setStyle(ButtonStyle.Primary)
@@ -7344,6 +7349,64 @@ To fix this:
           // Refresh the production menu to show the new season in header
           const menuData = await createProductionMenuInterface(context.guild, playerData, guildId, context.userId);
           return menuData;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'castlist_hub_main') {
+      // Handle Castlist Hub main menu
+      return ButtonHandlerFactory.create({
+        id: 'castlist_hub_main',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📋 START: castlist_hub_main - user ${context.userId}`);
+          
+          const { createCastlistHub } = await import('./castlistHub.js');
+          const hubData = await createCastlistHub(context.guildId, { mode: 'list' });
+          
+          console.log(`✅ SUCCESS: castlist_hub_main - showing hub`);
+          return hubData;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'castlist_select') {
+      // Handle castlist selection from dropdown
+      return ButtonHandlerFactory.create({
+        id: 'castlist_select',
+        updateMessage: true,
+        handler: async (context) => {
+          const selectedCastlistId = context.body.data.values[0];
+          console.log(`📋 Castlist selected: ${selectedCastlistId}`);
+          
+          if (selectedCastlistId === 'none') {
+            return {
+              content: 'No castlists available. Create one to get started!',
+              ephemeral: true
+            };
+          }
+          
+          const { createCastlistHub } = await import('./castlistHub.js');
+          const hubData = await createCastlistHub(context.guildId, {
+            mode: 'view',
+            selectedCastlistId
+          });
+          
+          return hubData;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('castlist_create_')) {
+      // Handle castlist creation options
+      const createType = custom_id.replace('castlist_create_', '');
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📋 Creating castlist type: ${createType}`);
+          
+          const { createCastlistWizard } = await import('./castlistHub.js');
+          const wizardData = await createCastlistWizard(context.guildId, createType);
+          
+          return wizardData;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
