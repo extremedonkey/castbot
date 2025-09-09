@@ -7374,7 +7374,7 @@ To fix this:
         id: 'castlist_select',
         updateMessage: true,
         handler: async (context) => {
-          const selectedCastlistId = context.body.data.values?.[0];
+          const selectedCastlistId = context.values?.[0];
           console.log(`📋 Castlist selected: ${selectedCastlistId || 'none'}`);
           
           const { createCastlistHub } = await import('./castlistHub.js');
@@ -7423,10 +7423,79 @@ To fix this:
       
       return ButtonHandlerFactory.create({
         id: custom_id,
-        updateMessage: true,
+        updateMessage: buttonType !== 'edit_info', // Don't update for edit_info (shows modal)
         handler: async (context) => {
           console.log(`📋 Castlist action: ${buttonType} for ${castlistId}`);
           
+          // Special handling for Edit Info - show modal
+          if (buttonType === 'edit_info') {
+            const { castlistManager } = await import('./castlistManager.js');
+            const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
+            
+            if (!castlist) {
+              return {
+                type: 4,
+                data: {
+                  content: '❌ Could not find castlist',
+                  flags: 64
+                }
+              };
+            }
+            
+            // Create modal for editing castlist info
+            return {
+              type: 9, // Modal
+              data: {
+                custom_id: `castlist_edit_info_modal_${castlistId}`,
+                title: 'Edit Castlist Info',
+                components: [
+                  {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 4, // Text Input
+                      custom_id: 'castlist_name',
+                      label: 'Castlist Name',
+                      style: 1, // Short
+                      value: castlist.name || '',
+                      placeholder: 'Enter castlist name',
+                      required: true,
+                      min_length: 1,
+                      max_length: 100
+                    }]
+                  },
+                  {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 4, // Text Input
+                      custom_id: 'castlist_emoji',
+                      label: 'Castlist Emoji',
+                      style: 1, // Short
+                      value: castlist.metadata?.emoji || '📋',
+                      placeholder: 'Enter an emoji (e.g., 🎭)',
+                      required: false,
+                      min_length: 1,
+                      max_length: 10
+                    }]
+                  },
+                  {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 4, // Text Input
+                      custom_id: 'castlist_description',
+                      label: 'Description',
+                      style: 2, // Paragraph
+                      value: castlist.metadata?.description || '',
+                      placeholder: 'Enter a brief description',
+                      required: false,
+                      max_length: 200
+                    }]
+                  }
+                ]
+              }
+            };
+          }
+          
+          // Regular button handling - update UI with active button
           const { createCastlistHub, CastlistButtonType } = await import('./castlistHub.js');
           const hubData = await createCastlistHub(context.guildId, {
             selectedCastlistId: castlistId,
@@ -7571,6 +7640,45 @@ To fix this:
           );
           
           return castlistResponse;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('castlist_edit_info_modal_')) {
+      // Handle castlist Edit Info modal submission
+      const castlistId = custom_id.replace('castlist_edit_info_modal_', '');
+      const components = req.body.data.components;
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📋 Updating castlist info for ${castlistId}`);
+          
+          const { castlistManager } = await import('./castlistManager.js');
+          const { createCastlistHub } = await import('./castlistHub.js');
+          
+          // Extract form values
+          const newName = components[0].components[0].value?.trim();
+          const newEmoji = components[1].components[0].value?.trim() || '📋';
+          const newDescription = components[2].components[0].value?.trim() || '';
+          
+          // Update the castlist
+          await castlistManager.updateCastlist(context.guildId, castlistId, {
+            name: newName,
+            metadata: {
+              emoji: newEmoji,
+              description: newDescription
+            }
+          });
+          
+          console.log(`✅ Updated castlist ${castlistId}: name="${newName}", emoji="${newEmoji}"`);
+          
+          // Refresh the UI with the castlist still selected
+          const hubData = await createCastlistHub(context.guildId, {
+            selectedCastlistId: castlistId,
+            activeButton: null // Clear active button after modal
+          });
+          
+          return hubData;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
