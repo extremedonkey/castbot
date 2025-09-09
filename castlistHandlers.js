@@ -258,9 +258,8 @@ export function handleShowCastlist(req, res, client, custom_id) {
         };
       }
       
-      // For now, just show basic castlist info
-      // TODO: Integrate with proper castlist display system
-      const members = await castlistManager.getCastlistMembers(context.guildId, castlistId);
+      // Get members from the castlist rankings
+      const members = castlist.rankings || [];
       
       return {
         embeds: [{

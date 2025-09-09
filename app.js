@@ -7287,9 +7287,9 @@ To fix this:
             };
           }
           
-          // EXPERIMENTAL: Create Section with multiple Text Display components
-          // Instead of one Text Display with all info, we create separate Text Display for each player
-          const textDisplayComponents = members.map(member => {
+          // EXPERIMENTAL: Create multiple Sections instead of multiple Text Displays in one Section
+          // Testing if multiple Sections stack differently than single Section with combined text
+          const playerSections = members.map((member, index) => {
             const player = guildPlayers[member.user.id];
             const placement = player?.placement || 'N/A';
             const tribe = player?.tribe || 'None';
@@ -7299,44 +7299,49 @@ To fix this:
                               `Placement: ${placement}\n` +
                               `Tribe: ${tribe}`;
             
+            // Each player gets their own Section with a single Text Display
             return {
-              type: 10, // Text Display
-              content: playerInfo
+              type: 9, // Section
+              components: [{
+                type: 10, // Text Display
+                content: playerInfo
+              }],
+              // Test: Add thumbnail accessory to see if it creates columns
+              accessory: {
+                type: 11, // Thumbnail
+                media: { url: member.user.displayAvatarURL() }
+              }
             };
           });
           
-          console.log(`🧪 Created ${textDisplayComponents.length} Text Display components`);
-          
-          // Create the experimental Section with multiple Text Display children
-          const experimentalSection = {
-            type: 9, // Section
-            components: textDisplayComponents // Array of Text Display components
-          };
+          console.log(`🧪 Created ${playerSections.length} Section components`);
           
           // Build the response with Container
+          const containerComponents = [
+            {
+              type: 10, // Text Display for header
+              content: '## 🧪 EXPERIMENTAL CASTLIST TEST\n\n' +
+                      '**Testing Multiple Sections vs Single Section**\n' +
+                      'Each player is now in their own Section with thumbnail.\n' +
+                      '⚠️ **This is temporary experimental code - DELETE AFTER TESTING**'
+            },
+            { type: 14 }, // Separator
+            ...playerSections, // Spread the array of Section components
+            { type: 14 }, // Separator
+            {
+              type: 10, // Text Display for footer
+              content: `*Rendered ${members.length} players as separate Section components*\n` +
+                      `*Normal castlist would combine all players into one Section*`
+            }
+          ];
+          
           const response = {
             flags: (1 << 15), // IS_COMPONENTS_V2
             ephemeral: true,
             components: [{
               type: 17, // Container
               accent_color: 0xFF00FF, // Magenta to indicate experimental
-              components: [
-                {
-                  type: 10, // Text Display for header
-                  content: '## 🧪 EXPERIMENTAL CASTLIST TEST\n\n' +
-                          '**Testing Multiple Text Display Components in a Section**\n' +
-                          'This is testing if Section components can render multiple Text Display children.\n' +
-                          '⚠️ **This is temporary experimental code - DELETE AFTER TESTING**'
-                },
-                { type: 14 }, // Separator
-                experimentalSection, // Our experimental Section with multiple Text Displays
-                { type: 14 }, // Separator
-                {
-                  type: 10, // Text Display for footer
-                  content: `*Rendered ${members.length} players as separate Text Display components*\n` +
-                          `*Normal castlist would combine these into one Text Display*`
-                }
-              ]
+              components: containerComponents
             }]
           };
           
