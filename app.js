@@ -116,7 +116,7 @@ import {
 } from './buttonHandlerFactory.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
 import { getBotEmoji, formatBotEmoji } from './botEmojis.js';
-import { createCastlistMenu, handleCastlistSeasonSelect } from './castlistMenu.js';
+import { createCastlistMenu } from './castlistMenu.js';
 import { 
   deleteMapGrid,
   createMapExplorerMenu 
@@ -7308,13 +7308,42 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'castlist_season_select') {
-      // Handle season selection in Castlist menu - delegate to module
+      // Handle season selection - save and refresh production menu
       return ButtonHandlerFactory.create({
         id: 'castlist_season_select',
+        updateMessage: true, // Update the existing message
         handler: async (context) => {
           console.log(`🔍 START: castlist_season_select - user ${context.userId}`);
           const playerData = await loadPlayerData();
-          return await handleCastlistSeasonSelect(context, playerData);
+          const { guildId, values } = context;
+          const selectedValue = values[0];
+          
+          // Get the selected season details
+          const season = playerData[guildId]?.applicationConfigs?.[selectedValue];
+          
+          if (!season) {
+            return {
+              content: '❌ Season not found. Please try again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            };
+          }
+          
+          // Save the active season to playerData
+          if (!playerData[guildId]) {
+            playerData[guildId] = {};
+          }
+          playerData[guildId].activeSeason = {
+            id: selectedValue,
+            name: season.seasonName,
+            stage: season.currentStage || 'planning'
+          };
+          
+          await savePlayerData(playerData);
+          console.log(`✅ Active season set to: ${season.seasonName}`);
+          
+          // Refresh the production menu to show the new season in header
+          const menuData = await createProductionMenuInterface(context.guild, playerData, guildId, context.userId);
+          return menuData;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
