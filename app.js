@@ -7287,9 +7287,9 @@ To fix this:
             };
           }
           
-          // EXPERIMENTAL: Create multiple Sections instead of multiple Text Displays in one Section
-          // Testing if multiple Sections stack differently than single Section with combined text
-          const playerSections = members.map((member, index) => {
+          // EXPERIMENTAL: Create ONE Section with THREE Text Display components
+          // Testing if Section can render multiple (up to 3) Text Display children as per docs
+          const textDisplayComponents = members.map((member, index) => {
             const player = guildPlayers[member.user.id];
             const placement = player?.placement || 'N/A';
             const tribe = player?.tribe || 'None';
@@ -7299,39 +7299,40 @@ To fix this:
                               `Placement: ${placement}\n` +
                               `Tribe: ${tribe}`;
             
-            // Each player gets their own Section with a single Text Display
+            // Return a Text Display component for this player
             return {
-              type: 9, // Section
-              components: [{
-                type: 10, // Text Display
-                content: playerInfo
-              }],
-              // Test: Add thumbnail accessory to see if it creates columns
-              accessory: {
-                type: 11, // Thumbnail
-                media: { url: member.user.displayAvatarURL() }
-              }
+              type: 10, // Text Display
+              content: playerInfo
             };
           });
           
-          console.log(`🧪 Created ${playerSections.length} Section components`);
+          console.log(`🧪 Created ${textDisplayComponents.length} Text Display components for Section`);
+          
+          // Create ONE Section with up to THREE Text Display components (docs say 1-3 allowed)
+          const experimentalSection = {
+            type: 9, // Section
+            components: textDisplayComponents // Array of Text Display components (max 3)
+            // NO accessory - testing pure multiple Text Displays
+          };
+          
+          console.log(`🧪 Created Section with ${textDisplayComponents.length} Text Display children`);
           
           // Build the response with Container
           const containerComponents = [
             {
               type: 10, // Text Display for header
               content: '## 🧪 EXPERIMENTAL CASTLIST TEST\n\n' +
-                      '**Testing Multiple Sections vs Single Section**\n' +
-                      'Each player is now in their own Section with thumbnail.\n' +
+                      '**Testing Section with Multiple Text Display Components**\n' +
+                      'Docs say Section can have 1-3 child components. Testing with 3 Text Displays.\n' +
                       '⚠️ **This is temporary experimental code - DELETE AFTER TESTING**'
             },
             { type: 14 }, // Separator
-            ...playerSections, // Spread the array of Section components
+            experimentalSection, // Single Section with multiple Text Display children
             { type: 14 }, // Separator
             {
               type: 10, // Text Display for footer
-              content: `*Rendered ${members.length} players as separate Section components*\n` +
-                      `*Normal castlist would combine all players into one Section*`
+              content: `*Section contains ${textDisplayComponents.length} Text Display components as children*\n` +
+                      `*Testing if they render as columns or stack vertically*`
             }
           ];
           
