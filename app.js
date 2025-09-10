@@ -7305,32 +7305,39 @@ To fix this:
             content: "Player 1 | Player 2 | Player 3"  // Combined content in single component
           };
           
-          // Create Section with SINGLE Text Display component (per working examples)
+          // Create Section with SINGLE Text Display component AND an accessory
           const experimentalSection = {
             type: 9, // Section
-            components: [singleTextDisplay] // Array with exactly ONE Text Display
-            // NO accessory - pure test of single child
+            components: [singleTextDisplay], // Array with exactly ONE Text Display
+            accessory: {
+              type: 2, // Button accessory (allowed per Discord docs)
+              label: "Test Button",
+              style: 2, // Secondary style
+              custom_id: "section_test_button",
+              emoji: { name: "🔬" }
+            }
           };
           
-          console.log(`🧪 Created Section with SINGLE Text Display child`);
+          console.log(`🧪 Created Section with SINGLE Text Display child AND Button accessory`);
           console.log('🔍 Section structure:', JSON.stringify(experimentalSection, null, 2));
+          console.log('🔬 Accessory details:', experimentalSection.accessory ? 'Button present' : 'No accessory');
           
           // Build the response with Container
           const containerComponents = [
             {
               type: 10, // Text Display for header
-              content: '## 🧪 SECTION TEST - SINGLE CHILD\n\n' +
-                      '**Testing Section with ONE Text Display component**\n' +
+              content: '## 🧪 SECTION TEST - WITH ACCESSORY\n\n' +
+                      '**Testing Section with ONE Text Display + Button Accessory**\n' +
                       'Combined content: "Player 1 | Player 2 | Player 3"\n' +
-                      'Testing if single child works (as per working examples)'
+                      'Testing if Section requires an accessory component'
             },
             { type: 14 }, // Separator
             experimentalSection, // Section with SINGLE Text Display child
             { type: 14 }, // Separator
             {
               type: 10, // Text Display for footer
-              content: `*Testing Section with exactly ONE Text Display child*\n` +
-                      `*This should work based on all working examples in codebase*`
+              content: `*Testing Section with Text Display + Button accessory*\n` +
+                      `*Hypothesis: Section might REQUIRE an accessory to be valid*`
             }
           ];
           
