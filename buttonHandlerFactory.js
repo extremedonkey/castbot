@@ -1919,6 +1919,16 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     parent: 'prod_availability',
     category: 'availability'
+  },
+  
+  // === EXPERIMENTAL/TEST BUTTONS ===
+  'castlist_test': {
+    label: 'Castlist Test',
+    description: 'Experimental Section component test with multiple Text Display children',
+    emoji: '🧪',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240', // Reece only
+    category: 'experimental'
   }
 };
 
