@@ -7296,50 +7296,41 @@ To fix this:
             };
           }
           
-          // EXPERIMENTAL: Test Section with multiple minimal Text Display components
-          // Testing with simplest possible content to isolate the issue
+          // EXPERIMENTAL: Test Section with SINGLE Text Display component
+          // Testing Discord's actual Section limitations
           
-          // Create THREE minimal Text Display components
-          const minimalTextDisplays = [
-            {
-              type: 10, // Text Display
-              content: "Player 1"
-            },
-            {
-              type: 10, // Text Display
-              content: "Player 2"
-            },
-            {
-              type: 10, // Text Display
-              content: "Player 3"
-            }
-          ];
-          
-          // Create Section with THREE Text Display components (testing if this works)
-          const experimentalSection = {
-            type: 9, // Section
-            components: minimalTextDisplays // Array of 3 Text Display components
-            // NO accessory - pure test of multiple children
+          // Create ONE Text Display component with combined content
+          const singleTextDisplay = {
+            type: 10, // Text Display
+            content: "Player 1 | Player 2 | Player 3"  // Combined content in single component
           };
           
-          console.log(`🧪 Created Section with ${minimalTextDisplays.length} minimal Text Display children`);
+          // Create Section with SINGLE Text Display component (per working examples)
+          const experimentalSection = {
+            type: 9, // Section
+            components: [singleTextDisplay] // Array with exactly ONE Text Display
+            // NO accessory - pure test of single child
+          };
+          
+          console.log(`🧪 Created Section with SINGLE Text Display child`);
+          console.log('🔍 Section structure:', JSON.stringify(experimentalSection, null, 2));
           
           // Build the response with Container
           const containerComponents = [
             {
               type: 10, // Text Display for header
-              content: '## 🧪 MINIMAL SECTION TEST\n\n' +
-                      '**Testing Section with 3 minimal Text Display components**\n' +
-                      'Each component just contains "Player 1", "Player 2", "Player 3"\n' +
-                      'No thumbnails, no complex content - pure structural test'
+              content: '## 🧪 SECTION TEST - SINGLE CHILD\n\n' +
+                      '**Testing Section with ONE Text Display component**\n' +
+                      'Combined content: "Player 1 | Player 2 | Player 3"\n' +
+                      'Testing if single child works (as per working examples)'
             },
             { type: 14 }, // Separator
-            experimentalSection, // Section with THREE minimal Text Display children
+            experimentalSection, // Section with SINGLE Text Display child
             { type: 14 }, // Separator
             {
               type: 10, // Text Display for footer
-              content: `*Testing if Discord accepts Section with ${minimalTextDisplays.length} Text Display children*\n` +
-                      `*Documentation claims "1-3 child components" are supported*`
+              content: `*Testing Section with exactly ONE Text Display child*\n` +
+                      `*This should work based on all working examples in codebase*`
             }
           ];
           
@@ -7352,6 +7343,17 @@ To fix this:
               components: containerComponents
             }]
           };
+          
+          // Detailed logging of the full response structure
+          console.log('📦 Full response structure being sent:');
+          console.log('  - flags:', response.flags, `(binary: ${response.flags.toString(2)})`);
+          console.log('  - ephemeral:', response.ephemeral);
+          console.log('  - components array length:', response.components.length);
+          console.log('  - Container type:', response.components[0].type);
+          console.log('  - Container accent_color:', response.components[0].accent_color);
+          console.log('  - Container components count:', response.components[0].components.length);
+          console.log('  - Component types:', response.components[0].components.map(c => `type ${c.type}`).join(', '));
+          console.log('📋 Full response JSON:', JSON.stringify(response, null, 2));
           
           console.log(`✅ EXPERIMENTAL: castlist_test - completed`);
           return response;
