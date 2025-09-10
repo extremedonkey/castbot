@@ -7335,7 +7335,7 @@ To fix this:
           ];
           
           const response = {
-            flags: (1 << 15), // IS_COMPONENTS_V2
+            // DO NOT set flags directly - ButtonHandlerFactory will add (1 << 15) | EPHEMERAL
             ephemeral: true,
             components: [{
               type: 17, // Container
@@ -7345,8 +7345,8 @@ To fix this:
           };
           
           // Detailed logging of the full response structure
-          console.log('📦 Full response structure being sent:');
-          console.log('  - flags:', response.flags, `(binary: ${response.flags.toString(2)})`);
+          console.log('📦 Full response structure being sent to ButtonHandlerFactory:');
+          console.log('  - flags:', response.flags || 'undefined (ButtonHandlerFactory will add)');
           console.log('  - ephemeral:', response.ephemeral);
           console.log('  - components array length:', response.components.length);
           console.log('  - Container type:', response.components[0].type);
