@@ -431,12 +431,14 @@ function calculateServerStats(logEntries, daysBack = 7) {
   console.log(`📈 DEBUG: Cutoff date: ${cutoffDate.toISOString()}`);
   
   // Filter entries within time period and exclude specific server
+  let totalFiltered = 0;
+  let invalidDates = 0;
   const recentEntries = logEntries.filter(entry => {
     const entryDate = entry.timestamp;
     
     // Validate that entryDate is a valid Date object
     if (!entryDate || isNaN(entryDate.getTime())) {
-      console.log(`📈 DEBUG: Skipping entry with invalid date: ${entry.rawLine.substring(0, 50)}...`);
+      invalidDates++;
       return false;
     }
     
@@ -446,13 +448,11 @@ function calculateServerStats(logEntries, daysBack = 7) {
     }
     
     const isRecent = entryDate >= cutoffDate;
-    if (!isRecent) {
-      console.log(`📈 DEBUG: Filtering out old entry: ${entry.rawLine.substring(0, 50)}... (${entryDate.toISOString()})`);
-    }
+    if (!isRecent) totalFiltered++;
     return isRecent;
   });
   
-  console.log(`📈 DEBUG: ${recentEntries.length} entries within ${daysBack} days`);
+  console.log(`📈 DEBUG: ${recentEntries.length} entries within ${daysBack} days (filtered: ${totalFiltered} old, ${invalidDates} invalid)`);
   
   const serverStats = {};
   const userActivity = {};
