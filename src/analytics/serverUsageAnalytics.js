@@ -436,7 +436,7 @@ function calculateServerStats(logEntries, daysBack = 7) {
     
     // Validate that entryDate is a valid Date object
     if (!entryDate || isNaN(entryDate.getTime())) {
-      console.log(`📈 DEBUG: Skipping entry with invalid date: ${entry.rawLine.substring(0, 50)}...`);
+      // Skip entries with invalid dates (logging removed to prevent spam)
       return false;
     }
     
@@ -446,9 +446,7 @@ function calculateServerStats(logEntries, daysBack = 7) {
     }
     
     const isRecent = entryDate >= cutoffDate;
-    if (!isRecent) {
-      console.log(`📈 DEBUG: Filtering out old entry: ${entry.rawLine.substring(0, 50)}... (${entryDate.toISOString()})`);
-    }
+    // Removed verbose debug logging that was causing performance issues
     return isRecent;
   });
   
