@@ -4693,9 +4693,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const { determineCastlistToShow } = await import('./utils/castlistUtils.js');
       const { determineDisplayScenario, createNavigationState, reorderTribes } = await import('./castlistV2.js');
       
-      // Determine which castlist to show
+      // Determine which castlist to show  
       const playerData = await loadPlayerData();
-      const castlistName = await determineCastlistToShow(guildId, requestedCastlist, playerData);
+      const castlistName = await determineCastlistToShow(guildId, userId, requestedCastlist);
       console.log('Determined castlist to show:', castlistName);
       
       // Get tribes for this castlist (using existing logic from app.js)
@@ -7545,7 +7545,7 @@ To fix this:
         
         // Determine which castlist to show
         const playerData = await loadPlayerData();
-        const castlistName = await determineCastlistToShow(guildId, decodedCastlist, playerData);
+        const castlistName = await determineCastlistToShow(guildId, userId, decodedCastlist);
         console.log('Determined castlist to show:', castlistName);
         
         // Get tribes for this castlist (using existing logic)
