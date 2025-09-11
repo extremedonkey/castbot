@@ -51,15 +51,34 @@ export async function handleCastlistButton(req, res, client, custom_id) {
   
   // Special handling for View button - directly post the castlist
   if (buttonType === 'view') {
-    // Get the actual castlist name to use
-    const castlist = await castlistManager.getCastlist(req.body.guild_id, castlistId);
-    if (castlist) {
-      // Update the custom_id to trigger show_castlist2 handler
-      const newCustomId = `show_castlist2_${castlist.name}`;
-      req.body.data.custom_id = newCustomId;
+    // Handle virtual castlists specially
+    if (castlistId.startsWith('virtual_')) {
+      // Virtual castlist - decode the name and use it directly
+      const base64 = castlistId.replace('virtual_', '');
+      // Add back padding if needed
+      const paddedBase64 = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+      // Decode from base64 (reverse the URL-safe replacements)
+      const normalBase64 = paddedBase64
+        .replace(/-/g, '+')
+        .replace(/_/g, '/');
+      const castlistName = Buffer.from(normalBase64, 'base64').toString('utf-8');
+      
+      // Update the custom_id to trigger show_castlist2 handler with decoded name
+      req.body.data.custom_id = `show_castlist2_${castlistName}`;
       
       // Return special value to signal app.js to handle as show_castlist2
       return { redirectToShowCastlist: true };
+    } else {
+      // Regular castlist - look it up
+      const castlist = await castlistManager.getCastlist(req.body.guild_id, castlistId);
+      if (castlist) {
+        // Update the custom_id to trigger show_castlist2 handler
+        const newCustomId = `show_castlist2_${castlist.name}`;
+        req.body.data.custom_id = newCustomId;
+        
+        // Return special value to signal app.js to handle as show_castlist2
+        return { redirectToShowCastlist: true };
+      }
     }
   }
   
