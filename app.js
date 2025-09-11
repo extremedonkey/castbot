@@ -4736,7 +4736,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           type: 4,
           data: {
             content: `No tribes found for castlist: ${castlistName}`,
-            flags: IS_EPHEMERAL
+            flags: 1 << 6  // Ephemeral flag
           }
         });
       }
@@ -4755,7 +4755,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               type: 4,
               data: {
                 content: 'You do not have permission to send messages in this channel.',
-                flags: IS_EPHEMERAL
+                flags: 1 << 6  // Ephemeral flag
               }
             });
           }
@@ -7586,7 +7586,7 @@ To fix this:
             type: 4,
             data: {
               content: `No tribes found for castlist: ${castlistName}`,
-              flags: IS_EPHEMERAL
+              flags: 1 << 6  // Ephemeral flag
             }
           });
         }
@@ -7604,7 +7604,7 @@ To fix this:
                 type: 4,
                 data: {
                   content: 'You do not have permission to send messages in this channel.',
-                  flags: IS_EPHEMERAL
+                  flags: 1 << 6  // Ephemeral flag
                 }
               });
             }
