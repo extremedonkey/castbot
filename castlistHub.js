@@ -310,18 +310,9 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
   
   switch (activeButton) {
     case CastlistButtonType.VIEW:
-      // Create button to post castlist
-      return {
-        type: 1, // ActionRow
-        components: [
-          new ButtonBuilder()
-            .setCustomId(`show_castlist2_${castlist.name}`)
-            .setLabel('Post Castlist to Channel')
-            .setStyle(ButtonStyle.Success)
-            .setEmoji('📋')
-            .toJSON()
-        ]
-      };
+      // This case is no longer used since clicking "Post Castlist" directly posts
+      // Keeping for backwards compatibility but returning null
+      return null;
     
     case CastlistButtonType.ADD_TRIBE:
       // Create role select for adding/removing tribes
