@@ -4666,20 +4666,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('show_castlist2') || req.body.data.custom_id.startsWith('show_castlist2')) {
-      // Use the potentially updated custom_id from req.body.data
-      const currentCustomId = req.body.data.custom_id.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
-      
-      // Extract castlist name from custom_id if present - handles virtual castlists
-      const castlistMatch = currentCustomId.match(/^show_castlist2(?:_(.+))?$/);
-      const requestedCastlistId = castlistMatch?.[1] || 'default';
-      
-      console.log('Button clicked, processing castlist2 for:', requestedCastlistId);
-      
-      // Use the centralized display function
-      const { displayCastlist } = await import('./castlistDisplay.js');
-      await displayCastlist(req, res, client, requestedCastlistId);
-      return;
+    } else if (custom_id.startsWith('show_castlist2') || req.body
     } else if (custom_id.startsWith('rank_')) {
       // Handle ranking button clicks - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({
