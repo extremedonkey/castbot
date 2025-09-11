@@ -4666,9 +4666,12 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('show_castlist2')) {
+    } else if (custom_id.startsWith('show_castlist2') || req.body.data.custom_id.startsWith('show_castlist2')) {
+      // Use the potentially updated custom_id from req.body.data
+      const currentCustomId = req.body.data.custom_id.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
+      
       // Extract castlist name from custom_id if present - handles virtual castlists
-      const castlistMatch = custom_id.match(/^show_castlist2(?:_(.+))?$/);
+      const castlistMatch = currentCustomId.match(/^show_castlist2(?:_(.+))?$/);
       let requestedCastlist = castlistMatch?.[1] || 'default';
       
       // Decode virtual castlist IDs back to their names
@@ -7542,8 +7545,8 @@ To fix this:
       
       // Check if we should redirect to show_castlist2 handler
       if (result && result.redirectToShowCastlist) {
-        // custom_id has been updated by the handler, fall through to show_castlist2 handler
-        custom_id = req.body.data.custom_id;
+        // The handler has updated req.body.data.custom_id, so we need to check show_castlist2
+        // Don't return here, let it fall through to the show_castlist2 handler below
       } else {
         return result;
       }
