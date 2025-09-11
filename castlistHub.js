@@ -265,9 +265,9 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
   buttonRow1.addComponents(
     new ButtonBuilder()
       .setCustomId(`castlist_view${suffix}`)
-      .setLabel('View')
+      .setLabel('Post Castlist')
       .setStyle(activeButton === CastlistButtonType.VIEW ? ButtonStyle.Primary : ButtonStyle.Secondary)
-      .setEmoji('👁️')
+      .setEmoji('📋')
       .setDisabled(!enabled),
     new ButtonBuilder()
       .setCustomId(`castlist_edit_info${suffix}`)

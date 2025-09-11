@@ -32,7 +32,7 @@ export function handleCastlistSelect(req, res, client) {
 /**
  * Handle castlist management button clicks (View, Edit Info, Add Tribe, Order)
  */
-export function handleCastlistButton(req, res, client, custom_id) {
+export async function handleCastlistButton(req, res, client, custom_id) {
   // Parse the custom_id to extract action and castlistId
   const parts = custom_id.split('_');
   const action = parts[1]; // view, edit, add, order, or swap
@@ -48,6 +48,20 @@ export function handleCastlistButton(req, res, client, custom_id) {
   else if (action === 'add' && subAction === 'tribe') buttonType = 'add_tribe';
   else if (action === 'order') buttonType = 'order';
   else if (action === 'swap' && subAction === 'merge') buttonType = 'swap_merge';
+  
+  // Special handling for View button - directly post the castlist
+  if (buttonType === 'view') {
+    // Get the actual castlist name to use
+    const castlist = await castlistManager.getCastlist(req.body.guild_id, castlistId);
+    if (castlist) {
+      // Update the custom_id to trigger show_castlist2 handler
+      const newCustomId = `show_castlist2_${castlist.name}`;
+      req.body.data.custom_id = newCustomId;
+      
+      // Return special value to signal app.js to handle as show_castlist2
+      return { redirectToShowCastlist: true };
+    }
+  }
   
   return ButtonHandlerFactory.create({
     id: custom_id,

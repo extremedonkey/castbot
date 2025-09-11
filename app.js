@@ -7538,7 +7538,15 @@ To fix this:
                custom_id.startsWith('castlist_order_')) {
       // Handle castlist management buttons
       const { handleCastlistButton } = await import('./castlistHandlers.js');
-      return handleCastlistButton(req, res, client, custom_id);
+      const result = await handleCastlistButton(req, res, client, custom_id);
+      
+      // Check if we should redirect to show_castlist2 handler
+      if (result && result.redirectToShowCastlist) {
+        // custom_id has been updated by the handler, fall through to show_castlist2 handler
+        custom_id = req.body.data.custom_id;
+      } else {
+        return result;
+      }
     } else if (custom_id.startsWith('castlist_sort_')) {
       // Handle sort strategy selection
       const { handleCastlistSort } = await import('./castlistHandlers.js');
