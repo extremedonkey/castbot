@@ -27,7 +27,8 @@
       "Bash(git push:*)",
       "Bash(pm2 restart:*)",
       "Bash(ssh:*)",
-      "Bash(git merge:*)"
+      "Bash(git merge:*)",
+      "Bash(git switch:*)"
     ],
     "deny": [],
     "ask": []
