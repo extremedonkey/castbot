@@ -110,6 +110,26 @@ export class CastlistVirtualAdapter {
   }
   
   /**
+   * Decode a virtual castlist ID back to the original name
+   * @param {string} virtualId - The virtual castlist ID
+   * @returns {string} The original castlist name
+   */
+  decodeVirtualId(virtualId) {
+    if (!this.isVirtualId(virtualId)) {
+      return virtualId; // Not virtual, return as-is
+    }
+    
+    const base64 = virtualId.replace('virtual_', '');
+    // Add back padding if needed
+    const paddedBase64 = base64 + '=='.slice(0, (4 - base64.length % 4) % 4);
+    // Decode from base64 (reverse the URL-safe replacements)
+    const normalBase64 = paddedBase64
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+    return Buffer.from(normalBase64, 'base64').toString('utf-8');
+  }
+  
+  /**
    * Get emoji for legacy castlist based on name/type
    * @param {string} name - Castlist name
    * @param {string} type - Castlist type
