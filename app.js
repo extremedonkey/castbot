@@ -4666,7 +4666,84 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('show_castlist2') || req.body
+    } else if (custom_id.startsWith('show_castlist2') || (req.body.data && req.body.data.custom_id && req.body.data.custom_id.startsWith('show_castlist2'))) {
+      // Handle show_castlist2 button clicks (supports both direct and redirected calls)
+      return ButtonHandlerFactory.create({
+        id: 'show_castlist2',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log('🔍 START: show_castlist2 - user', context.userId);
+          
+          // Use potentially updated custom_id from redirect
+          const currentCustomId = req.body.data.custom_id.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
+          
+          // Extract castlist ID and decode if virtual
+          const castlistMatch = currentCustomId.match(/^show_castlist2(?:_(.+))?$/);
+          let requestedCastlist = castlistMatch?.[1] || 'default';
+          
+          // Decode virtual castlist ID if needed
+          const { castlistVirtualAdapter } = await import('./castlistVirtualAdapter.js');
+          requestedCastlist = castlistVirtualAdapter.decodeVirtualId(requestedCastlist);
+          
+          console.log('Processing castlist2 for:', requestedCastlist);
+          
+          // Import necessary functions
+          const { loadPlayerData } = await import('./storage.js');
+          const { 
+            getCastlistTribes,
+            calculateComponentsForTribe,
+            determineDisplayScenario,
+            createNavigationState,
+            reorderTribes
+          } = await import('./castlistV2.js');
+          const { determineCastlistToShow } = await import('./utils/castlistUtils.js');
+          
+          const { guildId, userId, channelId, client } = context;
+          const guild = await client.guilds.fetch(guildId);
+          const member = await guild.members.fetch(userId);
+          
+          // Determine which castlist to show
+          const playerData = await loadPlayerData();
+          const castlistName = await determineCastlistToShow(guildId, requestedCastlist, playerData);
+          console.log('Determined castlist to show:', castlistName);
+          
+          // Get all tribes for this castlist
+          const allTribes = await getCastlistTribes(guildId, guild, castlistName);
+          if (allTribes.length === 0) {
+            return {
+              content: `No tribes found for castlist: ${castlistName}`,
+              ephemeral: true
+            };
+          }
+          
+          // Reorder tribes for display
+          const tribes = reorderTribes(allTribes, castlistName);
+          
+          // Check permissions if in channel
+          if (channelId) {
+            try {
+              const channel = await client.channels.fetch(channelId);
+              const permissions = channel?.permissionsFor(member);
+              if (!permissions?.has('SendMessages')) {
+                return {
+                  content: 'You do not have permission to send messages in this channel.',
+                  ephemeral: true
+                };
+              }
+            } catch (error) {
+              console.error('Error checking channel permissions:', error);
+            }
+          }
+          
+          // Calculate components for first tribe
+          const scenario = determineDisplayScenario(tribes[0]);
+          const navigationState = createNavigationState(tribes, 0, 0, scenario);
+          
+          // Send castlist response
+          await sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member, channelId);
+          return;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('rank_')) {
       // Handle ranking button clicks - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({
@@ -7414,9 +7491,75 @@ To fix this:
         
         console.log('Redirecting to castlist display for:', requestedCastlistId);
         
-        // Use the centralized display function
-        const { displayCastlist } = await import('./castlistDisplay.js');
-        await displayCastlist(req, res, client, requestedCastlistId);
+        // Inline the show_castlist2 logic here
+        console.log('Processing inline show_castlist2 for:', requestedCastlistId);
+        
+        // Decode virtual castlist ID if needed
+        const { castlistVirtualAdapter } = await import('./castlistVirtualAdapter.js');
+        const decodedCastlist = castlistVirtualAdapter.decodeVirtualId(requestedCastlistId);
+        
+        // Import necessary functions
+        const { loadPlayerData } = await import('./storage.js');
+        const { 
+          getCastlistTribes,
+          calculateComponentsForTribe,
+          determineDisplayScenario,
+          createNavigationState,
+          reorderTribes
+        } = await import('./castlistV2.js');
+        const { determineCastlistToShow } = await import('./utils/castlistUtils.js');
+        
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const channelId = req.body.channel_id || null;
+        const guild = await client.guilds.fetch(guildId);
+        const member = req.body.member ? await guild.members.fetch(userId) : null;
+        
+        // Determine which castlist to show
+        const playerData = await loadPlayerData();
+        const castlistName = await determineCastlistToShow(guildId, decodedCastlist, playerData);
+        console.log('Determined castlist to show:', castlistName);
+        
+        // Get all tribes for this castlist
+        const allTribes = await getCastlistTribes(guildId, guild, castlistName);
+        if (allTribes.length === 0) {
+          return res.send({
+            type: 4,
+            data: {
+              content: `No tribes found for castlist: ${castlistName}`,
+              flags: IS_EPHEMERAL
+            }
+          });
+        }
+        
+        // Reorder tribes for display
+        const tribes = reorderTribes(allTribes, castlistName);
+        
+        // Check permissions if in channel
+        if (channelId && member) {
+          try {
+            const channel = await client.channels.fetch(channelId);
+            const permissions = channel?.permissionsFor(member);
+            if (!permissions?.has('SendMessages')) {
+              return res.send({
+                type: 4,
+                data: {
+                  content: 'You do not have permission to send messages in this channel.',
+                  flags: IS_EPHEMERAL
+                }
+              });
+            }
+          } catch (error) {
+            console.error('Error checking channel permissions:', error);
+          }
+        }
+        
+        // Calculate components for first tribe
+        const scenario = determineDisplayScenario(tribes[0]);
+        const navigationState = createNavigationState(tribes, 0, 0, scenario);
+        
+        // Send castlist response
+        await sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member, channelId);
         return;
       } else {
         return result;
