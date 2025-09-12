@@ -11022,45 +11022,28 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Create modal with new Components V2 Label pattern for string select
-        const modal = {
-          title: `Stock Management - ${store.name}`,
-          custom_id: `safari_store_stock_modal_${storeId}`,
-          components: [
-            // String Select wrapped in Label (type 18)
-            {
-              type: 18, // Label
-              label: 'Select Item to Update Stock',
-              component: {
-                type: 3, // String Select
-                custom_id: 'item_select',
-                placeholder: 'Choose an item...',
-                min_values: 1,
-                max_values: 1,
-                options: options.slice(0, 25) // Discord limit of 25 options
-              }
-            },
-            // Text Input wrapped in Label (type 18)
-            {
-              type: 18, // Label
-              label: 'Enter new item qty (-1 for unlimited)',
-              description: 'Enter item stock level for that store',
-              component: {
-                type: 4, // Text Input
-                custom_id: 'stock_quantity',
-                style: 1, // Short
-                placeholder: 'Enter item stock level for that store',
-                required: true,
-                min_length: 1,
-                max_length: 10
-              }
-            }
-          ]
-        };
-        
+        // Show a message with string select instead of modal (modals don't support string selects in older Discord API)
         return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `## 📦 Stock Management - ${store.emoji || '🏪'} ${store.name}\n\nSelect an item to update its stock level:`,
+            components: [
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 3, // String Select
+                    custom_id: `safari_stock_select_${storeId}`,
+                    placeholder: 'Choose an item to manage stock...',
+                    min_values: 1,
+                    max_values: 1,
+                    options: options.slice(0, 25) // Discord limit of 25 options
+                  }
+                ]
+              }
+            ],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
         });
       } catch (error) {
         console.error('Error showing stock management modal:', error);
@@ -11069,6 +11052,73 @@ Your server is now ready for Tycoons gameplay!`;
           data: {
             content: '❌ Error opening stock management.',
             flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_stock_select_')) {
+      // Handle stock item selection - show modal for quantity input
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const selectedItemId = req.body.data.values[0];
+        
+        // Parse storeId from custom_id
+        const storeId = custom_id.replace('safari_stock_select_', '');
+        console.log(`📦 DEBUG: Selected item ${selectedItemId} for stock update in store ${storeId}`);
+        
+        // Import Safari manager functions
+        const { loadSafariContent, getItemStock } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const store = safariData[guildId]?.stores?.[storeId];
+        const item = safariData[guildId]?.items?.[selectedItemId];
+        
+        if (!store || !item) {
+          return res.send({
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              content: '❌ Store or item not found.',
+              components: []
+            }
+          });
+        }
+        
+        // Get current stock for display
+        const currentStock = await getItemStock(guildId, storeId, selectedItemId);
+        let stockDisplay;
+        if (currentStock === -1 || currentStock === null || currentStock === undefined) {
+          stockDisplay = 'Unlimited';
+        } else {
+          stockDisplay = `${currentStock}`;
+        }
+        
+        // Create modal with traditional ActionRow + TextInput pattern
+        const modal = new ModalBuilder()
+          .setCustomId(`safari_stock_modal_${storeId}_${selectedItemId}`)
+          .setTitle(`Stock: ${item.name}`);
+        
+        const stockInput = new TextInputBuilder()
+          .setCustomId('stock_quantity')
+          .setLabel(`New stock for ${item.name}`)
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder(`Current: ${stockDisplay} (-1 for unlimited)`)
+          .setRequired(true)
+          .setMinLength(1)
+          .setMaxLength(10);
+        
+        const actionRow = new ActionRowBuilder().addComponents(stockInput);
+        modal.addComponents(actionRow);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal.toJSON()
+        });
+      } catch (error) {
+        console.error('Error showing stock modal:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: '❌ Error showing stock modal.',
+            components: []
           }
         });
       }
@@ -30383,7 +30433,7 @@ Are you sure you want to continue?`;
           }
         });
       }
-    } else if (custom_id.startsWith('safari_store_stock_modal_')) {
+    } else if (custom_id.startsWith('safari_stock_modal_')) {
       // Handle Safari store stock management modal submission
       try {
         const member = req.body.member;
@@ -30392,29 +30442,22 @@ Are you sure you want to continue?`;
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage stock.')) return;
         
-        // Parse storeId from custom_id
-        const storeId = custom_id.replace('safari_store_stock_modal_', '');
-        console.log(`📦 DEBUG: Processing stock update for store ${storeId}`);
+        // Parse storeId and itemId from custom_id (format: safari_stock_modal_storeId_itemId)
+        const parts = custom_id.replace('safari_stock_modal_', '').split('_');
+        const storeId = parts.slice(0, -1).join('_'); // Everything except last part
+        const selectedItemId = parts[parts.length - 1]; // Last part is itemId
         
-        // Extract selected item and new stock quantity from modal
-        let selectedItemId = null;
-        let stockQuantityStr = null;
+        console.log(`📦 DEBUG: Processing stock update for item ${selectedItemId} in store ${storeId}`);
         
-        // Modal has Label components with nested string select and text input
-        for (const component of components) {
-          if (component.component?.type === 3) { // String Select in Label
-            selectedItemId = component.component.values?.[0];
-          } else if (component.component?.type === 4) { // Text Input in Label
-            stockQuantityStr = component.component.value?.trim();
-          }
-        }
+        // Extract stock quantity from modal (traditional ActionRow format)
+        const stockQuantityStr = components[0].components[0].value?.trim();
         
-        // Validate we got both inputs
-        if (!selectedItemId || stockQuantityStr === null || stockQuantityStr === '') {
+        // Validate we got the input
+        if (stockQuantityStr === null || stockQuantityStr === '') {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Both item selection and stock quantity are required.',
+              content: '❌ Stock quantity is required.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -33360,7 +33403,12 @@ client.on('messageReactionAdd', async (reaction, user) => {
   try {
     if (user.bot) return;
     
-    console.log(`🔍 DEBUG: Reaction added - Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id}, Bot: ${user.bot}, System: ${user.system || 'false'})`);
+    const guildInfo = reaction.message.guild 
+      ? `${reaction.message.guild.name} (${reaction.message.guild.id})` 
+      : 'DM';
+    const channelName = reaction.message.channel?.name || reaction.message.channel?.id || 'unknown';
+    
+    console.log(`🔍 DEBUG: Reaction added - Server: ${guildInfo} #${channelName}, Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id}, Bot: ${user.bot}, System: ${user.system || 'false'})`);
 
     // When a reaction is received, check if the structure is partial
     if (reaction.partial) {
@@ -33514,7 +33562,12 @@ client.on('messageReactionRemove', async (reaction, user) => {
   try {
     if (user.bot) return;
     
-    console.log(`🔍 DEBUG: Reaction removed - Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id}, Bot: ${user.bot}, System: ${user.system || 'false'})`);
+    const guildInfo = reaction.message.guild 
+      ? `${reaction.message.guild.name} (${reaction.message.guild.id})` 
+      : 'DM';
+    const channelName = reaction.message.channel?.name || reaction.message.channel?.id || 'unknown';
+    
+    console.log(`🔍 DEBUG: Reaction removed - Server: ${guildInfo} #${channelName}, Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id}, Bot: ${user.bot}, System: ${user.system || 'false'})`);
 
     // When a reaction is received, check if the structure is partial
     if (reaction.partial) {
