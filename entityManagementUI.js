@@ -778,11 +778,11 @@ export async function createStoreItemManagementUI(options) {
             if (stock === undefined || stock === null || stock === -1) {
                 stockDisplay = 'Unlimited';
             } else if (stock === 0) {
-                stockDisplay = 'Sold Out';
+                stockDisplay = '0';
             } else {
-                stockDisplay = `${stock} Remaining`;
+                stockDisplay = `${stock}`;
             }
-            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName} | 📦 **Remaining Stock:** ${stockDisplay}\n`;
+            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName} | 📦 **Remaining:** ${stockDisplay}\n`;
         }
     });
     
