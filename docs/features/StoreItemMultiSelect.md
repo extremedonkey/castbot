@@ -4,6 +4,8 @@
 
 The Store Item Multi-Select Management System replaces the previous button-based interface that hit Discord's 40-component limit. This new system provides a streamlined, scalable solution for managing store inventory using Discord's multi-select components.
 
+**Note**: Stock management functionality has been added to stores. See [Safari.md Stock Management System](Safari.md#stock-management-system-january-2025) for details on per-item stock limits.
+
 ## Problem Solved
 
 ### Previous System Issues

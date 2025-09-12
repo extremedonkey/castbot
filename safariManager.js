@@ -2533,6 +2533,15 @@ async function buyItem(guildId, storeId, itemId, userId) {
             };
         }
         
+        // Check stock availability
+        const hasStockAvailable = await hasStock(guildId, storeId, itemId);
+        if (!hasStockAvailable) {
+            return {
+                content: `❌ Sorry, **${item.emoji || '📦'} ${item.name}** is currently out of stock.`,
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+        
         // Check max quantity if limited
         if (item.maxQuantity > 0) {
             const currentQuantity = (await getPlayerInventory(guildId, userId))[itemId] || 0;
@@ -2553,6 +2562,18 @@ async function buyItem(guildId, storeId, itemId, userId) {
         };
         
         await updateCurrency(guildId, userId, -price, purchaseContext);
+        
+        // Decrement stock after successful payment
+        const stockUpdated = await decrementStock(guildId, storeId, itemId, 1);
+        if (!stockUpdated) {
+            // Rollback currency if stock update failed
+            await updateCurrency(guildId, userId, price, { source: 'Stock update failed - refund' });
+            return {
+                content: '❌ Failed to update stock. Purchase cancelled and refunded.',
+                flags: InteractionResponseFlags.EPHEMERAL
+            };
+        }
+        
         await addItemToInventory(guildId, userId, itemId, 1, {
             ...purchaseContext,
             source: `Purchase from ${store.name}`
@@ -7144,6 +7165,110 @@ function getPlayerEmoji(playerName) {
     return emojis[index];
 }
 
+// =============================================================================
+// Stock Management Functions
+// =============================================================================
+
+/**
+ * Check if an item has stock available in a store
+ * @param {string} guildId - Guild ID
+ * @param {string} storeId - Store ID
+ * @param {string} itemId - Item ID
+ * @returns {Promise<boolean>} True if stock is available (or unlimited)
+ */
+async function hasStock(guildId, storeId, itemId) {
+    const safariData = await loadSafariContent();
+    const store = safariData[guildId]?.stores?.[storeId];
+    if (!store) return false;
+    
+    const storeItem = store.items.find(si => si.itemId === itemId);
+    if (!storeItem) return false;
+    
+    // Backwards compatibility: no stock field = unlimited
+    if (storeItem.stock === undefined || storeItem.stock === null) return true;
+    if (storeItem.stock === -1) return true; // Explicitly unlimited
+    
+    return storeItem.stock > 0;
+}
+
+/**
+ * Decrement stock after a purchase
+ * @param {string} guildId - Guild ID
+ * @param {string} storeId - Store ID
+ * @param {string} itemId - Item ID
+ * @param {number} quantity - Quantity to decrement (default: 1)
+ * @returns {Promise<boolean>} True if stock was successfully decremented
+ */
+async function decrementStock(guildId, storeId, itemId, quantity = 1) {
+    const safariData = await loadSafariContent();
+    const store = safariData[guildId]?.stores?.[storeId];
+    if (!store) return false;
+    
+    const storeItem = store.items.find(si => si.itemId === itemId);
+    if (!storeItem) return false;
+    
+    // Don't decrement unlimited items
+    if (storeItem.stock === undefined || storeItem.stock === null || storeItem.stock === -1) {
+        return true; // Success, no decrement needed
+    }
+    
+    // Check sufficient stock
+    if (storeItem.stock < quantity) {
+        return false;
+    }
+    
+    // Decrement stock
+    storeItem.stock -= quantity;
+    await saveSafariContent(safariData);
+    
+    console.log(`📦 Stock updated: ${itemId} in store ${storeId} - new stock: ${storeItem.stock}`);
+    return true;
+}
+
+/**
+ * Update stock level for an item (admin function)
+ * @param {string} guildId - Guild ID
+ * @param {string} storeId - Store ID
+ * @param {string} itemId - Item ID
+ * @param {number} newStock - New stock level (-1 for unlimited, 0+ for limited)
+ * @returns {Promise<boolean>} True if stock was successfully updated
+ */
+async function updateItemStock(guildId, storeId, itemId, newStock) {
+    const safariData = await loadSafariContent();
+    const store = safariData[guildId]?.stores?.[storeId];
+    if (!store) return false;
+    
+    const storeItem = store.items.find(si => si.itemId === itemId);
+    if (!storeItem) return false;
+    
+    // Set stock (-1 for unlimited, 0+ for limited)
+    storeItem.stock = newStock;
+    await saveSafariContent(safariData);
+    
+    console.log(`📦 Stock set: ${itemId} in store ${storeId} - stock: ${newStock === -1 ? 'unlimited' : newStock}`);
+    return true;
+}
+
+/**
+ * Get current stock level for an item
+ * @param {string} guildId - Guild ID
+ * @param {string} storeId - Store ID
+ * @param {string} itemId - Item ID
+ * @returns {Promise<number|null>} Stock level (null = unlimited, number = limited stock)
+ */
+async function getItemStock(guildId, storeId, itemId) {
+    const safariData = await loadSafariContent();
+    const store = safariData[guildId]?.stores?.[storeId];
+    if (!store) return null;
+    
+    const storeItem = store.items.find(si => si.itemId === itemId);
+    if (!storeItem) return null;
+    
+    // Return null for unlimited, number for limited
+    if (storeItem.stock === undefined || storeItem.stock === null) return null;
+    return storeItem.stock;
+}
+
 export {
     createCustomButton,
     getCustomButton,
@@ -7195,6 +7320,11 @@ export {
     initializeEntityPoints,
     getEntityPoints,
     hasEnoughPoints,
+    // Stock Management exports
+    hasStock,
+    decrementStock,
+    updateItemStock,
+    getItemStock,
     usePoints,
     setEntityPoints,
     getTimeUntilRegeneration,

@@ -120,6 +120,7 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 - **WHISPER SYSTEM** → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)
 - **GLOBAL STORES** (NEW) → Permanent stores in player /menu
 - **ROUNDS MENU** (NEW) → Dedicated round management interface
+- **STOCK MANAGEMENT** (NEW) → Store inventory limits with per-item stock tracking
 
 **Architecture & Standards:**
 - **🎨 COMPONENTS V2** (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)

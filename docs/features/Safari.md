@@ -1478,6 +1478,7 @@ The Round Results V2 System provides a complete, scalable foundation for complex
 - **Smart Component Handling**: Automatic 40-component limit management with item truncation warnings
 - **Role-Based Access**: Shop access can be restricted by Discord roles
 - **Purchase Workflow**: Complete buy/sell system with currency deduction and inventory management
+- **Stock Management** (NEW): Per-item stock limits with automatic sold-out handling
 
 **Technical Implementation:**
 ```javascript
@@ -2510,6 +2511,64 @@ for (const storeId of globalStores) {
 **Technical Implementation:**
 - **Attack Data Structure**: Enhanced inventory format with `quantity` and `numAttacksAvailable` properties in `playerData.json`
 - **Queue Storage**: `safariContent.json` → `attackQueue.round{X}` with structured attack records including damage calculations
+
+## Stock Management System (January 2025)
+
+### Overview
+
+The Stock Management System adds inventory limits to Safari stores, allowing administrators to set per-item stock levels that automatically prevent purchases when items are sold out.
+
+### Features
+
+- **Per-Item Stock Limits**: Each item in a store can have limited or unlimited stock
+- **Automatic Sold-Out Handling**: Items become unpurchasable when stock reaches 0
+- **Backwards Compatible**: Existing stores without stock fields continue working as unlimited
+- **Production Team Control**: Stock levels managed through store configuration
+- **Real-Time Updates**: Stock decrements immediately upon successful purchase
+- **Rollback Protection**: Failed stock updates automatically refund currency
+
+### Technical Implementation
+
+#### Data Structure (safariContent.json)
+```javascript
+"stores": {
+  "store_id": {
+    "items": [
+      {
+        "itemId": "item_id",
+        "price": 30,
+        "stock": 10,        // NEW: Limited stock
+        "addedAt": timestamp
+      },
+      {
+        "itemId": "item_id_2",
+        "price": 20,
+        // No stock field = unlimited (backwards compatible)
+      }
+    ]
+  }
+}
+```
+
+#### Stock Values
+- **`undefined/null`**: Unlimited stock (backwards compatible)
+- **`-1`**: Explicitly set as unlimited
+- **`0`**: Sold out
+- **`> 0`**: Available quantity
+
+#### API Functions (safariManager.js)
+- `hasStock(guildId, storeId, itemId)` - Check if item is in stock
+- `decrementStock(guildId, storeId, itemId, quantity)` - Reduce stock after purchase
+- `updateItemStock(guildId, storeId, itemId, newStock)` - Admin stock management
+- `getItemStock(guildId, storeId, itemId)` - Get current stock level
+
+#### Purchase Flow Integration
+1. Check if user can afford item
+2. **NEW: Verify stock availability**
+3. Deduct currency from player
+4. **NEW: Decrement stock (with rollback on failure)**
+5. Add item to player inventory
+6. Update store statistics
 - **State Management**: Discord interaction state embedded in custom_ids to handle stateless UI updates
 - **UI Components**: Section components with blue "⚔️ Attack Player" buttons for attack items in inventory display
 - **Handler Integration**: Complete button handler system with proper dynamic handler exclusions
