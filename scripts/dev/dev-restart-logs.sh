@@ -5,8 +5,6 @@
 # 
 # Usage: ./dev-restart-logs.sh [commit-message] [custom-discord-message]
 
-set -e  # Exit on any error
-
 echo "=== CastBot Dev Restart + Logs ==="
 
 # Configuration
@@ -22,15 +20,6 @@ git add .
 if ! git diff --staged --quiet; then
     echo "📝 Committing: $COMMIT_MESSAGE"
     git commit -m "$COMMIT_MESSAGE"
-    
-    echo "🚀 Pushing to GitHub ($CURRENT_BRANCH)..."
-    if git push origin $CURRENT_BRANCH; then
-        echo "✅ Changes pushed to GitHub successfully"
-    else
-        echo "❌ Push failed - check authentication"
-        echo "💡 Run 'git push' manually or check GitHub token"
-        echo "ℹ️  Changes are committed locally, safe to continue"
-    fi
 else
     echo "📝 No changes to commit"
 fi

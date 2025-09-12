@@ -106,6 +106,3 @@ echo ""
 echo "📊 Use './dev-status.sh' to see full status"
 echo "📋 Use 'pm2 logs castbot-dev-pm' to monitor logs"
 echo ""
-
-# Start tailing PM2 logs
-pm2 logs castbot-dev-pm
