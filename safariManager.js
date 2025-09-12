@@ -259,7 +259,7 @@ function generateItemContent(item, customTerms, quantity = null, price = null, s
                 stockDisplay = `${stock} Available`;
             }
             console.log('🔍 DEBUG: Stock display string:', stockDisplay);
-            content += `\n> 📦 **Stock:** ${stockDisplay}`;
+            content += `\n> 📦 **Stock:** ${stockDisplay} 🆕`;
             console.log('🔍 DEBUG: Final content includes stock:', content.includes('Stock:'));
         }
     }
