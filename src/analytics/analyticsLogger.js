@@ -267,7 +267,9 @@ async function logInteraction(userId, guildId, action, details, username, guildN
     fs.appendFileSync(ANALYTICS_LOG_FILE, logEntry);
     
     // Try Discord logging (non-blocking)
-    console.log(`📊 DEBUG: About to call postToDiscordLogs - action: ${action}, safariContent exists: ${!!safariContent}, guildId: ${guildId}`);
+    if (process.env.DEBUG_MODE === 'true') {
+        console.log(`📊 DEBUG: About to call postToDiscordLogs - action: ${action}, safariContent exists: ${!!safariContent}, guildId: ${guildId}`);
+    }
     await postToDiscordLogs(logEntry.trim(), userId, action, details, components, guildId, safariContent);
     
   } catch (error) {
@@ -382,52 +384,55 @@ function formatActionDetails(actionType, details) {
  */
 async function postToDiscordLogs(logEntry, userId, action, details, components, guildId = null, safariContent = null) {
   try {
-    console.log(`📊 DEBUG: postToDiscordLogs ENTRY - action: ${action}, userId: ${userId}, guildId: ${guildId}`);
+    const debugMode = process.env.DEBUG_MODE === 'true';
+    if (debugMode) {
+      console.log(`📊 DEBUG: postToDiscordLogs ENTRY - action: ${action}, userId: ${userId}, guildId: ${guildId}`);
+    }
     
     // Skip if Discord client not available
     if (!discordClient) {
-      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - Discord client not available`);
+      if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - Discord client not available`);
       return;
     }
-    console.log(`📊 DEBUG: postToDiscordLogs - Discord client OK`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Discord client OK`);
 
     // Load environment config
     const { loadEnvironmentConfig } = await import('../../storage.js');
     const envConfig = await loadEnvironmentConfig();
-    console.log(`📊 DEBUG: postToDiscordLogs - envConfig loaded`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - envConfig loaded`);
     
     const loggingConfig = envConfig.liveDiscordLogging;
     // Don't log the entire config (it might have old queue data)
-    console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled:`, loggingConfig.enabled);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled:`, loggingConfig.enabled);
     
     // Check if logging is enabled
     if (!loggingConfig.enabled) {
-      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - Logging not enabled`);
+      if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - Logging not enabled`);
       return;
     }
-    console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled OK`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled OK`);
     
     // Check user exclusion (Option A: Complete Exclusion)
     if (loggingConfig.excludedUserIds.includes(userId)) {
-      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - User ${userId} is excluded`);
+      if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - User ${userId} is excluded`);
       return;
     }
-    console.log(`📊 DEBUG: postToDiscordLogs - User not excluded, continuing...`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - User not excluded, continuing...`);
     
     // Get target channel if not cached
-    console.log(`📊 DEBUG: postToDiscordLogs - Checking target channel cache`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Checking target channel cache`);
     if (!targetChannel) {
-      console.log(`📊 DEBUG: postToDiscordLogs - Target channel not cached, fetching...`);
+      if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Target channel not cached, fetching...`);
       try {
         const { getLoggingChannelId } = await import('../../storage.js');
         const targetChannelId = await getLoggingChannelId();
-        console.log(`📊 DEBUG: postToDiscordLogs - Got target channel ID: ${targetChannelId}`);
+        if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Got target channel ID: ${targetChannelId}`);
         
         const targetGuild = await discordClient.guilds.fetch(loggingConfig.targetGuildId);
-        console.log(`📊 DEBUG: postToDiscordLogs - Fetched target guild: ${targetGuild.name}`);
+        if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Fetched target guild: ${targetGuild.name}`);
         
         targetChannel = await targetGuild.channels.fetch(targetChannelId);
-        console.log(`📊 DEBUG: postToDiscordLogs - Fetched target channel: ${targetChannel?.name}`);
+        if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Fetched target channel: ${targetChannel?.name}`);
         
         if (!targetChannel) {
           console.error('Discord Logging: Target channel not found');
@@ -438,35 +443,35 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
         return;
       }
     } else {
-      console.log(`📊 DEBUG: postToDiscordLogs - Using cached target channel: ${targetChannel.name}`);
+      if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Using cached target channel: ${targetChannel.name}`);
     }
     
     // Format the log entry for Discord
-    console.log(`📊 DEBUG: postToDiscordLogs - Formatting log entry`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Formatting log entry`);
     const formattedMessage = `* ${formatAnalyticsLine(logEntry)}`;
-    console.log(`📊 DEBUG: postToDiscordLogs - Formatted message: ${formattedMessage.substring(0, 100)}...`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Formatted message: ${formattedMessage.substring(0, 100)}...`);
     
     // IMPORTANT: Check Safari Log conditions BEFORE rate limiting
     // This ensures Safari logs are posted even when analytics is rate limited
-    console.log(`📊 DEBUG: Checking Safari Log conditions - safariContent: ${!!safariContent}, guildId: ${!!guildId}, action starts with SAFARI_: ${action.startsWith('SAFARI_')}, action: ${action}`);
+    if (debugMode) console.log(`📊 DEBUG: Checking Safari Log conditions - safariContent: ${!!safariContent}, guildId: ${!!guildId}, action starts with SAFARI_: ${action.startsWith('SAFARI_')}, action: ${action}`);
     if (safariContent && guildId && action.startsWith('SAFARI_')) {
-      console.log(`📊 DEBUG: All Safari Log conditions met, calling postToSafariLog`);
+      if (debugMode) console.log(`📊 DEBUG: All Safari Log conditions met, calling postToSafariLog`);
       try {
         await postToSafariLog(guildId, userId, action, details, safariContent);
-        console.log(`📊 DEBUG: postToSafariLog completed successfully`);
+        if (debugMode) console.log(`📊 DEBUG: postToSafariLog completed successfully`);
       } catch (safariLogError) {
         console.error(`📊 ERROR: postToSafariLog failed:`, safariLogError);
         console.error(`📊 ERROR: Stack trace:`, safariLogError.stack);
       }
     } else {
-      console.log(`📊 DEBUG: Safari Log conditions not met - skipping Safari Log posting`);
+      if (debugMode) console.log(`📊 DEBUG: Safari Log conditions not met - skipping Safari Log posting`);
     }
 
     // Rate limiting check (simple implementation)
-    console.log(`📊 DEBUG: postToDiscordLogs - Checking rate limits`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Checking rate limits`);
     const now = Date.now();
     if (now - runtimeState.lastMessageTime < 1200) { // 1.2 seconds between messages
-      console.log(`📊 DEBUG: postToDiscordLogs - Rate limited, adding to queue`);
+      if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Rate limited, adding to queue`);
       // Add to queue for later processing
       runtimeState.rateLimitQueue.push({
         message: formattedMessage,
@@ -480,19 +485,19 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
       
       return;
     }
-    console.log(`📊 DEBUG: postToDiscordLogs - Rate limit OK, proceeding to send`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Rate limit OK, proceeding to send`);
     
     // Update last message time
     runtimeState.lastMessageTime = now;
     
     // Send message to Discord
-    console.log(`📊 DEBUG: postToDiscordLogs - Sending message to Discord`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Sending message to Discord`);
     await targetChannel.send(formattedMessage);
-    console.log(`📊 DEBUG: postToDiscordLogs - Message sent successfully`);
+    if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Message sent successfully`);
     
     // Start queue processing if needed (singleton ensures only one processor runs)
     if (runtimeState.rateLimitQueue.length > 0) {
-      console.log(`📊 DEBUG: postToDiscordLogs - Requesting queue processing for ${runtimeState.rateLimitQueue.length} messages`);
+      if (debugMode) console.log(`📊 DEBUG: postToDiscordLogs - Requesting queue processing for ${runtimeState.rateLimitQueue.length} messages`);
       setTimeout(async () => {
         await queueProcessor.startProcessing();
       }, 1200);
@@ -523,12 +528,12 @@ class QueueProcessor {
   async startProcessing() {
     // Only start if not already processing
     if (this.isProcessing) {
-      console.log(`📊 DEBUG: QueueProcessor - Already processing, ignoring request`);
+      if (process.env.DEBUG_MODE === 'true') console.log(`📊 DEBUG: QueueProcessor - Already processing, ignoring request`);
       return;
     }
 
     this.isProcessing = true;
-    console.log(`📊 DEBUG: QueueProcessor - Starting singleton processor`);
+    if (process.env.DEBUG_MODE === 'true') console.log(`📊 DEBUG: QueueProcessor - Starting singleton processor`);
     await this._processLoop();
   }
 
@@ -539,13 +544,13 @@ class QueueProcessor {
     try {
       while (runtimeState.rateLimitQueue.length > 0 && targetChannel) {
         const queueLength = runtimeState.rateLimitQueue.length;
-        console.log(`📊 DEBUG: QueueProcessor - Processing ${queueLength} queued messages`);
+        if (process.env.DEBUG_MODE === 'true') console.log(`📊 DEBUG: QueueProcessor - Processing ${queueLength} queued messages`);
         
         const message = runtimeState.rateLimitQueue.shift();
         await targetChannel.send(message.message);
         
         runtimeState.lastMessageTime = Date.now();
-        console.log(`📊 DEBUG: QueueProcessor - Sent message, ${runtimeState.rateLimitQueue.length} remaining`);
+        if (process.env.DEBUG_MODE === 'true') console.log(`📊 DEBUG: QueueProcessor - Sent message, ${runtimeState.rateLimitQueue.length} remaining`);
         
         // Wait 1.2 seconds before next message (only if more messages exist)
         if (runtimeState.rateLimitQueue.length > 0) {
@@ -555,7 +560,7 @@ class QueueProcessor {
         }
       }
       
-      console.log(`📊 DEBUG: QueueProcessor - Processing completed, queue empty`);
+      if (process.env.DEBUG_MODE === 'true') console.log(`📊 DEBUG: QueueProcessor - Processing completed, queue empty`);
     } catch (error) {
       console.error('Discord Logging Queue Error (non-critical):', error);
     } finally {
@@ -720,28 +725,31 @@ async function logNewServerInstall(guild, ownerInfo = null) {
  */
 async function postToSafariLog(guildId, userId, action, details, safariContent) {
   try {
-    console.log(`🦁 DEBUG: postToSafariLog called - guildId: ${guildId}, userId: ${userId}, action: ${action}, details: ${details}`);
-    console.log(`🦁 DEBUG: safariContent:`, JSON.stringify(safariContent, null, 2));
+    const debugMode = process.env.DEBUG_MODE === 'true';
+    if (debugMode) {
+      console.log(`🦁 DEBUG: postToSafariLog called - guildId: ${guildId}, userId: ${userId}, action: ${action}, details: ${details}`);
+      console.log(`🦁 DEBUG: safariContent:`, JSON.stringify(safariContent, null, 2));
+    }
     
     // Skip if Discord client not available
     if (!discordClient) {
-      console.log(`🦁 DEBUG: Discord client not available - skipping Safari Log`);
+      if (debugMode) console.log(`🦁 DEBUG: Discord client not available - skipping Safari Log`);
       return;
     }
-    console.log(`🦁 DEBUG: Discord client is available`);
+    if (debugMode) console.log(`🦁 DEBUG: Discord client is available`);
 
     // Load Safari content to get log settings
     const { loadSafariContent } = await import('../../safariManager.js');
     const safariData = await loadSafariContent();
     
-    console.log(`🔍 Safari Log Debug: Processing ${action} for guild ${guildId}, user ${userId}`);
+    if (debugMode) console.log(`🔍 Safari Log Debug: Processing ${action} for guild ${guildId}, user ${userId}`);
     
     // Check if Safari logging is enabled for this guild
     const logSettings = safariData[guildId]?.safariLogSettings;
-    console.log(`🔍 Safari Log Debug: Log settings:`, JSON.stringify(logSettings, null, 2));
+    if (debugMode) console.log(`🔍 Safari Log Debug: Log settings:`, JSON.stringify(logSettings, null, 2));
     
     if (!logSettings?.enabled || !logSettings?.logChannelId) {
-      console.log(`🔍 Safari Log Debug: Safari logging disabled or no channel set for guild ${guildId}`);
+      if (debugMode) console.log(`🔍 Safari Log Debug: Safari logging disabled or no channel set for guild ${guildId}`);
       return;
     }
     
@@ -759,20 +767,20 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     };
     
     const logType = logTypeMap[action];
-    console.log(`🔍 Safari Log Debug: Action ${action} maps to logType ${logType}, enabled: ${logSettings.logTypes?.[logType]}`);
+    if (debugMode) console.log(`🔍 Safari Log Debug: Action ${action} maps to logType ${logType}, enabled: ${logSettings.logTypes?.[logType]}`);
     
     if (!logType || !logSettings.logTypes?.[logType]) {
-      console.log(`🔍 Safari Log Debug: Log type ${logType} not enabled for guild ${guildId}`);
+      if (debugMode) console.log(`🔍 Safari Log Debug: Log type ${logType} not enabled for guild ${guildId}`);
       return;
     }
     
     // Get the Safari log channel
-    console.log(`🔍 Safari Log Debug: Attempting to fetch channel ${logSettings.logChannelId} for guild ${guildId}`);
+    if (debugMode) console.log(`🔍 Safari Log Debug: Attempting to fetch channel ${logSettings.logChannelId} for guild ${guildId}`);
     
     let safariLogChannel;
     try {
       const guild = await discordClient.guilds.fetch(guildId);
-      console.log(`🔍 Safari Log Debug: Guild fetched successfully: ${guild.name}`);
+      if (debugMode) console.log(`🔍 Safari Log Debug: Guild fetched successfully: ${guild.name}`);
       
       safariLogChannel = await guild.channels.fetch(logSettings.logChannelId);
       
@@ -781,7 +789,7 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
         return;
       }
       
-      console.log(`🔍 Safari Log Debug: Channel fetched successfully: ${safariLogChannel.name}`);
+      if (debugMode) console.log(`🔍 Safari Log Debug: Channel fetched successfully: ${safariLogChannel.name}`);
     } catch (error) {
       console.error(`Safari Log: Error fetching channel for guild ${guildId}:`, error);
       return;
@@ -905,17 +913,17 @@ async function postToSafariLog(guildId, userId, action, details, safariContent) 
     }
     
     // Send to Safari log channel
-    console.log(`🔍 Safari Log Debug: Sending log message to channel ${safariLogChannel.name}:`, logMessage);
+    if (debugMode) console.log(`🔍 Safari Log Debug: Sending log message to channel ${safariLogChannel.name}:`, logMessage);
     
     // Truncate message if it exceeds Discord's 2000 character limit
     if (logMessage.length > 1900) {
       logMessage = logMessage.substring(0, 1900) + '\n... [Message truncated due to length]';
-      console.log('⚠️ Safari Log: Message truncated from', logMessage.length, 'to 1900 characters');
+      if (debugMode) console.log('⚠️ Safari Log: Message truncated from', logMessage.length, 'to 1900 characters');
     }
     
     await safariLogChannel.send(logMessage);
     
-    console.log(`🔍 Safari Log Debug: Message sent successfully to Safari Log channel`);
+    if (debugMode) console.log(`🔍 Safari Log Debug: Message sent successfully to Safari Log channel`);
     
   } catch (error) {
     console.error('Safari Log Error (non-critical):', error);

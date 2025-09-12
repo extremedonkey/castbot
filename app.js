@@ -1873,8 +1873,11 @@ app.use('/img', express.static('./img'));
 const processedInteractions = new Map();
 
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
-    console.log("Got headers:", JSON.stringify(req.headers, null, 2));
-    console.log("Got body:", req.body);
+    // Only log headers/body in debug mode
+    if (process.env.DEBUG_MODE === 'true') {
+        console.log("Got headers:", JSON.stringify(req.headers, null, 2));
+        console.log("Got body:", req.body);
+    }
     
     // Clear request-scoped caches at the start of each interaction
     const { clearRequestCache } = await import('./storage.js');
@@ -3725,7 +3728,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
         const storeId = parts.slice(4).join('_'); // Rejoin in case storeId has underscores
         
-        console.log(`🏪 DEBUG: User ${userId} browsing store ${storeId} in guild ${guildId}`);
+        if (process.env.DEBUG_MODE === 'true') {
+            console.log(`🏪 DEBUG: User ${userId} browsing store ${storeId} in guild ${guildId}`);
+        }
         
         // Import Safari manager functions
         const { loadSafariContent, getCustomTerms, generateItemContent } = await import('./safariManager.js');
@@ -3752,9 +3757,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const playerCurrency = player?.safari?.currency || 0;
         
         // Build store display with Container -> Section pattern
-        console.log('🏪 DEBUG: Building store display components...');
-        
-        console.log('🏪 DEBUG: Sending store browse response...');
+        if (process.env.DEBUG_MODE === 'true') {
+            console.log('🏪 DEBUG: Building store display components...');
+            console.log('🏪 DEBUG: Sending store browse response...');
+        }
         
         // Create simplified Components V2 structure to avoid nesting issues
         const containerComponents = [];
@@ -3836,7 +3842,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           components: containerComponents
         };
         
-        console.log(`🏪 DEBUG: Simplified container with ${containerComponents.length} components`);
+        if (process.env.DEBUG_MODE === 'true') {
+            console.log(`🏪 DEBUG: Simplified container with ${containerComponents.length} components`);
+        }
         
         const response = {
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -3846,7 +3854,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         };
         
-        console.log('🏪 DEBUG: Full response:', JSON.stringify(response, null, 2));
+        if (process.env.DEBUG_MODE === 'true') {
+            console.log('🏪 DEBUG: Full response:', JSON.stringify(response, null, 2));
+        }
         return res.send(response);
         
       } catch (error) {
