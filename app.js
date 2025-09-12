@@ -11022,28 +11022,50 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
         
-        // Show a message with string select instead of modal (modals don't support string selects in older Discord API)
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `## 📦 Stock Management - ${store.emoji || '🏪'} ${store.name}\n\nSelect an item to update its stock level:`,
-            components: [
-              {
-                type: 1, // Action Row
-                components: [
-                  {
-                    type: 3, // String Select
-                    custom_id: `safari_stock_select_${storeId}`,
-                    placeholder: 'Choose an item to manage stock...',
-                    min_values: 1,
-                    max_values: 1,
-                    options: options.slice(0, 25) // Discord limit of 25 options
-                  }
-                ]
+        console.log(`📦 DEBUG: About to show modal with ${options.length} options`);
+        console.log(`📦 DEBUG: First option:`, JSON.stringify(options[0], null, 2));
+        
+        // Create modal with new Components V2 Label pattern for string select
+        const modal = {
+          title: `Stock Management - ${store.name}`.substring(0, 45), // Discord title limit
+          custom_id: `safari_store_stock_modal_${storeId}`,
+          components: [
+            // String Select wrapped in Label (type 18)
+            {
+              type: 18, // Label
+              label: 'Select Item to Update Stock',
+              component: {
+                type: 3, // String Select
+                custom_id: 'item_select',
+                placeholder: 'Choose an item...',
+                min_values: 1,
+                max_values: 1,
+                options: options.slice(0, 25) // Discord limit of 25 options
               }
-            ],
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+            },
+            // Text Input wrapped in Label (type 18)
+            {
+              type: 18, // Label
+              label: 'Enter new item qty (-1 for unlimited)',
+              description: 'Enter item stock level for that store',
+              component: {
+                type: 4, // Text Input
+                custom_id: 'stock_quantity',
+                style: 1, // Short
+                placeholder: 'Enter item stock level for that store',
+                required: true,
+                min_length: 1,
+                max_length: 10
+              }
+            }
+          ]
+        };
+        
+        console.log(`📦 DEBUG: Sending modal response`);
+        
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: modal
         });
       } catch (error) {
         console.error('Error showing stock management modal:', error);
@@ -11052,73 +11074,6 @@ Your server is now ready for Tycoons gameplay!`;
           data: {
             content: '❌ Error opening stock management.',
             flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id.startsWith('safari_stock_select_')) {
-      // Handle stock item selection - show modal for quantity input
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        const selectedItemId = req.body.data.values[0];
-        
-        // Parse storeId from custom_id
-        const storeId = custom_id.replace('safari_stock_select_', '');
-        console.log(`📦 DEBUG: Selected item ${selectedItemId} for stock update in store ${storeId}`);
-        
-        // Import Safari manager functions
-        const { loadSafariContent, getItemStock } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const store = safariData[guildId]?.stores?.[storeId];
-        const item = safariData[guildId]?.items?.[selectedItemId];
-        
-        if (!store || !item) {
-          return res.send({
-            type: InteractionResponseType.UPDATE_MESSAGE,
-            data: {
-              content: '❌ Store or item not found.',
-              components: []
-            }
-          });
-        }
-        
-        // Get current stock for display
-        const currentStock = await getItemStock(guildId, storeId, selectedItemId);
-        let stockDisplay;
-        if (currentStock === -1 || currentStock === null || currentStock === undefined) {
-          stockDisplay = 'Unlimited';
-        } else {
-          stockDisplay = `${currentStock}`;
-        }
-        
-        // Create modal with traditional ActionRow + TextInput pattern
-        const modal = new ModalBuilder()
-          .setCustomId(`safari_stock_modal_${storeId}_${selectedItemId}`)
-          .setTitle(`Stock: ${item.name}`);
-        
-        const stockInput = new TextInputBuilder()
-          .setCustomId('stock_quantity')
-          .setLabel(`New stock for ${item.name}`)
-          .setStyle(TextInputStyle.Short)
-          .setPlaceholder(`Current: ${stockDisplay} (-1 for unlimited)`)
-          .setRequired(true)
-          .setMinLength(1)
-          .setMaxLength(10);
-        
-        const actionRow = new ActionRowBuilder().addComponents(stockInput);
-        modal.addComponents(actionRow);
-        
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal.toJSON()
-        });
-      } catch (error) {
-        console.error('Error showing stock modal:', error);
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            content: '❌ Error showing stock modal.',
-            components: []
           }
         });
       }
@@ -30433,7 +30388,7 @@ Are you sure you want to continue?`;
           }
         });
       }
-    } else if (custom_id.startsWith('safari_stock_modal_')) {
+    } else if (custom_id.startsWith('safari_store_stock_modal_')) {
       // Handle Safari store stock management modal submission
       try {
         const member = req.body.member;
@@ -30442,22 +30397,29 @@ Are you sure you want to continue?`;
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage stock.')) return;
         
-        // Parse storeId and itemId from custom_id (format: safari_stock_modal_storeId_itemId)
-        const parts = custom_id.replace('safari_stock_modal_', '').split('_');
-        const storeId = parts.slice(0, -1).join('_'); // Everything except last part
-        const selectedItemId = parts[parts.length - 1]; // Last part is itemId
+        // Parse storeId from custom_id
+        const storeId = custom_id.replace('safari_store_stock_modal_', '');
+        console.log(`📦 DEBUG: Processing stock update for store ${storeId}`);
         
-        console.log(`📦 DEBUG: Processing stock update for item ${selectedItemId} in store ${storeId}`);
+        // Extract selected item and new stock quantity from modal
+        let selectedItemId = null;
+        let stockQuantityStr = null;
         
-        // Extract stock quantity from modal (traditional ActionRow format)
-        const stockQuantityStr = components[0].components[0].value?.trim();
+        // Modal has Label components with nested string select and text input
+        for (const component of components) {
+          if (component.component?.type === 3) { // String Select in Label
+            selectedItemId = component.component.values?.[0];
+          } else if (component.component?.type === 4) { // Text Input in Label
+            stockQuantityStr = component.component.value?.trim();
+          }
+        }
         
-        // Validate we got the input
-        if (stockQuantityStr === null || stockQuantityStr === '') {
+        // Validate we got both inputs
+        if (!selectedItemId || stockQuantityStr === null || stockQuantityStr === '') {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Stock quantity is required.',
+              content: '❌ Both item selection and stock quantity are required.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
