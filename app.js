@@ -4004,6 +4004,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
         item.metadata.totalSold = (item.metadata.totalSold || 0) + 1;
         
+        // Decrement stock if the item has stock tracking
+        const { decrementStock } = await import('./safariManager.js');
+        await decrementStock(guildId, storeId, itemId, 1);
+        
         // Save all changes
         await savePlayerData(playerData);
         await saveSafariContent(safariData);
