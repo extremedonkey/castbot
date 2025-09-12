@@ -3778,6 +3778,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           if (item) {
             // Get stock for this item (undefined means unlimited)
             const itemStock = storeItem.stock;
+            console.log('🔍 DEBUG safari_store_browse - storeItem:', storeItem, 'stock:', itemStock);
             
             // Generate detailed item content using shared function with stock info
             const itemContent = generateItemContent(item, customTerms, null, price, itemStock);
