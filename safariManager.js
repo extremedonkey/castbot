@@ -240,20 +240,21 @@ function generateItemContent(item, customTerms, quantity = null, price = null, s
         
         // Add price info for store display
         if (price !== null) {
-            content += `> ${customTerms.currencyEmoji} **Price:** ${price} ${customTerms.currencyName}\n`;
-            
-            // Add stock info if provided
-            if (stock !== undefined) {
-                let stockDisplay;
-                if (stock === null || stock === undefined || stock === -1) {
-                    stockDisplay = 'Unlimited';
-                } else if (stock === 0) {
-                    stockDisplay = 'Sold Out';
-                } else {
-                    stockDisplay = `${stock} Available`;
-                }
-                content += `> 📦 **Stock:** ${stockDisplay}`;
+            content += `> ${customTerms.currencyEmoji} **Price:** ${price} ${customTerms.currencyName}`;
+        }
+        
+        // Add stock info for store display (when price is shown)
+        if (price !== null) {
+            let stockDisplay;
+            // Handle all cases: undefined (not passed), null, -1 = unlimited
+            if (stock === undefined || stock === null || stock === -1) {
+                stockDisplay = 'Unlimited';
+            } else if (stock === 0) {
+                stockDisplay = 'Sold Out';
+            } else {
+                stockDisplay = `${stock} Available`;
             }
+            content += `\n> 📦 **Stock:** ${stockDisplay}`;
         }
     }
     
