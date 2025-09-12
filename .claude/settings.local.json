@@ -28,7 +28,10 @@
       "Bash(pm2 restart:*)",
       "Bash(ssh:*)",
       "Bash(git merge:*)",
-      "Bash(git switch:*)"
+      "Bash(git switch:*)",
+      "Bash(pm2:*)",
+      "WebSearch",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

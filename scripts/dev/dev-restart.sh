@@ -63,23 +63,23 @@ else
     echo "✅ Restart notification completed"
 fi
 
-# Restart the app
-echo "🔄 Restarting CastBot..."
-pkill -f "node app.js" 2>/dev/null || true
-sleep 2
-
-# Start in background
+# Restart the app with PM2
+echo "🔄 Restarting CastBot with PM2..."
 cd "$(git rev-parse --show-toplevel)"
-nohup node app.js > /tmp/castbot-dev.log 2>&1 &
-APP_PID=$!
-echo $APP_PID > /tmp/castbot-dev.pid
+
+# Restart PM2 process (or start if not running)
+if pm2 list | grep -q "castbot-dev-pm"; then
+    pm2 restart castbot-dev-pm
+else
+    pm2 start ecosystem.config.cjs
+fi
 
 # Quick verification
 sleep 3
-if kill -0 $APP_PID 2>/dev/null; then
-    echo "✅ CastBot restarted successfully (PID $APP_PID)"
+if pm2 list | grep -q "castbot-dev-pm.*online"; then
+    echo "✅ CastBot restarted successfully with PM2"
 else
-    echo "❌ App failed to start - check logs: tail /tmp/castbot-dev.log"
+    echo "❌ App failed to start - check logs: pm2 logs castbot-dev-pm"
 fi
 
 # Check static domain status
@@ -108,5 +108,5 @@ fi
 
 echo ""
 echo "📊 Use './dev-status.sh' to see full status"
-echo "📋 Use 'tail -f /tmp/castbot-dev.log' to monitor logs"
+echo "📋 Use 'pm2 logs castbot-dev-pm' to monitor logs"
 echo ""

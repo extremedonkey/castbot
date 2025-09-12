@@ -94,25 +94,25 @@ else
     echo "No changes to commit"
 fi
 
-# Start the app with node in background (pm2 has WSL networking issues)
-echo "Starting CastBot with node..."
-pkill -f "node app.js" 2>/dev/null || true  # Kill any existing instances
+# Start the app with PM2
+echo "Starting CastBot with PM2..."
 
 # Ensure we're in the project root directory
 PROJECT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$PROJECT_ROOT"
 
-nohup node app.js > /tmp/castbot-dev.log 2>&1 &
-APP_PID=$!
-echo $APP_PID > /tmp/castbot-dev.pid
-echo "✅ CastBot started with PID $APP_PID"
+# Stop any existing PM2 process
+pm2 delete castbot-dev-pm 2>/dev/null || true
+
+# Start with PM2 using ecosystem file
+pm2 start ecosystem.config.cjs
 
 # Wait a moment and verify it's running
 sleep 3
-if kill -0 $APP_PID 2>/dev/null; then
-    echo "✅ Process confirmed running"
+if pm2 list | grep -q "castbot-dev-pm.*online"; then
+    echo "✅ CastBot started with PM2 (castbot-dev-pm)"
 else
-    echo "❌ Process failed to start - check logs: tail /tmp/castbot-dev.log"
+    echo "❌ Process failed to start - check logs: pm2 logs castbot-dev-pm"
 fi
 
 echo ""
@@ -121,7 +121,7 @@ echo "🎉 DEVELOPMENT ENVIRONMENT READY!"
 echo "═══════════════════════════════════════════════════════════════════"
 echo ""
 echo "✅ Static ngrok tunnel: https://adapted-deeply-stag.ngrok-free.app"
-echo "✅ CastBot running with pm2 (castbot-dev)"
+echo "✅ CastBot running with PM2 (castbot-dev-pm)"
 echo ""
 echo "🌟 STATIC DOMAIN SETUP:"
 echo "   Your Discord webhook is permanently set to:"
@@ -134,6 +134,6 @@ echo ""
 echo "📋 DEVELOPMENT COMMANDS:"
 echo "   ./dev-restart.sh       - Restart app (your new Ctrl+C)"
 echo "   ./dev-status.sh        - Check status + show URLs"
-echo "   tail -f /tmp/castbot-dev.log - Monitor real-time logs"
+echo "   pm2 logs castbot-dev-pm    - Monitor real-time logs"
 echo "   ./dev-stop.sh          - Stop everything"
 echo ""

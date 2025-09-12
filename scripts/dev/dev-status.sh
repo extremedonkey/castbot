@@ -45,11 +45,11 @@ echo ""
 
 # Check app status
 echo "🚀 CASTBOT APP STATUS:"
-if [ -f /tmp/castbot-dev.pid ] && kill -0 $(cat /tmp/castbot-dev.pid) 2>/dev/null; then
-    APP_PID=$(cat /tmp/castbot-dev.pid)
-    echo "   ✅ Running (PID: $APP_PID)"
-    echo "   📋 Logs: tail -f /tmp/castbot-dev.log"
-    echo "   🔄 Restart: ./dev-restart.sh"
+if pm2 list | grep -q "castbot-dev-pm.*online"; then
+    echo "   ✅ Running with PM2 (castbot-dev-pm)"
+    echo "   📋 Logs: pm2 logs castbot-dev-pm"
+    echo "   🔄 Restart: ./dev-restart.sh or pm2 restart castbot-dev-pm"
+    echo "   📈 Monitor: pm2 monit"
 else
     echo "   ❌ Not running (use './dev-start.sh' to start)"
 fi
@@ -79,6 +79,7 @@ echo ""
 echo "=== QUICK COMMANDS ==="
 echo "./dev-restart.sh      - Restart app (your new Ctrl+C)"
 echo "./dev-stop.sh         - Stop everything cleanly"
-echo "pm2 logs castbot-dev   - Monitor real-time logs"
-echo "pm2 monit             - PM2 monitoring dashboard"
+echo "pm2 logs castbot-dev-pm - Monitor real-time logs"
+echo "pm2 monit              - PM2 monitoring dashboard"
+echo "pm2 info castbot-dev-pm - Detailed process info"
 echo ""
