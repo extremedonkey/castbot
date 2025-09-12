@@ -1674,7 +1674,7 @@ client.once('ready', async () => {
       out: '/home/bitnami/.pm2/logs/castbot-pm-out.log',
       error: '/home/bitnami/.pm2/logs/castbot-pm-error.log',
       processName: 'castbot-pm',
-      remote: true  // Requires SSH
+      remote: false  // Local files on production server
     }
   };
   
@@ -1765,7 +1765,8 @@ client.once('ready', async () => {
     return logs;
   }
   
-  // Helper: Read remote PM2 logs (prod) via SSH
+  // Helper: Read remote PM2 logs via SSH (for future remote monitoring capability)
+  // Not currently used - both dev and prod read local files
   async function readPM2LogsRemote(config, positions) {
     const logs = [];
     
@@ -1821,10 +1822,10 @@ client.once('ready', async () => {
       let logs = [];
       
       if (config.remote) {
-        // Production: Read PM2 logs via SSH (simple tail approach for MVP)
+        // Remote monitoring (not currently used, but available for future)
         logs = await readPM2LogsRemote(config, pm2LogPositions[env]);
       } else {
-        // Development: Read local PM2 logs
+        // Both dev and prod read local PM2 logs (prod runs on same server)
         logs = await readPM2LogsLocal(config, pm2LogPositions[env]);
       }
       
