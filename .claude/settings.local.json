@@ -22,7 +22,10 @@
       "Bash(rm:*)",
       "Bash(cat:*)",
       "Bash(git pull:*)",
-      "Bash(./scripts/dev/dev-start.sh:*)"
+      "Bash(./scripts/dev/dev-start.sh:*)",
+      "Bash(lsof:*)",
+      "Bash(awk:*)",
+      "Bash(xargs kill:*)"
     ],
     "deny": [],
     "ask": []
