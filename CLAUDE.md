@@ -1,185 +1,239 @@
 # CLAUDE.md
 
 **🌿 Current Branch: `castlistV3`** - Working on Castlist V3 redesign
-**📝 Git Note**: User needs assistance with git operations and production deployment (merging, etc.)
+**📝 Git Note**: User needs assistance with git operations and production deployment
 
-This file provides guidance to Claude Code when working with CastBot. This is a high-level navigation document - follow the references to detailed documentation.
+This file provides guidance to Claude Code when working with CastBot.
 
-## 🔴 Production Safety - NEVER Do These
+## 🔴 Critical Rules & Patterns
 
-1. **Use unapproved PM2 commands** (see approved list below)
-2. **Modify production without explicit permission**
-3. **Use `pm2 delete` followed by `pm2 start`** - This loses environment context
-4. **Create new PM2 processes** with `pm2 start app.js --args` 
-5. **Ignore "Discord client public key" errors** - Environment not loaded
+### 1. Discord Components V2 is MANDATORY
+- **Knowledge cutoff warning**: Discord Components V2 is the current best practice in discord UI design and was introduced AFTER Claude's training
+- **ALWAYS consult** → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md) before ANY Discord UI
+- **NEVER use legacy components** - User explicitly stated these are "poor architecture"
+- See full Discord limitations and UI standards below
 
-## 🔴 CRITICAL: Components V2 Types - ALWAYS USE THESE
+### 2. Button Handler Factory Pattern is REQUIRED  
+- **ALL buttons MUST** use ButtonHandlerFactory pattern
+- **ALL buttons MUST** be registered in BUTTON_REGISTRY
+- **NEVER create inline handlers** - Use the factory pattern
+- Details → [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
 
-**YOU MUST USE THESE EXACT TYPES - NO EXCEPTIONS:**
+### 3. app.js is a ROUTER, not a PROCESSOR
+- **Route requests only** - Don't implement logic in app.js
+- **Max 30 lines per function** in app.js
+- **Move business logic** to appropriate modules
+- **Import and delegate** to specialized handlers
+- Target: <5,000 lines (currently 21,000+)
+
+### 4. Data Structure Patterns
+- **Primary stores**: `playerData.json` and `safariContent.json`
+- **ALWAYS use storage.js** for data operations - never direct file access
+- **Never expose secrets** in data or logs
+
+### 5. Production Safety
+- **NEVER deploy without explicit permission**
+- **NEVER use `pm2 delete` followed by `pm2 start`**
+- **ALWAYS use approved deployment scripts**
+
+## 🚀 Production & Deployment
+
+### Safe Commands (No Permission Needed)
+```bash
+# Development
+./scripts/dev/dev-restart.sh "commit msg"   # After EVERY code change
+./scripts/dev/dev-status.sh                 # Check status
+pm2 logs castbot-dev-pm                     # View logs
+
+# Read-only Production
+npm run logs-prod                           # View production logs
+npm run deploy-remote-wsl-dry               # Preview changes (SAFE)
+pm2 status/list/info                        # Monitoring only
+```
+
+### Deployment (REQUIRES PERMISSION)
+```bash
+npm run deploy-remote-wsl      # Full deployment from GitHub
+npm run deploy-commands-wsl    # Commands only (lower risk)
+```
+
+**📝 DEPLOYMENT PROCESS:**
+1. **Dry run first**: `npm run deploy-remote-wsl-dry` (preview)
+2. **Get permission** from user
+3. **Deploy**: `npm run deploy-remote-wsl`
+4. **Check logs**: `npm run logs-prod`
+
+### Forbidden Commands
+- `pm2 delete` + `pm2 start` - Loses environment context
+- Direct `git push` to production
+- Creating new PM2 processes with `pm2 start app.js --args`
+- `pm2 scale` - Untested, may lose state
+- `pm2 resurrect` after delete - Incomplete restoration
+
+### Environment Recovery
+If "Discord client public key" error appears:
+```bash
+pm2 restart castbot-pm  # From correct directory with .env
+```
+
+## ⚠️ Discord Limitations & Component Counting
+
+### Hard Limits
+- **40 components per message** - Discord rejects if exceeded
+- **25 options per select menu** - Maximum selection choices
+- **4000 characters total** - Across ALL components in message
+- **5 buttons per Action Row** - Layout constraint
+- **5 components per modal** - Now includes select menus (Sept 2025)
+
+### Component Counting Rules
 ```javascript
-// ✅ VALID Components V2 Types:
-type: 17  // Container (wrapper for all components)
-type: 10  // Text Display (for content/text)
-type: 14  // Separator (visual divider)
-type: 1   // Action Row (contains buttons/selects)
-type: 2   // Button (inside Action Row)
-type: 3   // String Select (NOT type 6!)
-type: 9   // Section (with ONE child component only!)
-type: 11  // Thumbnail (as Section accessory)
+// Each counts as 1 component:
+- Container (type 17)
+- Section (type 9)  
+- Text Display (type 10)
+- Separator (type 14)
+- Action Row (type 1)
+- Each Button (type 2)
+- Select Menu (type 3-8)
+- Thumbnail (type 11) - Even as accessory!
+- Label (type 18) - Modal wrapper (Sept 2025)
 
-// ❌ INVALID/WRONG Types (DO NOT USE):
-type: 5   // NOT VALID - No "Paragraph" type  
-type: 6   // WRONG - Legacy string select (use type 3)
-type: 13  // WRONG - Invalid separator (use type 14)
+// CastBot's counting function:
+function calculateComponentsForTribe(playerCount, includeSeparators) {
+  const playerComponents = playerCount * 3; // Section + TextDisplay + Thumbnail
+  const separatorCount = includeSeparators ? playerCount - 1 : 0;
+  const overhead = 10-12; // Container, headers, navigation
+  return playerComponents + separatorCount + overhead;
+}
+
+// Safe limits:
+- 8 players per page = ~34-36 components (safe under 40)
+- 10-12 store items with buttons
+- 5-6 questions with management buttons
+- 3-4 select menus in modals (with Labels)
+```
+
+### Component Counting Tools
+- `countComponents()` in castlistV2.js - Recursive counter
+- `calculateComponentsForTribe()` - Castlist-specific
+- Console warnings at 35+ components
+- Automatic truncation for stores/items
+
+## 💾 Data Architecture
+
+### Core Data Stores
+- **playerData.json** - Player profiles, settings, game state, castlists
+- **safariContent.json** - Safari configuration, items, stores, maps
+
+### Data Access Pattern
+```javascript
+// ✅ ALWAYS use storage.js
+import { loadPlayerData, savePlayerData } from './storage.js';
+const playerData = await loadPlayerData();
+// Make changes
+await savePlayerData(playerData);
+
+// ❌ NEVER direct file access
+const data = JSON.parse(fs.readFileSync('playerData.json'));
+```
+
+### Storage.js Interface
+- `loadPlayerData()` / `savePlayerData()` - Player data operations
+- `loadSafariContent()` / `saveSafariContent()` - Safari data operations
+- Built-in backup and error recovery
+- Atomic writes to prevent corruption
+- Automatic file locking
+
+## 🎨 User Interface Standards
+
+### Discord Components V2 (MANDATORY)
+**⚠️ CRITICAL**: Discord Components V2 was introduced AFTER Claude's knowledge cutoff.
+
+**Required Reading**:
+1. → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md) - Complete reference
+2. → [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md) - Common fixes
+
+**Quick Reference**:
+```javascript
+// ❌ WRONG Types - DO NOT USE
+type: 6   // Role Select (often confused with String Select - use type 3!)
+type: 13  // Invalid separator (use type 14!)
+type: 5   // No "Paragraph" type exists
+
+// ⚠️ If you're using 'embed' or 'content' fields:
+// STOP! You're using legacy Components V1
+// The content and embeds fields will no longer work
+// Use Text Display (type 10) and Container (type 17) as replacements
 ```
 
 **UPDATE_MESSAGE Rules:**
-- NEVER include `ephemeral: true` in UPDATE_MESSAGE responses
-- NEVER include `flags` field in UPDATE_MESSAGE responses
-- Always return the full Container structure
+- NEVER include `ephemeral: true` in responses
+- NEVER include `flags` field in responses
+- Always return full Container structure
 
-## 🚀 Quick Start
+### UI Pattern Selection Guide
+
+#### 1. Simple Patterns (Use First)
+For basic select menus, single actions, quick configs:
+```javascript
+// Simple select menu pattern
+return {
+  flags: (1 << 15), // IS_COMPONENTS_V2
+  components: [{
+    type: 17, // Container
+    components: [
+      { type: 10, content: "Select option:" },
+      { type: 14 }, // Separator
+      selectMenu.toJSON()
+    ]
+  }]
+};
+```
+
+#### 2. Entity Edit Framework (Complex CRUD Only)
+**⚠️ DO NOT USE for simple UIs - See warning in docs**
+- → [docs/architecture/EntityEditFramework.md](docs/architecture/EntityEditFramework.md)
+- Use ONLY for: Full CRUD operations, multi-step workflows, validation
+- NOT for: Simple selects, basic forms, single buttons
+
+#### 3. Menu System Architecture
+For consistent menu patterns:
+- → [docs/architecture/MenuSystemArchitecture.md](docs/architecture/MenuSystemArchitecture.md)
+- Use MenuBuilder patterns
+- Track legacy menus with `MenuBuilder.trackLegacyMenu()`
+
+### Visual Standards
+- → [docs/ui/LeanMenuDesign.md](docs/ui/LeanMenuDesign.md) - UI/UX guidelines
+- Button text: 1-2 words ideal, 3 max
+- Section headers: 1-3 words with emoji
+- Stay under 40 components per container
+
+## 🛠️ Development Standards
+
+### Architecture Patterns (MANDATORY)
+- **[ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)** - ALL button handlers
+- **[MenuSystemArchitecture.md](docs/architecture/MenuSystemArchitecture.md)** - Menu patterns
+- **[EntityEditFramework.md](docs/architecture/EntityEditFramework.md)** - Complex CRUD operations
+- **[ComponentsV2.md](docs/architecture/ComponentsV2.md)** - Discord UI components
+- **[Analytics.md](docs/architecture/Analytics.md)** - Metrics and tracking
+- **[LoggingStandards.md](docs/architecture/LoggingStandards.md)** - Consistent logging
 
 ### Development Workflow
 ```bash
-./scripts/dev/dev-start.sh                  # Start development session
-./scripts/dev/dev-restart.sh "commit msg"   # Restart with meaningful commit message
+./scripts/dev/dev-start.sh                  # Start development
+./scripts/dev/dev-restart.sh "commit msg"   # Restart with commit (MANDATORY after changes)
 ./scripts/dev/dev-status.sh                 # Check status
 ./scripts/dev/dev-stop.sh                   # Clean shutdown
 ```
 
-**🚨 MANDATORY:** Run `./scripts/dev/dev-restart.sh` with descriptive message after ANY code changes
-- **ALWAYS provide commit message**: `./scripts/dev/dev-restart.sh "Fix safari button logic"`
-- **Include Discord notification for big changes**: `./scripts/dev/dev-restart.sh "Fix safari" "Safari navigation working!"`
-- **This replaces manual saves** - commit message helps track what changed
+**Workflow Requirements:**
+- **[DefinitionOfDone.md](docs/workflow/DefinitionOfDone.md)** - Completion criteria
+- **[DevWorkflow.md](docs/workflow/DevWorkflow.md)** - Development process
+- Test legacy functionality after changes
+- Run dev-restart after EVERY code change
 
-### Production Deployment
-
-**🚨 CRITICAL: NEVER deploy without explicit user permission!**
-
-**📝 CORRECT DEPLOYMENT PROCESS:**
-1. **ALWAYS use WSL deployment scripts** - NOT git commands directly
-2. **Dry run first**: `npm run deploy-remote-wsl-dry` (SAFE - no permission needed)
-3. **Get permission** from user before actual deployment
-4. **Deploy**: `npm run deploy-remote-wsl` (pulls from GitHub, restarts PM2)
-5. **Check logs**: `npm run logs-prod` to verify successful deployment
-
-**✅ APPROVED PM2 COMMANDS:**
-- `pm2 restart castbot-pm` - Safe, preserves environment
-- `pm2 reload castbot-pm` - Zero-downtime restart  
-- `pm2 logs` - Read-only, always safe
-- `pm2 status/list/info` - Read-only monitoring
-
-**🔴 FORBIDDEN PM2 COMMANDS:**
-- `pm2 delete` then `pm2 start` - Loses environment context
-- `pm2 start app.js` with arguments - Creates duplicate processes
-- `pm2 scale` - Untested, may lose state
-- `pm2 resurrect` after delete - Incomplete state restoration
-
-**Deployment Commands (REQUIRE PERMISSION):**
-```bash
-npm run deploy-remote-wsl      # Full deployment - pulls from GitHub, restarts PM2
-npm run deploy-commands-wsl    # Commands only (lower risk)
-npm run deploy-remote-wsl-dry  # Preview changes (SAFE - no permission needed)
-```
-
-**🔴 NEVER use `git push` directly for production** - The deployment script handles GitHub pulls
-
-### Production Monitoring
-```bash
-npm run logs-prod              # Last 100 lines
-npm run logs-prod-follow       # Real-time streaming
-npm run logs-prod-errors       # Error logs only
-npm run logs-prod -- --filter "user ID"  # Filtered logs
-```
-
-## ⚠️ Production Environment Variables
-
-**CRITICAL**: Production relies on `.env` file being loaded by dotenv
-- PM2 does NOT preserve env vars in its saved state
-- After system reboot: ALWAYS verify with `pm2 logs` for errors
-- If "You must specify a Discord client public key" error appears: Environment not loaded
-- Recovery: Use `pm2 restart castbot-pm` from correct directory
-
-## 📚 Feature Documentation Index
-
-**🚧 Current Work in Progress (castlistV3 branch):**
-- **🎯 CASTLIST V3 REDESIGN** → [docs/features/CastlistV3.md](docs/features/CastlistV3.md) - Complete castlist system overhaul
-- **ACTIVE SEASON SYSTEM** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)
-- **SEASON INTEGRATION** → [docs/features/CastlistV3-SeasonIntegration.md](docs/features/CastlistV3-SeasonIntegration.md)
-- **SEASON SELECTOR** → Reusable component in `seasonSelector.js`
-- **CHANGE SEASON BUTTON** → Production Menu header accessory
-
-**Core Systems:**
-- **🦁 SAFARI SYSTEM** → [docs/features/Safari.md](docs/features/Safari.md)
-- **📋 SEASON APPLICATIONS** → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
-- **🏆 CAST RANKING** → [docs/features/CastRanking.md](docs/features/CastRanking.md)
-
-**Safari Subsystems:**
-- **MAP SYSTEM** → [docs/features/SafariMapSystem.md](docs/features/SafariMapSystem.md) - User/admin guide
-- **MAP TECHNICAL** → [docs/features/SafariMapTechnical.md](docs/features/SafariMapTechnical.md) - Developer reference
-- **MAP ISSUES** → [docs/features/SafariMapIssues.md](docs/features/SafariMapIssues.md) - Known issues & roadmap
-- **POINTS SYSTEM** → [docs/features/SafariPoints.md](docs/features/SafariPoints.md)
-- **SAFARI PROGRESS** → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
-- **PLAYER LOCATIONS** → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
-- **WHISPER SYSTEM** → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)
-- **GLOBAL STORES** (NEW) → Permanent stores in player /menu
-- **ROUNDS MENU** (NEW) → Dedicated round management interface
-
-**Architecture & Standards:**
-- **🎨 COMPONENTS V2** (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
-- **🔘 BUTTON HANDLER FACTORY** (MANDATORY) → [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
-- **🎯 MENU SYSTEM ARCHITECTURE** (NEW) → [docs/architecture/MenuSystemArchitecture.md](docs/architecture/MenuSystemArchitecture.md)
-- **📐 LEAN MENU DESIGN** → [docs/ui/LeanMenuDesign.md](docs/ui/LeanMenuDesign.md)
-- **🔧 ENTITY/EDIT FRAMEWORK** → [docs/architecture/EntityEditFramework.md](docs/architecture/EntityEditFramework.md)
-- **📊 ANALYTICS** → [docs/architecture/Analytics.md](docs/architecture/Analytics.md)
-- **📝 LOGGING STANDARDS** → [docs/architecture/LoggingStandards.md](docs/architecture/LoggingStandards.md)
-
-## 🛠️ Development Standards
-
-### Mandatory Patterns
-
-**Button Handler Factory** - ALL buttons MUST use this pattern:
-```javascript
-} else if (custom_id === 'my_button') {
-  return ButtonHandlerFactory.create({
-    id: 'my_button',
-    handler: async (context) => { /* your code */ }
-  })(req, res, client);
-}
-```
-
-**🚨 CRITICAL: Button Registration** - ALL buttons MUST be in BUTTON_REGISTRY:
-```javascript
-// In buttonHandlerFactory.js BUTTON_REGISTRY:
-'my_button': {
-  label: 'My Button',
-  description: 'What this button does',
-  emoji: '🔘',
-  style: 'Primary',
-  category: 'feature_name'
-}
-```
-Missing registration causes "This interaction failed" errors!
-
-**Menu System Architecture** - Track and migrate menus systematically:
-```javascript
-// Track legacy menus for migration visibility
-MenuBuilder.trackLegacyMenu('menu_location', 'Menu description');
-
-// Future: Create menus from registry
-const menu = await MenuBuilder.create('menu_id', context);
-```
-
-**🚨 CRITICAL: Menu Standards** - Follow these patterns:
-- **NEVER build menus inline** - Use MenuBuilder patterns
-- **ALWAYS track legacy menus** - Add tracking calls for visibility
-- **FOLLOW LeanMenuDesign.md** - Visual/UX standards
-- **CHECK logs for menu usage** - `grep "MENULEGACY"` shows what needs migration
-
-**Components V2** - ALL UI MUST use `IS_COMPONENTS_V2` flag (1 << 15)
-
-**Pattern Matching** - When implementing "like X", examine X's implementation first:
+### Pattern Matching
+When implementing "like X", examine X's implementation first:
 ```bash
 grep -B20 -A20 "feature_pattern" app.js
 ```
@@ -188,84 +242,70 @@ grep -B20 -A20 "feature_pattern" app.js
 - Screenshots: `/mnt/c/Users/extre/OneDrive/Pictures/Screenshots 1`
 - External: `curl -s "URL" -o /tmp/img.png && Read /tmp/img.png`
 
-### Workflow Requirements
-- **Definition of Done**: [docs/workflow/DefinitionOfDone.md](docs/workflow/DefinitionOfDone.md)
-- **Dev Workflow**: [docs/workflow/DevWorkflow.md](docs/workflow/DevWorkflow.md)
+### Background Tasks
+Use `run_in_background: true` for:
+- Development servers
+- Watchers and build processes
+- Log monitoring
+- Long-running operations
 
-### Background Tasks for Efficiency
-**🚀 Use background processes when possible:**
-- Run development servers, watchers, and build processes in background using `run_in_background: true`
-- Examples: `npx tailwind --watch`, `./scripts/dev/dev-start.sh`, log monitoring
-- This allows Claude to continue working on other tasks while processes run
-- Monitor output with BashOutput and kill with KillBash when needed
-
-### Tools Without Permission Required
-**Claude can execute these without asking:**
-- `grep` commands and all Grep tool usage
-- `./scripts/dev/dev-restart.sh` 
+### Tools Without Permission
+Claude can execute these without asking:
+- All `grep` commands and Grep tool
+- `./scripts/dev/dev-restart.sh`
 - `npm run deploy-remote-wsl-dry` (preview only)
+- Read operations on any file
 
-## 📐 app.js Organization
+## 📚 Feature Documentation
 
-### Key Imports
-```javascript
-import { MenuBuilder } from './menuBuilder.js';  // Menu system architecture
-import { ButtonHandlerFactory } from './buttonHandlerFactory.js';  // Button management
-```
+### Current Focus (castlistV3 branch)
+- **[CastlistV3.md](docs/features/CastlistV3.md)** - Complete redesign
+- **[CastlistV3-SeasonIntegration.md](docs/features/CastlistV3-SeasonIntegration.md)** - Season integration
+- **[SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)** - Active season management
+- **Season Selector** - Reusable component in `seasonSelector.js`
 
-### Golden Rule: app.js is a ROUTER, not a PROCESSOR
+### Core Systems
+- **[Safari.md](docs/features/Safari.md)** - Main Safari system
+- **[SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)** - Season applications
+- **[CastRanking.md](docs/features/CastRanking.md)** - Cast ranking system
 
-**✅ BELONGS in app.js:**
-- Express/Discord initialization
-- Route handlers (`/interactions`)
-- Button routing (`if custom_id === ...`)
-- Top-level error handling
-- Basic permission checks
+### Safari Subsystems
+- Map System: [User Guide](docs/features/SafariMapSystem.md) | [Technical](docs/features/SafariMapTechnical.md) | [Issues](docs/features/SafariMapIssues.md)
+- **[SafariPoints.md](docs/features/SafariPoints.md)** - Points system
+- **[SafariProgress.md](docs/features/SafariProgress.md)** - Progress tracking
+- **[PlayerLocationManager.md](docs/features/PlayerLocationManager.md)** - Location tracking
+- **[WhisperSystem.md](docs/features/WhisperSystem.md)** - Private messaging
+- **Global Stores** - Permanent stores in player /menu
+- **Rounds Menu** - Dedicated round management interface
 
-**❌ MOVE to modules:**
-- Feature implementations
-- Data processing
-- UI component builders
-- Business logic
-- Helper functions >20 lines
+### Backlog: Contains unsorted, somewhat out of date list of features. See [BACKLOG.md](BACKLOG.md).
 
-**Size Targets:**
-- Functions: Max 30 lines
-- Handler blocks: Max 10 lines
-- Total file: <5,000 lines (currently 21,000+)
 
-## ⚠️ Troubleshooting
+## 🔧 Troubleshooting
 
-**"This interaction failed" errors:**
-- Quick causes: UPDATE_MESSAGE flags, malformed emojis, Container structure
-- Full guide: [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
+### "This interaction failed" Quick Fixes
+1. Check → [docs/troubleshooting/ComponentsV2Issues.md](docs/troubleshooting/ComponentsV2Issues.md)
+2. Verify button in BUTTON_REGISTRY
+3. Check for malformed emojis (use Unicode not :shortcut:)
+4. Ensure Container structure complete
+5. UPDATE_MESSAGE needs special handling (no flags)
 
-**Common Issues:**
-- Button not working → Check BUTTON_REGISTRY registration (CRITICAL!)
-- Missing variables → Ensure context extraction
-- Permission errors → Use BigInt for permission checks  
-- Menu crashes → Check 5-button limit per ActionRow
-- String Select limits → Maximum 25 options
-- Invalid emoji format → Use Unicode (🍎) not shortcuts (:apple:)
-- Round results ephemeral → Set `ephemeral: false` in ButtonHandlerFactory
-- Double handler execution → Missing BUTTON_REGISTRY entry
-- Button shows "[🪨 LEGACY]" in logs → Not registered in BUTTON_REGISTRY
-- Menu shows "[⚱️ MENULEGACY]" in logs → Needs migration to MenuBuilder
-- Menu not tracking → Add `MenuBuilder.trackLegacyMenu()` call
+### Common Issues
+- **Button not working** → Not in BUTTON_REGISTRY
+- **Missing variables** → Check context extraction
+- **Permission errors** → Use BigInt for checks
+- **Component limits** → Max 40 per message, 5 per row
+- **Select limits** → Max 25 options
+- **Button shows "[🪨 LEGACY]"** → Not registered
+- **Menu shows "[⚱️ MENULEGACY]"** → Needs migration
+- **Character limit exceeded** → 4000 char max across all components
 
 ## 🎯 Available Commands
 
-**Player Commands:**
-- `/menu` - Main player interface
-- `/castlist` - Display dynamic castlist
+**Player**: `/menu`, `/castlist`
+**Admin**: Most via `/menu` → Production Menu
 
-**Admin Commands:**
-- Most functionality via `/menu` → Production Menu
-
-## 📋 Feature Backlog
-
-See [BACKLOG.md](BACKLOG.md) for prioritized features and user stories.
 
 ---
 
-For detailed information on any topic, follow the documentation references above.
+For detailed information, follow the documentation references above.

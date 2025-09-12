@@ -33,7 +33,8 @@
       "WebSearch",
       "Bash(npm install:*)",
       "Bash(./scripts/dev/dev-restart-logs.sh:*)",
-      "WebFetch(domain:discord.com)"
+      "WebFetch(domain:discord.com)",
+      "WebFetch(domain:www.vibekanban.com)"
     ],
     "deny": [],
     "ask": []
