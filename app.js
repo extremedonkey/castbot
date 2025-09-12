@@ -660,11 +660,6 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Create admin control buttons (reorganized)
   const adminButtons = [
     new ButtonBuilder()
-      .setCustomId('castlist_hub_main')
-      .setLabel('Castlists')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('📋'),
-    new ButtonBuilder()
       .setCustomId('prod_setup')
       .setLabel('Initial Setup')
       .setStyle(ButtonStyle.Primary)
@@ -675,6 +670,17 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧑‍🤝‍🧑')
   ];
+  
+  // Add Castlists button only for specific user (Reece)
+  if (userId === '391415444084490240') {
+    adminButtons.unshift(
+      new ButtonBuilder()
+        .setCustomId('castlist_hub_main')
+        .setLabel('Castlists')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('📋')
+    );
+  }
   
   // Castlist button removed - now using Change Season in header
   

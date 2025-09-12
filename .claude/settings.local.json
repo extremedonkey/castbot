@@ -34,7 +34,9 @@
       "Bash(npm install:*)",
       "Bash(./scripts/dev/dev-restart-logs.sh:*)",
       "WebFetch(domain:discord.com)",
-      "WebFetch(domain:www.vibekanban.com)"
+      "WebFetch(domain:www.vibekanban.com)",
+      "Bash(PORT=8080 npx vibe-kanban)",
+      "Bash(git fetch:*)"
     ],
     "deny": [],
     "ask": []
