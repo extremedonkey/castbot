@@ -11025,9 +11025,17 @@ Your server is now ready for Tycoons gameplay!`;
         console.log(`📦 DEBUG: About to show modal with ${options.length} options`);
         console.log(`📦 DEBUG: First option:`, JSON.stringify(options[0], null, 2));
         
+        // Ensure title fits Discord's 45 character limit
+        let modalTitle = `Stock: ${store.name}`;
+        if (modalTitle.length > 45) {
+          modalTitle = `Stock: ${store.name.substring(0, 37)}...`; // 37 + 8 for "Stock: " + "..." = 45
+        }
+        
+        console.log(`📦 DEBUG: Modal title: "${modalTitle}" (length: ${modalTitle.length})`);
+        
         // Create modal with new Components V2 Label pattern for string select
         const modal = {
-          title: `Stock Management - ${store.name}`.substring(0, 45), // Discord title limit
+          title: modalTitle,
           custom_id: `safari_store_stock_modal_${storeId}`,
           components: [
             // String Select wrapped in Label (type 18)
@@ -11062,13 +11070,20 @@ Your server is now ready for Tycoons gameplay!`;
         };
         
         console.log(`📦 DEBUG: Sending modal response`);
+        console.log(`📦 DEBUG: Modal structure:`, JSON.stringify(modal, null, 2));
         
-        return res.send({
-          type: InteractionResponseType.MODAL,
-          data: modal
-        });
+        try {
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal
+          });
+        } catch (sendError) {
+          console.error('Error sending modal response:', sendError);
+          throw sendError;
+        }
       } catch (error) {
         console.error('Error showing stock management modal:', error);
+        console.error('Error stack:', error.stack);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
