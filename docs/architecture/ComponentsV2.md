@@ -6,6 +6,8 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 
 **Source**: [Discord Developer Documentation](https://discord.com/developers/docs/components/reference)
 
+**🎉 Update (September 10, 2025)**: Discord now supports all select menus (User, Role, Mentionable, Channel) and Text Display components in modals! Select menus must be wrapped in a Label component when used in modals.
+
 ## 🚨 CRITICAL: Mandatory for ALL Discord UI
 
 **ALL Discord UI in CastBot MUST use Components V2 pattern**. This is not optional.
@@ -43,7 +45,7 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 3. **Component Limits**:
    - Messages allow up to 40 total components
    - Action Rows can contain maximum 5 buttons
-   - Modals can have maximum 5 text inputs
+   - Modals can have maximum 5 components (text inputs, select menus, text displays)
 
 ## Architecture Components
 
@@ -108,7 +110,9 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 #### Text Display (Type 10)
 - **Purpose**: Display formatted text
 - **Features**: Full markdown support
-- **Usage**: Replaces traditional `content` field
+- **Usage**: Messages and Modals (as of Sept 2025)
+- **In Messages**: Replaces traditional `content` field
+- **In Modals**: Top-level component for instructional text
 
 ```javascript
 {
@@ -179,11 +183,14 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 ```
 
 #### Select Menus
+**All select menus now work in both messages AND modals (Sept 2025 update)**
 - **String Select** (Type 3): Custom options with default selection support
 - **User Select** (Type 5): User selection with default_values
 - **Role Select** (Type 6): Role selection
 - **Mentionable Select** (Type 7): Users + roles
 - **Channel Select** (Type 8): Channel selection
+
+**Important**: In modals, select menus MUST be wrapped in a Label component. In messages, they go in Action Rows.
 
 ##### String Select (Type 3)
 ```javascript
@@ -229,8 +236,10 @@ const options = items.map(item => ({
 - **Store Item Multi-Select** (`entityManagementUI.js:939`): Pre-selects currently stocked items
 - **Paused Players Select** (`pausedPlayersManager.js:214`): Pre-selects currently paused players
 
-##### User Select (Type 5) 
+##### User Select (Type 5)
+**Works in Messages (Action Row) and Modals (Label) as of Sept 2025**
 ```javascript
+// In Messages (inside Action Row):
 {
   type: 5, // User Select
   custom_id: "user_select",
@@ -242,14 +251,38 @@ const options = items.map(item => ({
     { id: "123456789012345678", type: "user" }
   ]
 }
+
+// In Modals (must be inside Label):
+{
+  type: 18, // Label
+  label: "Select Team Members",
+  component: {
+    type: 5, // User Select
+    custom_id: "user_select_modal",
+    placeholder: "Choose users...",
+    min_values: 1,
+    max_values: 10
+  }
+}
 ```
 
 ### Modal Components
+
+**As of September 10, 2025, modals now support:**
+- Text Input (Type 4) - wrapped in Label or Action Row
+- String Select (Type 3) - must be wrapped in Label
+- User Select (Type 5) - must be wrapped in Label
+- Role Select (Type 6) - must be wrapped in Label
+- Mentionable Select (Type 7) - must be wrapped in Label
+- Channel Select (Type 8) - must be wrapped in Label
+- Text Display (Type 10) - top-level component for markdown text
+- Label (Type 18) - wraps interactive components with label/description
 
 #### Text Input (Type 4)
 - **Purpose**: User text input in modals
 - **Styles**: Short (1), Paragraph (2)
 - **Features**: Validation, placeholders
+- **Container**: Should be wrapped in Label (recommended) or Action Row (deprecated)
 
 ```javascript
 {
@@ -306,14 +339,48 @@ const modal = {
     custom_id: "modal_id",
     title: "Modal Title",
     components: [
+      // Text Display for instructions (NEW - Sept 2025)
       {
-        type: 1, // Action Row
-        components: [{
+        type: 10, // Text Display
+        content: "## Instructions\nPlease fill out the form below:"
+      },
+      // Text Input wrapped in Label (recommended pattern)
+      {
+        type: 18, // Label
+        label: "Your Name",
+        description: "Enter your full name",
+        component: {
           type: 4, // Text Input
-          custom_id: "field_1",
-          label: "Field Label",
-          style: 1
-        }]
+          custom_id: "name_input",
+          style: 1, // Short
+          required: true
+        }
+      },
+      // Select Menu wrapped in Label (REQUIRED for modals)
+      {
+        type: 18, // Label
+        label: "Select Users",
+        description: "Choose team members",
+        component: {
+          type: 5, // User Select
+          custom_id: "user_select",
+          min_values: 1,
+          max_values: 5
+        }
+      },
+      // String Select in Label (NEW - Sept 2025)
+      {
+        type: 18, // Label
+        label: "Priority Level",
+        component: {
+          type: 3, // String Select
+          custom_id: "priority",
+          options: [
+            { label: "High", value: "high", emoji: { name: "🔴" } },
+            { label: "Medium", value: "medium", emoji: { name: "🟡" } },
+            { label: "Low", value: "low", emoji: { name: "🟢" } }
+          ]
+        }
       }
     ]
   }
@@ -355,6 +422,28 @@ return res.send({
     }]
   }
 });
+```
+
+### Label Component (Type 18)
+**Added for modal support (Sept 2025)**
+- **Purpose**: Wrap modal components with label and description
+- **Required for**: Select menus in modals
+- **Features**: Label text (45 chars), optional description (100 chars)
+- **Usage**: Modals only
+
+```javascript
+{
+  type: 18, // Label
+  label: "Select a Channel",
+  description: "Choose where to post",
+  component: {
+    type: 8, // Channel Select
+    custom_id: "channel_select",
+    channel_types: [0, 5], // Text and announcement channels
+    min_values: 1,
+    max_values: 1
+  }
+}
 ```
 
 ## Common Pitfalls
@@ -427,14 +516,85 @@ return {
 
 ## Best Practices
 
-1. **Always use Container** as top-level wrapper
+1. **Always use Container** as top-level wrapper for messages
 2. **Group related content** in sections
-3. **Use separators** for visual organization
-4. **Respect component limits** (5 buttons/row, 40 total)
+3. **Use separators** for visual organization  
+4. **Respect component limits** (5 buttons/row, 40 total components, 5 modal components)
 5. **Test on mobile** - UI should be responsive
 6. **Use appropriate styles** for button importance
 7. **Provide placeholders** for select menus
 8. **Add alt text** for images
+9. **Wrap select menus in Label** when using in modals (required)
+10. **Use Text Display in modals** for instructions or context
+
+## CastBot Implementation Opportunities (Sept 2025 Update)
+
+With the new modal component support, CastBot can now enhance several features:
+
+### Season Application Forms
+- **Before**: Multiple text inputs only
+- **After**: Role selects for timezone roles, user selects for references, string selects for availability
+
+### Castlist Creation
+- **Before**: Step-by-step button navigation
+- **After**: Single modal with role select for tribes, user select for members, string select for sort type
+
+### Safari Configuration  
+- **Before**: Multiple interactions to configure
+- **After**: Channel selects for safari channels, role selects for participant roles, all in one modal
+
+### Example: Enhanced Season Application Modal
+```javascript
+const applicationModal = {
+  type: 9,
+  data: {
+    custom_id: "season_application",
+    title: "Season 48 Application",
+    components: [
+      // Instructions with markdown
+      {
+        type: 10, // Text Display
+        content: "**Welcome!** Please complete all fields below."
+      },
+      // Character name
+      {
+        type: 18, // Label
+        label: "Character Name",
+        component: {
+          type: 4, // Text Input
+          custom_id: "character_name",
+          style: 1,
+          required: true
+        }
+      },
+      // Timezone selection via roles
+      {
+        type: 18, // Label
+        label: "Select Your Timezone",
+        description: "Choose your timezone role",
+        component: {
+          type: 6, // Role Select
+          custom_id: "timezone_role",
+          min_values: 1,
+          max_values: 1
+        }
+      },
+      // References
+      {
+        type: 18, // Label
+        label: "References",
+        description: "Select 2-3 players who can vouch for you",
+        component: {
+          type: 5, // User Select
+          custom_id: "references",
+          min_values: 2,
+          max_values: 3
+        }
+      }
+    ]
+  }
+};
+```
 
 ## Related Documentation
 
