@@ -20,13 +20,19 @@ type: 10  // Text Display (for content/text)
 type: 14  // Separator (visual divider)
 type: 1   // Action Row (contains buttons/selects)
 type: 2   // Button (inside Action Row)
-type: 3   // String Select (NOT type 6!)
+type: 3   // String Select
+type: 4   // Text Input (in modals)
+type: 5   // User Select
+type: 6   // Role Select  
+type: 7   // Mentionable Select
+type: 8   // Channel Select
+type: 9   // Section (with ONE child component only!)
+type: 11  // Thumbnail (as Section accessory)
+type: 18  // Label (NEW - for modal components)
 
-// ❌ INVALID/WRONG Types (DO NOT USE):
-type: 11  // NOT VALID - No "Section" type
-type: 5   // NOT VALID - No "Paragraph" type  
-type: 6   // WRONG - Legacy string select
-type: 13  // WRONG - Invalid separator
+// ❌ INVALID/DEPRECATED:
+type: 13  // WRONG - Invalid separator (use type 14)
+// ActionRow + TextInput in modals is DEPRECATED - use Label (type 18)
 ```
 
 **UPDATE_MESSAGE Rules:**

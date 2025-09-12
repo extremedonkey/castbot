@@ -6,6 +6,15 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 
 **Source**: [Discord Developer Documentation](https://discord.com/developers/docs/components/reference)
 
+### 📢 Latest Updates (September 2025)
+
+**Major Modal Enhancements:**
+- **NEW Label Component (Type 18)**: Wrapper for modal inputs with title/description
+- **All Select Menus in Modals**: User, Role, Mentionable, Channel selects now supported
+- **String Select in Modals**: Finally works! Must use Label wrapper
+- **Text Display in Modals**: Add markdown instructions/content
+- **Deprecation**: ActionRow + TextInput pattern deprecated for Label component
+
 ## 🚨 CRITICAL: Mandatory for ALL Discord UI
 
 **ALL Discord UI in CastBot MUST use Components V2 pattern**. This is not optional.
@@ -243,23 +252,133 @@ const options = items.map(item => ({
 
 ### Modal Components
 
-#### Text Input (Type 4)
-- **Purpose**: User text input in modals
-- **Styles**: Short (1), Paragraph (2)
-- **Features**: Validation, placeholders
+**UPDATE (September 2025)**: Modals now support ALL select menu types and the new Label component! ActionRow + TextInput pattern is deprecated in favor of Label components.
+
+#### Label (Type 18) - NEW!
+- **Purpose**: Top-level wrapper for modal components with title and description
+- **Features**: Replaces ActionRow for better accessibility
+- **Contains**: Text Input OR String Select (not both)
+- **Usage**: Preferred pattern for all modal inputs
 
 ```javascript
 {
-  type: 4, // Text Input
-  custom_id: "input_field",
-  label: "Enter Name",
-  style: 1, // Short
-  min_length: 1,
-  max_length: 100,
-  placeholder: "John Doe",
-  required: true
+  type: 18, // Label
+  label: "What's your favorite bug?",
+  description: "Optional description text", // Optional
+  component: {
+    type: 3, // String Select
+    custom_id: "bug_select",
+    placeholder: "Choose...",
+    required: false, // Optional, defaults to true in modals
+    options: [
+      {
+        label: "Ant",
+        value: "ant",
+        description: "(best option)",
+        emoji: { name: "🐜" }
+      }
+    ]
+  }
 }
 ```
+
+#### Text Input (Type 4)
+- **Purpose**: User text input in modals
+- **Styles**: Short (1), Paragraph (2)
+- **Features**: Validation, placeholders, required field
+- **Usage**: Should be wrapped in Label component (type 18)
+
+```javascript
+// Modern pattern with Label wrapper
+{
+  type: 18, // Label
+  label: "Why is it your favorite?",
+  description: "Please provide as much detail as possible!",
+  component: {
+    type: 4, // Text Input
+    custom_id: "explanation",
+    style: 2, // Paragraph
+    min_length: 100,
+    max_length: 4000,
+    placeholder: "Write your explanation here...",
+    required: true
+    // Note: 'label' field NOT allowed when inside Label component
+  }
+}
+
+// Legacy pattern (deprecated but still works)
+{
+  type: 1, // Action Row
+  components: [{
+    type: 4, // Text Input
+    custom_id: "field_1",
+    label: "Field Label", // Only used without Label wrapper
+    style: 1
+  }]
+}
+```
+
+#### String Select in Modals (Type 3)
+- **Purpose**: Dropdown selection in modals
+- **Requirements**: MUST be wrapped in Label component
+- **Features**: `required` field support (defaults to true)
+- **Restrictions**: `disabled` field not allowed in modals
+
+```javascript
+{
+  type: 18, // Label (required wrapper)
+  label: "Select your role",
+  component: {
+    type: 3, // String Select
+    custom_id: "role_select",
+    placeholder: "Choose a role...",
+    required: true, // Defaults to true in modals
+    min_values: 1,
+    max_values: 1,
+    options: [
+      {
+        label: "Admin",
+        value: "admin",
+        emoji: { name: "👑" }
+      }
+    ]
+  }
+}
+```
+
+#### All Select Menus Now Supported in Modals!
+- **User Select** (Type 5) - Select Discord users
+- **Role Select** (Type 6) - Select server roles  
+- **Mentionable Select** (Type 7) - Select users or roles
+- **Channel Select** (Type 8) - Select channels
+
+All select menus MUST be wrapped in Label component when used in modals:
+
+```javascript
+{
+  type: 18, // Label
+  label: "Choose moderators",
+  description: "Select up to 5 users",
+  component: {
+    type: 5, // User Select
+    custom_id: "moderator_select",
+    placeholder: "Select users...",
+    min_values: 1,
+    max_values: 5
+  }
+}
+```
+
+#### Text Display in Modals (Type 10)
+- **Purpose**: Display formatted text/markdown in modals
+- **Usage**: Top-level component (not in Label)
+- **Features**: Full markdown support
+
+```javascript
+{
+  type: 10, // Text Display
+  content: "### Instructions\n\nPlease fill out all required fields below."
+}
 
 ## Common Patterns in CastBot
 
@@ -296,15 +415,85 @@ const response = {
 ```
 
 ### Modal Pattern
+
+**Modern Modal (with Label components):**
 ```javascript
 const modal = {
+  type: 9, // MODAL interaction response
+  data: {
+    custom_id: "bug_report_modal",
+    title: "Bug Report",
+    components: [
+      // Text Display for instructions
+      {
+        type: 10, // Text Display
+        content: "### Please fill out the form below\n\nAll fields marked with * are required."
+      },
+      // String Select in Label
+      {
+        type: 18, // Label
+        label: "What's your favorite bug?",
+        component: {
+          type: 3, // String Select
+          custom_id: "bug_select",
+          placeholder: "Choose...",
+          options: [
+            {
+              label: "Ant",
+              value: "ant",
+              description: "(best option)",
+              emoji: { name: "🐜" }
+            },
+            {
+              label: "Butterfly",
+              value: "butterfly",
+              emoji: { name: "🦋" }
+            }
+          ]
+        }
+      },
+      // Text Input in Label
+      {
+        type: 18, // Label
+        label: "Why is it your favorite?",
+        description: "Please provide as much detail as possible!",
+        component: {
+          type: 4, // Text Input
+          custom_id: "bug_explanation",
+          style: 2, // Paragraph
+          min_length: 100,
+          max_length: 4000,
+          placeholder: "Write your explanation here...",
+          required: true
+        }
+      },
+      // User Select in Label
+      {
+        type: 18, // Label
+        label: "Who else likes this bug?",
+        component: {
+          type: 5, // User Select
+          custom_id: "bug_fans",
+          placeholder: "Select users...",
+          min_values: 0,
+          max_values: 5
+        }
+      }
+    ]
+  }
+};
+```
+
+**Legacy Modal Pattern (deprecated but still functional):**
+```javascript
+const legacyModal = {
   type: 9, // MODAL interaction response
   data: {
     custom_id: "modal_id",
     title: "Modal Title",
     components: [
       {
-        type: 1, // Action Row
+        type: 1, // Action Row (deprecated for modals)
         components: [{
           type: 4, // Text Input
           custom_id: "field_1",
