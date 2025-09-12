@@ -237,11 +237,9 @@ async function createCastlistDetailsSection(guildId, castlist) {
   }
   
   // Build the details section
-  const content = `> **\`${castlist.metadata?.emoji || '📋'} ${castlist.name}\`**\n` +
-    `-# ${castlist.metadata?.description || 'No description'}\n` +
-    `-# Type: ${castlist.type} | Created: <t:${Math.floor((castlist.createdAt || Date.now()) / 1000)}:R>` +
-    (castlist.isVirtual ? '\n-# ⚠️ Legacy castlist - will be upgraded on first edit' : '') +
-    `\n\n**Tribes Using This Castlist:**\n${tribesDisplay}`;
+  const content = `## Castlist: ${castlist.metadata?.emoji || '📋'} ${castlist.name}\n` +
+    `-# Type: ${castlist.type} | Created: <t:${Math.floor((castlist.createdAt || Date.now()) / 1000)}:R>\n` +
+    `\n**Tribes added to Castlist**\n${tribesDisplay}`;
   
   return {
     type: 10, // Text Display
@@ -265,9 +263,9 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
   buttonRow1.addComponents(
     new ButtonBuilder()
       .setCustomId(`castlist_view${suffix}`)
-      .setLabel('View')
+      .setLabel('Post Castlist')
       .setStyle(activeButton === CastlistButtonType.VIEW ? ButtonStyle.Primary : ButtonStyle.Secondary)
-      .setEmoji('👁️')
+      .setEmoji('📋')
       .setDisabled(!enabled),
     new ButtonBuilder()
       .setCustomId(`castlist_edit_info${suffix}`)

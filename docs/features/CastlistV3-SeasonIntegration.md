@@ -4,6 +4,30 @@
 
 This document outlines the integration of the season concept from SeasonAppBuilder into CastlistV3 Alumni Placements, addressing subtitle support, deletion cascades, and bidirectional season creation.
 
+## 🔴 CRITICAL: Production Safety Requirements
+
+**MANDATORY: ALL season integration MUST maintain backwards compatibility:**
+
+1. **Existing Tribes** - MUST continue working without seasons:
+   - Tribes without seasonId field must work normally
+   - prod_manage_tribes must function without modification
+   - Rankings and castlist strings remain functional
+
+2. **Gradual Adoption** - Season linking is OPTIONAL:
+   - New tribes CAN add seasons
+   - Old tribes continue WITHOUT seasons
+   - No forced migration
+
+3. **Data Safety**:
+   - NEVER modify existing tribe.castlist strings
+   - ADD new fields, don't replace old ones
+   - Both systems operate in parallel
+
+**⚠️ Before ANY season integration work:**
+- Test prod_manage_tribes functionality
+- Verify castlist displays work
+- Ensure no existing features break
+
 ## Key Requirements
 
 ### 1. Subtitle Support ✅
@@ -42,15 +66,17 @@ This document outlines the integration of the season concept from SeasonAppBuild
 
 ### Phase 1: Add Season Linking to Tribes (Soft-Link Pattern)
 
+**CRITICAL: This is ADDITIVE only - existing fields MUST remain!**
+
 ```javascript
 // Modified tribe structure in playerData.json
 "tribes": {
   "1409191262279700622": {
     "emoji": "🏆",
-    "castlist": "LOSTvivor Alumni",
+    "castlist": "LOSTvivor Alumni",  // KEEP THIS - prod_manage_tribes needs it!
     "type": "alumni_placements",
-    "seasonId": "season_abc123",  // NEW: Optional season link
-    "seasonName": "LOSTvivor S2: We've got to go back",  // NEW: Display name
+    "seasonId": "season_abc123",  // NEW: Optional season link (OPTIONAL!)
+    "seasonName": "LOSTvivor S2: We've got to go back",  // NEW: Display name (OPTIONAL!)
     "rankings": {
       "977455730300956683": { "placement": "1" },
       "572291395365109770": { "placement": "2" },
@@ -191,6 +217,16 @@ async function migrateToUnifiedSeasons(guildId) {
 ```
 
 ## Implementation Steps
+
+### Step 0: Verify Backwards Compatibility (MANDATORY FIRST)
+```javascript
+// Test checklist before ANY changes:
+// 1. Create tribe via prod_manage_tribes
+// 2. View castlist via viral_menu
+// 3. Display via /castlist command
+// 4. Edit rankings via prod_manage_tribes
+// 5. All work? Proceed. Any fail? STOP.
+```
 
 ### Step 1: Core Season Registry (2 hours)
 ```javascript
@@ -425,6 +461,14 @@ if (tribeData.seasonName) {
 
 ## Testing Checklist
 
+### Backwards Compatibility (TEST FIRST!)
+- [ ] prod_manage_tribes works WITHOUT seasons
+- [ ] Existing tribes display correctly
+- [ ] Rankings still function
+- [ ] viral_menu castlist button works
+- [ ] /castlist command works
+
+### New Features (ONLY after backwards compat passes)
 - [ ] Create alumni castlist without season (backwards compatible)
 - [ ] Create alumni castlist with existing season
 - [ ] Create alumni castlist with new season
