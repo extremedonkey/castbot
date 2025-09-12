@@ -20,7 +20,8 @@
       "Bash(npm run clean-commands:*)",
       "Read(///**)",
       "Bash(rm:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git pull:*)"
     ],
     "deny": [],
     "ask": []
