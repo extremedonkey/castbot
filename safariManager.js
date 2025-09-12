@@ -149,7 +149,7 @@ export async function getCoordinateFromChannelId(guildId, channelId) {
  * @param {number} price - Price (for store display, optional)
  * @returns {string} Formatted content string
  */
-function generateItemContent(item, customTerms, quantity = null, price = null) {
+function generateItemContent(item, customTerms, quantity = null, price = null, stock = undefined) {
     // Sanitize emoji - remove any zero-width joiners or invalid characters
     const emoji = (item.emoji || '📦').replace(/\u200d/g, '').trim();
     
@@ -240,7 +240,20 @@ function generateItemContent(item, customTerms, quantity = null, price = null) {
         
         // Add price info for store display
         if (price !== null) {
-            content += `> ${customTerms.currencyEmoji} **Price:** ${price} ${customTerms.currencyName}`;
+            content += `> ${customTerms.currencyEmoji} **Price:** ${price} ${customTerms.currencyName}\n`;
+            
+            // Add stock info if provided
+            if (stock !== undefined) {
+                let stockDisplay;
+                if (stock === null || stock === undefined || stock === -1) {
+                    stockDisplay = 'Unlimited';
+                } else if (stock === 0) {
+                    stockDisplay = 'Sold Out';
+                } else {
+                    stockDisplay = `${stock} Available`;
+                }
+                content += `> 📦 **Stock:** ${stockDisplay}`;
+            }
         }
     }
     

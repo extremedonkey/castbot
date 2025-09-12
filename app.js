@@ -3776,8 +3776,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           const price = storeItem.price || item?.basePrice || 0;
           
           if (item) {
-            // Generate detailed item content using shared function
-            const itemContent = generateItemContent(item, customTerms, null, price);
+            // Get stock for this item (undefined means unlimited)
+            const itemStock = storeItem.stock;
+            
+            // Generate detailed item content using shared function with stock info
+            const itemContent = generateItemContent(item, customTerms, null, price, itemStock);
+            
+            // Check if item is sold out (stock === 0)
+            const isSoldOut = itemStock === 0;
             
             const itemSection = {
               type: 9, // Section component
@@ -3789,7 +3795,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 type: 2, // Button accessory
                 custom_id: `safari_store_buy_${guildId}_${storeId}_${itemId}`,
                 label: `Buy ${item.name}`.slice(0, 80),
-                style: 1,
+                style: isSoldOut ? 2 : 1, // Secondary (grey/disabled look) if sold out, Primary otherwise
+                disabled: isSoldOut, // Disable button if sold out
                 emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || { name: '🛒' }) : { name: '🛒' }
               }
             };
@@ -3915,6 +3922,31 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
         
         const price = storeItem.price || item.basePrice || 0;
+        
+        // Check if item is sold out (for old buttons where stock may have changed)
+        const { hasStock } = await import('./safariManager.js');
+        const hasStockAvailable = await hasStock(guildId, storeId, itemId);
+        if (!hasStockAvailable) {
+          // Create sold out response using Components V2
+          const soldOutContainer = {
+            type: 17, // Container
+            accent_color: 0xff0000, // Red accent for error
+            components: [
+              {
+                type: 10, // Text Display
+                content: `# ❌ Item Sold Out\n\n**${item.emoji || '📦'} ${item.name}** is currently out of stock.\n\nPlease check back later or browse other items in the store.`
+              }
+            ]
+          };
+          
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+              components: [soldOutContainer]
+            }
+          });
+        }
         
         // Get player data and check currency
         const playerData = await loadPlayerData();
@@ -21712,9 +21744,22 @@ Are you sure you want to continue?`;
               const item = allItems[itemId];
               if (item) {
                 const price = storeItem.price || item.basePrice || 0;
-                itemContent += `**${index + 1}. ${item.emoji || '📦'} ${item.name}** - ${price} ${currencyEmoji}\n`;
+                
+                // Get stock display
+                let stockDisplay;
+                if (storeItem.stock === undefined || storeItem.stock === null || storeItem.stock === -1) {
+                  stockDisplay = 'Unlimited';
+                } else if (storeItem.stock === 0) {
+                  stockDisplay = '0';  // Will show "0 Available"
+                } else {
+                  stockDisplay = storeItem.stock.toString();
+                }
+                
+                itemContent += `**${index + 1}. ${item.emoji || '📦'} ${item.name}**\n`;
+                itemContent += `${currencyEmoji} ${price} ${currencyName}\n`;
+                itemContent += `📦 ${stockDisplay === 'Unlimited' ? 'Unlimited' : `${stockDisplay} Available`}\n`;
                 if (item.description) {
-                  itemContent += `   *${item.description}*\n`;
+                  itemContent += `\n   *${item.description}*\n`;
                 }
                 itemContent += '\n';
               }
@@ -21727,11 +21772,15 @@ Are you sure you want to continue?`;
             const itemId = storeItem.itemId || storeItem;
             const item = allItems[itemId];
             if (item) {
+              // Check if item is sold out
+              const isSoldOut = storeItem.stock === 0;
+              
               buyButtons.push({
                 type: 2,
                 custom_id: `safari_store_buy_${context.guildId}_${storeId}_${itemId}`,
                 label: `Buy ${item.name}`,
-                style: 3, // Success
+                style: isSoldOut ? 2 : 3, // Secondary (grey) if sold out, Success (green) otherwise
+                disabled: isSoldOut, // Disable button if sold out
                 emoji: item.emoji ? (parseTextEmoji(item.emoji)?.emoji || undefined) : undefined
               });
             }
@@ -21750,24 +21799,14 @@ Are you sure you want to continue?`;
           const containerComponents = [
             {
               type: 10, // Text Display
-              content: `# ${store.emoji || '🏪'} ${store.name}\n\n${store.description || 'Welcome to our store!'}`
-            }
-          ];
-          
-          if (store.settings?.storeownerText) {
-            containerComponents.push({
-              type: 10,
-              content: `*"${store.settings.storeownerText}"*`
-            });
-          }
-          
-          containerComponents.push(
+              content: `${store.emoji || '🏪'} **${store.name}**\n${store.description || ''}\n"${store.settings?.storeownerText || 'Welcome to our store!'}"\n**Your Balance:** ${currentBalance} ${currencyEmoji}`
+            },
             { type: 14 }, // Separator
             {
               type: 10,
-              content: `**Your Balance:** ${currentBalance} ${currencyEmoji}\n\n## Available Items\n\n${itemContent}`
+              content: `**Available Items**\n\n${itemContent}`
             }
-          );
+          ];
           
           if (buttonRows.length > 0) {
             containerComponents.push({ type: 14 }); // Separator
