@@ -10989,22 +10989,25 @@ Your server is now ready for Tycoons gameplay!`;
               stockDisplay = `${currentStock}`;
             }
             
-            // Truncate label to fit Discord's 100 character limit
-            const itemLabel = `${item.emoji || '📦'} ${item.name}`;
+            // Build label with proper emoji handling and truncation
+            const itemEmoji = (item.emoji && item.emoji.trim()) ? item.emoji : '📦';
+            const itemName = item.name || 'Unknown Item';
             const stockLabel = ` (Stock: ${stockDisplay})`;
-            let fullLabel = itemLabel + stockLabel;
+            
+            // Build full label
+            let fullLabel = `${itemEmoji} ${itemName}${stockLabel}`;
             
             // If too long, truncate the item name part
             if (fullLabel.length > 100) {
-              const maxItemLength = 100 - stockLabel.length - 3; // -3 for "..."
-              const truncatedName = item.name.substring(0, maxItemLength) + '...';
-              fullLabel = `${item.emoji || '📦'} ${truncatedName}${stockLabel}`;
+              const maxItemLength = 100 - itemEmoji.length - stockLabel.length - 4; // -4 for space and "..."
+              const truncatedName = itemName.substring(0, Math.max(maxItemLength, 1)) + '...';
+              fullLabel = `${itemEmoji} ${truncatedName}${stockLabel}`;
             }
             
             options.push({
               label: fullLabel.substring(0, 100), // Final safety truncation
               value: itemId,
-              description: `Current stock: ${stockDisplay}`
+              description: `Current stock: ${stockDisplay}`.substring(0, 100) // Also limit description
             });
           }
         }
