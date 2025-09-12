@@ -150,9 +150,6 @@ export async function getCoordinateFromChannelId(guildId, channelId) {
  * @returns {string} Formatted content string
  */
 function generateItemContent(item, customTerms, quantity = null, price = null, stock = undefined) {
-    // DEBUG: Log stock value
-    console.log('🔍 DEBUG generateItemContent - stock value:', stock, 'price:', price, 'item:', item?.name);
-    
     // Sanitize emoji - remove any zero-width joiners or invalid characters
     const emoji = (item.emoji || '📦').replace(/\u200d/g, '').trim();
     
@@ -248,7 +245,6 @@ function generateItemContent(item, customTerms, quantity = null, price = null, s
         
         // Add stock info for store display (when price is shown)
         if (price !== null) {
-            console.log('🔍 DEBUG: Adding stock display - stock value:', stock);
             let stockDisplay;
             // Handle all cases: undefined (not passed), null, -1 = unlimited
             if (stock === undefined || stock === null || stock === -1) {
@@ -258,9 +254,7 @@ function generateItemContent(item, customTerms, quantity = null, price = null, s
             } else {
                 stockDisplay = `${stock} Available`;
             }
-            console.log('🔍 DEBUG: Stock display string:', stockDisplay);
-            content += `\n> 📦 **Stock:** ${stockDisplay} 🆕`;
-            console.log('🔍 DEBUG: Final content includes stock:', content.includes('Stock:'));
+            content += `\n> 📦 **Stock:** ${stockDisplay}`;
         }
     }
     
