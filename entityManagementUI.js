@@ -765,14 +765,24 @@ export async function createStoreItemManagementUI(options) {
         };
     }
     
-    // Build current items display
+    // Build current items display with stock information
     let currentItemsList = '';
     currentItems.forEach((storeItem, index) => {
         const itemId = storeItem.itemId || storeItem;
         const item = allItems[itemId];
         if (item) {
             const price = storeItem.price || item.basePrice || 0;
-            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName}\n`;
+            // Get stock value - undefined/null/-1 means unlimited
+            const stock = storeItem.stock;
+            let stockDisplay;
+            if (stock === undefined || stock === null || stock === -1) {
+                stockDisplay = 'Unlimited';
+            } else if (stock === 0) {
+                stockDisplay = 'Sold Out';
+            } else {
+                stockDisplay = `${stock} Remaining`;
+            }
+            currentItemsList += `${index + 1}. **${item.emoji || '📦'} ${item.name}** - ${customTerms.currencyEmoji} ${price} ${customTerms.currencyName} | 📦 **Remaining Stock:** ${stockDisplay}\n`;
         }
     });
     
