@@ -25,7 +25,8 @@
       "Bash(./scripts/dev/dev-start.sh:*)",
       "Bash(lsof:*)",
       "Bash(awk:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(kill:*)"
     ],
     "deny": [],
     "ask": []
