@@ -21,7 +21,8 @@
       "Read(///**)",
       "Bash(rm:*)",
       "Bash(cat:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(./scripts/dev/dev-start.sh:*)"
     ],
     "deny": [],
     "ask": []
