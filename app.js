@@ -10989,8 +10989,20 @@ Your server is now ready for Tycoons gameplay!`;
               stockDisplay = `${currentStock}`;
             }
             
+            // Truncate label to fit Discord's 100 character limit
+            const itemLabel = `${item.emoji || '📦'} ${item.name}`;
+            const stockLabel = ` (Stock: ${stockDisplay})`;
+            let fullLabel = itemLabel + stockLabel;
+            
+            // If too long, truncate the item name part
+            if (fullLabel.length > 100) {
+              const maxItemLength = 100 - stockLabel.length - 3; // -3 for "..."
+              const truncatedName = item.name.substring(0, maxItemLength) + '...';
+              fullLabel = `${item.emoji || '📦'} ${truncatedName}${stockLabel}`;
+            }
+            
             options.push({
-              label: `${item.emoji || '📦'} ${item.name} (Current Stock: ${stockDisplay})`,
+              label: fullLabel.substring(0, 100), // Final safety truncation
               value: itemId,
               description: `Current stock: ${stockDisplay}`
             });
