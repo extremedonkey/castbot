@@ -1714,7 +1714,17 @@ client.once('ready', async () => {
         if (errorContent.length > positions.error) {
           const newErrors = errorContent.slice(positions.error);
           const errorLines = newErrors.split('\n')
-            .filter(line => line.trim())
+            .filter(line => {
+              // Filter out empty lines
+              if (!line.trim()) return false;
+              
+              // Filter out repetitive Node.js warnings
+              if (line.includes('ExperimentalWarning: The Node.js specifier resolution flag')) return false;
+              if (line.includes('ExperimentalWarning: The Ed25519 Web Crypto API')) return false;
+              if (line.includes('Use `node --trace-warnings ...` to show where the warning was created')) return false;
+              
+              return true;
+            })
             .slice(-50); // Last 50 lines max
           
           if (errorLines.length > 0) {

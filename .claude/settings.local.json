@@ -32,7 +32,8 @@
       "Bash(pm2:*)",
       "WebSearch",
       "Bash(npm install:*)",
-      "Bash(./scripts/dev/dev-restart-logs.sh:*)"
+      "Bash(./scripts/dev/dev-restart-logs.sh:*)",
+      "WebFetch(domain:discord.com)"
     ],
     "deny": [],
     "ask": []
