@@ -3725,8 +3725,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
         const storeId = parts.slice(4).join('_'); // Rejoin in case storeId has underscores
         
-        console.log(`🏪 DEBUG: User ${userId} browsing store ${storeId} in guild ${guildId}`);
-        
         // Import Safari manager functions
         const { loadSafariContent, getCustomTerms, generateItemContent } = await import('./safariManager.js');
         const { getPlayer, loadPlayerData } = await import('./storage.js');
@@ -3752,10 +3750,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const playerCurrency = player?.safari?.currency || 0;
         
         // Build store display with Container -> Section pattern
-        console.log('🏪 DEBUG: Building store display components...');
-        
-        console.log('🏪 DEBUG: Sending store browse response...');
-        
         // Create simplified Components V2 structure to avoid nesting issues
         const containerComponents = [];
         
@@ -3778,7 +3772,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           if (item) {
             // Get stock for this item (undefined means unlimited)
             const itemStock = storeItem.stock;
-            console.log('🔍 DEBUG safari_store_browse - storeItem:', storeItem, 'stock:', itemStock);
             
             // Generate detailed item content using shared function with stock info
             const itemContent = generateItemContent(item, customTerms, null, price, itemStock);
@@ -3837,8 +3830,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           components: containerComponents
         };
         
-        console.log(`🏪 DEBUG: Simplified container with ${containerComponents.length} components`);
-        
         const response = {
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
@@ -3847,7 +3838,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         };
         
-        console.log('🏪 DEBUG: Full response:', JSON.stringify(response, null, 2));
+        // Log concise store browse summary
+        console.log(`🏪 Store browsed: ${member?.user?.global_name || member?.user?.username || userId} → ${store.name} (${storeItems.length} items, ${containerComponents.length} components)`);
         return res.send(response);
         
       } catch (error) {
