@@ -64,7 +64,8 @@ if [ -f "$PID_FILE" ]; then
 fi
 
 # Kill any orphaned processes on port 3000
-PORT_PID=$(lsof -ti :3000 2>/dev/null)
+# Use timeout to prevent hanging in WSL
+PORT_PID=$(timeout 2 lsof -ti :3000 2>/dev/null || true)
 if [ ! -z "$PORT_PID" ]; then
     echo "  Killing process on port 3000 (PID: $PORT_PID)..."
     kill "$PORT_PID" 2>/dev/null || true
