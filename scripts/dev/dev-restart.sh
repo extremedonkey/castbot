@@ -48,23 +48,14 @@ echo "🔔 Sending restart notification to Discord..."
 # Ensure we're in the project root for notification script
 PROJECT_ROOT="$(git rev-parse --show-toplevel)"
 cd "$PROJECT_ROOT"
-# Run notification with background execution and error handling
-# Pass custom message, commit message, and git info
+# Run notification in background - let it complete independently
 if [ -n "$CUSTOM_MESSAGE" ]; then
     echo "📝 Including custom message: $CUSTOM_MESSAGE"
-    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" 2>&1 | head -20) &
+    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" 2>/dev/null || true) &
 else
-    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" 2>&1 | head -20) &
+    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" "$GIT_FILES_CHANGED" "$GIT_STATS" 2>/dev/null || true) &
 fi
-NOTIFY_PID=$!
-# Give it a few seconds to complete
-sleep 3
-if kill -0 $NOTIFY_PID 2>/dev/null; then
-    echo "📤 Notification running in background"
-    # Let it finish in background while we continue
-else
-    echo "✅ Restart notification completed"
-fi
+echo "📤 Notification sent in background"
 
 # Restart the app using node directly
 echo "🔄 Restarting CastBot..."
