@@ -10493,8 +10493,8 @@ Your server is now ready for Tycoons gameplay!`;
         storeOptions.push({
           label: 'Create New Store',
           value: 'create_new_store',
-          description: 'Create a new store for your Safari game',
-          emoji: { name: '🏪' }
+          description: 'Create a new store.',
+          emoji: { name: '➕' }
         });
 
         // Add existing stores (limit to 24 to leave room for Create New)
@@ -10512,17 +10512,17 @@ Your server is now ready for Tycoons gameplay!`;
         
         const storeSelect = new StringSelectMenuBuilder()
           .setCustomId('safari_store_items_select')
-          .setPlaceholder('Choose a store to manage items...')
+          .setPlaceholder('Select a store')
           .setMinValues(1)
           .setMaxValues(1)
           .addOptions(storeOptions);
         
         const selectRow = new ActionRowBuilder().addComponents(storeSelect);
-        
+
         // Create back button
         const backButton = new ButtonBuilder()
           .setCustomId('safari_manage_stores')
-          .setLabel('⬅ Back to Store Management')
+          .setLabel('← Safari 🦁')
           .setStyle(ButtonStyle.Secondary);
         
         const backRow = new ActionRowBuilder().addComponents(backButton);
@@ -10531,11 +10531,7 @@ Your server is now ready for Tycoons gameplay!`;
         const containerComponents = [
           {
             type: 10, // Text Display component
-            content: `## 🏪 Manage Store\n\nSelect Store:`
-          },
-          {
-            type: 10, // Text Display component
-            content: `> **Available Stores:** ${Object.keys(stores).length}`
+            content: `## 🏪 Select Store`
           },
           {
             type: 14 // Separator
