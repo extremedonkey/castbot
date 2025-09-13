@@ -45,6 +45,9 @@ GIT_STATS=$(git diff --cached --stat | tail -1 | sed 's/^ *//')
 
 # Send Discord notification
 echo "🔔 Sending restart notification to Discord..."
+# Ensure we're in the project root for notification script
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+cd "$PROJECT_ROOT"
 # Run notification with background execution and error handling
 # Pass custom message, commit message, and git info
 if [ -n "$CUSTOM_MESSAGE" ]; then

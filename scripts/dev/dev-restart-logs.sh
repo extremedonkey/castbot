@@ -22,19 +22,36 @@ git add .
 if ! git diff --staged --quiet; then
     echo "📝 Committing: $COMMIT_MESSAGE"
     git commit -m "$COMMIT_MESSAGE"
+
+    echo "🚀 Pushing to GitHub ($CURRENT_BRANCH)..."
+    if git push origin $CURRENT_BRANCH; then
+        echo "✅ Changes pushed to GitHub successfully"
+    else
+        echo "❌ Push failed - check authentication"
+        echo "💡 Run 'git push' manually or check GitHub token"
+        echo "ℹ️  Changes are committed locally, safe to continue"
+    fi
 else
     echo "📝 No changes to commit"
 fi
 
+# Send Discord notification
+echo "🔔 Sending restart notification to Discord..."
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+cd "$PROJECT_ROOT"
+# Run notification in background
+if [ -n "$CUSTOM_MESSAGE" ]; then
+    (node scripts/notify-restart.js "$CUSTOM_MESSAGE" "$COMMIT_MESSAGE" 2>/dev/null || echo "ℹ️  Discord notification failed") &
+else
+    (node scripts/notify-restart.js "" "$COMMIT_MESSAGE" 2>/dev/null || echo "ℹ️  Discord notification failed") &
+fi
+echo "🔔 Notification script completed"
+
 echo "🔄 Restarting CastBot..."
-cd "$(git rev-parse --show-toplevel)"
+cd "$PROJECT_ROOT"
 
 # Clean up any existing processes
 echo "🧹 Cleaning up existing processes..."
-
-# Kill any PM2 processes (if they exist)
-pm2 delete castbot-dev-pm 2>/dev/null || true
-pm2 delete castbot-dev 2>/dev/null || true
 
 # Kill existing node process if PID file exists
 if [ -f "$PID_FILE" ]; then
