@@ -10489,7 +10489,9 @@ Your server is now ready for Tycoons gameplay!`;
         // Create store selection dropdown
         const storeOptions = [];
         const storeCount = Object.keys(stores).length;
-        const needsSearch = storeCount > 23;
+        // TESTING: Show search when >= 10 stores for easier testing
+        // PRODUCTION TODO: Keep at >= 10 for production deployment
+        const needsSearch = storeCount >= 10;
 
         // Add "Create New Store" as the first option
         storeOptions.push({
