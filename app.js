@@ -10487,16 +10487,27 @@ Your server is now ready for Tycoons gameplay!`;
         }
         
         // Create store selection dropdown
-        const storeOptions = Object.entries(stores).slice(0, 25).map(([storeId, store]) => {
+        const storeOptions = [];
+
+        // Add "Create New Store" as the first option
+        storeOptions.push({
+          label: 'Create New Store',
+          value: 'create_new_store',
+          description: 'Create a new store for your Safari game',
+          emoji: { name: '🏪' }
+        });
+
+        // Add existing stores (limit to 24 to leave room for Create New)
+        Object.entries(stores).slice(0, 24).forEach(([storeId, store]) => {
           const itemCount = store.items?.length || 0;
           const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
           const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;
-          return {
+          storeOptions.push({
             label: safeCleanText.slice(0, 100),
             value: storeId,
             description: `${itemCount} item${itemCount !== 1 ? 's' : ''} currently in stock`.slice(0, 100),
             emoji: emoji
-          };
+          });
         });
         
         const storeSelect = new StringSelectMenuBuilder()
@@ -10567,16 +10578,70 @@ Your server is now ready for Tycoons gameplay!`;
         const guildId = req.body.guild_id;
         const data = req.body.data;
         const selectedStoreId = data.values[0];
-        
+
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage store items.')) return;
-        
+
         console.log(`📦 DEBUG: Managing items for store ${selectedStoreId}`);
-        
+
+        // Handle "Create New Store" selection
+        if (selectedStoreId === 'create_new_store') {
+          console.log(`🏪 DEBUG: Create new store selected from dropdown`);
+
+          // Show the store creation modal
+          const modal = new ModalBuilder()
+            .setCustomId('safari_store_modal_redirect')
+            .setTitle('Create New Store');
+
+          const storeNameInput = new TextInputBuilder()
+            .setCustomId('store_name')
+            .setLabel('Store Name')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(50)
+            .setPlaceholder('e.g. Adventure Supplies');
+
+          const storeEmojiInput = new TextInputBuilder()
+            .setCustomId('store_emoji')
+            .setLabel('Store Emoji')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(100)
+            .setPlaceholder('🏪 or <:custom:123456>');
+
+          const storeDescriptionInput = new TextInputBuilder()
+            .setCustomId('store_description')
+            .setLabel('Store Description')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(false)
+            .setMaxLength(500)
+            .setPlaceholder('A description of your store...');
+
+          const storeownerTextInput = new TextInputBuilder()
+            .setCustomId('storeowner_text')
+            .setLabel('Store Owner Greeting')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)
+            .setMaxLength(200)
+            .setPlaceholder('Welcome to my store!');
+
+          const row1 = new ActionRowBuilder().addComponents(storeNameInput);
+          const row2 = new ActionRowBuilder().addComponents(storeEmojiInput);
+          const row3 = new ActionRowBuilder().addComponents(storeDescriptionInput);
+          const row4 = new ActionRowBuilder().addComponents(storeownerTextInput);
+
+          modal.addComponents(row1, row2, row3, row4);
+
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          });
+        }
+
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
         const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
-        
+
         const safariData = await loadSafariContent();
         const store = safariData[guildId]?.stores?.[selectedStoreId];
         
@@ -30302,6 +30367,90 @@ Are you sure you want to continue?`;
         
       } catch (error) {
         console.error('Error creating store:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error creating store. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_store_modal_redirect') {
+      // Handle Safari store creation modal submission with redirect to management UI
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create stores.')) return;
+
+        // Extract form data
+        const storeName = components[0].components[0].value?.trim();
+        const storeEmoji = components[1].components[0].value?.trim() || null;
+        const storeDescription = components[2].components[0].value?.trim() || null;
+        const storeownerText = components[3].components[0].value?.trim() || null;
+
+        // Validate required fields
+        if (!storeName) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Store name is required.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log(`🏪 DEBUG: Creating store "${storeName}" for guild ${guildId} with redirect`);
+
+        // Import Safari manager functions
+        const { createStore, loadSafariContent } = await import('./safariManager.js');
+        const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
+
+        const newStoreId = await createStore(guildId, {
+          name: storeName,
+          emoji: storeEmoji,
+          description: storeDescription,
+          storeownerText: storeownerText,
+          createdBy: member.user.id
+        });
+
+        // Load the new store data
+        const safariData = await loadSafariContent();
+        const newStore = safariData[guildId]?.stores?.[newStoreId];
+
+        if (!newStore) {
+          // Fallback if store wasn't found for some reason
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: `✅ Store created but couldn't load management interface. Store ID: \`${newStoreId}\``,
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Initialize store.items if it doesn't exist
+        if (!newStore.items) {
+          newStore.items = [];
+        }
+
+        // Create the store management UI for the new store
+        const uiResponse = await createStoreItemManagementUI({
+          storeId: newStoreId,
+          store: newStore,
+          guildId: guildId,
+          searchTerm: ''
+        });
+
+        // Return UPDATE_MESSAGE to show the store management interface
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: uiResponse
+        });
+
+      } catch (error) {
+        console.error('Error creating store with redirect:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
