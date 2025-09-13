@@ -45,18 +45,58 @@ The Entity Edit Framework is a comprehensive, reusable UI/UX system for managing
 **Purpose**: Handles all CRUD operations for Safari entities
 
 **Key Functions**:
+
+##### Data Loading Operations
 - `loadEntities(guildId, entityType)` - Load all entities of a type
+  - Returns object with all entities keyed by ID
+  - Initializes empty object if no data exists
+  
 - `loadEntity(guildId, entityType, entityId)` - Load single entity
-- `updateEntity(guildId, entityType, entityId, updates)` - Update entity
+  - Returns entity object or null if not found
+  - Useful for checking entity existence
+
+##### Data Modification Operations
+- `updateEntity(guildId, entityType, entityId, updates)` - Full entity update
+  - Merges updates with existing entity
+  - Automatically updates `metadata.lastModified`
+  - Validates entity exists before updating
+  
+- `updateEntityFields(guildId, entityType, entityId, fieldUpdates)` - Targeted field updates
+  - Updates specific fields without replacing entire entity
+  - Supports nested field updates (e.g., `settings.storeownerText`)
+  - Special handling for map_cell baseContent fields
+  
 - `createEntity(guildId, entityType, entityData, userId)` - Create new entity
+  - Auto-generates appropriate ID based on entity type
+  - Applies entity-specific defaults (prices, limits, etc.)
+  - Validates against SAFARI_LIMITS before creation
+  - Adds metadata (createdBy, createdAt, lastModified)
+  
 - `deleteEntity(guildId, entityType, entityId)` - Delete entity
-- `searchEntities(guildId, entityType, searchTerm)` - Search entities
+  - Removes entity from storage
+  - Cleans up references in other entities
+  - Returns success boolean
+
+##### Search Functionality
+- `searchEntities(guildId, entityType, searchTerm)` - Search entities by term
+  - **Search Fields**: 
+    - Entity name or label
+    - Description
+    - Metadata tags (if present)
+  - **Search Method**: Case-insensitive substring matching
+  - **Returns**: Filtered object containing only matching entities
+  - **Usage Example**:
+    ```javascript
+    // Search for all items containing "sword"
+    const results = await searchEntities(guildId, 'item', 'sword');
+    ```
 
 **Supported Entity Types**:
-- `item` - Safari items
-- `store` - Safari stores
-- `safari_button` - Custom Safari buttons
-- `safari_config` - Safari configuration
+- `item` - Safari items (inventory objects)
+- `store` - Safari stores (shops with items)
+- `safari_button` - Custom Safari buttons (interactive elements)
+- `safari_config` - Safari configuration (guild settings)
+- `map_cell` - Map exploration coordinates (special handling)
 
 #### 2. `editFramework.js`
 **Purpose**: Defines edit configurations and UI builders for each entity type
@@ -245,6 +285,43 @@ if (custom_id.startsWith('entity_field_edit_')) {
 }
 ```
 
+### Data Operations Examples
+
+```javascript
+import { 
+  loadEntities, 
+  searchEntities, 
+  createEntity, 
+  updateEntityFields,
+  deleteEntity 
+} from './entityManager.js';
+
+// Load all items for a guild
+const allItems = await loadEntities(guildId, 'item');
+
+// Search for specific items
+const swordItems = await searchEntities(guildId, 'item', 'sword');
+const healingItems = await searchEntities(guildId, 'item', 'heal');
+
+// Create a new item
+const newItem = await createEntity(guildId, 'item', {
+  name: 'Magic Sword',
+  description: 'A powerful enchanted blade',
+  basePrice: 100,
+  category: 'Weapons',
+  maxQuantity: 5
+}, userId);
+
+// Update specific fields
+await updateEntityFields(guildId, 'item', newItem.id, {
+  basePrice: 150,
+  'metadata.tags': ['legendary', 'weapon', 'magic']
+});
+
+// Delete an item (with automatic cleanup)
+const success = await deleteEntity(guildId, 'item', itemId);
+```
+
 ## Components V2 Integration
 
 The framework fully utilizes Discord's Components V2 architecture:
@@ -317,11 +394,18 @@ if (errors.length > 0) {
 - Pagination for large lists
 - Efficient update mechanisms
 
-### 4. **Future Extensions**
+### 4. **Current Features**
+- **Search functionality** - Already implemented via `searchEntities()`
+  - Searches by name, description, and tags
+  - Case-insensitive substring matching
+  - Returns filtered results
+
+### 5. **Future Extensions**
 - Import/export functionality
 - Bulk operations
-- Advanced search/filtering
+- Advanced search/filtering (regex, field-specific)
 - Audit logging
+- Search result ranking/scoring
 
 ## When to Use This Framework
 
