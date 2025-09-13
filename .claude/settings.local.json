@@ -31,7 +31,10 @@
       "Bash(pm2 logs:*)",
       "Bash(pm2 restart:*)",
       "Bash(pm2 stop:*)",
-      "Bash(./scripts/dev/dev-restart-logs.sh:*)"
+      "Bash(./scripts/dev/dev-restart-logs.sh:*)",
+      "Bash(npm install:*)",
+      "Bash(npm:*)",
+      "Bash(mmdc:*)"
     ],
     "deny": [],
     "ask": []
