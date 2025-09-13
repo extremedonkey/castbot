@@ -71,17 +71,19 @@ if [ -f /tmp/castbot-dev.pid ]; then
     fi
 fi
 
-# Kill any orphaned processes on port 3000
+# Kill any orphaned processes on port 3000 (but not if started by restart-logs)
 # Use timeout to prevent hanging in WSL
 PORT_PID=$(timeout 2 lsof -ti :3000 2>/dev/null || true)
 if [ ! -z "$PORT_PID" ]; then
+    # Check if this process is attached to a terminal (pts)
+    # If it's attached to a terminal, it's likely from restart-logs.sh, so just kill it
     echo "  Killing process on port 3000 (PID: $PORT_PID)..."
     kill "$PORT_PID" 2>/dev/null || true
     sleep 1
 fi
 
-# Start fresh with node
-nohup node app.js > /tmp/castbot-dev.log 2>&1 &
+# Start fresh with node in background
+nohup node app.js >> /tmp/castbot-dev.log 2>&1 &
 NEW_PID=$!
 echo "$NEW_PID" > /tmp/castbot-dev.pid
 

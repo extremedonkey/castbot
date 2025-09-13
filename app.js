@@ -1114,9 +1114,9 @@ async function createSafariMenu(guildId, userId, member) {
       .setEmoji('💰'),
     new ButtonBuilder()
       .setCustomId('safari_player_inventory')
-      .setLabel(inventoryLabel)
+      .setLabel('Player Inventory')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧺')
+      .setEmoji('🪪')
   ];
   
   // TODO: Flag for deletion - Check if safari_manage_safari_buttons handler is still needed
