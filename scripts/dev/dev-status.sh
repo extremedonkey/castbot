@@ -77,8 +77,8 @@ git log --oneline -3 | sed 's/^/   /'
 
 echo ""
 echo "=== QUICK COMMANDS ==="
-echo "./dev-restart.sh      - Restart app (your new Ctrl+C)"
-echo "./dev-stop.sh         - Stop everything cleanly"
-echo "pm2 logs castbot-dev   - Monitor real-time logs"
-echo "pm2 monit             - PM2 monitoring dashboard"
+echo "./dev-restart.sh               - Restart app (your new Ctrl+C)"
+echo "./dev-restart-logs.sh          - Restart with log tailing"
+echo "./dev-stop.sh                  - Stop everything cleanly"
+echo "tail -f /tmp/castbot-dev.log   - Monitor real-time logs"
 echo ""

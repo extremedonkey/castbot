@@ -44,11 +44,14 @@ type: 13  // WRONG - Invalid separator (use type 14)
 
 ### Development Workflow
 ```bash
-./scripts/dev/dev-start.sh                  # Start development session
+./scripts/dev/dev-start.sh                  # Start development session (uses node directly)
 ./scripts/dev/dev-restart.sh "commit msg"   # Restart with meaningful commit message
 ./scripts/dev/dev-status.sh                 # Check status
 ./scripts/dev/dev-stop.sh                   # Clean shutdown
+tail -f /tmp/castbot-dev.log               # View logs (NOT PM2 in dev!)
 ```
+
+**⚠️ ENVIRONMENT DIFFERENCES**: Dev uses node directly, Prod uses PM2. See [EnvironmentStrategy.md](docs/architecture/EnvironmentStrategy.md)
 
 **🚨 MANDATORY:** Run `./scripts/dev/dev-restart.sh` with descriptive message after ANY code changes
 - **ALWAYS provide commit message**: `./scripts/dev/dev-restart.sh "Fix safari button logic"`
@@ -136,6 +139,7 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 - **🔧 ENTITY/EDIT FRAMEWORK** → [docs/architecture/EntityEditFramework.md](docs/architecture/EntityEditFramework.md)
 - **📊 ANALYTICS** → [docs/architecture/Analytics.md](docs/architecture/Analytics.md)
 - **📝 LOGGING STANDARDS** → [docs/architecture/LoggingStandards.md](docs/architecture/LoggingStandards.md)
+- **🌍 ENVIRONMENT STRATEGY** → [docs/architecture/EnvironmentStrategy.md](docs/architecture/EnvironmentStrategy.md)
 
 ## 🛠️ Development Standards
 

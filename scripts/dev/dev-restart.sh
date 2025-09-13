@@ -63,17 +63,36 @@ else
     echo "✅ Restart notification completed"
 fi
 
-# Restart the app using PM2
+# Restart the app using node directly
 echo "🔄 Restarting CastBot..."
 
-# Use PM2 to restart
 cd "$(git rev-parse --show-toplevel)"
-pm2 restart castbot-dev-pm 2>/dev/null || pm2 start app.js --name castbot-dev-pm
+
+# Kill existing process if running
+if [ -f /tmp/castbot-dev.pid ]; then
+    OLD_PID=$(cat /tmp/castbot-dev.pid)
+    if kill -0 "$OLD_PID" 2>/dev/null; then
+        kill "$OLD_PID" 2>/dev/null || true
+        sleep 1
+    fi
+fi
+
+# Kill any orphaned processes on port 3000
+PORT_PID=$(lsof -ti :3000 2>/dev/null)
+if [ ! -z "$PORT_PID" ]; then
+    kill "$PORT_PID" 2>/dev/null || true
+    sleep 1
+fi
+
+# Start fresh with node
+nohup node app.js > /tmp/castbot-dev.log 2>&1 &
+NEW_PID=$!
+echo "$NEW_PID" > /tmp/castbot-dev.pid
 
 # Quick verification
 sleep 3
-if pm2 status | grep -q "castbot-dev-pm.*online"; then
-    echo "✅ App restarted successfully"
+if kill -0 "$NEW_PID" 2>/dev/null; then
+    echo "✅ App restarted successfully (PID: $NEW_PID)"
 else
     echo "❌ App failed to start - check logs: tail /tmp/castbot-dev.log"
 fi
@@ -104,5 +123,5 @@ fi
 
 echo ""
 echo "📊 Use './dev-status.sh' to see full status"
-echo "📋 Use 'pm2 logs castbot-dev-pm' to monitor logs"
+echo "📋 Use 'tail -f /tmp/castbot-dev.log' to monitor logs"
 echo ""
