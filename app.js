@@ -6567,7 +6567,7 @@ To fix this:
                 .setCustomId('prod_menu_back')
                 .setLabel('← Menu')
                 .setStyle(ButtonStyle.Secondary)
-                // No emoji for main menu back button per LeanMenuDesign.md
+                // No emoji for main menu back button per LeanUserInterfaceDesign.md
             );
 
           seasonManagementComponents.push(

@@ -1,5 +1,31 @@
 # Definition of Done (DoD)
 
+## Quick Reference Diagram
+
+```mermaid
+graph TD
+    Start([Feature/Fix/Enhancement])
+    Start --> PreCheck[Pre-Implementation<br/>Pattern Check]
+    PreCheck --> Core[Core Requirements<br/>Functionality & Quality]
+    Core --> Discord[Discord Integration<br/>API Limits & UI]
+    Discord --> Logging[Logging & Analytics<br/>Debug, Info, Perf]
+    Logging --> Error[Error Handling<br/>Try-Catch & Fallbacks]
+    Error --> Security[Security<br/>Permissions & Validation]
+    Security --> Testing[Testing<br/>Manual & Integration]
+    Testing --> Performance[Performance<br/>< 3s Response]
+    Performance --> ButtonFactory{Uses Buttons?}
+    ButtonFactory -->|Yes| Registry[Button Registry<br/>& Factory Pattern]
+    ButtonFactory -->|No| Docs
+    Registry --> Docs[Documentation<br/>JSDoc & README]
+    Docs --> Deploy[Deployment<br/>Commit & Monitor]
+    Deploy --> Done([✅ Done])
+    
+    style Start fill:#e1f5fe
+    style Done fill:#c8e6c9
+    style PreCheck fill:#fff3e0
+    style Registry fill:#ffebee
+```
+
 This checklist MUST be completed for every feature, fix, or enhancement before it can be considered "done". Use this as your final quality gate.
 
 ## 🎯 Core Requirements
@@ -31,7 +57,7 @@ This checklist MUST be completed for every feature, fix, or enhancement before i
 ### 4. Logging Requirements
 Every feature MUST include comprehensive logging following our logging standards:
 
-**📋 MANDATORY:** Follow [docs/architecture/LoggingStandards.md](docs/architecture/LoggingStandards.md) for all logging
+**📋 MANDATORY:** Follow [LoggingStandards.md](../standards/LoggingStandards.md) for all logging
 
 #### Required Logging Points
 - [ ] Use logger utility (not direct console.log):
@@ -113,7 +139,7 @@ Every feature MUST include comprehensive logging following our logging standards
 - [ ] Memory leaks checked
 
 ### 10. Button/Component Handlers
-**🚨 MANDATORY: Use Button Handler Factory System** - See [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
+**🚨 MANDATORY: Use Button Handler Factory System** - See [ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md)
 
 If feature includes Discord buttons/components:
 - [ ] **Button defined in BUTTON_REGISTRY** (buttonHandlerFactory.js):
@@ -144,7 +170,7 @@ If feature includes Discord buttons/components:
   ```javascript
   const components = MenuFactory.createComponents('menu_id');
   ```
-- [ ] BUTTON_HANDLER_REGISTRY.md updated
+- [ ] [ButtonHandlerRegistry.md](../enablers/ButtonHandlerRegistry.md) updated
 - [ ] Natural language search works (test with ButtonRegistry.search())
 - [ ] **Mandatory logging pattern implemented**:
   ```javascript
@@ -186,9 +212,9 @@ If feature includes Discord buttons/components:
 - [ ] Documentation updated
 
 ### New Button/Menu
-- [ ] Handler implemented with try-catch
-- [ ] Context variables extracted
-- [ ] BUTTON_HANDLER_REGISTRY.md updated
+- [ ] Handler implemented with ButtonHandlerFactory
+- [ ] Button registered in BUTTON_REGISTRY
+- [ ] [ButtonHandlerRegistry.md](../enablers/ButtonHandlerRegistry.md) updated
 - [ ] Error responses are ephemeral
 - [ ] Mobile UI tested
 

@@ -482,8 +482,8 @@ Set up monitoring for:
 
 ## Related Documentation
 
-- [LoggingStandards.md](LoggingStandards.md) - General logging patterns and utilities
-- [ComponentsV2.md](ComponentsV2.md) - Discord UI architecture requirements
+- [LoggingStandards.md](../standards/LoggingStandards.md) - General logging patterns and utilities
+- [ComponentsV2.md](../standards/ComponentsV2.md) - Discord UI architecture requirements
 - [ButtonHandlerFactory.md](ButtonHandlerFactory.md) - Button implementation patterns
 - [DefinitionOfDone.md](../workflow/DefinitionOfDone.md) - Analytics requirements for new features
 

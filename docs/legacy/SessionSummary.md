@@ -62,8 +62,8 @@ catch (error) {
 - **User Guide**: `docs/features/SafariMapDrops.md`
 - **Technical Issues**: `docs/troubleshooting/ComponentsV2Issues.md`  
 - **Implementation Details**: `docs/implementation/SafariMapDropsImplementation.md`
-- **Components V2 Docs**: `docs/architecture/ComponentsV2.md`
-- **Button Factory Docs**: `docs/architecture/ButtonHandlerFactory.md`
+- **Components V2 Docs**: `docs/standards/ComponentsV2.md`
+- **Button Factory Docs**: `docs/enablers/ButtonHandlerFactory.md`
 
 ## For Future Development
 

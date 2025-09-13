@@ -925,9 +925,9 @@ npm run logs-prod-follow | grep --line-buffered "🔍\|✅\|❌"
 
 ## Related Documentation
 
-- [BUTTON_HANDLER_REGISTRY.md](BUTTON_HANDLER_REGISTRY.md) - Complete registry of all buttons
-- [ComponentsV2.md](ComponentsV2.md) - Discord Components V2 architecture
-- [LoggingStandards.md](LoggingStandards.md) - Logging best practices
+- [ButtonHandlerRegistry.md](ButtonHandlerRegistry.md) - Complete registry of all buttons
+- [ComponentsV2.md](../standards/ComponentsV2.md) - Discord Components V2 architecture
+- [LoggingStandards.md](../standards/LoggingStandards.md) - Logging best practices
 - [EntityEditFramework.md](EntityEditFramework.md) - Advanced UI patterns
 
 ## Conclusion

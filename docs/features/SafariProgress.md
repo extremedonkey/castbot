@@ -1067,13 +1067,13 @@ case 'new_condition_type':
 
 ### 🔗 Core System Documentation
 - **[Safari System](docs/features/Safari.md)** - Complete Safari system overview
-- **[Components V2](docs/architecture/ComponentsV2.md)** - UI architecture requirements
-- **[ButtonHandlerFactory](docs/architecture/ButtonHandlerFactory.md)** - Button implementation patterns
+- **[Components V2](docs/standards/ComponentsV2.md)** - UI architecture requirements
+- **[ButtonHandlerFactory](docs/enablers/ButtonHandlerFactory.md)** - Button implementation patterns
 
 ### 🛠️ Technical References
-- **[DiscordInteractionPatterns](docs/architecture/DiscordInteractionPatterns.md)** - Common patterns and pitfalls
-- **[EntityEditFramework](docs/architecture/EntityEditFramework.md)** - Admin interface patterns
-- **[LoggingStandards](docs/architecture/LoggingStandards.md)** - Logging best practices
+- **[DiscordInteractionPatterns](docs/standards/DiscordInteractionPatterns.md)** - Common patterns and pitfalls
+- **[EntityEditFramework](docs/enablers/EntityEditFramework.md)** - Admin interface patterns
+- **[LoggingStandards](docs/standards/LoggingStandards.md)** - Logging best practices
 
 ### 📋 Development Workflow
 - **[DevWorkflow](docs/workflow/DevWorkflow.md)** - Development process

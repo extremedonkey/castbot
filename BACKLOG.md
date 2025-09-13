@@ -68,7 +68,7 @@ This is a living requirements backlog for CastBot features and improvements, ord
 - Verify new field group modals work for Currency & Inventory, Events, and Rounds customization
 - Test reset to defaults functionality works properly
 - Confirm all existing Safari functionality continues working with new custom terms system
-- Remove commented code block and update BUTTON_HANDLER_REGISTRY.md
+- Remove commented code block and update ButtonHandlerRegistry.md
 **Priority:** High - cleanup after successful Components V2 interface upgrade
 
 ### Remove Commented Safari Interface Code
@@ -216,7 +216,7 @@ import { handleServerUsageStats, handleAnalyticsDump, handleLiveLogging } from '
 **🔄 Review BUTTON_HANDLER_*.md Documentation**
 Before implementing button handler reform, review the documentation files in `docs/` for current implementation guidelines:
 - `docs/BUTTON_HANDLER_ANALYSIS.md` - Complete menu hierarchy and implementation standards
-- `docs/BUTTON_HANDLER_REGISTRY.md` - Current button handler registry
+- `docs/ButtonHandlerRegistry.md` - Current button handler registry
 - `docs/BUTTON_INTERACTION_ANALYSIS.md` - Interaction analysis and patterns
 Consider updating any outdated prompts or implementation guidelines based on current architecture.
 

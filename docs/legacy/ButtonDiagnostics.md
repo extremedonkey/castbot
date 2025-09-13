@@ -214,6 +214,6 @@ npm run logs-prod-follow | grep "your_button_id"
 ## 📚 Related Documentation
 
 - [ButtonHandlerFactory.md](ButtonHandlerFactory.md) - Factory pattern details
-- [BUTTON_HANDLER_REGISTRY.md](BUTTON_HANDLER_REGISTRY.md) - All registered buttons
-- [LoggingStandards.md](LoggingStandards.md) - Logging best practices
+- [ButtonHandlerRegistry.md](ButtonHandlerRegistry.md) - All registered buttons
+- [LoggingStandards.md](../standards/LoggingStandards.md) - Logging best practices
 - [ComponentsV2.md](../features/ComponentsV2.md) - Discord component limits

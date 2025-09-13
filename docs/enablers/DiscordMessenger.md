@@ -403,7 +403,7 @@ npm run logs-prod | grep "DiscordMessenger"
 ## Related Documentation
 
 - [ButtonHandlerFactory.md](ButtonHandlerFactory.md) - Button handler patterns
-- [ComponentsV2.md](ComponentsV2.md) - Discord Components V2 requirements
+- [ComponentsV2.md](../standards/ComponentsV2.md) - Discord Components V2 requirements
 - [CLAUDE.md](../../CLAUDE.md) - Overall architecture principles
 
 ## Conclusion

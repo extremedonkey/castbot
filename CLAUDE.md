@@ -51,7 +51,7 @@ type: 13  // WRONG - Invalid separator (use type 14)
 tail -f /tmp/castbot-dev.log               # View logs (NOT PM2 in dev!)
 ```
 
-**⚠️ ENVIRONMENT DIFFERENCES**: Dev uses node directly, Prod uses PM2. See [EnvironmentStrategy.md](docs/architecture/EnvironmentStrategy.md)
+**⚠️ ENVIRONMENT DIFFERENCES**: Dev uses node directly, Prod uses PM2. See [InfrastructureArchitecture.md](docs/infrastructure/InfrastructureArchitecture.md)
 
 **🚨 MANDATORY:** Run `./scripts/dev/dev-restart.sh` with descriptive message after ANY code changes
 - **ALWAYS provide commit message**: `./scripts/dev/dev-restart.sh "Fix safari button logic"`
@@ -131,15 +131,26 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 - **ROUNDS MENU** (NEW) → Dedicated round management interface
 - **STOCK MANAGEMENT** (NEW) → Store inventory limits with per-item stock tracking
 
-**Architecture & Standards:**
-- **🎨 COMPONENTS V2** (MANDATORY) → [docs/architecture/ComponentsV2.md](docs/architecture/ComponentsV2.md)
-- **🔘 BUTTON HANDLER FACTORY** (MANDATORY) → [docs/architecture/ButtonHandlerFactory.md](docs/architecture/ButtonHandlerFactory.md)
-- **🎯 MENU SYSTEM ARCHITECTURE** (NEW) → [docs/architecture/MenuSystemArchitecture.md](docs/architecture/MenuSystemArchitecture.md)
-- **📐 LEAN MENU DESIGN** → [docs/ui/LeanMenuDesign.md](docs/ui/LeanMenuDesign.md)
-- **🔧 ENTITY/EDIT FRAMEWORK** → [docs/architecture/EntityEditFramework.md](docs/architecture/EntityEditFramework.md)
-- **📊 ANALYTICS** → [docs/architecture/Analytics.md](docs/architecture/Analytics.md)
-- **📝 LOGGING STANDARDS** → [docs/architecture/LoggingStandards.md](docs/architecture/LoggingStandards.md)
-- **🌍 ENVIRONMENT STRATEGY** → [docs/architecture/EnvironmentStrategy.md](docs/architecture/EnvironmentStrategy.md)
+**Infrastructure & Deployment:**
+- **🌍 INFRASTRUCTURE ARCHITECTURE** → [docs/infrastructure/InfrastructureArchitecture.md](docs/infrastructure/InfrastructureArchitecture.md)
+- **📊 ANALYTICS** → [docs/infrastructure/Analytics.md](docs/infrastructure/Analytics.md)
+
+**Enablers & Frameworks:**
+- **🔘 BUTTON HANDLER FACTORY** (MANDATORY) → [docs/enablers/ButtonHandlerFactory.md](docs/enablers/ButtonHandlerFactory.md)
+- **📋 BUTTON HANDLER REGISTRY** → [docs/enablers/ButtonHandlerRegistry.md](docs/enablers/ButtonHandlerRegistry.md)
+- **🎯 MENU SYSTEM ARCHITECTURE** → [docs/enablers/MenuSystemArchitecture.md](docs/enablers/MenuSystemArchitecture.md)
+- **🔧 ENTITY/EDIT FRAMEWORK** → [docs/enablers/EntityEditFramework.md](docs/enablers/EntityEditFramework.md)
+- **📨 DISCORD MESSENGER** → [docs/enablers/DiscordMessenger.md](docs/enablers/DiscordMessenger.md)
+- **🔄 REQUEST SCOPED CACHING** → [docs/enablers/RequestScopedCaching.md](docs/enablers/RequestScopedCaching.md)
+
+**Standards & Patterns:**
+- **🎨 COMPONENTS V2** (MANDATORY) → [docs/standards/ComponentsV2.md](docs/standards/ComponentsV2.md)
+- **📝 LOGGING STANDARDS** → [docs/standards/LoggingStandards.md](docs/standards/LoggingStandards.md)
+- **🔌 DISCORD INTERACTION PATTERNS** → [docs/standards/DiscordInteractionPatterns.md](docs/standards/DiscordInteractionPatterns.md)
+- **📊 BUTTON INTERACTION LOGGING** → [docs/standards/ButtonInteractionLogging.md](docs/standards/ButtonInteractionLogging.md)
+
+**UI/UX Design:**
+- **📐 LEAN USER INTERFACE DESIGN** → [docs/ui/LeanUserInterfaceDesign.md](docs/ui/LeanUserInterfaceDesign.md)
 
 ## 🛠️ Development Standards
 
@@ -180,7 +191,7 @@ const menu = await MenuBuilder.create('menu_id', context);
 **🚨 CRITICAL: Menu Standards** - Follow these patterns:
 - **NEVER build menus inline** - Use MenuBuilder patterns
 - **ALWAYS track legacy menus** - Add tracking calls for visibility
-- **FOLLOW LeanMenuDesign.md** - Visual/UX standards
+- **FOLLOW LeanUserInterfaceDesign.md** - Visual/UX standards
 - **CHECK logs for menu usage** - `grep "MENULEGACY"` shows what needs migration
 
 **Components V2** - ALL UI MUST use `IS_COMPONENTS_V2` flag (1 << 15)
@@ -198,11 +209,34 @@ grep -B20 -A20 "feature_pattern" app.js
 - **Definition of Done**: [docs/workflow/DefinitionOfDone.md](docs/workflow/DefinitionOfDone.md)
 - **Dev Workflow**: [docs/workflow/DevWorkflow.md](docs/workflow/DevWorkflow.md)
 
+### Documentation Standards - Mermaid Diagrams
+
+**ALWAYS create Mermaid diagrams when documenting:**
+- **New architecture files** → Include class/flowchart diagrams
+- **API/interaction flows** → Use sequence diagrams
+- **State machines** → Use stateDiagram-v2
+- **Data structures** → Use ER diagrams or class diagrams
+- **User flows** → Use journey or flowchart diagrams
+- **Complex button/menu flows** → Use flowchart with decision points
+- **New entity types** → Add to Entity Framework class diagram + ER diagram
+- **Feature docs (docs/features/)** → Include system flow in Technical Design section
+
+**Diagram samples**: [docs/mermaid-samples/](docs/mermaid-samples/)
+
+**When NOT to use diagrams:**
+- Simple linear processes (just use numbered lists)
+- Configuration files (use code blocks)
+- Single-function documentation (inline comments suffice)
+- README files (unless architecture overview)
+- Change logs or release notes
+
 ### Tools Without Permission Required
 **Claude can execute these without asking:**
 - `grep` commands and all Grep tool usage
 - `./scripts/dev/dev-restart.sh` 
 - `npm run deploy-remote-wsl-dry` (preview only)
+- Creating/editing markdown documentation files (*.md)
+- Creating Mermaid diagrams in documentation
 
 ## 📐 app.js Organization
 

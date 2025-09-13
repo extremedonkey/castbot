@@ -579,7 +579,7 @@ graph TD
 - ✅ **Data Layer:** Safari content integration with load/save pattern
 - ✅ **UI Components:** Components V2 interface with proper state management
 - ✅ **Error Handling:** Comprehensive try/catch with user feedback
-- ✅ **Documentation:** Button handlers registered in BUTTON_HANDLER_REGISTRY.md
+- ✅ **Documentation:** Button handlers registered in ButtonHandlerRegistry.md
 
 #### MapGridSystem Capabilities
 - ✅ **Grid Generation:** Supports any size from 1x1 to 100x100

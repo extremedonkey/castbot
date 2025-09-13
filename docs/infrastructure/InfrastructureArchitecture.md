@@ -258,17 +258,17 @@ if (DEBUG) {
 #### Architectural Enablers
 These are the foundational systems that power CastBot's features:
 
-1. **Button Factory** ([ButtonHandlerFactory.md](ButtonHandlerFactory.md))
+1. **Button Factory** ([ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md))
    - Centralized button handler registration
    - Consistent error handling
    - Performance tracking
 
-2. **Entity Framework** ([EntityEditFramework.md](EntityEditFramework.md))
+2. **Entity Framework** ([EntityEditFramework.md](../enablers/EntityEditFramework.md))
    - CRUD operations for Safari entities
    - Unified data management
    - Field validation
 
-3. **Menu System** ([MenuSystemArchitecture.md](MenuSystemArchitecture.md))
+3. **Menu System** ([MenuSystemArchitecture.md](../enablers/MenuSystemArchitecture.md))
    - Dynamic menu generation
    - Navigation state management
    - Components V2 compliance
@@ -521,13 +521,13 @@ pm2 restart castbot-pm
 
 ## Related Documentation
 
-- [LoggingStandards.md](LoggingStandards.md) - Detailed logging patterns
+- [LoggingStandards.md](../standards/LoggingStandards.md) - Detailed logging patterns
 - [DevWorkflow.md](../workflow/DevWorkflow.md) - Development process
 - [CLAUDE.md](../../CLAUDE.md) - Quick reference and safety rules
 - [DefinitionOfDone.md](../workflow/DefinitionOfDone.md) - Deployment checklist
-- [ButtonHandlerFactory.md](ButtonHandlerFactory.md) - Button handler patterns
-- [EntityEditFramework.md](EntityEditFramework.md) - Entity management system
-- [MenuSystemArchitecture.md](MenuSystemArchitecture.md) - Menu navigation system
+- [ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md) - Button handler patterns
+- [EntityEditFramework.md](../enablers/EntityEditFramework.md) - Entity management system
+- [MenuSystemArchitecture.md](../enablers/MenuSystemArchitecture.md) - Menu navigation system
 - **Production Architecture Diagram** - Visual reference in `Castbot Architecture - Prod Only.pdf`
 
 ## Architectural Documentation

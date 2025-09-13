@@ -78,8 +78,10 @@ The Entity Edit Framework is a comprehensive, reusable UI/UX system for managing
   - Returns success boolean
 
 ##### Search Functionality
+
+**Backend Search (entityManager.js):**
 - `searchEntities(guildId, entityType, searchTerm)` - Search entities by term
-  - **Search Fields**: 
+  - **Search Fields**:
     - Entity name or label
     - Description
     - Metadata tags (if present)
@@ -90,6 +92,38 @@ The Entity Edit Framework is a comprehensive, reusable UI/UX system for managing
     // Search for all items containing "sword"
     const results = await searchEntities(guildId, 'item', 'sword');
     ```
+
+**UI Search (entityManagementUI.js):**
+- `filterEntities(entities, searchTerm)` - Client-side entity filtering
+  - **Search Fields**:
+    - Entity name or label (primary)
+    - Description (secondary)
+  - **Search Method**: Case-insensitive substring matching
+  - **UI Integration**:
+    - Auto-appears when >10 entities exist
+    - Triggered via "🔍 Search" dropdown option
+    - Opens modal for search term input
+    - Results displayed in filtered dropdown
+    - Search term shown in placeholder
+  - **Usage Flow**:
+    1. User selects "🔍 Search" from dropdown
+    2. Modal appears for search input
+    3. System calls `filterEntities()` with term
+    4. Filtered results replace dropdown options
+    5. Search persists until cleared
+  - **Purpose of Search**:
+    - Primary goal: Work around Discord's 25-option limit in string selects
+    - When you have 100+ items, search lets users filter to find what they need
+    - Without search, only the first 25 items would be accessible
+  - **Search Limitations**:
+    - Still limited to showing 25 filtered results at once (Discord API limit)
+    - Store item selector shows "Too many results" warning for >24 matches
+    - Users need to refine search if too many items match their term
+    - Search requires manual refresh after entity creation/deletion
+  - **Special Behaviors**:
+    - Map item selection: Searches available items for drop locations
+    - Store management: Maintains selected items during search (prevents accidental deselection)
+    - Entity creation: "Create New" option always appears first, even when searching
 
 **Supported Entity Types**:
 - `item` - Safari items (inventory objects)
@@ -256,13 +290,55 @@ const ENTITY_TYPES = {
 if (custom_id === 'entity_select') {
   const selectedType = req.body.data.values[0];
   const { createEntityEditUI } = await import('./entityManagementUI.js');
-  
+
   const ui = await createEntityEditUI({
     guildId,
     entityType: selectedType,
     mode: 'list'
   });
-  
+
+  return res.send({
+    type: InteractionResponseType.UPDATE_MESSAGE,
+    data: ui
+  });
+}
+
+// Handle search functionality
+if (custom_id === 'search_entities') {
+  // Show modal for search input
+  return res.send({
+    type: InteractionResponseType.MODAL,
+    data: {
+      custom_id: `entity_search_modal_${entityType}`,
+      title: 'Search Entities',
+      components: [{
+        type: 1,
+        components: [{
+          type: 4,
+          custom_id: 'search_term',
+          label: 'Search Term',
+          style: 1,
+          placeholder: 'Enter name or description to search...',
+          required: true
+        }]
+      }]
+    }
+  });
+}
+
+// Process search results
+if (custom_id.startsWith('entity_search_modal_')) {
+  const entityType = custom_id.split('_')[3];
+  const searchTerm = req.body.data.components[0].components[0].value;
+  const { createEntityManagementUI } = await import('./entityManagementUI.js');
+
+  const ui = await createEntityManagementUI({
+    guildId,
+    entityType,
+    searchTerm,  // Pass search term to filter results
+    mode: 'edit'
+  });
+
   return res.send({
     type: InteractionResponseType.UPDATE_MESSAGE,
     data: ui
@@ -534,6 +610,6 @@ const ui = await createEntityEditUI({
 ## Related Documentation
 
 - [ButtonHandlerFactory.md](ButtonHandlerFactory.md) - Button implementation patterns
-- [ComponentsV2.md](ComponentsV2.md) - Discord UI architecture
+- [ComponentsV2.md](../standards/ComponentsV2.md) - Discord UI architecture
 - [Safari.md](../features/Safari.md) - Safari system overview
 - [SAFARI_LIMITS.js](../../config/safariLimits.js) - Configuration limits

@@ -55,7 +55,7 @@ export class MenuBuilder {
   }
 
   /**
-   * Build a standard menu following LeanMenuDesign.md patterns
+   * Build a standard menu following LeanUserInterfaceDesign.md patterns
    * @param {Object} menuConfig - Menu configuration from registry
    * @param {Object} context - Context object
    * @returns {Object} Menu container
@@ -63,7 +63,7 @@ export class MenuBuilder {
   static buildStandardMenu(menuConfig, context) {
     const components = [];
     
-    // Header (LeanMenuDesign.md pattern)
+    // Header (LeanUserInterfaceDesign.md pattern)
     components.push({ 
       type: 10, // Text Display
       content: `## ${menuConfig.title}` 

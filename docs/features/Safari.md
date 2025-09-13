@@ -1371,7 +1371,7 @@ The Round Results V2 System provides a complete, scalable foundation for complex
 - [ ] Backup playerData.json
 - [ ] Test in development environment
 - [ ] Update CLAUDE.md with Safari.md reference
-- [ ] Document in BUTTON_HANDLER_REGISTRY.md
+- [ ] Document in ButtonHandlerRegistry.md
 
 ### Deployment Steps
 

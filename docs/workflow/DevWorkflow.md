@@ -1,5 +1,53 @@
 # CastBot Development Workflow
 
+## Quick Process Overview
+
+```mermaid
+graph TD
+    subgraph "Sprint Planning"
+        Backlog[📋 Backlog<br/>User Stories]
+        Complexity{Complexity?}
+        Backlog --> Complexity
+        Complexity -->|< 100 lines| Simple[BACKLOG.md]
+        Complexity -->|100-500 lines| Medium[Existing .md]
+        Complexity -->|> 500 lines| Complex[New .md file]
+    end
+    
+    subgraph "Development Cycle"
+        Design[🎨 Design<br/>Architecture & Limits]
+        Build[🔨 Build<br/>Code & Logging]
+        Test[🧪 Test<br/>Manual & Integration]
+        Deploy[🚀 Deploy<br/>Production Push]
+        Document[📝 Document<br/>Update Docs]
+        
+        Simple --> Design
+        Medium --> Design
+        Complex --> Design
+        Design --> Build
+        Build --> Test
+        Test --> Deploy
+        Deploy --> Document
+    end
+    
+    subgraph "Daily Workflow"
+        Start[dev-start.sh]
+        Restart[dev-restart.sh<br/>"commit msg"]
+        Status[dev-status.sh]
+        ProdDeploy[npm run<br/>deploy-remote-wsl]
+        
+        Build -.-> Start
+        Build -.-> Restart
+        Test -.-> Status
+        Deploy -.-> ProdDeploy
+    end
+    
+    Document --> Done([✅ Done])
+    
+    style Backlog fill:#e3f2fd
+    style Done fill:#c8e6c9
+    style Deploy fill:#ffebee
+```
+
 This document defines the standard agile-devops workflow for CastBot development. All features, fixes, and enhancements should follow this process.
 
 ## Workflow Overview
@@ -122,7 +170,7 @@ graph LR
    - Check performance (< 3 second response)
 
 3. **Documentation Testing**
-   - Verify all new buttons in BUTTON_HANDLER_REGISTRY.md
+   - Verify all new buttons in [ButtonHandlerRegistry.md](../enablers/ButtonHandlerRegistry.md)
    - Check that help text is accurate
 
 ### Exit Criteria

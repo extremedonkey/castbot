@@ -193,5 +193,5 @@ if (problematicContext) {
 ## References
 
 - [ComponentsV2.md](ComponentsV2.md) - Component structure
-- [ButtonHandlerFactory.md](ButtonHandlerFactory.md) - Response handling
-- [EntityEditFramework.md](EntityEditFramework.md) - When to use complex UI
+- [ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md) - Response handling
+- [EntityEditFramework.md](../enablers/EntityEditFramework.md) - When to use complex UI

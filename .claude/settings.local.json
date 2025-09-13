@@ -34,7 +34,9 @@
       "Bash(./scripts/dev/dev-restart-logs.sh:*)",
       "Bash(npm install:*)",
       "Bash(npm:*)",
-      "Bash(mmdc:*)"
+      "Bash(mmdc:*)",
+      "Bash(sed:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

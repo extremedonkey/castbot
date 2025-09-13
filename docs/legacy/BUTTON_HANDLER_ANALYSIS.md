@@ -395,7 +395,7 @@ When implementing a new button handler, follow this checklist:
    console.log(`🔍 DEBUG: ${custom_id} - Starting for user ${userId} in guild ${guildId}`);
    ```
 
-7. ✅ Update BUTTON_HANDLER_REGISTRY.md immediately
+7. ✅ Update ButtonHandlerRegistry.md immediately
 
 ## 🚀 Immediate Action Items
 
@@ -558,7 +558,7 @@ console.log(`📤 RESPONSE: Sending validated Components V2 structure`);
 - [ ] Check next interaction logs - functionality might be working
 
 ### **Before Implementing New Handlers:**
-- [ ] Consult [BUTTON_HANDLER_REGISTRY.md](BUTTON_HANDLER_REGISTRY.md) for existing patterns
+- [ ] Consult [ButtonHandlerRegistry.md](ButtonHandlerRegistry.md) for existing patterns
 - [ ] Use standardized context extraction pattern
 - [ ] Implement comprehensive logging (START, PROCESSING, SUCCESS/FAILURE, RESPONSE)  
 - [ ] Validate Components V2 structure before sending

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Menu System Architecture provides a centralized, standardized approach to menu creation and management in CastBot. This system works alongside [ButtonHandlerFactory.md](ButtonHandlerFactory.md) and follows visual standards from [LeanMenuDesign.md](../ui/LeanMenuDesign.md).
+The Menu System Architecture provides a centralized, standardized approach to menu creation and management in CastBot. This system works alongside [ButtonHandlerFactory.md](ButtonHandlerFactory.md) and follows visual standards from [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md).
 
 ## Problem Solved
 
@@ -91,7 +91,7 @@ MenuBuilder.trackLegacyMenu('menu_location', 'Menu description');
 
 ## Menu Standards
 
-### Visual Standards (from LeanMenuDesign.md)
+### Visual Standards (from LeanUserInterfaceDesign.md)
 - **Header**: `## Menu Title`
 - **Sections**: `> **\`📊 Section Name\`**`
 - **Separators**: Between logical sections only
@@ -159,7 +159,7 @@ MenuRegistry.search('safari')             // Returns all safari-related menus
 
 ### DO ✅
 - Register all new menus in MENU_REGISTRY
-- Follow LeanMenuDesign.md visual standards
+- Follow LeanUserInterfaceDesign.md visual standards
 - Use MenuBuilder.create() for new menus
 - Add tracking to legacy menus immediately
 - Test menu limits (5 buttons/row, 25 components/container)
@@ -239,8 +239,8 @@ MenuBuilder.getMigrationStats()
 ## Related Documentation
 
 - [ButtonHandlerFactory.md](ButtonHandlerFactory.md) - Button system architecture
-- [LeanMenuDesign.md](../ui/LeanMenuDesign.md) - Visual design standards
-- [ComponentsV2.md](ComponentsV2.md) - Discord Components V2 details
+- [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md) - Visual design standards
+- [ComponentsV2.md](../standards/ComponentsV2.md) - Discord Components V2 details
 - [DefinitionOfDone.md](../workflow/DefinitionOfDone.md) - Development standards
 
 ## Conclusion
