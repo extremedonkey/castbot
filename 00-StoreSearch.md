@@ -175,19 +175,42 @@ if (selectedStoreId === 'create_new_store') {
 5. Submits → **Automatically redirected** to new store's management UI
 6. Can immediately add items (no extra clicks)
 
-## 📋 Phase 2: Store Search - PLANNING
+## 📋 Phase 2: Store Search - REVISED PLAN
 
-### Technical Design
+### Phase 2A: Basic Search (Immediate Implementation)
+
+#### Critical Constraints
+- Discord StringSelect limit: 25 options total
+- Our allocation:
+  - "Create New Store" = 1 slot (always present)
+  - "Search Stores" = 1 slot (when >23 stores)
+  - Store options = maximum 23 slots
+- **Search threshold**: Show search when `stores.length > 23`
 
 #### Search Trigger Logic
 ```javascript
-// Only show search if >= 10 stores
-if (Object.keys(stores).length >= 10) {
+// Only show search if we have more stores than can fit
+const storeCount = Object.keys(stores).length;
+const needsSearch = storeCount > 23;
+
+if (needsSearch) {
     storeOptions.splice(1, 0, {
         label: 'Search Stores',
         value: 'search_stores',
-        description: 'Search by name or description',
+        description: `Search ${storeCount} stores by name or description`,
         emoji: { name: '🔍' }
+    });
+
+    // Can only show 23 stores when search is present
+    // (25 total - Create New - Search = 23)
+    Object.entries(stores).slice(0, 23).forEach(([storeId, store]) => {
+        // ... add store options
+    });
+} else {
+    // Can show all stores (up to 24) when no search needed
+    // (25 total - Create New = 24)
+    Object.entries(stores).forEach(([storeId, store]) => {
+        // ... add store options
     });
 }
 ```
@@ -195,37 +218,112 @@ if (Object.keys(stores).length >= 10) {
 #### Search Modal Handler
 ```javascript
 if (selectedStoreId === 'search_stores') {
+    const storeCount = Object.keys(stores).length;
     const modal = new ModalBuilder()
         .setCustomId('safari_store_search_modal')
-        .setTitle('Search Stores');
+        .setTitle(`Search ${storeCount} Stores`);
 
     const searchInput = new TextInputBuilder()
         .setCustomId('search_term')
-        .setLabel('Search Term')
+        .setLabel('Search by name or description')
         .setPlaceholder('Enter store name or description...')
-        .setRequired(true);
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)  // Allow empty search to show all
+        .setMaxLength(100);
 
-    // ... show modal
+    const actionRow = new ActionRowBuilder().addComponents(searchInput);
+    modal.addComponents(actionRow);
+
+    return res.send({
+        type: InteractionResponseType.MODAL,
+        data: modal.toJSON()
+    });
 }
 ```
 
-#### Search Processing
+#### Search Processing (Modal Submission)
 ```javascript
-// In modal submission handler
-const searchTerm = components[0].components[0].value?.trim().toLowerCase();
-const filteredStores = {};
+} else if (custom_id === 'safari_store_search_modal') {
+    const searchTerm = components[0].components[0].value?.trim().toLowerCase() || '';
+    const safariData = await loadSafariContent();
+    const stores = safariData[guildId]?.stores || {};
 
-for (const [id, store] of Object.entries(stores)) {
-    const name = store.name?.toLowerCase() || '';
-    const description = store.description?.toLowerCase() || '';
+    // Filter stores
+    let filteredStores = {};
+    if (searchTerm) {
+        for (const [id, store] of Object.entries(stores)) {
+            const name = store.name?.toLowerCase() || '';
+            const description = store.description?.toLowerCase() || '';
 
-    if (name.includes(searchTerm) || description.includes(searchTerm)) {
-        filteredStores[id] = store;
+            if (name.includes(searchTerm) || description.includes(searchTerm)) {
+                filteredStores[id] = store;
+            }
+        }
+    } else {
+        // Empty search shows all stores
+        filteredStores = stores;
     }
-}
 
-// Rebuild dropdown with filtered results
+    // Build response with filtered results
+    const storeOptions = [];
+
+    // Always include Create New Store
+    storeOptions.push({
+        label: 'Create New Store',
+        value: 'create_new_store',
+        description: 'Create a new store for your Safari game',
+        emoji: { name: '🏪' }
+    });
+
+    const filteredCount = Object.keys(filteredStores).length;
+
+    // Handle different result scenarios
+    if (filteredCount === 0) {
+        storeOptions.push({
+            label: 'No stores found',
+            value: 'no_results',
+            description: `No matches for "${searchTerm}"`,
+            emoji: { name: '❌' }
+        });
+    } else {
+        // Add Search Again option if we still have many results
+        if (filteredCount > 23) {
+            storeOptions.push({
+                label: 'Search Stores',
+                value: 'search_stores',
+                description: `Showing 23 of ${filteredCount} matches. Search again to refine.`,
+                emoji: { name: '🔍' }
+            });
+        }
+
+        // Add filtered stores (max 23 or 22 if search option present)
+        const maxStores = filteredCount > 23 ? 23 : 24;
+        Object.entries(filteredStores)
+            .slice(0, maxStores - storeOptions.length)
+            .forEach(([storeId, store]) => {
+                // ... add store option
+            });
+    }
+
+    // Create select menu and send UPDATE_MESSAGE
+    const storeSelect = new StringSelectMenuBuilder()
+        .setCustomId('safari_store_items_select')
+        .setPlaceholder(searchTerm ? `Results for "${searchTerm}"` : 'Select a store...')
+        .addOptions(storeOptions);
+
+    // ... create Container and UPDATE_MESSAGE response
+}
 ```
+
+### Phase 2B: Enhanced Search (Future Enhancement)
+- Add search history/persistence
+- Show recent searches
+- Add sorting options (alphabetical, item count, etc.)
+
+### Phase 2C: Generalization (Foundation for Consolidation)
+- Extract to shared search module
+- Add `entityType` parameter
+- Unify all 8 search implementations
 
 ### Implementation Options Assessment
 
@@ -408,13 +506,25 @@ export function filterEntities(entities, searchTerm, searchFields = ['name', 'la
 - [x] Test end-to-end flow
 - [x] Fix dev scripts for testing
 
-### Phase 2: Store Search
-- [ ] Add search option (conditional on count)
-- [ ] Create search modal
-- [ ] Implement search logic
-- [ ] Filter dropdown results
-- [ ] Handle "too many results"
-- [ ] Test with 25+ stores
+### Phase 2A: Basic Store Search
+- [ ] Add search option when >23 stores
+- [ ] Create search modal handler
+- [ ] Implement search filtering logic
+- [ ] Handle no results case
+- [ ] Handle too many results (>23 filtered)
+- [ ] Test with 24+ stores scenario
+- [ ] Ensure "Create New Store" always present
+- [ ] Add "Search Again" when filtered results >23
+
+### Phase 2B: Enhanced Search (Future)
+- [ ] Add search persistence
+- [ ] Implement sorting options
+- [ ] Add search history
+
+### Phase 2C: Generalization (Future)
+- [ ] Extract to shared module
+- [ ] Add entityType parameter
+- [ ] Consolidate all 8 implementations
 
 ### Phase 3: Cleanup
 - [ ] Remove safari_manage_stores

@@ -10488,6 +10488,8 @@ Your server is now ready for Tycoons gameplay!`;
         
         // Create store selection dropdown
         const storeOptions = [];
+        const storeCount = Object.keys(stores).length;
+        const needsSearch = storeCount > 23;
 
         // Add "Create New Store" as the first option
         storeOptions.push({
@@ -10497,8 +10499,23 @@ Your server is now ready for Tycoons gameplay!`;
           emoji: { name: '➕' }
         });
 
-        // Add existing stores (limit to 24 to leave room for Create New)
-        Object.entries(stores).slice(0, 24).forEach(([storeId, store]) => {
+        // Add Search option if we have too many stores to display
+        if (needsSearch) {
+          storeOptions.push({
+            label: 'Search Stores',
+            value: 'search_stores',
+            description: `Search ${storeCount} stores by name or description`,
+            emoji: { name: '🔍' }
+          });
+        }
+
+        // Determine how many stores we can show
+        // If search is present: 25 - Create(1) - Search(1) = 23
+        // If no search: 25 - Create(1) = 24
+        const maxStoresToShow = needsSearch ? 23 : 24;
+
+        // Add existing stores
+        Object.entries(stores).slice(0, maxStoresToShow).forEach(([storeId, store]) => {
           const itemCount = store.items?.length || 0;
           const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
           const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;
@@ -10632,6 +10649,50 @@ Your server is now ready for Tycoons gameplay!`;
           return res.send({
             type: InteractionResponseType.MODAL,
             data: modal.toJSON()
+          });
+        }
+
+        // Handle "Search Stores" selection
+        if (selectedStoreId === 'search_stores') {
+          console.log(`🔍 DEBUG: Search stores selected from dropdown`);
+
+          // Load stores to get count for modal title
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const stores = safariData[guildId]?.stores || {};
+          const storeCount = Object.keys(stores).length;
+
+          // Show the search modal
+          const modal = new ModalBuilder()
+            .setCustomId('safari_store_search_modal')
+            .setTitle(`Search ${storeCount} Stores`);
+
+          const searchInput = new TextInputBuilder()
+            .setCustomId('search_term')
+            .setLabel('Search by name or description')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false)  // Allow empty search to show all
+            .setMaxLength(100)
+            .setPlaceholder('Enter store name or description...');
+
+          const searchRow = new ActionRowBuilder().addComponents(searchInput);
+          modal.addComponents(searchRow);
+
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          });
+        }
+
+        // Handle "No results" selection (from search)
+        if (selectedStoreId === 'no_results') {
+          console.log(`❌ DEBUG: No results option selected`);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ No stores found. Try searching again with different terms or create a new store.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
           });
         }
 
@@ -30452,6 +30513,156 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error creating store. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_store_search_modal') {
+      // Handle Safari store search modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to search stores.')) return;
+
+        // Get search term from modal
+        const searchTerm = components[0].components[0].value?.trim().toLowerCase() || '';
+        console.log(`🔍 DEBUG: Searching stores with term: "${searchTerm}"`);
+
+        // Import Safari manager functions
+        const { loadSafariContent } = await import('./safariManager.js');
+        const { parseTextEmoji } = await import('./utils.js');
+
+        // Load stores
+        const safariData = await loadSafariContent();
+        const stores = safariData[guildId]?.stores || {};
+
+        // Filter stores based on search term
+        let filteredStores = {};
+        if (searchTerm) {
+          for (const [id, store] of Object.entries(stores)) {
+            const name = store.name?.toLowerCase() || '';
+            const description = store.description?.toLowerCase() || '';
+
+            if (name.includes(searchTerm) || description.includes(searchTerm)) {
+              filteredStores[id] = store;
+            }
+          }
+        } else {
+          // Empty search shows all stores
+          filteredStores = stores;
+        }
+
+        console.log(`🔍 DEBUG: Found ${Object.keys(filteredStores).length} matching stores`);
+
+        // Build dropdown with filtered results
+        const storeOptions = [];
+
+        // Always include Create New Store
+        storeOptions.push({
+          label: 'Create New Store',
+          value: 'create_new_store',
+          description: 'Create a new store.',
+          emoji: { name: '➕' }
+        });
+
+        const filteredCount = Object.keys(filteredStores).length;
+
+        // Handle different result scenarios
+        if (filteredCount === 0) {
+          // No results found
+          storeOptions.push({
+            label: 'No stores found',
+            value: 'no_results',
+            description: searchTerm ? `No matches for "${searchTerm.slice(0, 50)}"` : 'No stores available',
+            emoji: { name: '❌' }
+          });
+        } else {
+          // Add Search Again option if we still have many results
+          if (filteredCount > 23) {
+            storeOptions.push({
+              label: 'Search Stores',
+              value: 'search_stores',
+              description: `Showing 23 of ${filteredCount} matches. Search again to refine.`,
+              emoji: { name: '🔍' }
+            });
+          }
+
+          // Calculate how many stores we can show
+          // We have Create New (1) + potentially Search Again (1) + stores
+          const maxStoresToShow = filteredCount > 23 ? 23 : (25 - storeOptions.length);
+
+          // Add filtered stores
+          Object.entries(filteredStores)
+            .slice(0, maxStoresToShow)
+            .forEach(([storeId, store]) => {
+              const itemCount = store.items?.length || 0;
+              const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
+              const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;
+              storeOptions.push({
+                label: safeCleanText.slice(0, 100),
+                value: storeId,
+                description: `${itemCount} item${itemCount !== 1 ? 's' : ''} currently in stock`.slice(0, 100),
+                emoji: emoji
+              });
+            });
+        }
+
+        // Create select menu with filtered results
+        const storeSelect = new StringSelectMenuBuilder()
+          .setCustomId('safari_store_items_select')
+          .setPlaceholder(searchTerm ? `Results for "${searchTerm.slice(0, 30)}"` : 'Select a store')
+          .setMinValues(1)
+          .setMaxValues(1)
+          .addOptions(storeOptions);
+
+        const selectRow = new ActionRowBuilder().addComponents(storeSelect);
+
+        // Create back button
+        const backButton = new ButtonBuilder()
+          .setCustomId('safari_manage_stores')
+          .setLabel('⬅ Back to Store Management')
+          .setStyle(ButtonStyle.Secondary);
+
+        const backRow = new ActionRowBuilder().addComponents(backButton);
+
+        // Create container with filtered results
+        const container = {
+          type: 17, // Container
+          components: [
+            {
+              type: 10, // TextDisplay
+              text: searchTerm
+                ? `🔍 **Search Results for "${searchTerm.slice(0, 50)}"**\n\nFound ${filteredCount} matching store${filteredCount !== 1 ? 's' : ''}.`
+                : `📦 **All Stores**\n\nShowing all ${filteredCount} store${filteredCount !== 1 ? 's' : ''}.`
+            },
+            {
+              type: 14 // Separator
+            },
+            selectRow.toJSON(),
+            backRow.toJSON()
+          ]
+        };
+
+        // Send UPDATE_MESSAGE with search results
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: '',
+            embeds: [],
+            components: [container],
+            flags: 1 << 15 // IS_COMPONENTS_V2
+          }
+        });
+
+      } catch (error) {
+        console.error('Error searching stores:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error searching stores. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
