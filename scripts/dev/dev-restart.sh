@@ -83,6 +83,7 @@ if [ ! -z "$PORT_PID" ]; then
 fi
 
 # Start fresh with node in background
+# Append to log file to preserve tail -f connections
 nohup node app.js >> /tmp/castbot-dev.log 2>&1 &
 NEW_PID=$!
 echo "$NEW_PID" > /tmp/castbot-dev.pid
