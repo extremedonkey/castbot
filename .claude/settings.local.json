@@ -36,7 +36,8 @@
       "Bash(npm:*)",
       "Bash(mmdc:*)",
       "Bash(sed:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(./scripts/dev/dev-stop.sh:*)"
     ],
     "deny": [],
     "ask": []

@@ -4,18 +4,24 @@
 
 We have **7 different implementations** of item search UI across the codebase, all solving the same problem: working around Discord's 25-option limit in string selects. This creates maintenance burden, inconsistent UX, and ~1,400 lines of duplicate code.
 
-## Current State - 7 Implementations
+**UPDATE (2025-09-13)**: We're now adding an **8th implementation for Store Search**, but this one is strategic - it will become the foundation for consolidating all search implementations.
+
+## Current State - 8 Implementations (7 existing + 1 new strategic)
 
 ```mermaid
 graph TB
-    subgraph "Search Implementations"
+    subgraph "Item Search Implementations"
         E[Entity Management<br/>entityManagementUI.js<br/>filterEntities]
         M[Map Item Selection<br/>entityManagementUI.js<br/>createMapItemSelectionUI]
-        S[Store Management<br/>entityManagementUI.js<br/>createStoreItemManagementUI]
+        S[Store Item Management<br/>entityManagementUI.js<br/>createStoreItemManagementUI]
         G[Safari Give Item<br/>app.js<br/>safari_give_item_select]
         C[Condition Manager<br/>customActionUI.js<br/>condition_item_select]
         A[Safari Store Addition<br/>app.js<br/>safari_store_items_select]
         CA[Custom Actions<br/>customActionUI.js<br/>search_items]
+    end
+
+    subgraph "NEW: Store Search"
+        SS[Store Search<br/>PLANNED<br/>Generalizes Store Item Management]
     end
 
     subgraph "Search Features"
@@ -24,6 +30,7 @@ graph TB
         F3["Multi-select"]
         F4["Too many results warning"]
         F5["Search persistence"]
+        F6["Generalizable to any entity"]
     end
 
     E --> F1
@@ -33,6 +40,9 @@ graph TB
     G --> F2
     G --> F5
     C --> F2
+    SS --> F6
+    SS --> F3
+    SS --> F4
 
     style E fill:#f9f,stroke:#333,stroke-width:2px
     style M fill:#f9f,stroke:#333,stroke-width:2px
@@ -41,6 +51,7 @@ graph TB
     style C fill:#9f9,stroke:#333,stroke-width:2px
     style A fill:#f99,stroke:#333,stroke-width:2px
     style CA fill:#f9f,stroke:#333,stroke-width:2px
+    style SS fill:#4CAF50,stroke:#333,stroke-width:3px
 ```
 
 ## Problem Analysis
@@ -168,6 +179,64 @@ export function createItemSelectComponent({
   multiSelect = false,
   minValues = 1,
   maxValues = 1
+})
+```
+
+## 🎯 Strategic Approach: Store Search as Foundation
+
+### Why We're Adding an 8th Implementation
+
+While adding another search implementation seems counterintuitive, the **Store Search** is strategic:
+
+1. **Different Entity Type** - Searches stores, not items (new use case)
+2. **Generalization Opportunity** - Will be built to handle ANY entity type
+3. **Foundation for Consolidation** - Becomes the base for unified search
+4. **Based on Best Implementation** - Uses Store Item Management as template
+
+### The Plan
+
+```mermaid
+flowchart LR
+    A[Store Item Management<br/>Most Robust] --> B[Generalize to<br/>Store Search]
+    B --> C[Add entityType<br/>Parameter]
+    C --> D[Unified Search<br/>Module]
+
+    E[7 Item Searches] --> D
+    F[Store Search] --> D
+
+    D --> G[Single Implementation<br/>~350 lines total]
+
+    style B fill:#4CAF50
+    style D fill:#2196F3
+    style G fill:#FFD700
+```
+
+### Implementation Strategy
+
+```javascript
+// Current: Store Item Management (items only)
+createStoreItemManagementUI({
+    storeId,
+    store,
+    guildId,
+    searchTerm
+})
+
+// Phase 2: Generalized for stores AND items
+createSearchableManagementUI({
+    entityType: 'store' | 'item',
+    entityId,
+    entity,
+    guildId,
+    searchTerm
+})
+
+// Future: Unified search module
+import { createSearchableSelect } from './searchUI.js';
+createSearchableSelect({
+    entities,
+    entityType: 'any',
+    // ... unified API
 })
 ```
 
