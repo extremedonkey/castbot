@@ -10522,8 +10522,9 @@ Your server is now ready for Tycoons gameplay!`;
         // Create back button
         const backButton = new ButtonBuilder()
           .setCustomId('safari_manage_stores')
-          .setLabel('← Safari 🦁')
-          .setStyle(ButtonStyle.Secondary);
+          .setLabel('← Safari')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('🦁');
         
         const backRow = new ActionRowBuilder().addComponents(backButton);
         
