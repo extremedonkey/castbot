@@ -850,7 +850,7 @@ export async function createStoreItemManagementUI(options) {
                     {
                         type: 2, // Button
                         custom_id: `safari_all_server_items_${guildId}`,
-                        label: 'All Server Items',
+                        label: 'View All Items',
                         style: 2,
                         emoji: { name: '📄' }
                     }
