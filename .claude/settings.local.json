@@ -29,7 +29,8 @@
       "Bash(kill:*)",
       "Bash(pm2 list:*)",
       "Bash(pm2 logs:*)",
-      "Bash(pm2 restart:*)"
+      "Bash(pm2 restart:*)",
+      "Bash(pm2 stop:*)"
     ],
     "deny": [],
     "ask": []
