@@ -3917,7 +3917,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         const price = storeItem.price || item.basePrice || 0;
         
         // Check if item is sold out (for old buttons where stock may have changed)
-        const { hasStock } = await import('./safariManager.js');
+        const { hasStock, decrementStock } = await import('./safariManager.js');
         const hasStockAvailable = await hasStock(guildId, storeId, itemId);
         if (!hasStockAvailable) {
           // Create sold out response using Components V2
@@ -3996,7 +3996,22 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           item.metadata = { totalSold: 0 };
         }
         item.metadata.totalSold = (item.metadata.totalSold || 0) + 1;
-        
+
+        // Decrement stock after successful purchase
+        const stockUpdated = await decrementStock(guildId, storeId, itemId, 1);
+        if (!stockUpdated) {
+          // Rollback currency if stock update failed
+          player.safari.currency = currentCurrency; // Restore original currency
+          console.error(`❌ Stock update failed for ${itemId} in store ${storeId} - purchase cancelled and refunded`);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Failed to update stock. Purchase cancelled and refunded.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
         // Save all changes
         await savePlayerData(playerData);
         await saveSafariContent(safariData);

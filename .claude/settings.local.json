@@ -38,7 +38,8 @@
       "Bash(sed:*)",
       "Bash(find:*)",
       "Bash(./scripts/dev/dev-stop.sh:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(git branch:*)"
     ],
     "deny": [],
     "ask": []
