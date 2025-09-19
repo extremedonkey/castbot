@@ -150,7 +150,8 @@ export async function createEntityManagementUI(options) {
         selectedId = null,
         activeFieldGroup = null,  // For grouped modal editing
         searchTerm = '',
-        mode = 'edit'        // Default to 'edit' mode - no separate view mode
+        mode = 'edit',       // Default to 'edit' mode - no separate view mode
+        userId = null        // Discord user ID for conditional UI elements
     } = options;
     
     // Load entity data
@@ -190,7 +191,7 @@ export async function createEntityManagementUI(options) {
             ] : []),
             
             // Mode-specific UI
-            ...(selectedEntity ? await createModeSpecificUI(mode, entityType, selectedId, selectedEntity, activeFieldGroup, guildId) : [])
+            ...(selectedEntity ? await createModeSpecificUI(mode, entityType, selectedId, selectedEntity, activeFieldGroup, guildId, userId) : [])
         ]
     }];
     
@@ -411,10 +412,10 @@ function createEntityDisplay(entity, entityType, safariConfig) {
 /**
  * Create mode-specific UI elements
  */
-async function createModeSpecificUI(mode, entityType, entityId, entity, activeFieldGroup, guildId) {
+async function createModeSpecificUI(mode, entityType, entityId, entity, activeFieldGroup, guildId, userId) {
     switch (mode) {
         case 'delete_confirm':
-            return createDeleteConfirmUI(entityType, entityId, entity);
+            return createDeleteConfirmUI(entityType, entityId, entity, userId);
         case 'edit':
         default:
             // Always default to edit mode - no separate view mode
@@ -602,33 +603,41 @@ function createFieldGroupEditor(entityType, entityId, entity, activeFieldGroup) 
 /**
  * Create delete confirmation UI
  */
-function createDeleteConfirmUI(entityType, entityId, entity) {
+function createDeleteConfirmUI(entityType, entityId, entity, userId) {
     const name = entity.name || entity.label || 'this item';
-    
+
+    // Create action row components
+    const actionRowComponents = [
+        // Back button (first button)
+        {
+            type: 2, // Button
+            style: 2, // Secondary (grey)
+            label: '← Back',
+            custom_id: `entity_view_mode_${entityType}_${entityId}`,
+            emoji: { name: '📦' }
+        }
+    ];
+
+    // Conditional delete button (only for specific user ID)
+    if (userId === '391415444084490240') {
+        actionRowComponents.push({
+            type: 2, // Button
+            style: 4, // Danger
+            label: 'Yes, Delete',
+            custom_id: `entity_confirm_delete_${entityType}_${entityId}`,
+            emoji: { name: '⚠️' }
+        });
+    }
+
     return [
         { type: 14 }, // Separator
         {
             type: 10, // Text Display
-            content: `⚠️ **Confirm Deletion**\n\nAre you sure you want to delete **${name}**?\n\n⚡ This action cannot be undone.`
+            content: `☄️ **Cannot Delete Items Directly!**\n\nYou can't directly delete an item ||(causes too many problems, sorry!)||; instead, remove items the following way:\n• **Players**: Edit the player's quantity of the item down to zero\n• **Stores**: From the Store Management Menu, clear the item so the store no longer stocks it\n• **Map Drops**: Go to the location, Map Drops, Configure and select Remove Item.\n• **Custom Actions**: Remove the 'Give Item' action; or remove the item from the condition.`
         },
         {
             type: 1, // ActionRow
-            components: [
-                {
-                    type: 2, // Button
-                    style: 4, // Danger
-                    label: 'Yes, Delete',
-                    custom_id: `entity_confirm_delete_${entityType}_${entityId}`,
-                    emoji: { name: '⚠️' }
-                },
-                {
-                    type: 2, // Button
-                    style: 2, // Secondary
-                    label: 'Cancel',
-                    custom_id: `entity_view_mode_${entityType}_${entityId}`,
-                    emoji: { name: '❌' }
-                }
-            ]
+            components: actionRowComponents
         }
     ];
 }

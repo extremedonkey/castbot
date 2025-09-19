@@ -20629,7 +20629,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             selectedId: entityId,
             activeFieldGroup: null,
             searchTerm: '',
-            mode: 'delete_confirm'
+            mode: 'delete_confirm',
+            userId: context.userId
           });
           
           return uiResponse;
