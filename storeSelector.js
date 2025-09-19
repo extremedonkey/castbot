@@ -94,21 +94,31 @@ export async function createStoreSelectionUI(options) {
     const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
     const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;
 
-    // Handle description properly - Discord requires undefined or non-empty string
+    // Handle description and visual indicators based on action
     let description;
+    let label = safeCleanText.slice(0, 100);
+
     if (action === 'manage_items') {
       description = `Sells ${itemCount} type${itemCount !== 1 ? 's' : ''} of items`.slice(0, 100);
+    } else if (action === 'add_to_location') {
+      // Add visual indicators for location stores (bulletproof approach)
+      if (preSelectedStores.includes(storeId)) {
+        label = label + ' (✅ Currently Added)';
+        description = 'Click to remove from this location';
+      } else {
+        description = 'Click to add to this location';
+      }
     } else {
       const storeDesc = store.description?.trim();
       description = storeDesc && storeDesc.length > 0 ? storeDesc.slice(0, 100) : undefined;
     }
 
     storeOptions.push({
-      label: safeCleanText.slice(0, 100),
+      label: label,
       value: storeId,
       description: description,
-      emoji: emoji,
-      default: preSelectedStores.includes(storeId) // 🎯 Magic for toggle behavior
+      emoji: emoji
+      // Removed default pre-selection - using visual indicators instead
     });
   });
 
@@ -118,7 +128,7 @@ export async function createStoreSelectionUI(options) {
     : `safari_store_select_${action}${entityId ? `_${entityId}` : ''}`;
 
   const minValues = action === 'add_to_location' ? 0 : 1; // Allow deselect for location actions
-  const maxValues = 1; // Always single select
+  const maxValues = 1; // Always single select for proper toggle behavior
 
   const storeSelect = new StringSelectMenuBuilder()
     .setCustomId(customId)
@@ -214,8 +224,8 @@ export async function handleStoreToggle(context, client) {
 
   console.log(`🏪 DEBUG: Location store toggle - coord ${entityId}, store: ${selectedStoreId || 'none'}`);
 
-  // Handle search request
-  if (selectedStoreId?.startsWith('search_stores_location_')) {
+  // Handle search request (both original and location-specific patterns)
+  if (selectedStoreId === 'search_stores' || selectedStoreId?.startsWith('search_stores_location_')) {
     console.log(`🔍 DEBUG: Location search stores selected from dropdown for ${entityId}`);
 
     // Load stores to get count for modal title

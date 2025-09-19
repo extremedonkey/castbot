@@ -18725,14 +18725,23 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                     // Set min_values to 0 to allow deselection
                     selectMenu.min_values = 0;
 
-                    // Fix max_values to accommodate pre-selected stores (Discord validation fix)
-                    selectMenu.max_values = Math.max(1, coordStores.length);
+                    // Keep single-select behavior for proper toggle (no pre-selection conflicts)
+                    selectMenu.max_values = 1;
 
-                    // Pre-select current stores by setting default: true
+                    // Add visual indicators instead of pre-selection (bulletproof approach)
                     if (selectMenu.options && coordStores.length > 0) {
                       selectMenu.options.forEach(option => {
+                        // Skip special options (Create New Store, Search)
+                        if (option.value === 'create_new_store' || option.value === 'search_stores') {
+                          return;
+                        }
+
+                        // Add visual indicator for currently added stores
                         if (coordStores.includes(option.value)) {
-                          option.default = true;
+                          option.label = option.label + ' (✅ Currently Added)';
+                          option.description = 'Click to remove from this location';
+                        } else {
+                          option.description = 'Click to add to this location';
                         }
                       });
                     }
