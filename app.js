@@ -11134,7 +11134,7 @@ Your server is now ready for Tycoons gameplay!`;
           const storeId = customId.replace(prefix, '');
 
           // Check if this was called from store selector (no store ID) vs specific store management
-          const isFromStoreSelector = storeId === '' || storeId === guildId;
+          const isFromStoreSelector = storeId === '' || storeId === guildId || storeId.startsWith('safari_all_server_items_');
 
           console.log(`📄 DEBUG: Showing all server items for guild ${guildId}, store context: ${storeId}`);
 
@@ -11185,9 +11185,15 @@ Your server is now ready for Tycoons gameplay!`;
           }
 
           // Create back button that returns to specific store management
-          console.log(`📄 DEBUG: Store lookup - storeId: "${storeId}", store found: ${!!store}, store name: ${store?.name}`);
+          console.log(`📄 DEBUG: Store lookup - storeId: "${storeId}", isFromStoreSelector: ${isFromStoreSelector}, store found: ${!!store}, store name: ${store?.name}`);
 
-          const backButton = store ? {
+          const backButton = isFromStoreSelector ? {
+            type: 2, // Button
+            custom_id: 'safari_store_manage_items', // Return to store selector
+            label: '← Store Management',
+            style: 2,
+            emoji: { name: '🏪' }
+          } : store ? {
             type: 2, // Button
             custom_id: `safari_store_items_select_back_${storeId}`,
             label: `← ${store.name || 'Store Management'}`,
@@ -11195,7 +11201,7 @@ Your server is now ready for Tycoons gameplay!`;
             emoji: { name: '🏪' }
           } : {
             type: 2, // Button
-            custom_id: `safari_store_items_select_back_${storeId}`, // Always use specific store ID
+            custom_id: 'safari_store_manage_items', // Fallback to store selector
             label: '← Store Management',
             style: 2,
             emoji: { name: '🏪' }
