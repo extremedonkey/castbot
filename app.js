@@ -10211,11 +10211,6 @@ Your server is now ready for Tycoons gameplay!`;
               .setLabel('Manage Store Items')
               .setStyle(ButtonStyle.Secondary)
               .setEmoji('📦'),
-            new ButtonBuilder()
-              .setCustomId('safari_store_list')
-              .setLabel('View All Stores')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('📋')
           ];
           
           const managementRow1 = new ActionRowBuilder().addComponents(managementButtonsRow1);
@@ -10381,94 +10376,6 @@ Your server is now ready for Tycoons gameplay!`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: '❌ Error creating store interface.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
-    } else if (custom_id === 'safari_store_list') {
-      // MVP2: View all stores list interface
-      console.log('📋 DEBUG: safari_store_list handler called');
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to view stores.')) return;
-        
-        console.log(`🏪 DEBUG: View all stores clicked for guild ${guildId}`);
-        
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        console.log(`🔍 DEBUG: Safari data for guild ${guildId}:`, JSON.stringify(safariData[guildId], null, 2));
-        const stores = safariData[guildId]?.stores || {};
-        const items = safariData[guildId]?.items || {};
-        console.log(`🔍 DEBUG: Found ${Object.keys(stores).length} stores:`, Object.keys(stores));
-        
-        // Create back button
-        const backButton = new ButtonBuilder()
-          .setCustomId('safari_manage_stores')
-          .setLabel('⬅ Back to Store Management')
-          .setStyle(ButtonStyle.Secondary);
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        
-        let content = '## 🏪 All Stores\n\n';
-        
-        if (Object.keys(stores).length === 0) {
-          content += '*No stores created yet.*\n\nCreate your first store using the **Create New Store** button in the Store Management interface.';
-        } else {
-          const storeList = Object.entries(stores)
-            .sort(([, a], [, b]) => (b.metadata?.createdAt || 0) - (a.metadata?.createdAt || 0)); // Sort by creation date
-          
-          content += `**Total Stores:** ${storeList.length}\n\n`;
-          
-          storeList.forEach(([storeId, store], index) => {
-            const itemsInStore = store.items?.length || 0;
-            const totalSales = store.metadata?.totalSales || 0;
-            const createdDate = store.metadata?.createdAt ? new Date(store.metadata.createdAt).toLocaleDateString() : 'Unknown';
-            
-            content += `**${index + 1}. ${store.emoji || '🏪'} ${store.name}**\n`;
-            if (store.description) {
-              content += `└ *${store.description}*\n`;
-            }
-            content += `└ **Store ID:** \`${storeId}\`\n`;
-            content += `└ **Items:** ${itemsInStore} | **Sales:** ${totalSales} | **Created:** ${createdDate}\n\n`;
-          });
-        }
-        
-        // Create response with Components V2
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: content
-          },
-          {
-            type: 14 // Separator
-          },
-          backRow.toJSON() // Back button
-        ];
-        
-        const container = {
-          type: 17, // Container component
-          accent_color: 0x3498db, // Blue accent color
-          components: containerComponents
-        };
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [container]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_store_list:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading stores list.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
