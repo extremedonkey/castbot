@@ -30550,7 +30550,7 @@ Are you sure you want to continue?`;
 
         // Import Safari manager functions
         const { loadSafariContent } = await import('./safariManager.js');
-        const { parseTextEmoji } = await import('./utils.js');
+        const { parseTextEmoji } = await import('./utils/emojiUtils.js');
 
         // Load stores
         const safariData = await loadSafariContent();
