@@ -18706,27 +18706,43 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               const activeMapId = safariData[context.guildId]?.maps?.active;
               const coordStores = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[entityId]?.stores || [];
 
-              // Get IDENTICAL UI but with location-specific configuration
+              // Get IDENTICAL working UI (same as safari_store_manage_items)
               const uiResponse = await createStoreSelectionUI({
                 guildId: context.guildId,
-                action: 'add_to_location',  // Use location action for proper behavior
-                entityId: entityId,
-                preSelectedStores: coordStores,  // Pre-select current stores
-                title: `🏪 Manage Stores at ${entityId}`,
-                backButtonId: `entity_view_mode_map_cell_${entityId}`,
-                backButtonLabel: '← Back',
-                backButtonEmoji: '📍'
+                action: 'manage_items'  // Use EXACT same action that works
               });
 
-              // Replace the select menu custom_id to use EXISTING handler (keep for compatibility)
+              // Modify the working UI for location behavior
               if (uiResponse.components?.[0]?.components) {
                 for (const component of uiResponse.components[0].components) {
-                  if (component.type === 1 && component.components?.[0]?.custom_id) {
-                    // If it's already the location pattern, keep it; otherwise convert it
-                    const currentId = component.components[0].custom_id;
-                    if (!currentId.includes('add_to_location')) {
-                      component.components[0].custom_id = `safari_store_select_add_to_location_${entityId}`;
+                  // Update the select menu
+                  if (component.type === 1 && component.components?.[0]?.custom_id === 'safari_store_items_select') {
+                    const selectMenu = component.components[0];
+
+                    // Change custom_id to route to location handler
+                    selectMenu.custom_id = `safari_store_select_add_to_location_${entityId}`;
+
+                    // Set min_values to 0 to allow deselection
+                    selectMenu.min_values = 0;
+
+                    // Pre-select current stores by setting default: true
+                    if (selectMenu.options && coordStores.length > 0) {
+                      selectMenu.options.forEach(option => {
+                        if (coordStores.includes(option.value)) {
+                          option.default = true;
+                        }
+                      });
                     }
+                  }
+
+                  // Update the title text to show location-specific info
+                  if (component.type === 10) { // Text Display
+                    const selectedCount = coordStores.length;
+                    const instructions = selectedCount > 0
+                      ? `**Current**: ${selectedCount} store${selectedCount !== 1 ? 's' : ''}\n• Click highlighted stores to remove\n• Click others to add`
+                      : `Select a store to add to this location`;
+
+                    component.content = `## 🏪 Manage Stores at ${entityId}\n\n${instructions}`;
                   }
                 }
               }
