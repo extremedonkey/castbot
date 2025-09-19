@@ -148,11 +148,17 @@ export async function createStoreSelectionUI(options) {
     components: containerComponents
   };
 
-  return {
+  const response = {
     flags: 1 << 15, // IS_COMPONENTS_V2 flag
-    components: [container],
-    ephemeral: true
+    components: [container]
   };
+
+  // Only include ephemeral for new messages, not UPDATE_MESSAGE scenarios
+  if (action === 'manage_items') {
+    response.ephemeral = true;
+  }
+
+  return response;
 }
 
 /**
