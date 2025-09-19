@@ -148,17 +148,12 @@ export async function createStoreSelectionUI(options) {
     components: containerComponents
   };
 
-  const response = {
-    flags: 1 << 15, // IS_COMPONENTS_V2 flag
-    components: [container]
+  // ButtonHandlerFactory expects consistent format with flags - it handles the conversion
+  return {
+    flags: (1 << 15) | (action === 'manage_items' ? (1 << 6) : 0), // IS_COMPONENTS_V2 + EPHEMERAL for store management
+    components: [container],
+    ephemeral: true  // ButtonHandlerFactory will strip this for UPDATE_MESSAGE
   };
-
-  // Only include ephemeral for new messages, not UPDATE_MESSAGE scenarios
-  if (action === 'manage_items') {
-    response.ephemeral = true;
-  }
-
-  return response;
 }
 
 /**
