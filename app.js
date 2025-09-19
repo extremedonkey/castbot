@@ -30651,7 +30651,7 @@ Are you sure you want to continue?`;
           components: [
             {
               type: 10, // TextDisplay
-              text: searchTerm
+              content: searchTerm
                 ? `🔍 **Search Results for "${searchTerm.slice(0, 50)}"**\n\nFound ${filteredCount} matching store${filteredCount !== 1 ? 's' : ''}.`
                 : `📦 **All Stores**\n\nShowing all ${filteredCount} store${filteredCount !== 1 ? 's' : ''}.`
             },
