@@ -10484,7 +10484,8 @@ Your server is now ready for Tycoons gameplay!`;
 
           return {
             flags: 1 << 15, // IS_COMPONENTS_V2 flag
-            components: [container]
+            components: [container],
+            ephemeral: true
           };
         }
       })(req, res, client);
@@ -30557,7 +30558,7 @@ Are you sure you want to continue?`;
             content: '',
             embeds: [],
             components: [container],
-            flags: 1 << 15 // IS_COMPONENTS_V2
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL // IS_COMPONENTS_V2 + EPHEMERAL
           }
         });
 
