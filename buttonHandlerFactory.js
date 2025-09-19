@@ -374,6 +374,14 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
+  'safari_store_manage_items': {
+    label: 'Manage Store Items',
+    description: 'Add/remove items from stores and manage store inventory',
+    emoji: '📦',
+    style: 'Secondary',
+    category: 'safari_stores',
+    parent: 'safari_manage_stores'
+  },
   'safari_use_item': {
     label: 'Use Item',
     description: 'Use a consumable item from inventory',

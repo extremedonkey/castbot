@@ -10477,131 +10477,115 @@ Your server is now ready for Tycoons gameplay!`;
     } else if (custom_id === 'safari_store_manage_items') {
       // MVP2 Sprint 1: Manage store items (add/remove items from stores)
       MenuBuilder.trackLegacyMenu('safari_store_manage_items', 'Safari store items management');
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage store items.')) return;
-        
-        console.log(`📦 DEBUG: Opening store items management interface`);
-        
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const stores = safariData[guildId]?.stores || {};
-        
-        if (Object.keys(stores).length === 0) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
+      return ButtonHandlerFactory.create({
+        id: 'safari_store_manage_items',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`📦 DEBUG: Opening store items management interface`);
+
+          // Import Safari manager functions
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const stores = safariData[context.guildId]?.stores || {};
+
+          if (Object.keys(stores).length === 0) {
+            return {
               content: '❌ **No stores to manage**\n\nCreate your first store using **🏪 Create New Store** before managing store items.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-        }
-        
-        // Create store selection dropdown
-        const storeOptions = [];
-        const storeCount = Object.keys(stores).length;
-        // TESTING: Always show search for testing
-        // PRODUCTION TODO: Change to >= 10 for production deployment
-        const needsSearch = storeCount >= 1;
+              ephemeral: true
+            };
+          }
 
-        // Add "Create New Store" as the first option
-        storeOptions.push({
-          label: 'Create New Store',
-          value: 'create_new_store',
-          description: 'Create a new store.',
-          emoji: { name: '➕' }
-        });
+          // Create store selection dropdown
+          const storeOptions = [];
+          const storeCount = Object.keys(stores).length;
+          // TESTING: Always show search for testing
+          // PRODUCTION TODO: Change to >= 10 for production deployment
+          const needsSearch = storeCount >= 1;
 
-        // Add Search option if we have too many stores to display
-        if (needsSearch) {
+          // Add "Create New Store" as the first option
           storeOptions.push({
-            label: 'Search Stores',
-            value: 'search_stores',
-            description: `Search ${storeCount} stores by name or description`,
-            emoji: { name: '🔍' }
+            label: 'Create New Store',
+            value: 'create_new_store',
+            description: 'Create a new store.',
+            emoji: { name: '➕' }
           });
-        }
 
-        // Determine how many stores we can show
-        // If search is present: 25 - Create(1) - Search(1) = 23
-        // If no search: 25 - Create(1) = 24
-        const maxStoresToShow = needsSearch ? 23 : 24;
+          // Add Search option if we have too many stores to display
+          if (needsSearch) {
+            storeOptions.push({
+              label: 'Search Stores',
+              value: 'search_stores',
+              description: `Search ${storeCount} stores by name or description`,
+              emoji: { name: '🔍' }
+            });
+          }
 
-        // Add existing stores
-        Object.entries(stores).slice(0, maxStoresToShow).forEach(([storeId, store]) => {
-          const itemCount = store.items?.length || 0;
-          const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
-          const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;
-          storeOptions.push({
-            label: safeCleanText.slice(0, 100),
-            value: storeId,
-            description: `Sells ${itemCount} type${itemCount !== 1 ? 's' : ''} of items`.slice(0, 100),
-            emoji: emoji
+          // Determine how many stores we can show
+          // If search is present: 25 - Create(1) - Search(1) = 23
+          // If no search: 25 - Create(1) = 24
+          const maxStoresToShow = needsSearch ? 23 : 24;
+
+          // Add existing stores
+          Object.entries(stores).slice(0, maxStoresToShow).forEach(([storeId, store]) => {
+            const itemCount = store.items?.length || 0;
+            const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
+            const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;
+            storeOptions.push({
+              label: safeCleanText.slice(0, 100),
+              value: storeId,
+              description: `Sells ${itemCount} type${itemCount !== 1 ? 's' : ''} of items`.slice(0, 100),
+              emoji: emoji
+            });
           });
-        });
-        
-        const storeSelect = new StringSelectMenuBuilder()
-          .setCustomId('safari_store_items_select')
-          .setPlaceholder('Select a store')
-          .setMinValues(1)
-          .setMaxValues(1)
-          .addOptions(storeOptions);
-        
-        const selectRow = new ActionRowBuilder().addComponents(storeSelect);
 
-        // Create back button
-        const backButton = new ButtonBuilder()
-          .setCustomId('safari_manage_stores')
-          .setLabel('← Safari')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('🦁');
-        
-        const backRow = new ActionRowBuilder().addComponents(backButton);
-        
-        // Create response with Components V2
-        const containerComponents = [
-          {
-            type: 10, // Text Display component
-            content: `## 🏪 Select Store`
-          },
-          {
-            type: 14 // Separator
-          },
-          selectRow.toJSON(), // Store selection dropdown
-          {
-            type: 14 // Separator
-          },
-          backRow.toJSON() // Back button
-        ];
-        
-        const container = {
-          type: 17, // Container component
-          accent_color: 0x3498db, // Blue accent color for items theme
-          components: containerComponents
-        };
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 flag + ephemeral
+          const storeSelect = new StringSelectMenuBuilder()
+            .setCustomId('safari_store_items_select')
+            .setPlaceholder('Select a store')
+            .setMinValues(1)
+            .setMaxValues(1)
+            .addOptions(storeOptions);
+
+          const selectRow = new ActionRowBuilder().addComponents(storeSelect);
+
+          // Create back button
+          const backButton = new ButtonBuilder()
+            .setCustomId('safari_manage_stores')
+            .setLabel('← Safari')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🦁');
+
+          const backRow = new ActionRowBuilder().addComponents(backButton);
+
+          // Create response with Components V2
+          const containerComponents = [
+            {
+              type: 10, // Text Display component
+              content: `## 🏪 Select Store`
+            },
+            {
+              type: 14 // Separator
+            },
+            selectRow.toJSON(), // Store selection dropdown
+            {
+              type: 14 // Separator
+            },
+            backRow.toJSON() // Back button
+          ];
+
+          const container = {
+            type: 17, // Container component
+            accent_color: 0x3498db, // Blue accent color for items theme
+            components: containerComponents
+          };
+
+          return {
+            flags: 1 << 15, // IS_COMPONENTS_V2 flag
             components: [container]
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_store_manage_items:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading store items management.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_store_items_select') {
       // Handle store selection for items management - Using new multi-select UI
       try {
