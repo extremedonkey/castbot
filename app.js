@@ -18725,6 +18725,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
                     // Set min_values to 0 to allow deselection
                     selectMenu.min_values = 0;
 
+                    // Fix max_values to accommodate pre-selected stores (Discord validation fix)
+                    selectMenu.max_values = Math.max(1, coordStores.length);
+
                     // Pre-select current stores by setting default: true
                     if (selectMenu.options && coordStores.length > 0) {
                       selectMenu.options.forEach(option => {
