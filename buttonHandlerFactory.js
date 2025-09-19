@@ -360,13 +360,6 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'safari'
   },
-  'safari_manage_stores': {
-    label: '🏪 Manage Stores',
-    description: 'Safari store management - create, edit, delete stores',
-    emoji: '🏪',
-    style: 'Primary',
-    category: 'safari'
-  },
   'safari_manage_items': {
     label: '📦 Manage Items',
     description: 'Safari item management - create, edit, manage items',
@@ -380,7 +373,7 @@ export const BUTTON_REGISTRY = {
     emoji: '📦',
     style: 'Secondary',
     category: 'safari_stores',
-    parent: 'safari_manage_stores'
+    parent: 'prod_safari_menu'
   },
   'safari_use_item': {
     label: 'Use Item',

@@ -1051,7 +1051,7 @@ async function createSafariMenu(guildId, userId, member) {
   // Safari Administration section buttons (renamed from Safari Details)
   const safariDetailsButtons = [
     new ButtonBuilder()
-      .setCustomId('safari_manage_stores')
+      .setCustomId('safari_store_manage_items')
       .setLabel('Stores')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🏪'),
@@ -10184,102 +10184,6 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'safari_manage_stores') {
-      // MVP2: Store management interface with full functionality (MIGRATED TO FACTORY)
-      return ButtonHandlerFactory.create({
-        id: 'safari_manage_stores',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          console.log(`🏪 DEBUG: Opening store management interface`);
-          
-          // Import Safari manager functions
-          const { loadSafariContent } = await import('./safariManager.js');
-          const safariData = await loadSafariContent();
-          const stores = safariData[context.guildId]?.stores || {};
-          const items = safariData[context.guildId]?.items || {};
-          
-          // Create store management buttons (Row 1: Core Functions)
-          const managementButtonsRow1 = [
-            new ButtonBuilder()
-              .setCustomId('safari_store_manage_items')
-              .setLabel('Manage Store Items')
-              .setStyle(ButtonStyle.Secondary)
-              .setEmoji('📦'),
-          ];
-          
-          const managementRow1 = new ActionRowBuilder().addComponents(managementButtonsRow1);
-          
-          // Create back button
-          const backButton = new ButtonBuilder()
-            .setCustomId('prod_safari_menu')
-            .setLabel('⬅ Back to Safari')
-            .setStyle(ButtonStyle.Secondary);
-          
-          const backRow = new ActionRowBuilder().addComponents(backButton);
-          
-          // Create store summary
-          const storeCount = Object.keys(stores).length;
-          const itemCount = Object.keys(items).length;
-          let totalSales = 0;
-          
-          Object.values(stores).forEach(store => {
-            totalSales += store.metadata?.totalSales || 0;
-          });
-          
-          // Show overview of existing stores
-          let storesOverview = '';
-          if (storeCount === 0) {
-            storesOverview = '*No stores created yet.*';
-          } else {
-            const storeList = Object.values(stores).slice(0, 5); // Show first 5
-            storesOverview = storeList.map(store => {
-              const itemsInStore = store.items?.length || 0;
-              const sales = store.metadata?.totalSales || 0;
-              return `**${store.emoji || '🏪'} ${store.name}**\n└ ${itemsInStore} items • ${sales} sales`;
-            }).join('\n\n');
-            
-            if (storeCount > 5) {
-              storesOverview += `\n\n*...and ${storeCount - 5} more stores*`;
-            }
-          }
-          
-          // Create response with Components V2
-          const containerComponents = [
-            {
-              type: 10, // Text Display component
-              content: `## 🏪 Store Management\n\nCreate and manage stores for your Safari adventures.`
-            },
-            {
-              type: 10, // Text Display component
-              content: `> **Total Stores:** ${storeCount}\n> **Available Items:** ${itemCount}\n> **Total Sales:** ${totalSales}`
-            },
-            {
-              type: 10, // Text Display component
-              content: `**📋 Current Stores:**\n${storesOverview}`
-            },
-            {
-              type: 14 // Separator
-            },
-            managementRow1.toJSON(), // Store management buttons
-            {
-              type: 14 // Separator
-            },
-            backRow.toJSON() // Back button
-          ];
-          
-          const container = {
-            type: 17, // Container component
-            accent_color: 0x2ecc71, // Green accent color for store theme
-            components: containerComponents
-          };
-          
-          return {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
-            components: [container]
-          };
-        }
-      })(req, res, client);
     } else if (custom_id === 'safari_manage_items') {
       // Streamlined: Go directly to Item Management section (entity management UI) (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
@@ -10453,7 +10357,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('safari_manage_stores')
+            .setCustomId('prod_safari_menu')
             .setLabel('← Safari')
             .setStyle(ButtonStyle.Secondary)
             .setEmoji('🦁');
@@ -11531,8 +11435,8 @@ Your server is now ready for Tycoons gameplay!`;
             type: 1, // Action Row
             components: [{
               type: 2, // Button
-              custom_id: 'safari_manage_stores',
-              label: '⬅ Back to Store Management',
+              custom_id: 'prod_safari_menu',
+              label: '⬅ Back to Safari',
               style: 2
             }]
           }
@@ -30526,10 +30430,10 @@ Are you sure you want to continue?`;
 
         // Create back button
         const backButton = new ButtonBuilder()
-          .setCustomId('safari_manage_stores')
-          .setLabel('← Stores')
+          .setCustomId('prod_safari_menu')
+          .setLabel('← Safari')
           .setStyle(ButtonStyle.Secondary)
-          .setEmoji('🏪');
+          .setEmoji('🦁');
 
         const backRow = new ActionRowBuilder().addComponents(backButton);
 

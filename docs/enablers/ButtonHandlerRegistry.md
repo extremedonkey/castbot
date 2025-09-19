@@ -45,7 +45,6 @@ This file maintains a comprehensive list of all button handlers, their custom_id
 | `safari_import_data` | ⚙️ Import | app.js:~5866 | Direct handler | ✅ Active |
 | `safari_schedule_results` | 📅 Schedule Results | app.js:~6341 | Direct handler | ✅ Active |
 | `safari_manage_safari_buttons` | 🎛️ Manage Safari Buttons | app.js:~3893 | Direct handler | ✅ Active |
-| `safari_manage_stores` | 🏪 Manage Stores | app.js:~5067 | Direct handler | ✅ Active |
 | `safari_manage_items` | 📦 Manage Items | app.js:~5195 | Direct handler | ✅ Active |
 | `safari_store_manage_items` | 📦 Manage Store Items | app.js:~5904 | Direct handler | ✅ Active |
 | `safari_store_items_select` | Store Selection for Items | app.js:~6009 | Select handler | ✅ Active |
