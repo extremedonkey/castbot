@@ -18700,17 +18700,33 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               // Use IDENTICAL store selector as safari_store_manage_items (GOLD STANDARD)
               const { createStoreSelectionUI } = await import('./storeSelector.js');
 
-              // Get the exact same UI that safari_store_manage_items uses
+              // Load current stores for this location for pre-selection
+              const { loadSafariContent } = await import('./safariManager.js');
+              const safariData = await loadSafariContent();
+              const activeMapId = safariData[context.guildId]?.maps?.active;
+              const coordStores = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[entityId]?.stores || [];
+
+              // Get IDENTICAL UI but with location-specific configuration
               const uiResponse = await createStoreSelectionUI({
                 guildId: context.guildId,
-                action: 'manage_items'  // Use same action to get identical interface
+                action: 'add_to_location',  // Use location action for proper behavior
+                entityId: entityId,
+                preSelectedStores: coordStores,  // Pre-select current stores
+                title: `🏪 Manage Stores at ${entityId}`,
+                backButtonId: `entity_view_mode_map_cell_${entityId}`,
+                backButtonLabel: '← Back',
+                backButtonEmoji: '📍'
               });
 
-              // Replace the select menu custom_id to use EXISTING handler
+              // Replace the select menu custom_id to use EXISTING handler (keep for compatibility)
               if (uiResponse.components?.[0]?.components) {
                 for (const component of uiResponse.components[0].components) {
-                  if (component.type === 1 && component.components?.[0]?.custom_id === 'safari_store_items_select') {
-                    component.components[0].custom_id = `safari_store_select_add_to_location_${entityId}`;
+                  if (component.type === 1 && component.components?.[0]?.custom_id) {
+                    // If it's already the location pattern, keep it; otherwise convert it
+                    const currentId = component.components[0].custom_id;
+                    if (!currentId.includes('add_to_location')) {
+                      component.components[0].custom_id = `safari_store_select_add_to_location_${entityId}`;
+                    }
                   }
                 }
               }
