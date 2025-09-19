@@ -11203,102 +11203,90 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id.startsWith('safari_all_server_items_')) {
-      // Show all server items in ephemeral message
-      try {
-        const member = req.body.member;
-        const guildId = req.body.guild_id;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to view all server items.')) return;
-        
-        console.log(`📄 DEBUG: Showing all server items for guild ${guildId}`);
-        
-        // Import Safari manager functions
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const allItems = safariData[guildId]?.items || {};
-        
-        // Get guild name for display
-        const guild = await client.guilds.fetch(guildId);
-        const serverName = guild.name;
-        
-        // Build items list
-        let itemsList = '';
-        const itemEntries = Object.entries(allItems);
-        
-        if (itemEntries.length === 0) {
-          itemsList = '*No items found on this server.*';
-        } else {
-          // Sort items alphabetically
-          itemEntries.sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
-          
-          let charCount = 0;
-          let itemCount = 0;
-          let truncated = false;
-          
-          for (const [itemId, item] of itemEntries) {
-            const emoji = item.emoji || '📦';
-            const name = item.name || 'Unnamed Item';
-            const price = item.basePrice || 0;
-            const line = `${emoji} ${name} - 💰 ${price} coins\n`;
-            
-            // Check if adding this line would exceed 3500 characters
-            if (charCount + line.length > 3500) {
-              const remaining = itemEntries.length - itemCount;
-              if (remaining > 0) {
-                itemsList += `... and ${remaining} more items`;
-                truncated = true;
+      return ButtonHandlerFactory.create({
+        id: 'safari_all_server_items',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ephemeral: true,
+        handler: async (context) => {
+          const { guildId, client } = context;
+
+          console.log(`📄 DEBUG: Showing all server items for guild ${guildId}`);
+
+          // Import Safari manager functions
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const allItems = safariData[guildId]?.items || {};
+
+          // Get guild name for display
+          const guild = await client.guilds.fetch(guildId);
+          const serverName = guild.name;
+
+          // Build items list
+          let itemsList = '';
+          const itemEntries = Object.entries(allItems);
+
+          if (itemEntries.length === 0) {
+            itemsList = '*No items found on this server.*';
+          } else {
+            // Sort items alphabetically
+            itemEntries.sort(([, a], [, b]) => (a.name || '').localeCompare(b.name || ''));
+
+            let charCount = 0;
+            let itemCount = 0;
+            let truncated = false;
+
+            for (const [itemId, item] of itemEntries) {
+              const emoji = item.emoji || '📦';
+              const name = item.name || 'Unnamed Item';
+              const price = item.basePrice || 0;
+              const line = `${emoji} ${name} - 💰 ${price} coins\n`;
+
+              // Check if adding this line would exceed 3500 characters
+              if (charCount + line.length > 3500) {
+                const remaining = itemEntries.length - itemCount;
+                if (remaining > 0) {
+                  itemsList += `... and ${remaining} more items`;
+                  truncated = true;
+                }
+                break;
               }
-              break;
+
+              itemsList += line;
+              charCount += line.length;
+              itemCount++;
             }
-            
-            itemsList += line;
-            charCount += line.length;
-            itemCount++;
           }
-        }
-        
-        // Create ephemeral response
-        const components = [{
-          type: 17, // Container
-          accent_color: 0x5865f2,
-          components: [
-            {
-              type: 10, // Text Display
-              content: `# 📦 All ${serverName} Items\n\n${itemsList}`
-            },
-            { type: 14 }, // Separator
-            {
-              type: 1, // Action Row
-              components: [{
-                type: 2, // Button
-                custom_id: 'safari_store_manage_items',
-                label: '← Store Management',
-                style: 2,
-                emoji: { name: '🏪' }
-              }]
-            }
-          ]
-        }];
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+
+          // Create ephemeral response
+          const components = [{
+            type: 17, // Container
+            accent_color: 0x5865f2,
+            components: [
+              {
+                type: 10, // Text Display
+                content: `# 📦 All ${serverName} Items\n\n${itemsList}`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [{
+                  type: 2, // Button
+                  custom_id: 'safari_store_manage_items',
+                  label: '← Store Management',
+                  style: 2,
+                  emoji: { name: '🏪' }
+                }]
+              }
+            ]
+          }];
+
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2 (ephemeral handled by factory)
             components: components
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_all_server_items handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error loading server items.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_store_delete_')) {
       // Handle store delete button - show confirmation dialog
       try {

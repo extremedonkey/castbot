@@ -375,6 +375,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari_stores',
     parent: 'prod_safari_menu'
   },
+  'safari_all_server_items': {
+    label: 'All Items',
+    description: 'View all items on this server with prices and details',
+    emoji: '📄',
+    style: 'Secondary',
+    category: 'safari_stores',
+    parent: 'prod_safari_menu'
+  },
   'safari_use_item': {
     label: 'Use Item',
     description: 'Use a consumable item from inventory',
