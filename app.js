@@ -30640,8 +30640,9 @@ Are you sure you want to continue?`;
         // Create back button
         const backButton = new ButtonBuilder()
           .setCustomId('safari_manage_stores')
-          .setLabel('⬅ Back to Store Management')
-          .setStyle(ButtonStyle.Secondary);
+          .setLabel('← Stores')
+          .setStyle(ButtonStyle.Secondary)
+          .setEmoji('🏪');
 
         const backRow = new ActionRowBuilder().addComponents(backButton);
 
@@ -30652,8 +30653,8 @@ Are you sure you want to continue?`;
             {
               type: 10, // TextDisplay
               content: searchTerm
-                ? `🔍 **Search Results for "${searchTerm.slice(0, 50)}"**\n\nFound ${filteredCount} matching store${filteredCount !== 1 ? 's' : ''}.`
-                : `📦 **All Stores**\n\nShowing all ${filteredCount} store${filteredCount !== 1 ? 's' : ''}.`
+                ? `## 🔍 Search Results for "${searchTerm.slice(0, 50)}"\n\nFound ${filteredCount} matching store${filteredCount !== 1 ? 's' : ''}.`
+                : `## 📦 All Stores\n\nShowing all ${filteredCount} store${filteredCount !== 1 ? 's' : ''}.`
             },
             {
               type: 14 // Separator
