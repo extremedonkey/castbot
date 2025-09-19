@@ -3443,6 +3443,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'safari_finish_button',
         'safari_remove_action',
         'safari_all_server_items',
+        'safari_store_items_select_back',
         'custom_action_add_condition',
         'custom_action_remove_condition',
         'custom_action_test',
@@ -11125,16 +11126,20 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_all_server_items',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        ephemeral: true,
         handler: async (context) => {
-          const { guildId, client } = context;
+          const { guildId, client, customId } = context;
 
-          console.log(`📄 DEBUG: Showing all server items for guild ${guildId}`);
+          // Extract store ID from custom_id pattern: safari_all_server_items_${guildId}_${storeId}
+          const parts = customId.split('_');
+          const storeId = parts[parts.length - 1]; // Last part is store ID
+
+          console.log(`📄 DEBUG: Showing all server items for guild ${guildId}, store context: ${storeId}`);
 
           // Import Safari manager functions
           const { loadSafariContent } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
           const allItems = safariData[guildId]?.items || {};
+          const store = safariData[guildId]?.stores?.[storeId];
 
           // Get guild name for display
           const guild = await client.guilds.fetch(guildId);
@@ -11176,6 +11181,21 @@ Your server is now ready for Tycoons gameplay!`;
             }
           }
 
+          // Create back button that returns to specific store management
+          const backButton = store ? {
+            type: 2, // Button
+            custom_id: `safari_store_items_select_back_${storeId}`,
+            label: `← ${store.name || 'Store Management'}`,
+            style: 2,
+            emoji: { name: '🏪' }
+          } : {
+            type: 2, // Button
+            custom_id: 'safari_store_manage_items',
+            label: '← Store Management',
+            style: 2,
+            emoji: { name: '🏪' }
+          };
+
           // Create ephemeral response
           const components = [{
             type: 17, // Container
@@ -11183,26 +11203,68 @@ Your server is now ready for Tycoons gameplay!`;
             components: [
               {
                 type: 10, // Text Display
-                content: `# 📦 All ${serverName} Items\n\n${itemsList}`
+                content: `# 📦 All ${serverName} Items`
+              },
+              { type: 14 }, // Separator (requested divider)
+              {
+                type: 10, // Text Display
+                content: itemsList
               },
               { type: 14 }, // Separator
               {
                 type: 1, // Action Row
-                components: [{
-                  type: 2, // Button
-                  custom_id: 'safari_store_manage_items',
-                  label: '← Store Management',
-                  style: 2,
-                  emoji: { name: '🏪' }
-                }]
+                components: [backButton]
               }
             ]
           }];
 
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2 (ephemeral handled by factory)
+            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
             components: components
           };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_store_items_select_back_')) {
+      // Handle back button from "All Items" view - return to specific store management
+      return ButtonHandlerFactory.create({
+        id: 'safari_store_items_select_back',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { guildId, customId } = context;
+
+          // Extract store ID from custom_id
+          const storeId = customId.replace('safari_store_items_select_back_', '');
+
+          console.log(`📦 DEBUG: Returning to store management for store ${storeId}`);
+
+          // Load store data
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const store = safariData[guildId]?.stores?.[storeId];
+
+          if (!store) {
+            return {
+              content: '❌ Store not found.',
+              flags: (1 << 6) // EPHEMERAL
+            };
+          }
+
+          // Initialize store.items if it doesn't exist
+          if (!store.items) {
+            store.items = [];
+          }
+
+          // Create the store management UI
+          const uiResponse = await createStoreItemManagementUI({
+            storeId: storeId,
+            store: store,
+            guildId: guildId,
+            searchTerm: ''
+          });
+
+          return uiResponse;
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_store_delete_')) {

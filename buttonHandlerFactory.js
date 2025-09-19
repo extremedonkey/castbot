@@ -383,6 +383,13 @@ export const BUTTON_REGISTRY = {
     category: 'safari_stores',
     parent: 'prod_safari_menu'
   },
+  'safari_store_items_select_back_*': {
+    label: 'Back to Store',
+    description: 'Return to specific store management interface from All Items view',
+    emoji: '🏪',
+    style: 'Secondary',
+    category: 'safari_stores'
+  },
   'safari_use_item': {
     label: 'Use Item',
     description: 'Use a consumable item from inventory',
