@@ -10202,11 +10202,6 @@ Your server is now ready for Tycoons gameplay!`;
           // Create store management buttons (Row 1: Core Functions)
           const managementButtonsRow1 = [
             new ButtonBuilder()
-              .setCustomId('safari_store_create')
-              .setLabel('Create New Store')
-              .setStyle(ButtonStyle.Primary)
-              .setEmoji('🏪'),
-            new ButtonBuilder()
               .setCustomId('safari_store_manage_items')
               .setLabel('Manage Store Items')
               .setStyle(ButtonStyle.Secondary)
