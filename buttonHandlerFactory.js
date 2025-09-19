@@ -607,6 +607,16 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map_admin',
     type: 'select_menu'
   },
+
+  // Store Selector - Add to Location (Toggle)
+  'safari_store_select_add_to_location_*': {
+    label: 'Store Selection (Toggle)',
+    description: 'Add/remove stores from map location with toggle behavior',
+    emoji: '🏪',
+    style: 'Primary',
+    category: 'safari_map_admin',
+    type: 'select_menu'
+  },
   'map_coord_store_*': {
     label: 'Store Access',
     description: 'Access store from map location',
