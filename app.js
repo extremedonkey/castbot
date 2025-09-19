@@ -11130,8 +11130,8 @@ Your server is now ready for Tycoons gameplay!`;
           const { guildId, client, customId } = context;
 
           // Extract store ID from custom_id pattern: safari_all_server_items_${guildId}_${storeId}
-          const parts = customId.split('_');
-          const storeId = parts[parts.length - 1]; // Last part is store ID
+          const prefix = `safari_all_server_items_${guildId}_`;
+          const storeId = customId.replace(prefix, '');
 
           console.log(`📄 DEBUG: Showing all server items for guild ${guildId}, store context: ${storeId}`);
 
@@ -11182,6 +11182,8 @@ Your server is now ready for Tycoons gameplay!`;
           }
 
           // Create back button that returns to specific store management
+          console.log(`📄 DEBUG: Store lookup - storeId: "${storeId}", store found: ${!!store}, store name: ${store?.name}`);
+
           const backButton = store ? {
             type: 2, // Button
             custom_id: `safari_store_items_select_back_${storeId}`,
@@ -11190,7 +11192,7 @@ Your server is now ready for Tycoons gameplay!`;
             emoji: { name: '🏪' }
           } : {
             type: 2, // Button
-            custom_id: 'safari_store_manage_items',
+            custom_id: `safari_store_items_select_back_${storeId}`, // Always use specific store ID
             label: '← Store Management',
             style: 2,
             emoji: { name: '🏪' }
@@ -11241,6 +11243,7 @@ Your server is now ready for Tycoons gameplay!`;
 
           // Load store data
           const { loadSafariContent } = await import('./safariManager.js');
+          const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
           const safariData = await loadSafariContent();
           const store = safariData[guildId]?.stores?.[storeId];
 
