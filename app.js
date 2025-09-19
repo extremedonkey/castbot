@@ -10614,18 +10614,6 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id.startsWith('safari_store_select_add_to_location_')) {
-      // Handle store selection for adding to map location with toggle behavior (CLEAN ROUTING)
-      return ButtonHandlerFactory.create({
-        id: 'safari_store_select_add_to_location',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: true,
-        handler: async (context) => {
-          const { handleStoreToggle } = await import('./storeSelector.js');
-          return await handleStoreToggle(context, client);
-        }
-      })(req, res, client);
     } else if (custom_id.startsWith('safari_store_add_item_')) {
       // Add item to store
       try {
@@ -18697,12 +18685,25 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Handle special field groups for map_cell
           if (entityType === 'map_cell') {
             if (fieldGroup === 'stores') {
-              // Use reusable store selector with toggle functionality (CLEAN ROUTING)
-              const { createMapLocationStoreSelector } = await import('./storeSelector.js');
-              return await createMapLocationStoreSelector({
+              // Use IDENTICAL store selector as safari_store_manage_items (GOLD STANDARD)
+              const { createStoreSelectionUI } = await import('./storeSelector.js');
+
+              // Get the exact same UI that safari_store_manage_items uses
+              const uiResponse = await createStoreSelectionUI({
                 guildId: context.guildId,
-                entityId: entityId
+                action: 'manage_items'  // Use same action to get identical interface
               });
+
+              // Replace the select menu custom_id to use EXISTING handler
+              if (uiResponse.components?.[0]?.components) {
+                for (const component of uiResponse.components[0].components) {
+                  if (component.type === 1 && component.components?.[0]?.custom_id === 'safari_store_items_select') {
+                    component.components[0].custom_id = `safari_store_select_add_to_location_${entityId}`;
+                  }
+                }
+              }
+
+              return uiResponse;
 
             } else if (fieldGroup === 'items') {
               // Show drop management interface
