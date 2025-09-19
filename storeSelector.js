@@ -22,15 +22,34 @@ export async function createStoreSelectionUI(options) {
     title = '🏪 Select Store',
     backButtonId = 'prod_safari_menu',
     backButtonLabel = '← Safari',
-    backButtonEmoji = '🦁'
+    backButtonEmoji = '🦁',
+    searchTerm = ''
   } = options;
 
   const safariData = await loadSafariContent();
-  const stores = safariData[guildId]?.stores || {};
+  let stores = safariData[guildId]?.stores || {};
+
+  // Apply search filtering if searchTerm provided
+  if (searchTerm) {
+    const filteredStores = {};
+    for (const [id, store] of Object.entries(stores)) {
+      const name = store.name?.toLowerCase() || '';
+      const description = store.description?.toLowerCase() || '';
+      if (name.includes(searchTerm) || description.includes(searchTerm)) {
+        filteredStores[id] = store;
+      }
+    }
+    stores = filteredStores;
+    console.log(`🔍 DEBUG: Filtered to ${Object.keys(stores).length} stores matching "${searchTerm}"`);
+  }
 
   if (Object.keys(stores).length === 0) {
+    const noResultsMessage = searchTerm
+      ? `❌ **No stores found**\n\nNo stores match "${searchTerm}". Try a different search term.`
+      : '❌ **No stores to manage**\n\nCreate your first store using **🏪 Create New Store** before managing store items.';
+
     return {
-      content: '❌ **No stores to manage**\n\nCreate your first store using **🏪 Create New Store** before managing store items.',
+      content: noResultsMessage,
       ephemeral: true
     };
   }
@@ -38,31 +57,35 @@ export async function createStoreSelectionUI(options) {
   // Create store selection dropdown
   const storeOptions = [];
   const storeCount = Object.keys(stores).length;
-  const needsSearch = storeCount >= 1; // TESTING: Always show search
 
-  // Only add Create/Search options for store management, not location actions
+  // Calculate reserved slots and determine if we need search
+  let reservedSlots = 0;
+
   if (action === 'manage_items') {
-    // Add "Create New Store" as the first option
+    // Always add "Create New Store" for management
     storeOptions.push({
       label: 'Create New Store',
       value: 'create_new_store',
       description: 'Create a new store.',
       emoji: { name: '➕' }
     });
-
-    // Add Search option if we have too many stores to display
-    if (needsSearch) {
-      storeOptions.push({
-        label: 'Search Stores',
-        value: 'search_stores',
-        description: `Search ${storeCount} stores by name or description`,
-        emoji: { name: '🔍' }
-      });
-    }
+    reservedSlots = 1;
   }
 
-  // Determine how many stores we can show
-  const reservedSlots = action === 'manage_items' ? (needsSearch ? 2 : 1) : 0;
+  // Determine if we need search (when stores + reserved slots > 25)
+  const needsSearch = (storeCount + reservedSlots) > 25;
+
+  if (needsSearch) {
+    storeOptions.push({
+      label: 'Search Stores',
+      value: action === 'manage_items' ? 'search_stores' : `search_stores_location_${entityId}`,
+      description: `Search ${storeCount} stores by name or description`,
+      emoji: { name: '🔍' }
+    });
+    reservedSlots += 1;
+  }
+
+  // Determine how many stores we can show (respect Discord's 25-option limit)
   const maxStoresToShow = 25 - reservedSlots;
 
   // Add existing stores
@@ -115,13 +138,22 @@ export async function createStoreSelectionUI(options) {
 
   const backRow = new ActionRowBuilder().addComponents(backButton);
 
-  // Create description based on action
+  // Create description based on action and search
   let description;
   if (action === 'add_to_location') {
     const selectedCount = preSelectedStores.length;
-    description = selectedCount > 0
+    let baseDescription = selectedCount > 0
       ? `**Current**: ${selectedCount} store${selectedCount !== 1 ? 's' : ''}\n• Click highlighted stores to remove\n• Click others to add`
       : `Select a store to add to this location`;
+
+    // Add search info if search term is provided
+    if (searchTerm) {
+      baseDescription = `**Search Results**: ${storeCount} store${storeCount !== 1 ? 's' : ''} matching "${searchTerm}"\n\n${baseDescription}`;
+    }
+    description = baseDescription;
+  } else if (searchTerm) {
+    // For manage_items with search
+    description = `**Search Results**: ${storeCount} store${storeCount !== 1 ? 's' : ''} matching "${searchTerm}"`;
   }
 
   // Create response with Components V2
@@ -181,6 +213,38 @@ export async function handleStoreToggle(context, client) {
   const selectedStoreId = context.values?.[0];
 
   console.log(`🏪 DEBUG: Location store toggle - coord ${entityId}, store: ${selectedStoreId || 'none'}`);
+
+  // Handle search request
+  if (selectedStoreId?.startsWith('search_stores_location_')) {
+    console.log(`🔍 DEBUG: Location search stores selected from dropdown for ${entityId}`);
+
+    // Load stores to get count for modal title
+    const safariData = await loadSafariContent();
+    const stores = safariData[context.guildId]?.stores || {};
+    const storeCount = Object.keys(stores).length;
+
+    // Show the search modal with location-specific custom_id
+    const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
+    const modal = new ModalBuilder()
+      .setCustomId(`safari_store_location_search_modal_${entityId}`)
+      .setTitle(`Search ${storeCount} Stores for ${entityId}`);
+
+    const searchInput = new TextInputBuilder()
+      .setCustomId('search_term')
+      .setLabel('Search by name or description')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false)  // Allow empty search to show all
+      .setMaxLength(100)
+      .setPlaceholder('Enter store name or description...');
+
+    const searchRow = new ActionRowBuilder().addComponents(searchInput);
+    modal.addComponents(searchRow);
+
+    return {
+      type: 9, // MODAL
+      data: modal.toJSON()
+    };
+  }
 
   // Load current map data
   const safariData = await loadSafariContent();

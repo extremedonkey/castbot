@@ -30378,6 +30378,58 @@ Are you sure you want to continue?`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_store_location_search_modal_')) {
+      // Handle location store search modal submission
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to search stores.')) return;
+
+        // Extract entityId from custom_id
+        const entityId = custom_id.replace('safari_store_location_search_modal_', '');
+
+        // Get search term from modal
+        const searchTerm = components[0].components[0].value?.trim().toLowerCase() || '';
+        console.log(`🔍 DEBUG: Searching location stores for ${entityId} with term: "${searchTerm}"`);
+
+        // Use the store selector with search term
+        const { createStoreSelectionUI } = await import('./storeSelector.js');
+        const { loadSafariContent } = await import('./safariManager.js');
+
+        // Load current stores for this location
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const coordStores = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[entityId]?.stores || [];
+
+        // Create filtered store selector
+        const ui = await createStoreSelectionUI({
+          guildId: guildId,
+          action: 'add_to_location',
+          entityId: entityId,
+          preSelectedStores: coordStores,
+          title: `🔍 Search Results for ${entityId}`,
+          backButtonId: `entity_view_mode_map_cell_${entityId}`,
+          backButtonLabel: '← Back',
+          backButtonEmoji: '📍',
+          searchTerm: searchTerm  // Pass search term for filtering
+        });
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: ui
+        });
+      } catch (error) {
+        console.error('Error handling location store search modal:', error);
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: '❌ Error searching stores. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
     } else if (custom_id.startsWith('safari_store_edit_modal_')) {
       // Handle Safari store edit modal submission
       try {
