@@ -71,12 +71,19 @@ export async function createStoreSelectionUI(options) {
     const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
     const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;
 
+    // Handle description properly - Discord requires undefined or non-empty string
+    let description;
+    if (action === 'manage_items') {
+      description = `Sells ${itemCount} type${itemCount !== 1 ? 's' : ''} of items`.slice(0, 100);
+    } else {
+      const storeDesc = store.description?.trim();
+      description = storeDesc && storeDesc.length > 0 ? storeDesc.slice(0, 100) : undefined;
+    }
+
     storeOptions.push({
       label: safeCleanText.slice(0, 100),
       value: storeId,
-      description: action === 'manage_items'
-        ? `Sells ${itemCount} type${itemCount !== 1 ? 's' : ''} of items`.slice(0, 100)
-        : store.description?.slice(0, 100),
+      description: description,
       emoji: emoji,
       default: preSelectedStores.includes(storeId) // 🎯 Magic for toggle behavior
     });
