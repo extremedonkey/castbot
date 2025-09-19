@@ -10539,7 +10539,7 @@ Your server is now ready for Tycoons gameplay!`;
           storeOptions.push({
             label: safeCleanText.slice(0, 100),
             value: storeId,
-            description: `${itemCount} item${itemCount !== 1 ? 's' : ''} currently in stock`.slice(0, 100),
+            description: `Sells ${itemCount} type${itemCount !== 1 ? 's' : ''} of items`.slice(0, 100),
             emoji: emoji
           });
         });
@@ -30621,7 +30621,7 @@ Are you sure you want to continue?`;
               storeOptions.push({
                 label: safeCleanText.slice(0, 100),
                 value: storeId,
-                description: `${itemCount} item${itemCount !== 1 ? 's' : ''} currently in stock`.slice(0, 100),
+                description: `Sells ${itemCount} type${itemCount !== 1 ? 's' : ''} of items`.slice(0, 100),
                 emoji: emoji
               });
             });
