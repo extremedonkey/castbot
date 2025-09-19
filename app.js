@@ -11133,6 +11133,9 @@ Your server is now ready for Tycoons gameplay!`;
           const prefix = `safari_all_server_items_${guildId}_`;
           const storeId = customId.replace(prefix, '');
 
+          // Check if this was called from store selector (no store ID) vs specific store management
+          const isFromStoreSelector = storeId === '' || storeId === guildId;
+
           console.log(`📄 DEBUG: Showing all server items for guild ${guildId}, store context: ${storeId}`);
 
           // Import Safari manager functions

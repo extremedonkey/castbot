@@ -148,12 +148,26 @@ export async function createStoreSelectionUI(options) {
     components: containerComponents
   };
 
-  // ButtonHandlerFactory expects consistent format with flags - it handles the conversion
-  return {
-    flags: (1 << 15) | (action === 'manage_items' ? (1 << 6) : 0), // IS_COMPONENTS_V2 + EPHEMERAL for store management
-    components: [container],
-    ephemeral: true  // ButtonHandlerFactory will strip this for UPDATE_MESSAGE
-  };
+  // Return format depends on how this will be used
+  if (action === 'manage_items') {
+    // Direct Discord response (for safari_store_manage_items)
+    return {
+      flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 + EPHEMERAL
+      components: [container],
+      ephemeral: true
+    };
+  } else {
+    // ButtonHandlerFactory format (for entity_field_group handlers)
+    // Return the container components directly - ButtonHandlerFactory will wrap them
+    return {
+      components: [{
+        type: 17, // Container
+        components: containerComponents
+      }],
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      ephemeral: true
+    };
+  }
 }
 
 /**
