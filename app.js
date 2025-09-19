@@ -10614,6 +10614,18 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
+    } else if (custom_id.startsWith('safari_store_select_add_to_location_')) {
+      // Handle store selection for map location (EXISTING HANDLER)
+      return ButtonHandlerFactory.create({
+        id: 'safari_store_select_add_to_location',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          const { handleStoreToggle } = await import('./storeSelector.js');
+          return await handleStoreToggle(context, client);
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_store_add_item_')) {
       // Add item to store
       try {
