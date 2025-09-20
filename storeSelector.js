@@ -61,12 +61,20 @@ export async function createStoreSelectionUI(options) {
   // Calculate reserved slots and determine if we need search
   let reservedSlots = 0;
 
+  // Always add "Create New Store" option for both management and location actions
   if (action === 'manage_items') {
-    // Always add "Create New Store" for management
     storeOptions.push({
       label: 'Create New Store',
       value: 'create_new_store',
       description: 'Create a new store.',
+      emoji: { name: '➕' }
+    });
+    reservedSlots = 1;
+  } else if (action === 'add_to_location') {
+    storeOptions.push({
+      label: 'Create New Store',
+      value: 'create_new_store',
+      description: 'Create a new store and add it to this location.',
       emoji: { name: '➕' }
     });
     reservedSlots = 1;
