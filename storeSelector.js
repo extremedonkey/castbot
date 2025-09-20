@@ -85,11 +85,41 @@ export async function createStoreSelectionUI(options) {
     reservedSlots += 1;
   }
 
-  // Determine how many stores we can show (respect Discord's 25-option limit)
+  // Smart sorting: prioritize currently selected stores for accessibility
+  let selectedStores = [];
+  let unselectedStores = [];
+
+  // Separate selected vs unselected stores (for location actions)
+  if (action === 'add_to_location' && preSelectedStores.length > 0) {
+    Object.entries(stores).forEach(([storeId, store]) => {
+      if (preSelectedStores.includes(storeId)) {
+        selectedStores.push([storeId, store]);
+      } else {
+        unselectedStores.push([storeId, store]);
+      }
+    });
+  } else {
+    // For manage_items or no selection, use regular order
+    unselectedStores = Object.entries(stores);
+  }
+
+  // Calculate how many stores we can show after reserved slots
   const maxStoresToShow = 25 - reservedSlots;
 
-  // Add existing stores
-  Object.entries(stores).slice(0, maxStoresToShow).forEach(([storeId, store]) => {
+  // Smart capacity allocation: selected stores first, then fill remaining with others
+  const selectedCapacity = Math.min(selectedStores.length, maxStoresToShow);
+  const remainingCapacity = maxStoresToShow - selectedCapacity;
+
+  // Combine in priority order: selected first, then unselected up to capacity
+  const prioritizedStores = [
+    ...selectedStores.slice(0, selectedCapacity),
+    ...unselectedStores.slice(0, remainingCapacity)
+  ];
+
+  console.log(`🔍 DEBUG: Store priority - Selected: ${selectedStores.length}, Unselected: ${unselectedStores.length}, Showing: ${prioritizedStores.length}/${maxStoresToShow}`);
+
+  // Add stores in priority order
+  prioritizedStores.forEach(([storeId, store]) => {
     const itemCount = store.items?.length || 0;
     const { cleanText, emoji } = parseTextEmoji(`${store.emoji || ''} ${store.name}`, '🏪');
     const safeCleanText = cleanText || `${store.emoji || '🏪'} ${store.name || 'Unnamed Store'}`;

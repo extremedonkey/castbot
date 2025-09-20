@@ -570,7 +570,7 @@ export function getFieldGroups(entityType) {
                 info: { label: 'Location Info', emoji: '📝', fields: ['title', 'description'] },
                 media: { label: 'Media', emoji: '🖼️', fields: ['image'] },
                 interaction: { label: 'Custom Actions', emoji: '⚡', fields: ['buttons'] },
-                stores: { label: 'Add Store', emoji: '🏪', fields: ['stores'] },
+                stores: { label: 'Stores', emoji: '🏪', fields: ['stores'] },
                 items: { label: 'Manage Drops', emoji: '🧰', fields: ['itemDrops', 'currencyDrops'] }
             };
         default:
