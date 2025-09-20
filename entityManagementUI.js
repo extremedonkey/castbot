@@ -1064,17 +1064,9 @@ export async function createPlayerItemSelectorUI(options) {
                         type: 2, // Button
                         style: 2, // Secondary
                         label: '← Player Admin',
-                        custom_id: `map_admin_edit_items_${targetUserId}`,
-                        emoji: { name: '👤' }
-                    },
-                    // Search button if many items
-                    ...(Object.keys(items).length > 10 ? [{
-                        type: 2, // Button
-                        style: 2, // Secondary
-                        label: 'Search Items',
-                        custom_id: `player_item_search_${targetUserId}`,
-                        emoji: { name: '🔍' }
-                    }] : [])
+                        custom_id: `map_admin_user_select_continue_${targetUserId}`,
+                        emoji: { name: '🧭' }
+                    }
                 ]
             }
         ]

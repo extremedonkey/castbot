@@ -25329,44 +25329,6 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
 
-    } else if (custom_id.startsWith('player_item_search_')) {
-      // Handle player item search button - show search modal
-      return ButtonHandlerFactory.create({
-        id: 'player_item_search',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        handler: async (context) => {
-          const targetUserId = context.customId.replace('player_item_search_', '');
-
-          console.log(`🔍 START: player_item_search - user ${targetUserId}`);
-
-          // Show search modal
-          const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
-
-          const modal = new ModalBuilder()
-            .setCustomId(`player_item_search_modal_${targetUserId}`)
-            .setTitle('Search Items');
-
-          const searchInput = new TextInputBuilder()
-            .setCustomId('search_term')
-            .setLabel('Search Term')
-            .setStyle(1) // Short
-            .setPlaceholder('Enter item name or description...')
-            .setRequired(true)
-            .setMaxLength(100);
-
-          const row = new ActionRowBuilder().addComponents(searchInput);
-          modal.addComponents(row);
-
-          console.log(`✅ SUCCESS: player_item_search - showing search modal`);
-
-          return {
-            type: 9, // Modal response
-            data: modal.toJSON()
-          };
-        }
-      })(req, res, client);
-
     } else if (custom_id.startsWith('map_admin_edit_items_DEPRECATED_')) {
       // DEPRECATED - Old comprehensive player inventory editor code
       return ButtonHandlerFactory.create({

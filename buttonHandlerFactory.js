@@ -1077,13 +1077,6 @@ export const BUTTON_REGISTRY = {
     category: 'safari_map_admin',
     type: 'select_menu'
   },
-  'player_item_search_*': {
-    label: 'Player Item Search',
-    description: 'Search items for player quantity editing',
-    emoji: '🔍',
-    style: 'Secondary',
-    category: 'safari_map_admin'
-  },
   'map_admin_view_raw_*': {
     label: 'View Raw Data',
     description: 'View raw Safari data JSON',
