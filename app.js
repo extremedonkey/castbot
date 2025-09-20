@@ -29095,7 +29095,7 @@ Are you sure you want to continue?`;
         const modalGuildId = parts[0];
 
         // Check for player_admin context suffix
-        const isPlayerAdminContext = parts[parts.length - 1] === 'player' && parts[parts.length - 2] === 'admin';
+        const isPlayerAdminContext = parts[parts.length - 1] === 'admin' && parts[parts.length - 2] === 'player';
         const userId = isPlayerAdminContext ? parts[parts.length - 3] : parts[parts.length - 1];
         const itemId = isPlayerAdminContext
           ? parts.slice(1, -3).join('_') // Everything between guildId and userId_player_admin
