@@ -12822,8 +12822,8 @@ Your server is now ready for Tycoons gameplay!`;
             await saveSafariContent(safariData);
 
             // Show updated Custom Action editor
-            const { showCustomActionEditor } = await import('./customActionUI.js');
-            return await showCustomActionEditor(context.guildId, buttonId);
+            const { createCustomActionEditorUI } = await import('./customActionUI.js');
+            return await createCustomActionEditorUI({ guildId: context.guildId, actionId: buttonId });
           }
 
           // Should not reach here for display_text or update_currency
