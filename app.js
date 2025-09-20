@@ -30183,11 +30183,13 @@ Are you sure you want to continue?`;
           newStore.items = [];
         }
 
-        // Redirect back to main store selector with new store visible
-        const { createStoreSelectionUI } = await import('./storeSelector.js');
-        const uiResponse = await createStoreSelectionUI({
+        // Redirect directly to new store item management for better UX
+        const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
+        const uiResponse = await createStoreItemManagementUI({
+          storeId: newStoreId,
+          store: newStore,
           guildId: guildId,
-          action: 'manage_items'
+          searchTerm: ''
         });
 
         // Return UPDATE_MESSAGE to show the store management interface
