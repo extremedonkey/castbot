@@ -29151,41 +29151,32 @@ Are you sure you want to continue?`;
         const inventory = playerData[guildId].players[userId].safari.inventory;
         const currentItem = inventory[itemId];
         
-        // Get previous values for change calculation
-        const previousQuantity = currentItem?.quantity || 0;
+        // Get previous values for change calculation (handle both legacy numbers and object format)
+        const previousQuantity = typeof currentItem === 'number' ? currentItem : (currentItem?.quantity || 0);
         const quantityChange = quantity - previousQuantity;
         
-        // Update quantity
-        if (quantity === 0 && !currentItem) {
-          // Setting to 0 for non-existent item - create with 0
-          inventory[itemId] = { quantity: 0 };
-          if (isAttackItem) {
-            inventory[itemId].numAttacksAvailable = 0;
-          }
-        } else if (quantity === 0 && currentItem) {
-          // Setting existing item to 0 - keep structure but set to 0
-          inventory[itemId].quantity = 0;
-          if (isAttackItem) {
-            inventory[itemId].numAttacksAvailable = 0;
-          }
+        // Always replace with proper object format (handles both legacy numbers and existing objects)
+        if (quantity === 0) {
+          // Remove item entirely when setting to 0
+          delete inventory[itemId];
         } else {
-          // Setting to non-zero value
-          if (!currentItem) {
-            // Create new item
-            inventory[itemId] = { quantity: quantity };
-            if (isAttackItem) {
-              inventory[itemId].numAttacksAvailable = quantity;
-            }
+          // Set item quantity - always create new object to handle legacy number format
+          if (isAttackItem) {
+            // For attack items, preserve existing attacks or set to quantity for new items/legacy numbers
+            const previousAttacks = (typeof currentItem === 'object' && currentItem?.numAttacksAvailable !== undefined)
+              ? currentItem.numAttacksAvailable + quantityChange
+              : quantity; // For new items or legacy numbers, set attacks equal to quantity
+
+            inventory[itemId] = {
+              quantity: quantity,
+              numAttacksAvailable: Math.max(0, previousAttacks)
+            };
           } else {
-            // Update existing item
-            inventory[itemId].quantity = quantity;
-            
-            // For attack items, adjust numAttacksAvailable proportionally
-            if (isAttackItem) {
-              const previousAttacks = currentItem.numAttacksAvailable || 0;
-              const newAttacks = Math.max(0, previousAttacks + quantityChange);
-              inventory[itemId].numAttacksAvailable = newAttacks;
-            }
+            // Regular item
+            inventory[itemId] = {
+              quantity: quantity,
+              numAttacksAvailable: 0
+            };
           }
         }
         
