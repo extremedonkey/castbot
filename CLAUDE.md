@@ -127,6 +127,7 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 - **SAFARI PROGRESS** → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
 - **PLAYER LOCATIONS** → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
 - **WHISPER SYSTEM** → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)
+- **STORE MANAGEMENT** → [docs/features/StoreManagementArchitecture.md](docs/features/StoreManagementArchitecture.md)
 - **GLOBAL STORES** (NEW) → Permanent stores in player /menu
 - **ROUNDS MENU** (NEW) → Dedicated round management interface
 - **STOCK MANAGEMENT** (NEW) → Store inventory limits with per-item stock tracking
@@ -195,6 +196,16 @@ const menu = await MenuBuilder.create('menu_id', context);
 - **CHECK logs for menu usage** - `grep "MENULEGACY"` shows what needs migration
 
 **Components V2** - ALL UI MUST use `IS_COMPONENTS_V2` flag (1 << 15)
+
+**Shared Utilities** - Eliminate code duplication with shared functions:
+```javascript
+// Example: Store modals use shared utility (eliminates ~120 lines of duplication)
+const { createStoreModal } = await import('./safariManager.js');
+const modal = createStoreModal(customId, title);
+```
+- **ALWAYS check for existing utilities** before duplicating modal/UI creation code
+- **CREATE shared utilities** when you see repeated patterns (3+ instances)
+- **UPDATE shared utilities** to modify all consumers at once
 
 **Pattern Matching** - When implementing "like X", examine X's implementation first:
 ```bash

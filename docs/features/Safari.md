@@ -1472,6 +1472,8 @@ The Round Results V2 System provides a complete, scalable foundation for complex
 - **Button Bundling**: Automatic UI optimization when follow-up buttons follow display_text
 
 ### 🏪 Enhanced Shop System
+**For detailed store management patterns**: → [StoreManagementArchitecture.md](StoreManagementArchitecture.md)
+
 **Architecture:**
 - **Multi-Shop Support**: Multiple stores per server with unique configurations
 - **Reusable Items**: Items defined once, used across multiple shops with shop-specific pricing
