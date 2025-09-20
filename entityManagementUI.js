@@ -1118,7 +1118,7 @@ function createPlayerItemSelector(items, targetUserId, searchTerm, selectedItemI
         options.push({
             label: safeCleanText.substring(0, 100),
             value: id,
-            description: getEntityDescription(item, 'item'),
+            description: getEntityDescription(item, 'item') || (item.description?.substring(0, 50) || 'No description'),
             emoji: parsedEmoji,
             default: id === selectedItemId
         });
@@ -1171,25 +1171,6 @@ function createPlayerItemSelector(items, targetUserId, searchTerm, selectedItemI
     };
 }
 
-/**
- * Get entity description for display
- * @param {Object} entity - Entity object
- * @param {string} entityType - Type of entity
- * @returns {string} Description string
- */
-function getEntityDescription(entity, entityType) {
-    if (entityType === 'item') {
-        const parts = [];
-        if (entity.description) {
-            parts.push(entity.description.substring(0, 50));
-        }
-        if (entity.basePrice !== undefined) {
-            parts.push(`Price: ${entity.basePrice}`);
-        }
-        return parts.join(' • ') || 'No description';
-    }
-    return entity.description || 'No description';
-}
 
 export {
     getDefaultEmoji,
