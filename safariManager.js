@@ -1601,7 +1601,26 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
                     result = await executeRemoveRole(action.config, userId, guildId, interaction);
                     responses.push(result);
                     break;
-                    
+
+                case 'calculate_results':
+                    try {
+                        console.log(`🌾 DEBUG: Executing calculate_results action for guild ${guildId}`);
+                        const harvestResult = await calculateSimpleResults(guildId);
+                        result = {
+                            content: `✅ Results calculated successfully! Processed ${harvestResult.processedPlayers} players with ${harvestResult.totalEarnings} total earnings.`,
+                            ephemeral: true
+                        };
+                        responses.push(result);
+                    } catch (error) {
+                        console.error('Error executing calculate_results action:', error);
+                        result = {
+                            content: '❌ Error calculating results. Please try again or contact an administrator.',
+                            ephemeral: true
+                        };
+                        responses.push(result);
+                    }
+                    break;
+
                 default:
                     console.log(`⚠️ Unknown action type: ${action.type}`);
             }
@@ -3902,6 +3921,75 @@ async function sortPlayersForResults(eligiblePlayers, priorityRoles, client, gui
             sorted: eligiblePlayers,
             groups: null
         };
+    }
+}
+
+/**
+ * Calculate simple results for all eligible players using goodOutcomeValue
+ * @param {string} guildId - Guild ID
+ * @returns {Promise<Object>} Result summary with player count and total earnings
+ */
+async function calculateSimpleResults(guildId) {
+    try {
+        console.log(`🌾 DEBUG: Calculating simple results for guild ${guildId}`);
+
+        // Get eligible players and items
+        const eligiblePlayers = await getEligiblePlayersFixed(guildId, null);
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+
+        let totalEarnings = 0;
+        let processedPlayers = 0;
+
+        // Process each eligible player
+        for (const player of eligiblePlayers) {
+            console.log(`🔄 DEBUG: Processing player ${player.playerName} (${player.userId})`);
+
+            let playerEarnings = 0;
+
+            // Process each inventory item using goodOutcomeValue
+            for (const [itemId, inventoryItem] of Object.entries(player.inventory)) {
+                // Use universal accessor to get quantity
+                const quantity = getItemQuantity(inventoryItem);
+                if (quantity <= 0) continue;
+
+                const item = items[itemId];
+                if (!item) {
+                    console.log(`⚠️ DEBUG: Item ${itemId} not found in items database`);
+                    continue;
+                }
+
+                // Calculate earnings using goodOutcomeValue (default for simple results)
+                const goodValue = item.goodOutcomeValue || 0;
+                if (goodValue !== 0) {
+                    const itemEarnings = quantity * goodValue;
+                    playerEarnings += itemEarnings;
+                    console.log(`💰 DEBUG: ${player.playerName} - ${item.name} x${quantity} = ${itemEarnings}`);
+                }
+            }
+
+            // Update player currency if earnings > 0
+            if (playerEarnings !== 0) {
+                await updateCurrency(guildId, player.userId, playerEarnings);
+                console.log(`💰 DEBUG: Updated ${player.playerName} currency by ${playerEarnings}`);
+                totalEarnings += playerEarnings;
+            }
+
+            processedPlayers++;
+        }
+
+        console.log(`✅ DEBUG: Simple results calculated - ${processedPlayers} players processed, ${totalEarnings} total earnings`);
+
+        return {
+            success: true,
+            processedPlayers,
+            totalEarnings,
+            message: `Results calculated for ${processedPlayers} players`
+        };
+
+    } catch (error) {
+        console.error('Error calculating simple results:', error);
+        throw error;
     }
 }
 
@@ -7358,6 +7446,7 @@ export {
     updateCustomTerms,
     resetCustomTerms,
     // Challenge Game Logic exports
+    calculateSimpleResults,
     processRoundResults,
     createFinalRankings,
     resetGameData,

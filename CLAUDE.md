@@ -109,6 +109,7 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 ## 📚 Feature Documentation Index
 
 **🚧 Current Work in Progress:**
+- **SAFARI CUSTOM EXPERIENCES** → [docs/features/SafariCustomExperiences.md](docs/features/SafariCustomExperiences.md) - Configurable challenge system via Custom Actions
 - **ACTIVE SEASON SYSTEM** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)
 - **CASTLIST V3 INTEGRATION** → [docs/features/CastlistV3-SeasonIntegration.md](docs/features/CastlistV3-SeasonIntegration.md)
 - **SEASON SELECTOR** → Reusable component in `seasonSelector.js`
@@ -309,6 +310,53 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';  // Button man
 ## 📋 Feature Backlog
 
 See [BACKLOG.md](BACKLOG.md) for prioritized features and user stories.
+
+## 🚧 Safari Custom Experiences Implementation Progress
+
+**Project**: Safari Custom Experiences - Configurable challenge system via Custom Actions framework
+**Documentation**: [docs/features/SafariCustomExperiences.md](docs/features/SafariCustomExperiences.md)
+**Started**: December 2024 - Analysis and design phase completed
+
+### Implementation Phases
+
+#### MANDATORY CORE: Calculate Results Action (1-2 hours) ✅ COMPLETED
+- [x] **Extract calculation logic**: Create `calculateSimpleResults()` function from `processRoundResults()`
+- [x] **Add action type**: Register "calculate_results" in Custom Action editor
+- [x] **Add execution handler**: Handle action execution in `executeButtonActions()`
+- [x] **Button registration**: Not needed - Custom Actions use dynamic button handling
+
+#### OPTIONAL FUTURE: Enhanced Action Types (3-4 weeks)
+- [ ] **Week 1**: "Determine Event" action + testing
+- [ ] **Week 2**: Enhanced "Calculate Results" with event source configuration
+- [ ] **Week 3**: "Calculate Attack" action + attack queue integration
+- [ ] **Week 4**: "Display Results" action + Discord API integration
+
+#### Phase 2: Trigger System (2 weeks)
+- [ ] **Week 1**: "Round Changed" trigger implementation
+- [ ] **Week 2**: Context preservation + button integration
+
+#### Phase 3: Integration & Testing (2 weeks)
+- [ ] **Week 1**: End-to-end Custom Experience creation
+- [ ] **Week 2**: Backwards compatibility testing + documentation
+
+#### Phase 4: Polish & Advanced Features (1-2 weeks)
+- [ ] Round conditions implementation
+- [ ] Location system improvements
+- [ ] Experience template foundations
+
+### Current Status
+- ✅ **Analysis Complete**: Safari system architecture fully documented
+- ✅ **Design Complete**: All new action types and trigger system designed
+- ✅ **Documentation Complete**: Comprehensive design document created
+- ✅ **Core Implementation Complete**: Calculate Results action fully implemented and functional
+- ⏳ **Next**: Optional advanced features (Determine Event, Calculate Attack, etc.)
+
+### Key Technical Insights Discovered
+- Safari harvest calculations are NOT stored permanently (exist only during round processing)
+- Round resolution order: Harvest → Attacks → Data Persistence → Display
+- Probability system uses linear interpolation with only 3 config points for unlimited rounds
+- Custom Actions framework already supports most needed functionality
+- Experience Templates can be achieved with locationless Custom Actions
 
 ---
 

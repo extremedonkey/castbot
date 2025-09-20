@@ -305,7 +305,8 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
                   { label: 'Give Item', value: 'give_item', emoji: { name: '🎁' } },
                   { label: 'Give Role', value: 'give_role', emoji: { name: '👑' } },
                   { label: 'Remove Role', value: 'remove_role', emoji: { name: '🚫' } },
-                  { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } }
+                  { label: 'Follow-up Action', value: 'follow_up_button', emoji: { name: '🔗' } },
+                  { label: 'Calculate Results', value: 'calculate_results', emoji: { name: '🌾' } }
                 ]
               }]
             });
@@ -483,6 +484,8 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}) {
       return `**\`${number}. Follow-up Action\`** ${followUpButtonName}`;
     case 'create_button':
       return `**\`${number}. Create Button\`** ${action.buttonLabel}`;
+    case 'calculate_results':
+      return `**\`${number}. Calculate Results\`** Calculate earnings using good outcome values`;
     default:
       return `**${number}. ${action.type || 'Unknown Action'}**`;
   }
