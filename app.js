@@ -18706,10 +18706,12 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               const activeMapId = safariData[context.guildId]?.maps?.active;
               const coordStores = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[entityId]?.stores || [];
 
-              // Get IDENTICAL working UI (same as safari_store_manage_items)
+              // Get IDENTICAL working UI but with location-specific data
               const uiResponse = await createStoreSelectionUI({
                 guildId: context.guildId,
-                action: 'manage_items'  // Use EXACT same action that works
+                action: 'add_to_location',  // Pass location action to enable sorting
+                entityId: entityId,
+                preSelectedStores: coordStores  // CRITICAL: Pass current stores for sorting
               });
 
               // Modify the working UI for location behavior
