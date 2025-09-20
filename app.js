@@ -12791,8 +12791,41 @@ Your server is now ready for Tycoons gameplay!`;
                 data: modal.toJSON()
               };
             }
+          } else if (actionType === 'calculate_results') {
+            // Calculate Results action - simple action with no configuration needed
+            console.log(`✅ SUCCESS: safari_action_type_select - adding calculate_results action`);
+
+            // Load safari content to add the action
+            const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+
+            // Ensure button exists
+            if (!safariData[context.guildId]?.buttons?.[buttonId]) {
+              return {
+                content: '❌ Button not found.',
+                ephemeral: true
+              };
+            }
+
+            // Create the calculate_results action
+            const newAction = {
+              type: 'calculate_results',
+              executeOn: 'true',
+              order: button.actions?.length || 0
+            };
+
+            // Add action to button
+            if (!button.actions) button.actions = [];
+            button.actions.push(newAction);
+
+            // Save changes
+            await saveSafariContent(safariData);
+
+            // Show updated Custom Action editor
+            const { showCustomActionEditor } = await import('./customActionUI.js');
+            return await showCustomActionEditor(context.guildId, buttonId);
           }
-          
+
           // Should not reach here for display_text or update_currency
           console.error(`Unknown action type: ${actionType}`);
           return {
