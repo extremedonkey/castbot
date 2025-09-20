@@ -1606,16 +1606,17 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
                     try {
                         console.log(`🌾 DEBUG: Executing calculate_results action for guild ${guildId}`);
                         const harvestResult = await calculateSimpleResults(guildId);
+                        console.log(`🌾 SUCCESS: Calculate results completed - ${harvestResult.processedPlayers} players, ${harvestResult.totalEarnings} total earnings`);
+
+                        // For deferred responses, create a visible public message
                         result = {
-                            content: `✅ Results calculated successfully! Processed ${harvestResult.processedPlayers} players with ${harvestResult.totalEarnings} total earnings.`,
-                            ephemeral: true
+                            content: `✅ **Results Calculated!**\n📊 Processed **${harvestResult.processedPlayers}** players\n💰 Total earnings: **${harvestResult.totalEarnings}** currency`
                         };
                         responses.push(result);
                     } catch (error) {
                         console.error('Error executing calculate_results action:', error);
                         result = {
-                            content: '❌ Error calculating results. Please try again or contact an administrator.',
-                            ephemeral: true
+                            content: '❌ **Error calculating results.** Please try again or contact an administrator.'
                         };
                         responses.push(result);
                     }
