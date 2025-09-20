@@ -1006,6 +1006,191 @@ function createStoreItemSelector(items, currentItemIds, storeId, searchTerm, all
     };
 }
 
+/**
+ * Create player-centric item selector UI for admin item quantity editing
+ * @param {Object} options - Configuration options
+ * @param {string} options.guildId - Guild ID
+ * @param {string} options.targetUserId - Player being edited
+ * @param {string} options.searchTerm - Current search term
+ * @param {string} options.selectedItemId - Currently selected item ID
+ * @returns {Object} Discord Components V2 response
+ */
+export async function createPlayerItemSelectorUI(options) {
+    const {
+        guildId,
+        targetUserId,
+        searchTerm = '',
+        selectedItemId = null
+    } = options;
+
+    console.log(`📦 DEBUG: createPlayerItemSelectorUI - targetUserId: ${targetUserId}, searchTerm: "${searchTerm}"`);
+
+    // Load entity data
+    const safariData = await loadSafariContent();
+    const guildData = safariData[guildId] || {};
+    const items = getEntitiesForType(guildData, 'item');
+    const config = EDIT_CONFIGS['item'];
+
+    if (!config) {
+        throw new Error(`Item configuration not found`);
+    }
+
+    // Filter items if search term provided
+    const filteredItems = filterEntities(items, searchTerm);
+    console.log(`🔍 DEBUG: createPlayerItemSelectorUI - found ${Object.keys(filteredItems).length} matching items`);
+
+    // Create player-specific item selector (no Create New option)
+    const itemSelector = createPlayerItemSelector(filteredItems, targetUserId, searchTerm, selectedItemId);
+
+    // Build Components V2 UI
+    const components = [{
+        type: 17, // Container
+        accent_color: 0x3498db, // Blue for player admin
+        components: [
+            // Title with player context
+            {
+                type: 10, // Text Display
+                content: `## Edit Player Items\n\nSelect an item to modify quantity for player <@${targetUserId}>`
+            },
+
+            // Item selector
+            itemSelector,
+
+            // Navigation buttons
+            {
+                type: 1, // ActionRow
+                components: [
+                    {
+                        type: 2, // Button
+                        style: 2, // Secondary
+                        label: '← Player Admin',
+                        custom_id: `map_admin_edit_items_${targetUserId}`,
+                        emoji: { name: '👤' }
+                    },
+                    // Search button if many items
+                    ...(Object.keys(items).length > 10 ? [{
+                        type: 2, // Button
+                        style: 2, // Secondary
+                        label: 'Search Items',
+                        custom_id: `player_item_search_${targetUserId}`,
+                        emoji: { name: '🔍' }
+                    }] : [])
+                ]
+            }
+        ]
+    }];
+
+    return {
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        components,
+        ephemeral: true
+    };
+}
+
+/**
+ * Create player-specific item selector dropdown (no Create New option)
+ * @param {Object} items - Filtered items
+ * @param {string} targetUserId - Player being edited
+ * @param {string} searchTerm - Current search term
+ * @param {string} selectedItemId - Currently selected item ID
+ * @returns {Object} ActionRow with String Select
+ */
+function createPlayerItemSelector(items, targetUserId, searchTerm, selectedItemId) {
+    const options = [];
+
+    // Add search option if many items (but no Create New)
+    if (Object.keys(items).length > 10) {
+        options.push({
+            label: `🔍 Search: "${searchTerm || 'Type to search...'}"`,
+            value: 'search_entities',
+            description: 'Click to search items'
+        });
+    }
+
+    // Add item options
+    Object.entries(items).forEach(([id, item]) => {
+        const name = item.name || 'Unnamed Item';
+        const emoji = item.emoji || '📦';
+
+        const { cleanText, emoji: parsedEmoji } = parseTextEmoji(`${emoji} ${name}`, '📦');
+        const safeCleanText = cleanText || `${emoji} ${name}`;
+
+        options.push({
+            label: safeCleanText.substring(0, 100),
+            value: id,
+            description: getEntityDescription(item, 'item'),
+            emoji: parsedEmoji,
+            default: id === selectedItemId
+        });
+    });
+
+    // Handle Discord 25-option limit (leave room for search option)
+    if (options.length > 25) {
+        const search = options.length > 10 && options[0].value === 'search_entities' ? options[0] : null;
+        const itemOptions = options.slice(search ? 1 : 0);
+
+        // Always include selected item if it exists
+        let selectedOption = null;
+        let remainingItems = itemOptions;
+        if (selectedItemId) {
+            selectedOption = itemOptions.find(opt => opt.value === selectedItemId);
+            remainingItems = itemOptions.filter(opt => opt.value !== selectedItemId);
+        }
+
+        options.length = 0;
+        if (search) options.push(search);
+
+        // Add selected item first if it exists
+        if (selectedOption) {
+            options.push(selectedOption);
+        }
+
+        // Fill remaining slots with other items
+        const remainingSlots = 25 - options.length;
+        options.push(...remainingItems.slice(0, remainingSlots));
+    }
+
+    // Fallback if no items
+    if (options.length === 0 || (options.length === 1 && options[0].value === 'search_entities')) {
+        options.push({
+            label: 'No items available',
+            value: 'no_items',
+            description: 'Create some items first in Safari > Items',
+            emoji: { name: '❌' }
+        });
+    }
+
+    return {
+        type: 1, // ActionRow
+        components: [{
+            type: 3, // String Select
+            custom_id: `player_item_select_${targetUserId}`,
+            placeholder: searchTerm ? `Filtered: "${searchTerm}"` : 'Select an item to edit quantity...',
+            options
+        }]
+    };
+}
+
+/**
+ * Get entity description for display
+ * @param {Object} entity - Entity object
+ * @param {string} entityType - Type of entity
+ * @returns {string} Description string
+ */
+function getEntityDescription(entity, entityType) {
+    if (entityType === 'item') {
+        const parts = [];
+        if (entity.description) {
+            parts.push(entity.description.substring(0, 50));
+        }
+        if (entity.basePrice !== undefined) {
+            parts.push(`Price: ${entity.basePrice}`);
+        }
+        return parts.join(' • ') || 'No description';
+    }
+    return entity.description || 'No description';
+}
+
 export {
     getDefaultEmoji,
     getEntitiesForType,

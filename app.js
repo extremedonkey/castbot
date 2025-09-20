@@ -25171,41 +25171,202 @@ Are you sure you want to continue?`;
       }
       
     } else if (custom_id.startsWith('map_admin_edit_items_')) {
-      // Show coming soon message for Edit Items
+      // Show player-centric item selector
       return ButtonHandlerFactory.create({
         id: 'map_admin_edit_items',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
         handler: async (context) => {
           const targetUserId = context.customId.split('_').pop();
-          console.log(`📦 START: map_admin_edit_items - coming soon message for user ${targetUserId}`);
-          
-          // Return coming soon message with Components V2
+          console.log(`📦 START: map_admin_edit_items - player item selector for user ${targetUserId}`);
+
+          // Import player item selector UI
+          const { createPlayerItemSelectorUI } = await import('./entityManagementUI.js');
+
+          // Create the UI
+          const uiResponse = await createPlayerItemSelectorUI({
+            guildId: context.guildId,
+            targetUserId,
+            searchTerm: '',
+            selectedItemId: null
+          });
+
+          console.log(`✅ SUCCESS: map_admin_edit_items - showing player item selector for user ${targetUserId}`);
+
+          return uiResponse;
+        }
+      })(req, res, client);
+
+    } else if (custom_id.startsWith('player_item_select_')) {
+      // Handle player item selection - show quantity modal
+      return ButtonHandlerFactory.create({
+        id: 'player_item_select',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context, req) => {
+          const targetUserId = context.customId.replace('player_item_select_', '');
+          const selectedValue = req.body.data.values[0];
+
+          console.log(`📦 START: player_item_select - user ${targetUserId}, selected ${selectedValue}`);
+
+          // Handle special cases
+          if (selectedValue === 'search_entities') {
+            // Show search modal
+            const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
+
+            const modal = new ModalBuilder()
+              .setCustomId(`player_item_search_modal_${targetUserId}`)
+              .setTitle('Search Items');
+
+            const searchInput = new TextInputBuilder()
+              .setCustomId('search_term')
+              .setLabel('Search Term')
+              .setStyle(1) // Short
+              .setPlaceholder('Enter item name or description...')
+              .setRequired(true)
+              .setMaxLength(100);
+
+            const row = new ActionRowBuilder().addComponents(searchInput);
+            modal.addComponents(row);
+
+            return {
+              type: 9, // Modal response
+              data: modal.toJSON()
+            };
+          }
+
+          if (selectedValue === 'no_items') {
+            // Return to player admin with error message
+            return {
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [{
+                type: 17, // Container
+                accent_color: 0xe74c3c, // Red for error
+                components: [
+                  {
+                    type: 10, // Text Display
+                    content: `## ❌ No Items Available\n\nNo items found in this server. Create some items first in **Safari → Items** before managing player quantities.`
+                  },
+                  {
+                    type: 1, // Action Row
+                    components: [{
+                      type: 2, // Button
+                      style: 2, // Secondary
+                      label: '← Player Admin',
+                      custom_id: `map_admin_edit_items_${targetUserId}`,
+                      emoji: { name: '👤' }
+                    }]
+                  }
+                ]
+              }],
+              ephemeral: true
+            };
+          }
+
+          // Regular item selection - redirect to existing quantity modal system
+          const itemId = selectedValue;
+
+          // Import necessary functions
+          const { loadEntity } = await import('./entityManager.js');
+          const { loadPlayerData } = await import('./storage.js');
+
+          // Load item data to get item name
+          const item = await loadEntity(context.guildId, 'item', itemId);
+          const itemName = item?.name || 'Unknown Item';
+
+          // Get current item quantity
+          const playerData = await loadPlayerData();
+          const inventory = playerData[context.guildId]?.players?.[targetUserId]?.safari?.inventory || {};
+          const currentItem = inventory[itemId];
+
+          let currentQuantity = '';
+          let modalLabel = 'Qty';
+
+          if (currentItem) {
+            if (typeof currentItem === 'object') {
+              currentQuantity = currentItem.quantity?.toString() || '0';
+              modalLabel = item?.attackValue !== undefined && item.attackValue > 0 ? 'Qty (⚔️ Attack Item)' : 'Qty';
+            } else {
+              currentQuantity = currentItem.toString();
+            }
+          }
+
+          // Create quantity modal with player admin return context
+          const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
+
+          let modalTitle = `Set ${itemName} Quantity`;
+          if (modalTitle.length > 45) {
+            const maxItemNameLength = 45 - 16; // "Set " (4) + "... Quantity" (12) = 16
+            modalTitle = `Set ${itemName.substring(0, maxItemNameLength)}... Quantity`;
+          }
+
+          const modal = new ModalBuilder()
+            .setCustomId(`safari_item_qty_modal_${context.guildId}_${itemId}_${targetUserId}_player_admin`)
+            .setTitle(modalTitle);
+
+          const quantityInput = new TextInputBuilder()
+            .setCustomId('item_quantity')
+            .setLabel(modalLabel)
+            .setStyle(1) // Short
+            .setRequired(true)
+            .setMaxLength(10)
+            .setPlaceholder('Enter quantity (0 or higher)');
+
+          // Set current value if item exists
+          if (currentQuantity !== '') {
+            quantityInput.setValue(currentQuantity);
+          }
+
+          const row = new ActionRowBuilder().addComponents(quantityInput);
+          modal.addComponents(row);
+
+          console.log(`✅ SUCCESS: player_item_select - showing quantity modal for ${itemName}`);
+
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2
-            components: [{
-              type: 17, // Container
-              accent_color: 0x5865f2, // Blue accent
-              components: [
-                {
-                  type: 10, // Text Display
-                  content: `# 🚧 Edit Player Items - Coming Soon!\n\nThis feature is currently under development, and will allow you to easily edit multiple different items for a specific player in one interface.\n\n**In the meantime:**\nPlease use the **Safari Menu → Items → Player Qty** button to manage items for a specific player. You'll need to select each item first, then the player.`
-                },
-                { type: 14 }, // Separator
-                {
-                  type: 1, // Action Row
-                  components: [{
-                    type: 2, // Button
-                    custom_id: `map_admin_user_select_continue_${targetUserId}`,
-                    label: 'Back to Player Admin',
-                    style: 2, // Secondary
-                    emoji: { name: '⬅️' }
-                  }]
-                }
-              ]
-            }]
+            type: 9, // Modal response
+            data: modal.toJSON()
           };
         }
       })(req, res, client);
-      
+
+    } else if (custom_id.startsWith('player_item_search_')) {
+      // Handle player item search button - show search modal
+      return ButtonHandlerFactory.create({
+        id: 'player_item_search',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          const targetUserId = context.customId.replace('player_item_search_', '');
+
+          console.log(`🔍 START: player_item_search - user ${targetUserId}`);
+
+          // Show search modal
+          const { ModalBuilder, TextInputBuilder, ActionRowBuilder } = await import('discord.js');
+
+          const modal = new ModalBuilder()
+            .setCustomId(`player_item_search_modal_${targetUserId}`)
+            .setTitle('Search Items');
+
+          const searchInput = new TextInputBuilder()
+            .setCustomId('search_term')
+            .setLabel('Search Term')
+            .setStyle(1) // Short
+            .setPlaceholder('Enter item name or description...')
+            .setRequired(true)
+            .setMaxLength(100);
+
+          const row = new ActionRowBuilder().addComponents(searchInput);
+          modal.addComponents(row);
+
+          console.log(`✅ SUCCESS: player_item_search - showing search modal`);
+
+          return {
+            type: 9, // Modal response
+            data: modal.toJSON()
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('map_admin_edit_items_DEPRECATED_')) {
       // DEPRECATED - Old comprehensive player inventory editor code
       return ButtonHandlerFactory.create({
@@ -28929,11 +29090,16 @@ Are you sure you want to continue?`;
         const member = req.body.member;
         const guildId = req.body.guild_id;
         
-        // Extract IDs from custom_id: safari_item_qty_modal_${guildId}_${itemId}_${userId}
+        // Extract IDs from custom_id: safari_item_qty_modal_${guildId}_${itemId}_${userId}[_player_admin]
         const parts = custom_id.replace('safari_item_qty_modal_', '').split('_');
         const modalGuildId = parts[0];
-        const userId = parts[parts.length - 1];
-        const itemId = parts.slice(1, -1).join('_'); // Everything between guildId and userId
+
+        // Check for player_admin context suffix
+        const isPlayerAdminContext = parts[parts.length - 1] === 'player' && parts[parts.length - 2] === 'admin';
+        const userId = isPlayerAdminContext ? parts[parts.length - 3] : parts[parts.length - 1];
+        const itemId = isPlayerAdminContext
+          ? parts.slice(1, -3).join('_') // Everything between guildId and userId_player_admin
+          : parts.slice(1, -1).join('_'); // Everything between guildId and userId
         
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to manage player items.')) return;
@@ -29414,6 +29580,49 @@ Are you sure you want to continue?`;
         
       } catch (error) {
         console.error('Error in safari_item_search_modal:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error searching items. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('player_item_search_modal_')) {
+      // Handle item search modal submission for player-centric item editing
+      try {
+        const targetUserId = custom_id.replace('player_item_search_modal_', '');
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+
+        console.log(`🔍 START: player_item_search_modal - user ${targetUserId}`);
+
+        // Extract search term from modal
+        const searchTerm = components[0].components[0].value?.trim() || '';
+
+        // Import and create updated UI with search results
+        const { createPlayerItemSelectorUI } = await import('./entityManagementUI.js');
+
+        const uiResponse = await createPlayerItemSelectorUI({
+          guildId,
+          targetUserId,
+          searchTerm,
+          selectedItemId: null
+        });
+
+        console.log(`✅ SUCCESS: player_item_search_modal - showing search results for "${searchTerm}"`);
+
+        // Return search results (update original message)
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            ...uiResponse,
+            flags: undefined // Remove flags for UPDATE_MESSAGE
+          }
+        });
+
+      } catch (error) {
+        console.error('Error in player_item_search_modal:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
@@ -29982,25 +30191,40 @@ Are you sure you want to continue?`;
         const itemName = item?.name || 'Unknown Item';
         
         // Success message
-        const successMessage = isAddMode 
+        const successMessage = isAddMode
           ? `✅ Added ${quantity} × ${item?.emoji || '📦'} ${itemName} to ${displayName}'s inventory.`
-          : quantity === 0 
+          : quantity === 0
             ? `✅ Removed ${item?.emoji || '📦'} ${itemName} from ${displayName}'s inventory.`
             : `✅ Set ${item?.emoji || '📦'} ${itemName} quantity to ${quantity} for ${displayName}.`;
-        
+
+        // Add audit logging for admin actions
+        const adminUserId = req.body.member?.user?.id || req.body.user?.id;
+        console.log(`🛡️ ADMIN: User ${adminUserId} set ${itemName} quantity for ${userId} from previous value to ${quantity} in guild ${guildId}`);
+
+        // Determine return destination based on context
+        const returnButton = isPlayerAdminContext
+          ? {
+              type: 2, // Button
+              style: 2, // Secondary
+              label: '← Item Selector',
+              custom_id: `map_admin_edit_items_${userId}`, // Returns to player item selector
+              emoji: { name: '📦' }
+            }
+          : {
+              type: 2, // Button
+              style: 2, // Secondary
+              label: 'Back to Inventory',
+              custom_id: `map_admin_edit_items_${userId}`,
+              emoji: { name: '⬅️' }
+            };
+
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: successMessage,
             components: [{
               type: 1, // Action Row
-              components: [{
-                type: 2, // Button
-                style: 2, // Secondary
-                label: 'Back to Inventory',
-                custom_id: `map_admin_edit_items_${userId}`,
-                emoji: { name: '⬅️' }
-              }]
+              components: [returnButton]
             }],
             flags: InteractionResponseFlags.EPHEMERAL
           }
