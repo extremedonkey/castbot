@@ -262,6 +262,23 @@ export async function handleStoreToggle(context, client) {
 
   console.log(`🏪 DEBUG: Location store toggle - coord ${entityId}, store: ${selectedStoreId || 'none'}`);
 
+  // Handle create new store request
+  if (selectedStoreId === 'create_new_store') {
+    console.log(`🏪 DEBUG: Create new store selected for location ${entityId}`);
+
+    // Use shared modal creation utility
+    const { createStoreModal } = await import('./safariManager.js');
+    const modal = createStoreModal(
+      `safari_store_modal_location_${entityId}`,
+      `Create Store for ${entityId}`
+    );
+
+    return {
+      type: 9, // MODAL
+      data: modal.toJSON()
+    };
+  }
+
   // Handle search request (both original and location-specific patterns)
   if (selectedStoreId === 'search_stores' || selectedStoreId?.startsWith('search_stores_location_')) {
     console.log(`🔍 DEBUG: Location search stores selected from dropdown for ${entityId}`);

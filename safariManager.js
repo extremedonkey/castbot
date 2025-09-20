@@ -1,10 +1,13 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { 
+import {
     ActionRowBuilder,
     ButtonBuilder,
-    ButtonStyle
+    ButtonStyle,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle
 } from 'discord.js';
 import { 
     InteractionResponseType,
@@ -7511,4 +7514,57 @@ function getConditionSummary(condition) {
         default:
             return 'Unknown condition';
     }
+}
+
+/**
+ * Create store creation modal with customizable custom_id and title
+ * @param {string} customId - The custom_id for the modal (e.g., "safari_store_modal_location_F2")
+ * @param {string} title - The modal title (e.g., "Create Store for F2")
+ * @returns {ModalBuilder} Configured modal ready for use
+ */
+export function createStoreModal(customId, title = "Create New Store") {
+    const modal = new ModalBuilder()
+        .setCustomId(customId)
+        .setTitle(title);
+
+    const storeNameInput = new TextInputBuilder()
+        .setCustomId("store_name")
+        .setLabel("Store Name")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(true)
+        .setMaxLength(50)
+        .setPlaceholder("e.g. Adventure Supplies");
+
+    const storeEmojiInput = new TextInputBuilder()
+        .setCustomId("store_emoji")
+        .setLabel("Store Emoji")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)
+        .setMaxLength(100)
+        .setPlaceholder("🏪 or <:custom:123456>");
+
+    const storeDescriptionInput = new TextInputBuilder()
+        .setCustomId("store_description")
+        .setLabel("Store Description")
+        .setStyle(TextInputStyle.Paragraph)
+        .setRequired(false)
+        .setMaxLength(500)
+        .setPlaceholder("A description of your store...");
+
+    const storeownerTextInput = new TextInputBuilder()
+        .setCustomId("storeowner_text")
+        .setLabel("Store Owner Greeting")
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)
+        .setMaxLength(200)
+        .setPlaceholder("Welcome to my store!");
+
+    const row1 = new ActionRowBuilder().addComponents(storeNameInput);
+    const row2 = new ActionRowBuilder().addComponents(storeEmojiInput);
+    const row3 = new ActionRowBuilder().addComponents(storeDescriptionInput);
+    const row4 = new ActionRowBuilder().addComponents(storeownerTextInput);
+
+    modal.addComponents(row1, row2, row3, row4);
+
+    return modal;
 }

@@ -10222,49 +10222,9 @@ Your server is now ready for Tycoons gameplay!`;
         
         console.log(`🏪 DEBUG: Create new store clicked`);
         
-        // Create store creation modal
-        const modal = new ModalBuilder()
-          .setCustomId('safari_store_modal')
-          .setTitle('Create New Store');
-        
-        const storeNameInput = new TextInputBuilder()
-          .setCustomId('store_name')
-          .setLabel('Store Name')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(true)
-          .setMaxLength(50)
-          .setPlaceholder('e.g. Adventure Supplies');
-        
-        const storeEmojiInput = new TextInputBuilder()
-          .setCustomId('store_emoji')
-          .setLabel('Store Emoji')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(false)
-          .setMaxLength(100)
-          .setPlaceholder('🏪 or <:custom:123456>');
-        
-        const storeDescriptionInput = new TextInputBuilder()
-          .setCustomId('store_description')
-          .setLabel('Store Description')
-          .setStyle(TextInputStyle.Paragraph)
-          .setRequired(false)
-          .setMaxLength(500)
-          .setPlaceholder('A description of your store...');
-        
-        const storeownerTextInput = new TextInputBuilder()
-          .setCustomId('storeowner_text')
-          .setLabel('Store Owner Greeting')
-          .setStyle(TextInputStyle.Short)
-          .setRequired(false)
-          .setMaxLength(200)
-          .setPlaceholder('Welcome to my store!');
-        
-        const row1 = new ActionRowBuilder().addComponents(storeNameInput);
-        const row2 = new ActionRowBuilder().addComponents(storeEmojiInput);
-        const row3 = new ActionRowBuilder().addComponents(storeDescriptionInput);
-        const row4 = new ActionRowBuilder().addComponents(storeownerTextInput);
-        
-        modal.addComponents(row1, row2, row3, row4);
+        // Use shared modal creation utility
+        const { createStoreModal } = await import('./safariManager.js');
+        const modal = createStoreModal('safari_store_modal', 'Create New Store');
         
         return res.send({
           type: InteractionResponseType.MODAL,
@@ -10317,49 +10277,9 @@ Your server is now ready for Tycoons gameplay!`;
         if (selectedStoreId === 'create_new_store') {
           console.log(`🏪 DEBUG: Create new store selected from dropdown`);
 
-          // Show the store creation modal
-          const modal = new ModalBuilder()
-            .setCustomId('safari_store_modal_redirect')
-            .setTitle('Create New Store');
-
-          const storeNameInput = new TextInputBuilder()
-            .setCustomId('store_name')
-            .setLabel('Store Name')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(50)
-            .setPlaceholder('e.g. Adventure Supplies');
-
-          const storeEmojiInput = new TextInputBuilder()
-            .setCustomId('store_emoji')
-            .setLabel('Store Emoji')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setMaxLength(100)
-            .setPlaceholder('🏪 or <:custom:123456>');
-
-          const storeDescriptionInput = new TextInputBuilder()
-            .setCustomId('store_description')
-            .setLabel('Store Description')
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(false)
-            .setMaxLength(500)
-            .setPlaceholder('A description of your store...');
-
-          const storeownerTextInput = new TextInputBuilder()
-            .setCustomId('storeowner_text')
-            .setLabel('Store Owner Greeting')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setMaxLength(200)
-            .setPlaceholder('Welcome to my store!');
-
-          const row1 = new ActionRowBuilder().addComponents(storeNameInput);
-          const row2 = new ActionRowBuilder().addComponents(storeEmojiInput);
-          const row3 = new ActionRowBuilder().addComponents(storeDescriptionInput);
-          const row4 = new ActionRowBuilder().addComponents(storeownerTextInput);
-
-          modal.addComponents(row1, row2, row3, row4);
+          // Use shared modal creation utility
+          const { createStoreModal } = await import('./safariManager.js');
+          const modal = createStoreModal('safari_store_modal_redirect', 'Create New Store');
 
           return res.send({
             type: InteractionResponseType.MODAL,
@@ -30263,12 +30183,11 @@ Are you sure you want to continue?`;
           newStore.items = [];
         }
 
-        // Create the store management UI for the new store
-        const uiResponse = await createStoreItemManagementUI({
-          storeId: newStoreId,
-          store: newStore,
+        // Redirect back to main store selector with new store visible
+        const { createStoreSelectionUI } = await import('./storeSelector.js');
+        const uiResponse = await createStoreSelectionUI({
           guildId: guildId,
-          searchTerm: ''
+          action: 'manage_items'
         });
 
         // Return UPDATE_MESSAGE to show the store management interface
@@ -30284,6 +30203,125 @@ Are you sure you want to continue?`;
           data: {
             content: '❌ Error creating store. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id.startsWith('safari_store_modal_location_')) {
+      // Handle Safari store creation modal submission for map locations
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const components = req.body.data.components;
+
+        // Extract entityId from custom_id
+        const entityId = custom_id.replace('safari_store_modal_location_', '');
+        console.log(`🏪 DEBUG: Creating store for location ${entityId}`);
+
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create stores.')) return;
+
+        // Extract form data (same as existing store creation)
+        const storeName = components[0].components[0].value?.trim();
+        const storeEmoji = components[1].components[0].value?.trim() || null;
+        const storeDescription = components[2].components[0].value?.trim() || null;
+        const storeownerText = components[3].components[0].value?.trim() || null;
+
+        // Validate required fields
+        if (!storeName) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              components: [{
+                type: 17, // Container
+                components: [{
+                  type: 10, // Text Display
+                  content: '❌ Store name is required.'
+                }]
+              }],
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Create the store using existing createStore function
+        const { createStore, loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const newStoreId = await createStore(guildId, {
+          name: storeName,
+          emoji: storeEmoji,
+          description: storeDescription,
+          storeownerText: storeownerText,
+          createdBy: member.user.id
+        });
+
+        console.log(`✅ DEBUG: Store '${newStoreId}' created successfully`);
+
+        // Add store to location coordinates
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+        const coordData = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[entityId];
+
+        if (!coordData) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              components: [{
+                type: 17, // Container
+                components: [{
+                  type: 10, // Text Display
+                  content: '❌ Location data not found.'
+                }]
+              }],
+              flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        // Add store to location
+        if (!coordData.stores) coordData.stores = [];
+        coordData.stores.push(newStoreId);
+        await saveSafariContent(safariData);
+
+        console.log(`✅ DEBUG: Store '${newStoreId}' added to location ${entityId}`);
+
+        // Update anchor message
+        const { safeUpdateAnchorMessage } = await import('./mapCellUpdater.js');
+        await safeUpdateAnchorMessage(guildId, entityId, client);
+
+        // Return to location store selector with new store visible
+        const { createStoreSelectionUI } = await import('./storeSelector.js');
+        const uiResponse = await createStoreSelectionUI({
+          guildId: guildId,
+          action: 'add_to_location',
+          entityId: entityId,
+          preSelectedStores: coordData.stores, // Include new store
+          title: `🏪 Manage Stores at ${entityId}`,
+          backButtonId: `entity_view_mode_map_cell_${entityId}`,
+          backButtonLabel: '← Back',
+          backButtonEmoji: '📍'
+        });
+
+        // Return Components V2 response
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            ...uiResponse,
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+          }
+        });
+
+      } catch (error) {
+        console.error(`❌ ERROR: safari_store_modal_location - ${error.message}`);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            components: [{
+              type: 17, // Container
+              components: [{
+                type: 10, // Text Display
+                content: '❌ Error creating store. Please try again.'
+              }]
+            }],
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
           }
         });
       }
