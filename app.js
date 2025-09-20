@@ -30184,7 +30184,6 @@ Are you sure you want to continue?`;
         }
 
         // Redirect directly to new store item management for better UX
-        const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
         const uiResponse = await createStoreItemManagementUI({
           storeId: newStoreId,
           store: newStore,
