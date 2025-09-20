@@ -18705,6 +18705,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               const safariData = await loadSafariContent();
               const activeMapId = safariData[context.guildId]?.maps?.active;
               const coordStores = safariData[context.guildId]?.maps?.[activeMapId]?.coordinates?.[entityId]?.stores || [];
+              console.log(`🔍 DEBUG: Map location ${entityId} - activeMapId: ${activeMapId}, coordStores: ${JSON.stringify(coordStores)}, length: ${coordStores.length}`);
 
               // Get IDENTICAL working UI but with location-specific data
               const uiResponse = await createStoreSelectionUI({
