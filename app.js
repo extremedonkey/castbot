@@ -32196,7 +32196,7 @@ Are you sure you want to continue?`;
                 (!action.coordinates || action.coordinates.length === 0)) {
               const phrases = action.trigger.phrases || [];
               if (phrases.some(phrase => phrase.toLowerCase() === command)) {
-                matchingAction = action;
+                matchingAction = { ...action, id: actionId };  // Add the actionId as id property
                 console.log(`✅ Found global action match: ${actionId}`);
                 break;
               }
