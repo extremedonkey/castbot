@@ -14507,9 +14507,13 @@ Your server is now ready for Tycoons gameplay!`;
           const coordinate = action.coordinates?.[0];
           
           if (!coordinate) {
-            // No coordinate assigned, go to Safari menu
+            // Orphan action - show Safari menu directly
+            console.log(`🌍 DEBUG: Orphan action ${actionId} - showing Safari menu`);
+
+            const safariMenuData = await createSafariMenu(context.guildId, context.userId, context.member);
+
             return {
-              content: '❌ No location assigned to this action. Returning to Safari menu.',
+              ...safariMenuData,
               ephemeral: true
             };
           }
@@ -32182,7 +32186,80 @@ Are you sure you want to continue?`;
         } else {
           // No matching command found
           console.log(`❌ No matching action found for command "${command}" at ${coord}`);
-          
+
+          // NEW: Search global actions (orphan actions) as fallback
+          console.log(`🌍 DEBUG: No location match for "${command}" at ${coord}, searching global actions`);
+
+          for (const actionId of Object.keys(safariData[guildId]?.buttons || {})) {
+            const action = safariData[guildId].buttons[actionId];
+            if (action.trigger?.type === 'modal' &&
+                (!action.coordinates || action.coordinates.length === 0)) {
+              const phrases = action.trigger.phrases || [];
+              if (phrases.some(phrase => phrase.toLowerCase() === command)) {
+                matchingAction = action;
+                console.log(`✅ Found global action match: ${actionId}`);
+                break;
+              }
+            }
+          }
+
+          if (matchingAction) {
+            // Execute global action using existing logic
+            console.log(`✅ Found matching global action for command "${command}"`);
+
+            // Execute the action
+            const { executeButtonActions } = await import('./safariManager.js');
+
+            // Create proper interaction object for the execution
+            const interactionData = {
+              token: req.body.token,
+              applicationId: req.body.application_id,
+              member: req.body.member,
+              channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
+            };
+
+            const result = await executeButtonActions(
+              guildId,
+              matchingAction.id,  // Use the button ID, not the actions array
+              userId,
+              interactionData
+            );
+
+            // Log the player command
+            try {
+              const { logCustomAction } = await import('./safariLogger.js');
+              const userData = req.body.member?.user || {};
+
+              await logCustomAction({
+                guildId,
+                userId,
+                username: userData.username || 'Unknown',
+                displayName: req.body.member?.nick || userData.global_name || userData.username || 'Unknown',
+                location: coord,
+                actionType: 'player_command',
+                actionId: command,
+                executedActions: matchingAction.actions?.map(action => ({
+                  type: action.type,
+                  config: action.config,
+                  result: 'executed'
+                })) || [],
+                success: true,
+                channelName: `#${req.body.channel?.name || coord.toLowerCase()}`
+              });
+            } catch (logError) {
+              console.error('Error logging player command:', logError);
+            }
+
+            // Return the result
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: result
+            });
+          }
+
+          // Still no match found - proceed with existing executeOn:"false" logic
+          console.log(`❌ No matching action found for command "${command}" at ${coord} or globally`);
+
           // Check for actions with executeOn: "false" to execute when no match is found
           let falseActions = [];
           for (const actionId of locationActions) {
