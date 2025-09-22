@@ -277,7 +277,7 @@ grep -B20 -A20 "feature_pattern" app.js
 ### Tools Without Permission Required
 **Claude can execute these without asking:**
 - `grep` commands and all Grep tool usage
-- `./scripts/dev/dev-restart.sh` 
+- **`./scripts/dev/dev-restart.sh`** - **MANDATORY after ANY code changes**
 - `npm run deploy-remote-wsl-dry` (preview only)
 - Creating/editing markdown documentation files (*.md)
 - Creating Mermaid diagrams in documentation
