@@ -28,7 +28,8 @@ import {
   ChannelSelectMenuBuilder,
   ComponentType,
   ChannelType,
-  Partials
+  Partials,
+  Options
 } from 'discord.js';
 import { capitalize, DiscordRequest } from './utils.js';  // Add DiscordRequest to imports
 import { 
@@ -1384,16 +1385,25 @@ const app = express();
 // Get port, or default to 3000
 const PORT = process.env.PORT || 3000;
 
-// Initialize Discord client with required intents and partials
-const client = new Client({ 
+// Initialize Discord client with required intents, partials, and ultra-cautious cache limits
+const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds, 
+    GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent
   ],
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction]
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+  // Ultra-cautious cache limits to prevent unbounded memory growth
+  // Based on production data: max 45 users per server, multiple active servers
+  makeCache: Options.cacheWithLimits({
+    MessageManager: 50,        // Limit message cache (messages are large objects)
+    GuildMemberManager: 1200,  // Very generous buffer for member objects (45 users * ~25x safety margin)
+    RoleManager: 400,          // Generous limit for role objects across all servers
+    UserManager: 300,          // Covers all users across multiple servers with buffer
+    ChannelManager: 100        // Generous limit for channel objects
+  })
 });
 
 // ============================================================================
