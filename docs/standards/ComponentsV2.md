@@ -4,7 +4,9 @@
 
 Components V2 is Discord's new component system that provides enhanced layout capabilities and better structure for messages and modals. This is an **architectural pattern** that ALL Discord UI in CastBot must follow.
 
-**Source**: [Discord Developer Documentation](https://discord.com/developers/docs/components/reference)
+**Sources**:
+- [Discord Developer Documentation](https://discord.com/developers/docs/components/reference)
+- **[Discord Interaction API](DiscordInteractionAPI.md)** - Foundational interaction concepts
 
 ### 📢 Latest Updates (September 2025)
 
@@ -624,8 +626,10 @@ return {
 
 ## Related Documentation
 
-- [ButtonHandlerFactory.md](ButtonHandlerFactory.md) - Button implementation patterns
-- [EntityEditFramework.md](EntityEditFramework.md) - Entity UI patterns
+- **[Discord Interaction API](DiscordInteractionAPI.md)** - Foundational Discord API concepts
+- [Discord Interaction Patterns](DiscordInteractionPatterns.md) - CastBot-specific implementation patterns
+- [ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md) - Button implementation patterns
+- [EntityEditFramework.md](../enablers/EntityEditFramework.md) - Entity UI patterns
 - [DefinitionOfDone.md](../workflow/DefinitionOfDone.md) - UI requirements
 
 ## References

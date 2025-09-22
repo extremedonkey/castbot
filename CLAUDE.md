@@ -179,8 +179,9 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 
 **Standards & Patterns:**
 - **🎨 COMPONENTS V2** (MANDATORY) → [docs/standards/ComponentsV2.md](docs/standards/ComponentsV2.md)
-- **📝 LOGGING STANDARDS** → [docs/standards/LoggingStandards.md](docs/standards/LoggingStandards.md)
+- **🔗 DISCORD INTERACTION API** → [docs/standards/DiscordInteractionAPI.md](docs/standards/DiscordInteractionAPI.md)
 - **🔌 DISCORD INTERACTION PATTERNS** → [docs/standards/DiscordInteractionPatterns.md](docs/standards/DiscordInteractionPatterns.md)
+- **📝 LOGGING STANDARDS** → [docs/standards/LoggingStandards.md](docs/standards/LoggingStandards.md)
 - **📊 BUTTON INTERACTION LOGGING** → [docs/standards/ButtonInteractionLogging.md](docs/standards/ButtonInteractionLogging.md)
 
 **UI/UX Design:**

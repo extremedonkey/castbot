@@ -2,7 +2,9 @@
 
 ## Overview
 
-This document provides patterns and best practices for Discord interactions, including common pitfalls and solutions discovered through real-world implementation.
+This document provides **CastBot-specific patterns** and best practices for Discord interactions, including common pitfalls and solutions discovered through real-world implementation.
+
+**For foundational Discord API concepts, see [Discord Interaction API](DiscordInteractionAPI.md)**.
 
 ## 🚨 Critical Lessons from Custom Actions Sprint
 
@@ -192,6 +194,7 @@ if (problematicContext) {
 
 ## References
 
+- **[Discord Interaction API](DiscordInteractionAPI.md)** - Foundational Discord API concepts
 - [ComponentsV2.md](ComponentsV2.md) - Component structure
 - [ButtonHandlerFactory.md](../enablers/ButtonHandlerFactory.md) - Response handling
 - [EntityEditFramework.md](../enablers/EntityEditFramework.md) - When to use complex UI

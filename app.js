@@ -4424,15 +4424,15 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     }
     
     // Handle safari dynamic buttons (format: safari_guildId_buttonId_timestamp)
-    if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 && 
-        !custom_id.startsWith('safari_add_action_') && 
-        !custom_id.startsWith('safari_finish_button_') && 
-        !custom_id.startsWith('safari_action_modal_') && 
-        !custom_id.startsWith('safari_currency_') && 
-        !custom_id.startsWith('safari_create_') && 
-        !custom_id.startsWith('safari_post_') && 
-        !custom_id.startsWith('safari_manage_') && 
-        !custom_id.startsWith('safari_view_') && 
+    if (custom_id.startsWith('safari_') && custom_id.split('_').length >= 4 &&
+        !custom_id.startsWith('safari_add_action_') &&
+        !custom_id.startsWith('safari_finish_button_') &&
+        !custom_id.startsWith('safari_action_modal_') &&
+        !custom_id.startsWith('safari_currency_') &&
+        !custom_id.startsWith('safari_create_') &&
+        !custom_id.startsWith('safari_post_') &&
+        !custom_id.startsWith('safari_manage_') &&
+        !custom_id.startsWith('safari_view_') &&
         !custom_id.startsWith('safari_inventory_') &&
         !custom_id.startsWith('safari_log_') &&
         !custom_id.startsWith('safari_configure_log') &&
@@ -4458,6 +4458,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_remove_action_') &&
         !custom_id.startsWith('safari_edit_action_') &&
         !custom_id.startsWith('safari_config_') &&
+        custom_id !== 'safari_player_menu_config' &&
         !custom_id.startsWith('safari_move_') &&
         !custom_id.startsWith('safari_drop_style_') &&
         !custom_id.startsWith('safari_drop_reset_') &&
