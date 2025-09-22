@@ -126,9 +126,9 @@ export const EDIT_CONFIGS = {
         label: 'Currency & Inventory',
         description: 'Customize currency name, emoji, and inventory name',
         fields: {
-          currencyName: { type: 'text', maxLength: 30, required: true, label: 'Currency Name', placeholder: 'coins' },
+          currencyName: { type: 'text', maxLength: 30, required: true, label: 'Currency Name', placeholder: 'Dollars' },
           currencyEmoji: { type: 'text', maxLength: 10, required: false, label: 'Currency Emoji', placeholder: '🪙' },
-          inventoryName: { type: 'text', maxLength: 30, required: true, label: 'Inventory Name', placeholder: 'Nest' },
+          inventoryName: { type: 'text', maxLength: 30, required: true, label: 'Inventory Name', placeholder: 'Inventory' },
           inventoryEmoji: { type: 'text', maxLength: 10, required: false, label: 'Inventory Emoji', placeholder: 'Set the emoji to be used to represent inventory' },
           defaultStartingCurrencyValue: { type: 'text', maxLength: 10, required: false, label: 'Default Starting Currency', placeholder: '100' }
         }

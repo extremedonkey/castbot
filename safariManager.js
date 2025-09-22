@@ -325,8 +325,8 @@ async function ensureSafariContentFile() {
                     "stores": {},      // NEW: MVP2 - Multiple stores per server
                     "items": {},       // NEW: MVP2 - Reusable items across stores
                     "safariConfig": {  // NEW: Custom terminology per guild
-                        "currencyName": "coins",
-                        "inventoryName": "Nest",
+                        "currencyName": "Dollars",
+                        "inventoryName": "Inventory",
                         "currencyEmoji": "🪙"
                     }
                 }
@@ -351,8 +351,8 @@ async function ensureSafariContentFile() {
                 }
                 if (!data[guildId].safariConfig) {
                     data[guildId].safariConfig = {
-                        currencyName: 'coins',
-                        inventoryName: 'Nest',
+                        currencyName: 'Dollars',
+                        inventoryName: 'Inventory',
                         currencyEmoji: '🪙'
                     };
                     updated = true;
@@ -3663,16 +3663,16 @@ async function getCustomTerms(guildId) {
         
         return {
             // Basic terms
-            currencyName: config.currencyName || 'coins',
-            inventoryName: config.inventoryName || 'Nest',
+            currencyName: config.currencyName || 'Dollars',
+            inventoryName: config.inventoryName || 'Inventory',
             currencyEmoji: config.currencyEmoji || '🪙',
             inventoryEmoji: config.inventoryEmoji || '🧰',
             defaultStartingCurrencyValue: config.defaultStartingCurrencyValue || 100,
             
             // Game settings - Challenge Game Logic
-            round1GoodProbability: config.round1GoodProbability || null,
-            round2GoodProbability: config.round2GoodProbability || null,
-            round3GoodProbability: config.round3GoodProbability || null,
+            round1GoodProbability: config.round1GoodProbability || 75,
+            round2GoodProbability: config.round2GoodProbability || 50,
+            round3GoodProbability: config.round3GoodProbability || 25,
             
             // Event details
             goodEventName: config.goodEventName || 'Clear Skies',
@@ -3691,15 +3691,15 @@ async function getCustomTerms(guildId) {
         console.error('Error getting custom terms:', error);
         return {
             // Basic terms fallbacks
-            currencyName: 'coins',
-            inventoryName: 'Nest',
+            currencyName: 'Dollars',
+            inventoryName: 'Inventory',
             currencyEmoji: '🪙',
             inventoryEmoji: '🧰',
             
             // Game settings fallbacks
-            round1GoodProbability: null,
-            round2GoodProbability: null,
-            round3GoodProbability: null,
+            round1GoodProbability: 75,
+            round2GoodProbability: 50,
+            round3GoodProbability: 25,
             
             // Event details fallbacks
             goodEventName: 'Clear Skies',
@@ -3742,18 +3742,18 @@ async function updateCustomTerms(guildId, terms) {
         // Ensure safariConfig exists
         if (!safariData[guildId].safariConfig) {
             safariData[guildId].safariConfig = {
-                currencyName: 'coins',
-                inventoryName: 'Nest',
+                currencyName: 'Dollars',
+                inventoryName: 'Inventory',
                 currencyEmoji: '🪙'
             };
         }
         
         // Update basic terms
         if (terms.currencyName !== undefined) {
-            safariData[guildId].safariConfig.currencyName = terms.currencyName || 'coins';
+            safariData[guildId].safariConfig.currencyName = terms.currencyName || 'Dollars';
         }
         if (terms.inventoryName !== undefined) {
-            safariData[guildId].safariConfig.inventoryName = terms.inventoryName || 'Nest';
+            safariData[guildId].safariConfig.inventoryName = terms.inventoryName || 'Inventory';
         }
         if (terms.currencyEmoji !== undefined) {
             safariData[guildId].safariConfig.currencyEmoji = terms.currencyEmoji || '🪙';
@@ -3823,8 +3823,8 @@ async function updateCustomTerms(guildId, terms) {
  */
 async function resetCustomTerms(guildId) {
     return await updateCustomTerms(guildId, {
-        currencyName: 'coins',
-        inventoryName: 'Nest',
+        currencyName: 'Dollars',
+        inventoryName: 'Inventory',
         currencyEmoji: '🪙',
         inventoryEmoji: '🧰'
     });

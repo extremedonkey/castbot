@@ -202,8 +202,8 @@ export function processFieldGroupSubmission(groupKey, modalData) {
  */
 function createCurrentSettingsDisplay(config) {
     const currencyEmoji = config.currencyEmoji || '🪙';
-    const currencyName = config.currencyName || 'coins';
-    const inventoryName = config.inventoryName || 'Nest';
+    const currencyName = config.currencyName || 'Dollars';
+    const inventoryName = config.inventoryName || 'Inventory';
     const inventoryEmoji = config.inventoryEmoji || '🧰';
     
     let display = `**🪙 Currency & Inventory**\n`;
@@ -233,7 +233,7 @@ function createCurrentSettingsDisplay(config) {
     if (config.round1GoodProbability !== undefined || 
         config.round2GoodProbability !== undefined || 
         config.round3GoodProbability !== undefined) {
-        display += `**🎲 Round Probabilities**\n`;
+        display += `**🎲 Round Harvest Probabilities**\n`;
         if (config.round1GoodProbability !== undefined) {
             const goodPercent = config.round1GoodProbability;
             const badPercent = 100 - goodPercent;
@@ -276,7 +276,7 @@ export function createResetConfirmationUI() {
     const containerComponents = [
         {
             type: 10, // Text Display component
-            content: `## ⚠️ Reset Safari Settings\n\nAre you sure you want to reset all Safari customizations to default values?\n\n**This will reset:**\n• Currency name back to "coins" 🪙\n• Inventory name back to "Nest"\n• Event names back to defaults\n• Round probabilities back to 75%, 50%, 25%\n\n**This action cannot be undone.**`
+            content: `## ⚠️ Reset Safari Settings\n\nAre you sure you want to reset all Safari customizations to default values?\n\n**This will reset:**\n• Currency name back to "Dollars" 🪙\n• Inventory name back to "Inventory"\n• Event names back to defaults\n• Round harvest probabilities back to 75%, 50%, 25%\n\n**This action cannot be undone.**`
         },
         {
             type: 1, // Action Row

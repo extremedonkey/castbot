@@ -1008,7 +1008,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
  */
 async function createSafariMenu(guildId, userId, member) {
   // Get the inventory name and current round for this guild
-  let inventoryName = 'Nest'; // Default
+  let inventoryName = 'Inventory'; // Default
   let inventoryEmoji = '🧰'; // Default emoji
   let currentRound = 1; // Default round
   let totalRounds = 3; // Default total rounds
@@ -8701,7 +8701,7 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'safari_player_inventory') {
-      // Handle "My Nest" player inventory display (MIGRATED TO FACTORY)
+      // Handle "My Inventory" player inventory display (MIGRATED TO FACTORY)
       return ButtonHandlerFactory.create({
         id: 'safari_player_inventory',
         handler: async (context) => {
@@ -9819,7 +9819,7 @@ Your server is now ready for Tycoons gameplay!`;
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '✅ **Safari Settings Reset!**\n\nAll customizations have been reset to default values:\n• Currency: 🪙 coins\n• Inventory: Nest\n• Events: ☀️ Clear Skies / ☄️ Meteor Strike\n• Round probabilities: 75%, 50%, 25%',
+            content: '✅ **Safari Settings Reset!**\n\nAll customizations have been reset to default values:\n• Currency: 🪙 Dollars\n• Inventory: Inventory\n• Events: ☀️ Clear Skies / ☄️ Meteor Strike\n• Round harvest probabilities: 75%, 50%, 25%',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });
@@ -31361,8 +31361,8 @@ Are you sure you want to continue?`;
         const gameSettings = components[0]?.components[0]?.value || '75,50,25';
         const eventNames = components[1]?.components[0]?.value || 'Clear Skies,Meteor Strike';
         const eventEmojis = components[2]?.components[0]?.value || '☀️,☄️';
-        const currencySettings = components[3]?.components[0]?.value || 'coins,🪙';
-        const inventoryName = components[4]?.components[0]?.value || 'Nest';
+        const currencySettings = components[3]?.components[0]?.value || 'Dollars,🪙';
+        const inventoryName = components[4]?.components[0]?.value || 'Inventory';
         
         // Parse comma-separated values
         const parseCommaSeparated = (value, expectedCount, fieldName) => {
@@ -31462,7 +31462,7 @@ Are you sure you want to continue?`;
         successMessage += `\n\n**Events:**\n• Good: ${goodEventEmoji} ${goodEventName}\n• Bad: ${badEventEmoji} ${badEventName}`;
         
         if (round1Good !== null || round2Good !== null || round3Good !== null) {
-          successMessage += `\n\n**Round Probabilities:**`;
+          successMessage += `\n\n**Round Harvest Probabilities:**`;
           if (round1Good !== null) successMessage += `\n• Round 1: ${round1Good}% good`;
           if (round2Good !== null) successMessage += `\n• Round 2: ${round2Good}% good`;
           if (round3Good !== null) successMessage += `\n• Round 3: ${round3Good}% good`;

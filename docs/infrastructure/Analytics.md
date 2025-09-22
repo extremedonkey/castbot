@@ -8,11 +8,12 @@ CastBot includes a comprehensive analytics and logging system that tracks user i
 
 ### 1. Analytics Logger (`src/analytics/analyticsLogger.js`)
 The core module that handles all interaction logging with the following features:
-- Tracks every user interaction (commands, buttons, selects, modals)
-- Stores logs in structured format for analysis
-- Supports live Discord posting for real-time monitoring
-- Maintains user exclusion lists for filtering admin activity
-- Rate-limited logging to prevent Discord API abuse
+- **User Interaction Tracking**: Commands, buttons, selects, modals across all environments
+- **Structured Logging**: File-based logging with configurable format and timestamps
+- **Live Discord Integration**: Real-time posting to environment-specific channels
+- **Environment-Specific Exclusions**: Separate user filtering for production vs development
+- **Performance Optimizations**: Server name caching, rate limiting, non-blocking operations
+- **Legacy Compatibility**: Automatic migration from old configuration formats
 
 ### 2. Server Usage Analytics (`src/analytics/serverUsageAnalytics.js`)
 Advanced server-by-server usage analysis system providing:
@@ -24,11 +25,63 @@ Advanced server-by-server usage analysis system providing:
 - **Components V2 UI** with professional formatting and refresh functionality
 
 ### 3. Live Discord Logging
-Real-time posting of analytics events to Discord channels:
-- Channel ID: 1385059476243218552
-- Markdown formatted messages with timestamps
-- Rate limited to prevent spam (1.2 second delay between posts)
-- Non-blocking error handling to prevent main bot disruption
+Real-time posting of analytics events to Discord channels with environment-specific configuration:
+
+#### Environment-Specific Channels
+- **Production**: 1385059476243218552 (#🪵logs)
+- **Development**: 1386998800215969904 (#🪵logs-dev)
+
+#### Advanced Features
+- **Environment-specific user exclusions** for testing vs production
+- **Server name caching** to eliminate 739KB file reads per interaction
+- **Rate limiting** (1.2 second delay between posts) to prevent Discord API abuse
+- **Markdown formatted messages** with timestamps and user context
+- **Non-blocking error handling** to prevent main bot disruption
+- **Backwards compatibility** with legacy configuration formats
+
+## Configuration Management
+
+### Environment-Specific Configuration
+
+The analytics system supports different configurations for development and production environments:
+
+```javascript
+// New environment-specific exclusion format
+excludedUserIds: {
+  production: ["391415444084490240"],  // Exclude admin in production
+  development: []                      // Allow all users in development for testing
+}
+
+// Legacy format (auto-migrated)
+excludedUserIds: ["391415444084490240"]  // Applied to both environments
+```
+
+### Configuration Tools
+
+- **Toggle Script**: `scripts/utilities/toggle-live-logging.js`
+  - `node toggle-live-logging.js enable` - Enable live Discord logging
+  - `node toggle-live-logging.js disable` - Disable live Discord logging
+  - `node toggle-live-logging.js exclude <userID>` - Toggle user exclusion (environment-specific)
+
+- **Production Button**: `prod_toggle_live_analytics` - Toggle live logging via Discord UI
+
+### Performance Optimizations
+
+#### Server Name Caching (Added 2025-01-22)
+To eliminate 739KB file reads per interaction, server names are cached in memory:
+
+```javascript
+// Cache implementation in analyticsLogger.js
+const serverNameCache = new Map();
+
+// Only read playerData.json once per server, then cache
+if (!serverNameCache.has(guildId)) {
+  const serverName = playerData[guildId]?.serverName || 'Unknown Server';
+  serverNameCache.set(guildId, serverName);
+}
+```
+
+**Impact**: ~98% reduction in file I/O operations for analytics logging.
 
 ## Server Usage Analytics System (Detailed)
 

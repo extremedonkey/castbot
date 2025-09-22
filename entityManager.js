@@ -67,8 +67,8 @@ export async function updateEntity(guildId, entityType, entityId, updates) {
             stores: {},
             items: {},
             safariConfig: {
-                currencyName: 'coins',
-                inventoryName: 'Nest',
+                currencyName: 'Dollars',
+                inventoryName: 'Inventory',
                 currencyEmoji: '🪙'
             }
         };
@@ -200,8 +200,8 @@ export async function createEntity(guildId, entityType, entityData, userId) {
             stores: {},
             items: {},
             safariConfig: {
-                currencyName: 'coins',
-                inventoryName: 'Nest',
+                currencyName: 'Dollars',
+                inventoryName: 'Inventory',
                 currencyEmoji: '🪙'
             }
         };

@@ -11,16 +11,16 @@ import { loadPlayerData, savePlayerData } from './storage.js';
  * Default Safari configuration template
  */
 const DEFAULT_SAFARI_CONFIG = {
-    currencyName: "coins",
+    currencyName: "Dollars",
     inventoryName: "Inventory", 
     currencyEmoji: "🪙",
     goodEventName: "Good Event",
     badEventName: "Bad Event", 
     goodEventEmoji: "✅",
     badEventEmoji: "❌",
-    round1GoodProbability: 70,
+    round1GoodProbability: 75,
     round2GoodProbability: 50,
-    round3GoodProbability: 30,
+    round3GoodProbability: 25,
     totalRounds: 3, // New: configurable number of rounds (default 3)
     currentRound: 1,
     lastRoundTimestamp: null
