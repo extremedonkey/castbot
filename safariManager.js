@@ -1633,6 +1633,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
                         }
 
                         result = {
+                            flags: (1 << 15), // IS_COMPONENTS_V2
                             components: [{
                                 type: 17, // Container
                                 accent_color: 0x2ECC71, // Green accent for success
@@ -1653,6 +1654,7 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
                     } catch (error) {
                         console.error('Error executing calculate_results action:', error);
                         result = {
+                            flags: (1 << 15), // IS_COMPONENTS_V2
                             components: [{
                                 type: 17, // Container
                                 accent_color: 0xE74C3C, // Red accent for error
