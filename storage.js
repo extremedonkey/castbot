@@ -315,7 +315,10 @@ export async function loadEnvironmentConfig() {
         // Environment-specific timezone offsets (hours to add to UTC)
         productionTimezoneOffset: 8,   // AWS server is UTC, add 8 hours for GMT+8
         developmentTimezoneOffset: 0,  // Local dev is already GMT+8, no offset needed
-        excludedUserIds: ["391415444084490240"],
+        excludedUserIds: {
+          production: ["391415444084490240"],  // Keep you excluded in prod
+          development: []                      // Allow all users in dev for testing
+        },
         rateLimitQueue: [],
         lastMessageTime: 0
       }
@@ -338,6 +341,17 @@ export async function loadEnvironmentConfig() {
     data.environmentConfig.liveDiscordLogging.productionTimezoneOffset = 8;   // AWS server UTC + 8 hours
     data.environmentConfig.liveDiscordLogging.developmentTimezoneOffset = 0;  // Local dev already GMT+8
     configUpdated = true;
+  }
+
+  // Migrate excludedUserIds from array to environment-specific object
+  if (Array.isArray(data.environmentConfig.liveDiscordLogging.excludedUserIds)) {
+    const legacyExcludedUsers = data.environmentConfig.liveDiscordLogging.excludedUserIds;
+    data.environmentConfig.liveDiscordLogging.excludedUserIds = {
+      production: legacyExcludedUsers,  // Keep existing exclusions in production
+      development: []                  // Allow all users in development for testing
+    };
+    configUpdated = true;
+    console.log('📊 Migrated excludedUserIds to environment-specific format');
   }
   
   if (configUpdated) {

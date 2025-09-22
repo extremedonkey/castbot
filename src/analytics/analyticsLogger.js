@@ -3,6 +3,9 @@ import path from 'path';
 
 const ANALYTICS_LOG_FILE = './logs/user-analytics.log';
 
+// Server name cache to eliminate 739KB file reads per interaction
+const serverNameCache = new Map();
+
 // Button label mappings for common buttons that may not be extractable from components
 const BUTTON_LABEL_MAP = {
   // Production menu buttons
@@ -228,27 +231,27 @@ async function logInteraction(userId, guildId, action, details, username, guildN
       ? `${displayName} (${username})`
       : username;
     
-    // Enhanced server display: "ServerName (guildId)" - prioritize playerData.json since it's more reliable
+    // Enhanced server display: "ServerName (guildId)" - use cache to avoid 739KB file reads
     let serverDisplay = `Unknown Server (${guildId})`;
-    
-    // Try to get server name from playerData.json file directly
-    try {
-      const rawData = fs.readFileSync('./playerData.json', 'utf8');
-      const playerData = JSON.parse(rawData);
-      
-      if (playerData[guildId] && playerData[guildId].serverName) {
-        serverDisplay = `${playerData[guildId].serverName} (${guildId})`;
-      } else {
-        // Fallback to Discord API guild name if available
-        if (guildName && guildName !== 'Unknown Server') {
-          serverDisplay = `${guildName} (${guildId})`;
-        }
+
+    // Check cache first to avoid 739KB file read per interaction
+    if (!serverNameCache.has(guildId)) {
+      try {
+        const rawData = fs.readFileSync('./playerData.json', 'utf8');
+        const playerData = JSON.parse(rawData);
+        const serverName = playerData[guildId]?.serverName || 'Unknown Server';
+        serverNameCache.set(guildId, serverName);
+      } catch (error) {
+        serverNameCache.set(guildId, 'Unknown Server');
       }
-    } catch (error) {
-      // Fallback to Discord API guild name if available
-      if (guildName && guildName !== 'Unknown Server') {
-        serverDisplay = `${guildName} (${guildId})`;
-      }
+    }
+
+    const cachedServerName = serverNameCache.get(guildId);
+    serverDisplay = `${cachedServerName} (${guildId})`;
+
+    // Fallback to Discord API name if cached name is generic
+    if (cachedServerName === 'Unknown Server' && guildName && guildName !== 'Unknown Server') {
+      serverDisplay = `${guildName} (${guildId})`;
     }
     
     // Enhanced action display: include channel and action type
@@ -407,12 +410,26 @@ async function postToDiscordLogs(logEntry, userId, action, details, components, 
     }
     console.log(`📊 DEBUG: postToDiscordLogs - Logging enabled OK`);
     
-    // Check user exclusion (Option A: Complete Exclusion)
-    if (loggingConfig.excludedUserIds.includes(userId)) {
-      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - User ${userId} is excluded`);
+    // Check user exclusion (environment-specific)
+    const isProduction = process.env.PRODUCTION === 'TRUE';
+
+    // Handle both new object format and legacy array format
+    let excludedUsers = [];
+    if (Array.isArray(loggingConfig.excludedUserIds)) {
+      // Legacy format: apply to both environments
+      excludedUsers = loggingConfig.excludedUserIds;
+    } else if (loggingConfig.excludedUserIds && typeof loggingConfig.excludedUserIds === 'object') {
+      // New format: environment-specific
+      excludedUsers = isProduction
+        ? (loggingConfig.excludedUserIds.production || [])
+        : (loggingConfig.excludedUserIds.development || []);
+    }
+
+    if (excludedUsers.includes(userId)) {
+      console.log(`📊 DEBUG: postToDiscordLogs EARLY RETURN - User ${userId} is excluded in ${isProduction ? 'production' : 'development'}`);
       return;
     }
-    console.log(`📊 DEBUG: postToDiscordLogs - User not excluded, continuing...`);
+    console.log(`📊 DEBUG: postToDiscordLogs - User not excluded (${isProduction ? 'production' : 'development'} mode), continuing...`);
     
     // Get target channel if not cached
     console.log(`📊 DEBUG: postToDiscordLogs - Checking target channel cache`);
