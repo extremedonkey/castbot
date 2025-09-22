@@ -367,7 +367,16 @@ npm run deploy-remote-wsl
 
 ### Production Monitoring
 
+**Comprehensive Health Monitoring** (see [Production Monitoring Guide](ProductionMonitoring.md)):
+
 ```bash
+# Health monitoring (ultrathink edition)
+npm run monitor-prod           # Full health dashboard
+npm run monitor-prod-quick     # Essential metrics (fastest)
+npm run monitor-prod-memory    # Memory analysis & optimization tracking
+npm run monitor-prod-alerts    # Alert conditions & recommendations
+npm run monitor-prod-cache     # Cache performance & effectiveness
+
 # Enhanced logging scripts
 npm run logs-prod              # Last 100 lines
 npm run logs-prod-follow       # Real-time tail

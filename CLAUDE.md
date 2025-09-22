@@ -91,6 +91,17 @@ npm run deploy-remote-wsl-dry  # Preview changes (SAFE - no permission needed)
 **🔴 NEVER use `git push` directly for production** - The deployment script handles GitHub pulls
 
 ### Production Monitoring
+
+**🎯 Ultrathink Health Monitoring** (see [ProductionMonitoring.md](docs/infrastructure/ProductionMonitoring.md)):
+```bash
+npm run monitor-prod           # Full health dashboard with scoring
+npm run monitor-prod-quick     # Essential metrics (fastest)
+npm run monitor-prod-memory    # Memory optimization tracking
+npm run monitor-prod-alerts    # Alert conditions & recommendations
+npm run monitor-prod-cache     # Cache performance analysis
+```
+
+**📋 Log Analysis**:
 ```bash
 npm run logs-prod              # Last 100 lines
 npm run logs-prod-follow       # Real-time streaming
