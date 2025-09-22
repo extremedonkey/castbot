@@ -4506,10 +4506,25 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
       // Import safari manager to check for calculate_results actions
       const { getCustomButton } = await import('./safariManager.js');
-      const button = await getCustomButton(guildId, buttonId);
 
-      // Check if any action is calculate_results type
-      const hasCalculateResults = button?.actions?.some(action => action.type === 'calculate_results');
+      let hasCalculateResults = false;
+      try {
+        const button = await getCustomButton(guildId, buttonId);
+
+        if (!button) {
+          console.log(`⚠️ DEBUG: Button ${buttonId} not found for deferred check in guild ${guildId}`);
+        } else {
+          // Check if any action is calculate_results type
+          hasCalculateResults = button.actions?.some(action => action.type === 'calculate_results') || false;
+          if (hasCalculateResults) {
+            console.log(`🌾 DEBUG: Detected calculate_results action in button ${buttonId} - using deferred response`);
+          }
+        }
+      } catch (error) {
+        console.error(`❌ ERROR: Failed to check button for calculate_results actions: ${error.message}`);
+        // Default to non-deferred to avoid breaking the interaction
+        hasCalculateResults = false;
+      }
 
       if (hasCalculateResults) {
         // Use deferred response pattern for calculate_results actions
@@ -14992,6 +15007,15 @@ Your server is now ready for Tycoons gameplay!`;
           const buttonId = parts.slice(0, -1).join('_');
           const scopeValue = context.values[0];
 
+          // Validate parsing
+          if (isNaN(actionIndex) || actionIndex < 0) {
+            console.error(`❌ Invalid actionIndex parsed: ${actionIndex} from ${context.customId}`);
+            return {
+              content: '❌ Invalid action configuration. Please recreate this action.',
+              ephemeral: true
+            };
+          }
+
           console.log(`🎯 SCOPE: safari_calculate_results_scope - setting to ${scopeValue} for ${buttonId}[${actionIndex}]`);
 
           // Load and update safari data
@@ -15060,6 +15084,15 @@ Your server is now ready for Tycoons gameplay!`;
           const actionIndex = parseInt(parts[parts.length - 1]);
           const buttonId = parts.slice(0, -1).join('_');
           const executeOnValue = context.values[0];
+
+          // Validate parsing
+          if (isNaN(actionIndex) || actionIndex < 0) {
+            console.error(`❌ Invalid actionIndex parsed: ${actionIndex} from ${context.customId}`);
+            return {
+              content: '❌ Invalid action configuration. Please recreate this action.',
+              ephemeral: true
+            };
+          }
 
           console.log(`🎯 EXECUTE ON: safari_calculate_results_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}]`);
 

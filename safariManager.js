@@ -4048,6 +4048,18 @@ async function calculateSimpleResults(guildId) {
  */
 async function calculateSinglePlayerResults(guildId, userId) {
     try {
+        // Validate input parameters
+        if (!guildId || !userId) {
+            console.error(`❌ Invalid parameters: guildId=${guildId}, userId=${userId}`);
+            return {
+                success: false,
+                processedPlayers: 0,
+                totalEarnings: 0,
+                playerName: 'Unknown Player',
+                message: 'Invalid guild or user ID'
+            };
+        }
+
         console.log(`🌾 DEBUG: Calculating single player results for user ${userId} in guild ${guildId}`);
 
         // Get eligible players and filter to specific user
@@ -4070,6 +4082,18 @@ async function calculateSinglePlayerResults(guildId, userId) {
         const safariData = await loadSafariContent();
         const items = safariData[guildId]?.items || {};
         let playerEarnings = 0;
+
+        // Validate player has inventory
+        if (!targetPlayer.inventory || typeof targetPlayer.inventory !== 'object') {
+            console.log(`⚠️ DEBUG: Player ${targetPlayer.playerName} has no inventory or invalid inventory`);
+            return {
+                success: true,
+                processedPlayers: 1,
+                totalEarnings: 0,
+                playerName: targetPlayer.playerName,
+                message: `Results calculated for ${targetPlayer.playerName} (no items)`
+            };
+        }
 
         // Process each inventory item using goodOutcomeValue
         for (const [itemId, inventoryItem] of Object.entries(targetPlayer.inventory)) {
