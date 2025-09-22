@@ -25,6 +25,11 @@
     "logs-prod-safari": "node scripts/prod-logs-enhanced.js --feature SAFARI",
     "logs-prod-stats": "node scripts/prod-logs-enhanced.js --stats",
     "status-remote-wsl": "node deploy-remote-wsl.js --status",
+    "monitor-prod": "node scripts/monitoring/prod-health-monitor.js",
+    "monitor-prod-quick": "node scripts/monitoring/prod-health-monitor.js --quick",
+    "monitor-prod-memory": "node scripts/monitoring/prod-health-monitor.js --memory",
+    "monitor-prod-alerts": "node scripts/monitoring/prod-health-monitor.js --alerts",
+    "monitor-prod-cache": "node scripts/monitoring/prod-health-monitor.js --cache",
     "ssh-test": "node scripts/deployment/ssh-test-wsl.js",
     "analytics": "node src/analytics/analytics.js",
     "live-analytics": "node src/analytics/liveAnalytics.js"
