@@ -108,10 +108,14 @@ function parseSystemMemory(output) {
 
   const parts = memLine.split(/\s+/);
 
-  // Extract numeric values, handling Mi/Gi units
+  // Extract numeric values and units, handling Mi/Gi units
   const parseMemValue = (str) => {
-    const numMatch = str.match(/(\d+\.?\d*)/);
-    return numMatch ? parseFloat(numMatch[1]) : 0;
+    const match = str.match(/(\d+\.?\d*)([KMGT]?i?)/);
+    if (!match) return { value: 0, unit: 'MB' };
+    return {
+      value: parseFloat(match[1]),
+      unit: match[2] || 'MB'
+    };
   };
 
   const total = parseMemValue(parts[1]);
@@ -120,12 +124,56 @@ function parseSystemMemory(output) {
   const available = parseMemValue(parts[6]);
 
   return {
-    total: total,
-    used: used,
-    free: free,
-    available: available,
-    usedPercent: total > 0 ? Math.round((used / total) * 100) : 0,
-    availablePercent: total > 0 ? Math.round((available / total) * 100) : 0
+    total: total.value,
+    used: used.value,
+    free: free.value,
+    available: available.value,
+    totalDisplay: `${total.value}${total.unit}`,
+    usedDisplay: `${used.value}${used.unit}`,
+    availableDisplay: `${available.value}${available.unit}`,
+    usedPercent: total.value > 0 ? Math.round((used.value / total.value) * 100) : 0,
+    availablePercent: total.value > 0 ? Math.round((available.value / total.value) * 100) : 0
+  };
+}
+
+/**
+ * Parse disk usage information
+ */
+function parseDiskUsage(output) {
+  const lines = output.split('\n');
+  const diskLine = lines.find(line => line.includes('/dev/') && line.includes('%'));
+
+  if (!diskLine) {
+    return null;
+  }
+
+  const parts = diskLine.split(/\s+/);
+
+  // Extract disk values, handling K/M/G/T units
+  const parseDiskValue = (str) => {
+    const match = str.match(/(\d+\.?\d*)([KMGT]?)/);
+    if (!match) return { value: 0, unit: 'GB' };
+    return {
+      value: parseFloat(match[1]),
+      unit: match[2] || 'GB'
+    };
+  };
+
+  const total = parseDiskValue(parts[1]);
+  const used = parseDiskValue(parts[2]);
+  const available = parseDiskValue(parts[3]);
+  const usedPercentMatch = parts[4].match(/(\d+)%/);
+  const usedPercent = usedPercentMatch ? parseInt(usedPercentMatch[1]) : 0;
+
+  return {
+    total: total.value,
+    used: used.value,
+    available: available.value,
+    totalDisplay: `${total.value}${total.unit}`,
+    usedDisplay: `${used.value}${used.unit}`,
+    availableDisplay: `${available.value}${available.unit}`,
+    usedPercent: usedPercent,
+    availablePercent: 100 - usedPercent
   };
 }
 
@@ -271,6 +319,7 @@ async function runHealthMonitor() {
     // Parse data
     const pm2Data = parsePM2Status(pm2Output);
     const sysMemory = parseSystemMemory(sysMemOutput);
+    const diskUsage = parseDiskUsage(diskOutput);
 
     if (!pm2Data) {
       console.log('❌ Unable to parse PM2 status. Bot may not be running.');
@@ -317,10 +366,12 @@ async function runHealthMonitor() {
     console.log(`   Process ID: ${pm2Data.pid}`);
 
     console.log(`\n🖥️  ${bold}SYSTEM METRICS:${reset}`);
-    const diskLine = diskOutput.split('\n')[1];
-    const diskUsage = diskLine ? diskLine.match(/(\d+)%/)?.[1] || 'N/A' : 'N/A';
-    console.log(`   Memory Usage: ${sysMemory.usedPercent}% (${sysMemory.availablePercent}% available)`);
-    console.log(`   Disk Usage: ${diskUsage}%`);
+    console.log(`   Memory Usage: ${sysMemory.usedPercent}% (${sysMemory.usedDisplay}/${sysMemory.totalDisplay})`);
+    if (diskUsage) {
+      console.log(`   Disk Usage: ${diskUsage.usedPercent}% (${diskUsage.usedDisplay}/${diskUsage.totalDisplay})`);
+    } else {
+      console.log(`   Disk Usage: Unable to parse`);
+    }
     console.log(`   ${uptimeOutput}`);
 
     // Memory-specific analysis
