@@ -31808,15 +31808,21 @@ Are you sure you want to continue?`;
         const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
         const customizationUI = await createSafariCustomizationUI(guildId, updatedConfig);
 
+        // Add success message to customization UI using Components V2
+        const successMessage = {
+          type: 10, // Text Display
+          content: `✅ **Player Menu Settings Updated**\n\n` +
+                  `🕹️ **Global Commands:** ${enableGlobalCommands ? 'Enabled' : 'Disabled'}\n\n` +
+                  `Players will ${enableGlobalCommands ? 'see' : 'not see'} the "Enter Command" button in their /menu.\n\n`
+        };
+
+        // Insert success message at the top of the container
+        customizationUI.components[0].components.unshift(successMessage);
+        customizationUI.components[0].components.splice(1, 0, { type: 14 }); // Add separator
+
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
-          data: {
-            content: `✅ **Player Menu Settings Updated**\n\n` +
-                    `🕹️ **Global Commands:** ${enableGlobalCommands ? 'Enabled' : 'Disabled'}\n\n` +
-                    `Players will ${enableGlobalCommands ? 'see' : 'not see'} the "Enter Command" button in their /menu.`,
-            ...customizationUI,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          data: customizationUI
         });
 
       } catch (error) {
