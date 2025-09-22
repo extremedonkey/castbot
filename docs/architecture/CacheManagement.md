@@ -232,9 +232,9 @@ const client = new Client({
   makeCache: Options.cacheWithLimits({
     MessageManager: 50,        // Limit message cache (messages are large objects)
     GuildMemberManager: 1200,  // Very generous buffer for member objects (45 users * ~25x safety margin)
-    RoleManager: 400,          // Generous limit for role objects across all servers
-    UserManager: 300,          // Covers all users across multiple servers with buffer
-    ChannelManager: 100        // Generous limit for channel objects
+    UserManager: 300           // Covers all users across multiple servers with buffer
+    // NOTE: RoleManager and ChannelManager are NOT limited per Discord.js recommendations
+    // These managers are unsupported for cache customization and will break functionality
   })
 });
 ```

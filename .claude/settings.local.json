@@ -44,7 +44,9 @@
       "Bash(chmod:*)",
       "Bash(git fetch:*)",
       "Bash(git for-each-ref:*)",
-      "Bash(git fsck:*)"
+      "Bash(git fsck:*)",
+      "WebSearch",
+      "WebFetch(domain:discordjs.guide)"
     ],
     "deny": [],
     "ask": []

@@ -1397,12 +1397,11 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
   // Ultra-cautious cache limits to prevent unbounded memory growth
   // Based on production data: max 45 users per server, multiple active servers
+  // NOTE: RoleManager and ChannelManager are NOT limited per Discord.js recommendations
   makeCache: Options.cacheWithLimits({
     MessageManager: 50,        // Limit message cache (messages are large objects)
     GuildMemberManager: 1200,  // Very generous buffer for member objects (45 users * ~25x safety margin)
-    RoleManager: 400,          // Generous limit for role objects across all servers
-    UserManager: 300,          // Covers all users across multiple servers with buffer
-    ChannelManager: 100        // Generous limit for channel objects
+    UserManager: 300           // Covers all users across multiple servers with buffer
   })
 });
 
