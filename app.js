@@ -9179,6 +9179,63 @@ Your server is now ready for Tycoons gameplay!`;
           };
         }
       })(req, res, client);
+    } else if (custom_id === 'safari_player_menu_config') {
+      // Handle Player Menu configuration button
+      return ButtonHandlerFactory.create({
+        id: 'safari_player_menu_config',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🕹️ DEBUG: User ${context.userId} configuring player menu for guild ${context.guildId}`);
+
+          // Load current safari configuration
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const safariConfig = safariData[context.guildId]?.safariConfig || {};
+
+          // Determine current setting (default to true for backward compatibility)
+          const currentEnabled = safariConfig.enableGlobalCommands !== false;
+
+          // Create Components V2 modal with Label + String Select
+          const modal = {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: 'safari_player_menu_config_modal',
+              title: 'Player Menu Configuration',
+              components: [
+                {
+                  type: 18, // Label (Components V2)
+                  label: 'Command Menu Button',
+                  description: 'Allow players to try commands from their /menu',
+                  component: {
+                    type: 3, // String Select
+                    custom_id: 'enable_global_commands',
+                    placeholder: 'Allow global commands to be used outside of Safari, for idol hunts or challenges.',
+                    min_values: 1,
+                    max_values: 1,
+                    options: [
+                      {
+                        label: 'Yes',
+                        value: 'true',
+                        description: 'Show command button in player /menu',
+                        default: currentEnabled === true
+                      },
+                      {
+                        label: 'No',
+                        value: 'false',
+                        description: 'Hide command button from player /menu',
+                        default: currentEnabled === false
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          };
+
+          return modal;
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_log_toggle') {
       // Handle Safari Log enable/disable toggle
       return ButtonHandlerFactory.create({
@@ -21589,6 +21646,36 @@ Are you sure you want to continue?`;
         }
       })(req, res, client);
     
+    } else if (custom_id === 'player_enter_command_global') {
+      // Handle global command entry button (coordinate-less)
+      return ButtonHandlerFactory.create({
+        id: 'player_enter_command_global',
+        handler: async (context) => {
+          console.log(`⌨️ START: player_enter_command_global - user ${context.userId}`);
+
+          // Show modal for global command input
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: 'player_command_modal_global',
+              title: 'Enter Command',
+              components: [{
+                type: 1, // Action Row
+                components: [{
+                  type: 4, // Text Input
+                  custom_id: 'command',
+                  label: 'Command',
+                  style: 1, // Short
+                  required: true,
+                  placeholder: 'Enter command you want to try, e.g. hello, claude, sendmea, tomato',
+                  min_length: 1,
+                  max_length: 100
+                }]
+              }]
+            }
+          };
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('player_enter_command_')) {
       // Handle player command entry button
       return ButtonHandlerFactory.create({
@@ -31664,6 +31751,69 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content: `❌ Error updating stamina settings: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'safari_player_menu_config_modal') {
+      // Handle Player Menu configuration modal submission
+      try {
+        const member = req.body.member;
+        const userId = member.user.id;
+        const guildId = req.body.guild_id;
+
+        // Check admin permissions
+        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to configure player menu settings.')) return;
+
+        console.log(`🕹️ DEBUG: User ${userId} submitting player menu config for guild ${guildId}`);
+
+        // Extract selected value from string select
+        const components = req.body.data.components;
+        const enableGlobalCommands = components[0]?.components[0]?.values?.[0] === 'true';
+
+        console.log(`🕹️ DEBUG: enableGlobalCommands setting: ${enableGlobalCommands}`);
+
+        // Load and update safari configuration
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+
+        // Ensure safariConfig exists
+        if (!safariData[guildId]) {
+          safariData[guildId] = {};
+        }
+        if (!safariData[guildId].safariConfig) {
+          safariData[guildId].safariConfig = {};
+        }
+
+        // Update the configuration
+        safariData[guildId].safariConfig.enableGlobalCommands = enableGlobalCommands;
+        await saveSafariContent(safariData);
+
+        const updatedConfig = safariData[guildId].safariConfig;
+
+        console.log(`✅ SUCCESS: Player menu configuration updated for guild ${guildId}`);
+
+        // Show success message and redirect back to customization
+        const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
+        const customizationUI = await createSafariCustomizationUI(guildId, updatedConfig);
+
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: {
+            content: `✅ **Player Menu Settings Updated**\n\n` +
+                    `🕹️ **Global Commands:** ${enableGlobalCommands ? 'Enabled' : 'Disabled'}\n\n` +
+                    `Players will ${enableGlobalCommands ? 'see' : 'not see'} the "Enter Command" button in their /menu.`,
+            ...customizationUI,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+
+      } catch (error) {
+        console.error('Error updating player menu config:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error updating player menu settings: ${error.message}`,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

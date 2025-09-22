@@ -460,6 +460,20 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari_admin'
   },
+  'safari_player_menu_config': {
+    label: 'Player Menu',
+    description: 'Configure global command button in player menu',
+    emoji: '🕹️',
+    style: 'Secondary',
+    category: 'safari'
+  },
+  'player_enter_command_global': {
+    label: 'Enter Command',
+    description: 'Enter a text command from anywhere (global)',
+    emoji: '⌨️',
+    style: 'Secondary',
+    category: 'safari_player'
+  },
   'safari_round_results': {
     label: '🎨 Round Results',
     description: 'Safari round results management',

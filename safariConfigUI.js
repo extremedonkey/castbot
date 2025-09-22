@@ -36,6 +36,15 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         emoji: { name: '⚡' }
     });
 
+    // Add player menu configuration button (5th and final button)
+    fieldGroupButtons.push({
+        type: 2, // Button
+        custom_id: 'safari_player_menu_config',
+        label: 'Player Menu',
+        style: 2, // Secondary
+        emoji: { name: '🕹️' }
+    });
+
     // Create Components V2 Container
     const containerComponents = [
         {

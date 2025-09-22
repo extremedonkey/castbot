@@ -484,7 +484,33 @@ export async function createPlayerManagementUI(options) {
                 }
               }
             }
-            
+
+            // Add global command button if enabled (for player-facing menus only)
+            try {
+              const { loadSafariContent } = await import('./safariManager.js');
+              const safariData = await loadSafariContent();
+              const safariConfig = safariData[guildId]?.safariConfig || {};
+
+              // Check if global commands are enabled (default to true for backward compatibility)
+              const enableGlobalCommands = safariConfig.enableGlobalCommands !== false;
+
+              if (enableGlobalCommands) {
+                // Add global command button for both Regular Player Menu and Player Profile Preview
+                // These are the only player-facing menus that should show this button
+                const { getBotEmoji } = await import('./emojiManager.js');
+                const globalCommandButton = new ButtonBuilder()
+                  .setCustomId('player_enter_command_global')
+                  .setLabel('Enter Command')
+                  .setStyle(ButtonStyle.Secondary)
+                  .setEmoji(getBotEmoji('command', guildId));
+
+                inventoryComponents.push(globalCommandButton);
+              }
+            } catch (error) {
+              console.error('Error checking global commands configuration:', error);
+              // Don't add the button if there's an error loading config
+            }
+
             // Always add inventory button for initialized players
             inventoryComponents.push(inventoryButton);
             
