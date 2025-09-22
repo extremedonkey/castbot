@@ -9196,44 +9196,30 @@ Your server is now ready for Tycoons gameplay!`;
           // Determine current setting (default to true for backward compatibility)
           const currentEnabled = safariConfig.enableGlobalCommands !== false;
 
-          // Create Components V2 modal with Label + String Select
-          const modal = {
-            type: InteractionResponseType.MODAL,
-            data: {
-              custom_id: 'safari_player_menu_config_modal',
-              title: 'Player Menu Configuration',
-              components: [
-                {
-                  type: 18, // Label (Components V2)
-                  label: 'Command Menu Button',
-                  description: 'Allow players to try commands from their /menu',
-                  component: {
-                    type: 3, // String Select
-                    custom_id: 'enable_global_commands',
-                    placeholder: 'Allow global commands to be used outside of Safari, for idol hunts or challenges.',
-                    min_values: 1,
-                    max_values: 1,
-                    options: [
-                      {
-                        label: 'Yes',
-                        value: 'true',
-                        description: 'Show command button in player /menu',
-                        default: currentEnabled === true
-                      },
-                      {
-                        label: 'No',
-                        value: 'false',
-                        description: 'Hide command button from player /menu',
-                        default: currentEnabled === false
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-          };
+          // Create modal using traditional pattern (like stamina config)
+          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
 
-          return modal;
+          const modal = new ModalBuilder()
+            .setCustomId('safari_player_menu_config_modal')
+            .setTitle('Player Menu Configuration');
+
+          const enableInput = new TextInputBuilder()
+            .setCustomId('enable_global_commands')
+            .setLabel('Show "Enter Command" button in player /menu?')
+            .setStyle(TextInputStyle.Short)
+            .setValue(currentEnabled ? 'yes' : 'no')
+            .setRequired(true)
+            .setPlaceholder('Enter "yes" to show button, "no" to hide')
+            .setMinLength(2)
+            .setMaxLength(3);
+
+          const actionRow = new ActionRowBuilder().addComponents(enableInput);
+          modal.addComponents(actionRow);
+
+          return {
+            type: InteractionResponseType.MODAL,
+            data: modal.toJSON()
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_log_toggle') {
@@ -31767,9 +31753,10 @@ Are you sure you want to continue?`;
 
         console.log(`🕹️ DEBUG: User ${userId} submitting player menu config for guild ${guildId}`);
 
-        // Extract selected value from string select
+        // Extract value from text input
         const components = req.body.data.components;
-        const enableGlobalCommands = components[0]?.components[0]?.values?.[0] === 'true';
+        const inputValue = components[0]?.components[0]?.value?.trim().toLowerCase();
+        const enableGlobalCommands = inputValue === 'yes' || inputValue === 'y' || inputValue === 'true';
 
         console.log(`🕹️ DEBUG: enableGlobalCommands setting: ${enableGlobalCommands}`);
 

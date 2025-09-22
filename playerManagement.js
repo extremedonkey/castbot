@@ -497,7 +497,7 @@ export async function createPlayerManagementUI(options) {
               if (enableGlobalCommands) {
                 // Add global command button for both Regular Player Menu and Player Profile Preview
                 // These are the only player-facing menus that should show this button
-                const { getBotEmoji } = await import('./emojiManager.js');
+                const { getBotEmoji } = await import('./botEmojis.js');
                 const globalCommandButton = new ButtonBuilder()
                   .setCustomId('player_enter_command_global')
                   .setLabel('Enter Command')
