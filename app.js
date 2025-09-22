@@ -4486,6 +4486,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         !custom_id.startsWith('safari_item_execute_on_') &&
         !custom_id.startsWith('safari_display_text_edit_') &&
         !custom_id.startsWith('safari_display_text_execute_on_') &&
+        !custom_id.startsWith('safari_calculate_results_scope_') &&
+        !custom_id.startsWith('safari_calculate_results_execute_on_') &&
         !custom_id.startsWith('safari_all_server_items_') &&
         !custom_id.startsWith('safari_progress_') &&
         !custom_id.startsWith('safari_inv_page_') &&  // Exclude inventory pagination buttons
@@ -12840,11 +12842,23 @@ Your server is now ready for Tycoons gameplay!`;
             const safariData = await loadSafariContent();
             const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
             const actionIndex = currentButton?.actions?.length || 0;
-            
+
             console.log(`✅ SUCCESS: safari_action_type_select - showing display_text entity for ${buttonId}[${actionIndex}]`);
             const { showDisplayTextConfig } = await import('./customActionUI.js');
             return await showDisplayTextConfig(context.guildId, buttonId, actionIndex);
-            
+
+          // For calculate_results, show new entity interface
+          } else if (actionType === 'calculate_results') {
+            // Determine the action index for new action
+            const { loadSafariContent } = await import('./safariManager.js');
+            const safariData = await loadSafariContent();
+            const currentButton = safariData[context.guildId]?.buttons?.[buttonId];
+            const actionIndex = currentButton?.actions?.length || 0;
+
+            console.log(`✅ SUCCESS: safari_action_type_select - showing calculate_results entity for ${buttonId}[${actionIndex}]`);
+            const { showCalculateResultsConfig } = await import('./customActionUI.js');
+            return await showCalculateResultsConfig(context.guildId, buttonId, actionIndex);
+
           // For update_currency, delegate to safari_add_action handler  
           } else if (actionType === 'update_currency') {
             // Simulate the safari_add_action custom_id and call its handler
@@ -14961,6 +14975,141 @@ Your server is now ready for Tycoons gameplay!`;
           const result = await handleDisplayTextExecuteOn(context.guildId, context.customId, context.values[0]);
           
           return result;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_calculate_results_scope_')) {
+      // Handle calculate results scope selection
+      return ButtonHandlerFactory.create({
+        id: 'safari_calculate_results_scope',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_calculate_results_scope - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_calculate_results_scope_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const scopeValue = context.values[0];
+
+          console.log(`🎯 SCOPE: safari_calculate_results_scope - setting to ${scopeValue} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button) {
+            console.error(`❌ Button ${buttonId} not found during scope update for guild ${context.guildId}`);
+            return {
+              content: `❌ Button "${buttonId}" not found.\n\nThe button you're trying to update no longer exists.`,
+              ephemeral: true
+            };
+          }
+
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+
+          // Create action if it doesn't exist (for new actions)
+          if (!button.actions[actionIndex]) {
+            button.actions[actionIndex] = {
+              type: 'calculate_results',
+              order: actionIndex,
+              config: {
+                scope: 'all_players'
+              },
+              executeOn: 'true'
+            };
+          }
+
+          // Update the scope value
+          if (!button.actions[actionIndex].config) {
+            button.actions[actionIndex].config = {};
+          }
+          button.actions[actionIndex].config.scope = scopeValue;
+
+          // Update metadata
+          button.metadata.lastModified = Date.now();
+
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showCalculateResultsConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showCalculateResultsConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_calculate_results_scope - updated to ${scopeValue}`);
+          return {
+            ...updatedConfig,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('safari_calculate_results_execute_on_')) {
+      // Handle calculate results execute on condition changes
+      return ButtonHandlerFactory.create({
+        id: 'safari_calculate_results_execute_on',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 START: safari_calculate_results_execute_on - user ${context.userId}`);
+
+          // Parse buttonId and actionIndex from custom_id
+          const parts = context.customId.replace('safari_calculate_results_execute_on_', '').split('_');
+          const actionIndex = parseInt(parts[parts.length - 1]);
+          const buttonId = parts.slice(0, -1).join('_');
+          const executeOnValue = context.values[0];
+
+          console.log(`🎯 EXECUTE ON: safari_calculate_results_execute_on - setting to ${executeOnValue} for ${buttonId}[${actionIndex}]`);
+
+          // Load and update safari data
+          const { saveSafariContent, loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const button = safariData[context.guildId]?.buttons?.[buttonId];
+
+          if (!button) {
+            console.error(`❌ Button ${buttonId} not found during executeOn update for guild ${context.guildId}`);
+            return {
+              content: `❌ Button "${buttonId}" not found.\n\nThe button you're trying to update no longer exists.`,
+              ephemeral: true
+            };
+          }
+
+          // Initialize actions array if needed
+          if (!button.actions) {
+            button.actions = [];
+          }
+
+          // Create action if it doesn't exist (for new actions)
+          if (!button.actions[actionIndex]) {
+            button.actions[actionIndex] = {
+              type: 'calculate_results',
+              order: actionIndex,
+              config: {
+                scope: 'all_players'
+              },
+              executeOn: 'true'
+            };
+          }
+
+          // Update the executeOn value
+          button.actions[actionIndex].executeOn = executeOnValue;
+
+          // Update metadata
+          button.metadata.lastModified = Date.now();
+
+          await saveSafariContent(safariData);
+
+          // Return updated configuration UI
+          const { showCalculateResultsConfig } = await import('./customActionUI.js');
+          const updatedConfig = await showCalculateResultsConfig(context.guildId, buttonId, actionIndex);
+
+          console.log(`✅ SUCCESS: safari_calculate_results_execute_on - updated to ${executeOnValue}`);
+          return {
+            ...updatedConfig,
+            ephemeral: true
+          };
         }
       })(req, res, client);
     } else if (custom_id.startsWith('safari_drop_type_')) {
@@ -19963,6 +20112,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'custom_action_test',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        deferred: true, // Enable deferred response for potentially long-running actions
         handler: async (context) => {
           console.log(`🔍 START: custom_action_test - user ${context.userId}`);
           

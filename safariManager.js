@@ -1605,18 +1605,64 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
                 case 'calculate_results':
                     try {
                         console.log(`🌾 DEBUG: Executing calculate_results action for guild ${guildId}`);
-                        const harvestResult = await calculateSimpleResults(guildId);
-                        console.log(`🌾 SUCCESS: Calculate results completed - ${harvestResult.processedPlayers} players, ${harvestResult.totalEarnings} total earnings`);
 
-                        // For deferred responses, create a visible public message
+                        // Get scope configuration (default to all_players for backwards compatibility)
+                        const scope = action.config?.scope || 'all_players';
+                        console.log(`🎯 DEBUG: Calculate results scope: ${scope}`);
+
+                        let harvestResult;
+                        if (scope === 'single_player') {
+                            // Process only the user who clicked the button
+                            harvestResult = await calculateSinglePlayerResults(guildId, userId);
+                            console.log(`🌾 SUCCESS: Single player results completed - ${harvestResult.playerName}, ${harvestResult.totalEarnings} earnings`);
+                        } else {
+                            // Default behavior: process all players
+                            harvestResult = await calculateSimpleResults(guildId);
+                            console.log(`🌾 SUCCESS: All players results completed - ${harvestResult.processedPlayers} players, ${harvestResult.totalEarnings} total earnings`);
+                        }
+
+                        // Create formatted response message with proper container structure
+                        let responseContent;
+                        let headerContent;
+                        if (scope === 'single_player') {
+                            headerContent = `## ✅ Results Calculated!\n\n**Single Player Processing Complete**`;
+                            responseContent = `👤 **Player:** ${harvestResult.playerName}\n💰 **Earnings:** ${harvestResult.totalEarnings} currency`;
+                        } else {
+                            headerContent = `## ✅ Results Calculated!\n\n**All Players Processing Complete**`;
+                            responseContent = `📊 **Players Processed:** ${harvestResult.processedPlayers}\n💰 **Total Earnings:** ${harvestResult.totalEarnings} currency`;
+                        }
+
                         result = {
-                            content: `✅ **Results Calculated!**\n📊 Processed **${harvestResult.processedPlayers}** players\n💰 Total earnings: **${harvestResult.totalEarnings}** currency`
+                            components: [{
+                                type: 17, // Container
+                                accent_color: 0x2ECC71, // Green accent for success
+                                components: [
+                                    {
+                                        type: 10, // Text Display
+                                        content: headerContent
+                                    },
+                                    { type: 14 }, // Separator
+                                    {
+                                        type: 10, // Text Display
+                                        content: responseContent
+                                    }
+                                ]
+                            }]
                         };
                         responses.push(result);
                     } catch (error) {
                         console.error('Error executing calculate_results action:', error);
                         result = {
-                            content: '❌ **Error calculating results.** Please try again or contact an administrator.'
+                            components: [{
+                                type: 17, // Container
+                                accent_color: 0xE74C3C, // Red accent for error
+                                components: [
+                                    {
+                                        type: 10, // Text Display
+                                        content: '## ❌ Error Calculating Results\n\nPlease try again or contact an administrator.'
+                                    }
+                                ]
+                            }]
                         };
                         responses.push(result);
                     }
@@ -3990,6 +4036,80 @@ async function calculateSimpleResults(guildId) {
 
     } catch (error) {
         console.error('Error calculating simple results:', error);
+        throw error;
+    }
+}
+
+/**
+ * Calculate results for a single player using action
+ * @param {string} guildId - Guild ID
+ * @param {string} userId - User ID of the player to process
+ * @returns {Object} Results object with success, processedPlayers, totalEarnings, playerName
+ */
+async function calculateSinglePlayerResults(guildId, userId) {
+    try {
+        console.log(`🌾 DEBUG: Calculating single player results for user ${userId} in guild ${guildId}`);
+
+        // Get eligible players and filter to specific user
+        const eligiblePlayers = await getEligiblePlayersFixed(guildId, null);
+        const targetPlayer = eligiblePlayers.find(player => player.userId === userId);
+
+        if (!targetPlayer) {
+            console.log(`⚠️ DEBUG: User ${userId} not found in eligible players list`);
+            return {
+                success: false,
+                processedPlayers: 0,
+                totalEarnings: 0,
+                playerName: 'Unknown Player',
+                message: 'Player not eligible for Safari results calculation'
+            };
+        }
+
+        console.log(`🔄 DEBUG: Processing single player ${targetPlayer.playerName} (${targetPlayer.userId})`);
+
+        const safariData = await loadSafariContent();
+        const items = safariData[guildId]?.items || {};
+        let playerEarnings = 0;
+
+        // Process each inventory item using goodOutcomeValue
+        for (const [itemId, inventoryItem] of Object.entries(targetPlayer.inventory)) {
+            // Use universal accessor to get quantity
+            const quantity = getItemQuantity(inventoryItem);
+            if (quantity <= 0) continue;
+
+            const item = items[itemId];
+            if (!item) {
+                console.log(`⚠️ DEBUG: Item ${itemId} not found in items database`);
+                continue;
+            }
+
+            // Calculate earnings using goodOutcomeValue (default for simple results)
+            const goodValue = item.goodOutcomeValue || 0;
+            if (goodValue !== 0) {
+                const itemEarnings = quantity * goodValue;
+                playerEarnings += itemEarnings;
+                console.log(`💰 DEBUG: ${targetPlayer.playerName} - ${item.name} x${quantity} = ${itemEarnings}`);
+            }
+        }
+
+        // Update player currency if earnings > 0
+        if (playerEarnings !== 0) {
+            await updateCurrency(guildId, targetPlayer.userId, playerEarnings);
+            console.log(`💰 DEBUG: Updated ${targetPlayer.playerName} currency by ${playerEarnings}`);
+        }
+
+        console.log(`✅ DEBUG: Single player results calculated - ${targetPlayer.playerName} processed, ${playerEarnings} earnings`);
+
+        return {
+            success: true,
+            processedPlayers: 1,
+            totalEarnings: playerEarnings,
+            playerName: targetPlayer.playerName,
+            message: `Results calculated for ${targetPlayer.playerName}`
+        };
+
+    } catch (error) {
+        console.error('Error calculating single player results:', error);
         throw error;
     }
 }
@@ -7448,6 +7568,7 @@ export {
     resetCustomTerms,
     // Challenge Game Logic exports
     calculateSimpleResults,
+    calculateSinglePlayerResults,
     processRoundResults,
     createFinalRankings,
     resetGameData,

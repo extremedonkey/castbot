@@ -184,6 +184,17 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 - **📝 LOGGING STANDARDS** → [docs/standards/LoggingStandards.md](docs/standards/LoggingStandards.md)
 - **📊 BUTTON INTERACTION LOGGING** → [docs/standards/ButtonInteractionLogging.md](docs/standards/ButtonInteractionLogging.md)
 
+**Discord API References:**
+- **🔐 PERMISSIONS** (100+ usage points) → [docs/standards/DiscordPermissions.md](docs/standards/DiscordPermissions.md) - BigInt permission handling, MANAGE_ROLES patterns
+- **⚡ RATE LIMITS** (production critical) → [docs/standards/DiscordRateLimits.md](docs/standards/DiscordRateLimits.md) - Exponential backoff, batching, webhook limits
+- **🏰 GUILD RESOURCE** (roles/channels) → [docs/standards/DiscordGuildResource.md](docs/standards/DiscordGuildResource.md) - Role creation, member fetching, server management
+- **💬 CHANNEL RESOURCE** (messaging) → [docs/standards/DiscordChannelResource.md](docs/standards/DiscordChannelResource.md) - Message posting, file uploads, permission management
+- **📨 MESSAGE RESOURCE** (content/embeds) → [docs/standards/DiscordMessageResource.md](docs/standards/DiscordMessageResource.md) - Message editing, embeds, attachments, analysis
+- **🔗 WEBHOOK RESOURCE** (follow-ups) → [docs/standards/DiscordWebhookResource.md](docs/standards/DiscordWebhookResource.md) - Interaction tokens, follow-up messages, external webhooks
+- **🧵 THREADS** (future features) → [docs/standards/DiscordThreads.md](docs/standards/DiscordThreads.md) - Application discussions, Safari events, voting threads
+- **👤 USER RESOURCE** (player management) → [docs/standards/DiscordUserResource.md](docs/standards/DiscordUserResource.md) - Member fetching, player data, user validation
+- **😀 EMOJI RESOURCE** (custom emojis) → [docs/standards/DiscordEmojiResource.md](docs/standards/DiscordEmojiResource.md) - Emoji processing, validation, guild emoji management
+
 **UI/UX Design:**
 - **📐 LEAN USER INTERFACE DESIGN** → [docs/ui/LeanUserInterfaceDesign.md](docs/ui/LeanUserInterfaceDesign.md)
 

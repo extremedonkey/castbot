@@ -1576,6 +1576,163 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
   };
 }
 
+/**
+ * Show configuration UI for calculate_results action
+ */
+export async function showCalculateResultsConfig(guildId, buttonId, actionIndex) {
+  // Load safari data to get existing action information
+  const safariData = await loadSafariContent();
+  const button = safariData[guildId]?.buttons?.[buttonId];
+
+  let action = null;
+  let isEdit = false;
+
+  if (button && button.actions && button.actions[actionIndex]) {
+    action = button.actions[actionIndex];
+    isEdit = true;
+  }
+
+  // Get current scope setting (default to all_players for backwards compatibility)
+  const currentScope = action?.config?.scope || 'all_players';
+
+  // Build preview text based on current configuration
+  let previewText = "No configuration set yet";
+  if (action && action.type === 'calculate_results') {
+    if (currentScope === 'all_players') {
+      previewText = "📊 **Calculate results for all eligible Safari players**\n\nProcesses all players and updates their currency using goodOutcomeValue from inventory items.";
+    } else if (currentScope === 'single_player') {
+      previewText = "👤 **Calculate results for player using action**\n\nProcesses only the player who clicked this button and updates their currency.";
+    }
+  }
+
+  // Build the configuration UI
+  return {
+    components: [{
+      type: 17, // Container
+      accent_color: 0x2ECC71, // Green accent for calculate results
+      components: [
+        {
+          type: 10, // Text Display
+          content: `## 🌾 Calculate Results Configuration\n${isEdit ? 'Editing' : 'Creating'} calculate results action`
+        },
+
+        { type: 14 }, // Separator
+
+        // Configuration preview
+        {
+          type: 10,
+          content: `### Current Configuration\n${previewText}`
+        },
+
+        { type: 14 }, // Separator
+
+        // Scope Selection section
+        {
+          type: 10,
+          content: '### Calculation Scope\nChoose which players to process:'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_calculate_results_scope_${buttonId}_${actionIndex}`,
+            placeholder: 'Select calculation scope...',
+            options: [
+              {
+                label: 'Calculate results for all players',
+                value: 'all_players',
+                description: 'Process all eligible Safari players (default)',
+                emoji: { name: '📊' },
+                default: currentScope === 'all_players'
+              },
+              {
+                label: 'Calculate results for player using action',
+                value: 'single_player',
+                description: 'Process only the player who clicks this button',
+                emoji: { name: '👤' },
+                default: currentScope === 'single_player'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Execution Condition section
+        {
+          type: 10,
+          content: '### Execution Condition\nWhen should this action be triggered?'
+        },
+        {
+          type: 1, // Action Row
+          components: [{
+            type: 3, // String Select
+            custom_id: `safari_calculate_results_execute_on_${buttonId}_${actionIndex}`,
+            placeholder: 'Select when to execute...',
+            options: [
+              {
+                label: 'Execute if conditions are TRUE',
+                value: 'true',
+                description: 'Only execute when conditions are met',
+                emoji: { name: '✅' },
+                default: (action?.executeOn || 'true') === 'true'
+              },
+              {
+                label: 'Execute if conditions are FALSE',
+                value: 'false',
+                description: 'Only execute when conditions are NOT met',
+                emoji: { name: '❌' },
+                default: (action?.executeOn || 'true') === 'false'
+              }
+            ]
+          }]
+        },
+
+        { type: 14 }, // Separator
+
+        // Action buttons
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `safari_test_action_${buttonId}_${actionIndex}`,
+              label: 'Test Action',
+              style: 1, // Primary
+              emoji: { name: '🧪' }
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+              label: 'Delete Action',
+              style: 4, // Danger (red)
+              emoji: { name: '🗑️' }
+            }
+          ]
+        },
+
+        { type: 14 }, // Separator
+
+        // Back button
+        {
+          type: 1, // Action Row
+          components: [
+            {
+              type: 2, // Button
+              custom_id: `custom_action_editor_${buttonId}`,
+              label: '← Back',
+              style: 2, // Secondary
+              emoji: { name: '⚡' }
+            }
+          ]
+        }
+      ]
+    }],
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    ephemeral: true
+  };
+}
+
 export async function handleDisplayTextEdit(guildId, userId, customId) {
   // Parse buttonId and actionIndex from custom_id
   const parts = customId.replace('safari_display_text_edit_', '').split('_');
@@ -1863,6 +2020,7 @@ export default {
   refreshConditionManagerUI,
   showConditionEditor,
   showDisplayTextConfig,
+  showCalculateResultsConfig,
   handleDisplayTextEdit,
   handleDisplayTextSave,
   handleDisplayTextExecuteOn
