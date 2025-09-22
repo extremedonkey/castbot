@@ -40,12 +40,36 @@ type: 13  // WRONG - Invalid separator (use type 14)
 - NEVER include `flags` field in UPDATE_MESSAGE responses
 - Always return the full Container structure
 
+## 🚨 MANDATORY AFTER ANY CODE CHANGES - RESTART DEV
+
+**🔴 CRITICAL: ALWAYS restart development after making code changes!**
+
+```bash
+# MANDATORY after ANY code change - no exceptions!
+./scripts/dev/dev-restart.sh "descriptive commit message"
+
+# For significant features, include Discord notification:
+./scripts/dev/dev-restart.sh "Fix safari logic" "Safari navigation working!"
+```
+
+**⚠️ This is NOT optional - restart after EVERY code change:**
+- ✅ Button handlers, modal handlers, UI changes
+- ✅ Configuration changes, data structure updates
+- ✅ New features, bug fixes, refactoring
+- ✅ ANY modification to .js files
+
+**📝 Always provide descriptive commit messages:**
+- ❌ Bad: `./scripts/dev/dev-restart.sh "fix"`
+- ✅ Good: `./scripts/dev/dev-restart.sh "Add global command button to player menu"`
+
+**🎯 This replaces manual saves - the script commits your changes automatically**
+
 ## 🚀 Quick Start
 
 ### Development Workflow
 ```bash
 ./scripts/dev/dev-start.sh                  # Start development session (uses node directly)
-./scripts/dev/dev-restart.sh "commit msg"   # Restart with meaningful commit message
+./scripts/dev/dev-restart.sh "commit msg"   # ⬆️ SEE MANDATORY SECTION ABOVE ⬆️
 ./scripts/dev/dev-status.sh                 # Check status
 ./scripts/dev/dev-stop.sh                   # Clean shutdown
 tail -f /tmp/castbot-dev.log               # View logs (NOT PM2 in dev!)
@@ -53,10 +77,7 @@ tail -f /tmp/castbot-dev.log               # View logs (NOT PM2 in dev!)
 
 **⚠️ ENVIRONMENT DIFFERENCES**: Dev uses node directly, Prod uses PM2. See [InfrastructureArchitecture.md](docs/infrastructure/InfrastructureArchitecture.md)
 
-**🚨 MANDATORY:** Run `./scripts/dev/dev-restart.sh` with descriptive message after ANY code changes
-- **ALWAYS provide commit message**: `./scripts/dev/dev-restart.sh "Fix safari button logic"`
-- **Include Discord notification for big changes**: `./scripts/dev/dev-restart.sh "Fix safari" "Safari navigation working!"`
-- **This replaces manual saves** - commit message helps track what changed
+**🔴 Remember: RESTART after ANY code changes (see mandatory section above)**
 
 ### Production Deployment
 
