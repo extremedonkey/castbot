@@ -39,7 +39,11 @@
       "Bash(find:*)",
       "Bash(./scripts/dev/dev-stop.sh:*)",
       "Bash(pkill:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(ssh:*)",
+      "Bash(chmod:*)",
+      "Bash(git fetch:*)",
+      "Bash(git for-each-ref:*)"
     ],
     "deny": [],
     "ask": []

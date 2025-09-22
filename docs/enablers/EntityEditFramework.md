@@ -172,6 +172,8 @@ EDIT_CONFIGS[entityType] = {
 - `createEntityManagementUI()` - Main selection interface
 - `createEntityEditUI()` - Entity-specific edit interface
 - `createFieldGroupEditUI()` - Field group editing (for safari_config)
+- `createPlayerItemSelectorUI()` - Player-centric item quantity editing interface
+- `createPlayerItemSelector()` - Helper function for player item dropdown creation
 
 #### 4. `fieldEditors.js`
 **Purpose**: Specialized field editors for complex data types
@@ -499,6 +501,21 @@ if (errors.length > 0) {
 - Quick configuration changes
 - User-facing simple interactions
 
+### 🧭 Player Item Management Specific Usage:
+
+**✅ Use `createPlayerItemSelectorUI()` For:**
+- Player-specific inventory adjustments
+- Admin quantity editing for specific players
+- Player admin workflows (e.g., fixing player inventories)
+- Context where "Create New Item" should not be available
+- Scenarios requiring audit logging of admin actions
+
+**❌ Use General Entity Framework For:**
+- Creating new items in the global catalog
+- Managing item properties (name, description, effects)
+- Bulk item operations across the system
+- Item lifecycle management (create, update, delete)
+
 ### 🎯 Example: Simple Pattern vs Entity Framework
 
 **Simple Pattern (Preferred for basic needs):**
@@ -586,6 +603,24 @@ const ui = await createEntityEditUI({
 // Setting conditions
 // Creating action chains
 // Testing button behavior
+```
+
+### Player Item Management
+```javascript
+// Player-centric item quantity editing
+const ui = await createPlayerItemSelectorUI({
+  guildId,
+  targetUserId,
+  searchTerm: '',
+  selectedItemId: null
+});
+
+// Specialized workflow for admin item adjustments
+// - No "Create New Item" option (uses existing items only)
+// - Search functionality for large item catalogs
+// - Direct quantity editing for specific players
+// - Context-aware navigation back to Player Admin
+// - Audit logging for admin actions
 ```
 
 ## Troubleshooting

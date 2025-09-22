@@ -432,6 +432,77 @@ handler: async (context) => {
 }
 ```
 
+## Production Button Examples
+
+### Safari Admin Button Registry Entries
+
+```javascript
+// Player-centric item management (implemented in production)
+'map_admin_edit_items_*': {
+  label: 'Edit Player Items',
+  description: 'Player-centric item quantity editing interface',
+  emoji: '📦',
+  style: 'Secondary',
+  category: 'safari_map_admin'
+},
+
+// Item selection dropdown handler
+'player_item_select_*': {
+  label: 'Select Player Item',
+  description: 'Choose item for quantity editing',
+  emoji: '📦',
+  style: 'Secondary',
+  category: 'safari_map_admin'
+}
+```
+
+### Safari Admin Handler Pattern
+
+```javascript
+// Pattern for wildcard button handlers with context parsing
+} else if (custom_id.startsWith('map_admin_edit_items_')) {
+  const targetUserId = custom_id.split('_').pop();
+
+  return ButtonHandlerFactory.create({
+    id: 'map_admin_edit_items',
+    requiresPermission: PermissionFlagsBits.ManageRoles,
+    permissionName: 'Manage Roles',
+    handler: async (context) => {
+      const { guildId } = context;
+      const { createPlayerItemSelectorUI } = await import('./entityManagementUI.js');
+
+      return await createPlayerItemSelectorUI({
+        guildId,
+        targetUserId,
+        searchTerm: '',
+        selectedItemId: null
+      });
+    }
+  })(req, res, client);
+}
+
+// Item selection with modal search integration
+} else if (custom_id.startsWith('player_item_select_')) {
+  const parts = custom_id.split('_');
+  const targetUserId = parts[3];
+  const searchTerm = req.body.data.values[0];
+
+  if (searchTerm === 'search_items') {
+    // Show search modal
+    return res.send({
+      type: InteractionResponseType.MODAL,
+      data: {
+        custom_id: `player_item_search_modal_${targetUserId}`,
+        title: 'Search Items',
+        components: [/* modal components */]
+      }
+    });
+  }
+
+  // Handle item selection...
+}
+```
+
 ## Natural Language Interface
 
 ### For Users (Reece)

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Higher Education Learning Management System - Unified Architecture & Requirements Taxonomy</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10.6.1/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            margin-top: 30px;
+        }
+
+        h3 {
+            color: #2c3e50;
+            margin-top: 25px;
+        }
+
+        .mermaid {
+            text-align: center;
+            margin: 20px 0;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .code {
+            background-color: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+
+        @media print {
+            body {
+                max-width: none;
+                margin: 0;
+                padding: 15px;
+            }
+
+            .mermaid {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            h1, h2, h3 {
+                break-after: avoid;
+                page-break-after: avoid;
+            }
+
+            table {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Higher Education Learning Management System - Unified Architecture & Requirements Taxonomy</h1>
+
+    <h2>Executive Summary</h2>
+    <p>This document presents a unified taxonomy that aligns TOGAF-based business capabilities (Enterprise Architecture perspective) with functional requirements (Business Analyst perspective) for a new Learning Management System. The goal is to create a common language and hierarchical structure that bridges both viewpoints and reduces organizational tension.</p>
+
+    <h2>1. Unified Taxonomy Framework</h2>
+
+    <h3>1.1 Hierarchical Structure</h3>
+
+    <div class="mermaid">
+        graph TD
+            A[Level 0: Business Domain<br/>Higher Education Learning Management] --> B[Level 1: Business Capability Areas<br/>EA Strategic View]
+            B --> C[Level 2: Business Capabilities<br/>BA Functional Domains]
+            C --> D[Level 3: Functional Capabilities<br/>BA Detailed Requirements]
+            D --> E[Level 4: System Functions<br/>Technical Implementation]
+
+            style A fill:#e1f5fe
+            style B fill:#f3e5f5
+            style C fill:#e8f5e8
+            style D fill:#fff3e0
+            style E fill:#fce4ec
+    </div>
+
+    <h3>1.2 Proposed Numbering Schemes</h3>
+
+    <h4>Option A: Decimal Notation</h4>
+    <ul>
+        <li><strong>Level 1</strong>: 1.0, 2.0, 3.0, 4.0</li>
+        <li><strong>Level 2</strong>: 1.1, 1.2, 2.1, 2.2</li>
+        <li><strong>Level 3</strong>: 1.1.1, 1.1.2, 1.2.1, 1.2.2</li>
+        <li><strong>Level 4</strong>: 1.1.1.1, 1.1.1.2</li>
+    </ul>
+
+    <h4>Option B: Hybrid Alpha-Numeric</h4>
+    <ul>
+        <li><strong>Level 1</strong>: CD (Curriculum Delivery), LRM (Learning Resource Management)</li>
+        <li><strong>Level 2</strong>: CD.1, CD.2, LRM.1, LRM.2</li>
+        <li><strong>Level 3</strong>: CD.1.A, CD.1.B, CD.2.A, CD.2.B</li>
+        <li><strong>Level 4</strong>: CD.1.A.01, CD.1.A.02</li>
+    </ul>
+
+    <h2>2. Complete Taxonomy Mapping</h2>
+
+    <h3>2.1 Unified Hierarchy View</h3>
+
+    <div class="mermaid">
+        graph TB
+            subgraph "Level 0: Business Domain"
+                BD[Higher Education Learning Management System]
+            end
+
+            subgraph "Level 1: EA Business Capability Areas"
+                LTD[1.0 Learning & Teaching Delivery]
+                LTRM[2.0 Learning & Teaching Resource Management]
+                LTRP[3.0 Learning & Teaching Resource Preparation]
+                SS[4.0 Student Supervision]
+            end
+
+            subgraph "Level 2: BA Functional Domains"
+                CCM[2.1 Course Content Management]
+                CD[1.1 Curriculum Delivery]
+            end
+
+            subgraph "Level 3: BA Functional Capabilities"
+                CA[2.1.1 Content Authoring]
+                AID[2.1.2 Accessibility & Inclusive Design]
+                CRAW[2.1.3 Content Review & Approval Workflow]
+                DSCS[2.1.4 Discipline-Specific Content Support]
+                CMAR[2.1.5 Content Migration, Archiving & Recovery]
+                CLMG[2.1.6 Content Lifecycle Management & Governance]
+                CCM2[2.1.7 Content Cascade Management]
+                RLM[2.1.8 Reading List Management]
+                PRI[2.1.9 Publishing & Resource Integration]
+                LRS[2.1.10 Learning Resource Sharing]
+
+                MMD[1.1.1 Multi-modal Delivery]
+                LP[1.1.2 Lesson Planning]
+                CS[1.1.3 Content Sequencing]
+                LOA[1.1.4 Learning Outcome Alignment]
+                VCM[1.1.5 Virtual Classroom Management]
+                IF[1.1.6 Interactive Forums]
+                MLA[1.1.7 Mobile Learning Access]
+            end
+
+            BD --> LTD
+            BD --> LTRM
+            BD --> LTRP
+            BD --> SS
+
+            LTD --> CD
+            LTRM --> CCM
+
+            CCM --> CA
+            CCM --> AID
+            CCM --> CRAW
+            CCM --> DSCS
+            CCM --> CMAR
+            CCM --> CLMG
+            CCM --> CCM2
+            CCM --> RLM
+            CCM --> PRI
+            CCM --> LRS
+
+            CD --> MMD
+            CD --> LP
+            CD --> CS
+            CD --> LOA
+            CD --> VCM
+            CD --> IF
+            CD --> MLA
+
+            style BD fill:#e1f5fe
+            style LTD fill:#f3e5f5
+            style LTRM fill:#f3e5f5
+            style CCM fill:#e8f5e8
+            style CD fill:#e8f5e8
+    </div>
+
+    <h3>2.2 Capability Alignment Matrix</h3>
+
+    <div class="mermaid">
+        graph LR
+            subgraph "EA Business Capabilities"
+                EA1[Learning & Teaching Delivery]
+                EA2[Learning & Teaching Resource Management]
+                EA3[Learning & Teaching Resource Preparation]
+                EA4[Student Supervision]
+            end
+
+            subgraph "BA Functional Domains"
+                BA1[Course Content Management]
+                BA2[Curriculum Delivery]
+            end
+
+            EA1 -.-> BA2
+            EA2 -.-> BA1
+            EA3 -.-> BA1
+            EA4 -.-> BA2
+
+            style EA1 fill:#f3e5f5
+            style EA2 fill:#f3e5f5
+            style EA3 fill:#f3e5f5
+            style EA4 fill:#f3e5f5
+            style BA1 fill:#e8f5e8
+            style BA2 fill:#e8f5e8
+    </div>
+
+    <h2>3. Information Architecture & Flow</h2>
+
+    <h3>3.1 TOGAF Information Flow Model</h3>
+
+    <div class="mermaid">
+        graph TD
+            subgraph "Information Architecture Layer"
+                IA1[Learning Content Information]
+                IA2[Student Progress Information]
+                IA3[Assessment Information]
+                IA4[Resource Metadata]
+            end
+
+            subgraph "Application Architecture Layer"
+                AA1[Content Management Applications]
+                AA2[Learning Delivery Applications]
+                AA3[Assessment Applications]
+                AA4[Analytics Applications]
+            end
+
+            subgraph "Technology Architecture Layer"
+                TA1[Content Repository]
+                TA2[Learning Platform]
+                TA3[Integration Services]
+                TA4[Analytics Engine]
+            end
+
+            IA1 --> AA1
+            IA2 --> AA2
+            IA3 --> AA3
+            IA4 --> AA4
+
+            AA1 --> TA1
+            AA2 --> TA2
+            AA3 --> TA1
+            AA4 --> TA4
+
+            TA1 <--> TA3
+            TA2 <--> TA3
+            TA4 <--> TA3
+    </div>
+
+    <h3>3.2 Cross-Domain Information Flow</h3>
+
+    <div class="mermaid">
+        sequenceDiagram
+            participant EA as Enterprise Architect<br/>(Strategic Capabilities)
+            participant BA as Business Analyst<br/>(Functional Requirements)
+            participant SA as Solution Architect<br/>(System Design)
+            participant DEV as Development Team<br/>(Implementation)
+
+            EA->>BA: Business Capability Model
+            Note over EA,BA: 1.0 Learning & Teaching Delivery<br/>2.0 Resource Management
+
+            BA->>SA: Detailed Functional Requirements
+            Note over BA,SA: 2.1.1 Content Authoring<br/>1.1.1 Multi-modal Delivery
+
+            SA->>DEV: Technical Specifications
+            Note over SA,DEV: System Components<br/>Integration Points
+
+            DEV->>SA: Implementation Feedback
+            SA->>BA: Capability Validation
+            BA->>EA: Strategic Alignment Confirmation
+    </div>
+
+    <h2>4. Detailed Taxonomy Breakdown</h2>
+
+    <h3>4.1 Complete Hierarchical Structure</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Level 1 (EA)</th>
+                <th>Level 2 (BA Domain)</th>
+                <th>Level 3 (BA Function)</th>
+                <th>Code</th>
+                <th>Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="background-color: #f8f9fa;">
+                <td rowspan="8"><strong>1.0 Learning & Teaching Delivery</strong></td>
+                <td rowspan="8">1.1 Curriculum Delivery</td>
+                <td>1.1.1 Multi-modal Delivery</td>
+                <td class="code">MMD</td>
+                <td>Multiple delivery modes with seamless transitions</td>
+            </tr>
+            <tr>
+                <td>1.1.2 Lesson Planning</td>
+                <td class="code">LP</td>
+                <td>Detailed lesson plans with objectives and resources</td>
+            </tr>
+            <tr>
+                <td>1.1.3 Content Sequencing</td>
+                <td class="code">CS</td>
+                <td>Optimal content structure for progressive learning</td>
+            </tr>
+            <tr>
+                <td>1.1.4 Learning Outcome Alignment</td>
+                <td class="code">LOA</td>
+                <td>Alignment with learning outcomes and standards</td>
+            </tr>
+            <tr>
+                <td>1.1.5 Virtual Classroom Management</td>
+                <td class="code">VCM</td>
+                <td>Real-time virtual learning facilitation</td>
+            </tr>
+            <tr>
+                <td>1.1.6 Interactive Forums</td>
+                <td class="code">IF</td>
+                <td>Discussion forums with peer learning</td>
+            </tr>
+            <tr>
+                <td>1.1.7 Mobile Learning Access</td>
+                <td class="code">MLA</td>
+                <td>Mobile application access to resources</td>
+            </tr>
+            <tr style="border-bottom: 2px solid #dee2e6;"></tr>
+            <tr style="background-color: #f8f9fa;">
+                <td rowspan="11"><strong>2.0 Learning & Teaching Resource Management</strong></td>
+                <td rowspan="11">2.1 Course Content Management</td>
+                <td>2.1.1 Content Authoring</td>
+                <td class="code">CA</td>
+                <td>Intuitive content creation tools</td>
+            </tr>
+            <tr>
+                <td>2.1.2 Accessibility & Inclusive Design</td>
+                <td class="code">AID</td>
+                <td>WCAG-compliant inclusive experiences</td>
+            </tr>
+            <tr>
+                <td>2.1.3 Content Review & Approval Workflow</td>
+                <td class="code">CRAW</td>
+                <td>Structured approval processes</td>
+            </tr>
+            <tr>
+                <td>2.1.4 Discipline-Specific Content Support</td>
+                <td class="code">DSCS</td>
+                <td>Specialized academic content support</td>
+            </tr>
+            <tr>
+                <td>2.1.5 Content Migration, Archiving & Recovery</td>
+                <td class="code">CMAR</td>
+                <td>Historical content preservation</td>
+            </tr>
+            <tr>
+                <td>2.1.6 Content Lifecycle Management & Governance</td>
+                <td class="code">CLMG</td>
+                <td>Creation through archival management</td>
+            </tr>
+            <tr>
+                <td>2.1.7 Content Cascade Management</td>
+                <td class="code">CCM</td>
+                <td>Global/local content update governance</td>
+            </tr>
+            <tr>
+                <td>2.1.8 Reading List Management</td>
+                <td class="code">RLM</td>
+                <td>Dynamic reading lists with compliance</td>
+            </tr>
+            <tr>
+                <td>2.1.9 Publishing & Resource Integration</td>
+                <td class="code">PRI</td>
+                <td>External resource integration</td>
+            </tr>
+            <tr>
+                <td>2.1.10 Learning Resource Sharing</td>
+                <td class="code">LRS</td>
+                <td>Controlled content sharing between units</td>
+            </tr>
+            <tr style="border-bottom: 2px solid #dee2e6;"></tr>
+            <tr style="background-color: #f8f9fa;">
+                <td rowspan="3"><strong>3.0 Learning & Teaching Resource Preparation</strong></td>
+                <td>3.1 Content Development</td>
+                <td colspan="3"><em>[Future BA Requirements]</em></td>
+            </tr>
+            <tr>
+                <td>3.2 Resource Acquisition</td>
+                <td colspan="3"><em>[Future BA Requirements]</em></td>
+            </tr>
+            <tr style="border-bottom: 2px solid #dee2e6;"></tr>
+            <tr style="background-color: #f8f9fa;">
+                <td rowspan="3"><strong>4.0 Student Supervision</strong></td>
+                <td>4.1 Academic Mentoring</td>
+                <td colspan="3"><em>[Future BA Requirements]</em></td>
+            </tr>
+            <tr>
+                <td>4.2 Progress Monitoring</td>
+                <td colspan="3"><em>[Future BA Requirements]</em></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>5. Language Harmonization</h2>
+
+    <h3>5.1 Common Definitions</h3>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Level</th>
+                <th>EA Term</th>
+                <th>BA Term</th>
+                <th>Unified Definition</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Strategic</td>
+                <td>Business Capability</td>
+                <td>Functional Domain</td>
+                <td><strong>Business Capability</strong>: A particular ability that a business possesses to deliver value</td>
+            </tr>
+            <tr>
+                <td>Tactical</td>
+                <td>Capability Component</td>
+                <td>Functional Capability</td>
+                <td><strong>Functional Capability</strong>: A specific function or feature required to support a business capability</td>
+            </tr>
+            <tr>
+                <td>Operational</td>
+                <td>Process Step</td>
+                <td>System Function</td>
+                <td><strong>System Function</strong>: A discrete operation performed by technology to enable a functional capability</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>6. Synthesis Recommendations</h2>
+
+    <h3>6.1 Organizational Alignment</h3>
+
+    <div class="mermaid">
+        graph LR
+            subgraph "Current State Issues"
+                I1[Language Disconnect]
+                I2[Level Misalignment]
+                I3[Scope Overlap]
+            end
+
+            subgraph "Proposed Solutions"
+                S1[Unified Taxonomy]
+                S2[Cross-functional Workshops]
+                S3[Shared Deliverable Templates]
+            end
+
+            subgraph "Expected Outcomes"
+                O1[Common Understanding]
+                O2[Reduced Rework]
+                O3[Faster Delivery]
+            end
+
+            I1 --> S1
+            I2 --> S2
+            I3 --> S3
+
+            S1 --> O1
+            S2 --> O2
+            S3 --> O3
+    </div>
+
+    <h3>6.2 Implementation Roadmap</h3>
+
+    <div class="mermaid">
+        gantt
+            title Taxonomy Implementation Timeline
+            dateFormat  YYYY-MM-DD
+            section Phase 1: Foundation
+            Taxonomy Adoption        :a1, 2024-01-15, 2w
+            Team Training           :a2, after a1, 1w
+            Template Creation       :a3, after a2, 1w
+
+            section Phase 2: Integration
+            Pilot Project          :b1, after a3, 4w
+            Feedback Collection    :b2, after b1, 1w
+            Taxonomy Refinement    :b3, after b2, 1w
+
+            section Phase 3: Rollout
+            Full Implementation    :c1, after b3, 8w
+            Continuous Improvement :c2, after c1, 12w
+    </div>
+
+    <h2>7. Success Metrics</h2>
+
+    <h3>7.1 Alignment Indicators</h3>
+    <ul>
+        <li><strong>Requirement Traceability</strong>: 100% of BA requirements mapped to EA capabilities</li>
+        <li><strong>Language Consistency</strong>: 95% use of agreed terminology in deliverables</li>
+        <li><strong>Cross-team Understanding</strong>: Survey scores >4.0/5.0 for comprehension</li>
+    </ul>
+
+    <h3>7.2 Efficiency Gains</h3>
+    <ul>
+        <li><strong>Reduced Rework</strong>: 30% decrease in requirement revision cycles</li>
+        <li><strong>Faster Reviews</strong>: 25% reduction in cross-team review time</li>
+        <li><strong>Better Coverage</strong>: 100% capability coverage in system design</li>
+    </ul>
+
+    <h2>8. Conclusion</h2>
+
+    <p>This unified taxonomy provides a bridge between strategic enterprise architecture thinking and detailed business analysis requirements. By adopting this framework, both teams can maintain their unique perspectives while working from a common foundation that reduces friction and improves project outcomes.</p>
+
+    <p>The key to success will be regular use of this taxonomy in joint deliverables and consistent application of the agreed terminology and numbering schemes.</p>
+
+    <hr>
+    <p><em>This document serves as a living framework that should be updated as the organization's understanding of the Learning Management System requirements evolves.</em></p>
+
+    <script>
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            themeVariables: {
+                primaryColor: '#3498db',
+                primaryTextColor: '#2c3e50',
+                primaryBorderColor: '#2c3e50',
+                lineColor: '#34495e',
+                sectionBkgColor: '#ecf0f1',
+                altSectionBkgColor: '#bdc3c7',
+                gridColor: '#95a5a6',
+                secondaryColor: '#e74c3c',
+                tertiaryColor: '#f39c12'
+            },
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true
+            },
+            sequence: {
+                useMaxWidth: true,
+                htmlLabels: true
+            },
+            gantt: {
+                useMaxWidth: true,
+                htmlLabels: true
+            }
+        });
+    </script>
+</body>
+</html>

@@ -346,6 +346,27 @@ await setPlayerStamina(guildId, userId, amount);
 - Display complete Safari data structure
 - Useful for debugging state issues
 
+**7. Edit Items** (`map_admin_edit_items_{userId}`)
+```javascript
+// Player-centric item quantity editing interface
+const ui = await createPlayerItemSelectorUI({
+  guildId,
+  targetUserId,
+  searchTerm: '',
+  selectedItemId: null
+});
+```
+- **Purpose**: Adjust specific item quantities for individual players
+- **Access**: Via Player Admin → Select Player → Edit Items
+- **Features**:
+  - Search functionality for large item catalogs (Discord 25-option limit workaround)
+  - No "Create New Item" option (uses existing items only)
+  - Context-aware navigation back to Player Admin
+  - Audit logging for admin actions
+  - Legacy item format compatibility (numbers vs objects)
+- **Workflow**: `Prod Menu > Safari > Player Admin > Select Player > Edit Items > Select Item > Set Quantity`
+- **Technical**: Uses Entity Management UI framework with specialized player context
+
 ## Integration with Points System
 
 ### Movement Cost Configuration
