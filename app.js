@@ -14839,6 +14839,20 @@ Your server is now ready for Tycoons gameplay!`;
 
             components.push(selectButton);
 
+            // Delete Action button
+            const deleteButton = {
+              type: 1, // Action Row
+              components: [{
+                type: 2, // Button
+                custom_id: `safari_remove_action_${actionId}_${actionIndex}`,
+                label: 'Delete Action',
+                style: 4, // Danger (red)
+                emoji: { name: '🗑️' }
+              }]
+            };
+
+            components.push(deleteButton);
+
             // Back button
             const backButton = {
               type: 1, // Action Row
