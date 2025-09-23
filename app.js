@@ -29004,8 +29004,8 @@ Are you sure you want to continue?`;
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
           data: {
-            ...result,
-            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
+            ...result
+            // No flags in UPDATE_MESSAGE - per Discord Interaction API requirements
           }
         });
         

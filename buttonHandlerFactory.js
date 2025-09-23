@@ -2226,29 +2226,16 @@ export async function updateDeferredResponse(token, data) {
   }
   webhookData.flags = flags;
 
-  // If this is a Components V2 response, we need to convert the container structure
+  // If this is a Components V2 response, preserve Container structure
   if (data.components && data.components.length > 0 && data.components[0].type === 17) {
-    console.log(`🔧 updateDeferredResponse: Converting Components V2 container for webhook`);
+    console.log(`🔧 updateDeferredResponse: Preserving Components V2 Container structure`);
 
-    // Extract the container components and flatten them
-    const container = data.components[0];
-    const containerComponents = container.components || [];
+    // CRITICAL: Keep Components V2 flag and Container structure
+    // Discord error: MESSAGE_CANNOT_REMOVE_COMPONENTS_V2_FLAG
+    // Must preserve both the flag and the Container format for webhook PATCH
+    webhookData.flags = webhookData.flags | (1 << 15); // Ensure IS_COMPONENTS_V2 flag is set
 
-    // Convert to webhook-compatible format
-    webhookData.components = containerComponents.filter(comp => comp.type === 1); // Only ActionRows
-
-    // If there's text content, add it as message content
-    const textComponents = containerComponents.filter(comp => comp.type === 10);
-    if (textComponents.length > 0) {
-      webhookData.content = textComponents.map(comp => comp.content).join('\n\n');
-    }
-
-    // CRITICAL: Remove Components V2 flag for webhook - Discord webhooks don't support it
-    // Webhooks must use legacy format with content + components, not Container structure
-    webhookData.flags = webhookData.flags & ~(1 << 15); // Remove IS_COMPONENTS_V2 flag
-    console.log(`🔧 updateDeferredResponse: Removed Components V2 flag for webhook compatibility`);
-
-    console.log(`🔧 updateDeferredResponse: Converted to webhook format:`, JSON.stringify(webhookData, null, 2));
+    console.log(`🔧 updateDeferredResponse: Preserved Components V2 format:`, JSON.stringify(webhookData, null, 2));
   }
 
   return DiscordRequest(endpoint, {

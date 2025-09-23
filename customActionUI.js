@@ -381,6 +381,114 @@ function getButtonStyleNumber(style) {
   return styles[style] || 1; // Default to Primary
 }
 
+/**
+ * Component counting function (adapted from castlistV2.js)
+ * @param {Array} components - Array of components to count
+ * @param {boolean} verbose - Whether to show detailed breakdown
+ * @returns {number} Total component count
+ */
+function countComponents(components, verbose = false) {
+  let count = 0;
+
+  const typeNames = {
+    1: 'ActionRow',
+    2: 'Button',
+    9: 'Section',
+    10: 'TextDisplay',
+    11: 'Thumbnail',
+    14: 'Separator',
+    17: 'Container'
+  };
+
+  function countRecursive(items, depth = 0) {
+    if (!Array.isArray(items)) return;
+
+    for (const item of items) {
+      count++; // Count the item itself
+
+      if (verbose) {
+        const indent = '  '.repeat(depth);
+        const typeName = typeNames[item.type] || `Unknown(${item.type})`;
+        const hasAccessory = item.accessory ? ' [HAS ACCESSORY]' : '';
+        console.log(`${indent}${count}. ${typeName}${hasAccessory}`);
+
+        // Show accessory details if present
+        if (item.accessory && depth < 3) {
+          const accessoryType = typeNames[item.accessory.type] || `Unknown(${item.accessory.type})`;
+          console.log(`${indent}   └─ Accessory: ${accessoryType}`);
+        }
+      }
+
+      // Recursively count nested components
+      if (item.components) {
+        countRecursive(item.components, depth + 1);
+      }
+    }
+  }
+
+  if (verbose) {
+    console.log('📋 DETAILED COMPONENT BREAKDOWN:');
+  }
+  countRecursive(components);
+  return count;
+}
+
+/**
+ * Calculate maximum possible components in Custom Action Editor
+ * @returns {Object} Component breakdown and totals
+ */
+function calculateMaxCustomActionEditorComponents() {
+  // Base structure components (fixed)
+  const baseComponents = {
+    container: 1, // type 17
+    header: 1, // type 10 - "## ⚡ Custom Action Editor"
+    actionInfoSection: 1, // type 9 - Action Info Section
+    actionInfoAccessory: 1, // type 2 - "Action Info" button (accessory)
+    separator1: 1, // type 14 - after Action Info
+    triggerSection: 1, // type 9 - Trigger Configuration Section
+    triggerAccessory: 1, // type 2 - "Manage" button (accessory)
+    conditionsSection: 1, // type 9 - Conditions Section
+    conditionsAccessory: 1, // type 2 - "Manage" button (accessory)
+    coordinatesSection: 1, // type 9 - Coordinates Section
+    coordinatesAccessory: 1, // type 2 - "Manage" button (accessory)
+    separator2: 1, // type 14 - after Coordinates
+    trueActionsHeader: 1, // type 10 - "✅ Actions executed if Conditions Met"
+    separator3: 1, // type 14 - between TRUE and FALSE sections
+    falseActionsHeader: 1, // type 10 - "❌ Actions executed if Conditions Not Met"
+    falseActionsPlaceholder: 1, // type 10 - "*No false conditions configured*" (worst case)
+    separator4: 1, // type 14 - before action select menu (when not at max)
+    actionSelectRow: 1, // type 1 - Action Row for select menu
+    actionSelectMenu: 1, // type 3 - String Select menu
+    separator5: 1, // type 14 - before final buttons
+    finalButtonRow: 1, // type 1 - Action Row for final buttons
+    finalButton1: 1, // type 2 - "← Location Manager"
+    finalButton2: 1, // type 2 - "Force Trigger Action"
+    finalButton3: 1 // type 2 - "Delete Action"
+  };
+
+  // Variable components (actions)
+  const maxActionsPerSection = SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON; // 5
+  const maxSections = 2; // TRUE and FALSE sections
+  const maxTotalActions = maxActionsPerSection * maxSections; // 10 total actions
+
+  // Each action creates: 1 Section (type 9) + 1 accessory Button (type 2) = 2 components
+  const maxActionComponents = maxTotalActions * 2; // 20 components for actions
+
+  const baseTotal = Object.values(baseComponents).reduce((sum, count) => sum + count, 0);
+  const maxTotal = baseTotal + maxActionComponents;
+
+  return {
+    baseComponents,
+    baseTotal,
+    maxActionComponents,
+    maxTotalActions,
+    maxTotal,
+    discordLimit: SAFARI_LIMITS.MAX_DISCORD_COMPONENTS,
+    withinLimit: maxTotal <= SAFARI_LIMITS.MAX_DISCORD_COMPONENTS,
+    overflow: Math.max(0, maxTotal - SAFARI_LIMITS.MAX_DISCORD_COMPONENTS)
+  };
+}
+
 function formatCoordinateList(coordinates) {
   if (!coordinates || coordinates.length === 0) {
     return '0 coordinates';
@@ -776,6 +884,9 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
         ]
       }]
     });
+
+    // Add divider before Button Preview
+    components.push({ type: 14 });
 
     components.push({
       type: 10,
@@ -2128,6 +2239,19 @@ export async function handleDisplayTextExecuteOn(guildId, customId, executeOnVal
   };
 }
 
+// Test the component calculation on module load
+console.log('🧮 CUSTOM ACTION EDITOR COMPONENT ANALYSIS:');
+const componentAnalysis = calculateMaxCustomActionEditorComponents();
+console.log(`📊 Base Components: ${componentAnalysis.baseTotal}`);
+console.log(`⚡ Max Action Components: ${componentAnalysis.maxActionComponents} (${componentAnalysis.maxTotalActions} actions × 2 components each)`);
+console.log(`🔢 Maximum Total Components: ${componentAnalysis.maxTotal}`);
+console.log(`🎯 Discord Limit: ${componentAnalysis.discordLimit}`);
+console.log(`✅ Within Limit: ${componentAnalysis.withinLimit ? 'YES' : 'NO'}`);
+if (!componentAnalysis.withinLimit) {
+  console.log(`❌ Overflow: ${componentAnalysis.overflow} components over limit`);
+}
+console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
 export default {
   createCustomActionSelectionUI,
   createCustomActionEditorUI,
@@ -2140,5 +2264,7 @@ export default {
   showCalculateResultsConfig,
   handleDisplayTextEdit,
   handleDisplayTextSave,
-  handleDisplayTextExecuteOn
+  handleDisplayTextExecuteOn,
+  calculateMaxCustomActionEditorComponents,
+  countComponents
 };
