@@ -841,9 +841,9 @@ async function executeDisplayText(config, interaction) {
             console.log(`⚠️ Invalid display text color format: ${config.color}, ignoring`);
         }
     }
-    
+
     return {
-        flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+        flags: (1 << 15), // IS_COMPONENTS_V2 only - no EPHEMERAL for display text
         components: [container]
     };
 }
