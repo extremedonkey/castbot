@@ -43,13 +43,11 @@ export async function createStoreSelectionUI(options) {
     console.log(`🔍 DEBUG: Filtered to ${Object.keys(stores).length} stores matching "${searchTerm}"`);
   }
 
-  if (Object.keys(stores).length === 0) {
-    const noResultsMessage = searchTerm
-      ? `❌ **No stores found**\n\nNo stores match "${searchTerm}". Try a different search term.`
-      : '❌ **No stores to manage**\n\nCreate your first store using **🏪 Create New Store** before managing store items.';
-
+  // Only return error if user searched but found no results
+  // If there are no stores at all (no search), proceed to show "Create New Store" option
+  if (Object.keys(stores).length === 0 && searchTerm) {
     return {
-      content: noResultsMessage,
+      content: `❌ **No stores found**\n\nNo stores match "${searchTerm}". Try a different search term.`,
       ephemeral: true
     };
   }
