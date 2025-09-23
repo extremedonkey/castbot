@@ -20484,10 +20484,15 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           console.log(`✅ SUCCESS: custom_action_up - action reordered`);
 
           // Refresh Custom Action Editor UI
-          const { getActionUI } = await import('./customActionUI.js');
-          const container = await getActionUI(actionId, guildId, allSafariContent);
+          const { createCustomActionEditorUI } = await import('./customActionUI.js');
+          const ui = await createCustomActionEditorUI({
+            guildId: guildId,
+            actionId: actionId,
+            coordinate: null,
+            skipAutoSave: true
+          });
 
-          return { container };
+          return ui;
         }
       })(req, res, client);
 
