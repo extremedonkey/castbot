@@ -14825,8 +14825,8 @@ Your server is now ready for Tycoons gameplay!`;
               content: `# ${action.type === 'give_role' ? '🎯 Give Role Configuration' : '🚫 Remove Role Configuration'}\n\n**Action:** ${button.label}\n**Type:** ${action.type}\n\n${currentRoleId ? `**Current Role:** <@&${currentRoleId}>` : '**Current Role:** None selected'}\n\nClick the button below to select a role.`
             });
 
-            // Role selection button
-            const selectButton = {
+            // Role selection and delete buttons in same row
+            const buttonRow = {
               type: 1, // Action Row
               components: [{
                 type: 2, // Button
@@ -14834,15 +14834,7 @@ Your server is now ready for Tycoons gameplay!`;
                 label: 'Select Role',
                 style: 1, // Primary
                 emoji: { name: '👥' }
-              }]
-            };
-
-            components.push(selectButton);
-
-            // Delete Action button
-            const deleteButton = {
-              type: 1, // Action Row
-              components: [{
+              }, {
                 type: 2, // Button
                 custom_id: `safari_remove_action_${actionId}_${actionIndex}`,
                 label: 'Delete Action',
@@ -14851,7 +14843,7 @@ Your server is now ready for Tycoons gameplay!`;
               }]
             };
 
-            components.push(deleteButton);
+            components.push(buttonRow);
 
             // Back button
             const backButton = {
