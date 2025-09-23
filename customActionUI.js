@@ -183,7 +183,9 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   let nameDisplay = action.name || 'New Action';
   if (triggerType === 'button') {
     const buttonLabel = action.trigger?.button?.label || 'Not set';
-    nameDisplay = `**Name (Button Label)**\n${buttonLabel}`;
+    const buttonEmoji = action.trigger?.button?.emoji || '';
+    const emojiPrefix = buttonEmoji ? `${buttonEmoji} ` : '';
+    nameDisplay = `**Name (Button Label)**\n${emojiPrefix}${buttonLabel}`;
   } else {
     nameDisplay = `**Name**\n${nameDisplay}`;
   }
@@ -619,7 +621,7 @@ async function formatConditionsDisplay(conditions, guildItems = {}) {
         break;
       case 'role':
         // Format role as Discord role mention
-        summary = `${condition.operator === 'has' ? 'Has role:' : 'Does not have role:'} <@&${condition.roleId}>`;
+        summary = `${condition.operator === 'has' ? 'Has' : 'Does not have'} <@&${condition.roleId}>`;
         break;
       default:
         summary = getConditionSummary ? getConditionSummary(condition) : 'Unknown condition';
