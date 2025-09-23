@@ -2228,6 +2228,11 @@ export async function updateDeferredResponse(token, data) {
       webhookData.content = textComponents.map(comp => comp.content).join('\n\n');
     }
 
+    // CRITICAL: Remove Components V2 flag for webhook - Discord webhooks don't support it
+    // Webhooks must use legacy format with content + components, not Container structure
+    webhookData.flags = webhookData.flags & ~(1 << 15); // Remove IS_COMPONENTS_V2 flag
+    console.log(`🔧 updateDeferredResponse: Removed Components V2 flag for webhook compatibility`);
+
     console.log(`🔧 updateDeferredResponse: Converted to webhook format:`, JSON.stringify(webhookData, null, 2));
   }
 
