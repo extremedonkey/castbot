@@ -2214,6 +2214,12 @@ export async function updateDeferredResponse(token, data) {
     ...data
   };
 
+  // CRITICAL: Remove content field for Components V2 - Discord error prevention
+  if (data.components && data.components.length > 0 && data.components[0].type === 17) {
+    // Components V2 cannot use content field - remove it if present
+    delete webhookData.content;
+  }
+
   // CRITICAL: Preserve IS_COMPONENTS_V2 flag for Components V2 messages
   // Discord requires this flag to remain set once used - cannot be removed
   let flags = data.flags || 0;
