@@ -20433,6 +20433,64 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         }
       })(req, res, client);
       
+    } else if (custom_id.startsWith('custom_action_up_')) {
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_up',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: custom_action_up - user ${context.userId}`);
+          const { guildId, userId } = context;
+
+          // Extract actionId and actionIndex: custom_action_up_{actionId}_{actionIndex}
+          const prefix = 'custom_action_up_';
+          const remaining = context.customId.replace(prefix, '');
+          const parts = remaining.split('_');
+          const actionIndex = parseInt(parts.pop()); // Get index from end
+          const actionId = parts.join('_'); // Join remaining as actionId
+
+          console.log(`🔍 DEBUG: Moving action up - Button: ${actionId}, Index: ${actionIndex}`);
+
+          // Load Safari content
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const guildData = allSafariContent[guildId] || {};
+          const button = guildData.buttons?.[actionId];
+
+          if (!button || !button.actions || actionIndex < 0 || actionIndex >= button.actions.length) {
+            return {
+              content: '❌ Unable to reorder action.',
+              ephemeral: true
+            };
+          }
+
+          // Handle cycling: if first action, move to bottom
+          if (actionIndex === 0) {
+            // Move first action to the end
+            const actionToMove = button.actions.shift();
+            button.actions.push(actionToMove);
+            console.log(`🔄 DEBUG: Cycled first action to bottom`);
+          } else {
+            // Standard swap with previous action
+            const temp = button.actions[actionIndex];
+            button.actions[actionIndex] = button.actions[actionIndex - 1];
+            button.actions[actionIndex - 1] = temp;
+            console.log(`🔄 DEBUG: Swapped action ${actionIndex} with ${actionIndex - 1}`);
+          }
+
+          await saveSafariContent(allSafariContent);
+
+          console.log(`✅ SUCCESS: custom_action_up - action reordered`);
+
+          // Refresh Custom Action Editor UI
+          const { getActionUI } = await import('./customActionUI.js');
+          const container = await getActionUI(actionId, guildId, allSafariContent);
+
+          return { container };
+        }
+      })(req, res, client);
+
     } else if (custom_id.startsWith('custom_action_delete_')) {
       // Handle delete action button with confirmation (MOST GENERAL - MUST BE LAST)
       return ButtonHandlerFactory.create({
@@ -28208,63 +28266,6 @@ Are you sure you want to continue?`;
           }
         });
       }
-    } else if (custom_id.startsWith('custom_action_up_')) {
-      return ButtonHandlerFactory.create({
-        id: 'custom_action_up',
-        requiresPermission: PermissionFlagsBits.ManageRoles,
-        permissionName: 'Manage Roles',
-        updateMessage: true,
-        handler: async (context) => {
-          console.log(`🔍 START: custom_action_up - user ${context.userId}`);
-          const { guildId, userId } = context;
-
-          // Extract actionId and actionIndex: custom_action_up_{actionId}_{actionIndex}
-          const prefix = 'custom_action_up_';
-          const remaining = context.customId.replace(prefix, '');
-          const parts = remaining.split('_');
-          const actionIndex = parseInt(parts.pop()); // Get index from end
-          const actionId = parts.join('_'); // Join remaining as actionId
-
-          console.log(`🔍 DEBUG: Moving action up - Button: ${actionId}, Index: ${actionIndex}`);
-
-          // Load Safari content
-          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
-          const allSafariContent = await loadSafariContent();
-          const guildData = allSafariContent[guildId] || {};
-          const button = guildData.buttons?.[actionId];
-
-          if (!button || !button.actions || actionIndex < 0 || actionIndex >= button.actions.length) {
-            return {
-              content: '❌ Unable to reorder action.',
-              ephemeral: true
-            };
-          }
-
-          // Handle cycling: if first action, move to bottom
-          if (actionIndex === 0) {
-            // Move first action to the end
-            const actionToMove = button.actions.shift();
-            button.actions.push(actionToMove);
-            console.log(`🔄 DEBUG: Cycled first action to bottom`);
-          } else {
-            // Standard swap with previous action
-            const temp = button.actions[actionIndex];
-            button.actions[actionIndex] = button.actions[actionIndex - 1];
-            button.actions[actionIndex - 1] = temp;
-            console.log(`🔄 DEBUG: Swapped action ${actionIndex} with ${actionIndex - 1}`);
-          }
-
-          await saveSafariContent(allSafariContent);
-
-          console.log(`✅ SUCCESS: custom_action_up - action reordered`);
-
-          // Refresh Custom Action Editor UI
-          const { getActionUI } = await import('./customActionUI.js');
-          const container = await getActionUI(actionId, guildId, allSafariContent);
-
-          return { container };
-        }
-      })(req, res, client);
     } else if (custom_id.startsWith('safari_currency_modal_') && custom_id.split('_').length > 4) {
       // Handle currency amount modal for give_currency action (format: safari_currency_modal_buttonId_actionIndex)
       try {
