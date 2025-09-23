@@ -20226,7 +20226,6 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'custom_action_test',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
-        deferred: true, // Enable deferred response for potentially long-running actions
         handler: async (context) => {
           console.log(`🔍 START: custom_action_test - user ${context.userId}`);
           
