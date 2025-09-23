@@ -1710,28 +1710,39 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
         console.log(`✅ DEBUG: Button actions executed successfully, returning response`);
 
         // Check if any calculate_results actions were executed and update anchor messages
-        const hasCalculateResults = sortedActions.some(action => action.type === 'calculate_results');
+        const calculateResultsActions = sortedActions.filter(action => action.type === 'calculate_results');
+        const hasCalculateResults = calculateResultsActions.length > 0;
+
         if (hasCalculateResults && button.coordinates && Array.isArray(button.coordinates)) {
-            console.log(`🌾 DEBUG: Calculate Results detected, updating anchor messages for coordinates: ${button.coordinates.join(', ')}`);
+            // OPTIMIZED: Only update anchors for all_players scope (single player changes don't affect map state)
+            const hasAllPlayersScope = calculateResultsActions.some(action =>
+                action.config?.scope !== 'single_player'
+            );
 
-            // Import anchor update function
-            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+            if (hasAllPlayersScope) {
+                console.log(`🌾 DEBUG: Calculate Results (all players) detected, updating anchor messages for coordinates: ${button.coordinates.join(', ')}`);
 
-            // Update anchor message for each coordinate this button is associated with
-            for (const coordinate of button.coordinates) {
-                try {
-                    console.log(`📍 DEBUG: Updating anchor message for coordinate ${coordinate}`);
-                    const client = interaction?.client;
-                    if (client) {
-                        await updateAnchorMessage(guildId, coordinate, client);
-                        console.log(`✅ SUCCESS: Updated anchor message for ${coordinate}`);
-                    } else {
-                        console.warn(`⚠️ WARNING: No client available to update anchor for ${coordinate}`);
+                // Import anchor update function
+                const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+
+                // Update anchor message for each coordinate this button is associated with
+                for (const coordinate of button.coordinates) {
+                    try {
+                        console.log(`📍 DEBUG: Updating anchor message for coordinate ${coordinate}`);
+                        const client = interaction?.client;
+                        if (client) {
+                            await updateAnchorMessage(guildId, coordinate, client);
+                            console.log(`✅ SUCCESS: Updated anchor message for ${coordinate}`);
+                        } else {
+                            console.warn(`⚠️ WARNING: No client available to update anchor for ${coordinate}`);
+                        }
+                    } catch (anchorError) {
+                        console.error(`❌ ERROR: Failed to update anchor for ${coordinate}:`, anchorError);
+                        // Don't throw - anchor update failure shouldn't break the main action
                     }
-                } catch (anchorError) {
-                    console.error(`❌ ERROR: Failed to update anchor for ${coordinate}:`, anchorError);
-                    // Don't throw - anchor update failure shouldn't break the main action
                 }
+            } else {
+                console.log(`🌾 DEBUG: Calculate Results (single player only) - skipping anchor updates (map state unchanged)`);
             }
         }
 
@@ -4095,14 +4106,11 @@ async function calculateSinglePlayerResults(guildId, userId, playerName = null) 
             };
         }
 
-        console.log(`🌾 DEBUG: Calculating single player results for user ${userId} in guild ${guildId}`);
+        // OPTIMIZED: Load target player data directly (skip expensive eligible players loop)
+        const playerData = await loadPlayerData();
+        const playerRecord = playerData[guildId]?.players?.[userId];
 
-        // Get eligible players and filter to specific user
-        const eligiblePlayers = await getEligiblePlayersFixed(guildId, null);
-        const targetPlayer = eligiblePlayers.find(player => player.userId === userId);
-
-        if (!targetPlayer) {
-            console.log(`⚠️ DEBUG: User ${userId} not found in eligible players list`);
+        if (!playerRecord?.safari) {
             return {
                 success: false,
                 processedPlayers: 0,
@@ -4112,11 +4120,15 @@ async function calculateSinglePlayerResults(guildId, userId, playerName = null) 
             };
         }
 
-        console.log(`🔄 DEBUG: Processing single player ${targetPlayer.playerName} (${targetPlayer.userId})`);
+        // Build minimal player object for processing
+        const targetPlayer = {
+            userId: userId,
+            playerName: playerName || `Player ${userId.slice(-4)}`,
+            inventory: playerRecord.safari.inventory || {}
+        };
 
         // Use provided player name if available (from interaction context)
         if (playerName) {
-            console.log(`👤 DEBUG: Using provided player name "${playerName}" instead of cached "${targetPlayer.playerName}"`);
             targetPlayer.playerName = playerName;
         }
 
@@ -4137,33 +4149,31 @@ async function calculateSinglePlayerResults(guildId, userId, playerName = null) 
         }
 
         // Process each inventory item using goodOutcomeValue
+        const itemsSummary = [];
         for (const [itemId, inventoryItem] of Object.entries(targetPlayer.inventory)) {
             // Use universal accessor to get quantity
             const quantity = getItemQuantity(inventoryItem);
             if (quantity <= 0) continue;
 
             const item = items[itemId];
-            if (!item) {
-                console.log(`⚠️ DEBUG: Item ${itemId} not found in items database`);
-                continue;
-            }
+            if (!item) continue; // Skip missing items silently
 
             // Calculate earnings using goodOutcomeValue (default for simple results)
             const goodValue = item.goodOutcomeValue || 0;
             if (goodValue !== 0) {
                 const itemEarnings = quantity * goodValue;
                 playerEarnings += itemEarnings;
-                console.log(`💰 DEBUG: ${targetPlayer.playerName} - ${item.name} x${quantity} = ${itemEarnings}`);
+                itemsSummary.push(`${item.name} x${quantity} = ${itemEarnings}`);
             }
         }
 
         // Update player currency if earnings > 0
         if (playerEarnings !== 0) {
             await updateCurrency(guildId, targetPlayer.userId, playerEarnings);
-            console.log(`💰 DEBUG: Updated ${targetPlayer.playerName} currency by ${playerEarnings}`);
         }
 
-        console.log(`✅ DEBUG: Single player results calculated - ${targetPlayer.playerName} processed, ${playerEarnings} earnings`);
+        // Single consolidated log line instead of multiple DEBUG lines
+        console.log(`💰 ${targetPlayer.playerName}: ${itemsSummary.join(', ')} → +${playerEarnings} currency`);
 
         return {
             success: true,
