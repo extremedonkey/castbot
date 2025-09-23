@@ -1014,8 +1014,14 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
             const claimedArray = Array.isArray(claimedBy) ? claimedBy : [];
             if (claimedArray.includes(userId)) {
                 return {
-                    content: '❌ You have already claimed this item!',
-                    flags: InteractionResponseFlags.EPHEMERAL
+                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+                    components: [{
+                        type: 17, // Container
+                        components: [{
+                            type: 10, // Text Display
+                            content: '❌ You have already claimed this item!'
+                        }]
+                    }]
                 };
             }
         }
@@ -1025,8 +1031,14 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
             // Arrays (empty or not) and null/undefined should allow claiming
             if (typeof claimedBy === 'string' && claimedBy !== '') {
                 return {
-                    content: '❌ This item has already been claimed!',
-                    flags: InteractionResponseFlags.EPHEMERAL
+                    flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+                    components: [{
+                        type: 17, // Container
+                        components: [{
+                            type: 10, // Text Display
+                            content: '❌ This item has already been claimed!'
+                        }]
+                    }]
                 };
             }
         }
@@ -1037,8 +1049,14 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
     
     if (!success) {
         return {
-            content: '❌ Failed to add item to inventory. Item may not exist.',
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [{
+                type: 17, // Container
+                components: [{
+                    type: 10, // Text Display
+                    content: '❌ Failed to add item to inventory. Item may not exist.'
+                }]
+            }]
         };
     }
     
@@ -1113,10 +1131,16 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
     const itemEmoji = item?.emoji || '🎁';
     
     const message = `${itemEmoji} You received **${config.quantity}x ${itemName}**!`;
-    
+
     return {
-        content: message,
-        flags: InteractionResponseFlags.EPHEMERAL
+        flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+        components: [{
+            type: 17, // Container
+            components: [{
+                type: 10, // Text Display
+                content: message
+            }]
+        }]
     };
 }
 
