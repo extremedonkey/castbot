@@ -206,7 +206,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10, // Text Display
-            content: `${nameDisplay}\n**Description:** ${action.description || 'No description'}`
+            content: action.description ? `${nameDisplay}\n**Description:** ${action.description}` : nameDisplay
           }],
           accessory: {
             type: 2, // Button
