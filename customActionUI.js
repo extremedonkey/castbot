@@ -183,7 +183,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   let nameDisplay = action.name || 'New Action';
   if (triggerType === 'button') {
     const buttonLabel = action.trigger?.button?.label || 'Not set';
-    nameDisplay = `**Name (Button Label¹)**\n${buttonLabel}¹`;
+    nameDisplay = `**Name (Button Label)**\n${buttonLabel}`;
   } else {
     nameDisplay = `**Name**\n${nameDisplay}`;
   }
@@ -237,7 +237,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Conditions**\n${conditionsDisplay}³`
+            content: `**Conditions**\n${conditionsDisplay}`
           }],
           accessory: {
             type: 2,
@@ -254,7 +254,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           components: [{
             type: 10,
             content: triggerType === 'button'
-              ? `**Assigned Locations (Adds button to coordinate anchor)¹**\n${formatCoordinateList(action.coordinates)}`
+              ? `**Assigned Locations (Adds button to coordinate anchor)**\n${formatCoordinateList(action.coordinates)}`
               : `**Assigned Locations**\n${formatCoordinateList(action.coordinates)}`
           }],
           accessory: {
@@ -328,15 +328,6 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           
           return components;
         })(),
-        
-        // Divider above footnotes
-        { type: 14 },
-
-        // Footnotes section
-        {
-          type: 10,
-          content: `¹ If Trigger Type = Button Click\n² If Trigger Type = Text Command\n³ See sample JSON structure. We already print this detail exactly in the Condition Manager`
-        },
 
         // Divider above action buttons
         { type: 14 },
@@ -355,9 +346,9 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
             {
               type: 2,
               custom_id: `custom_action_test_${actionId}`,
-              label: triggerType === 'modal' ? "Test Command" : "Test Action",
+              label: "Force Trigger Action",
               style: 2, // Secondary (grey)
-              emoji: { name: triggerType === 'modal' ? "💬" : "🧪" },
+              emoji: { name: "⚡" },
               disabled: !action.actions?.length
             },
             {
@@ -571,8 +562,8 @@ function ensureActionStructure(action) {
 
 function getTriggerTypeLabel(type) {
   const labels = {
-    button: '🖱️ Button Click¹',
-    modal: '⌨️ Text Command²',
+    button: '🖱️ Button Click',
+    modal: '⌨️ Text Command',
     select: '📋 Select Menu'
   };
   return labels[type] || '❓ Unknown';
@@ -622,12 +613,13 @@ async function formatConditionsDisplay(conditions, guildItems = {}) {
       case 'item':
         const item = guildItems[condition.itemId];
         const itemName = item?.name || condition.itemId;
-        summary = `${condition.operator === 'has' ? 'Has item:' : 'Does not have item:'} ${itemName}`;
+        const itemEmoji = item?.emoji || '';
+        const emojiPrefix = itemEmoji ? `${itemEmoji} ` : '';
+        summary = `${condition.operator === 'has' ? 'Has' : 'Does not have'} ${emojiPrefix}${itemName}`;
         break;
       case 'role':
-        // For roles, we'll show the ID since we don't have easy access to role names
-        // The user can see the actual role name in Discord
-        summary = `${condition.operator === 'has' ? 'Has role:' : 'Does not have role:'} @role`;
+        // Format role as Discord role mention
+        summary = `${condition.operator === 'has' ? 'Has role:' : 'Does not have role:'} <@&${condition.roleId}>`;
         break;
       default:
         summary = getConditionSummary ? getConditionSummary(condition) : 'Unknown condition';
