@@ -2196,9 +2196,20 @@ export async function updateDeferredResponse(token, data) {
 
   // Transform Components V2 container structure for webhook PATCH
   const webhookData = {
-    ...data,
-    flags: data.ephemeral ? InteractionResponseFlags.EPHEMERAL : (data.flags || 0)
+    ...data
   };
+
+  // CRITICAL: Preserve IS_COMPONENTS_V2 flag for Components V2 messages
+  // Discord requires this flag to remain set once used - cannot be removed
+  let flags = data.flags || 0;
+  if (data.components && data.components.length > 0 && data.components[0].type === 17) {
+    // Ensure IS_COMPONENTS_V2 flag is set for container responses
+    flags |= (1 << 15); // IS_COMPONENTS_V2
+  }
+  if (data.ephemeral) {
+    flags |= InteractionResponseFlags.EPHEMERAL;
+  }
+  webhookData.flags = flags;
 
   // If this is a Components V2 response, we need to convert the container structure
   if (data.components && data.components.length > 0 && data.components[0].type === 17) {
