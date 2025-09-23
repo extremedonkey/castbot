@@ -108,7 +108,7 @@ import {
   createPlayerInventoryDisplay,
   createRoundResultsV2 
 } from './safariManager.js';
-import { 
+import {
   ButtonHandlerFactory,
   ButtonRegistry,
   MenuFactory,
