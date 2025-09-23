@@ -467,12 +467,11 @@ function calculateMaxCustomActionEditorComponents() {
   };
 
   // Variable components (actions)
-  const maxActionsPerSection = SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON; // 5
-  const maxSections = 2; // TRUE and FALSE sections
-  const maxTotalActions = maxActionsPerSection * maxSections; // 10 total actions
+  // CORRECTED: MAX_ACTIONS_PER_BUTTON is total across BOTH TRUE and FALSE sections
+  const maxTotalActions = SAFARI_LIMITS.MAX_ACTIONS_PER_BUTTON; // 5 total actions max
 
   // Each action creates: 1 Section (type 9) + 1 accessory Button (type 2) = 2 components
-  const maxActionComponents = maxTotalActions * 2; // 20 components for actions
+  const maxActionComponents = maxTotalActions * 2; // 10 components for actions
 
   const baseTotal = Object.values(baseComponents).reduce((sum, count) => sum + count, 0);
   const maxTotal = baseTotal + maxActionComponents;
@@ -2240,15 +2239,17 @@ export async function handleDisplayTextExecuteOn(guildId, customId, executeOnVal
 }
 
 // Test the component calculation on module load
-console.log('🧮 CUSTOM ACTION EDITOR COMPONENT ANALYSIS:');
+console.log('🧮 CUSTOM ACTION EDITOR COMPONENT ANALYSIS (CORRECTED):');
 const componentAnalysis = calculateMaxCustomActionEditorComponents();
 console.log(`📊 Base Components: ${componentAnalysis.baseTotal}`);
-console.log(`⚡ Max Action Components: ${componentAnalysis.maxActionComponents} (${componentAnalysis.maxTotalActions} actions × 2 components each)`);
+console.log(`⚡ Max Action Components: ${componentAnalysis.maxActionComponents} (${componentAnalysis.maxTotalActions} total actions × 2 components each)`);
 console.log(`🔢 Maximum Total Components: ${componentAnalysis.maxTotal}`);
 console.log(`🎯 Discord Limit: ${componentAnalysis.discordLimit}`);
 console.log(`✅ Within Limit: ${componentAnalysis.withinLimit ? 'YES' : 'NO'}`);
 if (!componentAnalysis.withinLimit) {
   console.log(`❌ Overflow: ${componentAnalysis.overflow} components over limit`);
+} else {
+  console.log(`🎉 Safety margin: ${componentAnalysis.discordLimit - componentAnalysis.maxTotal} components remaining`);
 }
 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
