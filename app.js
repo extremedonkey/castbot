@@ -14845,6 +14845,11 @@ Your server is now ready for Tycoons gameplay!`;
 
             components.push(buttonRow);
 
+            // Separator before back button
+            components.push({
+              type: 14 // Separator
+            });
+
             // Back button
             const backButton = {
               type: 1, // Action Row
