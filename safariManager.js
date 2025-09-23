@@ -1613,7 +1613,14 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
                         let harvestResult;
                         if (scope === 'single_player') {
                             // Process only the user who clicked the button
-                            harvestResult = await calculateSinglePlayerResults(guildId, userId);
+                            // Extract correct player name from interaction
+                            const playerName = interaction?.member?.displayName ||
+                                             interaction?.member?.user?.global_name ||
+                                             interaction?.member?.user?.username ||
+                                             interaction?.user?.global_name ||
+                                             interaction?.user?.username ||
+                                             `Player ${userId.slice(-4)}`;
+                            harvestResult = await calculateSinglePlayerResults(guildId, userId, playerName);
                             console.log(`🌾 SUCCESS: Single player results completed - ${harvestResult.playerName}, ${harvestResult.totalEarnings} earnings`);
                         } else {
                             // Default behavior: process all players
@@ -4074,7 +4081,7 @@ async function calculateSimpleResults(guildId) {
  * @param {string} userId - User ID of the player to process
  * @returns {Object} Results object with success, processedPlayers, totalEarnings, playerName
  */
-async function calculateSinglePlayerResults(guildId, userId) {
+async function calculateSinglePlayerResults(guildId, userId, playerName = null) {
     try {
         // Validate input parameters
         if (!guildId || !userId) {
@@ -4106,6 +4113,12 @@ async function calculateSinglePlayerResults(guildId, userId) {
         }
 
         console.log(`🔄 DEBUG: Processing single player ${targetPlayer.playerName} (${targetPlayer.userId})`);
+
+        // Use provided player name if available (from interaction context)
+        if (playerName) {
+            console.log(`👤 DEBUG: Using provided player name "${playerName}" instead of cached "${targetPlayer.playerName}"`);
+            targetPlayer.playerName = playerName;
+        }
 
         const safariData = await loadSafariContent();
         const items = safariData[guildId]?.items || {};
