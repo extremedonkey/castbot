@@ -284,7 +284,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           if (falseActions.length === 0) {
             components.push({
               type: 10,
-              content: '*No False conditions configured - display generic error message*'
+              content: '*No false conditions configured - display generic error message*'
             });
           } else {
             components.push(...getActionListComponents(falseActions, actionId, guildItems, guildButtons, 'false', allActions));
@@ -485,7 +485,10 @@ function getActionSummary(action, number, guildItems = {}, guildButtons = {}) {
     case 'create_button':
       return `**\`${number}. Create Button\`** ${action.buttonLabel}`;
     case 'calculate_results':
-      return `**\`${number}. Calculate Results\`** Calculate earnings using good outcome values`;
+      // Check scope to determine display text
+      const scope = action?.config?.scope || 'all_players';
+      const scopeText = scope === 'single_player' ? 'Single Player' : 'All Players';
+      return `**\`${number}. Calculate Results\`** ${scopeText}`;
     default:
       return `**${number}. ${action.type || 'Unknown Action'}**`;
   }
@@ -1514,14 +1517,14 @@ export async function showDisplayTextConfig(guildId, buttonId, actionIndex) {
             placeholder: 'Select when to execute...',
             options: [
               {
-                label: 'Execute if conditions are TRUE',
+                label: 'Execute if all conditions are TRUE',
                 value: 'true',
                 description: 'Only execute when conditions are met',
                 emoji: { name: '✅' },
                 default: (action?.executeOn || 'true') === 'true'
               },
               {
-                label: 'Execute if conditions are FALSE',
+                label: 'Execute if all conditions are FALSE',
                 value: 'false',
                 description: 'Only execute when conditions are NOT met',
                 emoji: { name: '❌' },
@@ -1599,9 +1602,9 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
   let previewText = "No configuration set yet";
   if (action && action.type === 'calculate_results') {
     if (currentScope === 'all_players') {
-      previewText = "📊 **Calculate results for all eligible Safari players**\n\nProcesses all players and updates their currency using goodOutcomeValue from inventory items.";
+      previewText = "📊 **All Players**\n\nProcesses all eligible Safari players and updates their currency.";
     } else if (currentScope === 'single_player') {
-      previewText = "👤 **Calculate results for player using action**\n\nProcesses only the player who clicked this button and updates their currency.";
+      previewText = "👤 **Single Player**\n\nProcesses only the player who clicked this button and updates their currency.";
     }
   }
 
@@ -1613,15 +1616,14 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
       components: [
         {
           type: 10, // Text Display
-          content: `## 🌾 Calculate Results Configuration\n${isEdit ? 'Editing' : 'Creating'} calculate results action`
+          content: `## 🌾 Calculate Results Configuration`
         },
 
         { type: 14 }, // Separator
 
-        // Configuration preview
         {
           type: 10,
-          content: `### Current Configuration\n${previewText}`
+          content: "Calculate results will evaluate results for any players who have income-producing items. You can use it to create turn-based economy challenges, e.g., create a \"Farmers Market\" store that allows players to buy items that represent types of crops with different yields. Executing the custom action can represent a 'Harvest' which will then provide players with new income to spend."
         },
 
         { type: 14 }, // Separator
@@ -1629,7 +1631,7 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
         // Scope Selection section
         {
           type: 10,
-          content: '### Calculation Scope\nChoose which players to process:'
+          content: '### Calculation Scope\nWhich players should receive income when this action is executed?'
         },
         {
           type: 1, // Action Row
@@ -1639,14 +1641,14 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
             placeholder: 'Select calculation scope...',
             options: [
               {
-                label: 'Calculate results for all players',
+                label: 'All Players - Any user who triggers the action',
                 value: 'all_players',
                 description: 'Process all eligible Safari players (default)',
                 emoji: { name: '📊' },
                 default: currentScope === 'all_players'
               },
               {
-                label: 'Calculate results for player using action',
+                label: 'Single Player - Player who triggers the action',
                 value: 'single_player',
                 description: 'Process only the player who clicks this button',
                 emoji: { name: '👤' },
@@ -1671,14 +1673,14 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
             placeholder: 'Select when to execute...',
             options: [
               {
-                label: 'Execute if conditions are TRUE',
+                label: 'Execute if all conditions are TRUE',
                 value: 'true',
                 description: 'Only execute when conditions are met',
                 emoji: { name: '✅' },
                 default: (action?.executeOn || 'true') === 'true'
               },
               {
-                label: 'Execute if conditions are FALSE',
+                label: 'Execute if all conditions are FALSE',
                 value: 'false',
                 description: 'Only execute when conditions are NOT met',
                 emoji: { name: '❌' },

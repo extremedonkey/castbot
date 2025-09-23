@@ -35130,14 +35130,14 @@ async function showFollowUpConfig(guildId, buttonId, targetButtonId, actionIndex
               placeholder: 'Select when to execute...',
               options: [
                 {
-                  label: 'Execute if conditions are TRUE',
+                  label: 'Execute if all conditions are TRUE',
                   value: 'true',
                   description: 'Only show follow-up when conditions are met',
                   emoji: { name: '✅' },
                   default: state.executeOn === 'true'
                 },
                 {
-                  label: 'Execute if conditions are FALSE',
+                  label: 'Execute if all conditions are FALSE',
                   value: 'false',
                   description: 'Only show follow-up when conditions are NOT met',
                   emoji: { name: '❌' },

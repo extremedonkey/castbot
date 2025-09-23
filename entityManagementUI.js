@@ -354,10 +354,10 @@ function createEntityDisplay(entity, entityType, safariConfig) {
                 lines.push(`**Base Price**: ${entity.basePrice} ${currency}`);
             }
             if (entity.goodOutcomeValue !== undefined && entity.goodOutcomeValue !== null) {
-                lines.push(`**Good Outcome**: ${entity.goodOutcomeValue}`);
+                lines.push(`**Good Outcome Yield**: ${entity.goodOutcomeValue}`);
             }
             if (entity.badOutcomeValue !== undefined && entity.badOutcomeValue !== null) {
-                lines.push(`**Bad Outcome**: ${entity.badOutcomeValue}`);
+                lines.push(`**Bad Outcome Yield**: ${entity.badOutcomeValue}`);
             }
             if (entity.attackValue !== undefined && entity.attackValue !== null) {
                 lines.push(`**Attack**: ${entity.attackValue}`);
