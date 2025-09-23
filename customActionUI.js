@@ -532,29 +532,42 @@ function getActionListComponents(actions, actionId, guildItems = {}, guildButton
   if (!actions || actions.length === 0) {
     return [];
   }
-  
+
   const components = [];
-  
+
   actions.forEach((action, index) => {
     // Find the actual index in the full actions array for proper removal
     const actualIndex = allActions ? allActions.findIndex(a => a === action) : index;
-    
+
+    // Text Display (standalone)
     components.push({
-      type: 9, // Section
-      components: [{
-        type: 10,
-        content: getActionSummary(action, index + 1, guildItems, guildButtons)
-      }],
-      accessory: {
-        type: 2,
-        custom_id: `safari_edit_action_${actionId}_${actualIndex}`,
-        label: "Edit",
-        style: 2, // Secondary (grey)
-        emoji: { name: "📝" }
-      }
+      type: 10, // Text Display
+      content: getActionSummary(action, index + 1, guildItems, guildButtons)
+    });
+
+    // Action Row with Up and Edit buttons
+    components.push({
+      type: 1, // Action Row
+      components: [
+        {
+          type: 2, // Up Button
+          custom_id: `custom_action_up_${actionId}_${actualIndex}`,
+          label: '',
+          style: 2, // Secondary
+          emoji: { name: '⬆️' },
+          disabled: actualIndex === 0 // Disable for first action
+        },
+        {
+          type: 2, // Edit Button
+          custom_id: `safari_edit_action_${actionId}_${actualIndex}`,
+          label: 'Edit',
+          style: 2, // Secondary
+          emoji: { name: '📝' }
+        }
+      ]
     });
   });
-  
+
   return components;
 }
 

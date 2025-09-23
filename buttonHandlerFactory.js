@@ -283,6 +283,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
+  'custom_action_up': {
+    label: 'Move Action Up',
+    description: 'Move action higher in execution order',
+    emoji: '⬆️',
+    style: 'Secondary',
+    category: 'safari'
+  },
   
   // Safari Rounds Management
   'safari_rounds_menu': {
