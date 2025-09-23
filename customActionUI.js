@@ -206,7 +206,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10, // Text Display
-            content: `${nameDisplay}\n\n**Description:** ${action.description || 'No description'}`
+            content: `${nameDisplay}\n**Description:** ${action.description || 'No description'}`
           }],
           accessory: {
             type: 2, // Button
@@ -239,14 +239,14 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Conditions**\n${conditionsDisplay}`
+            content: `**Conditions (${conditionCount} set)**\n${conditionsDisplay}`
           }],
           accessory: {
             type: 2,
             custom_id: `condition_manager_${actionId}_0`, // Start at page 0
             label: "Manage",
             style: 2,
-            emoji: { name: "🧩" }
+            emoji: { name: "🚀" }
           }
         },
         
