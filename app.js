@@ -14803,22 +14803,28 @@ Your server is now ready for Tycoons gameplay!`;
             const { showDisplayTextConfig } = await import('./customActionUI.js');
             return await showDisplayTextConfig(context.guildId, actionId, actionIndex);
             
+          } else if (action.type === 'calculate_results') {
+            // Show calculate results configuration entity
+            console.log(`✅ SUCCESS: safari_edit_action - showing calculate_results config for ${actionId}[${actionIndex}]`);
+            const { showCalculateResultsConfig } = await import('./customActionUI.js');
+            return await showCalculateResultsConfig(context.guildId, actionId, actionIndex);
+
           } else if (action.type === 'give_role' || action.type === 'remove_role') {
             // Show role configuration UI inline
             console.log(`✅ SUCCESS: safari_edit_action - showing role config for ${actionId}[${actionIndex}]`);
-            
+
             // Get current role ID if any
             const currentRoleId = action.config?.roleId || '';
-            
+
             // Create UI for role selection
             const components = [];
-            
+
             // Header
             components.push({
               type: 10, // Text Display
               content: `# ${action.type === 'give_role' ? '🎯 Give Role Configuration' : '🚫 Remove Role Configuration'}\n\n**Action:** ${button.label}\n**Type:** ${action.type}\n\n${currentRoleId ? `**Current Role:** <@&${currentRoleId}>` : '**Current Role:** None selected'}\n\nClick the button below to select a role.`
             });
-            
+
             // Role selection button
             const selectButton = {
               type: 1, // Action Row
@@ -14830,12 +14836,12 @@ Your server is now ready for Tycoons gameplay!`;
                 emoji: { name: '👥' }
               }]
             };
-            
+
             components.push(selectButton);
-            
+
             // Back button
             const backButton = {
-              type: 1, // Action Row  
+              type: 1, // Action Row
               components: [{
                 type: 2, // Button
                 custom_id: `entity_custom_action_edit_${actionId}`,
@@ -14844,9 +14850,9 @@ Your server is now ready for Tycoons gameplay!`;
                 emoji: { name: '🔙' }
               }]
             };
-            
+
             components.push(backButton);
-            
+
             return {
               flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
               components: [{
@@ -14854,7 +14860,7 @@ Your server is now ready for Tycoons gameplay!`;
                 components: components
               }]
             };
-            
+
           } else {
             console.log(`❌ FAILURE: safari_edit_action - unsupported action type ${action.type}`);
             return {
