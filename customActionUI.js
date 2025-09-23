@@ -1692,23 +1692,7 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
 
         { type: 14 }, // Separator
 
-        // Action buttons
-        {
-          type: 1, // Action Row
-          components: [
-            {
-              type: 2, // Button
-              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
-              label: 'Delete Action',
-              style: 4, // Danger (red)
-              emoji: { name: '🗑️' }
-            }
-          ]
-        },
-
-        { type: 14 }, // Separator
-
-        // Back button
+        // Back and Delete Action buttons
         {
           type: 1, // Action Row
           components: [
@@ -1718,6 +1702,13 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
               label: '← Back',
               style: 2, // Secondary
               emoji: { name: '⚡' }
+            },
+            {
+              type: 2, // Button
+              custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
+              label: 'Delete Action',
+              style: 4, // Danger (red)
+              emoji: { name: '🗑️' }
             }
           ]
         }
