@@ -175,7 +175,19 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
   const conditionLogic = action.conditions?.logic || 'AND';
   const conditionCount = Array.isArray(action.conditions) ? action.conditions.length : 0;
   const coordinateCount = action.coordinates?.length || 0;
-  
+
+  // Format conditions display
+  const conditionsDisplay = await formatConditionsDisplay(action.conditions, guildItems);
+
+  // Format name display based on trigger type
+  let nameDisplay = action.name || 'New Action';
+  if (triggerType === 'button') {
+    const buttonLabel = action.trigger?.button?.label || 'Not set';
+    nameDisplay = `**Name (Button Label¹)**\n${buttonLabel}¹`;
+  } else {
+    nameDisplay = `**Name**\n${nameDisplay}`;
+  }
+
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
@@ -192,7 +204,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10, // Text Display
-            content: `**Name:** ${action.name || 'New Action'}\n**Description:** ${action.description || 'No description'}`
+            content: `${nameDisplay}\n\n**Description:** ${action.description || 'No description'}`
           }],
           accessory: {
             type: 2, // Button
@@ -209,7 +221,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Trigger Type:** ${getTriggerTypeLabel(triggerType)}`
+            content: `**Trigger Type**\n${getTriggerTypeLabel(triggerType)}`
           }],
           accessory: {
             type: 2, // Button
@@ -225,7 +237,7 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Conditions:** ${conditionCount} condition${conditionCount !== 1 ? 's' : ''}`
+            content: `**Conditions**\n${conditionsDisplay}³`
           }],
           accessory: {
             type: 2,
@@ -241,7 +253,9 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           type: 9, // Section
           components: [{
             type: 10,
-            content: `**Assigned Locations:** ${formatCoordinateList(action.coordinates)}`
+            content: triggerType === 'button'
+              ? `**Assigned Locations (Adds button to coordinate anchor)¹**\n${formatCoordinateList(action.coordinates)}`
+              : `**Assigned Locations**\n${formatCoordinateList(action.coordinates)}`
           }],
           accessory: {
             type: 2,
@@ -315,9 +329,18 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
           return components;
         })(),
         
+        // Divider above footnotes
+        { type: 14 },
+
+        // Footnotes section
+        {
+          type: 10,
+          content: `¹ If Trigger Type = Button Click\n² If Trigger Type = Text Command\n³ See sample JSON structure. We already print this detail exactly in the Condition Manager`
+        },
+
         // Divider above action buttons
         { type: 14 },
-        
+
         // Action buttons
         {
           type: 1, // Action Row
@@ -548,8 +571,8 @@ function ensureActionStructure(action) {
 
 function getTriggerTypeLabel(type) {
   const labels = {
-    button: '🔘 Button Click',
-    modal: '💬 Text Input',
+    button: '🖱️ Button Click¹',
+    modal: '⌨️ Text Command²',
     select: '📋 Select Menu'
   };
   return labels[type] || '❓ Unknown';
@@ -557,7 +580,7 @@ function getTriggerTypeLabel(type) {
 
 function getTriggerDescription(trigger) {
   if (!trigger) return 'Not configured';
-  
+
   switch (trigger.type) {
     case 'button':
       return `Label: "${trigger.button?.label || 'Not set'}"`;
@@ -573,6 +596,47 @@ function getTriggerDescription(trigger) {
     default:
       return 'Unknown trigger type';
   }
+}
+
+async function formatConditionsDisplay(conditions, guildItems = {}) {
+  if (!conditions || !Array.isArray(conditions) || conditions.length === 0) {
+    return 'None set, action will always execute on trigger';
+  }
+
+  // Import the getConditionSummary function from safariManager
+  const { getConditionSummary } = await import('./safariManager.js');
+
+  const conditionStrings = conditions.map(condition => {
+    let summary = '';
+
+    switch (condition.type) {
+      case 'currency':
+        if (condition.operator === 'gte') {
+          summary = `Currency ≥ ${condition.value}`;
+        } else if (condition.operator === 'lte') {
+          summary = `Currency ≤ ${condition.value}`;
+        } else if (condition.operator === 'eq_zero') {
+          summary = `Currency = 0`;
+        }
+        break;
+      case 'item':
+        const item = guildItems[condition.itemId];
+        const itemName = item?.name || condition.itemId;
+        summary = `${condition.operator === 'has' ? 'Has item:' : 'Does not have item:'} ${itemName}`;
+        break;
+      case 'role':
+        // For roles, we'll show the ID since we don't have easy access to role names
+        // The user can see the actual role name in Discord
+        summary = `${condition.operator === 'has' ? 'Has role:' : 'Does not have role:'} @role`;
+        break;
+      default:
+        summary = getConditionSummary ? getConditionSummary(condition) : 'Unknown condition';
+    }
+
+    return summary;
+  });
+
+  return conditionStrings.join(', ');
 }
 
 /**
