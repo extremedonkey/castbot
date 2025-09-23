@@ -160,7 +160,7 @@ export async function createSafariButtonComponents(buttonIds, guildId) {
       type: 2, // Button
       custom_id: `safari_${guildId}_${buttonId}_${Date.now()}`,
       label: label || 'Action', // Fallback if no label found
-      style: getButtonStyle(button.style),
+      style: getButtonStyle(button.trigger?.button?.style || button.style),
       emoji: safeEmoji
     };
     

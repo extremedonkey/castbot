@@ -720,9 +720,58 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   } else if (action.trigger?.type === 'button') {
     // Show button preview
     components.push({ type: 14 });
+
+    const currentStyle = action.trigger?.button?.style || 'Primary';
+    const styleLabel = {
+      'Primary': 'Blue',
+      'Secondary': 'Gray',
+      'Success': 'Green',
+      'Danger': 'Red'
+    }[currentStyle] || 'Blue';
+
     components.push({
       type: 10,
-      content: `### Button Preview:\nLabel: ${action.trigger?.button?.label || action.label || 'Click Me'}\nEmoji: ${action.trigger?.button?.emoji || action.emoji || '⚡'}`
+      content: `### Button Preview:\nLabel: ${action.trigger?.button?.label || action.label || 'Click Me'}\nEmoji: ${action.trigger?.button?.emoji || action.emoji || '⚡'}\nColor: ${styleLabel} (${currentStyle})`
+    });
+
+    // Add button style selector
+    components.push({
+      type: 1, // Action Row
+      components: [{
+        type: 3, // String Select
+        custom_id: `custom_action_button_style_${actionId}`,
+        placeholder: "Select button color/style",
+        options: [
+          {
+            label: 'Primary (Blue)',
+            description: 'Blue button style',
+            value: 'Primary',
+            emoji: { name: '🔵' },
+            default: currentStyle === 'Primary'
+          },
+          {
+            label: 'Secondary (Gray)',
+            description: 'Gray button style',
+            value: 'Secondary',
+            emoji: { name: '⚪' },
+            default: currentStyle === 'Secondary'
+          },
+          {
+            label: 'Success (Green)',
+            description: 'Green button style',
+            value: 'Success',
+            emoji: { name: '🟢' },
+            default: currentStyle === 'Success'
+          },
+          {
+            label: 'Danger (Red)',
+            description: 'Red button style',
+            value: 'Danger',
+            emoji: { name: '🔴' },
+            default: currentStyle === 'Danger'
+          }
+        ]
+      }]
     });
   } else if (action.trigger?.type === 'select') {
     components.push({ type: 14 });

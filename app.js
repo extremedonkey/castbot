@@ -15497,7 +15497,7 @@ Your server is now ready for Tycoons gameplay!`;
               button.trigger.button = {
                 label: button.label || 'Click Me',
                 emoji: button.emoji || '⚡',
-                style: button.style || 1
+                style: 'Primary' // Default to Primary (Blue) button style
               };
               break;
             case 'modal':
@@ -15529,6 +15529,66 @@ Your server is now ready for Tycoons gameplay!`;
           const configUI = await createTriggerConfigUI({ guildId: context.guildId, actionId });
           
           console.log(`✅ SUCCESS: custom_action_trigger_type - updated to ${selectedValue}`);
+          return configUI;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('custom_action_button_style_')) {
+      // Handle button style selection for custom actions
+      return ButtonHandlerFactory.create({
+        id: 'custom_action_button_style',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`🔍 START: custom_action_button_style - user ${context.userId}`);
+
+          const selectedValue = context.values[0];
+          const actionId = context.customId.replace('custom_action_button_style_', '');
+
+          console.log(`🎨 Updating button style for ${actionId} to ${selectedValue}`);
+
+          // Load and update button
+          const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+          const allSafariContent = await loadSafariContent();
+          const guildData = allSafariContent[context.guildId] || {};
+          const button = guildData.buttons?.[actionId];
+
+          if (!button) {
+            return {
+              content: '❌ Action not found.',
+              ephemeral: true
+            };
+          }
+
+          // Initialize trigger and button objects if needed
+          if (!button.trigger) {
+            button.trigger = { type: 'button' };
+          }
+          if (!button.trigger.button) {
+            button.trigger.button = {
+              label: button.label || 'Click Me',
+              emoji: button.emoji || '⚡'
+            };
+          }
+
+          // Update button style
+          button.trigger.button.style = selectedValue;
+
+          await saveSafariContent(allSafariContent);
+
+          // Update anchor messages for all coordinates using this action
+          try {
+            const { queueActionCoordinateUpdates } = await import('./anchorMessageManager.js');
+            await queueActionCoordinateUpdates(context.guildId, actionId, 'button_style_updated');
+          } catch (error) {
+            console.error('Error queueing anchor updates:', error);
+          }
+
+          // Show updated trigger configuration UI
+          const { createTriggerConfigUI } = await import('./customActionUI.js');
+          const configUI = await createTriggerConfigUI({ guildId: context.guildId, actionId });
+
+          console.log(`✅ SUCCESS: custom_action_button_style - updated to ${selectedValue}`);
           return configUI;
         }
       })(req, res, client);

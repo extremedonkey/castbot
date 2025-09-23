@@ -1510,6 +1510,14 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'select_menu'
   },
+  'custom_action_button_style_*': {
+    label: 'Button Style Select',
+    description: 'Select button color/style for custom action',
+    emoji: '🎨',
+    style: 'Secondary',
+    category: 'safari_management',
+    type: 'select_menu'
+  },
   'custom_action_condition_logic_*': {
     label: 'Condition Logic',
     description: 'Select AND/OR logic for conditions',
