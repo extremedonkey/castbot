@@ -1701,7 +1701,33 @@ async function executeButtonActions(guildId, buttonId, userId, interaction, forc
         }
         
         console.log(`✅ DEBUG: Button actions executed successfully, returning response`);
-        
+
+        // Check if any calculate_results actions were executed and update anchor messages
+        const hasCalculateResults = sortedActions.some(action => action.type === 'calculate_results');
+        if (hasCalculateResults && button.coordinates && Array.isArray(button.coordinates)) {
+            console.log(`🌾 DEBUG: Calculate Results detected, updating anchor messages for coordinates: ${button.coordinates.join(', ')}`);
+
+            // Import anchor update function
+            const { updateAnchorMessage } = await import('./mapCellUpdater.js');
+
+            // Update anchor message for each coordinate this button is associated with
+            for (const coordinate of button.coordinates) {
+                try {
+                    console.log(`📍 DEBUG: Updating anchor message for coordinate ${coordinate}`);
+                    const client = interaction?.client;
+                    if (client) {
+                        await updateAnchorMessage(guildId, coordinate, client);
+                        console.log(`✅ SUCCESS: Updated anchor message for ${coordinate}`);
+                    } else {
+                        console.warn(`⚠️ WARNING: No client available to update anchor for ${coordinate}`);
+                    }
+                } catch (anchorError) {
+                    console.error(`❌ ERROR: Failed to update anchor for ${coordinate}:`, anchorError);
+                    // Don't throw - anchor update failure shouldn't break the main action
+                }
+            }
+        }
+
         // Log the custom action
         try {
             console.log(`📝 DEBUG: Attempting to log custom action for button ${buttonId}`);
