@@ -14851,9 +14851,9 @@ Your server is now ready for Tycoons gameplay!`;
               components: [{
                 type: 2, // Button
                 custom_id: `entity_custom_action_edit_${actionId}`,
-                label: 'Back to Action Editor',
+                label: '← Back',
                 style: 2, // Secondary
-                emoji: { name: '🔙' }
+                emoji: { name: '⚡' }
               }]
             };
 
