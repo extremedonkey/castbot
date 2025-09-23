@@ -1518,6 +1518,13 @@ export const BUTTON_REGISTRY = {
     category: 'safari_management',
     type: 'select_menu'
   },
+  'button_preview_*': {
+    label: 'Button Preview',
+    description: 'Preview button that does nothing when clicked',
+    emoji: '👁️',
+    style: 'Primary',
+    category: 'safari_management'
+  },
   'custom_action_condition_logic_*': {
     label: 'Condition Logic',
     description: 'Select AND/OR logic for conditions',

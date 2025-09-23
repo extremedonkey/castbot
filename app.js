@@ -15592,6 +15592,21 @@ Your server is now ready for Tycoons gameplay!`;
           return configUI;
         }
       })(req, res, client);
+    } else if (custom_id.startsWith('button_preview_')) {
+      // Handle button preview clicks - do nothing to avoid errors
+      return ButtonHandlerFactory.create({
+        id: 'button_preview',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context) => {
+          console.log(`🔍 Button preview clicked for ${context.customId} - doing nothing`);
+
+          // Simply acknowledge the interaction without showing anything to the user
+          return {
+            type: 6 // DEFERRED_UPDATE_MESSAGE - acknowledges without response
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_player_menu') {
       // My Profile button - available to users with admin permissions
       try {

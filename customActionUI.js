@@ -371,6 +371,16 @@ export async function createCustomActionEditorUI({ guildId, actionId, coordinate
  * Helper functions
  */
 
+function getButtonStyleNumber(style) {
+  const styles = {
+    'Primary': 1,
+    'Secondary': 2,
+    'Success': 3,
+    'Danger': 4
+  };
+  return styles[style] || 1; // Default to Primary
+}
+
 function formatCoordinateList(coordinates) {
   if (!coordinates || coordinates.length === 0) {
     return '0 coordinates';
@@ -646,9 +656,8 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
   const components = [
     {
       type: 10,
-      content: `## 🎯 Trigger Configuration\n\nChoose how players will activate this action:`
+      content: `## 🚀 Trigger Configuration\n\n**Action is activated through..**`
     },
-    { type: 14 },
     {
       type: 1, // Action Row
       components: [{
@@ -659,15 +668,15 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
           {
             label: "Button Click",
             value: "button",
-            description: "Player clicks a button",
-            emoji: { name: "🔘" },
+            description: "Player or host clicks button.",
+            emoji: { name: "🖱️" },
             default: action.trigger?.type === 'button'
           },
           {
-            label: "Text Input",
+            label: "Text Command",
             value: "modal",
-            description: "Player types specific text",
-            emoji: { name: "💬" },
+            description: "Player enters pre-programmed command from host.",
+            emoji: { name: "⌨️" },
             default: action.trigger?.type === 'modal'
           },
           {
@@ -718,21 +727,15 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
     components.push({ type: 14 }); // Separator
     components.push(buttonRow.toJSON());
   } else if (action.trigger?.type === 'button') {
-    // Show button preview
+    // Additional Button Configuration
     components.push({ type: 14 });
-
-    const currentStyle = action.trigger?.button?.style || 'Primary';
-    const styleLabel = {
-      'Primary': 'Blue',
-      'Secondary': 'Gray',
-      'Success': 'Green',
-      'Danger': 'Red'
-    }[currentStyle] || 'Blue';
 
     components.push({
       type: 10,
-      content: `### Button Preview:\nLabel: ${action.trigger?.button?.label || action.label || 'Click Me'}\nEmoji: ${action.trigger?.button?.emoji || action.emoji || '⚡'}\nColor: ${styleLabel} (${currentStyle})`
+      content: `**Additional Button Configuration**\nChange Button Text and Emoji from main Custom Action Editor screen > Action Info button.`
     });
+
+    const currentStyle = action.trigger?.button?.style || 'Primary';
 
     // Add button style selector
     components.push({
@@ -773,6 +776,27 @@ export async function createTriggerConfigUI({ guildId, actionId }) {
         ]
       }]
     });
+
+    components.push({
+      type: 10,
+      content: `**Button Preview**`
+    });
+
+    // Create actual preview button that does nothing when clicked
+    const previewButton = new ButtonBuilder()
+      .setCustomId(`button_preview_${actionId}`)
+      .setLabel(action.trigger?.button?.label || action.label || 'Click Me')
+      .setStyle(getButtonStyleNumber(currentStyle))
+      .setDisabled(false); // Enable so it shows correctly but we'll handle the click
+
+    // Add emoji if available
+    const emoji = action.trigger?.button?.emoji || action.emoji;
+    if (emoji) {
+      previewButton.setEmoji(emoji);
+    }
+
+    const previewRow = new ActionRowBuilder().addComponents([previewButton]);
+    components.push(previewRow.toJSON());
   } else if (action.trigger?.type === 'select') {
     components.push({ type: 14 });
     components.push({
