@@ -2214,10 +2214,15 @@ export async function updateDeferredResponse(token, data) {
     ...data
   };
 
-  // CRITICAL: Remove content field for Components V2 - Discord error prevention
+  // CRITICAL: Remove ALL legacy fields for Components V2 - Discord error prevention
   if (data.components && data.components.length > 0 && data.components[0].type === 17) {
-    // Components V2 cannot use content field - remove it if present
+    // Components V2 cannot use ANY legacy fields - remove them if present
     delete webhookData.content;
+    delete webhookData.embeds;
+    delete webhookData.attachments;
+    delete webhookData.allowed_mentions;
+    delete webhookData.tts;
+    console.log(`🧹 updateDeferredResponse: Cleaned legacy fields for Components V2`);
   }
 
   // CRITICAL: Preserve IS_COMPONENTS_V2 flag for Components V2 messages
