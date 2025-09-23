@@ -1696,13 +1696,6 @@ export async function showCalculateResultsConfig(guildId, buttonId, actionIndex)
           components: [
             {
               type: 2, // Button
-              custom_id: `custom_action_test_${buttonId}`,
-              label: 'Test Action',
-              style: 1, // Primary
-              emoji: { name: '🧪' }
-            },
-            {
-              type: 2, // Button
               custom_id: `safari_remove_action_${buttonId}_${actionIndex}`,
               label: 'Delete Action',
               style: 4, // Danger (red)
