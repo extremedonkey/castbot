@@ -2191,12 +2191,38 @@ export async function sendDeferredResponse(res, ephemeral = true) {
  */
 export async function updateDeferredResponse(token, data) {
   const endpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`;
+
+  console.log(`🔍 updateDeferredResponse: Sending data to Discord:`, JSON.stringify(data, null, 2));
+
+  // Transform Components V2 container structure for webhook PATCH
+  const webhookData = {
+    ...data,
+    flags: data.ephemeral ? InteractionResponseFlags.EPHEMERAL : (data.flags || 0)
+  };
+
+  // If this is a Components V2 response, we need to convert the container structure
+  if (data.components && data.components.length > 0 && data.components[0].type === 17) {
+    console.log(`🔧 updateDeferredResponse: Converting Components V2 container for webhook`);
+
+    // Extract the container components and flatten them
+    const container = data.components[0];
+    const containerComponents = container.components || [];
+
+    // Convert to webhook-compatible format
+    webhookData.components = containerComponents.filter(comp => comp.type === 1); // Only ActionRows
+
+    // If there's text content, add it as message content
+    const textComponents = containerComponents.filter(comp => comp.type === 10);
+    if (textComponents.length > 0) {
+      webhookData.content = textComponents.map(comp => comp.content).join('\n\n');
+    }
+
+    console.log(`🔧 updateDeferredResponse: Converted to webhook format:`, JSON.stringify(webhookData, null, 2));
+  }
+
   return DiscordRequest(endpoint, {
     method: 'PATCH',
-    body: {
-      ...data,
-      flags: data.ephemeral ? InteractionResponseFlags.EPHEMERAL : (data.flags || 0)
-    }
+    body: webhookData
   });
 }
 
