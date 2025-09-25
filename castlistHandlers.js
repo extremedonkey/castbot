@@ -7,6 +7,7 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';
 import { createCastlistHub, CastlistButtonType } from './castlistHub.js';
 import { castlistManager } from './castlistManager.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
+import { PermissionFlagsBits } from 'discord.js';
 
 /**
  * Handle castlist selection from dropdown
@@ -245,23 +246,105 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
 
 
 /**
+ * Handle castlist deletion
+ */
+export function handleCastlistDelete(req, res, client, custom_id) {
+  const castlistId = custom_id.replace('castlist_delete_', '');
+
+  return ButtonHandlerFactory.create({
+    id: 'castlist_delete',
+    requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels,
+    permissionName: 'Manage Roles or Manage Channels',
+    updateMessage: true,
+    handler: async (context) => {
+      try {
+        console.log(`🗑️ START: castlist_delete - user ${context.userId}`);
+
+        if (!castlistId || castlistId === 'castlist_delete') {
+          return {
+            components: [{
+              type: 17,
+              components: [{
+                type: 10,
+                content: '❌ No castlist selected. Please select a castlist first, then click delete.'
+              }]
+            }]
+          };
+        }
+
+        // Get castlist info for confirmation message
+        const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
+
+        if (!castlist) {
+          return {
+            components: [{
+              type: 17,
+              components: [{
+                type: 10,
+                content: '❌ Castlist not found.'
+              }]
+            }]
+          };
+        }
+
+        // Delete the castlist
+        const result = await castlistManager.deleteCastlist(context.guildId, castlistId);
+
+        if (!result.success) {
+          return {
+            components: [{
+              type: 17,
+              components: [{
+                type: 10,
+                content: `❌ Failed to delete castlist: ${result.error || 'Unknown error'}`
+              }]
+            }]
+          };
+        }
+
+        // Success - refresh the hub with cleared selection
+        const hubData = await createCastlistHub(context.guildId, {
+          selectedCastlistId: null, // Clear selection
+          activeButton: null
+        });
+
+        console.log(`✅ SUCCESS: castlist_delete - deleted '${castlist.name}' (${result.virtual ? 'virtual' : 'real'}) and unlinked from ${result.cleanedCount} tribes`);
+        return hubData;
+
+      } catch (error) {
+        console.error(`❌ ERROR: castlist_delete - ${error.message}`);
+        return {
+          components: [{
+            type: 17,
+            components: [{
+              type: 10,
+              content: '❌ Error deleting castlist. Please try again.'
+            }]
+          }]
+        };
+      }
+    }
+  })(req, res, client);
+}
+
+/**
  * Handle Edit Info modal submission
  */
 export function handleEditInfoModal(req, res, client, custom_id) {
   const castlistId = custom_id.replace('castlist_edit_info_modal_', '');
   const components = req.body.data.components;
-  
+
   // Don't use ButtonHandlerFactory for modal submissions - handle directly
   return (async () => {
     try {
       const guildId = req.body.guild_id;
       console.log(`📋 Updating castlist info for ${castlistId}`);
-      
+
       // Extract form values
       const newName = components[0].components[0].value?.trim();
       const newEmoji = components[1].components[0].value?.trim() || '📋';
       const newDescription = components[2].components[0].value?.trim() || '';
-      
+
       // Update the castlist
       await castlistManager.updateCastlist(guildId, castlistId, {
         name: newName,
@@ -270,21 +353,21 @@ export function handleEditInfoModal(req, res, client, custom_id) {
           description: newDescription
         }
       });
-      
+
       console.log(`✅ Updated castlist ${castlistId}: name="${newName}", emoji="${newEmoji}"`);
-      
+
       // Refresh the UI with the castlist still selected
       const hubData = await createCastlistHub(guildId, {
         selectedCastlistId: castlistId,
         activeButton: null // Clear active button after modal
       });
-      
+
       // Send UPDATE_MESSAGE response to keep the container open
       return res.send({
         type: 7, // InteractionResponseType.UPDATE_MESSAGE
         data: hubData
       });
-      
+
     } catch (error) {
       console.error('Error updating castlist info:', error);
       return res.send({
