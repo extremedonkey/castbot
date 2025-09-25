@@ -1223,7 +1223,7 @@ async function createSafariMenu(guildId, userId, member) {
  * @param {string} channelId - Channel ID for permission checking (optional)
  * @returns {Object} Response data ready to send
  */
-async function buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member = null, channelId = null) {
+export async function buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member = null, channelId = null) {
   const { currentTribeIndex, currentTribePage, scenario } = navigationState;
   const currentTribe = tribes[currentTribeIndex];
 
