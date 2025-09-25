@@ -137,7 +137,8 @@ export async function createCastlistHub(guildId, options = {}) {
         activeButton,
         castlist.isVirtual
       );
-      container.components.push(managementButtons.toJSON());
+      container.components.push(managementButtons.buttonRow1.toJSON());
+      container.components.push(managementButtons.deleteRow.toJSON());
       
       // Separator before hot-swappable area
       container.components.push({ type: 14 });
@@ -169,9 +170,10 @@ export async function createCastlistHub(guildId, options = {}) {
   } else {
     // No castlist selected - show disabled buttons
     container.components.push({ type: 14 });
-    
+
     const disabledButtons = createManagementButtons(null, false, null, false);
-    container.components.push(disabledButtons.toJSON());
+    container.components.push(disabledButtons.buttonRow1.toJSON());
+    container.components.push(disabledButtons.deleteRow.toJSON());
     
     // Disabled placeholder
     container.components.push({ type: 14 });
@@ -255,12 +257,12 @@ async function createCastlistDetailsSection(guildId, castlist) {
  * @param {boolean} enabled - Whether buttons are enabled
  * @param {string} activeButton - Which button is active
  * @param {boolean} isVirtual - Whether castlist is virtual
- * @returns {ActionRowBuilder} Button row
+ * @returns {Object} Object with buttonRow1 and deleteRow
  */
 function createManagementButtons(castlistId, enabled = true, activeButton = null, isVirtual = false) {
   const buttonRow1 = new ActionRowBuilder();
   const suffix = castlistId ? `_${castlistId}` : '';
-  
+
   // Row 1: View, Edit Info, Add Tribe, Customize
   buttonRow1.addComponents(
     new ButtonBuilder()
@@ -294,8 +296,19 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setEmoji('🔀')
       .setDisabled(!enabled)
   );
-  
-  return buttonRow1;
+
+  // Row 2: Delete button (red, disabled when no castlist selected)
+  const deleteRow = new ActionRowBuilder();
+  deleteRow.addComponents(
+    new ButtonBuilder()
+      .setCustomId(enabled ? `castlist_delete${suffix}` : 'castlist_delete')
+      .setLabel('Delete Castlist')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🗑️')
+      .setDisabled(!enabled)
+  );
+
+  return { buttonRow1, deleteRow };
 }
 
 /**

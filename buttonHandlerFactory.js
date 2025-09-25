@@ -295,6 +295,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'castlist'
   },
+  'castlist_delete': {
+    label: 'Delete Castlist',
+    description: 'Delete selected castlist and unlink tribes',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'castlist'
+  },
   'show_castlist2': {
     label: 'Post Castlist',
     description: 'Post castlist to channel',

@@ -149,42 +149,47 @@ export class CastlistManager {
    * Delete a castlist
    * @param {string} guildId - The guild ID
    * @param {string} castlistId - The castlist ID
-   * @returns {boolean} Success status
+   * @returns {Object} Result with success status and clean count
    */
   async deleteCastlist(guildId, castlistId) {
     const playerData = await loadPlayerData();
-    
-    // Check if virtual
-    if (castlistVirtualAdapter.isVirtualId(castlistId)) {
-      console.log(`[CASTLIST] Cannot delete virtual castlist - remove from tribes instead`);
-      return false;
-    }
-    
-    // Check if castlist exists
-    const castlist = playerData[guildId]?.castlistConfigs?.[castlistId];
+
+    // First get castlist info for logging
+    const castlist = await this.getCastlist(guildId, castlistId);
     if (!castlist) {
-      return false;
+      return { success: false, error: 'Castlist not found', cleanedCount: 0 };
     }
-    
-    // Remove castlist references from tribes
+
+    // Remove castlist references from tribes (works for both real and virtual)
     const tribes = playerData[guildId]?.tribes || {};
+    let cleanedCount = 0;
+
     for (const [roleId, tribe] of Object.entries(tribes)) {
       if (tribe.castlistId === castlistId) {
         delete tribe.castlistId;
-        // Optionally set back to default
-        tribe.castlist = 'default';
+        // Keep legacy castlist field for backwards compatibility
+        cleanedCount++;
       }
     }
-    
-    // Delete the castlist
-    delete playerData[guildId].castlistConfigs[castlistId];
-    
+
+    // If virtual castlist, just clean tribe references (no real data to delete)
+    if (castlist.isVirtual) {
+      await savePlayerData(playerData);
+      console.log(`[CASTLIST] Unlinked virtual castlist '${castlist.name}' from ${cleanedCount} tribes`);
+      return { success: true, virtual: true, cleanedCount };
+    }
+
+    // Delete real castlist entity
+    if (playerData[guildId]?.castlistConfigs?.[castlistId]) {
+      delete playerData[guildId].castlistConfigs[castlistId];
+    }
+
     // Save changes
     await savePlayerData(playerData);
-    
-    console.log(`[CASTLIST] Deleted castlist '${castlist.name}' (${castlistId})`);
-    
-    return true;
+
+    console.log(`[CASTLIST] Deleted castlist '${castlist.name}' (${castlistId}) and unlinked from ${cleanedCount} tribes`);
+
+    return { success: true, virtual: false, cleanedCount };
   }
   
   /**

@@ -7630,6 +7630,87 @@ To fix this:
       // Handle castlist selection from dropdown
       const { handleCastlistSelect } = await import('./castlistHandlers.js');
       return handleCastlistSelect(req, res, client);
+    } else if (custom_id.startsWith('castlist_delete')) {
+      // Handle castlist deletion
+      return ButtonHandlerFactory.create({
+        id: 'castlist_delete',
+        requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels,
+        permissionName: 'Manage Roles or Manage Channels',
+        updateMessage: true,
+        handler: async (context) => {
+          try {
+            console.log(`🗑️ START: castlist_delete - user ${context.userId}`);
+
+            // Extract castlist ID from custom_id (format: castlist_delete_<castlistId>)
+            const castlistId = context.customId.replace('castlist_delete_', '');
+
+            if (!castlistId || castlistId === 'castlist_delete') {
+              return {
+                components: [{
+                  type: 17,
+                  components: [{
+                    type: 10,
+                    content: '❌ No castlist selected. Please select a castlist first, then click delete.'
+                  }]
+                }]
+              };
+            }
+
+            // Get castlist info for confirmation message
+            const { castlistManager } = await import('./castlistManager.js');
+            const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
+
+            if (!castlist) {
+              return {
+                components: [{
+                  type: 17,
+                  components: [{
+                    type: 10,
+                    content: '❌ Castlist not found.'
+                  }]
+                }]
+              };
+            }
+
+            // Delete the castlist
+            const result = await castlistManager.deleteCastlist(context.guildId, castlistId);
+
+            if (!result.success) {
+              return {
+                components: [{
+                  type: 17,
+                  components: [{
+                    type: 10,
+                    content: `❌ Failed to delete castlist: ${result.error || 'Unknown error'}`
+                  }]
+                }]
+              };
+            }
+
+            // Success - refresh the hub with cleared selection
+            const { createCastlistHub } = await import('./castlistHub.js');
+            const hubData = await createCastlistHub(context.guildId, {
+              selectedCastlistId: null, // Clear selection
+              activeButton: null
+            });
+
+            console.log(`✅ SUCCESS: castlist_delete - deleted '${castlist.name}' (${result.virtual ? 'virtual' : 'real'}) and unlinked from ${result.cleanedCount} tribes`);
+            return hubData;
+
+          } catch (error) {
+            console.error(`❌ ERROR: castlist_delete - ${error.message}`);
+            return {
+              components: [{
+                type: 17,
+                components: [{
+                  type: 10,
+                  content: '❌ Error deleting castlist. Please try again.'
+                }]
+              }]
+            };
+          }
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('castlist_create_')) {
       // Handle castlist creation options
       const createType = custom_id.replace('castlist_create_', '');
