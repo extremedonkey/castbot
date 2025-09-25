@@ -52,25 +52,27 @@ export async function handleCastlistButton(req, res, client, custom_id) {
   
   // Special handling for View button - directly post the castlist
   if (buttonType === 'view') {
-    // Handle virtual castlists specially
-    if (castlistId.startsWith('virtual_')) {
-      // Virtual castlist - keep the encoded format for show_castlist2
-      // show_castlist2 expects virtual castlists in the format: show_castlist2_virtual_BASE64
-      req.body.data.custom_id = `show_castlist2_${castlistId}`;
-      
-      // Return special value to signal app.js to handle as show_castlist2
-      return { redirectToShowCastlist: true };
+    // Use CastlistV3-specific display that doesn't affect production
+    const castlistDisplayData = await createCastlistV3Display(req.body.guild_id, castlistId, client);
+
+    if (castlistDisplayData.success) {
+      // Return the castlist display directly (doesn't redirect to legacy system)
+      return {
+        type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+        data: castlistDisplayData.data
+      };
     } else {
-      // Regular castlist - look it up
-      const castlist = await castlistManager.getCastlist(req.body.guild_id, castlistId);
-      if (castlist) {
-        // Update the custom_id to trigger show_castlist2 handler
-        const newCustomId = `show_castlist2_${castlist.name}`;
-        req.body.data.custom_id = newCustomId;
-        
-        // Return special value to signal app.js to handle as show_castlist2
-        return { redirectToShowCastlist: true };
-      }
+      // Fallback to hub with error message
+      const hubData = await createCastlistHub(req.body.guild_id, {
+        selectedCastlistId: castlistId,
+        activeButton: null,
+        error: castlistDisplayData.error
+      });
+
+      return {
+        type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+        data: hubData
+      };
     }
   }
   
@@ -244,6 +246,103 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
   })(req, res, client);
 }
 
+
+/**
+ * Create CastlistV3-specific display (doesn't affect production legacy system)
+ * Uses virtual adapter to find tribes by castlistId instead of string matching
+ */
+async function createCastlistV3Display(guildId, castlistId, client) {
+  try {
+    // Get castlist using virtual adapter
+    const castlist = await castlistManager.getCastlist(guildId, castlistId);
+    if (!castlist) {
+      return { success: false, error: 'Castlist not found' };
+    }
+
+    // Find tribes using this castlist by castlistId (not string matching)
+    const tribesUsingCastlist = await castlistManager.getTribesUsingCastlist(guildId, castlistId);
+
+    if (tribesUsingCastlist.length === 0) {
+      return {
+        success: false,
+        error: `No tribes found for castlist: ${castlist.name}`
+      };
+    }
+
+    // Get guild and tribe data
+    const guild = await client.guilds.fetch(guildId);
+    const playerData = await loadPlayerData();
+    const tribes = playerData[guildId]?.tribes || {};
+
+    // Build tribes data for display using the same structure as legacy system
+    const tribesForDisplay = [];
+
+    for (const roleId of tribesUsingCastlist) {
+      const tribeData = tribes[roleId];
+      if (tribeData && guild.roles.cache.has(roleId)) {
+        const role = guild.roles.cache.get(roleId);
+        const members = role.members;
+
+        // Convert to structure expected by castlist2 display logic
+        tribesForDisplay.push({
+          roleId,
+          role,
+          members: members.map(member => ({
+            id: member.id,
+            user: member.user,
+            displayName: member.displayName,
+            member
+          })),
+          tribeData,
+          emoji: tribeData.emoji || '🏕️',
+          showPlayerEmojis: tribeData.showPlayerEmojis || false,
+          color: tribeData.color
+        });
+      }
+    }
+
+    if (tribesForDisplay.length === 0) {
+      return {
+        success: false,
+        error: `No valid tribes found for castlist: ${castlist.name}`
+      };
+    }
+
+    // Use existing castlist2 display logic but with our custom data
+    const { buildCastlist2ResponseData } = await import('./castlistV2.js');
+
+    const responseData = await buildCastlist2ResponseData(
+      guild,
+      tribesForDisplay,
+      castlist.name,
+      null, // navigationState
+      null, // member
+      null, // channelId
+      {
+        // Pass castlist metadata for enhanced display
+        emoji: castlist.metadata?.emoji,
+        accentColor: castlist.metadata?.accentColor,
+        description: castlist.metadata?.description,
+        sortStrategy: castlist.settings?.sortStrategy
+      }
+    );
+
+    return {
+      success: true,
+      data: {
+        ...responseData,
+        flags: (1 << 15) // IS_COMPONENTS_V2
+      }
+    };
+
+  } catch (error) {
+    console.error(`❌ ERROR: createCastlistV3Display - ${error.message}`);
+    return {
+      success: false,
+      error: `Error displaying castlist: ${error.message}`
+    };
+  }
+}
 
 /**
  * Handle castlist deletion
