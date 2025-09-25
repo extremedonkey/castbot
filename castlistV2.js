@@ -817,6 +817,5 @@ export {
     processMemberData,
     createCastlistV2Layout,
     extractCastlistData,
-    createCastlistRows,
-    buildCastlist2ResponseData
+    createCastlistRows
 };
