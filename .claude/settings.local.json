@@ -47,7 +47,13 @@
       "Bash(git fsck:*)",
       "WebSearch",
       "WebFetch(domain:discordjs.guide)",
-      "WebFetch(domain:discord.com)"
+      "WebFetch(domain:discord.com)",
+      "Bash(git merge-base:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git stash push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
