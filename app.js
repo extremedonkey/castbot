@@ -7748,7 +7748,8 @@ To fix this:
         }
         
         // Reorder tribes for display
-        const tribes = reorderTribes(allTribes, castlistName);
+        // Fix: Pass correct parameters to reorderTribes (tribes, userId, strategy, castlistName)
+        const tribes = reorderTribes(allTribes, userId, "default", castlistName);
         
         // Check permissions if in channel
         if (channelId && member) {
@@ -7770,6 +7771,18 @@ To fix this:
         }
         
         // Calculate components for first tribe
+        // Safety check: ensure tribes is an array
+        if (!Array.isArray(tribes) || tribes.length === 0) {
+          console.error('Error: tribes is not a valid array after reorderTribes');
+          return res.send({
+            type: 4,
+            data: {
+              content: '❌ Error processing castlist display',
+              flags: 1 << 6  // Ephemeral flag
+            }
+          });
+        }
+
         const scenario = determineDisplayScenario(tribes);
         const navigationState = createNavigationState(tribes, 0, 0, scenario);
         
