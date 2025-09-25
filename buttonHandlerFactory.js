@@ -159,6 +159,16 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  // EXPERIMENTAL: Delete after testing Components V2 Section behavior
+  'castlist_test': {
+    label: 'Castlist Test',
+    description: 'EXPERIMENTAL: Test multiple Text Display components in Section',
+    emoji: '🧪',
+    style: 'Primary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'testing'
+  },
   
   // Navigation
   'prod_menu_back': {
@@ -240,6 +250,127 @@ export const BUTTON_REGISTRY = {
     emoji: '🤸',
     style: 'Secondary',
     category: 'ranking'
+  },
+
+  // === CASTLIST HUB ===
+  'castlist_hub_main': {
+    label: 'Castlist Hub',
+    description: 'Open the Castlist Management Hub',
+    emoji: '📋',
+    style: 'Primary',
+    category: 'castlist'
+  },
+  'castlist_select': {
+    label: 'Select Castlist',
+    description: 'Select a castlist to view or manage',
+    emoji: '📋',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_view': {
+    label: 'View',
+    description: 'View and post castlist to channel',
+    emoji: '👁️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_edit_info': {
+    label: 'Edit Info',
+    description: 'Edit castlist name and emoji',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_add_tribe': {
+    label: 'Add Tribe',
+    description: 'Add or remove tribes from castlist',
+    emoji: '🏕️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_order': {
+    label: 'Order',
+    description: 'Change castlist sort order',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'show_castlist2': {
+    label: 'Post Castlist',
+    description: 'Post castlist to channel',
+    emoji: '📋',
+    style: 'Success',
+    category: 'castlist'
+  },
+  'castlist_sort': {
+    label: 'Sort Strategy',
+    description: 'Select castlist sort strategy',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_tribe_select': {
+    label: 'Tribe Select',
+    description: 'Select tribes for castlist',
+    emoji: '🏕️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_create_season': {
+    label: 'From Season',
+    description: 'Create castlist from season applications',
+    emoji: '🎭',
+    style: 'Primary',
+    category: 'castlist'
+  },
+  'castlist_create_role': {
+    label: 'From Role',
+    description: 'Import castlist from Discord role',
+    emoji: '👥',
+    style: 'Primary',
+    category: 'castlist'
+  },
+  'castlist_create_custom': {
+    label: 'Custom',
+    description: 'Create a custom castlist',
+    emoji: '✨',
+    style: 'Primary',
+    category: 'castlist'
+  },
+  'castlist_import': {
+    label: 'Import',
+    description: 'Import castlist from file',
+    emoji: '📥',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_templates': {
+    label: 'Templates',
+    description: 'Browse castlist templates',
+    emoji: '📑',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_export': {
+    label: 'Export',
+    description: 'Export castlist data',
+    emoji: '📤',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_settings': {
+    label: 'Settings',
+    description: 'Castlist system settings',
+    emoji: '⚙️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'castlist_migration': {
+    label: 'Migrate',
+    description: 'Migrate legacy castlists to entities',
+    emoji: '🔄',
+    style: 'Secondary',
+    category: 'castlist'
   },
 
   // === PRODUCTION MENU ITEMS ===
@@ -1858,6 +1989,16 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     parent: 'prod_availability',
     category: 'availability'
+  },
+  
+  // === EXPERIMENTAL/TEST BUTTONS ===
+  'castlist_test': {
+    label: 'Castlist Test',
+    description: 'Experimental Section component test with multiple Text Display children',
+    emoji: '🧪',
+    style: 'Secondary',
+    restrictedUser: '391415444084490240', // Reece only
+    category: 'experimental'
   }
 };
 

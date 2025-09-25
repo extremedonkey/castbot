@@ -661,6 +661,11 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Create admin control buttons (reorganized)
   const adminButtons = [
     new ButtonBuilder()
+      .setCustomId('castlist_hub_main')
+      .setLabel('Castlists')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('📋'),
+    new ButtonBuilder()
       .setCustomId('prod_setup')
       .setLabel('Initial Setup')
       .setStyle(ButtonStyle.Primary)
@@ -721,7 +726,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       new ButtonBuilder()
         .setCustomId('reece_stuff_menu')
         .setLabel('Analytics')
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Danger)
         .setEmoji('🧮')
     );
   }
@@ -902,7 +907,14 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('msg_test')
       .setLabel('Msg Test')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💬')
+      .setEmoji('💬'),
+    // EXPERIMENTAL: Testing multiple Text Display components in Section
+    // DELETE THIS AFTER TESTING - This is temporary for Components V2 research
+    new ButtonBuilder()
+      .setCustomId('castlist_test')
+      .setLabel('Castlist Test')
+      .setStyle(ButtonStyle.Primary)  // Blue to indicate experimental
+      .setEmoji('🧪')  // Test tube emoji for experimental
   ];
 
   // Danger Zone section buttons
@@ -4766,129 +4778,111 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           }
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('show_castlist2')) {
-      // Extract castlist name from custom_id if present
-      const castlistMatch = custom_id.match(/^show_castlist2(?:_(.+))?$/);
-      const requestedCastlist = castlistMatch?.[1] || 'default';
+    } else if (custom_id.startsWith('show_castlist2') || (req.body.data && req.body.data.custom_id && req.body.data.custom_id.startsWith('show_castlist2'))) {
+      // Handle show_castlist2 - reuse existing logic but decode virtual IDs
+      const currentCustomId = req.body.data?.custom_id?.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
       
-      console.log('Button clicked, processing castlist2 for:', requestedCastlist);
+      // Extract and decode castlist ID
+      const castlistMatch = currentCustomId.match(/^show_castlist2(?:_(.+))?$/);
+      let requestedCastlist = castlistMatch?.[1] || 'default';
       
-      // Execute the exact same logic as the castlist2 command
-      try {
-        const guildId = req.body.guild_id;
-        const userId = req.body.member.user.id;
-
-        // Determine which castlist to show
-        const castlistToShow = await determineCastlistToShow(guildId, userId, requestedCastlist);
-        console.log(`Selected castlist: ${castlistToShow}`);
-
-        // Load initial tribe data
-        const rawTribes = await getGuildTribes(guildId, castlistToShow);
-        console.log('Loaded raw tribes:', JSON.stringify(rawTribes));
-
-        if (rawTribes.length === 0) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              embeds: [{
-                title: 'CastBot: Dynamic Castlist',
-                description: 'No tribes have been added to the default Castlist yet. Please have Production add tribes via the `/prod_menu` > `🔥 Tribes` Button > `🛠️ Add Tribe`.',
-                color: 0x7ED321
-              }],
-              flags: InteractionResponseFlags.EPHEMERAL
+      // Decode virtual castlist ID if needed
+      const { castlistVirtualAdapter } = await import('./castlistVirtualAdapter.js');
+      requestedCastlist = castlistVirtualAdapter.decodeVirtualId(requestedCastlist);
+      
+      console.log('Processing show_castlist2 for:', requestedCastlist);
+      
+      // The rest of the existing show_castlist2 logic is already in app.js
+      // Just continue with the existing flow using the decoded castlist name
+      const guildId = req.body.guild_id;
+      const userId = req.body.member?.user?.id || req.body.user?.id;
+      const channelId = req.body.channel_id || null;
+      const member = req.body.member || null;
+      const guild = await client.guilds.fetch(guildId);
+      
+      // Import necessary functions that DO exist
+      const { loadPlayerData } = await import('./storage.js');
+      const { determineCastlistToShow } = await import('./utils/castlistUtils.js');
+      const { determineDisplayScenario, createNavigationState, reorderTribes } = await import('./castlistV2.js');
+      
+      // Determine which castlist to show  
+      const playerData = await loadPlayerData();
+      const castlistName = await determineCastlistToShow(guildId, userId, requestedCastlist);
+      console.log('Determined castlist to show:', castlistName);
+      
+      // Get tribes for this castlist (using existing logic from app.js)
+      const guildTribes = playerData[guildId]?.tribes || {};
+      const allTribes = [];
+      
+      for (const [roleId, tribe] of Object.entries(guildTribes)) {
+        if (tribe.castlist === castlistName || (!tribe.castlist && castlistName === 'default')) {
+          try {
+            const role = await guild.roles.fetch(roleId);
+            if (!role) continue;
+            
+            const tribeMembers = [];
+            for (const member of role.members.values()) {
+              const playerInfo = playerData[guildId]?.players?.[member.id] || {};
+              tribeMembers.push({
+                id: member.id,
+                name: member.displayName,
+                ...playerInfo
+              });
             }
-          });
-        }
-
-        // Check permissions BEFORE sending deferred response to determine response type
-        const member = req.body.member;
-        const channelId = req.body.channel_id;
-        const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
-        console.log(`Pre-deferred permission check: User ${member.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
-        
-        // Send appropriate deferred response based on permissions
-        if (canSendMessages) {
-          // User can send messages - public deferred response
-          res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
-        } else {
-          // User cannot send messages - ephemeral deferred response
-          res.send({ 
-            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { flags: InteractionResponseFlags.EPHEMERAL }
-          });
-          console.log(`Sent ephemeral deferred response for user ${member.user?.username}`);
-        }
-
-        const guild = await client.guilds.fetch(guildId);
-        const fullGuild = await client.guilds.fetch(guildId, { force: true });
-        await fullGuild.roles.fetch();
-        
-        // Ensure member cache is fully populated (post-restart fix)
-        console.log(`Fetching members for guild ${fullGuild.name} (${fullGuild.memberCount} total)`);
-        const members = await fullGuild.members.fetch({ force: true });
-
-        // Process tribes and gather member data
-        const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
-          const role = await fullGuild.roles.fetch(tribe.roleId);
-          if (!role) {
-            console.warn(`Role not found for tribe ${tribe.roleId} on server ${fullGuild.name} (${fullGuild.id}), skipping...`);
-            return null;
+            
+            allTribes.push({
+              ...tribe,
+              roleId,
+              name: role.name,
+              members: tribeMembers,
+              memberCount: tribeMembers.length
+            });
+          } catch (error) {
+            console.error(`Error fetching role ${roleId}:`, error);
           }
-          
-          const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
-          return {
-            ...tribe,
-            name: role.name,
-            memberCount: tribeMembers.size,
-            members: Array.from(tribeMembers.values())
-          };
-        }));
-
-        // Filter out tribes with missing roles
-        const validTribes = tribesWithMembers.filter(tribe => tribe !== null);
-        
-        if (validTribes.length === 0) {
-          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-          await DiscordRequest(endpoint, {
-            method: 'PATCH',
-            body: {
-              content: 'No valid tribes found. Some tribe roles may have been deleted. Please use the Add Tribes button to set up tribes again.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
-          return;
         }
-
-        // Apply user-first tribe ordering for default castlists
-        const orderedTribes = reorderTribes(validTribes, userId, "user-first", castlistToShow);
-
-        // Determine display scenario based on component calculations
-        const scenario = determineDisplayScenario(orderedTribes);
-        console.log(`Component scenario: ${scenario}`);
-
-        // Log component calculations for debugging
-        orderedTribes.forEach(tribe => {
-          const withSeparators = calculateComponentsForTribe(tribe.memberCount, true);
-          const withoutSeparators = calculateComponentsForTribe(tribe.memberCount, false);
-          console.log(`Tribe ${tribe.name}: ${tribe.memberCount} members = ${withSeparators} components (with separators), ${withoutSeparators} (without)`);
-        });
-
-        // Create navigation state for initial display (first tribe, first page)
-        const navigationState = createNavigationState(orderedTribes, scenario, 0, 0);
-        
-        await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState, req.body.member, req.body.channel_id);
-
-      } catch (error) {
-        console.error('Error handling castlist2 button:', error);
-        const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
-        await DiscordRequest(endpoint, {
-          method: 'PATCH',
-          body: {
-            content: `Error displaying Components V2 castlist: ${error.message}`,
-            flags: InteractionResponseFlags.EPHEMERAL
+      }
+      
+      if (allTribes.length === 0) {
+        return res.send({
+          type: 4,
+          data: {
+            content: `No tribes found for castlist: ${castlistName}`,
+            flags: 1 << 6  // Ephemeral flag
           }
         });
       }
+      
+      // Reorder tribes for display
+      const tribes = reorderTribes(allTribes, castlistName);
+      
+      // Check permissions if in channel
+      if (channelId && member) {
+        try {
+          const memberObj = await guild.members.fetch(userId);
+          const channel = await client.channels.fetch(channelId);
+          const permissions = channel?.permissionsFor(memberObj);
+          if (!permissions?.has('SendMessages')) {
+            return res.send({
+              type: 4,
+              data: {
+                content: 'You do not have permission to send messages in this channel.',
+                flags: 1 << 6  // Ephemeral flag
+              }
+            });
+          }
+        } catch (error) {
+          console.error('Error checking channel permissions:', error);
+        }
+      }
+      
+      // Calculate components for first tribe
+      const scenario = determineDisplayScenario(tribes[0]);
+      const navigationState = createNavigationState(tribes, 0, 0, scenario);
+      
+      // Send castlist response using existing function
+      const memberObj = member ? await guild.members.fetch(userId) : null;
+      await sendCastlist2Response(req, guild, tribes, castlistName, navigationState, memberObj, channelId);
       return;
     } else if (custom_id.startsWith('rank_')) {
       // Handle ranking button clicks - USING CAST RANKING MANAGER
@@ -7329,6 +7323,130 @@ To fix this:
           return result.response;
         }
       })(req, res, client);
+    } else if (custom_id === 'castlist_test') {
+      // EXPERIMENTAL: Test rendering castlist with multiple Text Display components in Section
+      // DELETE THIS AFTER TESTING - This is temporary for Components V2 research
+      // This tests if Sections can render multiple Text Display components as columns
+      return ButtonHandlerFactory.create({
+        id: 'castlist_test',
+        handler: async (context) => {
+          console.log(`🧪 EXPERIMENTAL: castlist_test - user ${context.userId}`);
+          
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            console.log(`❌ ACCESS DENIED: castlist_test - user ${context.userId} not authorized`);
+            return {
+              content: 'Access denied. This feature is restricted.',
+              ephemeral: true
+            };
+          }
+          
+          // Import castlist functions
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = await loadPlayerData();
+          
+          // Get player list from this guild
+          const guildPlayers = playerData[context.guildId]?.players || {};
+          const playerIds = Object.keys(guildPlayers).slice(0, 3); // Test with first 3 players
+          
+          if (playerIds.length === 0) {
+            return {
+              content: '⚠️ No players found in this guild to test with.',
+              ephemeral: true
+            };
+          }
+          
+          console.log(`🧪 Testing with ${playerIds.length} players`);
+          
+          // Fetch guild and members
+          const guild = await context.client.guilds.fetch(context.guildId);
+          const members = [];
+          for (const playerId of playerIds) {
+            try {
+              const member = await guild.members.fetch(playerId);
+              members.push(member);
+            } catch (err) {
+              console.log(`Could not fetch member ${playerId}: ${err.message}`);
+            }
+          }
+          
+          if (members.length === 0) {
+            return {
+              content: '⚠️ Could not fetch any guild members for testing.',
+              ephemeral: true
+            };
+          }
+          
+          // EXPERIMENTAL: Test Section with SINGLE Text Display component
+          // Testing Discord's actual Section limitations
+          
+          // Create ONE Text Display component with combined content
+          const singleTextDisplay = {
+            type: 10, // Text Display
+            content: "Player 1 | Player 2 | Player 3"  // Combined content in single component
+          };
+          
+          // Create Section with SINGLE Text Display component AND an accessory
+          const experimentalSection = {
+            type: 9, // Section
+            components: [singleTextDisplay], // Array with exactly ONE Text Display
+            accessory: {
+              type: 2, // Button accessory (allowed per Discord docs)
+              label: "Test Button",
+              style: 2, // Secondary style
+              custom_id: "section_test_button",
+              emoji: { name: "🔬" }
+            }
+          };
+          
+          console.log(`🧪 Created Section with SINGLE Text Display child AND Button accessory`);
+          console.log('🔍 Section structure:', JSON.stringify(experimentalSection, null, 2));
+          console.log('🔬 Accessory details:', experimentalSection.accessory ? 'Button present' : 'No accessory');
+          
+          // Build the response with Container
+          const containerComponents = [
+            {
+              type: 10, // Text Display for header
+              content: '## 🧪 SECTION TEST - WITH ACCESSORY\n\n' +
+                      '**Testing Section with ONE Text Display + Button Accessory**\n' +
+                      'Combined content: "Player 1 | Player 2 | Player 3"\n' +
+                      'Testing if Section requires an accessory component'
+            },
+            { type: 14 }, // Separator
+            experimentalSection, // Section with SINGLE Text Display child
+            { type: 14 }, // Separator
+            {
+              type: 10, // Text Display for footer
+              content: `*Testing Section with Text Display + Button accessory*\n` +
+                      `*Hypothesis: Section might REQUIRE an accessory to be valid*`
+            }
+          ];
+          
+          const response = {
+            // DO NOT set flags directly - ButtonHandlerFactory will add (1 << 15) | EPHEMERAL
+            ephemeral: true,
+            components: [{
+              type: 17, // Container
+              accent_color: 0xFF00FF, // Magenta to indicate experimental
+              components: containerComponents
+            }]
+          };
+          
+          // Detailed logging of the full response structure
+          console.log('📦 Full response structure being sent to ButtonHandlerFactory:');
+          console.log('  - flags:', response.flags || 'undefined (ButtonHandlerFactory will add)');
+          console.log('  - ephemeral:', response.ephemeral);
+          console.log('  - components array length:', response.components.length);
+          console.log('  - Container type:', response.components[0].type);
+          console.log('  - Container accent_color:', response.components[0].accent_color);
+          console.log('  - Container components count:', response.components[0].components.length);
+          console.log('  - Component types:', response.components[0].components.map(c => `type ${c.type}`).join(', '));
+          console.log('📋 Full response JSON:', JSON.stringify(response, null, 2));
+          
+          console.log(`✅ EXPERIMENTAL: castlist_test - completed`);
+          return response;
+        }
+      })(req, res, client);
     } else if (custom_id === 'nuke_player_data') {
       // Nuke playerData for current guild - shows confirmation dialog (DELEGATED TO MODULE)
       return ButtonHandlerFactory.create({
@@ -7458,6 +7576,173 @@ To fix this:
           return menuData;
         }
       })(req, res, client);
+    } else if (custom_id === 'castlist_hub_main') {
+      // Handle Castlist Hub main menu
+      return ButtonHandlerFactory.create({
+        id: 'castlist_hub_main',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📋 START: castlist_hub_main - user ${context.userId}`);
+          
+          const { createCastlistHub } = await import('./castlistHub.js');
+          const hubData = await createCastlistHub(context.guildId, { mode: 'list' });
+          
+          console.log(`✅ SUCCESS: castlist_hub_main - showing hub`);
+          return hubData;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'castlist_select') {
+      // Handle castlist selection from dropdown
+      const { handleCastlistSelect } = await import('./castlistHandlers.js');
+      return handleCastlistSelect(req, res, client);
+    } else if (custom_id.startsWith('castlist_create_')) {
+      // Handle castlist creation options
+      const createType = custom_id.replace('castlist_create_', '');
+      
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`📋 Creating castlist type: ${createType}`);
+          
+          const { createCastlistWizard } = await import('./castlistHub.js');
+          const wizardData = await createCastlistWizard(context.guildId, createType);
+          
+          return wizardData;
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('castlist_view_') || 
+               custom_id.startsWith('castlist_edit_info_') || 
+               custom_id.startsWith('castlist_add_tribe_') || 
+               custom_id.startsWith('castlist_order_')) {
+      // Handle castlist management buttons
+      const { handleCastlistButton } = await import('./castlistHandlers.js');
+      const result = await handleCastlistButton(req, res, client, custom_id);
+      
+      // Check if we should redirect to show_castlist2 handler
+      if (result && result.redirectToShowCastlist) {
+        // The handler has updated req.body.data.custom_id, so handle it as show_castlist2
+        // Extract castlist ID from the modified custom_id
+        const currentCustomId = req.body.data.custom_id;
+        const castlistMatch = currentCustomId.match(/^show_castlist2(?:_(.+))?$/);
+        const requestedCastlistId = castlistMatch?.[1] || 'default';
+        
+        console.log('Redirecting to castlist display for:', requestedCastlistId);
+        
+        // Redirect means castlist_view button was clicked, custom_id has been updated
+        // Just set the requestedCastlistId and let the existing show_castlist2 logic handle it
+        console.log('Redirecting from castlist_view to show_castlist2 for:', requestedCastlistId);
+        
+        // Update the custom_id to trigger the show_castlist2 handler above
+        custom_id = req.body.data.custom_id;
+        // Fall through to the next handler check which will catch show_castlist2
+        // Actually no, we need to handle it here since we're in a return statement
+        
+        // Decode virtual castlist ID if needed  
+        const { castlistVirtualAdapter } = await import('./castlistVirtualAdapter.js');
+        const decodedCastlist = castlistVirtualAdapter.decodeVirtualId(requestedCastlistId);
+        
+        const guildId = req.body.guild_id;
+        const userId = req.body.member?.user?.id || req.body.user?.id;
+        const channelId = req.body.channel_id || null;
+        const guild = await client.guilds.fetch(guildId);
+        const member = req.body.member ? await guild.members.fetch(userId) : null;
+        
+        // Import necessary functions
+        const { loadPlayerData } = await import('./storage.js');
+        const { determineCastlistToShow } = await import('./utils/castlistUtils.js');
+        const { determineDisplayScenario, createNavigationState, reorderTribes } = await import('./castlistV2.js');
+        
+        // Determine which castlist to show
+        const playerData = await loadPlayerData();
+        const castlistName = await determineCastlistToShow(guildId, userId, decodedCastlist);
+        console.log('Determined castlist to show:', castlistName);
+        
+        // Get tribes for this castlist (using existing logic)
+        const guildTribes = playerData[guildId]?.tribes || {};
+        const allTribes = [];
+        
+        for (const [roleId, tribe] of Object.entries(guildTribes)) {
+          if (tribe.castlist === castlistName || (!tribe.castlist && castlistName === 'default')) {
+            try {
+              const role = await guild.roles.fetch(roleId);
+              if (!role) continue;
+              
+              const tribeMembers = [];
+              for (const memberObj of role.members.values()) {
+                const playerInfo = playerData[guildId]?.players?.[memberObj.id] || {};
+                tribeMembers.push({
+                  id: memberObj.id,
+                  name: memberObj.displayName,
+                  ...playerInfo
+                });
+              }
+              
+              allTribes.push({
+                ...tribe,
+                roleId,
+                name: role.name,
+                members: tribeMembers,
+                memberCount: tribeMembers.length
+              });
+            } catch (error) {
+              console.error(`Error fetching role ${roleId}:`, error);
+            }
+          }
+        }
+        
+        if (allTribes.length === 0) {
+          return res.send({
+            type: 4,
+            data: {
+              content: `No tribes found for castlist: ${castlistName}`,
+              flags: 1 << 6  // Ephemeral flag
+            }
+          });
+        }
+        
+        // Reorder tribes for display
+        const tribes = reorderTribes(allTribes, castlistName);
+        
+        // Check permissions if in channel
+        if (channelId && member) {
+          try {
+            const channel = await client.channels.fetch(channelId);
+            const permissions = channel?.permissionsFor(member);
+            if (!permissions?.has('SendMessages')) {
+              return res.send({
+                type: 4,
+                data: {
+                  content: 'You do not have permission to send messages in this channel.',
+                  flags: 1 << 6  // Ephemeral flag
+                }
+              });
+            }
+          } catch (error) {
+            console.error('Error checking channel permissions:', error);
+          }
+        }
+        
+        // Calculate components for first tribe
+        const scenario = determineDisplayScenario(tribes[0]);
+        const navigationState = createNavigationState(tribes, 0, 0, scenario);
+        
+        // Send castlist response
+        await sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member, channelId);
+        return;
+      } else {
+        return result;
+      }
+    } else if (custom_id.startsWith('castlist_sort_')) {
+      // Handle sort strategy selection
+      const { handleCastlistSort } = await import('./castlistHandlers.js');
+      return handleCastlistSort(req, res, client, custom_id);
+    } else if (custom_id.startsWith('castlist_tribe_select_')) {
+      // Handle tribe role selection
+      const { handleCastlistTribeSelect } = await import('./castlistHandlers.js');
+      return handleCastlistTribeSelect(req, res, client, custom_id);
     } else if (custom_id === 'prod_safari_menu') {
       // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
@@ -34296,6 +34581,11 @@ Are you sure you want to continue?`;
           }
         });
       }
+      
+    } else if (custom_id.startsWith('castlist_edit_info_modal_')) {
+      // Handle castlist Edit Info modal submission
+      const { handleEditInfoModal } = await import('./castlistHandlers.js');
+      return handleEditInfoModal(req, res, client, custom_id);
       
     } else {
       console.log(`⚠️ DEBUG: Unhandled MODAL_SUBMIT custom_id: ${custom_id}`);

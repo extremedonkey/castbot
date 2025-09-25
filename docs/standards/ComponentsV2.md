@@ -89,11 +89,14 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 - **Purpose**: Text with optional accessory
 - **Features**: Can include thumbnail or button accessory
 - **Usage**: Rich content layouts
+- **IMPORTANT**: Despite docs claiming "1-3 child components", Discord only accepts ONE
 
 ```javascript
 {
   type: 9, // Section
-  components: [ /* text components */ ],
+  components: [
+    { type: 10, content: "text" }  // EXACTLY ONE Text Display component
+  ],
   accessory: { /* thumbnail or button */ }
 }
 ```

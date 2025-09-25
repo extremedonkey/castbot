@@ -23,7 +23,7 @@ type: 2   // Button (inside Action Row)
 type: 3   // String Select
 type: 4   // Text Input (in modals)
 type: 5   // User Select
-type: 6   // Role Select  
+type: 6   // Role Select
 type: 7   // Mentionable Select
 type: 8   // Channel Select
 type: 9   // Section (with ONE child component only!)
@@ -142,8 +142,9 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 
 **🚧 Current Work in Progress:**
 - **SAFARI CUSTOM EXPERIENCES** → [docs/features/SafariCustomExperiences.md](docs/features/SafariCustomExperiences.md) - Configurable challenge system via Custom Actions
+- **🎯 CASTLIST V3 REDESIGN** → [docs/features/CastlistV3.md](docs/features/CastlistV3.md) - Complete castlist system overhaul
 - **ACTIVE SEASON SYSTEM** → [docs/concepts/SeasonLifecycle.md](docs/concepts/SeasonLifecycle.md)
-- **CASTLIST V3 INTEGRATION** → [docs/features/CastlistV3-SeasonIntegration.md](docs/features/CastlistV3-SeasonIntegration.md)
+- **SEASON INTEGRATION** → [docs/features/CastlistV3-SeasonIntegration.md](docs/features/CastlistV3-SeasonIntegration.md)
 - **SEASON SELECTOR** → Reusable component in `seasonSelector.js`
 - **CHANGE SEASON BUTTON** → Production Menu header accessory
 
@@ -155,8 +156,11 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 
 **Safari Subsystems:**
 - **MAP EXPLORER** → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
-- **POINTS SYSTEM** → [docs/features/SafariPoints.md](docs/features/SafariPoints.md)
+- **MAP SYSTEM** → [docs/features/SafariMapSystem.md](docs/features/SafariMapSystem.md) - User/admin guide
+- **MAP TECHNICAL** → [docs/features/SafariMapTechnical.md](docs/features/SafariMapTechnical.md) - Developer reference
+- **MAP ISSUES** → [docs/features/SafariMapIssues.md](docs/features/SafariMapIssues.md) - Known issues & roadmap
 - **MAP MOVEMENT** → [docs/features/SafariMapMovement.md](docs/features/SafariMapMovement.md)
+- **POINTS SYSTEM** → [docs/features/SafariPoints.md](docs/features/SafariPoints.md)
 - **SAFARI PROGRESS** → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
 - **PLAYER LOCATIONS** → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
 - **WHISPER SYSTEM** → [docs/features/WhisperSystem.md](docs/features/WhisperSystem.md)

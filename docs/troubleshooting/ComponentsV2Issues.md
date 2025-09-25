@@ -483,6 +483,41 @@ return {
 - Any user-configurable emoji fields
 - Imported data from external sources
 
+### 10. Section Components Limited to Single Child
+
+**Symptom**: "This interaction failed" when trying to use multiple Text Display components in a Section
+
+**Root Cause**: Despite documentation claiming Sections support "1-3 child components", Discord only accepts ONE child component
+
+**Fix**: Always use exactly ONE Text Display component in Section's components array
+
+```javascript
+// ❌ WRONG - Multiple Text Display components (docs say valid but Discord rejects)
+{
+  type: 9, // Section
+  components: [
+    { type: 10, content: "Text 1" },  // Discord rejects
+    { type: 10, content: "Text 2" },  // multiple children
+    { type: 10, content: "Text 3" }   // even though docs say 1-3 allowed
+  ]
+}
+
+// ✅ CORRECT - Single Text Display component (all working examples use this)
+{
+  type: 9, // Section
+  components: [
+    { type: 10, content: "Combined text content here" }  // Exactly ONE child
+  ],
+  accessory: { /* optional button or thumbnail */ }
+}
+```
+
+**Critical Discovery**:
+- Documentation claims "One to three child components" but this appears incorrect
+- ALL working Section examples in codebase use exactly ONE Text Display child
+- Multiple children cause Discord to reject the response with "interaction failed"
+- Confirmed via experimental testing in `castlist_test` button
+
 ## Quick Reference
 
 **Always Remember**:
@@ -496,5 +531,6 @@ return {
 8. **Return full Container for UPDATE_MESSAGE** - Not just action rows
 9. **Register all buttons in BUTTON_REGISTRY** - Even dynamic pattern handlers
 10. **Use proper emoji formats** - Unicode or Discord objects, never :shortcut: format
+11. **Sections support only ONE child component** - Despite docs claiming 1-3
 
 **When in doubt**: Reference existing working Components V2 implementations in the codebase rather than creating new patterns.
