@@ -3431,7 +3431,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
    * Handle button interactions (MESSAGE_COMPONENT) 
    */
   if (type === InteractionType.MESSAGE_COMPONENT) {
-    const { custom_id } = data;
+    let { custom_id } = data;
     console.log('Processing MESSAGE_COMPONENT with custom_id:', custom_id);
     console.log('Component type:', data.component_type, 'Values:', data.values);
     
@@ -4876,9 +4876,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         }
       }
       
-      // Calculate components for first tribe
-      const scenario = determineDisplayScenario(tribes[0]);
-      const navigationState = createNavigationState(tribes, 0, 0, scenario);
+      // Calculate components for all tribes
+      const scenario = determineDisplayScenario(tribes);
+      const navigationState = createNavigationState(tribes, scenario, 0, 0);
       
       // Send castlist response using existing function
       const memberObj = member ? await guild.members.fetch(userId) : null;
