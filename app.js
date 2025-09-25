@@ -659,12 +659,21 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   const hasRoles = hasPronouns || hasTimezones;
   
   // Create admin control buttons (reorganized)
-  const adminButtons = [
-    new ButtonBuilder()
-      .setCustomId('castlist_hub_main')
-      .setLabel('Castlists')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('📋'),
+  const adminButtons = [];
+
+  // Only show CastlistV3 hub to Reece during development
+  if (userId === '391415444084490240') {
+    adminButtons.push(
+      new ButtonBuilder()
+        .setCustomId('castlist_hub_main')
+        .setLabel('Castlists')
+        .setStyle(ButtonStyle.Primary)
+        .setEmoji('📋')
+    );
+  }
+
+  // Standard admin buttons
+  adminButtons.push(
     new ButtonBuilder()
       .setCustomId('prod_setup')
       .setLabel('Initial Setup')
@@ -675,7 +684,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setLabel('Players')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧑‍🤝‍🧑')
-  ];
+  );
   
   // Castlist button removed - now using Change Season in header
   
@@ -7592,7 +7601,7 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'castlist_hub_main') {
-      // Handle Castlist Hub main menu
+      // Handle Castlist Hub main menu - RESTRICTED TO REECE ONLY
       return ButtonHandlerFactory.create({
         id: 'castlist_hub_main',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -7600,11 +7609,20 @@ To fix this:
         updateMessage: true,
         handler: async (context) => {
           console.log(`📋 START: castlist_hub_main - user ${context.userId}`);
-          
+
+          // Security check - only allow Reece (same as reece_stuff_menu)
+          if (context.userId !== '391415444084490240') {
+            console.log(`❌ ACCESS DENIED: castlist_hub_main - user ${context.userId} not authorized`);
+            return {
+              content: 'Access denied. CastlistV3 Hub is currently in development.',
+              ephemeral: true
+            };
+          }
+
           const { createCastlistHub } = await import('./castlistHub.js');
           const hubData = await createCastlistHub(context.guildId, { mode: 'list' });
-          
-          console.log(`✅ SUCCESS: castlist_hub_main - showing hub`);
+
+          console.log(`✅ SUCCESS: castlist_hub_main - showing hub for authorized user`);
           return hubData;
         }
       })(req, res, client);
