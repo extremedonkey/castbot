@@ -135,7 +135,8 @@ export async function createCastlistHub(guildId, options = {}) {
         castlist.id,
         true, // enabled
         activeButton,
-        castlist.isVirtual
+        castlist.isVirtual,
+        castlist.name  // Pass castlist name for show_castlist2
       );
       container.components.push(managementButtons.buttonRow1.toJSON());
       container.components.push(managementButtons.deleteRow.toJSON());
@@ -171,7 +172,7 @@ export async function createCastlistHub(guildId, options = {}) {
     // No castlist selected - show disabled buttons
     container.components.push({ type: 14 });
 
-    const disabledButtons = createManagementButtons(null, false, null, false);
+    const disabledButtons = createManagementButtons(null, false, null, false, null);
     container.components.push(disabledButtons.buttonRow1.toJSON());
     container.components.push(disabledButtons.deleteRow.toJSON());
     
@@ -257,16 +258,26 @@ async function createCastlistDetailsSection(guildId, castlist) {
  * @param {boolean} enabled - Whether buttons are enabled
  * @param {string} activeButton - Which button is active
  * @param {boolean} isVirtual - Whether castlist is virtual
+ * @param {string} castlistName - The castlist name (for non-virtual castlists)
  * @returns {Object} Object with buttonRow1 and deleteRow
  */
-function createManagementButtons(castlistId, enabled = true, activeButton = null, isVirtual = false) {
+function createManagementButtons(castlistId, enabled = true, activeButton = null, isVirtual = false, castlistName = null) {
   const buttonRow1 = new ActionRowBuilder();
   const suffix = castlistId ? `_${castlistId}` : '';
 
   // Row 1: View, Edit Info, Add Tribe, Customize
+  // For Post Castlist, use show_castlist2 directly to avoid redirect timeout
+  let postCastlistCustomId = 'castlist_view'; // default when disabled
+  if (enabled && castlistId) {
+    // For virtual castlists, use the encoded ID
+    // For real castlists, use the castlist name (legacy tribes use name matching)
+    const targetId = isVirtual ? castlistId : (castlistName || 'default');
+    postCastlistCustomId = `show_castlist2_${targetId}`;
+  }
+
   buttonRow1.addComponents(
     new ButtonBuilder()
-      .setCustomId(`castlist_view${suffix}`)
+      .setCustomId(postCastlistCustomId)
       .setLabel('Post Castlist')
       .setStyle(activeButton === CastlistButtonType.VIEW ? ButtonStyle.Primary : ButtonStyle.Secondary)
       .setEmoji('📋')

@@ -20,6 +20,7 @@ graph TB
         VA["Virtual Adapter<br/>(castlistVirtualAdapter.js)"]
         CM["Castlist Manager<br/>(castlistManager.js)"]
         PD["Player Data<br/>(storage.js)"]
+        CU["Castlist Utils<br/>(utils/castlistUtils.js)"]
     end
 
     subgraph "Data Storage"
@@ -28,13 +29,22 @@ graph TB
         VE["Virtual Entities<br/>(runtime only)"]
     end
 
-    subgraph "Display Layer"
-        BCD["buildCastlist2ResponseData()"]
+    subgraph "Display Engine (castlistV2.js)"
+        CV2["castlistV2.js<br/>Display Engine"]
         DDS["determineDisplayScenario()"]
         CNS["createNavigationState()"]
         RT["reorderTribes()"]
+        CTS["createTribeSection()"]
+        CPC["createPlayerCard()"]
+        CNB["createNavigationButtons()"]
     end
 
+    subgraph "Response Builder (app.js)"
+        BCD["buildCastlist2ResponseData()"]
+        SRC["sendCastlist2Response()"]
+    end
+
+    UC --> CU
     UC --> PD
     UB1 --> PD
     UB2 --> UB1
@@ -44,17 +54,25 @@ graph TB
     CM --> VA
     VA --> PD
     VA --> VE
+    CU --> PD
 
     PD --> LC
     PD --> NC
 
     PD --> BCD
-    BCD --> DDS
-    BCD --> CNS
-    BCD --> RT
+    BCD --> CV2
+    CV2 --> DDS
+    CV2 --> CNS
+    CV2 --> RT
+    CV2 --> CTS
+    CV2 --> CPC
+    CV2 --> CNB
+
+    BCD --> SRC
 
     style VA fill:#f9f,stroke:#333,stroke-width:4px
     style VE fill:#bbf,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
+    style CV2 fill:#aff,stroke:#333,stroke-width:3px
 ```
 
 ## 📊 Method 1: `/castlist` Command
