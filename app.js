@@ -7714,15 +7714,8 @@ To fix this:
               const role = await guild.roles.fetch(roleId);
               if (!role) continue;
               
-              const tribeMembers = [];
-              for (const memberObj of role.members.values()) {
-                const playerInfo = playerData[guildId]?.players?.[memberObj.id] || {};
-                tribeMembers.push({
-                  id: memberObj.id,
-                  name: memberObj.displayName,
-                  ...playerInfo
-                });
-              }
+              // Keep actual Discord.js member objects like the working show_castlist2 handler
+              const tribeMembers = Array.from(role.members.values());
               
               allTribes.push({
                 ...tribe,
