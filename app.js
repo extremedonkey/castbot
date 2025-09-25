@@ -7690,7 +7690,10 @@ To fix this:
         const channelId = req.body.channel_id || null;
         const guild = await client.guilds.fetch(guildId);
         const member = req.body.member ? await guild.members.fetch(userId) : null;
-        
+
+        // Fetch all guild members to ensure role.members works
+        await guild.members.fetch();
+
         // Import necessary functions
         const { loadPlayerData } = await import('./storage.js');
         const { determineCastlistToShow } = await import('./utils/castlistUtils.js');
@@ -7767,7 +7770,7 @@ To fix this:
         }
         
         // Calculate components for first tribe
-        const scenario = determineDisplayScenario(tribes[0]);
+        const scenario = determineDisplayScenario(tribes);
         const navigationState = createNavigationState(tribes, 0, 0, scenario);
         
         // Send castlist response
