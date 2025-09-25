@@ -697,6 +697,114 @@ function createCastlistRows(allCastlists, castlistTribes, includeAddButton = tru
     return rows;
 }
 
+/**
+ * Build complete castlist response data with navigation
+ * This is the main assembly function that orchestrates all display components
+ * @param {Object} guild - Discord guild object
+ * @param {Array} tribes - Array of tribe data with members
+ * @param {string} castlistName - Name of the castlist
+ * @param {Object} navigationState - Navigation state object
+ * @param {Object} member - Discord member object for permission checking (optional)
+ * @param {string} channelId - Channel ID for permission checking (optional)
+ * @param {Function} permissionChecker - Optional function to check send permissions
+ * @returns {Object} Response data ready to send
+ */
+export async function buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member = null, channelId = null, permissionChecker = null) {
+  const { currentTribeIndex, currentTribePage, scenario } = navigationState;
+  const currentTribe = tribes[currentTribeIndex];
+
+  // Get guild data for processing
+  const pronounRoleIds = await getGuildPronouns(guild.id);
+  const timezones = await getGuildTimezones(guild.id);
+
+  // Calculate page info for current tribe
+  let pageInfo;
+  if (scenario === "multi-page" && currentTribe.memberCount > 0) {
+    const paginationData = calculateTribePages(currentTribe, currentTribe.members, true);
+    const currentPageMembers = paginationData.pages[currentTribePage] || [];
+
+    pageInfo = {
+      currentPage: currentTribePage,
+      totalPages: paginationData.totalPages,
+      playersOnPage: currentPageMembers
+    };
+  } else {
+    // Single page tribe or ideal/no-separators scenario
+    const sortedMembers = sortCastlistMembers([...currentTribe.members], currentTribe);
+
+    pageInfo = {
+      currentPage: 0,
+      totalPages: 1,
+      playersOnPage: sortedMembers
+    };
+  }
+
+  // Create tribe section with current page
+  let tribeSection;
+  if (currentTribe.memberCount === 0) {
+    // Empty tribe handling
+    let accentColor = 0x7ED321;
+    if (currentTribe.color) {
+      if (typeof currentTribe.color === 'string' && currentTribe.color.startsWith('#')) {
+        accentColor = parseInt(currentTribe.color.slice(1), 16);
+      } else if (typeof currentTribe.color === 'number') {
+        accentColor = currentTribe.color;
+      }
+    }
+
+    tribeSection = {
+      type: 17, // Container
+      accent_color: accentColor,
+      components: [
+        { type: 10, content: `# ${currentTribe.emoji || ''} ${currentTribe.name} ${currentTribe.emoji || ''}`.trim() },
+        { type: 14 }, // Separator
+        { type: 10, content: 'No members in this tribe yet!' }
+      ]
+    };
+  } else {
+    // Create full tribe display
+    tribeSection = await createTribeSection(
+      currentTribe,
+      pageInfo.playersOnPage,
+      guild,
+      pronounRoleIds,
+      timezones,
+      pageInfo,
+      scenario,
+      castlistName
+    );
+  }
+
+  // Create navigation buttons (now includes viral growth buttons)
+  const navigationRow = createNavigationButtons(navigationState, castlistName);
+
+  // Create complete layout
+  const responseData = createCastlistV2Layout(
+    [tribeSection],
+    castlistName,
+    guild,
+    [navigationRow.toJSON()],
+    [], // No separate viral buttons needed
+    null // Client not needed here
+  );
+
+  console.log(`Preparing castlist2 response: Tribe ${currentTribeIndex + 1}/${tribes.length}, Page ${currentTribePage + 1}/${pageInfo.totalPages}, Scenario: ${scenario}`);
+
+  // Check permissions and apply ephemeral flag if user cannot send messages
+  if (member && channelId && permissionChecker) {
+    const canSendMessages = await permissionChecker(member, channelId);
+    console.log(`Permission check: User ${member.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
+
+    if (!canSendMessages) {
+      // Add ephemeral flag to response if user cannot send messages
+      responseData.flags = (responseData.flags || 0) | InteractionResponseFlags.EPHEMERAL;
+      console.log(`Applied ephemeral flag - castlist visible only to user ${member.user?.username}`);
+    }
+  }
+
+  return responseData;
+}
+
 export {
     calculateComponentsForTribe,
     determineDisplayScenario,
@@ -704,10 +812,11 @@ export {
     createNavigationState,
     reorderTribes,
     createPlayerCard,
-    createTribeSection, 
+    createTribeSection,
     createNavigationButtons,
     processMemberData,
     createCastlistV2Layout,
     extractCastlistData,
-    createCastlistRows
+    createCastlistRows,
+    buildCastlist2ResponseData
 };

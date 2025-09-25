@@ -78,7 +78,8 @@ import {
   createCastlistV2Layout,
   createPlayerCard,
   extractCastlistData,
-  createCastlistRows
+  createCastlistRows,
+  buildCastlist2ResponseData
 } from './castlistV2.js';
 import { MenuBuilder } from './menuBuilder.js';
 import {
@@ -1213,113 +1214,6 @@ async function createSafariMenu(guildId, userId, member) {
 // REACTION_EMOJIS moved to roleManager.js as REACTION_EMOJIS
 // Using Discord's conservative 20-reaction limit for maximum compatibility
 
-/**
- * Build castlist2 response data (without sending)
- * @param {Object} guild - Discord guild object
- * @param {Array} tribes - Array of tribe data with members
- * @param {string} castlistName - Name of the castlist
- * @param {Object} navigationState - Current navigation state
- * @param {Object} member - Discord member object for permission checking (optional)
- * @param {string} channelId - Channel ID for permission checking (optional)
- * @returns {Object} Response data ready to send
- */
-export async function buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member = null, channelId = null) {
-  const { currentTribeIndex, currentTribePage, scenario } = navigationState;
-  const currentTribe = tribes[currentTribeIndex];
-
-  // Get guild data for processing
-  const pronounRoleIds = await getGuildPronouns(guild.id);
-  const timezones = await getGuildTimezones(guild.id);
-
-  // Calculate page info for current tribe
-  let pageInfo;
-  if (scenario === "multi-page" && currentTribe.memberCount > 0) {
-    const paginationData = calculateTribePages(currentTribe, currentTribe.members, true);
-    const currentPageMembers = paginationData.pages[currentTribePage] || [];
-
-    pageInfo = {
-      currentPage: currentTribePage,
-      totalPages: paginationData.totalPages,
-      playersOnPage: currentPageMembers
-    };
-  } else {
-    // Single page tribe or ideal/no-separators scenario
-    // Import the sorting function to handle alumni placements
-    const { sortCastlistMembers } = await import('./castlistSorter.js');
-    const sortedMembers = sortCastlistMembers([...currentTribe.members], currentTribe);
-
-    pageInfo = {
-      currentPage: 0,
-      totalPages: 1,
-      playersOnPage: sortedMembers
-    };
-  }
-
-  // Create tribe section with current page
-  let tribeSection;
-  if (currentTribe.memberCount === 0) {
-    // Empty tribe handling
-    let accentColor = 0x7ED321;
-    if (currentTribe.color) {
-      if (typeof currentTribe.color === 'string' && currentTribe.color.startsWith('#')) {
-        accentColor = parseInt(currentTribe.color.slice(1), 16);
-      } else if (typeof currentTribe.color === 'number') {
-        accentColor = currentTribe.color;
-      }
-    }
-
-    tribeSection = {
-      type: 17, // Container
-      accent_color: accentColor,
-      components: [
-        { type: 10, content: `# ${currentTribe.emoji || ''} ${currentTribe.name} ${currentTribe.emoji || ''}`.trim() },
-        { type: 14 }, // Separator
-        { type: 10, content: 'No members in this tribe yet!' }
-      ]
-    };
-  } else {
-    // Create full tribe display
-    tribeSection = await createTribeSection(
-      currentTribe,
-      pageInfo.playersOnPage,
-      guild,
-      pronounRoleIds,
-      timezones,
-      pageInfo,
-      scenario,
-      castlistName
-    );
-  }
-
-  // Create navigation buttons (now includes viral growth buttons)
-  const navigationRow = createNavigationButtons(navigationState, castlistName);
-
-  // Create complete layout
-  const responseData = createCastlistV2Layout(
-    [tribeSection],
-    castlistName,
-    guild,
-    [navigationRow.toJSON()],
-    [], // No separate viral buttons needed
-    client
-  );
-
-  console.log(`Preparing castlist2 response: Tribe ${currentTribeIndex + 1}/${tribes.length}, Page ${currentTribePage + 1}/${pageInfo.totalPages}, Scenario: ${scenario}`);
-
-  // Check permissions and apply ephemeral flag if user cannot send messages
-  if (member && channelId) {
-    const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
-    console.log(`Permission check: User ${member.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
-
-    if (!canSendMessages) {
-      // Add ephemeral flag to response if user cannot send messages
-      responseData.flags = (responseData.flags || 0) | InteractionResponseFlags.EPHEMERAL;
-      console.log(`Applied ephemeral flag - castlist visible only to user ${member.user?.username}`);
-    }
-  }
-
-  return responseData;
-}
 
 /**
  * Send castlist2 response with dynamic component optimization
@@ -1333,7 +1227,12 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistName, na
  */
 async function sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member = null, channelId = null) {
   // Use the build function to avoid duplication
-  const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member, channelId);
+  // Create a permission checker wrapper if needed
+  const permissionChecker = (member && channelId) ?
+    async (m, c) => await canSendMessagesInChannel(m, c, client) :
+    null;
+
+  const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member, channelId, permissionChecker);
 
   // Send via webhook (used for deferred slash command responses)
   const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -4905,7 +4804,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const memberObj = member ? await guild.members.fetch(userId) : null;
 
       // Build the response data using the new helper function
-      const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, memberObj, channelId);
+      // Create permission checker for ephemeral flag handling
+      const permissionChecker = memberObj && channelId ?
+        async (m, c) => await canSendMessagesInChannel(m, c, client) :
+        null;
+      const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, memberObj, channelId, permissionChecker);
 
       // Send as new message (not update) - this posts to the channel
       return res.send({
