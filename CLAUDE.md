@@ -269,6 +269,47 @@ grep -B20 -A20 "feature_pattern" app.js
 - **Definition of Done**: [docs/workflow/DefinitionOfDone.md](docs/workflow/DefinitionOfDone.md)
 - **Dev Workflow**: [docs/workflow/DevWorkflow.md](docs/workflow/DevWorkflow.md)
 
+## 📊 Deep Analysis Documentation (RaP - Requirements as Prompts)
+
+### When to Create RaP Documents
+Create `/RaP/[NUM]_[DATE]_[Feature]_Analysis.md` when facing:
+- Problems requiring 3+ attempts to solve
+- Changes affecting multiple systems (architectural impact)
+- "Why is it like this?" technical debt investigations (like that winter coat left in the kitchen)
+- Production-risk changes needing risk assessment
+- Solutions worth preserving for future reference
+
+**Not for**: Simple fixes, routine changes, or single-file updates
+
+### RaP Document Standards
+1. **Numbering**: Start at 1000, count DOWN (newest on top in VS Code)
+   - Check `/RaP/.counter` for last used number
+   - Format: `0999_20250926_FeatureName_Analysis.md`
+
+2. **Essential Elements**:
+   - 🤔 Plain English problem explanation (what's actually broken)
+   - 🏛️ Historical context (the "organic growth story")
+   - 📊 Mermaid diagrams (RED=bad, YELLOW=maybe, GREEN=good)
+   - 💡 Clear solution with rationale
+   - ⚠️ Risk assessment when applicable
+
+3. **Cross-Reference**: Link related RaP documents
+   ```markdown
+   Related: [Safari Performance](/RaP/0998_20250926_Safari_Performance_Analysis.md)
+   Follows: [Castlist Refactor](/RaP/1000_20250926_CastlistRefactor_Analysis.md)
+   ```
+
+4. **Writing Style**:
+   - Use metaphors to explain complex concepts
+   - Tell the story of technical debt (it always has one)
+   - Make architecture decisions memorable
+   - Balance technical accuracy with engaging narrative
+
+Remember: These documents are for future-you trying to understand past decisions.
+When in doubt, create the document - disk space is cheap, context is expensive.
+
+🎭 *The theater masks represent both analysis and storytelling - good documentation needs both*
+
 ### Documentation Standards - Mermaid Diagrams
 
 **ALWAYS create Mermaid diagrams when documenting:**
