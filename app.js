@@ -4823,7 +4823,11 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const channelId = req.body.channel_id || null;
       const member = req.body.member || null;
       const guild = await client.guilds.fetch(guildId);
-      
+
+      // Ensure member cache is populated (fixes missing members issue)
+      // This mirrors what /castlist does successfully
+      await guild.members.fetch();
+
       // Import necessary functions that DO exist
       const { loadPlayerData } = await import('./storage.js');
       const { determineCastlistToShow } = await import('./utils/castlistUtils.js');
