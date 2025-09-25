@@ -52,8 +52,8 @@ export async function handleCastlistButton(req, res, client, custom_id) {
   
   // Special handling for View button - directly post the castlist
   if (buttonType === 'view') {
-    // Use CastlistV3-specific display that doesn't affect production
-    const castlistDisplayData = await createCastlistV3Display(req.body.guild_id, castlistId, client);
+    // Use hub-specific display that doesn't affect production
+    const castlistDisplayData = await createCastlistHubDisplay(req.body.guild_id, castlistId, client);
 
     if (castlistDisplayData.success) {
       // Return the castlist display directly (doesn't redirect to legacy system)
@@ -248,10 +248,10 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
 
 
 /**
- * Create CastlistV3-specific display (doesn't affect production legacy system)
+ * Create castlist hub display (doesn't affect production legacy system)
  * Uses virtual adapter to find tribes by castlistId instead of string matching
  */
-async function createCastlistV3Display(guildId, castlistId, client) {
+async function createCastlistHubDisplay(guildId, castlistId, client) {
   try {
     // Get castlist using virtual adapter
     const castlist = await castlistManager.getCastlist(guildId, castlistId);
@@ -336,7 +336,7 @@ async function createCastlistV3Display(guildId, castlistId, client) {
     };
 
   } catch (error) {
-    console.error(`❌ ERROR: createCastlistV3Display - ${error.message}`);
+    console.error(`❌ ERROR: createCastlistHubDisplay - ${error.message}`);
     return {
       success: false,
       error: `Error displaying castlist: ${error.message}`
