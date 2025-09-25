@@ -1205,29 +1205,29 @@ async function createSafariMenu(guildId, userId, member) {
 // Using Discord's conservative 20-reaction limit for maximum compatibility
 
 /**
- * Send castlist2 response with dynamic component optimization
- * @param {Object} req - Request object with Discord interaction data
+ * Build castlist2 response data (without sending)
  * @param {Object} guild - Discord guild object
  * @param {Array} tribes - Array of tribe data with members
  * @param {string} castlistName - Name of the castlist
  * @param {Object} navigationState - Current navigation state
  * @param {Object} member - Discord member object for permission checking (optional)
  * @param {string} channelId - Channel ID for permission checking (optional)
+ * @returns {Object} Response data ready to send
  */
-async function sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member = null, channelId = null) {
+async function buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member = null, channelId = null) {
   const { currentTribeIndex, currentTribePage, scenario } = navigationState;
   const currentTribe = tribes[currentTribeIndex];
-  
+
   // Get guild data for processing
   const pronounRoleIds = await getGuildPronouns(guild.id);
   const timezones = await getGuildTimezones(guild.id);
-  
+
   // Calculate page info for current tribe
   let pageInfo;
   if (scenario === "multi-page" && currentTribe.memberCount > 0) {
     const paginationData = calculateTribePages(currentTribe, currentTribe.members, true);
     const currentPageMembers = paginationData.pages[currentTribePage] || [];
-    
+
     pageInfo = {
       currentPage: currentTribePage,
       totalPages: paginationData.totalPages,
@@ -1238,14 +1238,14 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
     // Import the sorting function to handle alumni placements
     const { sortCastlistMembers } = await import('./castlistSorter.js');
     const sortedMembers = sortCastlistMembers([...currentTribe.members], currentTribe);
-    
+
     pageInfo = {
       currentPage: 0,
       totalPages: 1,
       playersOnPage: sortedMembers
     };
   }
-  
+
   // Create tribe section with current page
   let tribeSection;
   if (currentTribe.memberCount === 0) {
@@ -1258,23 +1258,21 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
         accentColor = currentTribe.color;
       }
     }
-    
+
     tribeSection = {
       type: 17, // Container
       accent_color: accentColor,
       components: [
         { type: 10, content: `# ${currentTribe.emoji || ''} ${currentTribe.name} ${currentTribe.emoji || ''}`.trim() },
         { type: 14 }, // Separator
-        { type: 10, content: '_No players yet_' }
+        { type: 10, content: 'No members in this tribe yet!' }
       ]
     };
   } else {
-    // Members are already sorted by the appropriate method (alphabetical or by placement)
-    // No additional sorting needed here
-    
+    // Create full tribe display
     tribeSection = await createTribeSection(
       currentTribe,
-      currentTribe.members, // Full member list for context
+      pageInfo.playersOnPage,
       guild,
       pronounRoleIds,
       timezones,
@@ -1283,10 +1281,10 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
       castlistName
     );
   }
-  
+
   // Create navigation buttons (now includes viral growth buttons)
   const navigationRow = createNavigationButtons(navigationState, castlistName);
-  
+
   // Create complete layout
   const responseData = createCastlistV2Layout(
     [tribeSection],
@@ -1296,22 +1294,39 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
     [], // No separate viral buttons needed
     client
   );
-  
-  console.log(`Sending castlist2 response: Tribe ${currentTribeIndex + 1}/${tribes.length}, Page ${currentTribePage + 1}/${pageInfo.totalPages}, Scenario: ${scenario}`);
-  
+
+  console.log(`Preparing castlist2 response: Tribe ${currentTribeIndex + 1}/${tribes.length}, Page ${currentTribePage + 1}/${pageInfo.totalPages}, Scenario: ${scenario}`);
+
   // Check permissions and apply ephemeral flag if user cannot send messages
   if (member && channelId) {
     const canSendMessages = await canSendMessagesInChannel(member, channelId, client);
     console.log(`Permission check: User ${member.user?.username} can send messages in channel ${channelId}: ${canSendMessages}`);
-    
+
     if (!canSendMessages) {
       // Add ephemeral flag to response if user cannot send messages
       responseData.flags = (responseData.flags || 0) | InteractionResponseFlags.EPHEMERAL;
       console.log(`Applied ephemeral flag - castlist visible only to user ${member.user?.username}`);
     }
   }
-  
-  // Send response
+
+  return responseData;
+}
+
+/**
+ * Send castlist2 response with dynamic component optimization
+ * @param {Object} req - Request object with Discord interaction data
+ * @param {Object} guild - Discord guild object
+ * @param {Array} tribes - Array of tribe data with members
+ * @param {string} castlistName - Name of the castlist
+ * @param {Object} navigationState - Current navigation state
+ * @param {Object} member - Discord member object for permission checking (optional)
+ * @param {string} channelId - Channel ID for permission checking (optional)
+ */
+async function sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member = null, channelId = null) {
+  // Use the build function to avoid duplication
+  const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member, channelId);
+
+  // Send via webhook (used for deferred slash command responses)
   const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
   await DiscordRequest(endpoint, {
     method: 'PATCH',
@@ -4873,10 +4888,17 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const scenario = determineDisplayScenario(tribes);
       const navigationState = createNavigationState(tribes, scenario, 0, 0);
       
-      // Send castlist response using existing function
+      // Send castlist as a NEW message to the channel
       const memberObj = member ? await guild.members.fetch(userId) : null;
-      await sendCastlist2Response(req, guild, tribes, castlistName, navigationState, memberObj, channelId);
-      return;
+
+      // Build the response data using the new helper function
+      const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, memberObj, channelId);
+
+      // Send as new message (not update) - this posts to the channel
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: responseData
+      });
     } else if (custom_id.startsWith('rank_')) {
       // Handle ranking button clicks - USING CAST RANKING MANAGER
       return ButtonHandlerFactory.create({
