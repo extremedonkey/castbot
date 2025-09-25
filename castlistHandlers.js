@@ -309,7 +309,7 @@ async function createCastlistHubDisplay(guildId, castlistId, client) {
     }
 
     // Use existing castlist2 display logic but with our custom data
-    const { buildCastlist2ResponseData } = await import('./castlistV2.js');
+    const { buildCastlist2ResponseData } = await import('./app.js');
 
     const responseData = await buildCastlist2ResponseData(
       guild,
