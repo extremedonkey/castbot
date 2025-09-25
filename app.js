@@ -4820,16 +4820,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             const role = await guild.roles.fetch(roleId);
             if (!role) continue;
             
-            const tribeMembers = [];
-            for (const member of role.members.values()) {
-              const playerInfo = playerData[guildId]?.players?.[member.id] || {};
-              tribeMembers.push({
-                id: member.id,
-                name: member.displayName,
-                ...playerInfo
-              });
-            }
-            
+            // Store actual Discord.js member objects, not plain objects
+            const tribeMembers = Array.from(role.members.values());
+
             allTribes.push({
               ...tribe,
               roleId,
