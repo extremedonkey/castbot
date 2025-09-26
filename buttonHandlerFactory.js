@@ -63,9 +63,9 @@ export const BUTTON_REGISTRY = {
     category: 'analytics'
   },
   'prod_ultrathink_monitor': {
-    label: 'Ultrathink',
+    label: 'Ultramonitor',
     description: 'Real-time production health monitoring dashboard',
-    emoji: '🎯',
+    emoji: '🌈',
     style: 'Primary',
     parent: 'reece_stuff_menu',
     restrictedUser: '391415444084490240',

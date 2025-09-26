@@ -891,9 +891,9 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setEmoji('📈'),
     new ButtonBuilder()
       .setCustomId('prod_ultrathink_monitor')
-      .setLabel('Ultrathink')
+      .setLabel('Ultramonitor')
       .setStyle(ButtonStyle.Primary)
-      .setEmoji('🎯'),
+      .setEmoji('🌈'),
     new ButtonBuilder()
       .setCustomId('prod_analytics_dump')
       .setLabel('Server List')
@@ -923,13 +923,11 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setLabel('Msg Test')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('💬'),
-    // EXPERIMENTAL: Testing multiple Text Display components in Section
-    // DELETE THIS AFTER TESTING - This is temporary for Components V2 research
     new ButtonBuilder()
       .setCustomId('castlist_test')
-      .setLabel('Castlist Test')
-      .setStyle(ButtonStyle.Primary)  // Blue to indicate experimental
-      .setEmoji('🧪')  // Test tube emoji for experimental
+      .setLabel('Compact Castlist')
+      .setStyle(ButtonStyle.Secondary)  // Grey for secondary action
+      .setEmoji('🍒')
   ];
 
   // Danger Zone section buttons
@@ -8628,14 +8626,24 @@ Your server is now ready for Tycoons gameplay!`;
               );
             }
 
-            // Add refresh button
+            // Add divider before buttons
+            containerComponents.push({
+              type: 14 // Separator
+            });
+
+            // Add refresh and back buttons
             const refreshButton = new ButtonBuilder()
               .setCustomId('prod_ultrathink_monitor')
               .setLabel('Refresh')
               .setStyle(ButtonStyle.Primary)
               .setEmoji('🔄');
 
-            const actionRow = new ActionRowBuilder().addComponents(refreshButton);
+            const backButton = new ButtonBuilder()
+              .setCustomId('reece_stuff_menu')
+              .setLabel('← Analytics')
+              .setStyle(ButtonStyle.Secondary);
+
+            const actionRow = new ActionRowBuilder().addComponents(refreshButton, backButton);
             containerComponents.push(actionRow.toJSON());
 
             console.log(`✅ SUCCESS: prod_ultrathink_monitor - health score ${overallHealth}/100`);
