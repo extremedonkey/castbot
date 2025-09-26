@@ -469,5 +469,4 @@ export const getHealthMonitor = (client) => {
 };
 
 export const getMonitoringState = () => monitoringState;
-export { HealthMonitor };
 export default HealthMonitor;
