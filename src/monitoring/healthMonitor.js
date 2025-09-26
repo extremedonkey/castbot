@@ -277,10 +277,15 @@ export class HealthMonitor {
    * Build Discord message content
    */
   buildDiscordContent(metrics, scores, healthStatus, alerts) {
+    // Add user ping if not excellent
+    const healthLine = scores.overall >= 90 ?
+      `**Health Score**: ${scores.overall}/100 ${healthStatus}` :
+      `**Health Score**: ${scores.overall}/100 ${healthStatus} <@391415444084490240>`;
+
     const components = [
       {
         type: 10,
-        content: `# 🎯 Ultrathink Health Monitor\n\n**Health Score**: ${scores.overall}/100 ${healthStatus}`
+        content: `# 🎯 Ultrathink Health Monitor\n\n${healthLine}`
       },
       { type: 14 },
       {
@@ -435,22 +440,59 @@ export class HealthMonitor {
         throw new Error(`Channel ${channelId} not found`);
       }
 
+      // Build full Components V2 container (same as manual check)
+      const containerComponents = [...formatted.content];
+
+      // Add scheduled monitoring status
+      if (monitoringState.config.nextRun) {
+        containerComponents.push(
+          { type: 14 },
+          {
+            type: 10,
+            content: `## ⏰ Scheduled Report\n**Next Check**: <t:${Math.floor(monitoringState.config.nextRun.getTime() / 1000)}:R>`
+          }
+        );
+      }
+
+      // Add divider before buttons
+      containerComponents.push({ type: 14 });
+
+      // Add navigation buttons (no back button for scheduled posts)
+      const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
+
+      const refreshButton = new ButtonBuilder()
+        .setCustomId('prod_ultrathink_monitor')
+        .setLabel('View Live')
+        .setStyle(2)  // Secondary
+        .setEmoji('🌈');
+
+      const scheduleButton = new ButtonBuilder()
+        .setCustomId('health_monitor_schedule')
+        .setLabel('Adjust Schedule')
+        .setStyle(2)  // Secondary
+        .setEmoji('📅');
+
+      const actionRow = new ActionRowBuilder().addComponents(refreshButton, scheduleButton);
+      containerComponents.push(actionRow.toJSON());
+
+      // Determine if we need to ping (not EXCELLENT)
+      let content = null;
+      if (!formatted.healthStatus.includes('EXCELLENT')) {
+        content = `<@391415444084490240> Health alert! Status: ${formatted.healthStatus}`;
+      }
+
+      // Send the full Components V2 message
       await channel.send({
-        embeds: [{
-          title: '🎯 Scheduled Health Report',
-          color: formatted.healthColor,
-          description: formatted.healthStatus,
-          fields: [
-            {
-              name: 'Next Check',
-              value: `<t:${Math.floor(monitoringState.config.nextRun.getTime() / 1000)}:R>`,
-              inline: true
-            }
-          ],
-          timestamp: new Date().toISOString()
-        }],
-        content: formatted.alerts.length > 0 ? formatted.alerts.join('\n') : null
+        content: content,
+        flags: (1 << 15), // IS_COMPONENTS_V2
+        components: [{
+          type: 17, // Container
+          accent_color: formatted.healthColor,
+          components: containerComponents
+        }]
       });
+
+      console.log('[HealthMonitor] ✅ Scheduled report posted to Discord');
     } catch (error) {
       console.error('[HealthMonitor] Failed to post to Discord:', error.message);
       throw error; // Re-throw to trigger error handling

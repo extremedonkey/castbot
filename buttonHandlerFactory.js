@@ -2380,7 +2380,10 @@ export async function sendDeferredResponse(res, ephemeral = true) {
 export async function updateDeferredResponse(token, data) {
   const endpoint = `webhooks/${process.env.APP_ID}/${token}/messages/@original`;
 
-  console.log(`🔍 updateDeferredResponse: Sending data to Discord:`, JSON.stringify(data, null, 2));
+  // Simplified logging - just show key info
+  const isComponentsV2 = data.components?.[0]?.type === 17;
+  const contentPreview = data.content ? `"${data.content.substring(0, 50)}..."` : 'no content';
+  console.log(`🔍 updateDeferredResponse: ${isComponentsV2 ? 'Components V2' : 'Standard'} response, ${contentPreview}`);
 
   // Transform Components V2 container structure for webhook PATCH
   const webhookData = {
@@ -2395,7 +2398,7 @@ export async function updateDeferredResponse(token, data) {
     delete webhookData.attachments;
     delete webhookData.allowed_mentions;
     delete webhookData.tts;
-    console.log(`🧹 updateDeferredResponse: Cleaned legacy fields for Components V2`);
+    // Removed verbose log - operation is implied
   }
 
   // CRITICAL: Preserve IS_COMPONENTS_V2 flag for Components V2 messages
@@ -2412,14 +2415,13 @@ export async function updateDeferredResponse(token, data) {
 
   // If this is a Components V2 response, preserve Container structure
   if (data.components && data.components.length > 0 && data.components[0].type === 17) {
-    console.log(`🔧 updateDeferredResponse: Preserving Components V2 Container structure`);
-
     // CRITICAL: Keep Components V2 flag and Container structure
     // Discord error: MESSAGE_CANNOT_REMOVE_COMPONENTS_V2_FLAG
     // Must preserve both the flag and the Container format for webhook PATCH
     webhookData.flags = webhookData.flags | (1 << 15); // Ensure IS_COMPONENTS_V2 flag is set
 
-    console.log(`🔧 updateDeferredResponse: Preserved Components V2 format:`, JSON.stringify(webhookData, null, 2));
+    // Simplified log - just confirm V2 preservation
+    console.log(`✅ updateDeferredResponse: Components V2 preserved`);
   }
 
   return DiscordRequest(endpoint, {
