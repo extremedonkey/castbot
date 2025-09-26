@@ -206,17 +206,41 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 
 ### Mandatory Patterns
 
-**Button Handler Factory** - ALL buttons MUST use this pattern:
+**🚨 BUTTON CREATION QUICK CHECK:**
+1. **ALWAYS search for similar buttons first**: `grep -A20 "similar_feature" app.js`
+2. **If you see `[🪨 LEGACY]` in logs after testing** → You created legacy, fix it immediately
+3. **Use ButtonHandlerFactory pattern** (see below)
+
+**Button Handler Factory** - ALL new buttons MUST use this pattern:
 ```javascript
 } else if (custom_id === 'my_button') {
   return ButtonHandlerFactory.create({
     id: 'my_button',
-    handler: async (context) => { /* your code */ }
+    ephemeral: true,  // Optional: make response private
+    deferred: true,   // Required if operation takes >3 seconds
+    handler: async (context) => {
+      const { guildId, userId, member, client } = context;
+      // Your logic here (10-20 lines max)
+      return { content: 'Success!' };
+    }
   })(req, res, client);
 }
 ```
 
-**🚨 CRITICAL: Button Registration** - ALL buttons MUST be in BUTTON_REGISTRY:
+**❌ NEVER copy this legacy pattern (even though 164 still exist):**
+```javascript
+// DON'T COPY THIS - IT'S LEGACY
+} else if (custom_id === 'bad_example') {
+  try {
+    return res.send({
+      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+      data: { content: '...' }
+    });
+  } catch (error) { }
+}
+```
+
+**🚨 Button Registration** - Add to BUTTON_REGISTRY or see `[⚱️ UNREGISTERED]` warnings:
 ```javascript
 // In buttonHandlerFactory.js BUTTON_REGISTRY:
 'my_button': {
@@ -227,7 +251,15 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
   category: 'feature_name'
 }
 ```
-Missing registration causes "This interaction failed" errors!
+
+**📊 Self-Check After Creating Button:**
+```bash
+# Test your button and check logs:
+tail -f /tmp/castbot-dev.log | grep "my_button"
+
+# If you see [🪨 LEGACY] → Convert to ButtonHandlerFactory
+# If you see [⚱️ UNREGISTERED] → Add to BUTTON_REGISTRY
+```
 
 **Menu System Architecture** - Track and migrate menus systematically:
 ```javascript
