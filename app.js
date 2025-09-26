@@ -890,6 +890,11 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📈'),
     new ButtonBuilder()
+      .setCustomId('prod_ultrathink_monitor')
+      .setLabel('Ultrathink')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('🎯'),
+    new ButtonBuilder()
       .setCustomId('prod_analytics_dump')
       .setLabel('Server List')
       .setStyle(ButtonStyle.Secondary)
@@ -8396,6 +8401,260 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Return the response for deferred update
           return discordResponse;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'prod_ultrathink_monitor') {
+      // Ultrathink production health monitor (Components V2)
+      return ButtonHandlerFactory.create({
+        id: 'prod_ultrathink_monitor',
+        deferred: true,
+        updateMessage: false,
+        ephemeral: true,
+        handler: async (context) => {
+          console.log(`🎯 START: prod_ultrathink_monitor - user ${context.userId}`);
+
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            console.log(`❌ ACCESS DENIED: prod_ultrathink_monitor - user ${context.userId} not authorized`);
+            return {
+              content: '❌ Access denied. This feature is restricted.'
+            };
+          }
+
+          console.log('🎯 Running Ultrathink production health monitor...');
+
+          // Import monitoring utilities
+          const { spawn } = await import('child_process');
+          const fs = await import('fs');
+          const path = await import('path');
+          const os = await import('os');
+
+          // Configuration (matches prod-health-monitor.js)
+          const REMOTE_HOST = process.env.LIGHTSAIL_HOST || '13.238.148.170';
+          const REMOTE_USER = process.env.LIGHTSAIL_USER || 'bitnami';
+          const REMOTE_PATH = process.env.LIGHTSAIL_PATH || '/opt/bitnami/projects/castbot';
+          const SSH_KEY_PATH = path.join(os.homedir(), '.ssh', 'castbot-key.pem');
+          const SSH_TARGET = `${REMOTE_USER}@${REMOTE_HOST}`;
+
+          // Execute SSH command to gather metrics
+          const executeSSH = (command) => {
+            return new Promise((resolve, reject) => {
+              const sshProcess = spawn('ssh', [
+                '-i', SSH_KEY_PATH,
+                SSH_TARGET,
+                command
+              ], {
+                stdio: 'pipe'
+              });
+
+              let stdout = '';
+              let stderr = '';
+
+              sshProcess.stdout.on('data', (data) => {
+                stdout += data.toString();
+              });
+
+              sshProcess.stderr.on('data', (data) => {
+                stderr += data.toString();
+              });
+
+              sshProcess.on('close', (code) => {
+                if (code === 0) {
+                  resolve(stdout.trim());
+                } else {
+                  reject(new Error(`SSH command failed: ${stderr || 'Unknown error'}`));
+                }
+              });
+            });
+          };
+
+          try {
+            // Gather all metrics in parallel
+            const [pm2Output, memOutput, diskOutput, uptimeOutput] = await Promise.all([
+              executeSSH('pm2 jlist 2>/dev/null'),
+              executeSSH('free -m'),
+              executeSSH('df -h /'),
+              executeSSH('uptime')
+            ]);
+
+            // Parse PM2 data
+            let botMetrics = { memory: 0, cpu: 0, uptime: '0s', restarts: 0, status: 'offline' };
+            try {
+              const pm2Data = JSON.parse(pm2Output);
+              const castbot = pm2Data.find(p => p.name === 'castbot-pm');
+              if (castbot) {
+                botMetrics = {
+                  memory: Math.round(castbot.monit.memory / (1024 * 1024)),
+                  cpu: castbot.monit.cpu,
+                  uptime: castbot.pm2_env.created_at ?
+                    Math.floor((Date.now() - castbot.pm2_env.created_at) / 1000) : 0,
+                  restarts: castbot.pm2_env.restart_time,
+                  status: castbot.pm2_env.status
+                };
+
+                // Format uptime
+                const uptimeSeconds = botMetrics.uptime;
+                if (uptimeSeconds < 60) {
+                  botMetrics.uptime = `${uptimeSeconds}s`;
+                } else if (uptimeSeconds < 3600) {
+                  botMetrics.uptime = `${Math.floor(uptimeSeconds / 60)}m`;
+                } else if (uptimeSeconds < 86400) {
+                  botMetrics.uptime = `${Math.floor(uptimeSeconds / 3600)}h`;
+                } else {
+                  botMetrics.uptime = `${Math.floor(uptimeSeconds / 86400)}d`;
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing PM2 data:', e);
+            }
+
+            // Parse system memory
+            const memLines = memOutput.split('\n');
+            const memData = memLines[1].split(/\s+/);
+            const totalMemMB = parseInt(memData[1]);
+            const usedMemMB = parseInt(memData[2]);
+            const memPercent = Math.round((usedMemMB / totalMemMB) * 100);
+
+            // Parse disk usage
+            const diskLines = diskOutput.split('\n');
+            const diskData = diskLines[1].split(/\s+/);
+            const diskUsed = diskData[2];
+            const diskTotal = diskData[1];
+            const diskPercent = parseInt(diskData[4]);
+
+            // Calculate health scores
+            const calculateMemoryHealth = (memory) => {
+              if (memory < 150) return 100;
+              if (memory < 200) return 75;
+              if (memory < 250) return 25;
+              return 0;
+            };
+
+            const calculatePerformanceHealth = (cpu) => {
+              if (cpu < 5) return 100;
+              if (cpu < 20) return 75;
+              if (cpu < 50) return 50;
+              return 0;
+            };
+
+            const calculateStabilityHealth = (restarts) => {
+              if (restarts < 15) return 100;
+              if (restarts < 20) return 50;
+              if (restarts < 25) return 25;
+              return 0;
+            };
+
+            const memoryHealth = calculateMemoryHealth(botMetrics.memory);
+            const performanceHealth = calculatePerformanceHealth(botMetrics.cpu);
+            const stabilityHealth = calculateStabilityHealth(botMetrics.restarts);
+
+            // Overall health score (weighted average)
+            const overallHealth = Math.round(
+              (memoryHealth * 0.4) +
+              (performanceHealth * 0.3) +
+              (stabilityHealth * 0.3)
+            );
+
+            // Determine health status and color
+            let healthStatus, healthColor;
+            if (overallHealth >= 90) {
+              healthStatus = '🟢 EXCELLENT';
+              healthColor = 0x2ecc71;
+            } else if (overallHealth >= 75) {
+              healthStatus = '🟡 GOOD';
+              healthColor = 0xf1c40f;
+            } else if (overallHealth >= 50) {
+              healthStatus = '🟠 WARNING';
+              healthColor = 0xe67e22;
+            } else {
+              healthStatus = '🔴 CRITICAL';
+              healthColor = 0xe74c3c;
+            }
+
+            // Check for alerts
+            const alerts = [];
+            if (botMetrics.memory > 250) {
+              alerts.push('🔴 **CRITICAL**: Bot memory usage exceeds 250MB threshold');
+            }
+            if (botMetrics.status !== 'online') {
+              alerts.push('🔴 **CRITICAL**: Bot is offline');
+            }
+            if (memPercent > 85) {
+              alerts.push('🟠 **WARNING**: System memory usage above 85%');
+            }
+            if (botMetrics.restarts > 20) {
+              alerts.push('🟠 **WARNING**: High restart count indicates instability');
+            }
+
+            // Format as Components V2 Discord message
+            const containerComponents = [
+              {
+                type: 10, // Text Display
+                content: `# 🎯 Ultrathink Production Health Monitor\n\n**Overall Health Score**: ${overallHealth}/100 ${healthStatus}`
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 10, // Text Display
+                content: `## 🤖 Bot Metrics\n\`\`\`\nMemory:   ${botMetrics.memory}MB (Health: ${memoryHealth}/100)\nCPU:      ${botMetrics.cpu}%\nUptime:   ${botMetrics.uptime}\nRestarts: ${botMetrics.restarts}\nStatus:   ${botMetrics.status === 'online' ? '🟢 Online' : '🔴 Offline'}\n\`\`\``
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 10, // Text Display
+                content: `## 🖥️ System Resources\n\`\`\`\nMemory: ${memPercent}% (${usedMemMB}Mi/${totalMemMB}Mi)\nDisk:   ${diskPercent}% (${diskUsed}/${diskTotal})\n${uptimeOutput}\n\`\`\``
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 10, // Text Display
+                content: `## 📊 Health Breakdown\n\`\`\`\nMemory Health:      ${memoryHealth}/100 ${memoryHealth >= 75 ? '✅' : '⚠️'}\nPerformance:        ${performanceHealth}/100 ${performanceHealth >= 75 ? '✅' : '⚠️'}\nStability:          ${stabilityHealth}/100 ${stabilityHealth >= 75 ? '✅' : '⚠️'}\n\`\`\``
+              }
+            ];
+
+            // Add alerts section if any exist
+            if (alerts.length > 0) {
+              containerComponents.push(
+                {
+                  type: 14 // Separator
+                },
+                {
+                  type: 10, // Text Display
+                  content: `## ⚠️ Alerts & Recommendations\n\n${alerts.join('\n')}`
+                }
+              );
+            }
+
+            // Add refresh button
+            const refreshButton = new ButtonBuilder()
+              .setCustomId('prod_ultrathink_monitor')
+              .setLabel('Refresh')
+              .setStyle(ButtonStyle.Primary)
+              .setEmoji('🔄');
+
+            const actionRow = new ActionRowBuilder().addComponents(refreshButton);
+            containerComponents.push(actionRow.toJSON());
+
+            console.log(`✅ SUCCESS: prod_ultrathink_monitor - health score ${overallHealth}/100`);
+
+            return {
+              flags: (1 << 15), // IS_COMPONENTS_V2
+              components: [{
+                type: 17, // Container
+                accent_color: healthColor,
+                components: containerComponents
+              }]
+            };
+
+          } catch (error) {
+            console.error('❌ Error in prod_ultrathink_monitor:', error);
+            return {
+              content: `❌ **Error running health monitor:**\n\`\`\`\n${error.message}\n\`\`\`\nPlease check SSH configuration and server connectivity.`
+            };
+          }
         }
       })(req, res, client);
     } else if (custom_id.startsWith('server_stats_page_')) {

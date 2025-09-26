@@ -62,7 +62,16 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
-  
+  'prod_ultrathink_monitor': {
+    label: 'Ultrathink',
+    description: 'Real-time production health monitoring dashboard',
+    emoji: '🎯',
+    style: 'Primary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
+
   // Analytics Row 2
   'prod_toggle_live_analytics': {
     label: 'Toggle Channel Logs',
