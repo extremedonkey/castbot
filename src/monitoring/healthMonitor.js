@@ -7,6 +7,7 @@
 import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { ButtonBuilder, ActionRowBuilder } from 'discord.js';
 import { DiscordRequest } from '../../utils.js';
 
 const execAsync = promisify(exec);
@@ -346,6 +347,7 @@ export class HealthMonitor {
       };
 
       // Create interval with error isolation
+      const intervalMs = hours * 3600000;
       monitoringState.interval = setInterval(async () => {
         try {
           await this.runHealthCheck();
@@ -353,16 +355,18 @@ export class HealthMonitor {
           // This catch ensures the interval continues even if health check fails
           console.error('[HealthMonitor] Interval error (isolated):', error.message);
         }
-      }, hours * 3600000);
+      }, intervalMs);
 
-      // Run initial check after 5 seconds
-      setTimeout(async () => {
-        try {
-          await this.runHealthCheck();
-        } catch (error) {
-          console.error('[HealthMonitor] Initial check error:', error.message);
-        }
-      }, 5000);
+      // Run initial check after 5 seconds (only if interval is reasonable)
+      if (intervalMs >= 60000) { // Only run initial check if interval is >= 1 minute
+        setTimeout(async () => {
+          try {
+            await this.runHealthCheck();
+          } catch (error) {
+            console.error('[HealthMonitor] Initial check error:', error.message);
+          }
+        }, 5000);
+      }
 
       console.log(`[HealthMonitor] ✅ Started monitoring every ${hours} hours to channel ${channelId}`);
       return { success: true, message: `Monitoring every ${hours} hours` };
@@ -458,8 +462,6 @@ export class HealthMonitor {
       containerComponents.push({ type: 14 });
 
       // Add navigation buttons (no back button for scheduled posts)
-      const { ButtonBuilder, ActionRowBuilder } = await import('discord.js');
-
       const refreshButton = new ButtonBuilder()
         .setCustomId('prod_ultrathink_monitor')
         .setLabel('View Live')
