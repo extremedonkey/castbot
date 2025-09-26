@@ -892,7 +892,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
     new ButtonBuilder()
       .setCustomId('prod_ultrathink_monitor')
       .setLabel('Ultramonitor')
-      .setStyle(ButtonStyle.Primary)
+      .setStyle(ButtonStyle.Secondary)
       .setEmoji('🌈'),
     new ButtonBuilder()
       .setCustomId('prod_analytics_dump')
@@ -8631,19 +8631,19 @@ Your server is now ready for Tycoons gameplay!`;
               type: 14 // Separator
             });
 
-            // Add refresh and back buttons
-            const refreshButton = new ButtonBuilder()
-              .setCustomId('prod_ultrathink_monitor')
-              .setLabel('Refresh')
-              .setStyle(ButtonStyle.Primary)
-              .setEmoji('🔄');
-
+            // Add back and refresh buttons (back on left, refresh on right)
             const backButton = new ButtonBuilder()
               .setCustomId('reece_stuff_menu')
               .setLabel('← Analytics')
               .setStyle(ButtonStyle.Secondary);
 
-            const actionRow = new ActionRowBuilder().addComponents(refreshButton, backButton);
+            const refreshButton = new ButtonBuilder()
+              .setCustomId('prod_ultrathink_monitor')
+              .setLabel('Refresh')
+              .setStyle(ButtonStyle.Secondary)
+              .setEmoji('🔄');
+
+            const actionRow = new ActionRowBuilder().addComponents(backButton, refreshButton);
             containerComponents.push(actionRow.toJSON());
 
             console.log(`✅ SUCCESS: prod_ultrathink_monitor - health score ${overallHealth}/100`);
