@@ -71,6 +71,15 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'analytics'
   },
+  'health_monitor_schedule': {
+    label: 'Schedule',
+    description: 'Schedule automated health monitoring',
+    emoji: '📅',
+    style: 'Secondary',
+    parent: 'prod_ultrathink_monitor',
+    restrictedUser: '391415444084490240',
+    category: 'analytics'
+  },
 
   // Analytics Row 2
   'prod_toggle_live_analytics': {
