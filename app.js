@@ -66,6 +66,7 @@ import {
 } from './applicationManager.js';
 import { logInteraction, setDiscordClient } from './src/analytics/analyticsLogger.js';
 import { logger } from './logger.js';
+import { getPM2ErrorLogger } from './src/monitoring/pm2ErrorLogger.js';
 import {
   calculateComponentsForTribe,
   determineDisplayScenario,
@@ -434,6 +435,9 @@ import {
   PERMISSIONS
 } from './utils/permissionUtils.js';
 import fs from 'fs';
+import path from 'path';
+import { execSync } from 'child_process';
+import os from 'os';
 import { Readable } from 'stream';
 import { pipeline } from 'stream/promises';
 
@@ -1591,6 +1595,10 @@ client.once('ready', async () => {
   }
   
   console.log(`📥 Total reaction mappings loaded: ${totalMappingsLoaded}`);
+
+  // Start PM2 Error Log Monitoring (Dev & Prod)
+  const pm2Logger = getPM2ErrorLogger(client);
+  pm2Logger.start();
 });
 
 client.on('guildCreate', async (guild) => {
