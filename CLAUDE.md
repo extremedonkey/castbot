@@ -113,7 +113,15 @@ npm run deploy-remote-wsl-dry  # Preview changes (SAFE - no permission needed)
 
 ### Production Monitoring
 
-**🎯 Ultrathink Health Monitoring** (see [ProductionMonitoring.md](docs/infrastructure/ProductionMonitoring.md)):
+**🎯 Ultrathink Health Monitoring** - Two complementary interfaces (see [ProductionMonitoring.md](docs/infrastructure/ProductionMonitoring.md)):
+
+**📱 Discord Interface:**
+- **Manual**: `/menu` → Analytics → Ultramonitor button
+- **Schedule**: Click "Schedule" → Set interval (1min to 24hr)
+- **Alerts**: Only pings for CRITICAL health (<50/100)
+- **Architecture**: Uses Safari webhook pattern + Components V2
+
+**🖥️ CLI Interface:**
 ```bash
 npm run monitor-prod           # Full health dashboard with scoring
 npm run monitor-prod-quick     # Essential metrics (fastest)
@@ -171,6 +179,7 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 
 **Infrastructure & Deployment:**
 - **🌍 INFRASTRUCTURE ARCHITECTURE** → [docs/infrastructure/InfrastructureArchitecture.md](docs/infrastructure/InfrastructureArchitecture.md)
+- **🎯 PRODUCTION MONITORING** → [docs/infrastructure/ProductionMonitoring.md](docs/infrastructure/ProductionMonitoring.md)
 - **📊 ANALYTICS** → [docs/infrastructure/Analytics.md](docs/infrastructure/Analytics.md)
 
 **Enablers & Frameworks:**

@@ -6,7 +6,25 @@ CastBot includes comprehensive production monitoring tools that provide real-tim
 
 ## 🎯 Ultrathink Production Health Monitor
 
-### Core Features
+CastBot provides **two complementary monitoring interfaces**:
+
+1. **📱 Discord Health Monitor** - Interactive monitoring within Discord channels
+2. **🖥️ CLI Health Monitor** - Command-line tools for detailed analysis
+
+### Discord Health Monitor Features
+
+- **🔘 Interactive buttons** - Manual health checks via Discord UI
+- **⏰ Scheduled monitoring** - Automated health reports at configurable intervals
+- **🚨 Smart pings** - Alerts only for CRITICAL status (<50 health score)
+- **🎨 Environment-aware** - Shows `Dev` or `Prod` with appropriate bot emoji
+- **📊 Components V2 UI** - Rich formatted health displays
+
+#### Quick Access
+- **Manual Check**: Click "Ultramonitor" button in `/menu` → Analytics
+- **Schedule**: Click "Schedule" button to set automated intervals
+- **Configure**: Modal allows 1-minute to 24-hour intervals
+
+### CLI Health Monitor Features
 
 - **Real-time health scoring** (0-100 scale with color-coded status)
 - **Component health breakdown** (Memory, Performance, Stability)
@@ -33,6 +51,61 @@ npm run monitor-prod-alerts
 npm run monitor-prod-cache
 ```
 
+## 🏗️ Discord Health Monitor Technical Architecture
+
+### Implementation Pattern
+
+The Discord Health Monitor uses **Safari's webhook pattern** for reliable scheduled posting:
+
+```javascript
+// ✅ CORRECT: Webhook pattern (works in scheduled context)
+const webhook = await channel.createWebhook({name: 'Health Monitor'});
+await fetch(webhook.url, {
+  method: 'POST',
+  headers: {'Content-Type': 'application/json'},
+  body: JSON.stringify({
+    flags: (1 << 15), // IS_COMPONENTS_V2
+    components: [/* Plain Components V2 objects */]
+  })
+});
+
+// ❌ WRONG: Discord.js builders (fail in scheduled context)
+const actionRow = new ActionRowBuilder().addComponents(button);
+await channel.send({components: [actionRow]});
+```
+
+### Key Technical Decisions
+
+1. **Webhook over channel.send()** - Required for scheduled execution (setInterval context)
+2. **Plain Components V2 objects** - No Discord.js builders (`ActionRowBuilder`, `ButtonBuilder`)
+3. **No content field with IS_COMPONENTS_V2** - Discord webhooks reject this combination
+4. **Singleton pattern** - Prevents multiple monitoring tasks
+5. **Circuit breaker** - Auto-disables after 5 consecutive errors
+
+### File Architecture
+
+```
+/src/monitoring/
+├── healthMonitor.js          # Core monitoring class
+└── /scripts/                 # CLI monitoring tools
+    ├── monitor-prod.js
+    ├── monitor-prod-quick.js
+    └── monitor-prod-memory.js
+```
+
+### Integration Points
+
+- **ButtonHandlerFactory**: `prod_ultrathink_monitor` handler
+- **Modal System**: `health_monitor_schedule_modal` for configuration
+- **PM2 Integration**: Production metrics via `pm2 jlist`
+- **Environment Detection**: `process.env.PRODUCTION === 'TRUE'`
+
+### Related Documentation
+
+- **RaP #0998**: [Scheduling Architecture Analysis](../RaP/0998_20250927_Scheduling_Architecture_Analysis.md)
+- **Components V2**: [Components V2 Standards](../standards/ComponentsV2.md)
+- **Button Patterns**: [ButtonHandlerFactory](../enablers/ButtonHandlerFactory.md)
+
 ## 📊 Health Scoring System
 
 ### Overall Health Score (0-100)
@@ -44,12 +117,12 @@ The overall health score is a weighted average:
 
 ### Score Interpretation
 
-| Score Range | Status | Color | Action Required |
-|-------------|---------|-------|-----------------|
-| 90-100 | 🟢 EXCELLENT | Green | None - optimal performance |
-| 75-89 | 🟡 GOOD | Yellow | Monitor trends |
-| 50-74 | 🟠 WARNING | Orange | Investigation recommended |
-| 0-49 | 🔴 CRITICAL | Red | Immediate intervention |
+| Score Range | Status | Color | Discord Ping | Action Required |
+|-------------|---------|-------|--------------|-----------------|
+| 90-100 | 🟢 EXCELLENT | Green | No | None - optimal performance |
+| 75-89 | 🟡 GOOD | Yellow | No | Monitor trends |
+| 50-74 | 🟠 WARNING | Orange | No | Investigation recommended |
+| 0-49 | 🔴 CRITICAL | Red | **Yes** | Immediate intervention |
 
 ### Component Health Metrics
 
