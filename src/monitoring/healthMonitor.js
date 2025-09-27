@@ -332,7 +332,7 @@ export class HealthMonitor {
       }
 
       if (hours < 0.0167 || hours > 168) { // Min 1 minute, Max 1 week
-        return { success: false, message: 'Interval must be between 1 minute (0.0167) and 168 hours (1 week)' };
+        return { success: false, message: 'Interval must be between 1 minute and 168 hours (1 week)' };
       }
 
       // Update configuration

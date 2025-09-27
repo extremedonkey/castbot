@@ -8519,14 +8519,14 @@ Your server is now ready for Tycoons gameplay!`;
             .setCustomId(`health_monitor_schedule_modal`)
             .setTitle('Schedule Health Monitoring');
 
-          // Input for hours interval (0 to disable)
-          const hoursInput = new TextInputBuilder()
-            .setCustomId('monitor_hours')
-            .setLabel('Monitor every X hours (0 to disable):')
+          // Input for minutes interval (0 to disable)
+          const minutesInput = new TextInputBuilder()
+            .setCustomId('monitor_minutes')
+            .setLabel('Monitor every X minutes (0 to disable):')
             .setStyle(TextInputStyle.Short)
-            .setPlaceholder('6')
-            .setValue(status.config.hours?.toString() || '0')
-            .setMaxLength(3)
+            .setPlaceholder('30')
+            .setValue(status.config.hours ? Math.round(status.config.hours * 60).toString() : '0')
+            .setMaxLength(4)
             .setRequired(true);
 
           // Show current status
@@ -8540,7 +8540,7 @@ Your server is now ready for Tycoons gameplay!`;
             .setRequired(false);
 
           modal.addComponents(
-            new ActionRowBuilder().addComponents(hoursInput),
+            new ActionRowBuilder().addComponents(minutesInput),
             new ActionRowBuilder().addComponents(statusInput)
           );
 
@@ -34712,20 +34712,21 @@ Are you sure you want to continue?`;
 
         console.log('[🌈 Ultramonitor] Processing schedule modal submission');
 
-        // Extract hours value
-        const hoursValue = data.components[0]?.components[0]?.value?.trim();
-        const hours = parseFloat(hoursValue) || 0;
+        // Extract minutes value and convert to hours
+        const minutesValue = data.components[0]?.components[0]?.value?.trim();
+        const minutes = parseFloat(minutesValue) || 0;
+        const hours = minutes / 60; // Convert to hours
 
         // Import and get singleton health monitor
         const { getHealthMonitor } = await import('./src/monitoring/healthMonitor.js');
         const monitor = getHealthMonitor(client);
 
         // Validate input (allow 1 minute minimum for testing)
-        if (hours < 0 || hours > 168) {
+        if (minutes < 0 || minutes > 10080) { // 10080 minutes = 1 week
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Invalid hours. Please enter 0 to disable, or 0.0167 (1 min) to 168 hours (1 week).',
+              content: '❌ Invalid minutes. Please enter 0 to disable, or 1-10080 minutes (1 week max).',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
@@ -34735,13 +34736,16 @@ Are you sure you want to continue?`;
         const result = monitor.start(hours, channelId, guildId);
 
         let responseMessage;
-        if (hours === 0) {
+        if (minutes === 0) {
           responseMessage = '⏹️ **Health monitoring disabled**';
         } else {
-          responseMessage = `✅ **Health monitoring scheduled**\n\n**Interval**: Every ${hours} hour${hours === 1 ? '' : 's'}\n**Channel**: <#${channelId}>\n**First check**: In 5 seconds\n\n_Note: Schedule clears on bot restart_`;
+          const displayTime = minutes >= 60 ?
+            `${Math.round(minutes/60)} hour${Math.round(minutes/60) === 1 ? '' : 's'}` :
+            `${minutes} minute${minutes === 1 ? '' : 's'}`;
+          responseMessage = `✅ **Health monitoring scheduled**\n\n**Interval**: Every ${displayTime}\n**Channel**: <#${channelId}>\n**First check**: In 5 seconds\n\n_Note: Schedule clears on bot restart_`;
         }
 
-        console.log(`[🌈 Ultramonitor] Schedule updated - ${hours === 0 ? 'disabled' : `every ${hours} hours`}`);
+        console.log(`[🌈 Ultramonitor] Schedule updated - ${minutes === 0 ? 'disabled' : `every ${minutes} minutes`}`);
 
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
