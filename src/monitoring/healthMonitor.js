@@ -280,8 +280,8 @@ export class HealthMonitor {
    * Build Discord message content
    */
   buildDiscordContent(metrics, scores, healthStatus, alerts) {
-    // Add user ping if WARNING or CRITICAL (score < 75)
-    const healthLine = scores.overall >= 75 ?
+    // Add user ping if CRITICAL only (score < 50)
+    const healthLine = scores.overall >= 50 ?
       `**Health Score**: ${scores.overall}/100 ${healthStatus}` :
       `**Health Score**: ${scores.overall}/100 ${healthStatus} <@391415444084490240>`;
 
