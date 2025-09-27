@@ -222,6 +222,9 @@ export class HealthMonitor {
         (scores.performance * 0.3) +
         (scores.stability * 0.3)
       );
+
+      // TEMPORARY TEST: Force WARNING status to test ping functionality
+      scores.overall = 60;
     } catch (error) {
       console.error('[HealthMonitor] Score calculation error:', error.message);
     }
@@ -480,10 +483,12 @@ export class HealthMonitor {
       };
       containerComponents.push(actionRow);
 
-      // Determine if we need to ping (not EXCELLENT)
-      let content = null;
+      // Add ping as Text Display if not EXCELLENT (embed in Components V2 structure)
       if (!formatted.healthStatus.includes('EXCELLENT')) {
-        content = `<@391415444084490240> Health alert! Status: ${formatted.healthStatus}`;
+        containerComponents.unshift({
+          type: 10, // Text Display
+          content: `<@391415444084490240> Health alert! Status: ${formatted.healthStatus}`
+        });
       }
 
       // Build message payload
@@ -494,11 +499,6 @@ export class HealthMonitor {
           accent_color: formatted.healthColor,
           components: containerComponents
         }]
-      };
-
-      // Add content for pings
-      if (content) {
-        messagePayload.content = content;
       }
 
       // Use Safari's webhook pattern for reliable Components V2 posting
