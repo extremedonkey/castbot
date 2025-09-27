@@ -34734,6 +34734,7 @@ Are you sure you want to continue?`;
 
         // Start or stop monitoring
         const result = monitor.start(hours, channelId, guildId);
+        console.log(`[🌈 Ultramonitor] Monitor start result:`, result);
 
         let responseMessage;
         if (minutes === 0) {
