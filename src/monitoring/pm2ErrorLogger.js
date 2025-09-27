@@ -19,13 +19,14 @@ const PM2_LOG_PATHS = {
   dev: {
     out: './logs/pm2-out.log',
     error: './logs/pm2-error.log',
-    processName: 'castbot-pm-dev'
+    processName: 'castbot-pm-dev',
+    local: true  // Always read local files in dev
   },
   prod: {
     out: '/home/bitnami/.pm2/logs/castbot-pm-out.log',
     error: '/home/bitnami/.pm2/logs/castbot-pm-error.log',
     processName: 'castbot-pm',
-    remote: true  // Requires SSH
+    local: false  // Default to remote, will be overridden if running on prod server
   }
 };
 
@@ -45,6 +46,24 @@ export class PM2ErrorLogger {
   constructor(client) {
     this.client = client;
     this.channelId = PM2_ERROR_CHANNEL_ID;
+  }
+
+  /**
+   * Detect if we're running ON the production server
+   * Check if we're the bitnami user on the Lightsail instance
+   */
+  isRunningOnProdServer() {
+    try {
+      // Check if we're the bitnami user
+      const username = os.userInfo().username;
+
+      // Check if the production log directory exists (unique to prod server)
+      const prodLogDirExists = fs.existsSync('/home/bitnami/.pm2/logs');
+
+      return username === 'bitnami' && prodLogDirExists;
+    } catch (error) {
+      return false;
+    }
   }
 
   /**
@@ -234,12 +253,18 @@ export class PM2ErrorLogger {
       const config = PM2_LOG_PATHS[env];
       let logs = [];
 
-      if (config.remote) {
-        // Production: Read PM2 logs via SSH
-        logs = await this.readLogsRemote(config, monitoringState.positions[env]);
-      } else {
-        // Development: Read local PM2 logs
+      // Determine if we should read local or remote
+      // If running ON prod server, always read local files
+      // If running in dev, always read local files
+      // If PRODUCTION=TRUE but not on prod server, read remote via SSH
+      const shouldReadLocal = env === 'dev' || this.isRunningOnProdServer();
+
+      if (shouldReadLocal) {
+        // Read local PM2 logs (dev OR running on prod server)
         logs = await this.readLogsLocal(config, monitoringState.positions[env]);
+      } else {
+        // Read remote PM2 logs via SSH (monitoring prod from dev machine)
+        logs = await this.readLogsRemote(config, monitoringState.positions[env]);
       }
 
       if (logs.length > 0) {
