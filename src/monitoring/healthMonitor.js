@@ -7,8 +7,12 @@
 import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { getBotEmoji } from '../botEmojis.js';
 
 const execAsync = promisify(exec);
+
+// Detect environment for title
+const isProduction = process.env.PRODUCTION === 'TRUE';
 
 // Global state for monitoring (survives function calls, cleared on restart)
 let monitoringState = {
@@ -276,15 +280,20 @@ export class HealthMonitor {
    * Build Discord message content
    */
   buildDiscordContent(metrics, scores, healthStatus, alerts) {
-    // Add user ping if not excellent
-    const healthLine = scores.overall >= 90 ?
+    // Add user ping if WARNING or CRITICAL (score < 75)
+    const healthLine = scores.overall >= 75 ?
       `**Health Score**: ${scores.overall}/100 ${healthStatus}` :
       `**Health Score**: ${scores.overall}/100 ${healthStatus} <@391415444084490240>`;
+
+    // Build environment-aware title
+    const envEmoji = getBotEmoji('castbot_logo');
+    const envName = isProduction ? 'Prod' : 'Dev';
+    const titleEmoji = envEmoji ? `<:castbot_logo:${envEmoji.id}>` : '🎯';
 
     const components = [
       {
         type: 10,
-        content: `# 🎯 Ultrathink Health Monitor\n\n${healthLine}`
+        content: `# ${titleEmoji} Ultrathink Health Monitor - ${envName}\n\n${healthLine}`
       },
       { type: 14 },
       {
@@ -480,14 +489,6 @@ export class HealthMonitor {
       };
       containerComponents.push(actionRow);
 
-      // Add ping as Text Display if not EXCELLENT (embed in Components V2 structure)
-      if (!formatted.healthStatus.includes('EXCELLENT')) {
-        containerComponents.unshift({
-          type: 10, // Text Display
-          content: `<@391415444084490240> Health alert! Status: ${formatted.healthStatus}`
-        });
-      }
-
       // Build message payload
       const messagePayload = {
         flags: (1 << 15), // IS_COMPONENTS_V2
@@ -500,8 +501,9 @@ export class HealthMonitor {
 
       // Use Safari's webhook pattern for reliable Components V2 posting
       console.log('[HealthMonitor] Creating webhook for scheduled report');
+      const envName = isProduction ? 'Prod' : 'Dev';
       const webhook = await channel.createWebhook({
-        name: 'Ultrathink Health Monitor',
+        name: `Ultrathink Health Monitor - ${envName}`,
         reason: 'Scheduled health monitoring report'
       });
 
