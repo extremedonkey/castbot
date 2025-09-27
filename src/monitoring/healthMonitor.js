@@ -222,9 +222,6 @@ export class HealthMonitor {
         (scores.performance * 0.3) +
         (scores.stability * 0.3)
       );
-
-      // TEMPORARY TEST: Force WARNING status to test ping functionality
-      scores.overall = 60;
     } catch (error) {
       console.error('[HealthMonitor] Score calculation error:', error.message);
     }
