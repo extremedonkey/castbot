@@ -293,7 +293,7 @@ export class HealthMonitor {
     const components = [
       {
         type: 10,
-        content: `# ${titleEmoji} Ultrathink Health Monitor - ${envName}\n\n${healthLine}`
+        content: `# ${titleEmoji} Ultrathink Health Monitor \`${envName}\`\n\n${healthLine}`
       },
       { type: 14 },
       {
