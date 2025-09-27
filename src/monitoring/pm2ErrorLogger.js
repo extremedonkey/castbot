@@ -257,7 +257,10 @@ export class PM2ErrorLogger {
       // If running ON prod server, always read local files
       // If running in dev, always read local files
       // If PRODUCTION=TRUE but not on prod server, read remote via SSH
-      const shouldReadLocal = env === 'dev' || this.isRunningOnProdServer();
+      const isOnProdServer = this.isRunningOnProdServer();
+      const shouldReadLocal = env === 'dev' || isOnProdServer;
+
+      console.log(`[PM2Logger] Check: env=${env}, isOnProdServer=${isOnProdServer}, shouldReadLocal=${shouldReadLocal}`);
 
       if (shouldReadLocal) {
         // Read local PM2 logs (dev OR running on prod server)
