@@ -7,8 +7,6 @@
 import os from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import { ButtonBuilder, ActionRowBuilder } from 'discord.js';
-import { DiscordRequest } from '../../utils.js';
 
 const execAsync = promisify(exec);
 
@@ -429,7 +427,8 @@ export class HealthMonitor {
   }
 
   /**
-   * Post health report to Discord channel
+   * Post health report to Discord channel using webhook pattern
+   * (matches Safari's proven scheduled posting approach)
    */
   async postToChannel(channelId, guildId, formatted) {
     try {
@@ -459,21 +458,27 @@ export class HealthMonitor {
       // Add divider before buttons
       containerComponents.push({ type: 14 });
 
-      // Add navigation buttons (no back button for scheduled posts)
-      const refreshButton = new ButtonBuilder()
-        .setCustomId('prod_ultrathink_monitor')
-        .setLabel('View Live')
-        .setStyle(2)  // Secondary
-        .setEmoji('🌈');
-
-      const scheduleButton = new ButtonBuilder()
-        .setCustomId('health_monitor_schedule')
-        .setLabel('Adjust Schedule')
-        .setStyle(2)  // Secondary
-        .setEmoji('📅');
-
-      const actionRow = new ActionRowBuilder().addComponents(refreshButton, scheduleButton);
-      containerComponents.push(actionRow.toJSON());
+      // Add navigation buttons using plain Components V2 objects (no Discord.js builders)
+      const actionRow = {
+        type: 1, // Action Row
+        components: [
+          {
+            type: 2, // Button
+            custom_id: 'prod_ultrathink_monitor',
+            label: 'View Live',
+            style: 2, // Secondary
+            emoji: { name: '🌈' }
+          },
+          {
+            type: 2, // Button
+            custom_id: 'health_monitor_schedule',
+            label: 'Adjust Schedule',
+            style: 2, // Secondary
+            emoji: { name: '📅' }
+          }
+        ]
+      };
+      containerComponents.push(actionRow);
 
       // Determine if we need to ping (not EXCELLENT)
       let content = null;
@@ -481,8 +486,8 @@ export class HealthMonitor {
         content = `<@391415444084490240> Health alert! Status: ${formatted.healthStatus}`;
       }
 
-      // Build message data
-      const messageData = {
+      // Build message payload
+      const messagePayload = {
         flags: (1 << 15), // IS_COMPONENTS_V2
         components: [{
           type: 17, // Container
@@ -491,15 +496,43 @@ export class HealthMonitor {
         }]
       };
 
-      // Add content separately if needed (for pings)
+      // Add content for pings
       if (content) {
-        messageData.content = content;
+        messagePayload.content = content;
       }
 
-      // Send the full Components V2 message
-      await channel.send(messageData);
+      // Use Safari's webhook pattern for reliable Components V2 posting
+      console.log('[HealthMonitor] Creating webhook for scheduled report');
+      const webhook = await channel.createWebhook({
+        name: 'Ultrathink Health Monitor',
+        reason: 'Scheduled health monitoring report'
+      });
+
+      // Post via webhook (works reliably in scheduled context)
+      const response = await fetch(webhook.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(messagePayload)
+      });
+
+      // Check response status
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Webhook post failed (${response.status}): ${errorText}`);
+      }
 
       console.log('[HealthMonitor] ✅ Scheduled report posted to Discord');
+
+      // Clean up webhook after short delay
+      setTimeout(async () => {
+        try {
+          await webhook.delete('Cleanup after scheduled report');
+          console.log('[HealthMonitor] 🧹 Cleaned up webhook');
+        } catch (err) {
+          console.error('[HealthMonitor] ⚠️ Could not delete webhook:', err.message);
+        }
+      }, 5000);
+
     } catch (error) {
       console.error('[HealthMonitor] Failed to post to Discord:', error.message);
       throw error; // Re-throw to trigger error handling
