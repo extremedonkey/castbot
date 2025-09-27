@@ -331,8 +331,8 @@ export class HealthMonitor {
         return { success: true, message: 'Monitoring disabled' };
       }
 
-      if (hours > 168) { // Max 1 week
-        return { success: false, message: 'Maximum interval is 168 hours (1 week)' };
+      if (hours < 0.0167 || hours > 168) { // Min 1 minute, Max 1 week
+        return { success: false, message: 'Interval must be between 1 minute (0.0167) and 168 hours (1 week)' };
       }
 
       // Update configuration
@@ -357,16 +357,14 @@ export class HealthMonitor {
         }
       }, intervalMs);
 
-      // Run initial check after 5 seconds (only if interval is reasonable)
-      if (intervalMs >= 60000) { // Only run initial check if interval is >= 1 minute
-        setTimeout(async () => {
-          try {
-            await this.runHealthCheck();
-          } catch (error) {
-            console.error('[HealthMonitor] Initial check error:', error.message);
-          }
-        }, 5000);
-      }
+      // Run initial check after 5 seconds
+      setTimeout(async () => {
+        try {
+          await this.runHealthCheck();
+        } catch (error) {
+          console.error('[HealthMonitor] Initial check error:', error.message);
+        }
+      }, 5000);
 
       console.log(`[HealthMonitor] ✅ Started monitoring every ${hours} hours to channel ${channelId}`);
       return { success: true, message: `Monitoring every ${hours} hours` };
@@ -483,16 +481,23 @@ export class HealthMonitor {
         content = `<@391415444084490240> Health alert! Status: ${formatted.healthStatus}`;
       }
 
-      // Send the full Components V2 message
-      await channel.send({
-        content: content,
+      // Build message data
+      const messageData = {
         flags: (1 << 15), // IS_COMPONENTS_V2
         components: [{
           type: 17, // Container
           accent_color: formatted.healthColor,
           components: containerComponents
         }]
-      });
+      };
+
+      // Add content separately if needed (for pings)
+      if (content) {
+        messageData.content = content;
+      }
+
+      // Send the full Components V2 message
+      await channel.send(messageData);
 
       console.log('[HealthMonitor] ✅ Scheduled report posted to Discord');
     } catch (error) {

@@ -34720,12 +34720,12 @@ Are you sure you want to continue?`;
         const { getHealthMonitor } = await import('./src/monitoring/healthMonitor.js');
         const monitor = getHealthMonitor(client);
 
-        // Validate input
+        // Validate input (allow 1 minute minimum for testing)
         if (hours < 0 || hours > 168) {
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Invalid hours. Please enter a value between 0 and 168 (1 week).',
+              content: '❌ Invalid hours. Please enter 0 to disable, or 0.0167 (1 min) to 168 hours (1 week).',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
