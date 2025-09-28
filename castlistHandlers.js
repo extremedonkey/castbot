@@ -68,8 +68,9 @@ export async function handleCastlistButton(req, res, client, custom_id) {
       })(req, res, client);
     }
 
-    // For virtual castlists, keep the encoded format
+    // For virtual castlists, keep the ID format (e.g., "default" or "virtual_xyz")
     // For real castlists, use the castlist name (legacy tribes use name matching)
+    // Special case: default castlist should use "default" as the ID
     const targetId = castlist.isVirtual ? castlistId : castlist.name;
 
     // Update custom_id to trigger show_castlist2 handler
