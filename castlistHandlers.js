@@ -198,38 +198,46 @@ export function handleCastlistSort(req, res, client, custom_id) {
 export function handleCastlistTribeSelect(req, res, client, custom_id) {
   const castlistId = custom_id.replace('castlist_tribe_select_', '');
   const selectedRoles = req.body.data.values || [];
-  
+  const resolvedRoles = req.body.data.resolved?.roles || {};
+
   return ButtonHandlerFactory.create({
     id: custom_id,
     updateMessage: true,
     handler: async (context) => {
       console.log(`📋 Updating tribes for ${castlistId}: ${selectedRoles.length} roles selected`);
-      
+
       const playerData = await loadPlayerData();
       const tribes = playerData[context.guildId]?.tribes || {};
-      
+
       // Get current tribes using this castlist
       const currentTribes = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
-      
+
       // Remove castlist from tribes that are no longer selected
       for (const tribeId of currentTribes) {
         if (!selectedRoles.includes(tribeId)) {
-          await castlistManager.unlinkTribeFromCastlist(context.guildId, tribeId);
+          await castlistManager.unlinkTribeFromCastlist(context.guildId, tribeId, castlistId);
         }
       }
-      
+
       // Add castlist to newly selected tribes
       for (const roleId of selectedRoles) {
         if (!currentTribes.includes(roleId)) {
+          // Extract role color from Discord API
+          const roleData = resolvedRoles[roleId];
+          const roleColor = roleData?.color ? `#${roleData.color.toString(16).padStart(6, '0')}` : null;
+
           // Initialize tribe if it doesn't exist
           if (!tribes[roleId]) {
             tribes[roleId] = {
               name: `Tribe ${roleId}`,
               emoji: '🏕️',
-              type: 'default'
+              color: roleColor
             };
+          } else if (roleColor && !tribes[roleId].color) {
+            // Update existing tribe with color if missing
+            tribes[roleId].color = roleColor;
           }
-          
+
           // Link to castlist
           await castlistManager.linkTribeToCastlist(context.guildId, roleId, castlistId);
         }

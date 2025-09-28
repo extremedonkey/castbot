@@ -14,27 +14,33 @@ export class CastlistVirtualAdapter {
   async getAllCastlists(guildId) {
     const playerData = await loadPlayerData();
     const castlists = new Map();
-    
+
     // 1. Load REAL castlist entities (new system)
     const realCastlists = playerData[guildId]?.castlistConfigs || {};
     for (const [id, castlist] of Object.entries(realCastlists)) {
       castlists.set(id, { ...castlist, isVirtual: false });
     }
-    
-    // 2. Scan tribes for string-based castlists (old system)
+
+    // 2. Ensure default castlist exists (always first)
+    const defaultCastlist = await this.ensureDefaultCastlist(guildId, realCastlists);
+    if (!castlists.has('default')) {
+      castlists.set('default', defaultCastlist);
+    }
+
+    // 3. Scan tribes for string-based castlists (old system)
     const tribes = playerData[guildId]?.tribes || {};
     const virtualCastlists = new Map();
-    
+
     for (const [roleId, tribe] of Object.entries(tribes)) {
-      // Skip if tribe already uses new castlistId
-      if (tribe.castlistId) continue;
-      
-      // Skip default castlists
+      // Skip if tribe already uses new castlistId or castlistIds
+      if (tribe.castlistId || tribe.castlistIds) continue;
+
+      // Skip default castlists (handled separately)
       if (!tribe.castlist || tribe.castlist === 'default') continue;
-      
+
       // Generate consistent virtual ID from castlist name
       const virtualId = this.generateVirtualId(tribe.castlist);
-      
+
       if (!virtualCastlists.has(virtualId)) {
         // Create virtual entity that LOOKS real
         virtualCastlists.set(virtualId, {
@@ -53,8 +59,7 @@ export class CastlistVirtualAdapter {
           },
           metadata: {
             description: `Legacy castlist: ${tribe.castlist}`,
-            emoji: this.getCastlistEmoji(tribe.castlist, tribe.type),
-            accentColor: 0x9b59b6
+            emoji: this.getCastlistEmoji(tribe.castlist, tribe.type)
           }
         });
       } else {
@@ -62,18 +67,77 @@ export class CastlistVirtualAdapter {
         virtualCastlists.get(virtualId).tribes.push(roleId);
       }
     }
-    
-    // 3. Merge (skip virtual if real version exists with same name)
+
+    // 4. Merge (skip virtual if real version exists with same name)
     for (const [id, virtualCastlist] of virtualCastlists) {
-      const realExists = [...castlists.values()].some(c => 
+      const realExists = [...castlists.values()].some(c =>
         c.name === virtualCastlist.name && !c.isVirtual
       );
       if (!realExists) {
         castlists.set(id, virtualCastlist);
       }
     }
-    
+
     return castlists;
+  }
+
+  /**
+   * Ensure default castlist exists (virtual or real)
+   * @param {string} guildId - The guild ID
+   * @param {Object} realCastlists - Real castlist entities
+   * @returns {Object} Default castlist entity
+   */
+  async ensureDefaultCastlist(guildId, realCastlists) {
+    // Check if default exists in real castlists
+    if (realCastlists.default) {
+      return { ...realCastlists.default, isVirtual: false };
+    }
+
+    // Create virtual default by scanning tribes
+    const playerData = await loadPlayerData();
+    const tribes = playerData[guildId]?.tribes || {};
+    const defaultTribes = [];
+
+    for (const [roleId, tribe] of Object.entries(tribes)) {
+      // Check for multi-castlist format
+      if (tribe.castlistIds && tribe.castlistIds.includes('default')) {
+        defaultTribes.push(roleId);
+        continue;
+      }
+
+      // Check for single ID format
+      if (tribe.castlistId === 'default') {
+        defaultTribes.push(roleId);
+        continue;
+      }
+
+      // Check for legacy string format
+      if (tribe.castlist === 'default') {
+        defaultTribes.push(roleId);
+      }
+    }
+
+    // Create virtual default entity
+    return {
+      id: 'default',
+      name: 'Active Castlist',
+      type: 'system',
+      isVirtual: true,
+      tribes: defaultTribes,
+      createdAt: 0, // Beginning of time
+      createdBy: 'system',
+      settings: {
+        sortStrategy: 'alphabetical',
+        showRankings: false,
+        maxDisplay: 25,
+        visibility: 'public'
+      },
+      metadata: {
+        description: 'Select if you don\'t know what you\'re doing. Castlist for active phase of the game.',
+        emoji: '📋',
+        isDefault: true
+      }
+    };
   }
   
   /**
@@ -215,15 +279,23 @@ export class CastlistVirtualAdapter {
     const playerData = await loadPlayerData();
     const tribes = playerData[guildId]?.tribes || {};
     const usingTribes = [];
-    
+
     // Check both castlistId (new) and virtual matching (old)
     for (const [roleId, tribe] of Object.entries(tribes)) {
-      // Direct ID match (new system)
+      // Multi-castlist format (array)
+      if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
+        if (tribe.castlistIds.includes(castlistId)) {
+          usingTribes.push(roleId);
+          continue;
+        }
+      }
+
+      // Direct ID match (single ID format)
       if (tribe.castlistId === castlistId) {
         usingTribes.push(roleId);
         continue;
       }
-      
+
       // Virtual ID matching (old system)
       if (this.isVirtualId(castlistId) && tribe.castlist) {
         const virtualIdForTribe = this.generateVirtualId(tribe.castlist);
@@ -231,8 +303,13 @@ export class CastlistVirtualAdapter {
           usingTribes.push(roleId);
         }
       }
+
+      // Legacy string matching for default
+      if (castlistId === 'default' && tribe.castlist === 'default' && !tribe.castlistId && !tribe.castlistIds) {
+        usingTribes.push(roleId);
+      }
     }
-    
+
     return usingTribes;
   }
   

@@ -62,38 +62,52 @@ export async function createCastlistHub(guildId, options = {}) {
     .setPlaceholder('Select a castlist to manage...')
     .setMinValues(0) // Allow deselection
     .setMaxValues(1);
-  
-  // Sort castlists: real first, then virtual
-  const sortedCastlists = [...allCastlists.values()].sort((a, b) => {
-    if (a.isVirtual !== b.isVirtual) {
-      return a.isVirtual ? 1 : -1; // Real first
-    }
-    return a.name.localeCompare(b.name);
-  });
-  
-  // Add castlists to select menu (max 25)
+
+  // Add Active Castlist (default) as FIRST option
   let addedCount = 0;
+  const defaultCastlist = allCastlists.get('default');
+  if (defaultCastlist) {
+    selectMenu.addOptions({
+      label: 'Active Castlist',
+      value: 'default',
+      description: 'Select if you don\'t know what you\'re doing. Castlist for active phase of the game.',
+      emoji: '✅'
+    });
+    addedCount++;
+  }
+
+  // Sort remaining castlists: real first, then virtual (excluding default)
+  const sortedCastlists = [...allCastlists.values()]
+    .filter(c => c.id !== 'default') // Exclude default (already added)
+    .sort((a, b) => {
+      if (a.isVirtual !== b.isVirtual) {
+        return a.isVirtual ? 1 : -1; // Real first
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+  // Add remaining castlists to select menu (max 25 total)
   for (const castlist of sortedCastlists) {
     if (addedCount >= 25) break;
-    
+
     // Skip virtual if not showing
     if (castlist.isVirtual && !showVirtual) continue;
-    
+
     const emoji = castlist.metadata?.emoji || '📋';
     const label = castlist.isVirtual ? `${castlist.name} [Legacy]` : castlist.name;
-    const description = castlist.metadata?.description || 
+    const description = castlist.metadata?.description ||
       (castlist.isVirtual ? 'Legacy castlist - click to upgrade' : 'Managed castlist');
-    
+
     selectMenu.addOptions({
       label: label.substring(0, 100),
       value: castlist.id.substring(0, 100),
       description: description.substring(0, 100),
       emoji: emoji
     });
-    
+
     addedCount++;
   }
-  
+
   // If no castlists, add placeholder
   if (addedCount === 0) {
     selectMenu.addOptions({
@@ -103,11 +117,12 @@ export async function createCastlistHub(guildId, options = {}) {
     });
     selectMenu.setDisabled(true);
   }
-  
-  // Preserve selection if we have one
+
+  // Preserve selection if we have one (fix for dropdown persistence)
   if (selectedCastlistId && selectedCastlistId !== 'none') {
     selectMenu.setDisabled(false); // Ensure it's enabled
-    // Note: Discord doesn't support default_values on StringSelectMenu, only UserSelect/RoleSelect
+    // Set default values to persist selection
+    selectMenu.setDefaultValues([selectedCastlistId]);
   }
   
   const selectRow = new ActionRowBuilder().addComponents(selectMenu);
@@ -308,15 +323,16 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setDisabled(!enabled)
   );
 
-  // Row 2: Delete button (red, disabled when no castlist selected)
+  // Row 2: Delete button (red, disabled when no castlist selected OR when default)
   const deleteRow = new ActionRowBuilder();
+  const isDefaultCastlist = castlistId === 'default';
   deleteRow.addComponents(
     new ButtonBuilder()
       .setCustomId(enabled ? `castlist_delete${suffix}` : 'castlist_delete')
       .setLabel('Delete Castlist')
       .setStyle(ButtonStyle.Danger)
       .setEmoji('🗑️')
-      .setDisabled(!enabled)
+      .setDisabled(!enabled || isDefaultCastlist) // Disable for default
   );
 
   return { buttonRow1, deleteRow };

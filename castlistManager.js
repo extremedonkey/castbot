@@ -45,7 +45,6 @@ export class CastlistManager {
       metadata: {
         description: config.description || '',
         emoji: config.emoji || '📋',
-        accentColor: config.accentColor || 0x9b59b6,
         ...config.metadata
       }
     };
@@ -193,7 +192,7 @@ export class CastlistManager {
   }
   
   /**
-   * Link a tribe to a castlist
+   * Link a tribe to a castlist (multi-castlist support)
    * @param {string} guildId - The guild ID
    * @param {string} roleId - The role/tribe ID
    * @param {string} castlistId - The castlist ID
@@ -201,20 +200,20 @@ export class CastlistManager {
    */
   async linkTribeToCastlist(guildId, roleId, castlistId) {
     const playerData = await loadPlayerData();
-    
+
     // Ensure tribe exists
     if (!playerData[guildId]?.tribes?.[roleId]) {
       console.log(`[CASTLIST] Tribe ${roleId} not found`);
       return false;
     }
-    
+
     // Verify castlist exists (real or virtual)
     const castlist = await this.getCastlist(guildId, castlistId);
     if (!castlist) {
       console.log(`[CASTLIST] Castlist ${castlistId} not found`);
       return false;
     }
-    
+
     // If virtual, we might want to materialize it
     let finalCastlistId = castlistId;
     if (castlistVirtualAdapter.isVirtualId(castlistId)) {
@@ -222,44 +221,76 @@ export class CastlistManager {
       // In future, could auto-materialize based on settings
       console.log(`[CASTLIST] Linking tribe to virtual castlist '${castlist.name}'`);
     }
-    
-    // Update tribe
-    playerData[guildId].tribes[roleId].castlistId = finalCastlistId;
-    
-    // Keep the old castlist field for backwards compatibility
-    playerData[guildId].tribes[roleId].castlist = castlist.name;
-    
+
+    const tribe = playerData[guildId].tribes[roleId];
+
+    // Initialize castlistIds array if it doesn't exist
+    if (!tribe.castlistIds) {
+      tribe.castlistIds = [];
+    }
+
+    // Add castlist to array if not already present
+    if (!tribe.castlistIds.includes(finalCastlistId)) {
+      tribe.castlistIds.push(finalCastlistId);
+    }
+
+    // Keep the old castlist field for backwards compatibility (set to first castlist)
+    tribe.castlist = tribe.castlistIds[0] === 'default' ? 'default' : castlist.name;
+
     // Save changes
     await savePlayerData(playerData);
-    
+
     console.log(`[CASTLIST] Linked tribe ${roleId} to castlist '${castlist.name}' (${finalCastlistId})`);
-    
+
     return true;
   }
   
   /**
-   * Unlink a tribe from its castlist
+   * Unlink a tribe from a specific castlist (multi-castlist support)
    * @param {string} guildId - The guild ID
    * @param {string} roleId - The role/tribe ID
+   * @param {string} castlistId - The castlist ID to unlink from (optional, removes all if not specified)
    * @returns {boolean} Success status
    */
-  async unlinkTribeFromCastlist(guildId, roleId) {
+  async unlinkTribeFromCastlist(guildId, roleId, castlistId = null) {
     const playerData = await loadPlayerData();
-    
+
     // Ensure tribe exists
     if (!playerData[guildId]?.tribes?.[roleId]) {
       return false;
     }
-    
-    // Remove castlist link
-    delete playerData[guildId].tribes[roleId].castlistId;
-    playerData[guildId].tribes[roleId].castlist = 'default';
-    
+
+    const tribe = playerData[guildId].tribes[roleId];
+
+    if (castlistId) {
+      // Remove specific castlist from array
+      if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
+        tribe.castlistIds = tribe.castlistIds.filter(id => id !== castlistId);
+
+        // Update legacy castlist field to first remaining castlist
+        if (tribe.castlistIds.length > 0) {
+          tribe.castlist = tribe.castlistIds[0] === 'default' ? 'default' : tribe.castlistIds[0];
+        } else {
+          tribe.castlist = 'default';
+          delete tribe.castlistIds; // Clean up empty array
+        }
+      } else if (tribe.castlistId === castlistId) {
+        // Single ID format - remove it
+        delete tribe.castlistId;
+        tribe.castlist = 'default';
+      }
+    } else {
+      // Remove all castlist links
+      delete tribe.castlistIds;
+      delete tribe.castlistId;
+      tribe.castlist = 'default';
+    }
+
     // Save changes
     await savePlayerData(playerData);
-    
-    console.log(`[CASTLIST] Unlinked tribe ${roleId} from castlist`);
-    
+
+    console.log(`[CASTLIST] Unlinked tribe ${roleId} from castlist${castlistId ? ` ${castlistId}` : 's'}`);
+
     return true;
   }
   
