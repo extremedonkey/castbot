@@ -2,11 +2,25 @@
 
 ## Overview
 
-**Status**: In Development (previously CastlistV3 branch, moved to main branch)  
-**Created**: September 2025 (Work in progress)  
+**Status**: 🟡 **INFRASTRUCTURE COMPLETE, FEATURES PARTIAL** (September 2025)
+**Created**: September 2025
 **Purpose**: Complete redesign of the castlist system to support proper entities, flexible sorting, season integration, and cross-season features
 
+**Implementation Status**:
+- ✅ **Infrastructure**: 2,731+ lines across 7 modules (100% complete)
+- ✅ **Basic Features**: View, Edit, Add/Remove Tribes, Delete (working)
+- 🟡 **Sort Strategies**: 2 of 6 working (Alphabetical, Placements)
+- ❌ **Manual Ordering**: Placeholder only (major feature needed)
+- ❌ **Swap/Merge**: Placeholder only (major feature needed)
+- ⏳ **Legacy Removal**: prod_manage_tribes still active (parallel systems)
+
+**See [CastlistV3-FeatureStatus.md](CastlistV3-FeatureStatus.md) for complete implementation matrix and roadmap.**
+
 This document outlines the comprehensive redesign of CastBot's castlist system, moving from string-based matching to proper entity management with support for various sorting strategies, season integration, and special castlists that span multiple seasons.
+
+**Related Architectural Work**:
+- ✅ **[Castlist Architecture Refactor](../../RaP/1000_20250926_Castlist_Architecture_Refactor.md)** - COMPLETED: `buildCastlist2ResponseData()` successfully moved from app.js (21,000+ lines) to castlistV2.js where it belongs with other display functions. This 100+ line migration achieves clean separation of concerns with zero breaking changes.
+- 🟡 **[Feature Implementation Status](CastlistV3-FeatureStatus.md)** - Detailed breakdown of what's done vs. planned, with priority roadmap.
 
 ## 🎯 Core Problems Being Solved
 
@@ -493,6 +507,185 @@ Add castlist navigation buttons to BUTTON_REGISTRY for consistency:
 5. **Week 5**: Production deployment and monitoring
 6. **Week 6**: Remove CastlistV3 Hub restrictions if all stable
 
+## 📦 Complete Implementation Reference
+
+### castlistManager.js (405 lines)
+Core entity management with full CRUD operations:
+
+```javascript
+export class CastlistManager {
+  async createCastlist(guildId, config)           // Line 16: Create new castlist entity
+  async getCastlist(guildId, castlistId)          // Line 83: Get single castlist (virtual or real)
+  async getAllCastlists(guildId)                  // Line 93: Get all castlists via virtual adapter
+  async updateCastlist(guildId, castlistId, updates) // Line 104: Update with auto-materialization
+  async deleteCastlist(guildId, castlistId)      // Line 154: Delete with tribe cleanup
+  async linkTribeToCastlist(guildId, roleId, castlistId) // Line 202: Link tribe to castlist
+  async unlinkTribeFromCastlist(guildId, roleId) // Line 246: Unlink tribe
+  async getTribesUsingCastlist(guildId, castlistId) // Line 272: Find all linked tribes
+  async importFromSeason(guildId, seasonId, options) // Line 283: Import from season apps
+  async importFromRole(guildId, roleId, options, guild) // Line 332: Import from Discord role
+  async getMigrationStats(guildId)               // Line 377: Migration progress stats
+  async searchCastlists(guildId, searchTerm)     // Line 387: Search by name/description
+}
+```
+
+### castlistVirtualAdapter.js (273 lines)
+Backwards compatibility layer that makes legacy string-based castlists appear as entities:
+
+```javascript
+export class CastlistVirtualAdapter {
+  async getAllCastlists(guildId)                  // Line 14: Merge real + virtual entities
+  async getCastlist(guildId, castlistId)         // Line 85: Get single (real or virtual)
+  generateVirtualId(castlistName)                 // Line 95: Create virtual ID from name
+  isVirtualId(castlistId)                         // Line 108: Check if ID is virtual
+  decodeVirtualId(virtualId)                      // Line 117: Decode virtual ID to name
+  getCastlistEmoji(name, type)                    // Line 138: Smart emoji selection
+  async materializeCastlist(guildId, virtualId)  // Line 156: Convert virtual → real entity
+  async getTribesUsingCastlist(guildId, castlistId) // Line 214: Find tribes (handles virtual)
+  async getMigrationStats(guildId)               // Line 244: Real vs virtual counts
+}
+```
+
+**Key Innovation**: Virtual IDs use base64 encoding: `virtual_${Buffer.from(name).toString('base64')}`
+
+### castlistHandlers.js (388 lines)
+All interaction handlers using ButtonHandlerFactory pattern:
+
+```javascript
+export function handleCastlistSelect(req, res, client)        // Line 15: Dropdown selection
+export async function handleCastlistButton(req, res, client, custom_id) // Line 36: Button clicks
+export function handleCastlistSort(req, res, client, custom_id) // Line 169: Sort strategy
+export function handleCastlistTribeSelect(req, res, client, custom_id) // Line 198: Tribe roles
+export function handleCastlistDelete(req, res, client, custom_id) // Line 257: Delete with confirm
+export function handleEditInfoModal(req, res, client, custom_id) // Line 339: Modal submission
+```
+
+**Button Custom ID Patterns**:
+- `castlist_select` - Dropdown selection
+- `castlist_view_{id}` - View castlist (now uses show_castlist2)
+- `castlist_edit_info_{id}` - Edit metadata (opens modal)
+- `castlist_add_tribe_{id}` - Add/remove tribes
+- `castlist_order_{id}` - Sort strategy selector
+- `castlist_swap_merge_{id}` - Swap/merge (future)
+- `castlist_delete_{id}` - Delete castlist
+- `castlist_sort_{id}` - Sort strategy value
+- `castlist_tribe_select_{id}` - Tribe role selection
+- `castlist_edit_info_modal_{id}` - Modal submission
+
+### castlistHub.js (528 lines)
+Management hub UI with hot-swappable interfaces:
+
+```javascript
+export async function createCastlistHub(guildId, options) // Line 30: Main hub UI
+async function createCastlistDetailsSection(guildId, castlist) // Line 218: Details display
+function createManagementButtons(castlistId, enabled, activeButton, isVirtual, castlistName) // Line 264: Action buttons
+async function createHotSwappableInterface(guildId, castlist, activeButton) // Line 332: Dynamic interfaces
+export async function createCastlistWizard(guildId, createType) // Line 438: Creation wizard
+```
+
+**Hot-Swappable Pattern**: Buttons trigger interface changes without page reload:
+- **View** → Direct show_castlist2 handler
+- **Edit Info** → Modal for name/emoji/description
+- **Add Tribe** → Role select with current selection
+- **Order** → String select for sort strategies
+- **Swap/Merge** → Placeholder (future feature)
+
+### castlistV2.js Display Functions
+All display logic including the migrated buildCastlist2ResponseData:
+
+```javascript
+// Core display functions
+function determineDisplayScenario(tribes)         // Line 47: Calculate display mode
+function createNavigationState(tribes, scenario, ...) // Line 110: Navigation context
+function reorderTribes(tribes, userId, strategy, castlistName) // Line 132: Tribe ordering
+function createPlayerCard(member, tribeData, ...)  // ~Line 200: Individual player cards
+function createTribeSection(tribe, members, ...)   // ~Line 400: Tribe section with players
+function createNavigationButtons(navigationState, castlistName) // ~Line 500: Nav buttons
+export async function buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member, channelId, permissionChecker) // Line 712: **Main response builder**
+```
+
+**Note**: `buildCastlist2ResponseData()` was successfully moved from app.js to castlistV2.js (see RaP document)
+
+### Migration Evidence
+
+The "Haszo" castlist demonstrates successful automatic migration:
+
+**Before (Virtual)**:
+```json
+// Tribe with legacy string
+"1391142520787832904": {
+  "castlist": "Haszo",  // Legacy string
+  "type": "legacy"
+}
+```
+
+**After (Materialized)**:
+```json
+// Real entity created
+"castlist_1757445788734_system": {
+  "id": "castlist_1757445788734_system",
+  "name": "Haszo2",
+  "type": "legacy",
+  "metadata": {
+    "migratedFrom": "virtual_SGFzem8",  // base64("Haszo")
+    "migrationDate": 1757445788734
+  }
+}
+
+// Tribe updated with both fields for safety
+"1391142520787832904": {
+  "castlist": "Haszo",  // Kept for backwards compat
+  "castlistId": "castlist_1757445788734_system"  // New reference
+}
+```
+
+## 🚧 Current Limitations & Planned Features
+
+**See [CastlistV3-FeatureStatus.md](CastlistV3-FeatureStatus.md) for complete details.**
+
+### What Works Now (Production Ready)
+1. ✅ **Virtual Adapter** - Legacy castlists appear as entities, auto-migrate on edit
+2. ✅ **Basic CRUD** - Create, view, edit, delete castlists via Hub
+3. ✅ **Tribe Management** - Add/remove tribes via role selector
+4. ✅ **Two Sort Strategies** - Alphabetical (A-Z) and Placements working
+5. ✅ **Hub UI** - Hot-swappable interfaces for all operations
+
+### What's Incomplete (Placeholders or Stubs)
+1. ❌ **Manual Ordering** - Button shows sort strategy dropdown, not actual ordering UI
+2. ❌ **Swap/Merge** - Button shows "coming soon" text only
+3. ❌ **4 Sort Strategies** - Reverse Alpha, Age, Timezone, Join Date (UI exists, functions missing)
+4. ❌ **UI Polish** - No confirmations, loading states, or error details
+5. ⏳ **Legacy Removal** - prod_manage_tribes still active (5 references)
+
+### Priority Roadmap
+
+**Phase 1: Complete Sort Strategies** (1-2 days)
+- Implement missing 4 sort functions
+- Add reverse alphabetical call
+- Test all 6 strategies
+
+**Phase 2: Manual Ordering Feature** (3-5 days)
+- Design player list UI with reordering
+- Implement save to castlist.rankings
+- Integrate with 'custom' sort strategy
+
+**Phase 3: Swap/Merge Feature** (5-7 days)
+- Multi-step workflow (current → new → archive)
+- Role selector for new tribes
+- Archive castlist creation
+- Atomic transaction implementation
+
+**Phase 4: UI/UX Polish** (2-3 days)
+- Confirmation dialogs
+- Loading states
+- Better error messages
+- Search/filter for 25+ castlists
+
+**Phase 5: Legacy Removal** (1-2 days)
+- Remove Hub user restriction
+- Deprecate prod_manage_tribes
+- Clean up old references
+
 ## 💡 Key Innovations
 
 ### 1. Season-Optional Design
@@ -620,11 +813,14 @@ Using Menu System Architecture:
 ## 📝 Code References
 
 ### Key Files
-- `castlistManager.js` - NEW: Entity management
-- `castlistSorter.js` - Existing: Sorting logic (enhanced)
-- `castlistV2.js` - Display engine (updated)
+- `castlistManager.js` (405 lines) - NEW: Entity management (13 methods)
+- `castlistVirtualAdapter.js` (273 lines) - NEW: Backwards compatibility layer (9 methods)
+- `castlistSorter.js` (103 lines) - Existing: Sorting logic (enhanced)
+- `castlistHub.js` (528 lines) - NEW: Management hub UI
+- `castlistHandlers.js` (388 lines) - NEW: All interaction handlers (6 handlers)
+- `castlistV2.js` (767+ lines) - Display engine (updated, includes buildCastlist2ResponseData)
+- `castlistUtils.js` (267 lines) - Utility functions (determineCastlistToShow, etc.)
 - `storage.js` - Data persistence (modified)
-- `castlistMenu.js` - UI components (new)
 
 ### Migration Commands
 ```bash
@@ -647,8 +843,16 @@ node scripts/migrateCastlists.js --execute
 
 ## 📚 Related Documentation
 
+### Feature Documentation
+- 🟡 **[Feature Implementation Status](CastlistV3-FeatureStatus.md)** - What's done, what's not, priority roadmap
 - [Season Lifecycle](../concepts/SeasonLifecycle.md) - Active season management
 - [Season Integration](CastlistV3-SeasonIntegration.md) - Season/castlist relationships
+
+### Architecture Documentation
+- [Castlist Architecture](CastlistArchitecture.md) - Complete system analysis with all 5 access methods
+- [Castlist Architecture Refactor](../../RaP/1000_20250926_Castlist_Architecture_Refactor.md) - ✅ COMPLETED: buildCastlist2ResponseData moved to castlistV2.js
+
+### Framework Documentation
 - [Entity Edit Framework](../architecture/EntityEditFramework.md) - UI patterns for entity management
 - [Button Handler Factory](../architecture/ButtonHandlerFactory.md) - Button system architecture
 - [Menu System Architecture](../architecture/MenuSystemArchitecture.md) - Menu management patterns

@@ -680,11 +680,6 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Standard admin buttons
   adminButtons.push(
     new ButtonBuilder()
-      .setCustomId('prod_setup')
-      .setLabel('Initial Setup')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('🪛'),
-    new ButtonBuilder()
       .setCustomId('admin_manage_player')
       .setLabel('Players')
       .setStyle(ButtonStyle.Secondary)
@@ -731,9 +726,18 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   
   const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
   
-  // Create new action row for Analytics, Availability, and Need Help
+  // Create new action row for Initial Setup, Analytics, Availability, and Need Help
   const adminActionButtons2 = [];
-  
+
+  // Add Initial Setup button first
+  adminActionButtons2.push(
+    new ButtonBuilder()
+      .setCustomId('prod_setup')
+      .setLabel('Initial Setup')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🪛')
+  );
+
   // Add Analytics button only for specific user (Reece)
   if (userId === '391415444084490240') {
     adminActionButtons2.push(
@@ -744,7 +748,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
         .setEmoji('🧮')
     );
   }
-  
+
   // Add Availability button
   adminActionButtons2.push(
     new ButtonBuilder()

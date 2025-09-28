@@ -172,6 +172,26 @@ const season = playerData[guildId]?.applicationConfigs?.[seasonId];
 - Active season is optional - features work without it
 - Gradual migration as features are updated
 
+## Terminology
+
+### Admin / Host / Production Member
+Throughout CastBot documentation and UI, these terms are used interchangeably to refer to users with elevated permissions:
+
+**Required Permissions**: `MANAGE_CHANNELS` **OR** `MANAGE_ROLES`
+
+Users with either of these Discord permissions can:
+- Access Production Menu (`/menu` → Production Menu button)
+- Manage seasons and castlists
+- Configure tribes and roles
+- Access administrative features
+
+**Common Usage**:
+- "Admin" - General term for users with permissions
+- "Host" - User running the season/game
+- "Production Member" - Team member with production access
+
+**Example**: "Production members can add tribes via Tribes > Add Tribe > Select Tribes > Select Castlist"
+
 ## Best Practices
 
 ### For Developers
@@ -179,11 +199,13 @@ const season = playerData[guildId]?.applicationConfigs?.[seasonId];
 2. **Validate season exists** in `applicationConfigs`
 3. **Handle missing season** gracefully with fallbacks
 4. **Update displays** when active season changes
+5. **Use permission check**: `member.permissions.has(PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageRoles)`
 
-### For Users
+### For Admins/Hosts/Production
 1. **Set active season** at start of casting period
 2. **Change via header button** when switching seasons
 3. **All features** will use this as default context
+4. **Manage tribes** through Production Menu for active season
 
 ## Related Documentation
 - [Season Applications](../features/SeasonAppBuilder.md) - Creating seasons in applicationConfigs
