@@ -4755,13 +4755,26 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Get tribes for this castlist (using existing logic from app.js)
       const guildTribes = playerData[guildId]?.tribes || {};
       const allTribes = [];
-      
+
       for (const [roleId, tribe] of Object.entries(guildTribes)) {
-        if (tribe.castlist === castlistName || (!tribe.castlist && castlistName === 'default')) {
+        // Check both legacy 'castlist' field and new 'castlistId' field
+        // Special handling for Active/Default castlist
+        const matchesCastlist = (
+          // Legacy string matching
+          tribe.castlist === castlistName ||
+          // New entity ID matching
+          tribe.castlistId === requestedCastlist ||
+          // Default castlist special cases
+          (!tribe.castlist && !tribe.castlistId && (castlistName === 'default' || requestedCastlist === 'default')) ||
+          (tribe.castlist === 'default' && (castlistName === 'Active Castlist' || requestedCastlist === 'default')) ||
+          (tribe.castlistId === 'default' && (castlistName === 'Active Castlist' || requestedCastlist === 'default'))
+        );
+
+        if (matchesCastlist) {
           try {
             const role = await guild.roles.fetch(roleId);
             if (!role) continue;
-            
+
             // Store actual Discord.js member objects, not plain objects
             const tribeMembers = Array.from(role.members.values());
 
