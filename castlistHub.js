@@ -288,7 +288,7 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
   const buttonRow1 = new ActionRowBuilder();
   const suffix = castlistId ? `_${castlistId}` : '';
 
-  // Row 1: View, Edit Info, Add Tribe, Customize
+  // Row 1: View, Edit Info, Manage Tribes, Customize
   // For Post Castlist, use show_castlist2 directly to avoid redirect timeout
   let postCastlistCustomId = 'castlist_view'; // default when disabled
   if (enabled && castlistId) {
@@ -313,7 +313,7 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setDisabled(!enabled),
     new ButtonBuilder()
       .setCustomId(`castlist_add_tribe${suffix}`)
-      .setLabel('Add Tribe')
+      .setLabel('Manage Tribes')
       .setStyle(activeButton === CastlistButtonType.ADD_TRIBE ? ButtonStyle.Primary : ButtonStyle.Secondary)
       .setEmoji('🏕️')
       .setDisabled(!enabled),
@@ -372,7 +372,7 @@ async function createHotSwappableInterface(guildId, castlist, activeButton) {
         components: [{
           type: 6, // Role Select
           custom_id: `castlist_tribe_select_${castlist.id}`,
-          placeholder: 'Select roles to add/remove as tribes...',
+          placeholder: 'Select roles to manage as tribes (add/remove)...',
           min_values: 0,
           max_values: 25, // Discord limit
           default_values: tribesUsingCastlist.map(roleId => ({

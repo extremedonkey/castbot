@@ -6,6 +6,7 @@
 import { ButtonHandlerFactory } from './buttonHandlerFactory.js';
 import { createCastlistHub, CastlistButtonType } from './castlistHub.js';
 import { castlistManager } from './castlistManager.js';
+import { castlistVirtualAdapter } from './castlistVirtualAdapter.js';
 import { loadPlayerData, savePlayerData } from './storage.js';
 import { PermissionFlagsBits } from 'discord.js';
 
@@ -207,16 +208,25 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
     handler: async (context) => {
       console.log(`📋 Updating tribes for ${castlistId}: ${selectedRoles.length} roles selected`);
 
+      // CRITICAL: Materialize virtual castlist before updating tribes
+      // This ensures changes persist to real data structure
+      let actualCastlistId = castlistId;
+      if (castlistVirtualAdapter.isVirtualId(castlistId) && castlistId !== 'default') {
+        console.log(`[CASTLIST] Materializing virtual castlist before tribe updates`);
+        actualCastlistId = await castlistVirtualAdapter.materializeCastlist(context.guildId, castlistId);
+      }
+      // Note: 'default' castlist is special and handled differently below
+
       const playerData = await loadPlayerData();
       const tribes = playerData[context.guildId]?.tribes || {};
 
-      // Get current tribes using this castlist
+      // Get current tribes using this castlist (use original ID for lookup)
       const currentTribes = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
 
       // Remove castlist from tribes that are no longer selected
       for (const tribeId of currentTribes) {
         if (!selectedRoles.includes(tribeId)) {
-          await castlistManager.unlinkTribeFromCastlist(context.guildId, tribeId, castlistId);
+          await castlistManager.unlinkTribeFromCastlist(context.guildId, tribeId, actualCastlistId);
         }
       }
 
@@ -239,8 +249,8 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
             tribes[roleId].color = roleColor;
           }
 
-          // Link to castlist
-          await castlistManager.linkTribeToCastlist(context.guildId, roleId, castlistId);
+          // Link to castlist (use actualized ID for real updates)
+          await castlistManager.linkTribeToCastlist(context.guildId, roleId, actualCastlistId);
         }
       }
       

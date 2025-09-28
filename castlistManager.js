@@ -101,14 +101,53 @@ export class CastlistManager {
    * @returns {Object} Updated castlist
    */
   async updateCastlist(guildId, castlistId, updates) {
-    const playerData = await loadPlayerData();
-    
+    let playerData = await loadPlayerData();
+
+    // Ensure structure exists
+    if (!playerData[guildId]) {
+      playerData[guildId] = {};
+    }
+    if (!playerData[guildId].castlistConfigs) {
+      playerData[guildId].castlistConfigs = {};
+    }
+
+    // Special handling for default castlist - create it if it doesn't exist
+    if (castlistId === 'default' && !playerData[guildId].castlistConfigs.default) {
+      console.log(`[CASTLIST] Creating real default castlist entity on first edit`);
+      // Get virtual default for initial values
+      const defaultVirtual = await castlistVirtualAdapter.getCastlist(guildId, 'default');
+
+      // Create the default castlist directly with ID 'default'
+      playerData[guildId].castlistConfigs.default = {
+        id: 'default',
+        name: defaultVirtual?.name || 'Active Castlist',
+        type: 'system', // Special type that can't be deleted
+        createdAt: Date.now(),
+        createdBy: 'system',
+        settings: {
+          sortStrategy: 'alphabetical',
+          showRankings: false,
+          maxDisplay: 25,
+          visibility: 'public'
+        },
+        metadata: {
+          description: defaultVirtual?.metadata?.description || 'Active season castlist',
+          emoji: defaultVirtual?.metadata?.emoji || '📋',
+          isDefault: true
+        }
+      };
+
+      // Save the newly created default
+      await savePlayerData(playerData);
+      playerData = await loadPlayerData(); // Reload to ensure consistency
+    }
     // Check if virtual - if so, materialize first
-    if (castlistVirtualAdapter.isVirtualId(castlistId)) {
+    else if (castlistVirtualAdapter.isVirtualId(castlistId)) {
       console.log(`[CASTLIST] Materializing virtual castlist before update`);
       castlistId = await castlistVirtualAdapter.materializeCastlist(guildId, castlistId);
+      playerData = await loadPlayerData(); // Reload after materialization
     }
-    
+
     // Get the real castlist
     const castlist = playerData[guildId]?.castlistConfigs?.[castlistId];
     if (!castlist) {
