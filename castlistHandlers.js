@@ -254,48 +254,97 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
         actualCastlistId = await castlistVirtualAdapter.materializeCastlist(context.guildId, castlistId);
       }
 
+      // Load data ONCE (following store multi-select pattern)
       const playerData = await loadPlayerData();
       const tribes = playerData[context.guildId]?.tribes || {};
 
       // Get current tribes using this castlist (use original ID for lookup)
       const currentTribes = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
 
-      // Calculate changes for logging
+      // Calculate changes (exactly like store implementation)
       const toRemove = currentTribes.filter(t => !selectedRoles.includes(t));
       const toAdd = selectedRoles.filter(r => !currentTribes.includes(r));
 
       console.log(`[CASTLIST] Processing changes: Remove ${toRemove.length} tribes, Add ${toAdd.length} tribes`);
 
-      // Remove castlist from tribes that are no longer selected
+      // Get castlist entity for name (needed for legacy field)
+      const castlist = await castlistManager.getCastlist(context.guildId, actualCastlistId);
+      const castlistName = castlist?.name || 'default';
+
+      // Process ALL removals in memory
       for (const tribeId of toRemove) {
-        await castlistManager.unlinkTribeFromCastlist(context.guildId, tribeId, actualCastlistId);
-        console.log(`[CASTLIST] Removed tribe ${tribeId} from castlist`);
+        const tribe = tribes[tribeId];
+        if (tribe) {
+          // Remove from castlistIds array
+          if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
+            tribe.castlistIds = tribe.castlistIds.filter(id => id !== actualCastlistId);
+
+            // Update legacy field based on remaining castlists
+            if (tribe.castlistIds.length > 0) {
+              // Set to first remaining castlist's name
+              const firstId = tribe.castlistIds[0];
+              if (firstId === 'default') {
+                tribe.castlist = 'default';
+              } else {
+                const firstCastlist = await castlistManager.getCastlist(context.guildId, firstId);
+                tribe.castlist = firstCastlist?.name || firstId;
+              }
+            } else {
+              // No castlists left - clean up
+              delete tribe.castlistIds;
+              delete tribe.castlist;
+            }
+          } else if (tribe.castlistId === actualCastlistId) {
+            // Handle legacy single ID format
+            delete tribe.castlistId;
+            delete tribe.castlist;
+          } else if (tribe.castlist === castlistName) {
+            // Handle legacy string format
+            delete tribe.castlist;
+          }
+          console.log(`[CASTLIST] Removed tribe ${tribeId} from castlist (in memory)`);
+        }
       }
 
-      // Add castlist to newly selected tribes
+      // Process ALL additions in memory
       for (const roleId of toAdd) {
-          // Extract role color from Discord API
-          const roleData = resolvedRoles[roleId];
-          const roleColor = roleData?.color ? `#${roleData.color.toString(16).padStart(6, '0')}` : null;
+        // Extract role color from Discord API
+        const roleData = resolvedRoles[roleId];
+        const roleColor = roleData?.color ? `#${roleData.color.toString(16).padStart(6, '0')}` : null;
 
-          // Initialize tribe if it doesn't exist
-          if (!tribes[roleId]) {
-            tribes[roleId] = {
-              name: `Tribe ${roleId}`,
-              emoji: '🏕️',
-              color: roleColor
-            };
-          } else if (roleColor && !tribes[roleId].color) {
-            // Update existing tribe with color if missing
+        // Initialize or update tribe
+        if (!tribes[roleId]) {
+          // Create new tribe with castlist already assigned
+          tribes[roleId] = {
+            name: `Tribe ${roleId}`,
+            emoji: '🏕️',
+            color: roleColor,
+            castlistIds: [actualCastlistId],  // Add directly here
+            castlist: castlistName  // Legacy field
+          };
+        } else {
+          // Update existing tribe
+          if (roleColor && !tribes[roleId].color) {
             tribes[roleId].color = roleColor;
           }
 
-          // Link to castlist (use actualized ID for real updates)
-          await castlistManager.linkTribeToCastlist(context.guildId, roleId, actualCastlistId);
-          console.log(`[CASTLIST] Added tribe ${roleId} to castlist`);
+          // Add to castlistIds array
+          if (!tribes[roleId].castlistIds) {
+            tribes[roleId].castlistIds = [];
+          }
+          if (!tribes[roleId].castlistIds.includes(actualCastlistId)) {
+            tribes[roleId].castlistIds.push(actualCastlistId);
+          }
+
+          // Update legacy field (set to first castlist or this one)
+          if (!tribes[roleId].castlist || tribes[roleId].castlistIds[0] === actualCastlistId) {
+            tribes[roleId].castlist = castlistName;
+          }
         }
-      
-      // Save changes
+        console.log(`[CASTLIST] Added tribe ${roleId} to castlist (in memory)`);
+      }
+
+      // Save ONCE at the end - NO MORE linkTribeToCastlist calls!
       await savePlayerData(playerData);
 
       // Log summary
