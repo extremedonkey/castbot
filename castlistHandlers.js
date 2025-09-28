@@ -220,17 +220,23 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
         await castlistManager.updateCastlist(context.guildId, 'default', {});
         actualCastlistId = 'default'; // Keep using 'default' as the ID
 
-        // CRITICAL: Migrate existing tribes from legacy format to new format
+        // CRITICAL: Migrate existing tribes from legacy format to new format ONCE
         // This ensures all tribes with castlist: "default" get converted to use castlistIds array
         const playerData = await loadPlayerData();
         const tribes = playerData[context.guildId]?.tribes || {};
         let migratedCount = 0;
 
         for (const [roleId, tribe] of Object.entries(tribes)) {
-          // If tribe has legacy format castlist: "default", convert it
-          if (tribe.castlist === 'default' && !tribe.castlistIds) {
+          // Only migrate if tribe has legacy format AND hasn't been migrated yet
+          // Check if castlistIds doesn't exist or doesn't include 'default'
+          if (tribe.castlist === 'default' && (!tribe.castlistIds || !tribe.castlistIds.includes('default'))) {
             console.log(`[CASTLIST] Migrating tribe ${roleId} from legacy to new format`);
-            tribe.castlistIds = ['default'];
+            if (!tribe.castlistIds) {
+              tribe.castlistIds = [];
+            }
+            if (!tribe.castlistIds.includes('default')) {
+              tribe.castlistIds.push('default');
+            }
             // Keep castlist field for backwards compatibility
             tribe.castlist = 'default';
             migratedCount++;

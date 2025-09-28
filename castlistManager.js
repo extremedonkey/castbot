@@ -273,8 +273,14 @@ export class CastlistManager {
       tribe.castlistIds.push(finalCastlistId);
     }
 
-    // Keep the old castlist field for backwards compatibility (set to first castlist)
-    tribe.castlist = tribe.castlistIds[0] === 'default' ? 'default' : castlist.name;
+    // Keep the old castlist field for backwards compatibility
+    // For default, always use 'default' string
+    // For others, use the castlist name
+    if (finalCastlistId === 'default' || castlistId === 'default') {
+      tribe.castlist = 'default';
+    } else {
+      tribe.castlist = castlist.name;
+    }
 
     // Save changes
     await savePlayerData(playerData);
@@ -302,27 +308,49 @@ export class CastlistManager {
     const tribe = playerData[guildId].tribes[roleId];
 
     if (castlistId) {
-      // Remove specific castlist from array
-      if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
-        tribe.castlistIds = tribe.castlistIds.filter(id => id !== castlistId);
+      // Handle removal based on format
+      let removed = false;
 
-        // Update legacy castlist field to first remaining castlist
+      // First, handle the new array format
+      if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
+        const originalLength = tribe.castlistIds.length;
+        tribe.castlistIds = tribe.castlistIds.filter(id => id !== castlistId);
+        removed = tribe.castlistIds.length < originalLength;
+
+        // Update or clean up based on remaining castlists
         if (tribe.castlistIds.length > 0) {
-          tribe.castlist = tribe.castlistIds[0] === 'default' ? 'default' : tribe.castlistIds[0];
+          // Update legacy field to first remaining castlist
+          const firstCastlist = tribe.castlistIds[0];
+          if (firstCastlist === 'default') {
+            tribe.castlist = 'default';
+          } else {
+            // For non-default, might need to get the name
+            const firstCastlistEntity = await this.getCastlist(guildId, firstCastlist);
+            tribe.castlist = firstCastlistEntity ? firstCastlistEntity.name : firstCastlist;
+          }
         } else {
-          tribe.castlist = 'default';
-          delete tribe.castlistIds; // Clean up empty array
+          // No castlists left - clean up
+          delete tribe.castlistIds;
+          delete tribe.castlist; // Remove castlist entirely when no castlists assigned
         }
-      } else if (tribe.castlistId === castlistId) {
-        // Single ID format - remove it
+      }
+
+      // Handle legacy single ID format
+      if (!removed && tribe.castlistId === castlistId) {
         delete tribe.castlistId;
-        tribe.castlist = 'default';
-      } else if (tribe.castlist === castlistId) {
-        // Legacy string format - handle default castlist removal
-        // This is the case for tribes with castlist: "default" string
+        delete tribe.castlist; // Remove entirely when unlinked
+        removed = true;
+      }
+
+      // Handle legacy string format (for tribes not yet migrated)
+      if (!removed && tribe.castlist === castlistId) {
         console.log(`[CASTLIST] Removing legacy castlist '${castlistId}' from tribe ${roleId}`);
-        delete tribe.castlist; // Remove from this castlist
-        // Don't set to 'default' since we're removing from default
+        delete tribe.castlist;
+        removed = true;
+      }
+
+      if (!removed) {
+        console.log(`[CASTLIST] Tribe ${roleId} was not linked to castlist ${castlistId}`);
       }
     } else {
       // Remove all castlist links
