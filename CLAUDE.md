@@ -130,6 +130,13 @@ npm run monitor-prod-alerts    # Alert conditions & recommendations
 npm run monitor-prod-cache     # Cache performance analysis
 ```
 
+**📋 PM2 Error Logger** - Automated error monitoring to Discord:
+- **Auto-posts** PM2 errors to Discord #error channel every 60s
+- **Bulletproof**: Never crashes the bot, all errors isolated
+- **Dual-mode**: Local file reading in dev/prod, SSH remote monitoring
+- **Smart filtering**: ERROR, FATAL, CRITICAL, failed, TypeError patterns
+- **Implementation**: `/src/monitoring/pm2ErrorLogger.js` (singleton pattern)
+
 **📋 Log Analysis**:
 ```bash
 npm run logs-prod              # Last 100 lines

@@ -207,6 +207,228 @@ Shows actual totals alongside percentages (matches Lightsail dashboard):
    📋 Action: Consider immediate restart
 ```
 
+## 📋 PM2 Error Logger
+
+### Overview
+
+The PM2 Error Logger provides automated monitoring of PM2 process logs with real-time error notifications posted directly to Discord. This system operates continuously in both dev and prod environments, ensuring no critical errors go unnoticed.
+
+**Key Features:**
+- **Automated Monitoring**: Checks PM2 logs every 60 seconds
+- **Discord Integration**: Posts errors to #error channel (ID: 1416025517706186845)
+- **Bulletproof Design**: Never crashes the bot - all errors isolated and logged
+- **Dual-Mode Operation**: Local file reading (dev/prod server) or SSH remote monitoring
+- **Smart Filtering**: Detects ERROR, FATAL, CRITICAL, failed, TypeError, and more
+- **Position Tracking**: Remembers last-read position to avoid duplicate notifications
+- **Environment Tags**: Clear 🟡 [PM2-DEV] or 🔴 [PM2-PROD] prefixes
+
+### How It Works
+
+#### Environment Detection
+
+The system intelligently detects three scenarios:
+
+1. **Dev Environment** (`PRODUCTION !== 'TRUE'`)
+   - Reads local logs from `./logs/pm2-*.log`
+   - Process name: `castbot-pm-dev`
+
+2. **Production Server** (running ON prod server as bitnami user)
+   - Reads local logs from `/home/bitnami/.pm2/logs/castbot-pm-*.log`
+   - Process name: `castbot-pm`
+   - Detection: Checks `os.userInfo().username === 'bitnami'` AND `/home/bitnami/.pm2/logs` exists
+
+3. **Remote Monitoring** (`PRODUCTION === 'TRUE'` but NOT on prod server)
+   - Uses SSH to read remote prod logs
+   - Same error patterns and filtering
+   - Requires SSH key at `~/.ssh/castbot-key.pem`
+
+#### Error Pattern Detection
+
+The logger filters for these critical patterns:
+
+**Error Log (always monitored):**
+- All content from `pm2-error.log`
+- Last 50 lines per check
+
+**Output Log (pattern-filtered):**
+- `ERROR`, `FATAL`, `CRITICAL`
+- `❌`, `failed`, `Failed`
+- `Error:`, `TypeError`, `ReferenceError`, `SyntaxError`
+- Last 30 critical lines per check
+
+### Discord Integration
+
+**Message Format:**
+```
+🟡 **[PM2-DEV]** 2:45 PM
+```
+=== ERRORS ===
+[error log lines]
+
+=== CRITICAL OUTPUT ===
+[filtered output lines]
+```
+```
+
+**Message Characteristics:**
+- **Truncation**: Limited to 1900 chars (100 char buffer from 2000 limit)
+- **Timestamps**: Human-readable format (2:45 PM)
+- **Environment Tags**:
+  - 🟡 `[PM2-DEV]` for development
+  - 🔴 `[PM2-PROD]` for production
+- **Code Blocks**: Uses triple backticks for log formatting
+
+### Technical Implementation
+
+#### File Architecture
+
+```
+/src/monitoring/pm2ErrorLogger.js    # Main implementation (292 lines)
+/logs/pm2-positions.json              # Position tracking (dev)
+/home/bitnami/.pm2/logs/              # Production logs
+```
+
+#### Key Classes and Methods
+
+```javascript
+class PM2ErrorLogger {
+  constructor(client)              // Initialize with Discord client
+  isRunningOnProdServer()          // Detect prod server environment
+  loadPositions()                  // Load file position tracking
+  savePositions(positions)         // Save file position tracking
+  readLogsLocal(config, positions) // Read local PM2 logs
+  readLogsRemote(config, positions)// Read remote logs via SSH
+  start()                          // Start monitoring (60s interval)
+  stop()                           // Stop monitoring
+  checkLogs()                      // Check logs and post to Discord
+}
+
+export const getPM2ErrorLogger = (client) => { /* Singleton */ }
+```
+
+#### Integration Point
+
+In `app.js`:
+```javascript
+import { getPM2ErrorLogger } from './src/monitoring/pm2ErrorLogger.js';
+
+// Start PM2 Error Log Monitoring (Dev & Prod)
+const pm2Logger = getPM2ErrorLogger(client);
+pm2Logger.start();
+```
+
+### Configuration
+
+**PM2 Log Paths:**
+```javascript
+const PM2_LOG_PATHS = {
+  dev: {
+    out: './logs/pm2-out.log',
+    error: './logs/pm2-error.log',
+    processName: 'castbot-pm-dev',
+    local: true
+  },
+  prod: {
+    out: '/home/bitnami/.pm2/logs/castbot-pm-out.log',
+    error: '/home/bitnami/.pm2/logs/castbot-pm-error.log',
+    processName: 'castbot-pm',
+    local: false  // Overridden if running on prod server
+  }
+};
+```
+
+**Timing Configuration:**
+- Check interval: 60 seconds (`PM2_LOG_CHECK_INTERVAL`)
+- Discord channel: `1416025517706186845` (hardcoded)
+
+### Monitoring Status
+
+#### Verify Operation
+
+Check console logs for startup confirmation:
+```bash
+[PM2Logger] 📋 Starting PM2 Discord logger...
+[PM2Logger] ✅ PM2 Discord logger started - posting to #error channel every 60s
+```
+
+#### Check Activity
+
+Monitor for successful posts:
+```bash
+[PM2Logger] Check: env=prod, isOnProdServer=true, shouldReadLocal=true
+[PM2Logger] 📋 PM2 logs posted to Discord (3 lines)
+```
+
+#### Verify Discord Channel
+
+Navigate to #error channel to see posted errors with environment tags.
+
+### Error Handling Philosophy
+
+**Bulletproof Architecture:**
+- **Never crashes the bot** - All errors caught and logged
+- **Isolated intervals** - Each check wrapped in try/catch
+- **Silent failures** - SSH errors logged but don't break monitoring
+- **Graceful degradation** - Missing logs don't stop other checks
+
+**Error Isolation Example:**
+```javascript
+async checkLogs() {
+  try {
+    // Main logic
+  } catch (error) {
+    console.error('[PM2Logger] Log check error (non-critical):', error);
+    // Don't throw - this should never break the bot
+  }
+}
+```
+
+### Historical Context
+
+**Restoration Background:**
+- Originally implemented in commit `92b16c0`
+- Accidentally lost during development
+- Restored January 2025 with production improvements
+- Enhanced with `isRunningOnProdServer()` detection to prevent SSH-to-self issues
+
+**Before Restoration:**
+```
+❌ PM2 errors only visible in logs
+❌ Manual SSH required to check production errors
+❌ No real-time error notifications
+```
+
+**After Restoration:**
+```
+✅ Real-time Discord notifications every 60s
+✅ Smart environment detection (dev/prod/remote)
+✅ Automatic filtering of critical patterns
+✅ Position tracking prevents duplicates
+✅ Bulletproof design never crashes bot
+```
+
+### Related Documentation
+
+- [Infrastructure Architecture](InfrastructureArchitecture.md) - Deployment and environment setup
+- [Logging Standards](../standards/LoggingStandards.md) - Log format conventions
+- PM2 Configuration: `ecosystem.config.cjs` (dev), production uses PM2 saved state
+
+### Troubleshooting
+
+**Issue**: No errors posted to Discord
+- **Check**: Console logs for `[PM2Logger]` startup message
+- **Check**: PM2 log files exist and contain errors
+- **Check**: Discord channel ID is correct (1416025517706186845)
+
+**Issue**: SSH permission errors in production
+- **Cause**: Running on prod server but trying to SSH to itself
+- **Fix**: Already resolved - `isRunningOnProdServer()` detects this scenario
+- **Verify**: Check logs for `isOnProdServer=true, shouldReadLocal=true`
+
+**Issue**: Duplicate error messages
+- **Cause**: Position tracking file corrupted or deleted
+- **Fix**: Delete `./logs/pm2-positions.json` to reset tracking
+
 ## 🗄️ Cache Performance Monitoring
 
 ### Cache Optimization Status
