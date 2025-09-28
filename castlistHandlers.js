@@ -260,16 +260,20 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
       // Get current tribes using this castlist (use original ID for lookup)
       const currentTribes = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
 
+      // Calculate changes for logging
+      const toRemove = currentTribes.filter(t => !selectedRoles.includes(t));
+      const toAdd = selectedRoles.filter(r => !currentTribes.includes(r));
+
+      console.log(`[CASTLIST] Processing changes: Remove ${toRemove.length} tribes, Add ${toAdd.length} tribes`);
+
       // Remove castlist from tribes that are no longer selected
-      for (const tribeId of currentTribes) {
-        if (!selectedRoles.includes(tribeId)) {
-          await castlistManager.unlinkTribeFromCastlist(context.guildId, tribeId, actualCastlistId);
-        }
+      for (const tribeId of toRemove) {
+        await castlistManager.unlinkTribeFromCastlist(context.guildId, tribeId, actualCastlistId);
+        console.log(`[CASTLIST] Removed tribe ${tribeId} from castlist`);
       }
 
       // Add castlist to newly selected tribes
-      for (const roleId of selectedRoles) {
-        if (!currentTribes.includes(roleId)) {
+      for (const roleId of toAdd) {
           // Extract role color from Discord API
           const roleData = resolvedRoles[roleId];
           const roleColor = roleData?.color ? `#${roleData.color.toString(16).padStart(6, '0')}` : null;
@@ -288,18 +292,25 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
 
           // Link to castlist (use actualized ID for real updates)
           await castlistManager.linkTribeToCastlist(context.guildId, roleId, actualCastlistId);
+          console.log(`[CASTLIST] Added tribe ${roleId} to castlist`);
         }
-      }
       
       // Save changes
       await savePlayerData(playerData);
-      
+
+      // Log summary
+      if (toRemove.length > 0 || toAdd.length > 0) {
+        console.log(`[CASTLIST] ✅ Successfully updated castlist: ${toAdd.length} added, ${toRemove.length} removed`);
+      } else {
+        console.log(`[CASTLIST] No changes made - selection unchanged`);
+      }
+
       // Refresh the UI with Add Tribe button still active
       const hubData = await createCastlistHub(context.guildId, {
         selectedCastlistId: castlistId,
         activeButton: 'add_tribe' // Keep Add Tribe button active
       });
-      
+
       return hubData;
     }
   })(req, res, client);
