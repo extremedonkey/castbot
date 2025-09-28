@@ -9,6 +9,8 @@ CastlistV3's **infrastructure is production-ready** (2,731+ lines), but many **u
 
 **Critical Context**: The "Default Castlist" is the **heart of CastBot** - not an optional feature. It represents the active season's main player roster and is what most users interact with daily. CastlistV3 Hub must support default castlist creation and management.
 
+**Latest Update (Sept 29, 2025)**: Active/Default Castlist basic implementation COMPLETE but UNTESTED. Multi-castlist support (one tribe on multiple castlists) implemented. Critical bug fixes applied to tribe initialization and color extraction. Placements sorting strategy NOT IMPLEMENTED despite being marked as complete (only UI exists).
+
 ## 📋 Conversation Context Summary
 
 This document was created during comprehensive analysis session covering:
@@ -69,9 +71,65 @@ This document was created during comprehensive analysis session covering:
 
 **Recommendation**: Extract pattern, not code. Create `buildCastlistOptions()` helper in castlistHub.js.
 
-### 6. Default Castlist - THE HEART OF CASTBOT
+### 6. Default Castlist - THE HEART OF CASTBOT (NOW IMPLEMENTED)
 
 **Critical Correction**: Default castlist is NOT optional or just for beginners. It's the **core castlist** representing active season's main player roster.
+
+**Implementation Update (Sept 29, 2025)**: Active Castlist (renamed from Default) has been implemented in CastlistV3 Hub with the following critical design decisions:
+
+**1. Multi-Castlist Support Implemented**:
+```javascript
+// Tribe data structure now supports multiple castlists
+tribe: {
+  // Legacy single castlist (string format - still supported)
+  castlist: "default" || "Custom Name",
+
+  // NEW: Multi-castlist array format
+  castlistIds: ["default", "castlist_12345_user", "virtual_xyz"],
+
+  // NEW: Role color extracted from Discord API
+  color: "#5865F2"  // Stored on tribe, NOT castlist
+}
+```
+
+**2. Active Castlist Virtual Entity**:
+```javascript
+// Created by castlistVirtualAdapter.ensureDefaultCastlist()
+{
+  id: 'default',
+  name: 'Active Castlist',  // Renamed for clarity
+  type: 'system',           // Cannot be deleted
+  isVirtual: true,          // Until materialized on first edit
+  tribes: [/* computed */],  // Dynamically finds all tribes using it
+  metadata: {
+    description: 'Select if you don\'t know what you\'re doing. Castlist for active phase of the game.',
+    emoji: '📋',
+    isDefault: true
+  }
+}
+```
+
+**3. Color Extraction Bug Fix**:
+```javascript
+// FIXED: Extract color from Discord resolved roles, not castlist metadata
+const roleData = resolvedRoles[roleId];
+const roleColor = roleData?.color
+  ? `#${roleData.color.toString(16).padStart(6, '0')}`
+  : null;
+
+// Store on tribe, not castlist
+tribes[roleId] = {
+  name: `Tribe ${roleId}`,
+  emoji: '🏕️',
+  color: roleColor  // Correctly stored per-tribe
+};
+```
+
+**4. No Implicit Fallback Behavior**:
+- User explicitly rejected implicit default assignment
+- Tribes without castlist field DO NOT automatically belong to default
+- This prevents confusion and ensures explicit castlist assignment
+- Implementation awaits user's step-by-step design
 
 **How Default Works**:
 
@@ -178,23 +236,24 @@ if (tribe.castlist === castlistName || (!tribe.castlist && castlistName === 'def
 | Dropdown Selection | ✅ Working | castlistHandlers.js:15-30 | Shows all castlists |
 | Virtual → Real Migration | ✅ Working | castlistManager.js:104-110 | Auto on edit |
 
-### 🟡 Sort Strategies (PARTIAL - 33% Complete)
+### 🟡 Sort Strategies (PARTIAL - 17% Complete)
 
 | Strategy | UI Button | Sorting Function | Status | Implementation |
 |----------|-----------|------------------|--------|----------------|
 | Alphabetical (A-Z) | ✅ | ✅ | Working | castlistSorter.js:90-97 |
-| Placements | ✅ | ✅ | Working | castlistSorter.js:49-82 |
+| Placements | ✅ | ❌ | **NOT IMPLEMENTED** | castlistSorter.js:49-82 (function exists but NO DATA) |
 | Reverse Alpha (Z-A) | ✅ | ❌ | **Stub** | castlistHub.js:381-387 (UI only) |
 | Age | ✅ | ❌ | **Stub** | castlistHub.js:395-401 (UI only) |
 | Timezone | ✅ | ❌ | **Stub** | castlistHub.js:402-408 (UI only) |
 | Join Date | ✅ | ❌ | **Stub** | castlistHub.js:409-416 (UI only) |
 
-**Note**: UI shows 6 sort options, but only 2 actually work. The others fall back to alphabetical.
+**Note**: UI shows 6 sort options, but only 1 actually works (Alphabetical). Placements appears to work but has NO DATA to sort by (no rankings stored). The other 4 fall back to alphabetical.
 
 **What Works**:
 - ✅ Dropdown shows all 6 options
 - ✅ Selection saved to castlist.settings.sortStrategy
-- ✅ Alphabetical and Placements sort correctly
+- ✅ Alphabetical sorts correctly
+- ⚠️ Placements sorting function exists but has NO DATA (rankings never populated)
 
 **What Doesn't Work**:
 - ❌ Reverse Alpha - `sortAlphabetical(members, true)` never called
@@ -450,15 +509,136 @@ Based on user feedback and technical priorities:
 - Removes confusion
 - Sets foundation for custom ordering
 
+## 🔬 Implementation Details Discovered Through Testing
+
+### Multi-Castlist Array Implementation
+
+During implementation, we discovered critical details about how tribes can belong to multiple castlists:
+
+**Data Structure Evolution**:
+```javascript
+// LEGACY: Single castlist (string format)
+tribe: {
+  castlist: "default" || "Custom Name",
+  // ... other fields
+}
+
+// TRANSITIONAL: Single castlist ID (entity reference)
+tribe: {
+  castlistId: "castlist_12345_user",
+  castlist: "Legacy Name" // Kept for backwards compatibility
+}
+
+// NEW: Multi-castlist array (supports multiple castlists)
+tribe: {
+  castlistIds: ["default", "castlist_12345_user", "virtual_xyz"],
+  castlist: "First Castlist Name", // Legacy field maintained
+  color: "#5865F2" // Role color from Discord API
+}
+```
+
+**Key Implementation Decisions**:
+1. **Array always used**: Even for single castlist, use `castlistIds: ["default"]` not `castlistId: "default"`
+2. **Legacy field maintained**: `castlist` field kept pointing to first array entry for backwards compatibility
+3. **Color on tribe**: Role color extracted from Discord API and stored on tribe, NOT castlist metadata
+4. **No implicit default**: Tribes without castlist field are NOT implicitly added to default
+
+### Active Castlist Implementation Details
+
+**1. Dropdown Ordering**:
+```javascript
+// castlistHub.js - Active Castlist ALWAYS first
+selectMenu.addOptions({
+  label: 'Active Castlist',  // Renamed from "Default Castlist"
+  value: 'default',          // ID stays "default" for legacy compatibility
+  description: 'Select if you don\'t know what you\'re doing. Castlist for active phase of the game.',
+  emoji: '✅'
+});
+// Then real castlists, then virtual castlists
+```
+
+**2. Virtual Until Materialized**:
+```javascript
+// Active Castlist exists as virtual entity until first edit
+// castlistVirtualAdapter.ensureDefaultCastlist() creates virtual representation
+// On first edit, automatically materializes to real entity via:
+if (castlistVirtualAdapter.isVirtualId(castlistId)) {
+  castlistId = await castlistVirtualAdapter.materializeCastlist(guildId, castlistId);
+}
+```
+
+**3. Delete Protection**:
+```javascript
+// castlistHub.js line 335
+const isDefaultCastlist = (selectedCastlistId === 'default');
+deleteButton.setDisabled(!enabled || isDefaultCastlist); // Cannot delete Active Castlist
+```
+
+**4. Dropdown Persistence Fix**:
+```javascript
+// Fixed dropdown not maintaining selection
+selectMenu.setDefaultValues(selectedCastlistId ? [selectedCastlistId] : []);
+```
+
+### Color Extraction Bug Fix
+
+**The Bug**: `accentColor` was incorrectly stored in castlist metadata instead of per-tribe
+
+**Before (INCORRECT)**:
+```javascript
+// In castlistManager.js
+metadata: {
+  description: config.description || '',
+  emoji: config.emoji || '📋',
+  accentColor: config.accentColor || null  // WRONG LOCATION
+}
+```
+
+**After (CORRECT)**:
+```javascript
+// In castlistHandlers.js during tribe role selection
+const roleData = resolvedRoles[roleId];
+const roleColor = roleData?.color
+  ? `#${roleData.color.toString(16).padStart(6, '0')}`
+  : null;
+
+tribes[roleId] = {
+  name: `Tribe ${roleId}`,
+  emoji: '🏕️',
+  color: roleColor  // CORRECT: Stored per-tribe
+};
+```
+
+### Discovered Bugs During Implementation
+
+1. **Type Default Bug**: Tribe initialization incorrectly set `type: 'default'` instead of leaving undefined
+2. **Placements Sort Data**: Function exists but rankings are never populated, making it non-functional
+3. **Unlink Missing Parameter**: `unlinkTribeFromCastlist` wasn't receiving castlistId parameter
+4. **Dropdown Persistence**: Selection wasn't maintained after button clicks (fixed with setDefaultValues)
+
+### Testing Requirements
+
+**CastBot Default Role ID**: `1421932674611941618` - Use this for testing Active Castlist functionality
+
+**Test Scenarios Needed**:
+1. Create new tribe with Active Castlist
+2. Move tribe from virtual to real castlist
+3. Add tribe to multiple castlists simultaneously
+4. Verify color extraction from Discord role
+5. Confirm delete protection on Active Castlist
+6. Test dropdown persistence across interactions
+
 ## 🎯 Critical Implementation Requirements
 
 Based on analysis, these are **REQUIRED** for CastlistV3 to replace legacy:
 
-### 1. Default Castlist Support (CRITICAL)
-- [ ] Add "Default Castlist" option to Hub dropdown (not currently present)
-- [ ] Order: Default → Real → Virtual → ➕ New
-- [ ] Match legacy behavior: tribes with no `castlist` field implicitly belong to default
-- [ ] Support default castlist entity creation (special handling needed?)
+### 1. Default Castlist Support (CRITICAL) - ✅ IMPLEMENTED (UNTESTED)
+- [x] Add "Active Castlist" option to Hub dropdown (renamed from Default)
+- [x] Order: Active → Real → Virtual (➕ New still needed)
+- [x] NO implicit default behavior (user explicitly rejected this)
+- [x] Support default castlist virtual entity (materializes on first edit)
+- [x] Delete protection for Active Castlist
+- [x] Dropdown persistence with setDefaultValues()
 
 ### 2. Create New Castlist Entry Point (HIGH)
 - [ ] Add "➕ New Castlist" option to dropdown
@@ -467,6 +647,7 @@ Based on analysis, these are **REQUIRED** for CastlistV3 to replace legacy:
 - [ ] Wire to existing createCastlistWizard()
 
 ### 3. Complete Sort Strategies (MEDIUM)
+- [ ] Fix Placements sorting (function exists but no data populated)
 - [ ] Implement Reverse Alphabetical
 - [ ] Implement Age sorting
 - [ ] Implement Timezone sorting
@@ -523,6 +704,38 @@ Based on analysis, these are **REQUIRED** for CastlistV3 to replace legacy:
 - Hub restricted to one user (intentional, but blocks deprecation)
 - prod_manage_tribes has 5 references in app.js
 - Both systems running in parallel (maintenance burden)
+
+## 📝 Session Summary (Sept 29, 2025)
+
+**What Was Accomplished**:
+1. ✅ Implemented Active Castlist (default) support in CastlistV3 Hub
+2. ✅ Added multi-castlist array support (`castlistIds: []`)
+3. ✅ Fixed role color extraction bug (now from Discord API to tribe.color)
+4. ✅ Added delete protection for Active Castlist
+5. ✅ Fixed dropdown persistence issue
+6. ✅ Removed incorrect `type: 'default'` tribe initialization
+7. ✅ Created virtual Active Castlist entity via adapter
+
+**What Needs Testing**:
+- Active Castlist appears first in dropdown
+- Multi-castlist assignment works correctly
+- Role colors are extracted and displayed properly
+- Virtual to real materialization on edit
+- Delete button disabled for Active Castlist
+- Legacy compatibility maintained
+
+**What's Still Missing**:
+- Placements sorting (function exists but no data)
+- Create New Castlist entry point in dropdown
+- 4 sort strategies (Reverse Alpha, Age, Timezone, Join Date)
+- Manual ordering UI
+- Swap/Merge feature implementation
+
+**Critical Clarifications**:
+- Active Castlist is the HEART of CastBot, not optional
+- One tribe CAN belong to multiple castlists (design requirement)
+- Colors belong on tribes, NOT castlists (per Discord role)
+- NO implicit default assignment (user's explicit choice)
 
 ## 🔍 Key Learnings
 

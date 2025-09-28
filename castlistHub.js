@@ -121,12 +121,20 @@ export async function createCastlistHub(guildId, options = {}) {
   // Preserve selection if we have one (fix for dropdown persistence)
   if (selectedCastlistId && selectedCastlistId !== 'none') {
     selectMenu.setDisabled(false); // Ensure it's enabled
-    // Set default values to persist selection
-    selectMenu.setDefaultValues([selectedCastlistId]);
   }
   
   const selectRow = new ActionRowBuilder().addComponents(selectMenu);
-  container.components.push(selectRow.toJSON());
+  const selectComponent = selectRow.toJSON();
+
+  // Add default_values for dropdown persistence if we have a selection
+  if (selectedCastlistId && selectedCastlistId !== 'none' && selectComponent.components[0]) {
+    selectComponent.components[0].default_values = [{
+      id: selectedCastlistId,
+      type: 'string'
+    }];
+  }
+
+  container.components.push(selectComponent);
   
   // If a castlist is selected, show details and management options
   if (selectedCastlistId && selectedCastlistId !== 'none') {
