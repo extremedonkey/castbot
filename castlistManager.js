@@ -317,6 +317,12 @@ export class CastlistManager {
         // Single ID format - remove it
         delete tribe.castlistId;
         tribe.castlist = 'default';
+      } else if (tribe.castlist === castlistId) {
+        // Legacy string format - handle default castlist removal
+        // This is the case for tribes with castlist: "default" string
+        console.log(`[CASTLIST] Removing legacy castlist '${castlistId}' from tribe ${roleId}`);
+        delete tribe.castlist; // Remove from this castlist
+        // Don't set to 'default' since we're removing from default
       }
     } else {
       // Remove all castlist links

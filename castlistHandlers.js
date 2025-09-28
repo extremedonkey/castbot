@@ -211,11 +211,42 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
       // CRITICAL: Materialize virtual castlist before updating tribes
       // This ensures changes persist to real data structure
       let actualCastlistId = castlistId;
-      if (castlistVirtualAdapter.isVirtualId(castlistId) && castlistId !== 'default') {
+
+      // Special handling for default castlist - create real entity on first modification
+      if (castlistId === 'default') {
+        console.log(`[CASTLIST] Materializing default castlist on tribe management`);
+        // This will create the default entity in castlistConfigs if it doesn't exist
+        // We use updateCastlist with empty updates just to trigger creation
+        await castlistManager.updateCastlist(context.guildId, 'default', {});
+        actualCastlistId = 'default'; // Keep using 'default' as the ID
+
+        // CRITICAL: Migrate existing tribes from legacy format to new format
+        // This ensures all tribes with castlist: "default" get converted to use castlistIds array
+        const playerData = await loadPlayerData();
+        const tribes = playerData[context.guildId]?.tribes || {};
+        let migratedCount = 0;
+
+        for (const [roleId, tribe] of Object.entries(tribes)) {
+          // If tribe has legacy format castlist: "default", convert it
+          if (tribe.castlist === 'default' && !tribe.castlistIds) {
+            console.log(`[CASTLIST] Migrating tribe ${roleId} from legacy to new format`);
+            tribe.castlistIds = ['default'];
+            // Keep castlist field for backwards compatibility
+            tribe.castlist = 'default';
+            migratedCount++;
+          }
+        }
+
+        if (migratedCount > 0) {
+          await savePlayerData(playerData);
+          console.log(`[CASTLIST] Migrated ${migratedCount} tribes to new format`);
+        }
+      }
+      // Handle other virtual castlists
+      else if (castlistVirtualAdapter.isVirtualId(castlistId)) {
         console.log(`[CASTLIST] Materializing virtual castlist before tribe updates`);
         actualCastlistId = await castlistVirtualAdapter.materializeCastlist(context.guildId, castlistId);
       }
-      // Note: 'default' castlist is special and handled differently below
 
       const playerData = await loadPlayerData();
       const tribes = playerData[context.guildId]?.tribes || {};
