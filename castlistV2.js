@@ -179,9 +179,12 @@ function reorderTribes(tribes, userId = null, strategy = "default", castlistName
  * @param {string} timezone - Timezone role name (empty if none)
  * @param {string} formattedTime - Current time in player's timezone (empty if none)
  * @param {boolean} showEmoji - Whether to display player emoji
+ * @param {string} displayMode - 'view' or 'edit' mode
+ * @param {Object} tribeData - Tribe information (for edit button)
+ * @param {string} guildId - Guild ID (for placement lookup)
  * @returns {Object} Player card section component
  */
-function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji) {
+function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji, displayMode = 'view', tribeData = null, guildId = null) {
     // Check if member has a placement prefix (from alumni_placements sorting)
     const prefix = member.displayPrefix || '';
     const displayName = capitalize(member.displayName);
@@ -234,6 +237,53 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
         allInfo += `\n${vanityRolesInfo}`;
     }
 
+    // Create accessory based on display mode
+    let accessory;
+    if (displayMode === 'edit' && tribeData && guildId) {
+        // Edit mode - create placement edit button
+        const { loadPlayerData } = require('./storage.js');
+        const allPlayerData = loadPlayerData();
+        const placement = allPlayerData[guildId]?.placements?.global?.[member.user.id]?.placement;
+
+        // Helper function for ordinal suffixes
+        const getOrdinalLabel = (placement) => {
+            if (!placement) return "Set Place";
+
+            const num = typeof placement === 'number' ? placement : parseInt(placement);
+            if (isNaN(num)) return "Set Place";
+
+            // Handle special cases 11-13
+            if (num % 100 >= 11 && num % 100 <= 13) {
+                return `${num}th`;
+            }
+
+            // Standard ordinal rules
+            switch (num % 10) {
+                case 1: return `${num}st`;
+                case 2: return `${num}nd`;
+                case 3: return `${num}rd`;
+                default: return `${num}th`;
+            }
+        };
+
+        accessory = {
+            type: 2, // Button
+            custom_id: `edit_placement_${tribeData.id}_${member.user.id}`,
+            label: getOrdinalLabel(placement),
+            style: 2, // Secondary
+            emoji: { name: "✏️" }
+        };
+    } else {
+        // View mode - create thumbnail
+        accessory = {
+            type: 11, // Thumbnail
+            media: {
+                url: member.user.displayAvatarURL({ size: 128, extension: 'png' })
+            },
+            description: `${prefix}${displayName}'s avatar`
+        };
+    }
+
     return {
         type: 9, // Section component
         components: [
@@ -242,13 +292,7 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
                 content: allInfo
             }
         ],
-        accessory: {
-            type: 11, // Thumbnail
-            media: {
-                url: member.user.displayAvatarURL({ size: 128, extension: 'png' })
-            },
-            description: `${prefix}${displayName}'s avatar`
-        }
+        accessory: accessory
     };
 }
 
@@ -261,9 +305,11 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
  * @param {Object} timezones - Timezone role mappings
  * @param {Object} pageInfo - Page information for this tribe
  * @param {string} scenario - Display scenario ("ideal", "no-separators", "multi-page")
+ * @param {string} castlistName - Name of the castlist
+ * @param {string} displayMode - 'view' or 'edit' mode
  * @returns {Object} Tribe container component
  */
-async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, pageInfo, scenario, castlistName = 'default') {
+async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, pageInfo, scenario, castlistName = 'default', displayMode = 'view') {
     const { currentPage, totalPages, playersOnPage } = pageInfo;
     const pageMembers = playersOnPage;
     
@@ -328,12 +374,15 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         
         // Create individual player card with inline thumbnail (no player emojis for castlist2)
         const playerCard = createPlayerCard(
-            member, 
-            playerData, 
-            memberPronouns, 
+            member,
+            playerData,
+            memberPronouns,
             memberTimezone,
             formattedTime,
-            false // Never show player emojis in castlist2
+            false, // Never show player emojis in castlist2
+            displayMode,
+            tribe, // Pass tribe data for edit button
+            guild.id // Pass guild ID for placement lookup
         );
         
         playerCards.push(playerCard);
@@ -709,7 +758,7 @@ function createCastlistRows(allCastlists, castlistTribes, includeAddButton = tru
  * @param {Function} permissionChecker - Optional function to check send permissions
  * @returns {Object} Response data ready to send
  */
-export async function buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member = null, channelId = null, permissionChecker = null) {
+export async function buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member = null, channelId = null, permissionChecker = null, displayMode = 'view') {
   const { currentTribeIndex, currentTribePage, scenario } = navigationState;
   const currentTribe = tribes[currentTribeIndex];
 
@@ -771,7 +820,8 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistName, na
       timezones,
       pageInfo,
       scenario,
-      castlistName
+      castlistName,
+      displayMode
     );
   }
 

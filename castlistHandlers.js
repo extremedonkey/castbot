@@ -50,6 +50,7 @@ export async function handleCastlistButton(req, res, client, custom_id) {
   else if (action === 'add' && subAction === 'tribe') buttonType = 'add_tribe';
   else if (action === 'order') buttonType = 'order';
   else if (action === 'swap' && subAction === 'merge') buttonType = 'swap_merge';
+  else if (action === 'placements') buttonType = 'placements';
   
   // Special handling for View button - redirect to show_castlist2 handler
   if (buttonType === 'view') {
@@ -80,7 +81,58 @@ export async function handleCastlistButton(req, res, client, custom_id) {
     // Signal to app.js to handle as show_castlist2
     return { redirectToShowCastlist: true };
   }
-  
+
+  // Special handling for Placements button - redirect to show_castlist2 in edit mode
+  if (buttonType === 'placements') {
+    // Check production permissions
+    const member = req.body.member;
+    const hasAdminPermissions = member?.permissions &&
+      (BigInt(member.permissions) & BigInt(PermissionFlagsBits.ManageRoles)) !== 0n;
+
+    if (!hasAdminPermissions) {
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async () => ({
+          components: [{
+            type: 17, // Container
+            components: [{
+              type: 10, // Text Display
+              content: '❌ **Production permissions required**\n\nYou need Manage Roles permission to edit placements.'
+            }]
+          }],
+          flags: (1 << 15) // IS_COMPONENTS_V2
+        })
+      })(req, res, client);
+    }
+
+    // Get castlist to determine the name for show_castlist2
+    const castlist = await castlistManager.getCastlist(req.body.guild_id, castlistId);
+
+    if (!castlist) {
+      // Return error as hub update
+      const hubData = await createCastlistHub(req.body.guild_id, {
+        selectedCastlistId: castlistId,
+        activeButton: null
+      });
+      return ButtonHandlerFactory.create({
+        id: custom_id,
+        updateMessage: true,
+        handler: async () => hubData
+      })(req, res, client);
+    }
+
+    // For virtual castlists, keep the ID format (e.g., "default" or "virtual_xyz")
+    // For real castlists, use the castlist name (legacy tribes use name matching)
+    const targetId = castlist.isVirtual ? castlistId : castlist.name;
+
+    // Update custom_id to trigger show_castlist2 handler in EDIT MODE
+    req.body.data.custom_id = `show_castlist2_${targetId}_edit`;
+
+    // Signal to app.js to handle as show_castlist2
+    return { redirectToShowCastlist: true };
+  }
+
   return ButtonHandlerFactory.create({
     id: custom_id,
     updateMessage: buttonType !== 'edit_info', // Don't update for edit_info (shows modal)

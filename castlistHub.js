@@ -18,7 +18,8 @@ export const CastlistButtonType = {
   CUSTOMIZE: 'customize',
   EDIT_PLAYERS: 'edit_players',
   SWAP_MERGE: 'swap_merge',
-  ORDER: 'order'
+  ORDER: 'order',
+  PLACEMENTS: 'placements'
 };
 
 /**
@@ -162,6 +163,7 @@ export async function createCastlistHub(guildId, options = {}) {
         castlist.name  // Pass castlist name for show_castlist2
       );
       container.components.push(managementButtons.buttonRow1.toJSON());
+      container.components.push(managementButtons.buttonRow2.toJSON());
       container.components.push(managementButtons.deleteRow.toJSON());
       
       // Separator before hot-swappable area
@@ -197,6 +199,7 @@ export async function createCastlistHub(guildId, options = {}) {
 
     const disabledButtons = createManagementButtons(null, false, null, false, null);
     container.components.push(disabledButtons.buttonRow1.toJSON());
+    container.components.push(disabledButtons.buttonRow2.toJSON());
     container.components.push(disabledButtons.deleteRow.toJSON());
     
     // Disabled placeholder
@@ -333,7 +336,18 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setDisabled(!enabled)
   );
 
-  // Row 2: Delete button (red, disabled when no castlist selected OR when default)
+  // Row 2: Tribes & Placements button and Delete button
+  const buttonRow2 = new ActionRowBuilder();
+  buttonRow2.addComponents(
+    new ButtonBuilder()
+      .setCustomId(`castlist_placements${suffix}`)
+      .setLabel('Tribes & Placements')
+      .setStyle(activeButton === CastlistButtonType.PLACEMENTS ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setEmoji('🔥')
+      .setDisabled(!enabled)
+  );
+
+  // Row 3: Delete button (red, disabled when no castlist selected OR when default)
   const deleteRow = new ActionRowBuilder();
   const isDefaultCastlist = castlistId === 'default';
   deleteRow.addComponents(
@@ -345,7 +359,7 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setDisabled(!enabled || isDefaultCastlist) // Disable for default
   );
 
-  return { buttonRow1, deleteRow };
+  return { buttonRow1, buttonRow2, deleteRow };
 }
 
 /**

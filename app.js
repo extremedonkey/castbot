@@ -4720,15 +4720,29 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       // Handle show_castlist2 - reuse existing logic but decode virtual IDs
       const currentCustomId = req.body.data?.custom_id?.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
       
-      // Extract and decode castlist ID
-      const castlistMatch = currentCustomId.match(/^show_castlist2(?:_(.+))?$/);
-      let requestedCastlist = castlistMatch?.[1] || 'default';
-      
+      // Extract castlist ID and display mode
+      const parts = currentCustomId.split('_');
+      // Format: show_castlist2_[castlistId]_[mode]
+      // Examples:
+      //   show_castlist2_default (view mode - default)
+      //   show_castlist2_default_edit (edit mode)
+      const displayMode = parts[parts.length - 1] === 'edit' ? 'edit' : 'view';
+
+      // Extract castlist ID (everything between show_castlist2 and optional _edit)
+      let requestedCastlist;
+      if (displayMode === 'edit') {
+        // Remove the _edit suffix and rejoin
+        requestedCastlist = parts.slice(1, -1).join('_') || 'default';
+      } else {
+        // No edit suffix, take everything after show_castlist2
+        requestedCastlist = parts.slice(1).join('_') || 'default';
+      }
+
       // Decode virtual castlist ID if needed
       const { castlistVirtualAdapter } = await import('./castlistVirtualAdapter.js');
       requestedCastlist = castlistVirtualAdapter.decodeVirtualId(requestedCastlist);
       
-      console.log('Processing show_castlist2 for:', requestedCastlist);
+      console.log('Processing show_castlist2 for:', requestedCastlist, 'in mode:', displayMode);
       
       // The rest of the existing show_castlist2 logic is already in app.js
       // Just continue with the existing flow using the decoded castlist name
@@ -4836,7 +4850,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const permissionChecker = memberObj && channelId ?
         async (m, c) => await canSendMessagesInChannel(m, c, client) :
         null;
-      const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, memberObj, channelId, permissionChecker);
+      const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, memberObj, channelId, permissionChecker, displayMode);
 
       // Send as new message (not update) - this posts to the channel
       return res.send({
@@ -7585,10 +7599,11 @@ To fix this:
           return wizardData;
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('castlist_view_') || 
-               custom_id.startsWith('castlist_edit_info_') || 
-               custom_id.startsWith('castlist_add_tribe_') || 
-               custom_id.startsWith('castlist_order_')) {
+    } else if (custom_id.startsWith('castlist_view_') ||
+               custom_id.startsWith('castlist_edit_info_') ||
+               custom_id.startsWith('castlist_add_tribe_') ||
+               custom_id.startsWith('castlist_order_') ||
+               custom_id.startsWith('castlist_placements_')) {
       // Handle castlist management buttons
       const { handleCastlistButton } = await import('./castlistHandlers.js');
       const result = await handleCastlistButton(req, res, client, custom_id);
@@ -7724,6 +7739,113 @@ To fix this:
       // Handle tribe role selection
       const { handleCastlistTribeSelect } = await import('./castlistHandlers.js');
       return handleCastlistTribeSelect(req, res, client, custom_id);
+    } else if (custom_id.startsWith('edit_placement_')) {
+      // Handle placement edit button - show modal
+      const [, , tribeId, playerId] = custom_id.split('_');
+      const guildId = req.body.guild_id;
+
+      // Load current placement
+      const { loadPlayerData } = await import('./storage.js');
+      const playerData = loadPlayerData();
+      const placement = playerData[guildId]?.placements?.global?.[playerId]?.placement;
+
+      // Show modal
+      return res.send({
+        type: InteractionResponseType.MODAL,
+        data: {
+          custom_id: `save_placement_${tribeId}_${playerId}`,
+          title: "Edit Season Placement",
+          components: [
+            {
+              type: 18, // Label (Components V2)
+              label: "Placement (1-99)",
+              description: "Enter whole number only (1 = Winner, 2 = Runner-up, etc.). Leave blank if still in game.",
+              component: {
+                type: 4, // Text Input
+                custom_id: "placement",
+                value: placement ? placement.toString() : "", // Convert number to string for display
+                placeholder: "e.g., 1, 2, 24",
+                max_length: 2,
+                required: false, // Allow clearing
+                style: 1 // Short
+              }
+            }
+          ]
+        }
+      });
+    } else if (custom_id.startsWith('save_placement_')) {
+      // Handle placement save from modal
+      const [, , tribeId, playerId] = custom_id.split('_');
+      const guildId = req.body.guild_id;
+      const userId = req.body.member?.user?.id || req.body.user?.id;
+      const components = req.body.data.components;
+      const placementInput = components[0].components[0].value?.trim();
+
+      // Validate: must be integer 1-99 or empty
+      if (placementInput && !/^\d{1,2}$/.test(placementInput)) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            components: [{
+              type: 17, // Container
+              components: [{
+                type: 10, // Text Display
+                content: '❌ Please enter a whole number (1-99)'
+              }]
+            }],
+            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+          }
+        });
+      }
+
+      // Convert to integer for storage
+      const placementValue = placementInput ? parseInt(placementInput, 10) : null;
+
+      // Load and update player data
+      const { loadPlayerData, savePlayerData } = await import('./storage.js');
+      const playerData = loadPlayerData();
+
+      // Initialize structure if needed
+      if (!playerData[guildId]) {
+        playerData[guildId] = {};
+      }
+      if (!playerData[guildId].placements) {
+        playerData[guildId].placements = {};
+      }
+      if (!playerData[guildId].placements.global) {
+        playerData[guildId].placements.global = {};
+      }
+
+      // Save or delete GLOBAL placement
+      if (placementValue !== null) {
+        playerData[guildId].placements.global[playerId] = {
+          placement: placementValue, // INTEGER not string
+          updatedBy: userId,
+          updatedAt: new Date().toISOString()
+        };
+      } else {
+        // Remove placement if cleared
+        delete playerData[guildId].placements.global[playerId];
+      }
+
+      await savePlayerData(playerData);
+
+      // Return success message
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          components: [{
+            type: 17, // Container
+            components: [{
+              type: 10, // Text Display
+              content: placementValue
+                ? `✅ Placement set to **${placementValue}** for <@${playerId}>`
+                : `✅ Placement cleared for <@${playerId}>`
+            }]
+          }],
+          flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+        }
+      });
     } else if (custom_id === 'prod_safari_menu') {
       // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
