@@ -1236,14 +1236,14 @@ async function createSafariMenu(guildId, userId, member) {
  * @param {Object} member - Discord member object for permission checking (optional)
  * @param {string} channelId - Channel ID for permission checking (optional)
  */
-async function sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member = null, channelId = null) {
+async function sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member = null, channelId = null, displayMode = 'view') {
   // Use the build function to avoid duplication
   // Create a permission checker wrapper if needed
   const permissionChecker = (member && channelId) ?
     async (m, c) => await canSendMessagesInChannel(m, c, client) :
     null;
 
-  const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member, channelId, permissionChecker);
+  const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member, channelId, permissionChecker, displayMode);
 
   // Send via webhook (used for deferred slash command responses)
   const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -7610,10 +7610,23 @@ To fix this:
         // The handler has updated req.body.data.custom_id, so handle it as show_castlist2
         // Extract castlist ID from the modified custom_id
         const currentCustomId = req.body.data.custom_id;
-        const castlistMatch = currentCustomId.match(/^show_castlist2(?:_(.+))?$/);
-        const requestedCastlistId = castlistMatch?.[1] || 'default';
-        
-        console.log('Redirecting to castlist display for:', requestedCastlistId);
+
+        // Check for edit mode suffix FIRST
+        const displayMode = currentCustomId.endsWith('_edit') ? 'edit' : 'view';
+        let requestedCastlistId;
+
+        if (displayMode === 'edit') {
+          // Remove '_edit' suffix first, then extract castlist ID
+          const withoutEdit = currentCustomId.slice(0, -5); // Remove '_edit'
+          const castlistMatch = withoutEdit.match(/^show_castlist2(?:_(.+))?$/);
+          requestedCastlistId = castlistMatch?.[1] || 'default';
+        } else {
+          // No edit suffix, extract everything after show_castlist2_
+          const castlistMatch = currentCustomId.match(/^show_castlist2(?:_(.+))?$/);
+          requestedCastlistId = castlistMatch?.[1] || 'default';
+        }
+
+        console.log('Redirecting to castlist display for:', requestedCastlistId, 'in mode:', displayMode);
         
         // Redirect means castlist_view button was clicked, custom_id has been updated
         // Just set the requestedCastlistId and let the existing show_castlist2 logic handle it
@@ -7721,9 +7734,9 @@ To fix this:
 
         const scenario = determineDisplayScenario(tribes);
         const navigationState = createNavigationState(tribes, 0, 0, scenario);
-        
-        // Send castlist response
-        await sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member, channelId);
+
+        // Send castlist response with display mode
+        await sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member, channelId, displayMode);
         return;
       } else {
         return result;
