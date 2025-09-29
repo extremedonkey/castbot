@@ -4721,21 +4721,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const currentCustomId = req.body.data?.custom_id?.startsWith('show_castlist2') ? req.body.data.custom_id : custom_id;
       
       // Extract castlist ID and display mode
-      const parts = currentCustomId.split('_');
-      // Format: show_castlist2_[castlistId]_[mode]
-      // Examples:
-      //   show_castlist2_default (view mode - default)
-      //   show_castlist2_default_edit (edit mode)
-      const displayMode = parts[parts.length - 1] === 'edit' ? 'edit' : 'view';
+      // Check if it ends with _edit specifically
+      const displayMode = currentCustomId.endsWith('_edit') ? 'edit' : 'view';
 
-      // Extract castlist ID (everything between show_castlist2 and optional _edit)
+      // Extract castlist ID
       let requestedCastlist;
       if (displayMode === 'edit') {
-        // Remove the _edit suffix and rejoin
-        requestedCastlist = parts.slice(1, -1).join('_') || 'default';
+        // Remove the _edit suffix
+        const withoutEdit = currentCustomId.slice(0, -5); // Remove '_edit'
+        requestedCastlist = withoutEdit.replace('show_castlist2_', '') || 'default';
       } else {
-        // No edit suffix, take everything after show_castlist2
-        requestedCastlist = parts.slice(1).join('_') || 'default';
+        // No edit suffix, extract everything after show_castlist2_
+        requestedCastlist = currentCustomId.replace('show_castlist2_', '') || 'default';
       }
 
       // Decode virtual castlist ID if needed
@@ -7830,21 +7827,28 @@ To fix this:
 
       await savePlayerData(playerData);
 
-      // Return success message
+      // Refresh the castlist view with updated placement
+      // Build custom_id to re-render the castlist in edit mode
+      const refreshCustomId = `show_castlist2_default_edit`;
+
+      // Import castlist module
+      const { extractCastlistData } = await import('./castlistV2.js');
+      const { channelId, member, client } = req.body;
+
+      // Extract castlist data with edit mode enabled
+      const castlistResponse = await extractCastlistData(
+        refreshCustomId,
+        guildId,
+        channelId,
+        member,
+        null, // permissionChecker - not needed for edit mode
+        client
+      );
+
+      // Send UPDATE_MESSAGE to refresh the view
       return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          components: [{
-            type: 17, // Container
-            components: [{
-              type: 10, // Text Display
-              content: placementValue
-                ? `✅ Placement set to **${placementValue}** for <@${playerId}>`
-                : `✅ Placement cleared for <@${playerId}>`
-            }]
-          }],
-          flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
-        }
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: castlistResponse
       });
     } else if (custom_id === 'prod_safari_menu') {
       // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)

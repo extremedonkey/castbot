@@ -4,11 +4,12 @@ import {
     ButtonStyle
 } from 'discord.js';
 import { InteractionResponseFlags } from 'discord-interactions';
-import { 
-    getGuildTribes, 
-    getGuildPronouns, 
-    getGuildTimezones, 
-    getPlayer 
+import {
+    getGuildTribes,
+    getGuildPronouns,
+    getGuildTimezones,
+    getPlayer,
+    loadPlayerData
 } from './storage.js';
 import { capitalize } from './utils.js';
 import { sortCastlistMembers } from './castlistSorter.js';
@@ -241,7 +242,6 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
     let accessory;
     if (displayMode === 'edit' && tribeData && guildId) {
         // Edit mode - create placement edit button
-        const { loadPlayerData } = require('./storage.js');
         const allPlayerData = loadPlayerData();
         const placement = allPlayerData[guildId]?.placements?.global?.[member.user.id]?.placement;
 
