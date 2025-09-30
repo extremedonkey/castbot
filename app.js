@@ -1258,7 +1258,7 @@ async function sendCastlist2Response(req, guild, tribes, castlistName, navigatio
 // Update ensureServerData function
 async function ensureServerData(guild) {
   const playerData = await loadPlayerData();
-  
+
   // Try to get owner information safely
   let ownerInfo = null;
   try {
@@ -1273,7 +1273,7 @@ async function ensureServerData(guild) {
     // Silently fail - owner might not be in cache or accessible
     console.debug(`Could not fetch owner info for guild ${guild.id}`);
   }
-  
+
   // Prepare server metadata with enhanced analytics
   const serverMetadata = {
     serverName: guild.name,
@@ -1304,25 +1304,25 @@ async function ensureServerData(guild) {
       firstInstalled: Date.now(),
       installationMethod: 'command' // Could be 'invite', 'command', etc.
     };
-    await savePlayerData(playerData);
-    console.log(`🎉 NEW SERVER INSTALLED: ${guild.name} (${guild.id}) - Owner: ${ownerInfo?.tag || guild.ownerId}`);
-    
-    // Post new server install announcement to Discord analytics channel
-    try {
-      const { logNewServerInstall } = await import('./src/analytics/analyticsLogger.js');
-      await logNewServerInstall(guild, ownerInfo);
-    } catch (error) {
-      console.error('Error posting server install announcement:', error);
-      // Don't break server initialization if announcement fails
-    }
+    // PRIORITY 3: Return indicator to batch write later (don't write per-guild)
+    return { updated: true, isNew: true };
   } else {
-    // Update existing server metadata
-    playerData[guild.id] = {
-      ...playerData[guild.id],
-      ...serverMetadata
-    };
-    await savePlayerData(playerData);
-    console.log(`Updated server metadata: ${guild.name} (${guild.id})`);
+    // Check if metadata actually changed before marking for update
+    const existing = playerData[guild.id];
+    const hasChanges = existing.memberCount !== serverMetadata.memberCount ||
+                      existing.serverName !== serverMetadata.serverName ||
+                      existing.icon !== serverMetadata.icon;
+
+    if (hasChanges) {
+      // Update existing server metadata
+      playerData[guild.id] = {
+        ...existing,
+        ...serverMetadata
+      };
+      return { updated: true, isNew: false };
+    }
+
+    return { updated: false, isNew: false };
   }
 }
 
@@ -1559,35 +1559,76 @@ async function executeSafariRoundResults(channelId, guildId) {
 // Add these event handlers after client initialization
 client.once('ready', async () => {
   console.log('Discord client is ready!');
-  
+
   // Set Discord client reference for analytics logging
   setDiscordClient(client);
-  
+
+  // PRIORITY 3: Batch all analytics updates, then write ONCE
+  console.log('📊 Updating server analytics metadata...');
+  const playerData = await loadPlayerData();
+  let analyticsUpdated = false;
+  let newServersCount = 0;
+  let updatedServersCount = 0;
+
+  // Collect all metadata updates in memory
+  for (const guild of client.guilds.cache.values()) {
+    const result = await ensureServerData(guild);
+
+    if (result.updated) {
+      analyticsUpdated = true;
+      if (result.isNew) {
+        newServersCount++;
+        console.log(`🎉 NEW SERVER INSTALLED: ${guild.name} (${guild.id})`);
+
+        // Post new server install announcement to Discord analytics channel
+        try {
+          const { logNewServerInstall } = await import('./src/analytics/analyticsLogger.js');
+          await logNewServerInstall(guild, null); // ownerInfo handled in ensureServerData
+        } catch (error) {
+          console.error('Error posting server install announcement:', error);
+          // Don't break server initialization if announcement fails
+        }
+      } else {
+        updatedServersCount++;
+      }
+    }
+  }
+
+  // SINGLE WRITE after all updates
+  if (analyticsUpdated) {
+    await savePlayerData(playerData);
+    if (newServersCount > 0) {
+      console.log(`✅ Analytics: ${newServersCount} new server(s) installed, ${updatedServersCount} updated`);
+    } else {
+      console.log(`✅ Analytics: Updated metadata for ${updatedServersCount} server(s)`);
+    }
+  } else {
+    console.log('✅ Analytics: No metadata changes needed');
+  }
+
   // Initialize reaction mappings from persistent storage
   console.log('📥 Loading reaction mappings from persistent storage...');
   client.roleReactions = new Map();
   let totalMappingsLoaded = 0;
-  
+
   for (const guild of client.guilds.cache.values()) {
-    await ensureServerData(guild);
-    
     // Load reaction mappings for this guild
     try {
       const mappings = await loadAllReactionMappings(guild.id);
       let guildMappingsCount = 0;
-      
+
       for (const [messageId, mappingData] of Object.entries(mappings)) {
         if (mappingData && mappingData.mapping) {
           client.roleReactions.set(messageId, mappingData.mapping);
           guildMappingsCount++;
         }
       }
-      
+
       if (guildMappingsCount > 0) {
         console.log(`  ✅ Loaded ${guildMappingsCount} reaction mappings for guild ${guild.name}`);
         totalMappingsLoaded += guildMappingsCount;
       }
-      
+
       // Clean up old mappings while we're at it
       const cleanedCount = await cleanupOldReactionMappings(guild.id);
       if (cleanedCount > 0) {
@@ -1597,7 +1638,7 @@ client.once('ready', async () => {
       console.error(`  ❌ Error loading reaction mappings for guild ${guild.name}:`, error);
     }
   }
-  
+
   console.log(`📥 Total reaction mappings loaded: ${totalMappingsLoaded}`);
 
   // Start PM2 Error Log Monitoring (Dev & Prod)
@@ -1606,8 +1647,15 @@ client.once('ready', async () => {
 });
 
 client.on('guildCreate', async (guild) => {
-  await ensureServerData(guild);
-  
+  // PRIORITY 3: Handle new guild, then write once
+  const playerData = await loadPlayerData();
+  const result = await ensureServerData(guild);
+
+  if (result.updated) {
+    await savePlayerData(playerData);
+    console.log(`✅ New server data saved: ${guild.name} (${guild.id})`);
+  }
+
   // Send welcome message using Discord Messenger service
   try {
     const { default: DiscordMessenger } = await import('./discordMessenger.js');

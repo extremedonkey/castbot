@@ -33,10 +33,41 @@ async function ensureStorageFile() {
     try {
         let data;
         const exists = await fs.access(STORAGE_FILE).then(() => true).catch(() => false);
-        
+
         if (exists) {
-            data = JSON.parse(await fs.readFile(STORAGE_FILE, 'utf8'));
-            
+            // PRIORITY 2: Validate file BEFORE reading to catch corruption early
+            const stats = await fs.stat(STORAGE_FILE);
+            if (stats.size < 50000) {
+                console.error('🚨 playerData.json suspiciously small:', stats.size, 'bytes (expected >50KB)');
+                console.error('🚨 Check .backup file or VS Code history before proceeding');
+                console.error('🚨 File location:', STORAGE_FILE);
+                throw new Error(`Corrupted storage file detected - too small (${stats.size} bytes)`);
+            }
+
+            // Read file content
+            const fileContent = await fs.readFile(STORAGE_FILE, 'utf8');
+
+            // PRIORITY 2: Verify we read the full file (network issues can cause partial reads)
+            if (fileContent.length < 50000) {
+                console.error('🚨 File read incomplete:', fileContent.length, 'bytes (file is', stats.size, 'bytes)');
+                console.error('🚨 This indicates a network or I/O issue during read');
+                throw new Error(`Incomplete file read detected - possible network issue (read ${fileContent.length} of ${stats.size} bytes)`);
+            }
+
+            // Parse JSON
+            data = JSON.parse(fileContent);
+
+            // PRIORITY 2: Validate structure has minimum guilds
+            const guildCount = Object.keys(data).filter(k => k.match(/^\d+$/)).length;
+            if (guildCount < 10) {
+                console.error('🚨 Loaded data missing guilds:', guildCount, '(expected 15+)');
+                console.error('🚨 This may indicate corrupted read or data loss');
+                console.error('🚨 Check .backup file immediately');
+                throw new Error(`Invalid data structure - only ${guildCount} guilds found (expected 15+)`);
+            }
+
+            console.log(`✅ Loaded playerData.json (${fileContent.length} bytes, ${guildCount} guilds)`);
+
             // Initialize or ensure guild data structure
             Object.keys(data).forEach(guildId => {
                 // Skip the comment entry
@@ -116,9 +147,59 @@ export async function loadPlayerData(guildId) {
 }
 
 export async function savePlayerData(data) {
-    await fs.writeFile(STORAGE_FILE, JSON.stringify(data, null, 2));
-    // Clear cache after save to ensure fresh data on next read
+    // PRIORITY 1: Add 7 layers of safety to prevent data loss
+
+    // 1. SIZE VALIDATION - Refuse if suspiciously small
+    const dataStr = JSON.stringify(data, null, 2);
+    if (dataStr.length < 50000) {
+        console.error('🚨 REFUSING to save suspiciously small playerData:', dataStr.length, 'bytes');
+        console.error('🚨 Expected >50KB (normal is 168KB), got', dataStr.length, 'bytes');
+        console.error('🚨 Dumping attempted save to playerData.json.REJECTED for analysis');
+        await fs.writeFile(STORAGE_FILE + '.REJECTED', dataStr);
+        throw new Error(`Data validation failed - file too small (${dataStr.length} bytes < 50KB threshold)`);
+    }
+
+    // 2. STRUCTURE VALIDATION - Ensure we have enough guilds
+    const guildCount = Object.keys(data).filter(k => k.match(/^\d+$/)).length;
+    if (guildCount < 10) {
+        console.error('🚨 REFUSING to save - only', guildCount, 'guilds (expected 15+)');
+        console.error('🚨 This indicates corrupted or incomplete data structure');
+        console.error('🚨 Dumping attempted save to playerData.json.REJECTED for analysis');
+        await fs.writeFile(STORAGE_FILE + '.REJECTED', dataStr);
+        throw new Error(`Data validation failed - only ${guildCount} guilds (expected 15+)`);
+    }
+
+    // 3. BACKUP BEFORE WRITE - Keep .backup copy for recovery
+    const backupPath = STORAGE_FILE + '.backup';
+    try {
+        const fileExists = await fs.access(STORAGE_FILE).then(() => true).catch(() => false);
+        if (fileExists) {
+            await fs.copyFile(STORAGE_FILE, backupPath);
+            console.log('✅ Backup created:', backupPath);
+        }
+    } catch (error) {
+        console.error('⚠️ Backup failed:', error.message);
+        // Continue anyway - better to save than lose in-memory changes
+    }
+
+    // 4. ATOMIC WRITE - Write to temp file first (prevents partial writes)
+    const tempPath = STORAGE_FILE + '.tmp';
+    await fs.writeFile(tempPath, dataStr);
+
+    // 5. VERIFY TEMP FILE - Check it before committing
+    const tempStats = await fs.stat(tempPath);
+    if (tempStats.size < 50000) {
+        await fs.unlink(tempPath);
+        throw new Error(`Temp file verification failed - too small (${tempStats.size} bytes)`);
+    }
+
+    // 6. ATOMIC RENAME - This is atomic on most filesystems (prevents corruption)
+    await fs.rename(tempPath, STORAGE_FILE);
+
+    // 7. CLEAR CACHE - Only after successful write
     requestCache.clear();
+
+    console.log(`✅ Saved playerData.json (${dataStr.length} bytes, ${guildCount} guilds)`);
 }
 
 export async function updatePlayer(guildId, playerId, data) {
