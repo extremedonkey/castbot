@@ -7820,7 +7820,7 @@ To fix this:
         handler: async (context) => {
           // Load current placement
           const { loadPlayerData } = await import('./storage.js');
-          const playerData = loadPlayerData();
+          const playerData = await loadPlayerData();  // ✅ FIXED: Added await
           const placement = playerData[context.guildId]?.placements?.global?.[playerId]?.placement;
 
           // Return modal structure
@@ -28563,7 +28563,7 @@ Are you sure you want to continue?`;
 
         // Load and update player data
         const { loadPlayerData, savePlayerData } = await import('./storage.js');
-        const playerData = loadPlayerData();
+        const playerData = await loadPlayerData();  // 🚨 CRITICAL FIX: Added await
 
         // Initialize structure if needed
         if (!playerData[guildId]) {
