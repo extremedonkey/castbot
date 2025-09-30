@@ -2225,6 +2225,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
     
     if (playerData[guildId]?.tribes) {
       Object.entries(playerData[guildId].tribes).forEach(([roleId, tribeData]) => {
+        if (!tribeData) return; // Skip null/undefined tribe entries
         const castlistName = tribeData.castlist || 'default';
         allCastlists.add(castlistName);
         
@@ -16839,6 +16840,7 @@ Your server is now ready for Tycoons gameplay!`;
         // Group tribes by castlist
         const castlistGroups = {};
         for (const [roleId, tribeData] of Object.entries(tribes)) {
+          if (!tribeData) continue; // Skip null/undefined tribe entries
           const castlistName = tribeData.castlist || 'default';
           if (!castlistGroups[castlistName]) {
             castlistGroups[castlistName] = [];

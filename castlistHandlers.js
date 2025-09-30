@@ -279,6 +279,7 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
         let migratedCount = 0;
 
         for (const [roleId, tribe] of Object.entries(tribes)) {
+          if (!tribe) continue; // Skip null/undefined tribe entries
           // Only migrate if tribe has legacy format AND hasn't been migrated yet
           // Check if castlistIds doesn't exist or doesn't include 'default'
           if (tribe.castlist === 'default' && (!tribe.castlistIds || !tribe.castlistIds.includes('default'))) {

@@ -32,6 +32,7 @@ export class CastlistVirtualAdapter {
     const virtualCastlists = new Map();
 
     for (const [roleId, tribe] of Object.entries(tribes)) {
+      if (!tribe) continue; // Skip null/undefined tribe entries
       // Skip if tribe already uses new castlistId or castlistIds
       if (tribe.castlistId || tribe.castlistIds) continue;
 
@@ -99,6 +100,8 @@ export class CastlistVirtualAdapter {
     const defaultTribes = [];
 
     for (const [roleId, tribe] of Object.entries(tribes)) {
+      if (!tribe) continue; // Skip null/undefined tribe entries
+
       // Check for multi-castlist format
       if (tribe.castlistIds && tribe.castlistIds.includes('default')) {
         defaultTribes.push(roleId);
@@ -282,6 +285,7 @@ export class CastlistVirtualAdapter {
 
     // Check both castlistId (new) and virtual matching (old)
     for (const [roleId, tribe] of Object.entries(tribes)) {
+      if (!tribe) continue; // Skip null/undefined tribe entries
       // Multi-castlist format (array)
       if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
         if (tribe.castlistIds.includes(castlistId)) {

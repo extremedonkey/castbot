@@ -800,6 +800,7 @@ export async function migrateToUnifiedSeasons(guildId) {
   // Future: Migrate alumni castlists with seasons
   const tribes = guildData.tribes || {};
   for (const [tribeId, tribe] of Object.entries(tribes)) {
+    if (!tribe) continue; // Skip null/undefined tribe entries
     if (tribe.seasonId && guildData.seasons[tribe.seasonId]) {
       if (!guildData.seasons[tribe.seasonId].linkedEntities.tribes.includes(tribeId)) {
         guildData.seasons[tribe.seasonId].linkedEntities.tribes.push(tribeId);

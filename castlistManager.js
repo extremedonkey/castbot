@@ -203,6 +203,7 @@ export class CastlistManager {
     let cleanedCount = 0;
 
     for (const [roleId, tribe] of Object.entries(tribes)) {
+      if (!tribe) continue; // Skip null/undefined tribe entries
       if (tribe.castlistId === castlistId) {
         delete tribe.castlistId;
         // Keep legacy castlist field for backwards compatibility
