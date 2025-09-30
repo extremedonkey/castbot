@@ -82,55 +82,66 @@ export async function handleCastlistButton(req, res, client, custom_id) {
     return { redirectToShowCastlist: true };
   }
 
-  // Special handling for Placements button - redirect to show_castlist2 in edit mode
+  // Special handling for Placements button - show castlist in edit mode
   if (buttonType === 'placements') {
-    // Check production permissions
-    const member = req.body.member;
-    const hasAdminPermissions = member?.permissions &&
-      (BigInt(member.permissions) & BigInt(PermissionFlagsBits.ManageRoles)) !== 0n;
+    return ButtonHandlerFactory.create({
+      id: custom_id,
+      requiresPermission: PermissionFlagsBits.ManageRoles,
+      permissionName: 'Manage Roles',
+      deferred: true, // CRITICAL: Castlist building takes >3 seconds
+      handler: async (context) => {
+        console.log(`🔍 START: placements button - user ${context.userId}, castlist ${castlistId}`);
 
-    if (!hasAdminPermissions) {
-      return ButtonHandlerFactory.create({
-        id: custom_id,
-        updateMessage: true,
-        handler: async () => ({
-          components: [{
-            type: 17, // Container
+        // Get castlist to determine the name for show_castlist2
+        const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
+
+        if (!castlist) {
+          console.log(`❌ ERROR: placements button - castlist ${castlistId} not found`);
+          return {
             components: [{
-              type: 10, // Text Display
-              content: '❌ **Production permissions required**\n\nYou need Manage Roles permission to edit placements.'
+              type: 17, // Container
+              components: [{
+                type: 10, // Text Display
+                content: '❌ **Castlist not found**\n\nThe requested castlist could not be loaded.'
+              }]
             }]
-          }],
-          flags: (1 << 15) // IS_COMPONENTS_V2
-        })
-      })(req, res, client);
-    }
+          };
+        }
 
-    // Get castlist to determine the name for show_castlist2
-    const castlist = await castlistManager.getCastlist(req.body.guild_id, castlistId);
+        // For virtual castlists, keep the ID format (e.g., "default" or "virtual_xyz")
+        // For real castlists, use the castlist name (legacy tribes use name matching)
+        const targetId = castlist.isVirtual ? castlistId : castlist.name;
 
-    if (!castlist) {
-      // Return error as hub update
-      const hubData = await createCastlistHub(req.body.guild_id, {
-        selectedCastlistId: castlistId,
-        activeButton: null
-      });
-      return ButtonHandlerFactory.create({
-        id: custom_id,
-        updateMessage: true,
-        handler: async () => hubData
-      })(req, res, client);
-    }
+        // Build castlist in edit mode using extractCastlistData
+        const { extractCastlistData } = await import('./castlistV2.js');
+        const customId = `show_castlist2_${targetId}_edit`;
 
-    // For virtual castlists, keep the ID format (e.g., "default" or "virtual_xyz")
-    // For real castlists, use the castlist name (legacy tribes use name matching)
-    const targetId = castlist.isVirtual ? castlistId : castlist.name;
+        try {
+          const castlistResponse = await extractCastlistData(
+            customId,
+            context.guildId,
+            context.channelId,
+            context.member,
+            null, // permissionChecker - not needed for edit mode
+            context.client
+          );
 
-    // Update custom_id to trigger show_castlist2 handler in EDIT MODE
-    req.body.data.custom_id = `show_castlist2_${targetId}_edit`;
-
-    // Signal to app.js to handle as show_castlist2
-    return { redirectToShowCastlist: true };
+          console.log(`✅ SUCCESS: placements button - castlist loaded in edit mode`);
+          return castlistResponse;
+        } catch (error) {
+          console.error(`❌ ERROR: placements button - ${error.message}`);
+          return {
+            components: [{
+              type: 17, // Container
+              components: [{
+                type: 10, // Text Display
+                content: '❌ **Error loading castlist**\n\nPlease try again or contact support.'
+              }]
+            }]
+          };
+        }
+      }
+    })(req, res, client);
   }
 
   return ButtonHandlerFactory.create({
