@@ -28630,17 +28630,28 @@ Are you sure you want to continue?`;
         console.log(`🔄 Refreshing castlist with updated placement`);
 
         // Update the message via webhook
-        await fetch(
+        const webhookPayload = {
+          components: castlistResponse.components,  // Only send components, not other fields
+          flags: (1 << 15) // IS_COMPONENTS_V2
+        };
+
+        console.log(`📤 Sending webhook PATCH to update message`);
+        const webhookResponse = await fetch(
           `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              ...castlistResponse,
-              flags: (1 << 15) // IS_COMPONENTS_V2
-            })
+            body: JSON.stringify(webhookPayload)
           }
         );
+
+        if (!webhookResponse.ok) {
+          const errorText = await webhookResponse.text();
+          console.error(`❌ Webhook PATCH failed (${webhookResponse.status}):`, errorText);
+          throw new Error(`Webhook PATCH failed: ${webhookResponse.status} ${errorText}`);
+        }
+
+        console.log(`✅ Successfully updated castlist message with new placement`);
 
       } catch (error) {
         console.error('❌ Error in save_placement modal handler:', error);
