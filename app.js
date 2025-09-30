@@ -28533,19 +28533,37 @@ Are you sure you want to continue?`;
 
         await savePlayerData(playerData);
 
+        // Small delay to ensure file write completes (prevents race conditions)
+        await new Promise(resolve => setTimeout(resolve, 100));
+
         // Refresh the castlist view with updated placement
         const refreshCustomId = `show_castlist2_default_edit`;
         const { extractCastlistData } = await import('./castlistV2.js');
 
-        // Extract castlist data with edit mode enabled
-        const castlistResponse = await extractCastlistData(
-          refreshCustomId,
-          guildId,
-          channelId,
-          member,
-          null,
-          client
-        );
+        // Extract castlist data with edit mode enabled  - retry once if JSON parse error
+        let castlistResponse;
+        let attempts = 0;
+        while (attempts < 2) {
+          try {
+            castlistResponse = await extractCastlistData(
+              refreshCustomId,
+              guildId,
+              channelId,
+              member,
+              null,
+              client
+            );
+            break; // Success
+          } catch (error) {
+            attempts++;
+            if (error.message.includes('JSON') && attempts < 2) {
+              console.log(`⚠️ JSON parse error on attempt ${attempts}, retrying after delay...`);
+              await new Promise(resolve => setTimeout(resolve, 200));
+            } else {
+              throw error; // Re-throw if not JSON error or out of retries
+            }
+          }
+        }
 
         console.log(`🔄 Refreshing castlist with updated placement`);
 
