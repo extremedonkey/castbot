@@ -675,6 +675,7 @@ function extractCastlistData(playerData, guildId) {
     
     if (playerData[guildId]?.tribes) {
         Object.entries(playerData[guildId].tribes).forEach(([roleId, tribeData]) => {
+            if (!tribeData) return; // Skip null/undefined tribe entries
             const castlistName = tribeData.castlist || 'default';
             allCastlists.add(castlistName);
             

@@ -155,6 +155,7 @@ export async function getGuildTribes(guildId, castlist = 'default') {
   
   if (data[guildId]?.tribes) {
     Object.entries(data[guildId].tribes).forEach(([roleId, tribeData]) => {
+      if (!tribeData) return; // Skip null/undefined tribe entries
       if (tribeData.castlist === castlist) {
         // Include ALL tribe data to support new features like type and rankings
         tribes.push({
