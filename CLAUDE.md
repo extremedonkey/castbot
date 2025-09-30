@@ -7,8 +7,30 @@ This file provides guidance to Claude Code when working with CastBot. This is a 
 1. **Use unapproved PM2 commands** (see approved list below)
 2. **Modify production without explicit permission**
 3. **Use `pm2 delete` followed by `pm2 start`** - This loses environment context
-4. **Create new PM2 processes** with `pm2 start app.js --args` 
+4. **Create new PM2 processes** with `pm2 start app.js --args`
 5. **Ignore "Discord client public key" errors** - Environment not loaded
+6. **Forget `await` with async storage functions** - Missing `await` = DATA LOSS (see below)
+
+## 🔴 CRITICAL: Async/Await - File I/O
+
+**Missing `await` with storage functions causes data loss!**
+
+```javascript
+// ❌ DATA LOSS - Returns Promise, not data
+const playerData = loadPlayerData();
+// playerData is Promise { <pending> }, modifications create ~200 bytes = wipes 171KB
+
+// ✅ CORRECT - Always await
+const playerData = await loadPlayerData();
+```
+
+**Critical functions requiring `await`:**
+- `loadPlayerData()`, `savePlayerData()`, `loadSafariData()`, `saveSafariData()`
+
+**Before committing storage code:**
+```javascript
+console.log('Data size:', JSON.stringify(playerData).length);  // Should be ~170KB
+```
 
 ## 🔴 CRITICAL: Components V2 Types - ALWAYS USE THESE
 
