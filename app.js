@@ -28476,7 +28476,8 @@ Are you sure you want to continue?`;
           type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
         });
 
-        const placementInput = components[0].components[0].value?.trim();
+        // Extract value from Label (type 18) component structure
+        const placementInput = components[0].component.value?.trim();
 
         // Validate: must be integer 1-99 or empty
         if (placementInput && !/^\d{1,2}$/.test(placementInput)) {
