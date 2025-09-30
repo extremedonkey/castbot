@@ -1725,7 +1725,7 @@
         "buttonText": "Test out CastBot Apps!",
         "explanatoryText": "",
         "channelFormat": "📝%name%-app",
-        "stage": "active",
+        "stage": "awaiting_selections",
         "seasonId": "season_03859e4abc554bb5",
         "seasonName": "ReeceVivor S15!",
         "questions": [
@@ -1807,12 +1807,12 @@
           }
         ],
         "targetChannelId": "1395819813640601742",
-        "categoryId": "1390361752910168175",
+        "categoryId": "1334493817231114271",
         "buttonStyle": "Primary",
         "productionRole": "1333822520737927281",
         "createdBy": "391415444084490240",
-        "createdAt": 1753600778479,
-        "lastUpdated": 1753600778479,
+        "createdAt": 1759258045670,
+        "lastUpdated": 1759258045670,
         "welcomeDescription": "In season_question_edit_config_*, please add a next Text Input called \"Image URL\", optional, with the placeholder text of \"Enter the url of an image hosted on discord (https://cdn.discor..) to include.\"\nUnder the question configuration, save the URL of the image the user provided (e.g. imageURL).\nIn app_continue_*, when the container loads, if a question has a non-empty imageURL, create a ComponentsV2.md Media Gallery (type = 12) component directly below the questionText and attempt to load the imageURL in the component.",
         "welcomeTitle": "Welcome!"
       },
@@ -2729,9 +2729,9 @@
     "placements": {
       "global": {
         "676262975132139522": {
-          "placement": 66,
+          "placement": 33,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-09-30T16:18:06.226Z"
+          "updatedAt": "2025-09-30T16:48:16.600Z"
         },
         "977455730300956683": {
           "placement": 8,
@@ -2744,9 +2744,9 @@
           "updatedAt": "2025-09-30T16:44:52.553Z"
         },
         "683102296380276766": {
-          "placement": 5,
+          "placement": 7,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-09-30T16:47:50.486Z"
+          "updatedAt": "2025-09-30T16:57:54.319Z"
         }
       }
     }
