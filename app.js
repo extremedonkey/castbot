@@ -28637,20 +28637,26 @@ Are you sure you want to continue?`;
           flags: (1 << 15) // IS_COMPONENTS_V2
         };
 
-        console.log(`📤 Sending webhook PATCH to update castlist message ${castlistMessageId}`);
-        const webhookResponse = await fetch(
-          `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/${castlistMessageId}`,
+        console.log(`📤 Using Discord REST API to update castlist message ${castlistMessageId} in channel ${channelId}`);
+
+        // Use Discord REST API with bot token (not webhook token)
+        // Webhook tokens can only edit messages from that specific interaction
+        const restResponse = await fetch(
+          `https://discord.com/api/v10/channels/${channelId}/messages/${castlistMessageId}`,
           {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bot ${process.env.DISCORD_TOKEN}`
+            },
             body: JSON.stringify(webhookPayload)
           }
         );
 
-        if (!webhookResponse.ok) {
-          const errorText = await webhookResponse.text();
-          console.error(`❌ Webhook PATCH failed (${webhookResponse.status}):`, errorText);
-          throw new Error(`Webhook PATCH failed: ${webhookResponse.status} ${errorText}`);
+        if (!restResponse.ok) {
+          const errorText = await restResponse.text();
+          console.error(`❌ REST API PATCH failed (${restResponse.status}):`, errorText);
+          throw new Error(`REST API PATCH failed: ${restResponse.status} ${errorText}`);
         }
 
         console.log(`✅ Successfully updated castlist message with new placement`);
