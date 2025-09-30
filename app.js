@@ -7607,6 +7607,11 @@ To fix this:
       
       // Check if we should redirect to show_castlist2 handler
       if (result && result.redirectToShowCastlist) {
+        // Send deferred response immediately (castlist building takes >3 seconds)
+        await res.send({
+          type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
+        });
+
         // The handler has updated req.body.data.custom_id, so handle it as show_castlist2
         // Extract castlist ID from the modified custom_id
         const currentCustomId = req.body.data.custom_id;

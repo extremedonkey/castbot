@@ -386,6 +386,14 @@ When in doubt, create the document - disk space is cheap, context is expensive.
 - `npm run deploy-remote-wsl-dry` (preview only)
 - Creating/editing markdown documentation files (*.md)
 - Creating Mermaid diagrams in documentation
+- **Read-only SSH commands to Lightsail production server:**
+  - `ssh -i ~/.ssh/castbot-key.pem bitnami@13.238.148.170` with read-only operations:
+    - `cat`, `grep`, `tail`, `head`, `less`, `more` (file reading)
+    - `ls`, `find`, `wc`, `stat` (file listing/info)
+    - `sed -n`, `awk` (read-only text processing)
+    - `node -e` with `console.log` / `fs.readFileSync` (read-only Node.js scripts)
+    - `git log`, `git show`, `git diff`, `git status` (read-only git operations)
+    - `pm2 list`, `pm2 status`, `pm2 info`, `pm2 logs` (read-only PM2 monitoring)
 
 ## 📐 app.js Organization
 
