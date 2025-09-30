@@ -286,17 +286,42 @@ async function createApplicationChannel(guild, user, config, configId = 'unknown
         }
 
         // Create the channel with proper permissions
+        // Debug logging for permission overwrites validation
+        const everyoneRoleId = guild.roles.everyone?.id;
+        const userId = user.id;
+
+        console.log('🔍 [APPLICATION] Creating channel with permissions', {
+            guildId: guild.id,
+            guildName: guild.name,
+            userId: userId,
+            username: user.username || user.user?.username,
+            displayName: user.displayName,
+            everyoneRoleId: everyoneRoleId,
+            everyoneRoleExists: !!guild.roles.everyone,
+            configId: configId,
+            productionRole: config.productionRole || 'none',
+            channelName: channelName
+        });
+
+        // Validate IDs exist before creating channel
+        if (!everyoneRoleId) {
+            throw new Error(`@everyone role not found in guild ${guild.id} (${guild.name})`);
+        }
+        if (!userId) {
+            throw new Error(`User ID is undefined for user: ${JSON.stringify(user)}`);
+        }
+
         const channel = await guild.channels.create({
             name: channelName,
             type: ChannelType.GuildText,
             parent: category.id,
             permissionOverwrites: [
                 {
-                    id: guild.roles.everyone.id,
+                    id: everyoneRoleId,
                     deny: [PermissionFlagsBits.ViewChannel]
                 },
                 {
-                    id: user.id,
+                    id: userId,
                     allow: [
                         PermissionFlagsBits.ViewChannel,
                         PermissionFlagsBits.SendMessages,
@@ -399,7 +424,24 @@ Click the button below to get started!`
         return { success: true, channel };
 
     } catch (error) {
-        console.error('Error creating application channel:', error);
+        console.error('❌ [APPLICATION] Error creating application channel:', error);
+        console.error('❌ [APPLICATION] Error context:', {
+            errorMessage: error.message,
+            errorCode: error.code,
+            errorStack: error.stack,
+            guildId: guild?.id,
+            guildName: guild?.name,
+            userId: user?.id,
+            username: user?.username || user?.user?.username,
+            displayName: user?.displayName,
+            everyoneRoleId: guild?.roles?.everyone?.id,
+            everyoneRoleExists: !!guild?.roles?.everyone,
+            configId: configId,
+            productionRole: config?.productionRole,
+            categoryId: config?.categoryId,
+            userObjectKeys: user ? Object.keys(user) : 'user is undefined',
+            guildRolesCount: guild?.roles?.cache?.size || 0
+        });
         return { success: false, error: error.message };
     }
 }
