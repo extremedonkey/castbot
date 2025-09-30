@@ -1569,6 +1569,9 @@ client.once('ready', async () => {
   let analyticsUpdated = false;
   let newServersCount = 0;
   let updatedServersCount = 0;
+  const newServers = [];
+  const updatedServers = [];
+  const unchangedServers = [];
 
   // Collect all metadata updates in memory
   for (const guild of client.guilds.cache.values()) {
@@ -1578,6 +1581,7 @@ client.once('ready', async () => {
       analyticsUpdated = true;
       if (result.isNew) {
         newServersCount++;
+        newServers.push(guild.name);
         console.log(`🎉 NEW SERVER INSTALLED: ${guild.name} (${guild.id})`);
 
         // Post new server install announcement to Discord analytics channel
@@ -1590,7 +1594,10 @@ client.once('ready', async () => {
         }
       } else {
         updatedServersCount++;
+        updatedServers.push(guild.name);
       }
+    } else {
+      unchangedServers.push(guild.name);
     }
   }
 
@@ -1598,12 +1605,13 @@ client.once('ready', async () => {
   if (analyticsUpdated) {
     await savePlayerData(playerData);
     if (newServersCount > 0) {
-      console.log(`✅ Analytics: ${newServersCount} new server(s) installed, ${updatedServersCount} updated`);
-    } else {
-      console.log(`✅ Analytics: Updated metadata for ${updatedServersCount} server(s)`);
+      console.log(`✅ Analytics: ${newServersCount} new server(s) installed: ${newServers.join(', ')}`);
+    }
+    if (updatedServersCount > 0) {
+      console.log(`✅ Analytics: ${updatedServersCount} updated: ${updatedServers.join(', ')}`);
     }
   } else {
-    console.log('✅ Analytics: No metadata changes needed');
+    console.log(`✅ Analytics: No metadata changes needed (${unchangedServers.length} servers checked: ${unchangedServers.slice(0, 3).join(', ')}${unchangedServers.length > 3 ? ` +${unchangedServers.length - 3} more` : ''})`);
   }
 
   // Initialize reaction mappings from persistent storage
