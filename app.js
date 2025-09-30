@@ -7792,78 +7792,6 @@ To fix this:
           };
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('save_placement_')) {
-      // Handle placement save from modal (MIGRATED TO FACTORY)
-      const playerId = custom_id.replace('save_placement_', '');
-
-      return ButtonHandlerFactory.create({
-        id: 'save_placement',
-        deferred: true, // CRITICAL: Castlist refresh takes >3 seconds
-        handler: async (context) => {
-          const components = req.body.data.components;
-          const placementInput = components[0].components[0].value?.trim();
-
-          // Validate: must be integer 1-99 or empty
-          if (placementInput && !/^\d{1,2}$/.test(placementInput)) {
-            return {
-              components: [{
-                type: 17, // Container
-                components: [{
-                  type: 10, // Text Display
-                  content: '❌ Please enter a whole number (1-99)'
-                }]
-              }]
-            };
-          }
-
-          // Convert to integer for storage
-          const placementValue = placementInput ? parseInt(placementInput, 10) : null;
-
-          // Load and update player data
-          const { loadPlayerData, savePlayerData } = await import('./storage.js');
-          const playerData = loadPlayerData();
-
-          // Initialize structure if needed
-          if (!playerData[context.guildId]) {
-            playerData[context.guildId] = {};
-          }
-          if (!playerData[context.guildId].placements) {
-            playerData[context.guildId].placements = {};
-          }
-          if (!playerData[context.guildId].placements.global) {
-            playerData[context.guildId].placements.global = {};
-          }
-
-          // Save or delete GLOBAL placement
-          if (placementValue !== null) {
-            playerData[context.guildId].placements.global[playerId] = {
-              placement: placementValue,
-              updatedBy: context.userId,
-              updatedAt: new Date().toISOString()
-            };
-          } else {
-            delete playerData[context.guildId].placements.global[playerId];
-          }
-
-          await savePlayerData(playerData);
-
-          // Refresh the castlist view with updated placement
-          const refreshCustomId = `show_castlist2_default_edit`;
-          const { extractCastlistData } = await import('./castlistV2.js');
-
-          // Extract castlist data with edit mode enabled
-          const castlistResponse = await extractCastlistData(
-            refreshCustomId,
-            context.guildId,
-            context.channelId,
-            context.member,
-            null,
-            context.client
-          );
-
-          return castlistResponse;
-        }
-      })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
       // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
@@ -28531,7 +28459,134 @@ Are you sure you want to continue?`;
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: result
       });
-      
+
+    } else if (custom_id.startsWith('save_placement_')) {
+      // Handle placement save from modal submission
+      try {
+        const playerId = custom_id.replace('save_placement_', '');
+        const guildId = req.body.guild_id;
+        const channelId = req.body.channel_id;
+        const member = req.body.member;
+        const userId = member?.user?.id;
+
+        console.log(`✏️ DEBUG: Placement modal submitted for player ${playerId}`);
+
+        // Send deferred response immediately (castlist refresh takes >3 seconds)
+        await res.send({
+          type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
+        });
+
+        const placementInput = components[0].components[0].value?.trim();
+
+        // Validate: must be integer 1-99 or empty
+        if (placementInput && !/^\d{1,2}$/.test(placementInput)) {
+          return fetch(
+            `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                components: [{
+                  type: 17, // Container
+                  components: [{
+                    type: 10, // Text Display
+                    content: '❌ Please enter a whole number (1-99)'
+                  }]
+                }],
+                flags: (1 << 15) // IS_COMPONENTS_V2
+              })
+            }
+          );
+        }
+
+        // Convert to integer for storage
+        const placementValue = placementInput ? parseInt(placementInput, 10) : null;
+
+        // Load and update player data
+        const { loadPlayerData, savePlayerData } = await import('./storage.js');
+        const playerData = loadPlayerData();
+
+        // Initialize structure if needed
+        if (!playerData[guildId]) {
+          playerData[guildId] = {};
+        }
+        if (!playerData[guildId].placements) {
+          playerData[guildId].placements = {};
+        }
+        if (!playerData[guildId].placements.global) {
+          playerData[guildId].placements.global = {};
+        }
+
+        // Save or delete GLOBAL placement
+        if (placementValue !== null) {
+          playerData[guildId].placements.global[playerId] = {
+            placement: placementValue,
+            updatedBy: userId,
+            updatedAt: new Date().toISOString()
+          };
+          console.log(`✅ Saved placement ${placementValue} for player ${playerId}`);
+        } else {
+          delete playerData[guildId].placements.global[playerId];
+          console.log(`🗑️ Deleted placement for player ${playerId}`);
+        }
+
+        await savePlayerData(playerData);
+
+        // Refresh the castlist view with updated placement
+        const refreshCustomId = `show_castlist2_default_edit`;
+        const { extractCastlistData } = await import('./castlistV2.js');
+
+        // Extract castlist data with edit mode enabled
+        const castlistResponse = await extractCastlistData(
+          refreshCustomId,
+          guildId,
+          channelId,
+          member,
+          null,
+          client
+        );
+
+        console.log(`🔄 Refreshing castlist with updated placement`);
+
+        // Update the message via webhook
+        await fetch(
+          `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...castlistResponse,
+              flags: (1 << 15) // IS_COMPONENTS_V2
+            })
+          }
+        );
+
+      } catch (error) {
+        console.error('❌ Error in save_placement modal handler:', error);
+        // Try to send error message via webhook
+        try {
+          await fetch(
+            `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
+            {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                components: [{
+                  type: 17, // Container
+                  components: [{
+                    type: 10, // Text Display
+                    content: `❌ Error saving placement: ${error.message}`
+                  }]
+                }],
+                flags: (1 << 15) // IS_COMPONENTS_V2
+              })
+            }
+          );
+        } catch (webhookError) {
+          console.error('Failed to send error via webhook:', webhookError);
+        }
+      }
+
     } else if (custom_id.startsWith('condition_currency_modal_')) {
       // Handle currency amount modal submission
       try {

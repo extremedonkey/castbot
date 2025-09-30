@@ -327,13 +327,6 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'castlist'
   },
-  'save_placement_*': {
-    label: 'Save Placement',
-    description: 'Save player season placement from modal',
-    emoji: '💾',
-    style: 'Primary',
-    category: 'castlist'
-  },
   'show_castlist2': {
     label: 'Post Castlist',
     description: 'Post castlist to channel',
