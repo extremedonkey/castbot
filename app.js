@@ -28526,8 +28526,10 @@ Are you sure you want to continue?`;
         const channelId = req.body.channel_id;
         const member = req.body.member;
         const userId = member?.user?.id;
+        const castlistMessageId = req.body.message?.id;  // The castlist message we need to update
 
         console.log(`✏️ DEBUG: Placement modal submitted for player ${playerId}`);
+        console.log(`📋 DEBUG: Castlist message ID to update: ${castlistMessageId}`);
 
         // Send deferred response immediately (castlist refresh takes >3 seconds)
         await res.send({
@@ -28635,9 +28637,9 @@ Are you sure you want to continue?`;
           flags: (1 << 15) // IS_COMPONENTS_V2
         };
 
-        console.log(`📤 Sending webhook PATCH to update message`);
+        console.log(`📤 Sending webhook PATCH to update castlist message ${castlistMessageId}`);
         const webhookResponse = await fetch(
-          `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
+          `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/${castlistMessageId}`,
           {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
