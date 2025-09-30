@@ -2729,9 +2729,14 @@
     "placements": {
       "global": {
         "676262975132139522": {
-          "placement": 1,
+          "placement": 55,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-09-30T15:53:41.254Z"
+          "updatedAt": "2025-09-30T16:02:59.203Z"
+        },
+        "977455730300956683": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-09-30T16:02:35.011Z"
         }
       }
     }
@@ -5373,7 +5378,7 @@
     "installationMethod": "command"
   },
   "1389538775352348737": {
-    "serverName": "CastBot Regression Yellow",
+    "serverName": "CastBot Regression Yellow zz",
     "icon": "https://cdn.discordapp.com/icons/1389538775352348737/9fd8f80fbe4b3b4eb8d55b1fa40cba7f.webp",
     "ownerId": "391415444084490240",
     "memberCount": 3,
@@ -5383,7 +5388,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1751362260426,
-    "lastUpdated": 1759240172024,
+    "lastUpdated": 1759247791642,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",

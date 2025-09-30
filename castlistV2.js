@@ -183,9 +183,10 @@ function reorderTribes(tribes, userId = null, strategy = "default", castlistName
  * @param {string} displayMode - 'view' or 'edit' mode
  * @param {Object} tribeData - Tribe information (for edit button)
  * @param {string} guildId - Guild ID (for placement lookup)
+ * @param {Object} allPlacements - Pre-loaded placement data (global placements map)
  * @returns {Object} Player card section component
  */
-function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji, displayMode = 'view', tribeData = null, guildId = null) {
+function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji, displayMode = 'view', tribeData = null, guildId = null, allPlacements = {}) {
     // Check if member has a placement prefix (from alumni_placements sorting)
     const prefix = member.displayPrefix || '';
     const displayName = capitalize(member.displayName);
@@ -241,9 +242,8 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
     // Create accessory based on display mode
     let accessory;
     if (displayMode === 'edit' && tribeData && guildId) {
-        // Edit mode - create placement edit button
-        const allPlayerData = loadPlayerData();
-        const placement = allPlayerData[guildId]?.placements?.global?.[member.user.id]?.placement;
+        // Edit mode - create placement edit button (use pre-loaded placement data)
+        const placement = allPlacements[member.user.id]?.placement;
 
         // Helper function for ordinal suffixes
         const getOrdinalLabel = (placement) => {
@@ -312,29 +312,36 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
 async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, pageInfo, scenario, castlistName = 'default', displayMode = 'view') {
     const { currentPage, totalPages, playersOnPage } = pageInfo;
     const pageMembers = playersOnPage;
-    
+
     // Simplified: Always include separators - we paginate instead of removing separators
     const includeSeparators = true;
     console.log(`Tribe ${tribe.name}: ${playersOnPage.length} players (always with separators)`);
-    
+
+    // Load placement data ONCE if in edit mode (prevents repeated async calls in sync function)
+    let allPlacements = {};
+    if (displayMode === 'edit') {
+        const playerDataAll = await loadPlayerData();
+        allPlacements = playerDataAll[guild.id]?.placements?.global || {};
+    }
+
     // Create header with proper format: Line 1 = castlist name, Line 2 = tribe info
     const castlistDisplay = castlistName !== 'default' ? `## ${castlistName} Castlist` : '## Castlist';
     const tribeHeaderText = `${tribe.emoji || ''} **${tribe.name}** ${tribe.emoji || ''}`.trim();
     const paginationText = totalPages > 1 ? ` \`${currentPage + 1}/${totalPages}\`` : '';
-    
+
     // Add season name if available (for alumni placements with seasons)
     const seasonText = tribe.seasonName ? `\n📅 **Season:** ${tribe.seasonName}` : '';
-    
+
     const combinedHeaderContent = `${castlistDisplay}\n${tribeHeaderText}${paginationText}${seasonText}`;
-    
+
     // Create tribe header as simple Text Display (not Section to avoid accessory requirement)
     const tribeHeader = {
         type: 10, // Text Display component
         content: combinedHeaderContent
     };
-    
+
     console.log('🔍 DEBUG: tribeHeader structure:', JSON.stringify(tribeHeader, null, 2));
-    
+
     const playerCards = [];
     
     // Process each member into individual Section components with inline thumbnails
@@ -382,7 +389,8 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             false, // Never show player emojis in castlist2
             displayMode,
             tribe, // Pass tribe data for edit button
-            guild.id // Pass guild ID for placement lookup
+            guild.id, // Pass guild ID for placement lookup
+            allPlacements // Pass pre-loaded placement data (edit mode only)
         );
         
         playerCards.push(playerCard);
