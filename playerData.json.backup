@@ -1,0 +1,5609 @@
+{
+  "/* Server ID */": null,
+  "environmentConfig": {
+    "liveDiscordLogging": {
+      "enabled": true,
+      "targetGuildId": "1331657596087566398",
+      "excludedUserIds": {
+        "production": [
+          "391415444084490240"
+        ],
+        "development": []
+      },
+      "productionChannelId": "1385059476243218552",
+      "developmentChannelId": "1386998800215969904",
+      "productionTimezoneOffset": 8,
+      "developmentTimezoneOffset": 0
+    },
+    "players": {},
+    "tribes": {
+      "tribe1": null,
+      "tribe1emoji": null,
+      "tribe2": null,
+      "tribe2emoji": null,
+      "tribe3": null,
+      "tribe3emoji": null,
+      "tribe4": null,
+      "tribe4emoji": null
+    },
+    "timezones": {}
+  },
+  "1297188286191767603": {
+    "serverName": "EpochORG S7: Rumrunners",
+    "icon": "https://cdn.discordapp.com/icons/1297188286191767603/82ee1b34273d340c02179b0ae8567e8a.webp",
+    "ownerId": "696456309762949141",
+    "memberCount": 79,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1729344188021,
+    "lastUpdated": 1759240169422,
+    "players": {
+      "391415444084490240": {
+        "age": "36",
+        "emojiCode": null
+      },
+      "676262975132139522": {
+        "emojiCode": null,
+        "age": "21"
+      },
+      "1088078919409881098": {
+        "emojiCode": "<:1088078919409881098:1331592200458600499>",
+        "age": "21"
+      },
+      "287002306078310400": {
+        "emojiCode": "<:287002306078310400:1331592203516121121>",
+        "age": "27"
+      },
+      "208197633846542336": {
+        "emojiCode": "<:208197633846542336:1331592205822857216>",
+        "age": "21"
+      },
+      "1147751688481026110": {
+        "emojiCode": "<:1147751688481026110:1330211914050965616>",
+        "age": "23"
+      },
+      "696456309762949141": {
+        "emojiCode": "<:696456309762949141:1333357906367614977>",
+        "age": "99"
+      },
+      "197562770068078592": {
+        "emojiCode": null,
+        "age": "100"
+      },
+      "443545183997657120": {
+        "emojiCode": null
+      },
+      "909852958525636660": {
+        "emojiCode": "<:909852958525636660:1333357921840533566>"
+      },
+      "386463066600112128": {
+        "emojiCode": "<:386463066600112128:1333357924315037756>",
+        "age": "55"
+      },
+      "689155539028148232": {
+        "emojiCode": "<:689155539028148232:1333357925892362271>",
+        "age": "10"
+      },
+      "1125936782698086461": {
+        "emojiCode": null
+      },
+      "723629872173416579": {
+        "emojiCode": null
+      },
+      "504494339116761088": {
+        "emojiCode": "<:504494339116761088:1330120066595033211>"
+      },
+      "499595256270946326": {
+        "age": "10",
+        "emojiCode": "<:499595256270946326:1333386167282040862>"
+      },
+      "784284227373367346": {
+        "emojiCode": "<:784284227373367346:1335634894684160127>"
+      },
+      "741788327572668486": {
+        "emojiCode": null
+      },
+      "1319912453248647170": {
+        "emojiCode": null
+      },
+      "235148962103951360": {
+        "emojiCode": "<:235148962103951360:1335634815143383061>"
+      },
+      "1086246253819613274": {
+        "age": "19"
+      },
+      "349895876845633546": {
+        "emojiCode": null
+      },
+      "347887248982671371": {
+        "emojiCode": "<:347887248982671371:1337762174172663808>"
+      },
+      "130194954562699264": {
+        "emojiCode": "<:130194954562699264:1337762213250863180>"
+      },
+      "1064656591862894732": {
+        "emojiCode": null
+      },
+      "331217504653279242": {
+        "emojiCode": null
+      },
+      "977455730300956683": {
+        "emojiCode": null
+      },
+      "1037731441771020358": {
+        "emojiCode": null
+      },
+      "650409567028641802": {
+        "emojiCode": null
+      },
+      "621198992386293783": {
+        "emojiCode": null
+      },
+      "762931741715070996": {
+        "emojiCode": "<:762931741715070996:1337762364145012847>"
+      },
+      "711433088198115328": {
+        "emojiCode": "<:711433088198115328:1337762366342955120>"
+      },
+      "725745811283116032": {
+        "emojiCode": null
+      },
+      "209773824357564416": {
+        "emojiCode": null
+      },
+      "105719056325181440": {
+        "emojiCode": null
+      },
+      "351074790368477184": {
+        "emojiCode": null
+      },
+      "802619353065455656": {
+        "emojiCode": null
+      },
+      "847294676948221982": {
+        "emojiCode": null
+      },
+      "765705051162804264": {
+        "emojiCode": null
+      },
+      "644748993288601600": {
+        "emojiCode": "<:644748993288601600:1337762613026750584>"
+      },
+      "642919782219513880": {
+        "emojiCode": "<:642919782219513880:1337762615421833261>"
+      },
+      "1192911250724757597": {
+        "emojiCode": null
+      },
+      "1011791456492597308": {
+        "emojiCode": "<a:1011791456492597308:1337762623378427996>"
+      },
+      "654839660953993247": {
+        "emojiCode": "<:654839660953993247:1337762625953468477>"
+      },
+      "572291395365109770": {
+        "emojiCode": "<:572291395365109770:1337762628176449558>"
+      },
+      "361004472568250371": {
+        "emojiCode": null
+      },
+      "942858850850205717": {
+        "emojiCode": "<a:942858850850205717:1337762991029882932>"
+      },
+      "636588274122620928": {
+        "emojiCode": null
+      },
+      "444637942988668938": {
+        "emojiCode": null
+      },
+      "704354759527628840": {
+        "emojiCode": null
+      },
+      "684530139694104618": {
+        "emojiCode": null
+      }
+    },
+    "tribes": {
+      "1297206459301367914": {
+        "emoji": null,
+        "castlist": "production"
+      },
+      "1297199733718384744": {
+        "emoji": null,
+        "castlist": "carl"
+      },
+      "1297209767814631447": {
+        "emoji": "😅",
+        "castlist": "carl"
+      },
+      "1297188286326116383": {
+        "emoji": null,
+        "castlist": "nextszn"
+      },
+      "1297188286305013839": {
+        "emoji": null,
+        "castlist": "nextszn"
+      },
+      "1297228233921790045": {
+        "emoji": null,
+        "castlist": "lastszn"
+      },
+      "1299771218479808563": {
+        "emoji": null,
+        "castlist": "lastszn"
+      },
+      "1328367538840801315": {
+        "emoji": null,
+        "castlist": "lastszn"
+      },
+      "1318738763752542278": {
+        "emoji": null,
+        "castlist": "gamenight"
+      },
+      "1297188286250356741": {
+        "emoji": null,
+        "castlist": "challengeupdates"
+      },
+      "1319529241704005703": {
+        "emoji": null,
+        "castlist": "blackjack"
+      },
+      "1297188286305013834": {
+        "emoji": null,
+        "castlist": "immune"
+      }
+    },
+    "timezones": {
+      "1320094346288300124": {
+        "offset": -5
+      },
+      "1320094564731850803": {
+        "offset": -6
+      },
+      "1330207937330679938": {
+        "offset": 13
+      },
+      "1335635316077498409": {
+        "offset": 1
+      },
+      "1335635318027845754": {
+        "offset": 2
+      },
+      "1335635320045043785": {
+        "offset": 5.5
+      },
+      "1335635324444868708": {
+        "offset": 13
+      },
+      "1320094634646704350": {
+        "offset": -3
+      },
+      "1320094467486908507": {
+        "offset": -8
+      },
+      "1335635312508145728": {
+        "offset": -7
+      },
+      "1328044184673714248": {
+        "offset": 0
+      },
+      "1330207345619374131": {
+        "offset": 8
+      },
+      "1328044491860607118": {
+        "offset": 10
+      }
+    },
+    "pronounRoleIDs": [
+      "1317667003015626795",
+      "1317667163854868552",
+      "1321780294482923530",
+      "1297199989646299208",
+      "1297199987498946673",
+      "1297199988375293972",
+      "1319920908680433664",
+      "1297199988954370068",
+      "1330184045216141415"
+    ],
+    "ownerInfo": {
+      "username": "mpschettig",
+      "globalName": "Tylenol Boy",
+      "discriminator": "0",
+      "tag": "mpschettig"
+    },
+    "analyticsVersion": "1.0"
+  },
+  "1127596863885934652": {
+    "serverName": "LOSTVivor",
+    "players": {
+      "987862850338963506": {
+        "emojiCode": null
+      },
+      "475402113443168256": {
+        "emojiCode": "<:475402113443168256:1365344891915468941>",
+        "age": "22"
+      },
+      "372442773799829506": {
+        "emojiCode": "<:372442773799829506:1365344897523257438>"
+      },
+      "692193262957756417": {
+        "emojiCode": null
+      },
+      "700105131517018182": {
+        "emojiCode": "<:700105131517018182:1365344911787954196>"
+      },
+      "233762709932474370": {
+        "emojiCode": null
+      },
+      "705936744595587112": {
+        "emojiCode": null
+      },
+      "420459241313271808": {
+        "emojiCode": null
+      },
+      "348399805048946692": {
+        "emojiCode": null
+      },
+      "572291395365109770": {
+        "emojiCode": "<:572291395365109770:1365344915604639785>"
+      },
+      "765705051162804264": {
+        "emojiCode": null,
+        "age": "31"
+      },
+      "700145159618166856": {
+        "emojiCode": null
+      },
+      "523325892810768397": {
+        "emojiCode": "<:523325892810768397:1365344751481655297>"
+      },
+      "749083524241555486": {
+        "emojiCode": "<:749083524241555486:1365344757311734015>"
+      },
+      "468655730975703041": {
+        "emojiCode": "<:468655730975703041:1365344761791381584>"
+      },
+      "391415444084490240": {
+        "emojiCode": "<:391415444084490240:1365344765704536156>",
+        "age": "36"
+      },
+      "1086246253819613274": {
+        "emojiCode": null
+      },
+      "891514863107579984": {
+        "emojiCode": "<:891514863107579984:1365344769663827998>"
+      },
+      "977455730300956683": {
+        "emojiCode": "<:977455730300956683:1365344773879234640>"
+      },
+      "650409567028641802": {
+        "emojiCode": "<:650409567028641802:1365344777721352363>"
+      },
+      "763204913839865906": {
+        "emojiCode": "<:763204913839865906:1365344902258360401>"
+      },
+      "621170444740853772": {
+        "emojiCode": "<:621170444740853772:1365344906150674553>"
+      },
+      "235148962103951360": {
+        "emojiCode": "<:235148962103951360:1365345129484914769>"
+      },
+      "557628352828014614": {
+        "emojiCode": "<:557628352828014614:1365345134325268661>"
+      },
+      "302050872383242240": {
+        "emojiCode": "<:302050872383242240:1365345138045620265>"
+      },
+      "411916947773587456": {
+        "emojiCode": "<:411916947773587456:1365345142038331454>"
+      },
+      "695664345832620062": {
+        "emojiCode": "<:695664345832620062:1365345146182434817>"
+      },
+      "1104937162413199421": {
+        "emojiCode": "<:1104937162413199421:1365345156416540674>"
+      },
+      "491769129318088714": {
+        "emojiCode": "<:491769129318088714:1365345160392740978>"
+      }
+    },
+    "tribes": {
+      "1127614270306263080": {
+        "emoji": "🤓",
+        "castlist": "default"
+      },
+      "1129714392699768912": {
+        "emoji": "👩‍🦰",
+        "castlist": "default"
+      },
+      "1143197876378419231": {
+        "emoji": "🤖",
+        "castlist": "default"
+      }
+    },
+    "timezones": {
+      "1129716603504828509": {
+        "offset": 8
+      },
+      "1334215311523713025": {
+        "offset": -3.5
+      },
+      "1334215313423863839": {
+        "offset": -3
+      },
+      "1334215314656985220": {
+        "offset": 1
+      },
+      "1334215316590301205": {
+        "offset": 2
+      },
+      "1334215318532526212": {
+        "offset": 5.5
+      },
+      "1334215319765651489": {
+        "offset": 10
+      },
+      "1334215321917325382": {
+        "offset": 13
+      },
+      "1129716323790888970": {
+        "offset": -8
+      },
+      "1129716263371935804": {
+        "offset": -7
+      },
+      "1129716184363831316": {
+        "offset": -6
+      },
+      "1129716015811547206": {
+        "offset": -5
+      },
+      "1129716469844955217": {
+        "offset": 0
+      }
+    },
+    "pronounRoleIDs": [
+      "1334212951699357777",
+      "1334212953079025776",
+      "1334212954509414451",
+      "1334212956518617088",
+      "1129714391877681192",
+      "1129714392699768912",
+      "1129714393358274570",
+      "1129714393920327721"
+    ],
+    "icon": "https://cdn.discordapp.com/icons/1127596863885934652/21246f7f1ab8a24074a5bdb6ae3b6ba2.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 85,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1688910442087,
+    "lastUpdated": 1759240166876,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0"
+  },
+  "1308581797915005029": {
+    "serverName": "SERVIVORG S10 - DRIVE IN MADNESS",
+    "players": {
+      "877692281619116093": {
+        "emojiCode": "<:877692281619116093:1331595398128734218>"
+      },
+      "813130551254056960": {
+        "emojiCode": "<:813130551254056960:1331595401727316059>"
+      },
+      "272907597303119873": {
+        "emojiCode": "<:272907597303119873:1331595405217108030>"
+      },
+      "242017916826943489": {
+        "emojiCode": "<:242017916826943489:1331595408153251850>"
+      },
+      "473926986516135937": {
+        "emojiCode": "<:473926986516135937:1331595411504496731>"
+      },
+      "468655730975703041": {
+        "emojiCode": "<:468655730975703041:1331595414000111748>"
+      },
+      "688699623581155340": {
+        "emojiCode": "<:688699623581155340:1331595416273162330>"
+      },
+      "391415444084490240": {
+        "emojiCode": "<:391415444084490240:1331595418135433338>",
+        "age": "36"
+      },
+      "700105131517018182": {
+        "emojiCode": "<:700105131517018182:1331595419611955293>"
+      },
+      "671651621956222978": {
+        "emojiCode": "<:671651621956222978:1331595422107566202>"
+      },
+      "1086246253819613274": {
+        "age": "22",
+        "emojiCode": "<:1086246253819613274:1333462294079864923>"
+      },
+      "235148962103951360": {
+        "emojiCode": "<:235148962103951360:1333796489515765851>"
+      },
+      "784284227373367346": {
+        "emojiCode": null
+      }
+    },
+    "tribes": {
+      "1308797124275863592": {
+        "emoji": null,
+        "castlist": "screen1"
+      },
+      "1333449772559761428": {
+        "emoji": null,
+        "castlist": "default"
+      },
+      "1308796968700608616": {
+        "emoji": null,
+        "castlist": "default"
+      }
+    },
+    "timezones": {
+      "1333449345839665345": {
+        "offset": -8
+      },
+      "1333449090989691012": {
+        "offset": -7
+      },
+      "1333449388596527104": {
+        "offset": -6
+      },
+      "1333449533895479306": {
+        "offset": 0
+      },
+      "1333449655153070123": {
+        "offset": 8
+      },
+      "1333449725617242242": {
+        "offset": 13
+      },
+      "1333449626136612924": {
+        "offset": -5
+      },
+      "1333449564304310353": {
+        "offset": 1
+      },
+      "1333449594092130345": {
+        "offset": 2
+      }
+    },
+    "icon": "https://cdn.discordapp.com/icons/1308581797915005029/844ba42288ad45eec25cf10db6b356ab.webp",
+    "ownerId": "468655730975703041",
+    "memberCount": 110,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1732060612897,
+    "lastUpdated": 1739017168167,
+    "pronounRoleIDs": [
+      "1333449772559761428",
+      "1333449804411437128",
+      "1333449831750045829",
+      "1333449858505244712",
+      "1333449884053016587",
+      "1333450037732048916",
+      "1333449944614572142",
+      "1333449916776841248"
+    ]
+  },
+  "1203901346311438356": {
+    "serverName": "Parkvivor: Mythic Lands - S4: Olympus",
+    "icon": "https://cdn.discordapp.com/icons/1203901346311438356/5c83c22cbb568e4e9a196cf6f9cf8da9.webp",
+    "ownerId": "233762709932474370",
+    "memberCount": 161,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1707102848366,
+    "lastUpdated": 1752896284476,
+    "players": {
+      "178018306328887298": {
+        "emojiCode": "<:178018306328887298:1333791273764655147>"
+      },
+      "252302032390586368": {
+        "emojiCode": "<:252302032390586368:1333791287089958984>"
+      },
+      "692928428046942311": {
+        "emojiCode": "<:692928428046942311:1333791289505747019>"
+      },
+      "242017916826943489": {
+        "emojiCode": "<:242017916826943489:1333791291938439251>"
+      },
+      "977455730300956683": {
+        "emojiCode": "<:977455730300956683:1333791295059001446>"
+      },
+      "233762709932474370": {
+        "emojiCode": "<:233762709932474370:1333791299610083369>"
+      },
+      "1058212158732783727": {
+        "emojiCode": "<:1058212158732783727:1333791302227329174>"
+      },
+      "496063358877958159": {
+        "emojiCode": "<:ckohrs0221:1382265937516040203>"
+      },
+      "692193262957756417": {
+        "emojiCode": "<:schardt312:1382265941911535706>"
+      },
+      "816785399878778900": {
+        "emojiCode": "<:anya0011:1382265947343163402>"
+      }
+    },
+    "tribes": {
+      "1205906888194129961": {
+        "emoji": null,
+        "castlist": "default",
+        "showPlayerEmojis": true,
+        "analyticsName": "Production",
+        "color": "#2ecc71"
+      }
+    },
+    "timezones": {
+      "1350353655865282591": {
+        "offset": 0
+      },
+      "1350353654640807947": {
+        "offset": 0
+      },
+      "1206381199484911627": {
+        "offset": 0
+      },
+      "1206381198461370408": {
+        "offset": 0
+      },
+      "1350353653013413920": {
+        "offset": 0
+      },
+      "1206381197748346950": {
+        "offset": 0
+      },
+      "1206381199140851722": {
+        "offset": 0
+      },
+      "1350353651763384361": {
+        "offset": 0
+      }
+    },
+    "pronounRoleIDs": [],
+    "ownerInfo": {
+      "username": "gofef",
+      "globalName": "Geo",
+      "discriminator": "0",
+      "tag": "gofef"
+    },
+    "analyticsVersion": "1.0"
+  },
+  "1331657596087566398": {
+    "serverName": "CastBot",
+    "icon": "https://cdn.discordapp.com/icons/1331657596087566398/84e48ab9d15d35611b80ce584bb80f95.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 27,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1737562311909,
+    "lastUpdated": 1759240170309,
+    "players": {
+      "233762709932474370": {
+        "emojiCode": "<:Geo:1396856830281388144>",
+        "age": "30",
+        "safari": {
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "currency": 1450,
+          "lastInteraction": 1758949572454,
+          "history": [],
+          "storeHistory": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {}
+        }
+      },
+      "455951495272202240": {
+        "emojiCode": "<:Natadwen:1396856838158417931>",
+        "age": "29",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949573124,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      },
+      "572291395365109770": {
+        "emojiCode": "<:Megan:1396856854314745957>",
+        "age": "26",
+        "safari": {
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "D5",
+              "exploredCoordinates": [
+                "A1",
+                "D5"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:03:07.676Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:03:07.691Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "D5",
+                  "timestamp": "2025-08-04T15:44:57.228Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-04T15:03:07.676Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": true,
+          "currency": 1450,
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "history": [],
+          "storeHistory": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "lastInteraction": 1758949574209
+        }
+      },
+      "391415444084490240": {
+        "age": "32",
+        "emojiCode": "<:ReeceBot:1396856819690766460>",
+        "vanityRoles": [
+          "1398904036643831818"
+        ],
+        "safari": {
+          "currency": 10382,
+          "history": [],
+          "lastInteraction": 1758949571427,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 15,
+              "numAttacksAvailable": 15
+            },
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": {
+              "quantity": 1,
+              "numAttacksAvailable": 1
+            },
+            "lance_of_ruin_627670": {
+              "quantity": 2,
+              "numAttacksAvailable": 0
+            },
+            "dupe99_263476": {
+              "quantity": 22,
+              "numAttacksAvailable": 0
+            },
+            "bait_530852": {
+              "quantity": 4,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757693950304
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758028371006
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758028409849
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758028413325
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758028416611
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758029284150
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758036850666
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758036865080
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758039293299
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758039308695
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758039310479
+            }
+          ],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "B2",
+              "exploredCoordinates": [
+                "A1",
+                "B2"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-06T05:33:52.335Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-09-06T05:33:52.356Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "B2",
+                  "timestamp": "2025-09-23T15:38:48.717Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-09-06T05:33:52.335Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false
+        }
+      },
+      "251452487997980673": {
+        "emojiCode": "<:Patrick:1396856834236747977>",
+        "age": "20",
+        "vanityRoles": []
+      },
+      "705936744595587112": {
+        "emojiCode": null
+      },
+      "696456309762949141": {
+        "age": "22",
+        "emojiCode": "<:Mike:1396856858475495454>",
+        "vanityRoles": [
+          "1368969393819746336",
+          "1401201426436456468"
+        ],
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949574712,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      },
+      "468655730975703041": {
+        "age": "45",
+        "emojiCode": "<:Serviver:1396856842994585651>",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949575612,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      },
+      "538540453973327873": {
+        "age": "22",
+        "emojiCode": "<:kayl:1396856849126522991>",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949576106,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-06T11:59:31.130Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-06T11:59:31.166Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-06T11:59:31.130Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false
+        }
+      },
+      "443545183997657120": {
+        "emojiCode": null
+      },
+      "1328366050848411658": {
+        "emojiCode": null,
+        "safari": {
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-04T13:22:16.559Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-04T13:22:16.572Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 10,
+              "maximum": 10,
+              "lastRegeneration": "2025-08-04T13:22:16.559Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false,
+          "currency": 1450,
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "history": [],
+          "storeHistory": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "lastInteraction": 1758949579940
+        }
+      },
+      "676262975132139522": {
+        "emojiCode": "<:Belle:1382413449342091405>",
+        "age": "28",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949576576,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:22:47.269Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:22:47.287Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-04T15:22:47.269Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false
+        }
+      },
+      "977455730300956683": {
+        "emojiCode": "<:morgane:1382413461094535281>",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949578222,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      },
+      "480712959824363520": {
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949580434,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        },
+        "inventory": {
+          "nurturer_361363": {
+            "quantity": 1
+          }
+        }
+      },
+      "1088078919409881098": {
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949585265,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      },
+      "208197633846542336": {
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949578942,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        },
+        "emojiCode": "<:DieselFuryy:1396856824904552609>"
+      },
+      "235148962103951360": {
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949586549,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1752919246680": {
+              "currentLocation": "H5",
+              "exploredCoordinates": [
+                "H5"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-07-19T11:23:54.463Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-07-19T11:23:54.490Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A2",
+                  "timestamp": "2025-07-19T11:24:21.119Z"
+                },
+                {
+                  "from": "A2",
+                  "to": "H5",
+                  "timestamp": "2025-07-19T14:28:00.551Z"
+                }
+              ]
+            },
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:00:28.944Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:00:28.957Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-04T15:00:28.944Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false
+        }
+      },
+      "1319912453248647170": {
+        "safari": {
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-04T13:26:29.641Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-04T13:26:29.657Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-08-04T13:26:29.641Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false,
+          "currency": 1450,
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "history": [],
+          "storeHistory": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "lastInteraction": 1758949587066
+        }
+      },
+      "1086246253819613274": {
+        "age": "60s",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949588297,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758038829691
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758038835139
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758038841436
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758038847196
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758039196659
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758039233731
+            }
+          ],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "E2",
+              "exploredCoordinates": [
+                "A1",
+                "E2"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-06T02:17:57.193Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-09-06T02:17:57.204Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "E2",
+                  "timestamp": "2025-09-16T15:47:46.268Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-09-06T02:17:57.193Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "1100826875435163780": {
+        "age": "16"
+      },
+      "1372636989408673964": {},
+      "731547575211262128": {},
+      "admin": {
+        "safari": {
+          "inventory": {
+            "nurturer_361363_391415444084490240_player": {
+              "quantity": 5
+            }
+          }
+        }
+      },
+      "630470402900230146": {
+        "safari": {
+          "currency": 260,
+          "history": [],
+          "lastInteraction": 1758949579426,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "B2",
+              "exploredCoordinates": [
+                "A1",
+                "B2"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-23T06:25:50.067Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-09-23T06:25:50.086Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "B2",
+                  "timestamp": "2025-09-23T15:36:40.599Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 999,
+              "maximum": 999,
+              "lastRegeneration": "2025-09-23T15:40:44.995Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      }
+    },
+    "tribes": {
+      "1380906521084559401": {
+        "emoji": null,
+        "castlist": "Haszo",
+        "showPlayerEmojis": true,
+        "color": "#607d8b",
+        "castlistId": "castlist_1758812609810_system"
+      },
+      "1333822520737927281": {
+        "emoji": null,
+        "castlist": "Haszo",
+        "showPlayerEmojis": false,
+        "color": "#3498db",
+        "analyticsName": "🤖Mr CastBot",
+        "analyticsAdded": 1751070525853,
+        "castlistId": "castlist_1758812609810_system"
+      },
+      "1391142520787832904": {
+        "emoji": "👀",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "👀 BST (UTC+1) 👀",
+        "analyticsAdded": 1754751135102
+      },
+      "1333822411912642630": {
+        "emoji": "🧟‍♂️",
+        "castlist": "Haszo",
+        "showPlayerEmojis": false,
+        "color": "#2ecc71",
+        "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
+        "analyticsAdded": 1754751381750,
+        "castlistId": "castlist_1758812609810_system"
+      },
+      "1335645032891547670": {
+        "emoji": "🤷‍♀️",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "🤷‍♀️ Any 🤷‍♀️",
+        "analyticsAdded": 1756021096260
+      },
+      "1409191262279700622": {
+        "emoji": "🐻‍❄️",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": "#000001",
+        "analyticsName": "🐻‍❄️ LOSTvivor Alumni 🐻‍❄️",
+        "analyticsAdded": 1756048042925,
+        "type": "alumni_placements",
+        "rankings": {
+          "977455730300956683": {
+            "placement": "1"
+          },
+          "572291395365109770": {
+            "placement": "2"
+          },
+          "391415444084490240": {
+            "placement": "3"
+          }
+        }
+      },
+      "1379077934953922611": {
+        "emoji": null,
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "Nyauu / +3 +/ GMT5 22",
+        "analyticsAdded": 1757442465942
+      },
+      "1368969395795398716": {
+        "name": "Tribe 1368969395795398716",
+        "emoji": "🏕️",
+        "type": "default",
+        "castlistId": "castlist_1758812609810_system",
+        "castlist": "Haszo"
+      },
+      "1368969393819746336": {
+        "name": "Tribe 1368969393819746336",
+        "emoji": "🏕️",
+        "type": "default"
+      },
+      "1415062472007749765": {
+        "name": "Tribe 1415062472007749765",
+        "emoji": "🏕️",
+        "type": "default"
+      },
+      "1401201426436456468": {
+        "name": "Tribe 1401201426436456468",
+        "emoji": "🏕️",
+        "type": "default",
+        "castlistId": "virtual_VGhlQmVzdA",
+        "castlist": "TheBest"
+      },
+      "1368969399251501126": {
+        "emoji": "🪄",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "🪄 ar.3 🪄",
+        "analyticsAdded": 1759081799205
+      },
+      "1388327092634124368": {
+        "emoji": null,
+        "castlist": "TheBest",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "SendMessages",
+        "analyticsAdded": 1759245471727
+      }
+    },
+    "timezones": {
+      "1391142497484275712": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1391142499283763300": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1391142500936192042": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1391142502429495328": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1391142506049048686": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1391142507446014125": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1391142509316411443": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1391142510859915358": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1391142516262174780": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1391142517944357025": {
+        "offset": -2.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1391142519148118140": {
+        "offset": 0,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1391142520787832904": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
+      },
+      "1391142522428067842": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1391142524285882551": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1391142526072914060": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1391142527826002000": {
+        "offset": 10,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1391142529482752175": {
+        "offset": 11,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
+      },
+      "1401201424783642624": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1401201426436456468": {
+        "offset": -3,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1368969401067372625": {
+        "offset": 4
+      },
+      "1409024736490422364": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
+      }
+    },
+    "pronounRoleIDs": [
+      "1335645024154812669",
+      "1335645022774886490",
+      "1335645026168082532",
+      "1335645029674254347",
+      "1335645027497545811",
+      "1335645031226277959",
+      "1335645032891547670",
+      "1335645034380525708",
+      "1368969399251501126"
+    ],
+    "applicationConfigs": {
+      "config_1751549410029_391415444084490240": {
+        "buttonText": "Test out CastBot Apps!",
+        "explanatoryText": "asdsa",
+        "channelFormat": "📝%name%-app",
+        "stage": "active",
+        "seasonId": "season_03859e4abc554bb5",
+        "seasonName": "ReeceVivor S15!",
+        "questions": [
+          {
+            "id": "question_16591fb65b054d5b",
+            "order": 1,
+            "questionTitle": "Name & Location",
+            "questionText": "To start off, please confirm the following information:\n* First and last name\n* General Location (State/Province)\n\n*Please also make sure to set your age, pronouns, and timezone using the CastBot buttons above*",
+            "createdAt": 1751550324378,
+            "lastUpdated": 1751558051761
+          },
+          {
+            "id": "question_cffec0ffc9b34ffc",
+            "order": 2,
+            "questionTitle": "Who Referred You?",
+            "questionText": "Who referred you to Power Grab, if anyone? How did you hear about Power Grab?",
+            "createdAt": 1751550341294,
+            "lastUpdated": 1751558060611
+          },
+          {
+            "id": "question_ce56543655724962",
+            "order": 3,
+            "questionTitle": "ORG History",
+            "questionText": "Tell us about your ORG history! What ORG’s have you played in the last 2 years? How did you do in those ORG’s?",
+            "createdAt": 1751550416660,
+            "lastUpdated": 1751558066038
+          },
+          {
+            "id": "question_40ae12331112420a",
+            "order": 4,
+            "questionTitle": "Competitions",
+            "questionText": "There are no direct competitions in Power Grab. Do you think you will thrive in this atmosphere? Why or why not?",
+            "createdAt": 1751550458949
+          },
+          {
+            "id": "question_d7366853139149d8",
+            "order": 5,
+            "questionTitle": "Level of Activity",
+            "questionText": "**Power Grab is a fast-paced game lasting 18 days with an Elimination Ceremony almost every night at 10pm EST. We expect you to be present and active within the game.**\n\nDo you foresee any conflicts or potential reasons you may not be able to fully participate? Are you playing any other games during the season time frame, and if so, will you be able to commit to Power Grab? \n\nOn a scale of 1-5, with 1 being the least and 5 being the most, how active of a player do you expect to be?",
+            "createdAt": 1751558157182
+          },
+          {
+            "id": "question_a98a777038114063",
+            "order": 6,
+            "questionTitle": "Season Theme",
+            "questionText": "What about the theme of the season in particular speaks to you?",
+            "createdAt": 1751558188974
+          },
+          {
+            "id": "question_1e1fa7c35d1b4510",
+            "order": 7,
+            "questionTitle": "Who won't you play with?",
+            "questionText": "Is there anyone in the community you **will not** play with? We want to provide a fun, safe, and enjoyable experience to the best of our ability. We will keep this information private between production and you. \n\nPlease provide the first & last name of the player(s) as well as their discord handles or other handles/usernames (if you did not play with them on discord).",
+            "createdAt": 1751558253064
+          },
+          {
+            "id": "question_019c96f5b4fa41fe",
+            "order": 8,
+            "questionTitle": "Random Questions",
+            "questionText": "Please answer these three questions: \n\n1. Are you a cat person, a dog person, or both….or neither?\n\n2. Pick the traits that fit you the best:\na. Loyal and Enthusiastic\nb. Independent and Mysterious\nc. Curious and Quirky\nAdaptable and Unpredictable\n\n3. When you are at a party, how likely are you to be the person in the following scenarios (please rate on a scale of 1-10)?\na. Hostess with the mostest, chatting everyone up\nb. Hanging out with your small squad of homies in the corner, doing your own thing\nc. Hiding in a room and only sneaking out for food and drink…your extroverted friends forced you to come",
+            "createdAt": 1751550470684,
+            "lastUpdated": 1751558347136
+          },
+          {
+            "id": "question_e40e1050b202465f",
+            "order": 9,
+            "questionTitle": "Final Pitch",
+            "questionText": "Please give us your final elevator pitch as to why you should be cast for Power Grab!",
+            "createdAt": 1751558361166
+          },
+          {
+            "id": "question_048587aa52f84d75",
+            "order": 10,
+            "questionTitle": "Photo & Interview",
+            "questionText": "There are 2 things you must complete in order to finish your application! We need a photo and an interview.  \n\nPlease note that we **do** consider submitting a photo and an interview a prerequisite to applying for the game.  If you do complete your application and are ultimately not cast, we will add a bump (point) to your chat to give you extra consideration for future seasons.\n\n**Photo**\n-Please submit a photo and make sure everything is in frame (see examples below).\n-Waist-up, make sure all body parts are in frame. Make sure the photo is good quality!\n-We actually recommend that you do not include pets in your photo for the season.\n\nThis video may also help- https://www.youtube.com/watch?v=KeIlXFmFu84. \n\n**Interview**\nYou will need to schedule an interview with Brandon. \n\nDeadline for your materials and interviews are on July 30th, however, we recommend submitting as early as possible in case we choose to cast earlier depending on the pool.\n\nThank you for submitting an application!",
+            "createdAt": 1751558448013,
+            "imageURL": "https://cdn.discordapp.com/attachments/1390375522806009899/1390380890521075723/image.png?ex=68680c9c&is=6866bb1c&hm=9bb8da0c7652f63bb749f81a0e8c61679c6ee90975acfbd361919e783c18b278&",
+            "lastUpdated": 1751563470002
+          }
+        ],
+        "targetChannelId": "1337754151655833694",
+        "categoryId": "1334493817231114271",
+        "buttonStyle": "Primary",
+        "productionRole": null,
+        "createdBy": "391415444084490240",
+        "createdAt": 1759258254949,
+        "lastUpdated": 1759258254949,
+        "welcomeDescription": "In season_question_edit_config_*, please add a next Text Input called \"Image URL\", optional, with the placeholder text of \"Enter the url of an image hosted on discord (https://cdn.discor..) to include.\"\nUnder the question configuration, save the URL of the image the user provided (e.g. imageURL).\nIn app_continue_*, when the container loads, if a question has a non-empty imageURL, create a ComponentsV2.md Media Gallery (type = 12) component directly below the questionText and attempt to load the imageURL in the component.",
+        "welcomeTitle": "Welcome!"
+      },
+      "config_1757436209072_391415444084490240": {
+        "buttonText": "Apply to test123",
+        "explanatoryText": "test",
+        "channelFormat": "📝%name%-app",
+        "stage": "awaiting_selections",
+        "seasonId": "season_875934ef5b7b49ee",
+        "seasonName": "test123",
+        "questions": [
+          {
+            "id": "question_4e29cafb9e6e4e2e",
+            "order": 1,
+            "questionTitle": "asdsa",
+            "questionText": "asdas",
+            "imageURL": "",
+            "createdAt": 1757443342897
+          },
+          {
+            "id": "question_3cf9146606a045f0",
+            "order": 2,
+            "questionTitle": "12312",
+            "questionText": "adwsdas",
+            "imageURL": "",
+            "createdAt": 1757443336483
+          }
+        ],
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "createdAt": 1758635465491,
+        "lastUpdated": 1758635465491
+      }
+    },
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "applications": {
+      "13989237782597430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297437099": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297430099": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasdasdasasdas dasd",
+        "rankings": {
+          "391415444084490240": 5
+        },
+        "castingStatus": "cast"
+      },
+      "1398923712597430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297447099": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778295430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297430299": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297630099": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923722597430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297448099": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778245430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "139892377829330299": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398919977020555284_0_config_1751549410029": {
+        "rankings": {
+          "391415444084490240": 5
+        }
+      },
+      "1398923778297430099_1_config_1751549410029": {
+        "rankings": {
+          "391415444084490240": 2
+        }
+      }
+    },
+    "rankings": {
+      "1382698115748073574": {
+        "391415444084490240": 2,
+        "1086246253819613274": 2,
+        "676262975132139522": 5
+      },
+      "1382700344600952959": {
+        "1086246253819613274": 2,
+        "391415444084490240": 5
+      },
+      "1382721883556024340": {
+        "391415444084490240": 5
+      },
+      "1382713657749930076": {
+        "391415444084490240": 3
+      },
+      "1398809112610865183": {
+        "391415444084490240": 3
+      },
+      "1398864305008545823_0_config_1749305698427": {
+        "391415444084490240": 4
+      },
+      "1398874028789465178_0_config_1753587914351": {
+        "391415444084490240": 5
+      },
+      "1398865589887434783": {
+        "391415444084490240": 1
+      },
+      "1398923778297430099_1_config_1751549410029": {
+        "391415444084490240": 4
+      }
+    },
+    "reactionMappings": {},
+    "availability": {
+      "391415444084490240": [
+        10,
+        11,
+        12,
+        13,
+        19,
+        20,
+        21
+      ],
+      "1086246253819613274": [
+        0,
+        1,
+        2,
+        3,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        18,
+        19,
+        20,
+        21
+      ]
+    },
+    "availabilityMessages": {
+      "1403064271067414579": {
+        "slots": [
+          {
+            "emoji": "1️⃣",
+            "utcHour": 18
+          },
+          {
+            "emoji": "2️⃣",
+            "utcHour": 19
+          },
+          {
+            "emoji": "3️⃣",
+            "utcHour": 20
+          },
+          {
+            "emoji": "4️⃣",
+            "utcHour": 21
+          },
+          {
+            "emoji": "5️⃣",
+            "utcHour": 22
+          },
+          {
+            "emoji": "6️⃣",
+            "utcHour": 23
+          },
+          {
+            "emoji": "7️⃣",
+            "utcHour": 0
+          },
+          {
+            "emoji": "8️⃣",
+            "utcHour": 1
+          },
+          {
+            "emoji": "9️⃣",
+            "utcHour": 2
+          },
+          {
+            "emoji": "🔟",
+            "utcHour": 3
+          },
+          {
+            "emoji": "🇦",
+            "utcHour": 4
+          },
+          {
+            "emoji": "🇧",
+            "utcHour": 5
+          },
+          {
+            "emoji": "🇨",
+            "utcHour": 6
+          },
+          {
+            "emoji": "🇩",
+            "utcHour": 7
+          },
+          {
+            "emoji": "🇪",
+            "utcHour": 8
+          },
+          {
+            "emoji": "🇫",
+            "utcHour": 9
+          },
+          {
+            "emoji": "🇬",
+            "utcHour": 10
+          },
+          {
+            "emoji": "🇭",
+            "utcHour": 11
+          },
+          {
+            "emoji": "🇮",
+            "utcHour": 12
+          },
+          {
+            "emoji": "🇯",
+            "utcHour": 13
+          }
+        ],
+        "startHour": 17,
+        "channelId": "1337754151655833694",
+        "createdAt": 1754587006661
+      },
+      "1403064362989519009": {
+        "slots": [
+          {
+            "emoji": "1️⃣",
+            "utcHour": 18
+          },
+          {
+            "emoji": "2️⃣",
+            "utcHour": 19
+          },
+          {
+            "emoji": "3️⃣",
+            "utcHour": 20
+          },
+          {
+            "emoji": "4️⃣",
+            "utcHour": 21
+          },
+          {
+            "emoji": "5️⃣",
+            "utcHour": 22
+          },
+          {
+            "emoji": "6️⃣",
+            "utcHour": 23
+          },
+          {
+            "emoji": "7️⃣",
+            "utcHour": 0
+          },
+          {
+            "emoji": "8️⃣",
+            "utcHour": 1
+          },
+          {
+            "emoji": "9️⃣",
+            "utcHour": 2
+          },
+          {
+            "emoji": "🔟",
+            "utcHour": 3
+          },
+          {
+            "emoji": "🇦",
+            "utcHour": 4
+          },
+          {
+            "emoji": "🇧",
+            "utcHour": 5
+          },
+          {
+            "emoji": "🇨",
+            "utcHour": 6
+          },
+          {
+            "emoji": "🇩",
+            "utcHour": 7
+          },
+          {
+            "emoji": "🇪",
+            "utcHour": 8
+          },
+          {
+            "emoji": "🇫",
+            "utcHour": 9
+          },
+          {
+            "emoji": "🇬",
+            "utcHour": 10
+          },
+          {
+            "emoji": "🇭",
+            "utcHour": 11
+          },
+          {
+            "emoji": "🇮",
+            "utcHour": 12
+          },
+          {
+            "emoji": "🇯",
+            "utcHour": 13
+          }
+        ],
+        "startHour": 17,
+        "channelId": "1337754151655833694",
+        "createdAt": 1754587030707
+      },
+      "1405542651603718265": {
+        "slots": [
+          {
+            "emoji": "1️⃣",
+            "utcHour": 14
+          },
+          {
+            "emoji": "2️⃣",
+            "utcHour": 15
+          },
+          {
+            "emoji": "3️⃣",
+            "utcHour": 16
+          },
+          {
+            "emoji": "4️⃣",
+            "utcHour": 17
+          },
+          {
+            "emoji": "5️⃣",
+            "utcHour": 18
+          },
+          {
+            "emoji": "6️⃣",
+            "utcHour": 19
+          },
+          {
+            "emoji": "7️⃣",
+            "utcHour": 20
+          },
+          {
+            "emoji": "8️⃣",
+            "utcHour": 21
+          },
+          {
+            "emoji": "9️⃣",
+            "utcHour": 22
+          },
+          {
+            "emoji": "🔟",
+            "utcHour": 23
+          },
+          {
+            "emoji": "🇦",
+            "utcHour": 0
+          },
+          {
+            "emoji": "🇧",
+            "utcHour": 1
+          },
+          {
+            "emoji": "🇨",
+            "utcHour": 2
+          },
+          {
+            "emoji": "🇩",
+            "utcHour": 3
+          },
+          {
+            "emoji": "🇪",
+            "utcHour": 4
+          },
+          {
+            "emoji": "🇫",
+            "utcHour": 5
+          },
+          {
+            "emoji": "🇬",
+            "utcHour": 6
+          },
+          {
+            "emoji": "🇭",
+            "utcHour": 7
+          },
+          {
+            "emoji": "🇮",
+            "utcHour": 8
+          },
+          {
+            "emoji": "🇯",
+            "utcHour": 9
+          }
+        ],
+        "startHour": 13,
+        "channelId": "1396134920954450074",
+        "createdAt": 1755177897632
+      },
+      "1409154227569426432": {
+        "slots": [
+          {
+            "emoji": "1️⃣",
+            "utcHour": 13
+          },
+          {
+            "emoji": "2️⃣",
+            "utcHour": 14
+          },
+          {
+            "emoji": "3️⃣",
+            "utcHour": 15
+          },
+          {
+            "emoji": "4️⃣",
+            "utcHour": 16
+          },
+          {
+            "emoji": "5️⃣",
+            "utcHour": 17
+          },
+          {
+            "emoji": "6️⃣",
+            "utcHour": 18
+          },
+          {
+            "emoji": "7️⃣",
+            "utcHour": 19
+          },
+          {
+            "emoji": "8️⃣",
+            "utcHour": 20
+          },
+          {
+            "emoji": "9️⃣",
+            "utcHour": 21
+          },
+          {
+            "emoji": "🔟",
+            "utcHour": 22
+          },
+          {
+            "emoji": "🇦",
+            "utcHour": 23
+          },
+          {
+            "emoji": "🇧",
+            "utcHour": 0
+          },
+          {
+            "emoji": "🇨",
+            "utcHour": 1
+          },
+          {
+            "emoji": "🇩",
+            "utcHour": 2
+          },
+          {
+            "emoji": "🇪",
+            "utcHour": 3
+          },
+          {
+            "emoji": "🇫",
+            "utcHour": 4
+          },
+          {
+            "emoji": "🇬",
+            "utcHour": 5
+          },
+          {
+            "emoji": "🇭",
+            "utcHour": 6
+          },
+          {
+            "emoji": "🇮",
+            "utcHour": 7
+          },
+          {
+            "emoji": "🇯",
+            "utcHour": 8
+          }
+        ],
+        "startHour": 12,
+        "channelId": "1337754151655833694",
+        "createdAt": 1756038966969
+      }
+    },
+    "activeSeason": {
+      "id": "config_1751549410029_391415444084490240",
+      "name": "ReeceVivor S15!",
+      "stage": "planning"
+    },
+    "castlistConfigs": {
+      "castlist_1758812609810_system": {
+        "id": "castlist_1758812609810_system",
+        "name": "Haszo",
+        "type": "legacy",
+        "createdAt": 1758812609810,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "New format castlist Haszo",
+          "emoji": "📋",
+          "accentColor": 10181046,
+          "migratedFrom": "virtual_SGFzem8",
+          "migrationDate": 1758812609810
+        },
+        "modifiedAt": 1759080421480,
+        "modifiedBy": "system"
+      }
+    },
+    "placements": {
+      "global": {
+        "676262975132139522": {
+          "placement": 33,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-09-30T16:48:16.600Z"
+        },
+        "977455730300956683": {
+          "placement": 8,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-09-30T16:45:38.122Z"
+        },
+        "391415444084490240": {
+          "placement": 44,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-09-30T16:44:52.553Z"
+        },
+        "683102296380276766": {
+          "placement": 7,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-09-30T16:57:54.319Z"
+        }
+      }
+    }
+  },
+  "1266913708123361303": {
+    "serverName": "EpochORG S6: Buccaneers",
+    "icon": "https://cdn.discordapp.com/icons/1266913708123361303/c6692f2c83b69e4de2cce0c5806380ac.webp",
+    "ownerId": "696456309762949141",
+    "memberCount": 68,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1722126166135,
+    "lastUpdated": 1759240168981,
+    "players": {},
+    "tribes": {
+      "1267501924639571988": {
+        "emoji": null,
+        "castlist": "default"
+      }
+    },
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "ownerInfo": {
+      "username": "mpschettig",
+      "globalName": "Tylenol Boy",
+      "discriminator": "0",
+      "tag": "mpschettig"
+    },
+    "analyticsVersion": "1.0"
+  },
+  "1240325979214188615": {
+    "serverName": "EpochORG S5: Incan Empire",
+    "icon": "https://cdn.discordapp.com/icons/1240325979214188615/156095a9edb1de2f24dfac78d2904a04.webp",
+    "ownerId": "696456309762949141",
+    "memberCount": 58,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1715787157587,
+    "lastUpdated": 1759240168564,
+    "players": {},
+    "tribes": {
+      "1241383870260056095": {
+        "emoji": null,
+        "castlist": "default"
+      }
+    },
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "ownerInfo": {
+      "username": "mpschettig",
+      "globalName": "Tylenol Boy",
+      "discriminator": "0",
+      "tag": "mpschettig"
+    },
+    "analyticsVersion": "1.0"
+  },
+  "1365865567227219968": {
+    "serverName": "CastBOTBREAK",
+    "icon": null,
+    "ownerId": "391415444084490240",
+    "memberCount": 3,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1745718127782,
+    "lastUpdated": 1745718329158,
+    "players": {},
+    "tribes": {},
+    "timezones": {
+      "1365865671174393986": {
+        "offset": -7
+      },
+      "1365865671988351061": {
+        "offset": -6
+      },
+      "1365865673644834898": {
+        "offset": -5
+      },
+      "1365865675117301810": {
+        "offset": -4
+      },
+      "1365865676501422240": {
+        "offset": 0
+      },
+      "1365865677813977089": {
+        "offset": 1
+      },
+      "1365865679592624171": {
+        "offset": 2
+      },
+      "1365865682331504722": {
+        "offset": 8
+      },
+      "1365865684432715899": {
+        "offset": 10
+      }
+    },
+    "pronounRoleIDs": [
+      "1365865654149845063",
+      "1365865661229830185",
+      "1365865662475403395",
+      "1365865664484475011",
+      "1365865665776455761",
+      "1365865667047456871",
+      "1365865668485844992",
+      "1365865669933137930"
+    ]
+  },
+  "974318870057848842": {
+    "serverName": "Servivorg S12 - JURASSIC PARK (Second Chances)",
+    "icon": "https://cdn.discordapp.com/icons/974318870057848842/7e21787a39e859c1ad7707c2591a5b28.webp",
+    "ownerId": "468655730975703041",
+    "memberCount": 531,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1652366120591,
+    "lastUpdated": 1754143648501,
+    "players": {
+      "235148962103951360": {
+        "emojiCode": "<:Carl_bot:1381126640163360800>"
+      },
+      "877692281619116093": {
+        "emojiCode": "<:jenn95:1381126645796044910>"
+      },
+      "813130551254056960": {
+        "emojiCode": "<:logoins:1381126650430750791>"
+      },
+      "272907597303119873": {
+        "emojiCode": "<:asmashterpiece:1381126654562406480>"
+      },
+      "880086374479450143": {
+        "emojiCode": "<:markshoe:1381126659608154133>"
+      },
+      "468655730975703041": {
+        "emojiCode": "<:serviver:1381126665111076914>"
+      },
+      "391415444084490240": {
+        "emojiCode": "<:extremedonkey:1381126669783535719>"
+      },
+      "891514863107579984": {
+        "emojiCode": "<:rockyff:1381126675189858467>"
+      }
+    },
+    "tribes": {
+      "974319320240885821": {
+        "emoji": null,
+        "castlist": "default",
+        "showPlayerEmojis": true,
+        "color": "#66e9ab"
+      }
+    },
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "ownerInfo": {
+      "username": "serviver",
+      "globalName": "Serviver",
+      "discriminator": "0",
+      "tag": "serviver"
+    },
+    "analyticsVersion": "1.0",
+    "applicationConfigs": {
+      "config_1749735756270_391415444084490240": {
+        "buttonText": "Apply to be Reece's bestie",
+        "explanatoryText": "Click if you think Reece is cool",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1353518434541113364",
+        "categoryId": "1081791358131523664",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749735756272,
+        "lastUpdated": 1749735756272
+      }
+    },
+    "applications": {
+      "1382716755968786513": {
+        "userId": "391415444084490240",
+        "channelId": "1382716755968786513",
+        "username": "extremedonkey",
+        "displayName": "Reeceful Things",
+        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
+        "channelName": "reecefulthings-app",
+        "createdAt": "2025-06-12T13:42:45.734Z",
+        "configId": "unknown"
+      }
+    },
+    "rankings": {
+      "1382716755968786513": {
+        "391415444084490240": 5
+      }
+    }
+  },
+  "1365751181292474571": {
+    "serverName": "EpochORG S9: Land Before Time",
+    "icon": "https://cdn.discordapp.com/icons/1365751181292474571/4ce33b38c36d557b741269ef25ac7c3e.webp",
+    "ownerId": "696456309762949141",
+    "memberCount": 158,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1745690856050,
+    "lastUpdated": 1749927218108,
+    "players": {
+      "696456309762949141": {
+        "emojiCode": null
+      },
+      "235148962103951360": {
+        "emojiCode": null
+      },
+      "197562770068078592": {
+        "emojiCode": null
+      },
+      "802619353065455656": {
+        "emojiCode": null
+      },
+      "538540453973327873": {
+        "emojiCode": null
+      },
+      "391415444084490240": {
+        "emojiCode": null,
+        "age": "36"
+      },
+      "909852958525636660": {
+        "emojiCode": null
+      },
+      "386463066600112128": {
+        "emojiCode": null
+      },
+      "676262975132139522": {
+        "emojiCode": null
+      },
+      "719547106318352496": {
+        "emojiCode": null
+      },
+      "650409567028641802": {
+        "emojiCode": null
+      },
+      "689155539028148232": {
+        "emojiCode": null
+      },
+      "642919782219513880": {
+        "emojiCode": "<:soum_g:1382038768998944891>",
+        "vanityRoles": [
+          "1365751181413978137"
+        ],
+        "age": "22"
+      },
+      "480712959824363520": {
+        "emojiCode": null,
+        "vanityRoles": [
+          "1365751181413978139"
+        ],
+        "age": "24"
+      },
+      "1088078919409881098": {
+        "emojiCode": "<:andrechillin:1382038786262962188>",
+        "vanityRoles": [
+          "1365751181413978135"
+        ],
+        "age": "21"
+      },
+      "251752361230336000": {
+        "emojiCode": null,
+        "vanityRoles": [
+          "1365751181413978138"
+        ],
+        "age": "26"
+      },
+      "1064656591862894732": {
+        "emojiCode": null,
+        "vanityRoles": [
+          "1365751181413978140"
+        ]
+      },
+      "444637942988668938": {
+        "emojiCode": "<:epicwainer:1382038805657423922>",
+        "vanityRoles": [
+          "1365751181413978136"
+        ],
+        "age": "26"
+      },
+      "765705051162804264": {
+        "emojiCode": null,
+        "vanityRoles": [
+          "1366210373270769784"
+        ],
+        "age": "39"
+      },
+      "752324157055959090": {
+        "vanityRoles": [
+          "1365751181413978141"
+        ],
+        "age": "20",
+        "emojiCode": null
+      },
+      "1086246253819613274": {
+        "age": "22"
+      },
+      "847294676948221982": {
+        "emojiCode": null
+      },
+      "347887248982671371": {
+        "emojiCode": null
+      },
+      "1376598080027365459": {
+        "emojiCode": null
+      },
+      "684530139694104618": {
+        "emojiCode": null
+      },
+      "130194954562699264": {
+        "emojiCode": null
+      },
+      "331217504653279242": {
+        "emojiCode": null
+      },
+      "977455730300956683": {
+        "emojiCode": null
+      },
+      "827935295089410088": {
+        "emojiCode": null
+      },
+      "939649772120313916": {
+        "emojiCode": null
+      },
+      "621198992386293783": {
+        "emojiCode": null
+      },
+      "1058212158732783727": {
+        "emojiCode": null
+      },
+      "214798070909501440": {
+        "emojiCode": null
+      },
+      "555153848486985738": {
+        "emojiCode": null
+      },
+      "711433088198115328": {
+        "emojiCode": null
+      }
+    },
+    "tribes": {
+      "1365751181413978133": {
+        "emoji": "⚔️",
+        "castlist": "Alumni",
+        "showPlayerEmojis": false,
+        "color": "#ad1717",
+        "analyticsName": "⚔️ Season 1: Camelot ⚔️",
+        "analyticsAdded": 1749403593629
+      },
+      "1365751181413978132": {
+        "emoji": "🎥",
+        "castlist": "Alumni",
+        "showPlayerEmojis": false,
+        "color": "#dd05cf",
+        "analyticsName": "🎥 Season 2: Technicolor 🎥",
+        "analyticsAdded": 1749403630965
+      },
+      "1365751181388943499": {
+        "emoji": "🌊",
+        "castlist": "Alumni",
+        "showPlayerEmojis": false,
+        "color": "#095fcf",
+        "analyticsName": "🌊 Season 3: Merchant Republics 🌊",
+        "analyticsAdded": 1749403660746
+      },
+      "1365751181388943498": {
+        "emoji": "⚰️",
+        "castlist": "Alumni",
+        "showPlayerEmojis": false,
+        "color": "#f1c40f",
+        "analyticsName": "⚰️ Season 4: Ancient Egypt ⚰️",
+        "analyticsAdded": 1749403698293
+      },
+      "1365751181388943497": {
+        "emoji": "🌄",
+        "castlist": "Alumni",
+        "showPlayerEmojis": false,
+        "color": "#1abc9c",
+        "analyticsName": "🌄 Season 5: Incan Empire 🌄",
+        "analyticsAdded": 1749403721774
+      },
+      "1365751181388943496": {
+        "emoji": "🏴‍",
+        "castlist": "Alumni",
+        "showPlayerEmojis": false,
+        "color": "#3e2fdd",
+        "analyticsName": "🏴‍ Season 6: Buccaneers 🏴‍",
+        "analyticsAdded": 1749403768440
+      },
+      "1365751181388943495": {
+        "emoji": "🍺",
+        "castlist": "Alumni",
+        "showPlayerEmojis": false,
+        "color": "#9b59b6",
+        "analyticsName": "🍺 Season 7: Rumrunners 🍺",
+        "analyticsAdded": 1749403891628
+      },
+      "1366208998994608188": {
+        "emoji": "💥",
+        "castlist": "Alumni",
+        "showPlayerEmojis": false,
+        "color": "#ea8100",
+        "analyticsName": "💥 Season 8: All Stars 💥",
+        "analyticsAdded": 1749403933431
+      },
+      "1365751181426688111": {
+        "emoji": null,
+        "castlist": "Winners",
+        "showPlayerEmojis": true,
+        "analyticsName": "Winners",
+        "analyticsAdded": 1749574118557,
+        "color": "#f1c40f"
+      }
+    },
+    "timezones": {
+      "1365862091444977726": {
+        "offset": -7
+      },
+      "1365862092925829231": {
+        "offset": -6
+      },
+      "1365862094272200754": {
+        "offset": -5
+      },
+      "1365862095739944961": {
+        "offset": -4
+      },
+      "1365862096830595117": {
+        "offset": 0
+      },
+      "1365862098709647471": {
+        "offset": 1
+      },
+      "1365862100559466537": {
+        "offset": 2
+      },
+      "1365862102757015663": {
+        "offset": 8
+      },
+      "1381227031924314173": {
+        "offset": -5.5
+      },
+      "1365862104502108252": {
+        "offset": 10
+      }
+    },
+    "pronounRoleIDs": [
+      "1365751181325893766",
+      "1365751181325893765",
+      "1365751181325893764",
+      "1365751181309382665",
+      "1365751181309382664",
+      "1365751181309382663",
+      "1365751181309382662",
+      "1365751181309382661"
+    ],
+    "applicationConfigs": {
+      "config_1749060209259_391415444084490240": {
+        "buttonText": "Click here if you think Reece is the best",
+        "explanatoryText": "It's true",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749060209259,
+        "lastUpdated": 1749060209259
+      },
+      "config_1749265141118_391415444084490240": {
+        "buttonText": "Apply to the Belle Smells ORG",
+        "explanatoryText": "Yes she does",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749265141119,
+        "lastUpdated": 1749265141119
+      },
+      "config_1749268265250_391415444084490240": {
+        "buttonText": "Click if you think REECE IS COOL",
+        "explanatoryText": "Yeah he is",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749268265250,
+        "lastUpdated": 1749268265250
+      },
+      "config_1749269212292_391415444084490240": {
+        "buttonText": "Apply for Reece's Season",
+        "explanatoryText": "Test Test Test",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749269212293,
+        "lastUpdated": 1749269212293
+      },
+      "config_1749269277900_391415444084490240": {
+        "buttonText": "Apply to our cool ass season",
+        "explanatoryText": "It's so cool",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749269277900,
+        "lastUpdated": 1749269277900
+      },
+      "config_1749269451165_391415444084490240": {
+        "buttonText": "Apply to this season!",
+        "explanatoryText": "Apppply its so cool",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749269451165,
+        "lastUpdated": 1749269451165
+      },
+      "config_1749270325009_391415444084490240": {
+        "buttonText": "Apply to BvW",
+        "explanatoryText": "test",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749270325010,
+        "lastUpdated": 1749270325010
+      },
+      "config_1749270539146_391415444084490240": {
+        "buttonText": "asdasd",
+        "explanatoryText": "asdas",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Danger",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749270539146,
+        "lastUpdated": 1749270539146
+      },
+      "config_1749270769142_391415444084490240": {
+        "buttonText": "test",
+        "explanatoryText": "test",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749270769143,
+        "lastUpdated": 1749270769143
+      },
+      "config_1749270849681_391415444084490240": {
+        "buttonText": "Apply to Servivorg S10!",
+        "explanatoryText": "Cool cool cool",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Secondary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749270849681,
+        "lastUpdated": 1749270849681
+      },
+      "config_1749272548060_391415444084490240": {
+        "buttonText": "Test my new season",
+        "explanatoryText": "Test test test",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749272548061,
+        "lastUpdated": 1749272548061
+      },
+      "config_1749273564359_391415444084490240": {
+        "buttonText": "Apply yo!",
+        "explanatoryText": "This season is gonna be a banger!\n\nStarts July 29!",
+        "channelFormat": "%name%-app22-%name%",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Secondary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749273564361,
+        "lastUpdated": 1749273564361
+      },
+      "config_1749294935174_391415444084490240": {
+        "buttonText": "Apply to season",
+        "explanatoryText": "Appppylyfsd",
+        "channelFormat": "%name%-app-%name%",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749294935175,
+        "lastUpdated": 1749294935175
+      },
+      "config_1749295390820_391415444084490240": {
+        "buttonText": "Apply to be Mike's bf",
+        "explanatoryText": "No one will click this",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Secondary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749295390821,
+        "lastUpdated": 1749295390821
+      },
+      "config_1749295793446_391415444084490240": {
+        "buttonText": "Apply to kill Reece",
+        "explanatoryText": "We hate him",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749295793447,
+        "lastUpdated": 1749295793447
+      },
+      "config_1749296130772_391415444084490240": {
+        "buttonText": "HIIIIIIIdsa",
+        "explanatoryText": "askjlnhklajsdnsajkidbn",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749296130773,
+        "lastUpdated": 1749296130773
+      },
+      "config_1749296698905_391415444084490240": {
+        "buttonText": "Apply",
+        "explanatoryText": "Apply to my season",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Danger",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749296698906,
+        "lastUpdated": 1749296698906
+      },
+      "config_1749298082989_391415444084490240": {
+        "buttonText": "Apply to Servivorg S13!",
+        "explanatoryText": "This season is gonna be a killer! Apps close 13 August!",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1379868612063531110",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749298082990,
+        "lastUpdated": 1749298082990
+      },
+      "config_1749372208909_391415444084490240": {
+        "buttonText": "asdsad",
+        "explanatoryText": "asdasd",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1365751182017957999",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Danger",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749372208910,
+        "lastUpdated": 1749372208910
+      },
+      "config_1749666035431_391415444084490240": {
+        "buttonText": "APPLY TO BE MIKE'S BF",
+        "explanatoryText": "One time only offer!",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1365751181426688119",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Danger",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749666035433,
+        "lastUpdated": 1749666035433
+      },
+      "config_1749693454969_391415444084490240": {
+        "buttonText": "ReeceNewButton",
+        "explanatoryText": "It's a season to remember!",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1382368341318045696",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749693454970,
+        "lastUpdated": 1749693454970
+      },
+      "config_1749732326561_391415444084490240": {
+        "buttonText": "gagasd",
+        "explanatoryText": "asdasd",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1365751182017957999",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Danger",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749732326563,
+        "lastUpdated": 1749732326563
+      },
+      "config_1749741451608_391415444084490240": {
+        "buttonText": "Apply to kill Peyton",
+        "explanatoryText": "She.must.die!",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1382368341318045696",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749741451623,
+        "lastUpdated": 1749741451623
+      },
+      "config_1749751514966_391415444084490240": {
+        "buttonText": "Apply to be in the Reece cool club!",
+        "explanatoryText": "It'll be worth it!",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1382368341318045696",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749751514968,
+        "lastUpdated": 1749751514968
+      },
+      "config_1749752173206_391415444084490240": {
+        "buttonText": "Apply to the Reece Fun Club",
+        "explanatoryText": "Woooooooooo!",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1382368341318045696",
+        "categoryId": "1379868751578533959",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1749752173208,
+        "lastUpdated": 1749752173208
+      }
+    },
+    "ownerInfo": {
+      "username": "mpschettig",
+      "globalName": "Mike",
+      "discriminator": "0",
+      "tag": "mpschettig"
+    },
+    "analyticsVersion": "1.0",
+    "applications": {
+      "1382782829103939717": {
+        "userId": "391415444084490240",
+        "channelId": "1382782829103939717",
+        "username": "extremedonkey",
+        "displayName": "tyrannosaurus reece",
+        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
+        "channelName": "tyrannosaurusreece-app",
+        "createdAt": "2025-06-12T18:05:19.147Z",
+        "configId": "unknown"
+      },
+      "1382786128402452501": {
+        "userId": "909852958525636660",
+        "channelId": "1382786128402452501",
+        "username": "adk_ironbritt",
+        "displayName": "BRITTasaurus Rex",
+        "avatarURL": "https://cdn.discordapp.com/avatars/909852958525636660/1c289d01a3409775586045f5274faf7b.webp?size=128",
+        "channelName": "brittasaurusrex-app",
+        "createdAt": "2025-06-12T18:18:25.351Z",
+        "configId": "unknown"
+      },
+      "1382786134580658208": {
+        "userId": "386463066600112128",
+        "channelId": "1382786134580658208",
+        "username": ".apeescaper",
+        "displayName": "kaZACHlambia",
+        "avatarURL": "https://cdn.discordapp.com/avatars/386463066600112128/2f0fb03b45e18b741abeeccb0ce64674.webp?size=128",
+        "channelName": "kazachlambia-app",
+        "createdAt": "2025-06-12T18:18:26.431Z",
+        "configId": "unknown"
+      },
+      "1382786192730361866": {
+        "userId": "719547106318352496",
+        "channelId": "1382786192730361866",
+        "username": "catherine_on_ice",
+        "displayName": "Catherine beat the dinosaurs",
+        "avatarURL": "https://cdn.discordapp.com/avatars/719547106318352496/7c92836c1bdd71ac0cb2c1bbf42a5d77.webp?size=128",
+        "channelName": "catherinebeatthedinosaurs-app",
+        "createdAt": "2025-06-12T18:18:40.259Z",
+        "configId": "unknown"
+      },
+      "1382787302782402631": {
+        "userId": "802619353065455656",
+        "channelId": "1382787302782402631",
+        "username": "jaybirdi",
+        "displayName": "JAYnosaurus",
+        "avatarURL": "https://cdn.discordapp.com/avatars/802619353065455656/019b458618e0e8079bda28ee88c93f83.webp?size=128",
+        "channelName": "jaynosaurus-app",
+        "createdAt": "2025-06-12T18:23:05.502Z",
+        "configId": "unknown"
+      },
+      "1382787897257754674": {
+        "userId": "689155539028148232",
+        "channelId": "1382787897257754674",
+        "username": "frenchjedi1",
+        "displayName": "TONYdactyl",
+        "avatarURL": "https://cdn.discordapp.com/avatars/689155539028148232/ede96fbce924b722aa6bc66e1f53e3ba.webp?size=128",
+        "channelName": "tonydactyl-app",
+        "createdAt": "2025-06-12T18:25:27.085Z",
+        "configId": "unknown"
+      },
+      "1382794782719344680": {
+        "userId": "538540453973327873",
+        "channelId": "1382794782719344680",
+        "username": "kauliberry",
+        "displayName": "anKAYLosaurus",
+        "avatarURL": "https://cdn.discordapp.com/avatars/538540453973327873/36dd4a1410ddf51e4c89f57946b7a608.webp?size=128",
+        "channelName": "ankaylosaurus-app",
+        "createdAt": "2025-06-12T18:52:49.185Z",
+        "configId": "unknown"
+      }
+    },
+    "rankings": {
+      "1382740674285146134": {
+        "391415444084490240": 5,
+        "676262975132139522": 1
+      },
+      "1382782829103939717": {
+        "676262975132139522": 4,
+        "386463066600112128": 5,
+        "909852958525636660": 5,
+        "391415444084490240": 5,
+        "719547106318352496": 5,
+        "538540453973327873": 5
+      },
+      "1382786128402452501": {
+        "197562770068078592": 1,
+        "386463066600112128": 5,
+        "909852958525636660": 5,
+        "391415444084490240": 1,
+        "538540453973327873": 5,
+        "676262975132139522": 4
+      },
+      "1382786134580658208": {
+        "391415444084490240": 1,
+        "909852958525636660": 5,
+        "538540453973327873": 5,
+        "676262975132139522": 5
+      },
+      "1382786192730361866": {
+        "909852958525636660": 5,
+        "391415444084490240": 2,
+        "719547106318352496": 5,
+        "689155539028148232": 1,
+        "538540453973327873": 5,
+        "802619353065455656": 4,
+        "386463066600112128": 5
+      },
+      "1382787302782402631": {
+        "538540453973327873": 5,
+        "391415444084490240": 4,
+        "802619353065455656": 5
+      },
+      "1382787897257754674": {
+        "538540453973327873": 1
+      },
+      "1382794782719344680": {
+        "538540453973327873": 5,
+        "802619353065455656": 3,
+        "391415444084490240": 1
+      }
+    }
+  },
+  "1195996661185511434": {
+    "serverName": "Zeldavivor",
+    "icon": "https://cdn.discordapp.com/icons/1195996661185511434/294b3ca83eb4fefc2a1ac43aeea70cb3.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 35,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1705218224570,
+    "lastUpdated": 1759240167735,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {
+      "1381279534070108242": {
+        "offset": -7
+      },
+      "1381279535743373516": {
+        "offset": -6
+      },
+      "1381279537333014529": {
+        "offset": -5
+      },
+      "1381279539921162332": {
+        "offset": -4
+      },
+      "1381279542135492658": {
+        "offset": 0
+      },
+      "1381279544127787059": {
+        "offset": 1
+      },
+      "1381279545855836244": {
+        "offset": 2
+      },
+      "1381279547173109812": {
+        "offset": 8
+      },
+      "1381279548917940256": {
+        "offset": 10
+      }
+    },
+    "pronounRoleIDs": [
+      "1381279521776603197",
+      "1381279523365978184",
+      "1381279524976726247",
+      "1381279526469763183",
+      "1381279528042758286",
+      "1381279529431207959",
+      "1381279531335290943",
+      "1381279532933320824"
+    ],
+    "firstInstalled": 1749392292379,
+    "installationMethod": "command"
+  },
+  "1023409443603488810": {
+    "serverName": "$ҽɾҽɳiťყ Sųɾvivøɾ",
+    "icon": "https://cdn.discordapp.com/icons/1023409443603488810/e317b53ab4437f104f7373cdfa5a353f.webp",
+    "ownerId": "703448702320246815",
+    "memberCount": 758,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1664070225383,
+    "lastUpdated": 1749918661482,
+    "ownerInfo": {
+      "username": "jfranc",
+      "globalName": "!j",
+      "discriminator": "0",
+      "tag": "jfranc"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1749918661482,
+    "installationMethod": "command"
+  },
+  "1385042963310055515": {
+    "serverName": "EmeraldORG: Fire Emblem Three Houses",
+    "icon": "https://cdn.discordapp.com/icons/1385042963310055515/4bea7eb65723bab308c21c06332836be.webp",
+    "ownerId": "676262975132139522",
+    "memberCount": 80,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1750290375307,
+    "lastUpdated": 1753124259088,
+    "ownerInfo": {
+      "username": "deadlybelle",
+      "globalName": "Belle",
+      "discriminator": "0",
+      "tag": "deadlybelle"
+    },
+    "analyticsVersion": "1.0",
+    "players": {
+      "391415444084490240": {
+        "safari": {
+          "currency": 52,
+          "history": [],
+          "lastInteraction": 1750437969362,
+          "achievements": [],
+          "inventory": {
+            "iron_sword_256792": {
+              "quantity": 2,
+              "numAttacksAvailable": 1
+            },
+            "elixir_790584": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
+          },
+          "mapProgress": {
+            "map_7x7_1752338399462": {
+              "currentLocation": "D3",
+              "exploredCoordinates": [
+                "A1",
+                "D3"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-07-12T16:59:26.161Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-07-12T16:59:26.174Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "D3",
+                  "timestamp": "2025-07-12T17:00:39.959Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 999,
+              "maximum": 999,
+              "lastRegeneration": "2025-07-12T17:00:00.686Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "storeHistory": [
+            {
+              "itemId": "iron_sword_256792",
+              "storeId": "marketplace_179188",
+              "price": 520,
+              "timestamp": 1752351445642
+            },
+            {
+              "itemId": "elixir_790584",
+              "storeId": "anna_749368",
+              "price": 100,
+              "timestamp": 1753120909476
+            }
+          ]
+        },
+        "age": "36"
+      },
+      "202627838451384320": {
+        "safari": {
+          "currency": 50,
+          "history": [],
+          "lastInteraction": 1750473747380,
+          "achievements": [],
+          "inventory": {}
+        }
+      },
+      "676262975132139522": {
+        "safari": {
+          "mapProgress": {
+            "map_7x7_1752338399462": {
+              "currentLocation": "C4",
+              "exploredCoordinates": [
+                "A1",
+                "D3",
+                "C4"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-07-12T16:59:41.337Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-07-12T16:59:41.344Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "D3",
+                  "timestamp": "2025-07-12T17:01:16.297Z"
+                },
+                {
+                  "from": "D3",
+                  "to": "C4",
+                  "timestamp": "2025-07-12T20:21:21.348Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 999,
+              "maximum": 999,
+              "lastRegeneration": "2025-07-12T16:59:48.818Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "703974323098222603": {
+        "safari": {
+          "mapProgress": {
+            "map_7x7_1752338399462": {
+              "currentLocation": "C4",
+              "exploredCoordinates": [
+                "A1",
+                "D3",
+                "C4"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-07-12T17:00:20.022Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-07-12T17:00:20.027Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "D3",
+                  "timestamp": "2025-07-12T17:00:33.081Z"
+                },
+                {
+                  "from": "D3",
+                  "to": "C4",
+                  "timestamp": "2025-07-12T20:21:47.303Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 999,
+              "maximum": 999,
+              "lastRegeneration": "2025-07-12T17:00:25.827Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "1086246253819613274": {
+        "safari": {
+          "mapProgress": {
+            "map_7x7_1752338399462": {
+              "currentLocation": "E4",
+              "exploredCoordinates": [
+                "A1",
+                "A2",
+                "B2",
+                "C2",
+                "C3",
+                "C4",
+                "E3",
+                "D3",
+                "E4"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-07-21T17:46:32.128Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-07-21T17:46:32.141Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A2",
+                  "timestamp": "2025-07-21T17:55:14.585Z"
+                },
+                {
+                  "from": "A2",
+                  "to": "B2",
+                  "timestamp": "2025-07-21T17:56:10.317Z"
+                },
+                {
+                  "from": "B2",
+                  "to": "C2",
+                  "timestamp": "2025-07-21T17:56:20.437Z"
+                },
+                {
+                  "from": "C2",
+                  "to": "C3",
+                  "timestamp": "2025-07-21T17:56:32.485Z"
+                },
+                {
+                  "from": "C3",
+                  "to": "C4",
+                  "timestamp": "2025-07-21T17:56:53.851Z"
+                },
+                {
+                  "from": "C4",
+                  "to": "E3",
+                  "timestamp": "2025-07-21T18:23:18.393Z"
+                },
+                {
+                  "from": "E3",
+                  "to": "C3",
+                  "timestamp": "2025-07-21T18:26:29.994Z"
+                },
+                {
+                  "from": "C3",
+                  "to": "D3",
+                  "timestamp": "2025-07-21T18:51:34.804Z"
+                },
+                {
+                  "from": "D3",
+                  "to": "E3",
+                  "timestamp": "2025-07-21T18:51:48.291Z"
+                },
+                {
+                  "from": "E3",
+                  "to": "E4",
+                  "timestamp": "2025-07-21T18:52:04.623Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 999,
+              "maximum": 999,
+              "lastRegeneration": "2025-07-21T17:46:43.913Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      }
+    },
+    "tribes": {
+      "1385296503274340557": {
+        "emoji": "<:BlackEagles:1393529844779974687>",
+        "castlist": "CastlistTest",
+        "showPlayerEmojis": false,
+        "color": "#de6f6b",
+        "analyticsName": "<:BlackEagles:1393529844779974687> Black Eagles <:BlackEagles:1393529844779974687>",
+        "analyticsAdded": 1752314374628
+      },
+      "1385296564960100423": {
+        "emoji": "<:GoldenDeer:1393529850387632258>",
+        "castlist": "CastlistTest",
+        "showPlayerEmojis": false,
+        "color": "#dbbb44",
+        "analyticsName": "<:GoldenDeer:1393529850387632258> Golden Deer <:GoldenDeer:1393529850387632258>",
+        "analyticsAdded": 1752314509361
+      },
+      "1385296702172303482": {
+        "emoji": "<:BlueLions:1393529848047341660>",
+        "castlist": "CastlistTest",
+        "showPlayerEmojis": false,
+        "color": "#1f3387",
+        "analyticsName": "<:BlueLions:1393529848047341660> Blue Lions <:BlueLions:1393529848047341660>",
+        "analyticsAdded": 1752314595419
+      }
+    },
+    "timezones": {
+      "1392078237940711538": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1385293602527379480": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1392078239609917533": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1385293604108501063": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1392078241417658418": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1385293605614391468": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1392078243133390962": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1385293607174537337": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1392078244378968184": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1392078246191038484": {
+        "offset": -3,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1392078247860244521": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1392078249508605962": {
+        "offset": -2.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1385293609154252942": {
+        "offset": 0,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1385293610538373181": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
+      },
+      "1392078251144384584": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1385293611796533281": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1385293613616988283": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1385293615483584565": {
+        "offset": 10,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1392078252335435797": {
+        "offset": 11,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
+      },
+      "1392078254361411725": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
+      }
+    },
+    "pronounRoleIDs": [
+      "1385293590468497506",
+      "1385293588669268030",
+      "1385293592670765056",
+      "1385293595543601382",
+      "1385293593811619891",
+      "1385293597028384799",
+      "1385293598618161275",
+      "1385293600950321324"
+    ],
+    "firstInstalled": 1750436144933,
+    "installationMethod": "command"
+  },
+  "1143065902137491536": {
+    "serverName": "Upcoming Seasons",
+    "icon": null,
+    "ownerId": "391415444084490240",
+    "memberCount": 10,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1692598548207,
+    "lastUpdated": 1759240167312,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {
+      "1386711449216487497": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1386711450872971376": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1386711452718596226": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1386711454455169128": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1386711456002740395": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1386711457366016001": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1386711459135885392": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1386711460759076905": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1386711462214504511": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1386711463640436758": {
+        "offset": -3,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1386711466169733154": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1386711468036198440": {
+        "offset": -2.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1386711470469021912": {
+        "offset": 0,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1386711472536682568": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
+      },
+      "1386711474466193431": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1386711475925684296": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1386711477611794657": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1386711479130128416": {
+        "offset": 10,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1386711481227149392": {
+        "offset": 11,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
+      },
+      "1386711482879836342": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
+      }
+    },
+    "pronounRoleIDs": [
+      "1386732117655949514",
+      "1386732119459369102",
+      "1386732121174966392",
+      "1386732124027093114",
+      "1386732125281321223",
+      "1386732126967169035",
+      "1386732011976265870"
+    ],
+    "firstInstalled": 1750688150247,
+    "installationMethod": "command"
+  },
+  "1381673478939345049": {
+    "serverName": "DBZvivor",
+    "icon": "https://cdn.discordapp.com/icons/1381673478939345049/daae4cc62647267623d9921d0a220fea.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 3,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1749487027631,
+    "lastUpdated": 1759240170773,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {
+      "1386722788290723960": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1386722789720854645": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1386722792132575262": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1386722793487470822": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1386722795597332651": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1386722797195104407": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1386722799233531945": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1386722800475046091": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1386722802769596466": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1386722804191334551": {
+        "offset": -3,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1386722806389145760": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1386722808343564380": {
+        "offset": -2.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1386722810734448801": {
+        "offset": 0,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1386722818011693218": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
+      },
+      "1386722820045934595": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1386722821744627765": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1386722825037156483": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1386722828136742962": {
+        "offset": 10,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1386722829600428166": {
+        "offset": 11,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
+      },
+      "1386722832494362707": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
+      }
+    },
+    "pronounRoleIDs": [
+      "1386728793774755860",
+      "1386728795758661742",
+      "1386728797478588488",
+      "1386728799290396816",
+      "1386728801408647169",
+      "1386728802637582450",
+      "1386728804348858509",
+      "1386728806378901514"
+    ],
+    "firstInstalled": 1750690837402,
+    "installationMethod": "command"
+  },
+  "1387590156994744533": {
+    "serverName": "CastBot TempTest 1",
+    "icon": null,
+    "ownerId": "391415444084490240",
+    "memberCount": 2,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1750897673606,
+    "lastUpdated": 1750898123417,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {
+      "1387592758105210950": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1387592759791059025": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1387592761489887253": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1387592763469729843": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1387592766330241034": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1387592768183992432": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1387592769916108800": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1387592771296034908": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1387592772977954947": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1387592774865522770": {
+        "offset": -3,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1387592776723595295": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1387592778803970048": {
+        "offset": -2.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1387592780976754738": {
+        "offset": 0,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1387592783170113638": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
+      },
+      "1387592784512417875": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1387592786676813984": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1387592788488618125": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1387592790216802426": {
+        "offset": 10,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1387592792208965662": {
+        "offset": 11,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
+      },
+      "1387592795006439444": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
+      }
+    },
+    "pronounRoleIDs": [],
+    "firstInstalled": 1750898028570,
+    "installationMethod": "command"
+  },
+  "1387593603030978712": {
+    "serverName": "Active Seasons",
+    "icon": null,
+    "ownerId": "391415444084490240",
+    "memberCount": 5,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1750898495205,
+    "lastUpdated": 1759240171171,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {
+      "1086246253819613274": {
+        "age": "19",
+        "emojiCode": "<:radicaldinosaur:1387601729520009310>",
+        "safari": {
+          "currency": 0,
+          "history": [],
+          "lastInteraction": 1754914614520,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_5x5_1752299541245": {
+              "currentLocation": "B1",
+              "exploredCoordinates": [
+                "A1",
+                "B2",
+                "B1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-11T12:16:54.521Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-11T12:16:54.594Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "B2",
+                  "timestamp": "2025-08-11T12:23:04.942Z"
+                },
+                {
+                  "from": "B2",
+                  "to": "A1",
+                  "timestamp": "2025-08-11T13:26:28.072Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "B1",
+                  "timestamp": "2025-08-11T13:26:40.600Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-11T12:16:54.521Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": true
+        }
+      },
+      "391415444084490240": {
+        "age": "20",
+        "emojiCode": "<:Reece:1387601726093135882>",
+        "safari": {
+          "currency": 100,
+          "history": [],
+          "lastInteraction": 1751225454143,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      },
+      "1328366050848411658": {
+        "age": "20",
+        "vanityRoles": [
+          "1387594292025098241"
+        ],
+        "safari": {
+          "currency": 0,
+          "history": [],
+          "lastInteraction": 1754918433680,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_5x5_1752299541245": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-11T13:20:44.946Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-11T13:20:44.957Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-11T13:20:44.946Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "784284227373367346": {
+        "safari": {
+          "currency": 0,
+          "history": [],
+          "lastInteraction": 1754918423454,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_5x5_1752299541245": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-11T13:20:23.455Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-11T13:20:23.469Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-11T13:20:23.455Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false
+        }
+      }
+    },
+    "tribes": {
+      "1387594292025098241": {
+        "emoji": "🆒",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": "#ffffff",
+        "analyticsName": "🆒 All Pronouns 🆒",
+        "analyticsAdded": 1750900210748
+      }
+    },
+    "timezones": {
+      "1387594293778186282": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1387594295627874314": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1387594297167057007": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1387594298412765279": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1387594300589609023": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1387594302372450374": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1387594304205099088": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1387594305765507194": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1387594307762131034": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1387594309225943090": {
+        "offset": -3,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1387594310752669887": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1387594312287653918": {
+        "offset": -2.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1387594313923301408": {
+        "offset": 0,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1387594315336781956": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
+      },
+      "1387594317161566448": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1387594318654607401": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1387594322156851231": {
+        "offset": 10,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1387594323549229097": {
+        "offset": 11,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
+      },
+      "1387598861861785633": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1387594292025098241": {
+        "offset": 0
+      }
+    },
+    "pronounRoleIDs": [
+      "1387593666763165717",
+      "1387593758601773197",
+      "1387594282608627954",
+      "1387594284961890324",
+      "1387594286400409635",
+      "1387594288325591225",
+      "1387594289894391990",
+      "1387594292025098241",
+      "1387593868391878749"
+    ],
+    "firstInstalled": 1750898560550,
+    "installationMethod": "command",
+    "applicationConfigs": {
+      "config_1750900150281_391415444084490240": {
+        "buttonText": "tes",
+        "explanatoryText": "asdasd",
+        "channelFormat": "%name%-app",
+        "targetChannelId": "1387593603618050060",
+        "categoryId": "1387593603618050058",
+        "buttonStyle": "Success",
+        "createdBy": "391415444084490240",
+        "stage": "active",
+        "createdAt": 1750900150298,
+        "lastUpdated": 1750900150298
+      }
+    },
+    "applications": {
+      "1387600559875297351": {
+        "userId": "391415444084490240",
+        "channelId": "1387600559875297351",
+        "username": "extremedonkey",
+        "displayName": "Reece",
+        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
+        "channelName": "reece-app",
+        "createdAt": "2025-06-26T01:09:17.493Z",
+        "configId": "unknown"
+      }
+    },
+    "rankings": {
+      "1387600559875297351": {
+        "391415444084490240": 5
+      }
+    }
+  },
+  "1389543002346885281": {
+    "serverName": "CastBot Test Server 2",
+    "icon": "https://cdn.discordapp.com/icons/1389543002346885281/11296d0c5e67f268f8cd3516e1e188d1.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 2,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1751363268220,
+    "lastUpdated": 1751363483161,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {
+      "1389543002346885290": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1389543002359205898": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1389543002359205899": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1389543002359205900": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1389543002359205901": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1389543002359205902": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1389543002359205903": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1389543002359205904": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1389543002359205905": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1389543002359205906": {
+        "offset": -3,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1389543002359205907": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1389543002367725648": {
+        "offset": -2.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1389543002367725649": {
+        "offset": 0,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1389543002367725650": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
+      },
+      "1389543002367725651": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1389543002367725652": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1389543002367725653": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1389543002367725654": {
+        "offset": 10,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1389543002367725655": {
+        "offset": 11,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
+      },
+      "1389543002367725656": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
+      }
+    },
+    "pronounRoleIDs": [
+      "1389543002346885282",
+      "1389543002346885283",
+      "1389543002346885284",
+      "1389543002346885285",
+      "1389543002346885286",
+      "1389543002346885287",
+      "1389543002346885288",
+      "1389543002346885289"
+    ],
+    "firstInstalled": 1751363285480,
+    "installationMethod": "command"
+  },
+  "1400479796219215959": {
+    "serverName": "CastBot Regression Green",
+    "icon": "https://cdn.discordapp.com/icons/1400479796219215959/a3130de1fcf31537b8d156c015d17b42.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 3,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1753970803075,
+    "lastUpdated": 1759240172903,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {
+      "391415444084490240": {
+        "safari": {
+          "mapProgress": {
+            "map_7x7_1753973585402": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-07-31T15:02:52.798Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-07-31T15:02:52.809Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 10,
+              "maximum": 10,
+              "lastRegeneration": "2025-07-31T15:02:52.798Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "currency": 22
+        }
+      },
+      "1086246253819613274": {
+        "safari": {
+          "currency": 0,
+          "history": [],
+          "lastInteraction": 1757082139297,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1754317553475": {
+              "currentLocation": "A2",
+              "exploredCoordinates": [
+                "A1",
+                "A2"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-05T14:22:19.298Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-09-05T14:22:19.309Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A2",
+                  "timestamp": "2025-09-05T14:45:19.442Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-09-05T14:22:19.298Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false
+        }
+      }
+    },
+    "tribes": {},
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1753970820644,
+    "installationMethod": "command"
+  },
+  "1294676751913320618": {
+    "serverName": "HasChannel",
+    "icon": "https://cdn.discordapp.com/icons/1294676751913320618/3ab3c182f749a9dd9b8dfde4982316ee.webp",
+    "ownerId": "1100826875435163780",
+    "memberCount": 200,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1728745391587,
+    "lastUpdated": 1754752074381,
+    "ownerInfo": {
+      "username": "haszocs",
+      "globalName": "Haszo",
+      "discriminator": "0",
+      "tag": "haszocs"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1754752074382,
+    "installationMethod": "command"
+  },
+  "1209015985798127696": {
+    "serverName": "EpochORG S4: Ancient Egypt",
+    "icon": "https://cdn.discordapp.com/icons/1209015985798127696/fab803057622fa548002ca6920f860ac.webp",
+    "ownerId": "696456309762949141",
+    "memberCount": 75,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1708322273445,
+    "lastUpdated": 1759240168153,
+    "ownerInfo": {
+      "username": "mpschettig",
+      "globalName": "Tylenol Boy",
+      "discriminator": "0",
+      "tag": "mpschettig"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1754799452836,
+    "installationMethod": "command"
+  },
+  "1297403832891867206": {
+    "serverName": "EpochORG Season Template",
+    "icon": null,
+    "ownerId": "391415444084490240",
+    "memberCount": 14,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1729395578359,
+    "lastUpdated": 1759240169880,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1755957346853,
+    "installationMethod": "command"
+  },
+  "1388309647336673290": {
+    "serverName": "Bot Tools",
+    "icon": null,
+    "ownerId": "391415444084490240",
+    "memberCount": 3,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1751069213471,
+    "lastUpdated": 1759240171562,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1755957958850,
+    "installationMethod": "command"
+  },
+  "1400065575090389045": {
+    "serverName": "CastBot Regression Pink",
+    "icon": "https://cdn.discordapp.com/icons/1400065575090389045/bd1ee1bc1ff3abca14f2d2ba9455716f.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 2,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1753872045062,
+    "lastUpdated": 1759240172500,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {
+      "391415444084490240": {
+        "safari": {
+          "currency": 0,
+          "history": [],
+          "lastInteraction": 1757004909802,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_3x1_1757431573115": {
+              "currentLocation": "C1",
+              "exploredCoordinates": [
+                "A1",
+                "A2",
+                "B1",
+                "C1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-09T15:27:11.287Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A2",
+                  "timestamp": "2025-09-09T15:27:17.190Z"
+                },
+                {
+                  "from": "A2",
+                  "to": "A1",
+                  "timestamp": "2025-09-09T15:32:59.269Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "B1",
+                  "timestamp": "2025-09-09T15:33:11.864Z"
+                },
+                {
+                  "from": "B1",
+                  "to": "C1",
+                  "timestamp": "2025-09-09T15:33:28.339Z"
+                }
+              ]
+            },
+            "map_1x1_1757432118477": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-09T15:35:43.905Z"
+                }
+              ]
+            },
+            "map_20x1_1757432228391": {
+              "currentLocation": "F1",
+              "exploredCoordinates": [
+                "A1",
+                "B1",
+                "C1",
+                "D1",
+                "E1",
+                "F1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-09T15:42:07.576Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "B1",
+                  "timestamp": "2025-09-09T15:42:14.034Z"
+                },
+                {
+                  "from": "B1",
+                  "to": "C1",
+                  "timestamp": "2025-09-09T15:42:24.141Z"
+                },
+                {
+                  "from": "C1",
+                  "to": "D1",
+                  "timestamp": "2025-09-09T15:42:32.971Z"
+                },
+                {
+                  "from": "D1",
+                  "to": "E1",
+                  "timestamp": "2025-09-09T15:42:40.799Z"
+                },
+                {
+                  "from": "E1",
+                  "to": "F1",
+                  "timestamp": "2025-09-09T15:42:47.685Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-09-09T15:42:07.576Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      }
+    },
+    "tribes": {},
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1756997555052,
+    "installationMethod": "command"
+  },
+  "1389538775352348737": {
+    "serverName": "CastBot Regression Yellow zz",
+    "icon": "https://cdn.discordapp.com/icons/1389538775352348737/9fd8f80fbe4b3b4eb8d55b1fa40cba7f.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 3,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1751362260426,
+    "lastUpdated": 1759247791642,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {
+      "1086246253819613274": {
+        "safari": {
+          "currency": 700,
+          "history": [],
+          "lastInteraction": 1757692319781,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 10,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757692349638
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757692352051
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757692354650
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757692357653
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757692362467
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757693624200
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757693628783
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757693632878
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757693647170
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757693843841
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-09-12T15:51:59.782Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      }
+    },
+    "tribes": {
+      "1416063109063508008": {
+        "emoji": "🐈",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": "#e91e63",
+        "analyticsName": "🐈 Prod 🐈",
+        "analyticsAdded": 1757686378119
+      }
+    },
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1757180914930,
+    "installationMethod": "command"
+  },
+  "1419678967585050841": {
+    "serverName": "CastBot Regression Black",
+    "icon": null,
+    "ownerId": "391415444084490240",
+    "memberCount": 3,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1758548242232,
+    "lastUpdated": 1759240173320,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {
+      "391415444084490240": {
+        "safari": {
+          "currency": 999,
+          "history": [],
+          "lastInteraction": 1758647028629,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_4x4_1758646877922": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-23T17:03:48.630Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-09-23T17:03:48.644Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-09-23T17:03:48.630Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "1086246253819613274": {
+        "safari": {
+          "currency": 100,
+          "history": [],
+          "lastInteraction": 1758648160293,
+          "achievements": [],
+          "inventory": {
+            "bulbasaur_619741": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1758647472567": {
+              "currentLocation": "E4",
+              "exploredCoordinates": [
+                "A1",
+                "A2",
+                "A3",
+                "A4",
+                "E5",
+                "E4"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-23T17:22:40.294Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-09-23T17:22:40.310Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A2",
+                  "timestamp": "2025-09-23T17:22:59.996Z"
+                },
+                {
+                  "from": "A2",
+                  "to": "A3",
+                  "timestamp": "2025-09-23T17:23:10.865Z"
+                },
+                {
+                  "from": "A3",
+                  "to": "A4",
+                  "timestamp": "2025-09-23T17:23:36.758Z"
+                },
+                {
+                  "from": "A4",
+                  "to": "E5",
+                  "timestamp": "2025-09-23T17:23:49.322Z"
+                },
+                {
+                  "from": "E5",
+                  "to": "E4",
+                  "timestamp": "2025-09-23T17:24:03.539Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 999,
+              "maximum": 999,
+              "lastRegeneration": "2025-09-23T17:22:47.712Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      }
+    },
+    "tribes": {},
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1758548256348,
+    "installationMethod": "command"
+  },
+  "1420100181017231563": {
+    "serverName": "Pokévivor",
+    "icon": "https://cdn.discordapp.com/icons/1420100181017231563/9240cc5ebb8958e70e94a11ec691d1f3.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 3,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1758648667340,
+    "lastUpdated": 1759240173703,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {
+      "391415444084490240": {
+        "safari": {
+          "currency": 889,
+          "history": [],
+          "lastInteraction": 1758651107560,
+          "achievements": [],
+          "inventory": {
+            "great_ball_653283": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "charmander_561486": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "great_ball_653283",
+              "storeId": "celadon_superstore_818244",
+              "price": 50,
+              "timestamp": 1758651169845
+            },
+            {
+              "itemId": "super_potion_322766",
+              "storeId": "celadon_superstore_818244",
+              "price": 60,
+              "timestamp": 1758651173647
+            }
+          ],
+          "mapProgress": {
+            "map_7x7_1758651530323": {
+              "currentLocation": "E4",
+              "exploredCoordinates": [
+                "E4"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "E4",
+                  "timestamp": "2025-09-23T19:04:19.952Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-09-23T19:04:19.952Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "1086246253819613274": {
+        "safari": {
+          "currency": 40,
+          "history": [],
+          "lastInteraction": 1758653056674,
+          "achievements": [],
+          "inventory": {
+            "super_potion_322766": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "bulbasaur_449582": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "pikachu_601425": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "super_potion_322766",
+              "storeId": "pokemart_481320",
+              "price": 60,
+              "timestamp": 1758653619609
+            }
+          ],
+          "mapProgress": {
+            "map_7x7_1758651530323": {
+              "currentLocation": "E4",
+              "exploredCoordinates": [
+                "A1",
+                "B2",
+                "C3",
+                "D3",
+                "E3",
+                "E4"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-23T18:44:16.674Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-09-23T18:44:16.698Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "B2",
+                  "timestamp": "2025-09-23T18:45:54.691Z"
+                },
+                {
+                  "from": "B2",
+                  "to": "C3",
+                  "timestamp": "2025-09-23T18:53:26.481Z"
+                },
+                {
+                  "from": "C3",
+                  "to": "D3",
+                  "timestamp": "2025-09-23T18:54:51.366Z"
+                },
+                {
+                  "from": "D3",
+                  "to": "E3",
+                  "timestamp": "2025-09-23T18:55:05.205Z"
+                },
+                {
+                  "from": "E3",
+                  "to": "E4",
+                  "timestamp": "2025-09-23T18:55:17.365Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 999,
+              "maximum": 999,
+              "lastRegeneration": "2025-09-23T18:54:30.127Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      }
+    },
+    "tribes": {},
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1758649697859,
+    "installationMethod": "command"
+  }
+}
