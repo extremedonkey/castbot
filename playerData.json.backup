@@ -1725,7 +1725,7 @@
         "buttonText": "Test out CastBot Apps!",
         "explanatoryText": "",
         "channelFormat": "📝%name%-app",
-        "stage": "awaiting_selections",
+        "stage": "active",
         "seasonId": "season_03859e4abc554bb5",
         "seasonName": "ReeceVivor S15!",
         "questions": [
@@ -1811,8 +1811,8 @@
         "buttonStyle": "Primary",
         "productionRole": "1333822520737927281",
         "createdBy": "391415444084490240",
-        "createdAt": 1759258045670,
-        "lastUpdated": 1759258045670,
+        "createdAt": 1759258047872,
+        "lastUpdated": 1759258047872,
         "welcomeDescription": "In season_question_edit_config_*, please add a next Text Input called \"Image URL\", optional, with the placeholder text of \"Enter the url of an image hosted on discord (https://cdn.discor..) to include.\"\nUnder the question configuration, save the URL of the image the user provided (e.g. imageURL).\nIn app_continue_*, when the container loads, if a question has a non-empty imageURL, create a ComponentsV2.md Media Gallery (type = 12) component directly below the questionText and attempt to load the imageURL in the component.",
         "welcomeTitle": "Welcome!"
       },
@@ -1857,23 +1857,6 @@
     },
     "analyticsVersion": "1.0",
     "applications": {
-      "1398919974020555284": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
-      },
       "13989237782597430091": {
         "userId": "1086246253819613274",
         "channelId": "1398923778297430099",
@@ -1888,23 +1871,6 @@
           "391415444084490240": 1
         },
         "castingStatus": "reject"
-      },
-      "1398919977020565286": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
       },
       "1398923778297437099": {
         "userId": "1086246253819613274",
@@ -1921,26 +1887,6 @@
         },
         "castingStatus": "reject"
       },
-      "1398919977020555284": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 3,
-          "1086246253819613274": 1,
-          "683102296380276766": 5,
-          "676262975132139522": 2,
-          "977455730300956683": 1
-        },
-        "castingStatus": "reject",
-        "playerNotes": "zzzz"
-      },
       "1398923778297430091": {
         "userId": "1086246253819613274",
         "channelId": "1398923778297430099",
@@ -1955,23 +1901,6 @@
           "391415444084490240": 1
         },
         "castingStatus": "reject"
-      },
-      "1398919977020555286": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
       },
       "1398923778297430099": {
         "userId": "1086246253819613274",
@@ -1988,23 +1917,6 @@
         },
         "castingStatus": "cast"
       },
-      "1398919974020565284": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
-      },
       "1398923712597430091": {
         "userId": "1086246253819613274",
         "channelId": "1398923778297430099",
@@ -2019,23 +1931,6 @@
           "391415444084490240": 1
         },
         "castingStatus": "reject"
-      },
-      "1398219977020565286": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
       },
       "1398923778297447099": {
         "userId": "1086246253819613274",
@@ -2052,23 +1947,6 @@
         },
         "castingStatus": "reject"
       },
-      "1398919977020755284": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
-      },
       "1398923778295430091": {
         "userId": "1086246253819613274",
         "channelId": "1398923778297430099",
@@ -2083,23 +1961,6 @@
           "391415444084490240": 1
         },
         "castingStatus": "reject"
-      },
-      "1398919977020515286": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
       },
       "1398923778297430299": {
         "userId": "1086246253819613274",
@@ -2131,23 +1992,6 @@
         },
         "castingStatus": "reject"
       },
-      "1398919974023565284": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
-      },
       "1398923722597430091": {
         "userId": "1086246253819613274",
         "channelId": "1398923778297430099",
@@ -2162,23 +2006,6 @@
           "391415444084490240": 1
         },
         "castingStatus": "reject"
-      },
-      "1398219977020465286": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
       },
       "1398923778297448099": {
         "userId": "1086246253819613274",
@@ -2195,23 +2022,6 @@
         },
         "castingStatus": "reject"
       },
-      "139891997760755284": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
-      },
       "1398923778245430091": {
         "userId": "1086246253819613274",
         "channelId": "1398923778297430099",
@@ -2226,40 +2036,6 @@
           "391415444084490240": 1
         },
         "castingStatus": "reject"
-      },
-      "1392919977020515286": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
-      },
-      "1392919944420515286": {
-        "userId": "391415444084490240",
-        "channelId": "1398919977020555284",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-07-27T06:48:34.280Z",
-        "configId": "config_1751549410029_391415444084490240",
-        "currentQuestion": 1,
-        "rankings": {
-          "391415444084490240": 2,
-          "1086246253819613274": 1
-        },
-        "castingStatus": "tentative",
-        "playerNotes": "Great guy love to grab a beer with him someday"
       },
       "139892377829330299": {
         "userId": "1086246253819613274",
