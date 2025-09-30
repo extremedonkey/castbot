@@ -56,7 +56,9 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git merge:*)",
-      "Bash(pm2 status:*)"
+      "Bash(pm2 status:*)",
+      "Read(//home/reece/.config/**)",
+      "Read(//home/reece/.claude/**)"
     ],
     "deny": [],
     "ask": []
