@@ -7755,119 +7755,115 @@ To fix this:
       const { handleCastlistTribeSelect } = await import('./castlistHandlers.js');
       return handleCastlistTribeSelect(req, res, client, custom_id);
     } else if (custom_id.startsWith('edit_placement_')) {
-      // Handle placement edit button - show modal
-      const playerId = custom_id.replace('edit_placement_', '');  // No tribeId - placements are global
-      const guildId = req.body.guild_id;
+      // Handle placement edit button - show modal (MIGRATED TO FACTORY)
+      const playerId = custom_id.replace('edit_placement_', '');
 
-      // Load current placement
-      const { loadPlayerData } = await import('./storage.js');
-      const playerData = loadPlayerData();
-      const placement = playerData[guildId]?.placements?.global?.[playerId]?.placement;
+      return ButtonHandlerFactory.create({
+        id: 'edit_placement',
+        handler: async (context) => {
+          // Load current placement
+          const { loadPlayerData } = await import('./storage.js');
+          const playerData = loadPlayerData();
+          const placement = playerData[context.guildId]?.placements?.global?.[playerId]?.placement;
 
-      // Show modal
-      return res.send({
-        type: InteractionResponseType.MODAL,
-        data: {
-          custom_id: `save_placement_${playerId}`,
-          title: "Edit Season Placement",
-          components: [
-            {
-              type: 18, // Label (Components V2)
-              label: "Placement (1-99)",
-              description: "Enter whole number only (1 = Winner, 2 = Runner-up, etc.). Leave blank if still in game.",
-              component: {
-                type: 4, // Text Input
-                custom_id: "placement",
-                value: placement ? placement.toString() : "", // Convert number to string for display
-                placeholder: "e.g., 1, 2, 24",
-                max_length: 2,
-                required: false, // Allow clearing
-                style: 1 // Short
-              }
+          // Return modal structure
+          return {
+            type: InteractionResponseType.MODAL,
+            data: {
+              custom_id: `save_placement_${playerId}`,
+              title: "Edit Season Placement",
+              components: [
+                {
+                  type: 18, // Label (Components V2)
+                  label: "Placement (1-99)",
+                  description: "Enter whole number only (1 = Winner, 2 = Runner-up, etc.). Leave blank if still in game.",
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: "placement",
+                    value: placement ? placement.toString() : "",
+                    placeholder: "e.g., 1, 2, 24",
+                    max_length: 2,
+                    required: false,
+                    style: 1 // Short
+                  }
+                }
+              ]
             }
-          ]
+          };
         }
-      });
+      })(req, res, client);
     } else if (custom_id.startsWith('save_placement_')) {
-      // Handle placement save from modal
-      const playerId = custom_id.replace('save_placement_', '');  // No tribeId - placements are global
-      const guildId = req.body.guild_id;
-      const userId = req.body.member?.user?.id || req.body.user?.id;
-      const components = req.body.data.components;
-      const placementInput = components[0].components[0].value?.trim();
+      // Handle placement save from modal (MIGRATED TO FACTORY)
+      const playerId = custom_id.replace('save_placement_', '');
 
-      // Validate: must be integer 1-99 or empty
-      if (placementInput && !/^\d{1,2}$/.test(placementInput)) {
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            components: [{
-              type: 17, // Container
+      return ButtonHandlerFactory.create({
+        id: 'save_placement',
+        deferred: true, // CRITICAL: Castlist refresh takes >3 seconds
+        handler: async (context) => {
+          const components = req.body.data.components;
+          const placementInput = components[0].components[0].value?.trim();
+
+          // Validate: must be integer 1-99 or empty
+          if (placementInput && !/^\d{1,2}$/.test(placementInput)) {
+            return {
               components: [{
-                type: 10, // Text Display
-                content: '❌ Please enter a whole number (1-99)'
+                type: 17, // Container
+                components: [{
+                  type: 10, // Text Display
+                  content: '❌ Please enter a whole number (1-99)'
+                }]
               }]
-            }],
-            flags: (1 << 15) | (1 << 6), // IS_COMPONENTS_V2 | EPHEMERAL
+            };
           }
-        });
-      }
 
-      // Convert to integer for storage
-      const placementValue = placementInput ? parseInt(placementInput, 10) : null;
+          // Convert to integer for storage
+          const placementValue = placementInput ? parseInt(placementInput, 10) : null;
 
-      // Load and update player data
-      const { loadPlayerData, savePlayerData } = await import('./storage.js');
-      const playerData = loadPlayerData();
+          // Load and update player data
+          const { loadPlayerData, savePlayerData } = await import('./storage.js');
+          const playerData = loadPlayerData();
 
-      // Initialize structure if needed
-      if (!playerData[guildId]) {
-        playerData[guildId] = {};
-      }
-      if (!playerData[guildId].placements) {
-        playerData[guildId].placements = {};
-      }
-      if (!playerData[guildId].placements.global) {
-        playerData[guildId].placements.global = {};
-      }
+          // Initialize structure if needed
+          if (!playerData[context.guildId]) {
+            playerData[context.guildId] = {};
+          }
+          if (!playerData[context.guildId].placements) {
+            playerData[context.guildId].placements = {};
+          }
+          if (!playerData[context.guildId].placements.global) {
+            playerData[context.guildId].placements.global = {};
+          }
 
-      // Save or delete GLOBAL placement
-      if (placementValue !== null) {
-        playerData[guildId].placements.global[playerId] = {
-          placement: placementValue, // INTEGER not string
-          updatedBy: userId,
-          updatedAt: new Date().toISOString()
-        };
-      } else {
-        // Remove placement if cleared
-        delete playerData[guildId].placements.global[playerId];
-      }
+          // Save or delete GLOBAL placement
+          if (placementValue !== null) {
+            playerData[context.guildId].placements.global[playerId] = {
+              placement: placementValue,
+              updatedBy: context.userId,
+              updatedAt: new Date().toISOString()
+            };
+          } else {
+            delete playerData[context.guildId].placements.global[playerId];
+          }
 
-      await savePlayerData(playerData);
+          await savePlayerData(playerData);
 
-      // Refresh the castlist view with updated placement
-      // Build custom_id to re-render the castlist in edit mode
-      const refreshCustomId = `show_castlist2_default_edit`;
+          // Refresh the castlist view with updated placement
+          const refreshCustomId = `show_castlist2_default_edit`;
+          const { extractCastlistData } = await import('./castlistV2.js');
 
-      // Import castlist module
-      const { extractCastlistData } = await import('./castlistV2.js');
-      const { channelId, member, client } = req.body;
+          // Extract castlist data with edit mode enabled
+          const castlistResponse = await extractCastlistData(
+            refreshCustomId,
+            context.guildId,
+            context.channelId,
+            context.member,
+            null,
+            context.client
+          );
 
-      // Extract castlist data with edit mode enabled
-      const castlistResponse = await extractCastlistData(
-        refreshCustomId,
-        guildId,
-        channelId,
-        member,
-        null, // permissionChecker - not needed for edit mode
-        client
-      );
-
-      // Send UPDATE_MESSAGE to refresh the view
-      return res.send({
-        type: InteractionResponseType.UPDATE_MESSAGE,
-        data: castlistResponse
-      });
+          return castlistResponse;
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_safari_menu') {
       // Handle Safari submenu - dynamic content management (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);

@@ -320,6 +320,20 @@ export const BUTTON_REGISTRY = {
     style: 'Danger',
     category: 'castlist'
   },
+  'edit_placement_*': {
+    label: 'Edit Placement',
+    description: 'Edit player season placement (1st, 2nd, etc.)',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'castlist'
+  },
+  'save_placement_*': {
+    label: 'Save Placement',
+    description: 'Save player season placement from modal',
+    emoji: '💾',
+    style: 'Primary',
+    category: 'castlist'
+  },
   'show_castlist2': {
     label: 'Post Castlist',
     description: 'Post castlist to channel',
