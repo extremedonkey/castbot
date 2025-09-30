@@ -268,7 +268,7 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
 
         accessory = {
             type: 2, // Button
-            custom_id: `edit_placement_${tribeData.id}_${member.user.id}`,
+            custom_id: `edit_placement_${member.user.id}`,  // No tribeId needed - placements are global
             label: getOrdinalLabel(placement),
             style: 2, // Secondary
             emoji: { name: "✏️" }

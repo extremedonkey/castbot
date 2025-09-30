@@ -7756,7 +7756,7 @@ To fix this:
       return handleCastlistTribeSelect(req, res, client, custom_id);
     } else if (custom_id.startsWith('edit_placement_')) {
       // Handle placement edit button - show modal
-      const [, , tribeId, playerId] = custom_id.split('_');
+      const playerId = custom_id.replace('edit_placement_', '');  // No tribeId - placements are global
       const guildId = req.body.guild_id;
 
       // Load current placement
@@ -7768,7 +7768,7 @@ To fix this:
       return res.send({
         type: InteractionResponseType.MODAL,
         data: {
-          custom_id: `save_placement_${tribeId}_${playerId}`,
+          custom_id: `save_placement_${playerId}`,
           title: "Edit Season Placement",
           components: [
             {
@@ -7790,7 +7790,7 @@ To fix this:
       });
     } else if (custom_id.startsWith('save_placement_')) {
       // Handle placement save from modal
-      const [, , tribeId, playerId] = custom_id.split('_');
+      const playerId = custom_id.replace('save_placement_', '');  // No tribeId - placements are global
       const guildId = req.body.guild_id;
       const userId = req.body.member?.user?.id || req.body.user?.id;
       const components = req.body.data.components;
