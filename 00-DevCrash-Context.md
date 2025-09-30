@@ -36,30 +36,26 @@ During placement editor implementation, `playerData.json` was completely wiped i
   - 1331657596087566398 (CastBot): Safari data, applications, rankings
   - Full application configs, season data, player emojis, etc.
 
-## Root Cause Hypothesis
+## Root Cause: CONFIRMED (See 00-DevCrash-RootCause-Analysis.md)
 
-### Most Likely: savePlayerData() Wrote Empty Structure
+### Network-Induced Race Condition During Analytics Startup
 
-**Evidence:**
-1. File was **overwritten** (modified timestamp changed), not deleted
-2. No manual deletion in bash history
-3. Occurred during multiple restart cycles with code changes
-4. Current file contains valid JSON structure with stub data
+**ROOT CAUSE CONFIRMED:**
+Poor internet connectivity caused `fs.readFile()` to return incomplete data during app startup. The analytics system's `client.on('ready')` handler loaded this partial data (valid JSON but empty structure), added metadata, and called `savePlayerData()` 17 times - once per guild - overwriting the complete file with minimal structure.
 
-**Probable sequence:**
-```javascript
-// storage.js - ensureStorageFile() line 24-79
-1. During startup/restart, ensureStorageFile() called
-2. If file access check fails or returns empty: initialize fresh structure
-3. Analytics system writes metadata to fresh structure
-4. savePlayerData() called with this minimal structure
-5. Overwrites existing file with stub data
-```
+**The Kill Chain:**
+1. App starts → Discord `client.on('ready')` fires
+2. Analytics loads: `const playerData = await loadPlayerData()`
+3. **Network issue**: `fs.readFile()` returns partial file (14KB instead of 168KB)
+4. `JSON.parse()` succeeds (partial data is valid JSON with empty objects)
+5. For each of 17 guilds: Analytics spreads empty data + new metadata
+6. `savePlayerData()` writes 17 times with NO validation
+7. File overwritten: 5800 lines → 488 lines
 
 **Critical code sections:**
-- `storage.js:24-79` - `ensureStorageFile()`: Initializes structure if file issues
-- `storage.js:113` - `savePlayerData()`: Writes data back to disk
-- Multiple savePlayerData calls throughout codebase (confirmed via grep)
+- `storage.js:118-122` - `savePlayerData()`: NO safety checks, NO validation, NO backup
+- `storage.js:24-79` - `ensureStorageFile()`: NO size validation, assumes read always succeeds
+- `app.js:1260-1326` - Analytics system: Writes 17 times on startup, no data validation
 
 ### Contributing Factors
 
