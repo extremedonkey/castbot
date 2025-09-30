@@ -28591,6 +28591,10 @@ Are you sure you want to continue?`;
 
         await savePlayerData(playerData);
 
+        // Clear request cache to force fresh load of updated data
+        const { clearRequestCache } = await import('./storage.js');
+        clearRequestCache();
+
         // Small delay to ensure file write completes (prevents race conditions)
         await new Promise(resolve => setTimeout(resolve, 100));
 
