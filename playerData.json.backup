@@ -39,7 +39,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1729344188021,
-    "lastUpdated": 1759240169422,
+    "lastUpdated": 1759258331129,
     "players": {
       "391415444084490240": {
         "age": "36",
@@ -484,7 +484,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1688910442087,
-    "lastUpdated": 1759240166876,
+    "lastUpdated": 1759258327962,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -701,7 +701,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1759240170309,
+    "lastUpdated": 1759258332080,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -1723,7 +1723,7 @@
     "applicationConfigs": {
       "config_1751549410029_391415444084490240": {
         "buttonText": "Test out CastBot Apps!",
-        "explanatoryText": "",
+        "explanatoryText": "asdsa",
         "channelFormat": "📝%name%-app",
         "stage": "active",
         "seasonId": "season_03859e4abc554bb5",
@@ -1806,13 +1806,13 @@
             "lastUpdated": 1751563470002
           }
         ],
-        "targetChannelId": "1395819813640601742",
+        "targetChannelId": "1337754151655833694",
         "categoryId": "1334493817231114271",
         "buttonStyle": "Primary",
-        "productionRole": "1333822520737927281",
+        "productionRole": null,
         "createdBy": "391415444084490240",
-        "createdAt": 1759258047872,
-        "lastUpdated": 1759258047872,
+        "createdAt": 1759258376440,
+        "lastUpdated": 1759258376440,
         "welcomeDescription": "In season_question_edit_config_*, please add a next Text Input called \"Image URL\", optional, with the placeholder text of \"Enter the url of an image hosted on discord (https://cdn.discor..) to include.\"\nUnder the question configuration, save the URL of the image the user provided (e.g. imageURL).\nIn app_continue_*, when the container loads, if a question has a non-empty imageURL, create a ComponentsV2.md Media Gallery (type = 12) component directly below the questionText and attempt to load the imageURL in the component.",
         "welcomeTitle": "Welcome!"
       },
@@ -2061,6 +2061,16 @@
         "rankings": {
           "391415444084490240": 2
         }
+      },
+      "1422657665896681513": {
+        "userId": "391415444084490240",
+        "channelId": "1422657665896681513",
+        "username": "extremedonkey",
+        "displayName": "ReeceBot",
+        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
+        "channelName": "📝reecebot-app",
+        "createdAt": "2025-09-30T18:53:40.721Z",
+        "configId": "config_1751549410029_391415444084490240"
       }
     },
     "rankings": {
@@ -2538,7 +2548,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1722126166135,
-    "lastUpdated": 1759240168981,
+    "lastUpdated": 1759258330408,
     "players": {},
     "tribes": {
       "1267501924639571988": {
@@ -2567,7 +2577,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1715787157587,
-    "lastUpdated": 1759240168564,
+    "lastUpdated": 1759258329983,
     "players": {},
     "tribes": {
       "1241383870260056095": {
@@ -3436,7 +3446,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1705218224570,
-    "lastUpdated": 1759240167735,
+    "lastUpdated": 1759258328916,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -3945,7 +3955,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1692598548207,
-    "lastUpdated": 1759240167312,
+    "lastUpdated": 1759258328437,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -4080,7 +4090,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1749487027631,
-    "lastUpdated": 1759240170773,
+    "lastUpdated": 1759258332521,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -4343,7 +4353,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1750898495205,
-    "lastUpdated": 1759240171171,
+    "lastUpdated": 1759258333077,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -4817,7 +4827,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1753970803075,
-    "lastUpdated": 1759240172903,
+    "lastUpdated": 1759258334900,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -4952,7 +4962,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1708322273445,
-    "lastUpdated": 1759240168153,
+    "lastUpdated": 1759258329496,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Tylenol Boy",
@@ -4978,7 +4988,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1729395578359,
-    "lastUpdated": 1759240169880,
+    "lastUpdated": 1759258331682,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -5004,7 +5014,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1751069213471,
-    "lastUpdated": 1759240171562,
+    "lastUpdated": 1759258333542,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -5030,7 +5040,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1753872045062,
-    "lastUpdated": 1759240172500,
+    "lastUpdated": 1759258334442,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -5174,7 +5184,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1751362260426,
-    "lastUpdated": 1759247791642,
+    "lastUpdated": 1759258334039,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -5297,7 +5307,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1758548242232,
-    "lastUpdated": 1759240173320,
+    "lastUpdated": 1759258335419,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -5441,7 +5451,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1758648667340,
-    "lastUpdated": 1759240173703,
+    "lastUpdated": 1759258335796,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
