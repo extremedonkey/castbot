@@ -1496,10 +1496,13 @@
     "tribes": {
       "1380906521084559401": {
         "emoji": null,
-        "castlist": "Haszo",
+        "castlist": "Active Castlist",
         "showPlayerEmojis": true,
         "color": "#607d8b",
-        "castlistId": "castlist_1758812609810_system"
+        "castlistId": "castlist_1758812609810_system",
+        "castlistIds": [
+          "default"
+        ]
       },
       "1333822520737927281": {
         "emoji": null,
@@ -1516,7 +1519,10 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "👀 BST (UTC+1) 👀",
-        "analyticsAdded": 1754751135102
+        "analyticsAdded": 1754751135102,
+        "castlistIds": [
+          "default"
+        ]
       },
       "1333822411912642630": {
         "emoji": "🧟‍♂️",
@@ -1533,7 +1539,10 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "🤷‍♀️ Any 🤷‍♀️",
-        "analyticsAdded": 1756021096260
+        "analyticsAdded": 1756021096260,
+        "castlistIds": [
+          "default"
+        ]
       },
       "1409191262279700622": {
         "emoji": "🐻‍❄️",
@@ -1553,7 +1562,10 @@
           "391415444084490240": {
             "placement": "3"
           }
-        }
+        },
+        "castlistIds": [
+          "default"
+        ]
       },
       "1379077934953922611": {
         "emoji": null,
@@ -1561,7 +1573,10 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "Nyauu / +3 +/ GMT5 22",
-        "analyticsAdded": 1757442465942
+        "analyticsAdded": 1757442465942,
+        "castlistIds": [
+          "default"
+        ]
       },
       "1368969395795398716": {
         "name": "Tribe 1368969395795398716",
@@ -1593,7 +1608,10 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "🪄 ar.3 🪄",
-        "analyticsAdded": 1759081799205
+        "analyticsAdded": 1759081799205,
+        "castlistIds": [
+          "default"
+        ]
       },
       "1388327092634124368": {
         "emoji": null,
@@ -2510,6 +2528,26 @@
         },
         "modifiedAt": 1759080421480,
         "modifiedBy": "system"
+      },
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1759326924851,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1759326924879,
+        "modifiedBy": "system"
       }
     },
     "placements": {
@@ -2525,9 +2563,9 @@
           "updatedAt": "2025-09-30T16:45:38.122Z"
         },
         "391415444084490240": {
-          "placement": 44,
+          "placement": 22,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-09-30T16:44:52.553Z"
+          "updatedAt": "2025-10-01T14:10:03.351Z"
         },
         "683102296380276766": {
           "placement": 7,
