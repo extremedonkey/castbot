@@ -238,6 +238,7 @@ export class CastlistVirtualAdapter {
       createdBy: 'migration',
       metadata: {
         ...virtual.metadata,
+        description: `Upgraded from legacy castlist '${virtual.name}'`,
         migratedFrom: virtualId,
         migrationDate: Date.now()
       }
