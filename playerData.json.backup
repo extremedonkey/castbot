@@ -1615,7 +1615,17 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "SendMessages",
-        "analyticsAdded": 1759245471727
+        "analyticsAdded": 1759245471727,
+        "castlistId": "castlist_1759422070959_system"
+      },
+      "1335645031226277959": {
+        "emoji": "🧓",
+        "castlist": "The OId Ask Tribe",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "🧓 Ask 🧓",
+        "analyticsAdded": 1759422827344,
+        "castlistId": "castlist_1759422854044_system"
       }
     },
     "timezones": {
@@ -2544,6 +2554,44 @@
         },
         "modifiedAt": 1759326924879,
         "modifiedBy": "system"
+      },
+      "castlist_1759422070959_system": {
+        "id": "castlist_1759422070959_system",
+        "name": "TheBest",
+        "type": "legacy",
+        "createdAt": 1759422070960,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Legacy castlist: TheBest",
+          "emoji": "📋",
+          "migratedFrom": "virtual_VGhlQmVzdA",
+          "migrationDate": 1759422070960
+        }
+      },
+      "castlist_1759422854044_system": {
+        "id": "castlist_1759422854044_system",
+        "name": "The OId Ask Tribe",
+        "type": "legacy",
+        "createdAt": 1759422854045,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'The OId Ask Tribe'",
+          "emoji": "🏕️",
+          "migratedFrom": "virtual_VGhlIE9JZCBBc2sgVHJpYmU",
+          "migrationDate": 1759422854045
+        }
       }
     },
     "placements": {

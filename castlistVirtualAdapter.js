@@ -233,6 +233,7 @@ export class CastlistVirtualAdapter {
     const realCastlist = {
       ...virtual,
       id: realId,
+      type: 'system',  // Upgrade from 'legacy' to 'system' (managed)
       isVirtual: false,
       createdAt: Date.now(),
       createdBy: 'migration',
