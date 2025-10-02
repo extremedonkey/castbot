@@ -375,6 +375,11 @@ Create `/RaP/[NUM]_[DATE]_[Feature]_Analysis.md` when facing:
    - Make architecture decisions memorable
    - Balance technical accuracy with engaging narrative
 
+**⚠️ MERMAID DIAGRAM LIMITATION:**
+- **Claude Code CANNOT view Mermaid diagrams in chat messages**
+- Only create Mermaid diagrams when saving to markdown files
+- If user needs to see a diagram, always save it to a file first
+
 Remember: These documents are for future-you trying to understand past decisions.
 When in doubt, create the document - disk space is cheap, context is expensive.
 

@@ -141,11 +141,9 @@ export class CastlistManager {
       await savePlayerData(playerData);
       playerData = await loadPlayerData(); // Reload to ensure consistency
     }
-    // Check if virtual - if so, materialize first
+    // Validate not virtual (should have been materialized on selection)
     else if (castlistVirtualAdapter.isVirtualId(castlistId)) {
-      console.log(`[CASTLIST] Materializing virtual castlist before update`);
-      castlistId = await castlistVirtualAdapter.materializeCastlist(guildId, castlistId);
-      playerData = await loadPlayerData(); // Reload after materialization
+      throw new Error(`[CASTLIST] Virtual ID should have been materialized on selection: ${castlistId}`);
     }
 
     // Get the real castlist

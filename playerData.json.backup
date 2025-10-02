@@ -1506,12 +1506,10 @@
       },
       "1333822520737927281": {
         "emoji": null,
-        "castlist": "Haszo",
         "showPlayerEmojis": false,
         "color": "#3498db",
         "analyticsName": "🤖Mr CastBot",
-        "analyticsAdded": 1751070525853,
-        "castlistId": "castlist_1758812609810_system"
+        "analyticsAdded": 1751070525853
       },
       "1391142520787832904": {
         "emoji": "👀",
@@ -1581,9 +1579,7 @@
       "1368969395795398716": {
         "name": "Tribe 1368969395795398716",
         "emoji": "🏕️",
-        "type": "default",
-        "castlistId": "castlist_1758812609810_system",
-        "castlist": "Haszo"
+        "type": "default"
       },
       "1368969393819746336": {
         "name": "Tribe 1368969393819746336",

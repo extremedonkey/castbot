@@ -12,20 +12,49 @@ import { PermissionFlagsBits } from 'discord.js';
 
 /**
  * Handle castlist selection from dropdown
+ * Materializes virtual castlists immediately on selection
  */
 export function handleCastlistSelect(req, res, client) {
   return ButtonHandlerFactory.create({
     id: 'castlist_select',
     updateMessage: true,
     handler: async (context) => {
-      const selectedCastlistId = context.values?.[0];
+      let selectedCastlistId = context.values?.[0];
       console.log(`📋 Castlist selected: ${selectedCastlistId || 'none'}`);
-      
+
+      // Materialize virtual castlists immediately on selection
+      if (selectedCastlistId && castlistVirtualAdapter.isVirtualId(selectedCastlistId)) {
+        console.log(`[CASTLIST] Materializing virtual castlist on selection: ${selectedCastlistId}`);
+
+        try {
+          selectedCastlistId = await castlistVirtualAdapter.materializeCastlist(
+            context.guildId,
+            selectedCastlistId
+          );
+          console.log(`[CASTLIST] ✅ Materialized to: ${selectedCastlistId}`);
+        } catch (error) {
+          console.error('[CASTLIST] ❌ Materialization failed:', error);
+
+          // Return error UI to user
+          return {
+            components: [{
+              type: 17, // Container
+              components: [{
+                type: 10, // Text Display
+                content: `❌ **Unable to upgrade castlist**\n\nPlease try again or contact support.\n\n**Error**: ${error.message}`
+              }]
+            }],
+            flags: (1 << 15) // IS_COMPONENTS_V2
+          };
+        }
+      }
+
+      // Display hub with real ID (or null)
       const hubData = await createCastlistHub(context.guildId, {
         selectedCastlistId: selectedCastlistId || null,
         activeButton: null // Reset active button on new selection
       });
-      
+
       return hubData;
     }
   })(req, res, client);
