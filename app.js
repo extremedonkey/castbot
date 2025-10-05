@@ -4946,7 +4946,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         async (m, c) => await canSendMessagesInChannel(m, c, client) :
         null;
       // Pass ID for lookups, name for display
-      const responseData = await buildCastlist2ResponseData(guild, tribes, requestedCastlist, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName);
+      const responseData = await buildCastlist2ResponseData(guild, tribes, castlistIdForNavigation, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName);
 
       // Send as new message (not update) - this posts to the channel
       return res.send({
