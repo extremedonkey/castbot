@@ -28750,8 +28750,8 @@ Are you sure you want to continue?`;
 
         for (const [roleId, tribe] of Object.entries(tribes)) {
           const matchesCastlist = (
-            tribe.castlists?.includes(castlistName) ||
-            (castlistName === 'default' && (!tribe.castlists || tribe.castlists.length === 0))
+            tribe.castlists?.includes(castlistId) ||
+            (castlistId === 'default' && (!tribe.castlists || tribe.castlists.length === 0))
           );
 
           if (matchesCastlist) {
