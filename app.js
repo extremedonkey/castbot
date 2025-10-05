@@ -28120,34 +28120,24 @@ Are you sure you want to continue?`;
         const parts = withoutPrefix.split('_');
 
         // Format: action_{tribeIndex}_{tribePage}_{castlistId}_{displayMode}
-        // CRITICAL: castlistId has underscores! Need smart parsing like placement buttons
+        // CRITICAL: castlistId has underscores! Use position-based parsing
 
-        if (parts.length < 4) {
-          throw new Error('Invalid navigation custom_id format');
+        if (parts.length < 5) {
+          throw new Error('Invalid navigation custom_id format - needs at least 5 parts');
         }
 
-        // Work backwards from the end (these are always single parts)
+        // Position-based parsing (actions are always 2 parts: next_page, last_tribe, etc.)
+        // parts[0-1]: action (2 parts)
+        // parts[2]: tribeIndex
+        // parts[3]: tribePage
+        // parts[4 to length-2]: castlistId (may have underscores!)
+        // parts[length-1]: displayMode
+
         const displayMode = parts[parts.length - 1] || 'view';
-
-        // Find the castlist by looking for "castlist_" or "default" pattern
-        let castlistIdStartIdx = -1;
-        for (let i = parts.length - 2; i >= 2; i--) {
-          if (parts[i] === 'castlist' || (parts[i] === 'default' && i === parts.length - 2)) {
-            castlistIdStartIdx = i;
-            break;
-          }
-        }
-
-        if (castlistIdStartIdx === -1) {
-          console.error(`❌ Could not find castlist in nav button ID: ${custom_id}`);
-          throw new Error('Invalid navigation button format - missing castlist identifier');
-        }
-
-        // Extract components
-        const currentTribePage = parseInt(parts[castlistIdStartIdx - 1]);
-        const currentTribeIndex = parseInt(parts[castlistIdStartIdx - 2]);
-        const castlistId = parts.slice(castlistIdStartIdx, parts.length - 1).join('_');
-        const action = parts.slice(0, castlistIdStartIdx - 2).join('_');
+        const action = `${parts[0]}_${parts[1]}`;  // Actions are always 2 parts
+        const currentTribeIndex = parseInt(parts[2]);
+        const currentTribePage = parseInt(parts[3]);
+        const castlistId = parts.slice(4, parts.length - 1).join('_');
 
         console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistId, displayMode, user: `${user?.username}#${user?.discriminator} (${user?.id})` });
         
