@@ -28755,24 +28755,33 @@ Are you sure you want to continue?`;
           );
 
           if (matchesCastlist) {
-            const role = await guild.roles.fetch(roleId);
-            if (!role) continue;
+            try {
+              const role = await guild.roles.fetch(roleId);
+              if (!role) {
+                console.log(`⚠️ Role ${roleId} not found, skipping tribe`);
+                continue;
+              }
 
-            const tribeMembers = Array.from(role.members.values());
+              const tribeMembers = Array.from(role.members.values());
 
-            allTribes.push({
-              ...tribe,
-              roleId,
-              name: role.name,
-              members: tribeMembers,
-              memberCount: tribeMembers.length,
-              castlistSettings: {
-                ...castlistEntity?.settings,
-                seasonId: castlistEntity?.seasonId
-              },
-              castlistId: castlistName,
-              guildId: guildId
-            });
+              allTribes.push({
+                ...tribe,
+                roleId,
+                name: role.name,
+                members: tribeMembers,
+                memberCount: tribeMembers.length,
+                castlistSettings: {
+                  ...castlistEntity?.settings,
+                  seasonId: castlistEntity?.seasonId
+                },
+                castlistId: castlistId,  // FIX: Use castlistId not castlistName
+                guildId: guildId
+              });
+            } catch (error) {
+              console.error(`❌ Error fetching role ${roleId}:`, error.message);
+              // Skip this tribe and continue with others
+              continue;
+            }
           }
         }
 
