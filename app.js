@@ -7806,7 +7806,7 @@ To fix this:
         }
 
         const scenario = determineDisplayScenario(tribes);
-        const navigationState = createNavigationState(tribes, 0, 0, scenario);
+        const navigationState = createNavigationState(tribes, scenario, 0, 0);
 
         // Send castlist response with display mode
         await sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member, channelId, displayMode);
