@@ -17,23 +17,26 @@ export function sortCastlistMembers(members, tribeData, options = {}) {
   if (!tribeData) {
     return sortAlphabetical(members);
   }
-  
-  // Determine sorting strategy based on tribe type
-  const sortingStrategy = tribeData.type || 'default';
-  
+
+  // Determine sorting strategy from castlistSettings (NEW) or legacy tribe.type (fallback)
+  const sortingStrategy = tribeData.castlistSettings?.sortStrategy
+                       || (tribeData.type === 'alumni_placements' ? 'placements' : null)
+                       || 'alphabetical';
+
   switch (sortingStrategy) {
-    case 'alumni_placements':
-      return sortByPlacements(members, tribeData.rankings || {});
-    
+    case 'placements':
+      return sortByPlacements(members, tribeData, options);
+
+    case 'reverse_alpha':
+      return sortAlphabetical(members, true);
+
     // Future sorting strategies can be added here
-    // case 'alphabetical_reverse':
-    //   return sortAlphabetical(members, true);
     // case 'by_age':
-    //   return sortByAge(members, tribeData);
+    //   return sortByAge(members, tribeData, options);
     // case 'by_timezone':
-    //   return sortByTimezone(members, tribeData);
-    
-    case 'default':
+    //   return sortByTimezone(members, tribeData, options);
+
+    case 'alphabetical':
     default:
       return sortAlphabetical(members);
   }
@@ -41,34 +44,58 @@ export function sortCastlistMembers(members, tribeData, options = {}) {
 
 /**
  * Sort members by placement rankings (for alumni seasons)
- * Ranked members appear first (1, 2, 3...), followed by unranked members alphabetically
+ * Unranked members (active players) appear first alphabetically,
+ * followed by ranked members (eliminated players) in ascending placement order
  * @param {Array} members - Array of member objects
- * @param {Object} rankings - Object mapping user IDs to placement data
+ * @param {Object} tribeData - Tribe data with castlistSettings
+ * @param {Object} options - Options containing pre-loaded playerData and guildId
  * @returns {Array} Sorted array with placement prefixes added
  */
-function sortByPlacements(members, rankings) {
+function sortByPlacements(members, tribeData, options = {}) {
+  const { playerData, guildId } = options;
+
+  // Fallback to alphabetical if no data available
+  if (!playerData || !guildId) {
+    console.warn('[SORTER] No playerData or guildId provided, falling back to alphabetical');
+    return sortAlphabetical(members);
+  }
+
+  // Determine placement namespace based on castlist's season
+  const seasonId = tribeData.castlistSettings?.seasonId;
+  const placementNamespace = seasonId
+    ? playerData[guildId]?.placements?.[seasonId]      // Season-specific placements
+    : playerData[guildId]?.placements?.global;          // Global fallback (No Season)
+
+  if (!placementNamespace) {
+    console.warn(`[SORTER] No placement data for ${seasonId ? `season ${seasonId}` : 'global'}, falling back to alphabetical`);
+    return sortAlphabetical(members);
+  }
+
+  console.log(`[SORTER] Using placement namespace: ${seasonId || 'global'}, found ${Object.keys(placementNamespace).length} placements`);
+
   const ranked = [];
   const unranked = [];
-  
+
   // Separate members into ranked and unranked groups
   members.forEach(member => {
     const userId = member.user?.id || member.id;
-    
-    if (rankings[userId]) {
+    const placementData = placementNamespace[userId];
+
+    if (placementData?.placement) {
       // Preserve the original member object and add properties directly
       // This maintains Discord.js object structure
-      member.placement = parseInt(rankings[userId].placement);
-      member.displayPrefix = `${rankings[userId].placement}) `; // e.g., "1) "
+      member.placement = parseInt(placementData.placement);
+      member.displayPrefix = `${placementData.placement}) `; // e.g., "5) "
       ranked.push(member);
     } else {
-      // Keep unranked members as-is
+      // Keep unranked members as-is (active players)
       unranked.push(member);
     }
   });
-  
-  // Sort ranked members by placement (1 first, 2 second, etc.)
+
+  // Sort ranked members by placement (ascending: 1, 2, 3...)
   ranked.sort((a, b) => a.placement - b.placement);
-  
+
   // Sort unranked members alphabetically
   // Handle Discord.js member objects which may have displayName as a property or need to fallback
   unranked.sort((a, b) => {
@@ -76,9 +103,11 @@ function sortByPlacements(members, rankings) {
     const nameB = b.displayName || b.nickname || b.user?.username || b.username || '';
     return nameA.localeCompare(nameB);
   });
-  
-  // Return ranked members first, then unranked
-  return [...ranked, ...unranked];
+
+  console.log(`[SORTER] Sorted ${unranked.length} unranked (active), ${ranked.length} ranked (eliminated)`);
+
+  // Return unranked members first (active players), then ranked (eliminated players)
+  return [...unranked, ...ranked];
 }
 
 /**

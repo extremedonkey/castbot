@@ -2075,7 +2075,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const guild = await client.guilds.fetch(guildId);
       const fullGuild = await client.guilds.fetch(guildId, { force: true });
       await fullGuild.roles.fetch();
-      
+
+      // Pre-load playerData for sorting (placements, etc.)
+      const playerData = await loadPlayerData();
+
       // Ensure member cache is fully populated (post-restart fix)
       console.log(`Fetching members for guild ${fullGuild.name} (${fullGuild.memberCount} total)`);
       const members = await fullGuild.members.fetch({ force: true });
@@ -2127,8 +2130,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       });
 
       // Create navigation state for initial display (first tribe, first page)
-      const navigationState = createNavigationState(orderedTribes, scenario, 0, 0);
-      
+      const navigationState = createNavigationState(orderedTribes, scenario, 0, 0, fullGuild, { playerData, guildId });
+
       await sendCastlist2Response(req, fullGuild, orderedTribes, castlistToShow, navigationState, req.body.member, req.body.channel_id);
 
     } catch (error) {
@@ -4932,11 +4935,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           console.error('Error checking channel permissions:', error);
         }
       }
-      
+
+      // Pre-load playerData for sorting (placements, etc.)
+      const playerData = await loadPlayerData();
+
       // Calculate components for all tribes
       const scenario = determineDisplayScenario(tribes);
-      const navigationState = createNavigationState(tribes, scenario, 0, 0);
-      
+      const navigationState = createNavigationState(tribes, scenario, 0, 0, guild, { playerData, guildId });
+
       // Send castlist as a NEW message to the channel
       const memberObj = member ? await guild.members.fetch(userId) : null;
 
@@ -4946,7 +4952,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         async (m, c) => await canSendMessagesInChannel(m, c, client) :
         null;
       // Pass ID for lookups, name for display
-      const responseData = await buildCastlist2ResponseData(guild, tribes, castlistIdForNavigation, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName);
+      const responseData = await buildCastlist2ResponseData(guild, tribes, castlistIdForNavigation, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName, { playerData, guildId });
 
       // Send as new message (not update) - this posts to the channel
       return res.send({

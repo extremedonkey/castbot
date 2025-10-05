@@ -66,12 +66,13 @@ function determineDisplayScenario(tribes) {
  * Calculate pagination for a tribe that exceeds component limits
  * @param {Object} tribe - Tribe data
  * @param {Array} members - Array of Discord members
- * @param {boolean} includeSeparators - Whether to include separators
+ * @param {Object} guild - Guild object for guildId extraction
+ * @param {Object} options - Options containing playerData for sorting
  * @returns {Object} Pagination information
  */
-function calculateTribePages(tribe, members) {
-    // Sort members according to tribe type (alumni_placements, etc.)
-    const sortedMembers = sortCastlistMembers([...members], tribe);
+function calculateTribePages(tribe, members, guild, options = {}) {
+    // Sort members according to tribe castlistSettings.sortStrategy (placements, alphabetical, etc.)
+    const sortedMembers = sortCastlistMembers([...members], tribe, { ...options, guildId: guild.id });
     
     // Simplified: Always allow 8 players per page with separators
     const maxPlayersPerPage = 8;
@@ -108,7 +109,7 @@ function calculateTribePages(tribe, members) {
  * @param {number} currentTribePage - Current page within tribe
  * @returns {Object} Navigation state
  */
-export function createNavigationState(tribes, scenario, currentTribeIndex = 0, currentTribePage = 0) {
+export function createNavigationState(tribes, scenario, currentTribeIndex = 0, currentTribePage = 0, guild = null, options = {}) {
     return {
         currentTribeIndex,
         currentTribePage,
@@ -116,8 +117,8 @@ export function createNavigationState(tribes, scenario, currentTribeIndex = 0, c
         scenario,
         tribes: tribes.map(tribe => ({
             ...tribe,
-            totalPages: scenario === "multi-page" && tribe.memberCount > 0 ? 
-                calculateTribePages(tribe, tribe.members).totalPages : 1
+            totalPages: scenario === "multi-page" && tribe.memberCount > 0 && guild ?
+                calculateTribePages(tribe, tribe.members, guild, options).totalPages : 1
         }))
     };
 }
@@ -797,7 +798,10 @@ function createCastlistRows(allCastlists, castlistTribes, includeAddButton = tru
  * @param {Function} permissionChecker - Optional function to check send permissions
  * @returns {Object} Response data ready to send
  */
-export async function buildCastlist2ResponseData(guild, tribes, castlistId, navigationState, member = null, channelId = null, permissionChecker = null, displayMode = 'view', castlistName = null) {
+export async function buildCastlist2ResponseData(guild, tribes, castlistId, navigationState, member = null, channelId = null, permissionChecker = null, displayMode = 'view', castlistName = null, options = {}) {
+  // Extract playerData and guildId from options for sorting
+  const { playerData, guildId } = options;
+
   // If no display name provided, use ID for display (backwards compatibility)
   if (!castlistName) {
     castlistName = castlistId;
@@ -812,7 +816,7 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistId, navi
   // Calculate page info for current tribe
   let pageInfo;
   if (scenario === "multi-page" && currentTribe.memberCount > 0) {
-    const paginationData = calculateTribePages(currentTribe, currentTribe.members, true);
+    const paginationData = calculateTribePages(currentTribe, currentTribe.members, guild, { playerData, guildId });
     const currentPageMembers = paginationData.pages[currentTribePage] || [];
 
     pageInfo = {
@@ -822,7 +826,7 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistId, navi
     };
   } else {
     // Single page tribe or ideal/no-separators scenario
-    const sortedMembers = sortCastlistMembers([...currentTribe.members], currentTribe);
+    const sortedMembers = sortCastlistMembers([...currentTribe.members], currentTribe, { playerData, guildId });
 
     pageInfo = {
       currentPage: 0,
