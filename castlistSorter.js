@@ -85,7 +85,25 @@ function sortByPlacements(members, tribeData, options = {}) {
       // Preserve the original member object and add properties directly
       // This maintains Discord.js object structure
       member.placement = parseInt(placementData.placement);
-      member.displayPrefix = `\`${placementData.placement}\` `; // e.g., "`5` "
+
+      // Format with ordinal indicator (1st, 2nd, 3rd, etc.)
+      const num = parseInt(placementData.placement);
+      let ordinal;
+
+      // Handle special cases 11-13
+      if (num % 100 >= 11 && num % 100 <= 13) {
+        ordinal = `${num}th`;
+      } else {
+        // Standard ordinal rules
+        switch (num % 10) {
+          case 1: ordinal = `${num}st`; break;
+          case 2: ordinal = `${num}nd`; break;
+          case 3: ordinal = `${num}rd`; break;
+          default: ordinal = `${num}th`;
+        }
+      }
+
+      member.displayPrefix = `\`${ordinal}\` `; // e.g., "`5th` "
       ranked.push(member);
     } else {
       // Keep unranked members as-is (active players)
