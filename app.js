@@ -4935,10 +4935,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           console.error('Error checking channel permissions:', error);
         }
       }
-
-      // Pre-load playerData for sorting (placements, etc.)
-      const playerData = await loadPlayerData();
-
       // Calculate components for all tribes
       const scenario = determineDisplayScenario(tribes);
       const navigationState = createNavigationState(tribes, scenario, 0, 0, guild, { playerData, guildId });
