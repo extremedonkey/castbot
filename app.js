@@ -28749,9 +28749,11 @@ Are you sure you want to continue?`;
         const tribes = playerData[guildId]?.tribes || {};
 
         for (const [roleId, tribe] of Object.entries(tribes)) {
+          // 🔧 FIX: Use SAME matching logic as show_castlist2 handler
           const matchesCastlist = (
-            tribe.castlists?.includes(castlistId) ||
-            (castlistId === 'default' && (!tribe.castlists || tribe.castlists.length === 0))
+            tribe.castlist === castlistEntity?.name ||              // Legacy name matching
+            tribe.castlistId === castlistId ||                      // New ID matching
+            (!tribe.castlist && !tribe.castlistId && castlistId === 'default')  // Default fallback
           );
 
           if (matchesCastlist) {
