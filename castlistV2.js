@@ -891,7 +891,6 @@ export {
     calculateComponentsForTribe,
     determineDisplayScenario,
     calculateTribePages,
-    createNavigationState,
     reorderTribes,
     createPlayerCard,
     createTribeSection,
