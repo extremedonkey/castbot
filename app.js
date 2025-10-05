@@ -28785,6 +28785,11 @@ Are you sure you want to continue?`;
           }
         }
 
+        // Safety check: ensure we have tribes
+        if (allTribes.length === 0) {
+          throw new Error('No valid tribes found for this castlist');
+        }
+
         // Determine scenario (same logic as show_castlist2)
         const totalMembers = allTribes.reduce((sum, t) => sum + t.memberCount, 0);
         const maxTribeSize = Math.max(...allTribes.map(t => t.memberCount));
@@ -28793,8 +28798,14 @@ Are you sure you want to continue?`;
           scenario = 'multi-page';
         }
 
-        // Create navigation state pointing to the EXACT same view
-        const navigationState = createNavigationState(allTribes, scenario, tribeIndex, tribePage);
+        // Safety check: tribe index might be out of bounds if tribes were deleted
+        const safeTribeIndex = Math.min(tribeIndex, allTribes.length - 1);
+        const safeTribePage = safeTribeIndex === tribeIndex ? tribePage : 0;
+
+        console.log(`📍 Navigation safety check: requested tribe ${tribeIndex}, safe tribe ${safeTribeIndex}, allTribes count: ${allTribes.length}`);
+
+        // Create navigation state pointing to a valid view
+        const navigationState = createNavigationState(allTribes, scenario, safeTribeIndex, safeTribePage);
 
         // Build the response data with current navigation state
         // CRITICAL: Pass castlistId for button encoding, name for display
