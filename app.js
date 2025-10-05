@@ -1231,19 +1231,21 @@ async function createSafariMenu(guildId, userId, member) {
  * @param {Object} req - Request object with Discord interaction data
  * @param {Object} guild - Discord guild object
  * @param {Array} tribes - Array of tribe data with members
- * @param {string} castlistName - Name of the castlist
+ * @param {string} castlistId - ID of the castlist (for lookups/button encoding)
  * @param {Object} navigationState - Current navigation state
  * @param {Object} member - Discord member object for permission checking (optional)
  * @param {string} channelId - Channel ID for permission checking (optional)
+ * @param {string} displayMode - 'view' or 'edit' mode
+ * @param {string} castlistName - Display name (optional, defaults to ID)
  */
-async function sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member = null, channelId = null, displayMode = 'view') {
+async function sendCastlist2Response(req, guild, tribes, castlistId, navigationState, member = null, channelId = null, displayMode = 'view', castlistName = null) {
   // Use the build function to avoid duplication
   // Create a permission checker wrapper if needed
   const permissionChecker = (member && channelId) ?
     async (m, c) => await canSendMessagesInChannel(m, c, client) :
     null;
 
-  const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member, channelId, permissionChecker, displayMode);
+  const responseData = await buildCastlist2ResponseData(guild, tribes, castlistId, navigationState, member, channelId, permissionChecker, displayMode, castlistName);
 
   // Send via webhook (used for deferred slash command responses)
   const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
@@ -7873,7 +7875,8 @@ To fix this:
         const navigationState = createNavigationState(tribes, scenario, 0, 0);
 
         // Send castlist response with display mode
-        await sendCastlist2Response(req, guild, tribes, castlistName, navigationState, member, channelId, displayMode);
+        // 🔧 FIX: Pass ID for button encoding, name for display
+        await sendCastlist2Response(req, guild, tribes, requestedCastlistId, navigationState, member, channelId, displayMode, castlistName);
         return;
       } else {
         return result;
@@ -28087,14 +28090,14 @@ Are you sure you want to continue?`;
         }
 
         const displayMode = parts[parts.length - 1] || 'view'; // Default to view if missing
-        const castlistName = parts[parts.length - 2];
+        const castlistId = parts[parts.length - 2];  // This is the ID, not display name
         const currentTribePage = parseInt(parts[parts.length - 3]);
         const currentTribeIndex = parseInt(parts[parts.length - 4]);
 
         // Everything before the last 4 parts is the action
         const action = parts.slice(0, parts.length - 4).join('_');
-        
-        console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistName, displayMode, user: `${user?.username}#${user?.discriminator} (${user?.id})` });
+
+        console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistId, displayMode, user: `${user?.username}#${user?.discriminator} (${user?.id})` });
         
         // Ignore disabled buttons
         if (action.startsWith('disabled_')) {
@@ -28181,8 +28184,13 @@ Are you sure you want to continue?`;
         // Create new navigation state
         const navigationState = createNavigationState(orderedTribes, scenario, newTribeIndex, newTribePage);
         
+        // Look up display name for castlist
+        const playerData = await loadPlayerData();
+        const castlistEntity = playerData[req.body.guild_id]?.castlistConfigs?.[castlistId];
+        const castlistName = castlistEntity?.name || castlistId;
+
         // Send updated response (preserve displayMode for edit mode navigation)
-        await sendCastlist2Response(req, guild, orderedTribes, castlistName, navigationState, req.body.member, req.body.channel_id, displayMode);
+        await sendCastlist2Response(req, guild, orderedTribes, castlistId, navigationState, req.body.member, req.body.channel_id, displayMode, castlistName);
 
         console.log(`Successfully navigated to tribe ${newTribeIndex + 1}, page ${newTribePage + 1} in ${displayMode} mode`);
 
