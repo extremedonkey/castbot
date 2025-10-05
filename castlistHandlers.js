@@ -133,27 +133,34 @@ async function createEditInfoModalForNew(guildId) {
  * Handle castlist selection from dropdown
  * Materializes virtual castlists immediately on selection
  */
-export function handleCastlistSelect(req, res, client) {
+export async function handleCastlistSelect(req, res, client) {
+  const { body } = req;
+  const values = body.data?.values;
+  const selectedCastlistId = values?.[0];
+
+  console.log(`📋 Castlist selected: ${selectedCastlistId || 'none'}`);
+
+  // Handle "Create New Castlist" option DIRECTLY (bypass ButtonHandlerFactory for modals)
+  if (selectedCastlistId === 'create_new') {
+    console.log(`📋 Creating new castlist for guild ${body.guild_id}`);
+
+    // Show the Edit Info modal but for a new castlist
+    const modal = await createEditInfoModalForNew(body.guild_id);
+
+    // Send modal response directly to Discord
+    return res.send({
+      type: 9, // MODAL
+      data: modal
+    });
+  }
+
+  // For all other selections, use ButtonHandlerFactory
   return ButtonHandlerFactory.create({
     id: 'castlist_select',
     updateMessage: true,
     handler: async (context) => {
       let selectedCastlistId = context.values?.[0];
-      console.log(`📋 Castlist selected: ${selectedCastlistId || 'none'}`);
-
-      // Handle "Create New Castlist" option
-      if (selectedCastlistId === 'create_new') {
-        console.log(`📋 Creating new castlist for guild ${context.guildId}`);
-
-        // Show the Edit Info modal but for a new castlist
-        const modal = await createEditInfoModalForNew(context.guildId);
-
-        // Return modal response directly (not UPDATE_MESSAGE)
-        return {
-          type: 9, // MODAL
-          data: modal
-        };
-      }
+      console.log(`📋 Processing castlist selection: ${selectedCastlistId}`);
 
       // Materialize virtual castlists immediately on selection
       if (selectedCastlistId && castlistVirtualAdapter.isVirtualId(selectedCastlistId)) {
