@@ -99,10 +99,10 @@ export async function handleCastlistButton(req, res, client, custom_id) {
       })(req, res, client);
     }
 
-    // For virtual castlists, keep the ID format (e.g., "default" or "virtual_xyz")
-    // For real castlists, use the castlist name (legacy tribes use name matching)
-    // Special case: default castlist should use "default" as the ID
-    const targetId = castlist.isVirtual ? castlistId : castlist.name;
+    // 🔧 FIX: Always use castlistId (not name) to preserve entity lookup for seasonId
+    // The show_castlist2 handler supports both name and ID matching (app.js:4841-4850)
+    // Using ID ensures castlistEntity lookup works correctly for season-based placements
+    const targetId = castlistId;
 
     // Update custom_id to trigger show_castlist2 handler
     req.body.data.custom_id = `show_castlist2_${targetId}`;
@@ -151,9 +151,10 @@ export async function handleCastlistButton(req, res, client, custom_id) {
       })(req, res, client);
     }
 
-    // For virtual castlists, keep the ID format (e.g., "default" or "virtual_xyz")
-    // For real castlists, use the castlist name (legacy tribes use name matching)
-    const targetId = castlist.isVirtual ? castlistId : castlist.name;
+    // 🔧 FIX: Always use castlistId (not name) to preserve entity lookup for seasonId
+    // The show_castlist2 handler supports both name and ID matching (app.js:4841-4850)
+    // Using ID ensures castlistEntity lookup works correctly for season-based placements
+    const targetId = castlistId;
 
     // Update custom_id to trigger show_castlist2 handler in EDIT MODE
     req.body.data.custom_id = `show_castlist2_${targetId}_edit`;
