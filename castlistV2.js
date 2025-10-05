@@ -337,6 +337,9 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
         // 🔧 PHASE 0: Get season context from tribe data (passed via castlistSettings from Phase 2)
         const seasonId = tribe.castlistSettings?.seasonId;
 
+        console.log(`🔍 [PLACEMENT DEBUG] Tribe: ${tribe.name}, castlistSettings:`, tribe.castlistSettings);
+        console.log(`🔍 [PLACEMENT DEBUG] seasonId from castlistSettings: ${seasonId || 'undefined'}`);
+
         // Determine placement namespace: season-specific or global fallback
         const placementNamespace = seasonId
             ? playerDataAll[guild.id]?.placements?.[seasonId]      // Season-specific

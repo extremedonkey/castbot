@@ -1634,6 +1634,14 @@
         "color": "#9b59b6",
         "analyticsName": "💩 ForeverLegacyRole 💩",
         "analyticsAdded": 1759661561330
+      },
+      "1424348666336116786": {
+        "emoji": "🐈",
+        "castlist": "ForeverLegacyCastlist",
+        "showPlayerEmojis": false,
+        "color": "#e91e63",
+        "analyticsName": "🐈 ForeverLegacySecondRole 🐈",
+        "analyticsAdded": 1759661638995
       }
     },
     "timezones": {
@@ -2624,7 +2632,7 @@
       },
       "castlist_1759638936214_system": {
         "id": "castlist_1759638936214_system",
-        "name": "legacyList",
+        "name": "noLongerLegacy",
         "type": "system",
         "createdAt": 1759638936215,
         "createdBy": "migration",
@@ -2635,12 +2643,12 @@
           "visibility": "public"
         },
         "metadata": {
-          "description": "Upgraded from legacy castlist 'legacyList'  aaa",
-          "emoji": "📋",
+          "description": "The new and improved list!",
+          "emoji": "✨",
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1759648507534,
+        "modifiedAt": 1759663735196,
         "modifiedBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79"
       }
@@ -2666,6 +2674,16 @@
           "placement": 7,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-09-30T16:57:54.319Z"
+        },
+        "208197633846542336": {
+          "placement": 6,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T11:14:58.941Z"
+        },
+        "538540453973327873": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T11:15:58.030Z"
         }
       },
       "season_cac1b81de8914c79": {

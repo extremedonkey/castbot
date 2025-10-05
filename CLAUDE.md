@@ -190,6 +190,7 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 - **📋 SEASON APPLICATIONS** → [docs/features/SeasonAppBuilder.md](docs/features/SeasonAppBuilder.md)
 - **🏆 CAST RANKING** → [docs/features/CastRanking.md](docs/features/CastRanking.md)
 - **🥇 CASTLIST V3** → [docs/features/CastlistV3-AlumniPlacements.md](docs/features/CastlistV3-AlumniPlacements.md)
+- **🧭 CASTLIST NAVIGATION** → [docs/features/CastlistNavigationParsing.md](docs/features/CastlistNavigationParsing.md) - Button parsing & identifier resolution
 
 **Safari Subsystems:**
 - **MAP EXPLORER** → [docs/features/SafariMapExplorer.md](docs/features/SafariMapExplorer.md)
