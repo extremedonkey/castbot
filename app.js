@@ -7677,7 +7677,22 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'castlist_select') {
-      // Handle castlist selection from dropdown
+      // Special check for Create New Castlist to bypass handler and show modal directly
+      const values = data.values || [];
+      if (values[0] === 'create_new') {
+        // Handle Create New Castlist modal directly here
+        const { createEditInfoModalForNew } = await import('./castlistHandlers.js');
+        const modal = await createEditInfoModalForNew(req.body.guild_id);
+
+        console.log(`📋 Showing Create New Castlist modal for guild ${req.body.guild_id}`);
+
+        return res.send({
+          type: 9, // MODAL
+          data: modal
+        });
+      }
+
+      // Handle all other castlist selections normally
       const { handleCastlistSelect } = await import('./castlistHandlers.js');
       return handleCastlistSelect(req, res, client);
     } else if (custom_id.startsWith('castlist_delete')) {

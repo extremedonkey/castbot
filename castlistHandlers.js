@@ -14,7 +14,7 @@ import { PermissionFlagsBits } from 'discord.js';
  * Create the Edit Info modal for a NEW castlist
  * Similar to the edit modal but with no pre-filled values and a different submit handler
  */
-async function createEditInfoModalForNew(guildId) {
+export async function createEditInfoModalForNew(guildId) {
   // Import season helpers
   const { getSeasonStageEmoji, getSeasonStageName } = await import('./seasonSelector.js');
   const playerData = await loadPlayerData();
@@ -134,35 +134,8 @@ async function createEditInfoModalForNew(guildId) {
  * Materializes virtual castlists immediately on selection
  */
 export async function handleCastlistSelect(req, res, client) {
-  const { body } = req;
-  const values = body.data?.values;
-  const selectedCastlistId = values?.[0];
-
-  console.log(`📋 Castlist selected: ${selectedCastlistId || 'none'}`);
-
-  // Handle "Create New Castlist" option DIRECTLY (bypass ButtonHandlerFactory for modals)
-  if (selectedCastlistId === 'create_new') {
-    console.log(`📋 Creating new castlist for guild ${body.guild_id}`);
-
-    try {
-      // Show the Edit Info modal but for a new castlist
-      const modal = await createEditInfoModalForNew(body.guild_id);
-
-      console.log('📋 Modal structure:', JSON.stringify(modal, null, 2));
-      console.log('📋 Sending modal response with type 9...');
-
-      // Send modal response directly to Discord
-      return res.send({
-        type: 9, // MODAL
-        data: modal
-      });
-    } catch (error) {
-      console.error('❌ Error creating modal:', error);
-      throw error;
-    }
-  }
-
-  // For all other selections, use ButtonHandlerFactory
+  // Note: create_new is now handled directly in app.js to bypass ButtonHandlerFactory
+  // This function only handles regular castlist selections
   return ButtonHandlerFactory.create({
     id: 'castlist_select',
     updateMessage: true,
