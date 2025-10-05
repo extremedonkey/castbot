@@ -7738,28 +7738,59 @@ To fix this:
         
         // Determine which castlist to show
         const playerData = await loadPlayerData();
-        const castlistName = await determineCastlistToShow(guildId, userId, decodedCastlist);
+        let castlistName = await determineCastlistToShow(guildId, userId, decodedCastlist);
+
+        // 🔧 If requestedCastlistId is a castlistId, look up the real name for display
+        // (Keep requestedCastlistId as ID for tribe matching, but use name for display)
+        let castlistEntity = null;
+        if (requestedCastlistId && (requestedCastlistId.startsWith('castlist_') || requestedCastlistId === 'default')) {
+          castlistEntity = playerData[guildId]?.castlistConfigs?.[requestedCastlistId];
+          if (castlistEntity?.name) {
+            castlistName = castlistEntity.name;
+            console.log(`Resolved castlistId '${requestedCastlistId}' to name '${castlistName}' for display`);
+          }
+        }
+
         console.log('Determined castlist to show:', castlistName);
-        
-        // Get tribes for this castlist (using existing logic)
+
+        // Get tribes for this castlist (using existing logic from main show_castlist2)
         const guildTribes = playerData[guildId]?.tribes || {};
         const allTribes = [];
-        
+
         for (const [roleId, tribe] of Object.entries(guildTribes)) {
-          if (tribe.castlist === castlistName || (!tribe.castlist && castlistName === 'default')) {
+          // 🔧 Check both legacy 'castlist' field and new 'castlistId' field
+          const matchesCastlist = (
+            // Legacy string matching
+            tribe.castlist === castlistName ||
+            // New entity ID matching
+            tribe.castlistId === requestedCastlistId ||
+            // Default castlist special cases
+            (!tribe.castlist && !tribe.castlistId && (castlistName === 'default' || requestedCastlistId === 'default')) ||
+            (tribe.castlist === 'default' && (castlistName === 'Active Castlist' || requestedCastlistId === 'default')) ||
+            (tribe.castlistId === 'default' && (castlistName === 'Active Castlist' || requestedCastlistId === 'default'))
+          );
+
+          if (matchesCastlist) {
             try {
               const role = await guild.roles.fetch(roleId);
               if (!role) continue;
-              
+
               // Keep actual Discord.js member objects like the working show_castlist2 handler
               const tribeMembers = Array.from(role.members.values());
-              
+
               allTribes.push({
                 ...tribe,
                 roleId,
                 name: role.name,
                 members: tribeMembers,
-                memberCount: tribeMembers.length
+                memberCount: tribeMembers.length,
+                // 🔗 PHASE 2: Attach castlist settings AND seasonId for placement lookups
+                castlistSettings: {
+                  ...castlistEntity?.settings,
+                  seasonId: castlistEntity?.seasonId
+                },
+                castlistId: requestedCastlistId,
+                guildId: guildId
               });
             } catch (error) {
               console.error(`Error fetching role ${roleId}:`, error);
@@ -7768,11 +7799,19 @@ To fix this:
         }
         
         if (allTribes.length === 0) {
-          return res.send({
-            type: 4,
-            data: {
-              content: `No tribes found for castlist: ${castlistName}`,
-              flags: 1 << 6  // Ephemeral flag
+          // 🔧 Use webhook endpoint (already sent deferred response)
+          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          return await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: {
+              components: [{
+                type: 17, // Container
+                components: [{
+                  type: 10, // Text Display
+                  content: `❌ No tribes found for castlist: ${castlistName}`
+                }]
+              }],
+              flags: (1 << 15) // IS_COMPONENTS_V2
             }
           });
         }
@@ -7787,11 +7826,19 @@ To fix this:
             const channel = await client.channels.fetch(channelId);
             const permissions = channel?.permissionsFor(member);
             if (!permissions?.has('SendMessages')) {
-              return res.send({
-                type: 4,
-                data: {
-                  content: 'You do not have permission to send messages in this channel.',
-                  flags: 1 << 6  // Ephemeral flag
+              // 🔧 Use webhook endpoint (already sent deferred response)
+              const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+              return await DiscordRequest(endpoint, {
+                method: 'PATCH',
+                body: {
+                  components: [{
+                    type: 17, // Container
+                    components: [{
+                      type: 10, // Text Display
+                      content: '❌ You do not have permission to send messages in this channel.'
+                    }]
+                  }],
+                  flags: (1 << 15) // IS_COMPONENTS_V2
                 }
               });
             }
@@ -7804,11 +7851,19 @@ To fix this:
         // Safety check: ensure tribes is an array
         if (!Array.isArray(tribes) || tribes.length === 0) {
           console.error('Error: tribes is not a valid array after reorderTribes');
-          return res.send({
-            type: 4,
-            data: {
-              content: '❌ Error processing castlist display',
-              flags: 1 << 6  // Ephemeral flag
+          // 🔧 Use webhook endpoint (already sent deferred response)
+          const endpoint = `webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`;
+          return await DiscordRequest(endpoint, {
+            method: 'PATCH',
+            body: {
+              components: [{
+                type: 17, // Container
+                components: [{
+                  type: 10, // Text Display
+                  content: '❌ Error processing castlist display'
+                }]
+              }],
+              flags: (1 << 15) // IS_COMPONENTS_V2
             }
           });
         }
