@@ -28128,11 +28128,11 @@ Are you sure you want to continue?`;
         });
         
         const guildId = req.body.guild_id;
-        
+
         // Load and process tribe data (reuse castlist2 logic)
-        const rawTribes = await getGuildTribes(guildId, castlistName);
+        const rawTribes = await getGuildTribes(guildId, castlistId);  // FIX: Use castlistId
         const guild = await client.guilds.fetch(guildId);
-        
+
         // Use cached data where possible for better performance
         const roles = guild.roles.cache.size > 0 ? guild.roles.cache : await guild.roles.fetch();
         
@@ -28161,7 +28161,7 @@ Are you sure you want to continue?`;
         }));
 
         const validTribes = tribesWithMembers.filter(tribe => tribe !== null);
-        const orderedTribes = reorderTribes(validTribes, req.body.member.user.id, "user-first", castlistName);
+        const orderedTribes = reorderTribes(validTribes, req.body.member.user.id, "user-first", castlistId);  // FIX: Use castlistId
         const scenario = determineDisplayScenario(orderedTribes);
         
         // Calculate new navigation position

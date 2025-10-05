@@ -2549,9 +2549,9 @@
           "migratedFrom": "virtual_SGFzem8",
           "migrationDate": 1758812609810
         },
-        "modifiedAt": 1759635070382,
+        "modifiedAt": 1759657120029,
         "modifiedBy": "391415444084490240",
-        "seasonId": "season_cac1b81de8914c79"
+        "seasonId": "season_875934ef5b7b49ee"
       },
       "default": {
         "id": "default",
@@ -2687,9 +2687,9 @@
           "updatedAt": "2025-10-05T09:26:04.047Z"
         },
         "676262975132139522": {
-          "placement": 2,
+          "placement": 5,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T09:27:50.167Z"
+          "updatedAt": "2025-10-05T09:34:58.622Z"
         }
       },
       "season_cac1b81de8914c79_castlist_1759638936214": {
@@ -2697,6 +2697,23 @@
           "placement": 11,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-05T09:14:43.159Z"
+        }
+      },
+      "season_875934ef5b7b49ee": {
+        "676262975132139522": {
+          "placement": 4,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:39:01.108Z"
+        },
+        "683102296380276766": {
+          "placement": 3,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:39:08.201Z"
+        },
+        "391415444084490240": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:39:13.505Z"
         }
       }
     }
