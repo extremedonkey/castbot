@@ -28099,19 +28099,35 @@ Are you sure you want to continue?`;
         const withoutPrefix = custom_id.substring('castlist2_nav_'.length);
         const parts = withoutPrefix.split('_');
 
-        // Since actions can have underscores, we need to work backwards from the end
-        // Last part is displayMode, second-to-last is castlistName, third-to-last is tribePage, fourth-to-last is tribeIndex
+        // Format: action_{tribeIndex}_{tribePage}_{castlistId}_{displayMode}
+        // CRITICAL: castlistId has underscores! Need smart parsing like placement buttons
+
         if (parts.length < 4) {
           throw new Error('Invalid navigation custom_id format');
         }
 
-        const displayMode = parts[parts.length - 1] || 'view'; // Default to view if missing
-        const castlistId = parts[parts.length - 2];  // This is the ID, not display name
-        const currentTribePage = parseInt(parts[parts.length - 3]);
-        const currentTribeIndex = parseInt(parts[parts.length - 4]);
+        // Work backwards from the end (these are always single parts)
+        const displayMode = parts[parts.length - 1] || 'view';
 
-        // Everything before the last 4 parts is the action
-        const action = parts.slice(0, parts.length - 4).join('_');
+        // Find the castlist by looking for "castlist_" or "default" pattern
+        let castlistIdStartIdx = -1;
+        for (let i = parts.length - 2; i >= 2; i--) {
+          if (parts[i] === 'castlist' || (parts[i] === 'default' && i === parts.length - 2)) {
+            castlistIdStartIdx = i;
+            break;
+          }
+        }
+
+        if (castlistIdStartIdx === -1) {
+          console.error(`❌ Could not find castlist in nav button ID: ${custom_id}`);
+          throw new Error('Invalid navigation button format - missing castlist identifier');
+        }
+
+        // Extract components
+        const currentTribePage = parseInt(parts[castlistIdStartIdx - 1]);
+        const currentTribeIndex = parseInt(parts[castlistIdStartIdx - 2]);
+        const castlistId = parts.slice(castlistIdStartIdx, parts.length - 1).join('_');
+        const action = parts.slice(0, castlistIdStartIdx - 2).join('_');
 
         console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistId, displayMode, user: `${user?.username}#${user?.discriminator} (${user?.id})` });
         
