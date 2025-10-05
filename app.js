@@ -7894,7 +7894,7 @@ To fix this:
         }
 
         const scenario = determineDisplayScenario(tribes);
-        const navigationState = createNavigationState(tribes, scenario, 0, 0);
+        const navigationState = createNavigationState(tribes, scenario, 0, 0, guild, { playerData, guildId });
 
         // Send castlist response with display mode
         // 🔧 FIX: Pass ID for button encoding, name for display
@@ -28235,9 +28235,9 @@ Are you sure you want to continue?`;
             throw new Error('No valid tribes found - all roles may have been deleted');
           }
         }
-        
+
         // Create new navigation state
-        const navigationState = createNavigationState(orderedTribes, scenario, newTribeIndex, newTribePage);
+        const navigationState = createNavigationState(orderedTribes, scenario, newTribeIndex, newTribePage, guild, { playerData, guildId });
 
         // Get display name from previously loaded castlist entity
         const castlistName = castlistEntity?.name || castlistId;
@@ -28844,7 +28844,7 @@ Are you sure you want to continue?`;
         console.log(`📍 Navigation safety check: requested tribe ${tribeIndex}, safe tribe ${safeTribeIndex}, allTribes count: ${allTribes.length}`);
 
         // Create navigation state pointing to a valid view
-        const navigationState = createNavigationState(allTribes, scenario, safeTribeIndex, safeTribePage);
+        const navigationState = createNavigationState(allTribes, scenario, safeTribeIndex, safeTribePage, guild, { playerData, guildId });
 
         // Build the response data with current navigation state
         // CRITICAL: Pass castlistId for button encoding, name for display
@@ -28857,7 +28857,8 @@ Are you sure you want to continue?`;
           channelId,
           null,
           displayMode,
-          castlistEntity?.name || castlistId  // Display name
+          castlistEntity?.name || castlistId,  // Display name
+          { playerData, guildId }  // Pass playerData for sorting
         );
 
         // Send UPDATE_MESSAGE to refresh the UI (matches Safari modal pattern)

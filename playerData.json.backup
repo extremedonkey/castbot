@@ -1499,7 +1499,6 @@
         "castlist": "default",
         "showPlayerEmojis": true,
         "color": "#607d8b",
-        "castlistId": "castlist_1758812609810_system",
         "castlistIds": [
           "default"
         ]
@@ -1525,7 +1524,6 @@
         "color": "#2ecc71",
         "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
         "analyticsAdded": 1754751381750,
-        "castlistId": "castlist_1758812609810_system",
         "castlistIds": [
           "castlist_1759638936214_system"
         ]
@@ -1642,6 +1640,27 @@
         "color": "#e91e63",
         "analyticsName": "🐈 ForeverLegacySecondRole 🐈",
         "analyticsAdded": 1759661638995
+      },
+      "1424390073075372043": {
+        "emoji": "🅰️",
+        "castlist": "MultiA",
+        "showPlayerEmojis": false,
+        "color": "#2ecc71",
+        "analyticsName": "🅰️ The Multi-TribeA 🅰️",
+        "analyticsAdded": 1759671564635,
+        "castlistId": "castlist_1759671866227_system"
+      },
+      "1424390164947664916": {
+        "emoji": "🅱️",
+        "castlist": "MultiA",
+        "showPlayerEmojis": false,
+        "color": "#3498db",
+        "analyticsName": "🅱️ The Multi-TribeB 🅱️",
+        "analyticsAdded": 1759671585440,
+        "castlistId": "castlist_1759671885172_system",
+        "castlistIds": [
+          "castlist_1759671866227_system"
+        ]
       }
     },
     "timezones": {
@@ -1903,6 +1922,23 @@
         "lastUpdated": 1759634522900,
         "seasonId": "season_cac1b81de8914c79",
         "seasonName": "S16 The NU Season",
+        "questions": []
+      },
+      "config_1759672397657_391415444084490240": {
+        "buttonText": "Apply to S8 Multi-A",
+        "explanatoryText": "Multiples of 8 everywhere!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1759672397658,
+        "lastUpdated": 1759672397658,
+        "seasonId": "season_9a8360f7864d4120",
+        "seasonName": "S8 Multi-A",
         "questions": []
       }
     },
@@ -2553,7 +2589,7 @@
         "createdAt": 1758812609810,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -2565,8 +2601,8 @@
           "migratedFrom": "virtual_SGFzem8",
           "migrationDate": 1758812609810
         },
-        "modifiedAt": 1759657120029,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1759671055123,
+        "modifiedBy": "system",
         "seasonId": "season_875934ef5b7b49ee"
       },
       "default": {
@@ -2651,6 +2687,49 @@
         "modifiedAt": 1759663735196,
         "modifiedBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79"
+      },
+      "castlist_1759671866227_system": {
+        "id": "castlist_1759671866227_system",
+        "name": "MultiA",
+        "type": "system",
+        "createdAt": 1759671866227,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "",
+          "emoji": "8️⃣",
+          "migratedFrom": "virtual_TXVsdGlB",
+          "migrationDate": 1759671866227
+        },
+        "modifiedAt": 1759672442941,
+        "modifiedBy": "391415444084490240",
+        "seasonId": "season_9a8360f7864d4120"
+      },
+      "castlist_1759671885172_system": {
+        "id": "castlist_1759671885172_system",
+        "name": "MultiB",
+        "type": "system",
+        "createdAt": 1759671885172,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "",
+          "emoji": "🅱️",
+          "migratedFrom": "virtual_TXVsdGlC",
+          "migrationDate": 1759671885172
+        },
+        "modifiedAt": 1759671896374,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {
@@ -2780,6 +2859,38 @@
           "placement": 4,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-05T12:40:59.298Z"
+        },
+        "468655730975703041": {
+          "placement": 9,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:42:28.312Z"
+        }
+      },
+      "season_9a8360f7864d4120": {
+        "1088078919409881098": {
+          "placement": 7,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T13:55:04.401Z"
+        },
+        "676262975132139522": {
+          "placement": 4,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T13:55:10.409Z"
+        },
+        "208197633846542336": {
+          "placement": 9,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T13:55:15.434Z"
+        },
+        "538540453973327873": {
+          "placement": 3,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T13:55:21.047Z"
+        },
+        "383455201182613514": {
+          "placement": 22,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T13:55:30.590Z"
         }
       }
     }
