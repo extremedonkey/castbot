@@ -32,8 +32,8 @@ async function createEditInfoModalForNew(guildId) {
   const seasonOptions = [{
     label: '🌟 No Season (Winners, Alumni, etc.)',
     value: 'none',
-    description: 'Used where players are across multiple seasons',
-    default: true // Default to "No Season" for new castlists
+    description: 'Used where players are across multiple seasons'
+    // No default when min_values is 0 - user can choose to have no season
   }];
 
   // Add actual seasons if they exist (limit to 24 to stay within Discord's 25 option limit)
@@ -50,8 +50,8 @@ async function createEditInfoModalForNew(guildId) {
       return {
         label: `${emoji} ${season.seasonName}`.substring(0, 100),
         value: season.seasonId,
-        description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100),
-        default: false
+        description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100)
+        // No default property when min_values is 0
       };
     });
 
