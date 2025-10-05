@@ -2576,7 +2576,7 @@
       },
       "castlist_1759422854044_system": {
         "id": "castlist_1759422854044_system",
-        "name": "The OId Ask Tribe",
+        "name": "The OId Ask Tribe - NEW!",
         "type": "legacy",
         "createdAt": 1759422854045,
         "createdBy": "migration",
@@ -2591,7 +2591,9 @@
           "emoji": "🏕️",
           "migratedFrom": "virtual_VGhlIE9JZCBBc2sgVHJpYmU",
           "migrationDate": 1759422854045
-        }
+        },
+        "modifiedAt": 1759422874788,
+        "modifiedBy": "system"
       }
     },
     "placements": {

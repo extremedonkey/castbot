@@ -171,7 +171,7 @@ export async function handleCastlistButton(req, res, client, custom_id) {
       // Special handling for Edit Info - show modal
       if (buttonType === 'edit_info') {
         const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
-        
+
         if (!castlist) {
           return {
             type: 4,
@@ -181,54 +181,128 @@ export async function handleCastlistButton(req, res, client, custom_id) {
             }
           };
         }
-        
-        // Create modal for editing castlist info
+
+        // Import season helpers
+        const { getSeasonStageEmoji, getSeasonStageName } = await import('./seasonSelector.js');
+        const playerData = await loadPlayerData();
+        const seasons = playerData[context.guildId]?.applicationConfigs || {};
+        const currentSeasonId = castlist.seasonId || null;
+
+        // Build season options (most recent first)
+        const allSeasons = Object.entries(seasons)
+          .sort(([,a], [,b]) => {
+            const aTime = a.lastUpdated || a.createdAt || 0;
+            const bTime = b.lastUpdated || b.createdAt || 0;
+            return bTime - aTime;
+          });
+
+        // CRITICAL: Hard limit to 24 seasons (Discord limit is 25 total including "No Season")
+        const maxSeasons = 24;
+        const selectedSeasons = allSeasons.slice(0, maxSeasons);
+        const droppedCount = allSeasons.length - maxSeasons;
+
+        const seasonOptions = selectedSeasons.map(([configId, season]) => {
+          const stage = season.stage || 'planning';
+          const emoji = getSeasonStageEmoji(stage);
+          const stageName = getSeasonStageName(stage);
+          const lastUpdate = new Date(season.lastUpdated || season.createdAt || 0);
+
+          return {
+            label: `${emoji} ${season.seasonName}`.substring(0, 100),
+            value: configId,
+            description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100),
+            default: configId === currentSeasonId
+          };
+        });
+
+        // Add "No Season" option at the BOTTOM (always included, position 25)
+        seasonOptions.push({
+          label: '🌟 No Season (Winners, Alumni, etc.)',
+          value: 'none',
+          description: 'Used where players are across multiple seasons',
+          default: !currentSeasonId
+        });
+
+        // Log if seasons were dropped
+        if (droppedCount > 0) {
+          console.log(`[CASTLIST] Showing ${maxSeasons} most recent seasons, ${droppedCount} older seasons not displayed`);
+        }
+
+        // Create modal for editing castlist info with Components V2
         return {
           type: 9, // Modal
           data: {
             custom_id: `castlist_edit_info_modal_${castlistId}`,
             title: 'Edit Castlist Info',
             components: [
+              // Header text
               {
-                type: 1, // Action Row
-                components: [{
+                type: 10, // Text Display
+                content: '### Castlist Information\n\nEdit the details below:'
+              },
+
+              // Name field (Label + Text Input)
+              {
+                type: 18, // Label
+                label: 'Castlist Name',
+                component: {
                   type: 4, // Text Input
                   custom_id: 'castlist_name',
-                  label: 'Castlist Name',
                   style: 1, // Short
+                  required: true,
                   value: castlist.name || '',
                   placeholder: 'Enter castlist name',
-                  required: true,
                   min_length: 1,
                   max_length: 100
-                }]
+                }
               },
+
+              // Emoji field (Label + Text Input)
               {
-                type: 1, // Action Row
-                components: [{
+                type: 18, // Label
+                label: 'Emoji',
+                description: 'Single emoji to represent this castlist',
+                component: {
                   type: 4, // Text Input
                   custom_id: 'castlist_emoji',
-                  label: 'Castlist Emoji',
                   style: 1, // Short
-                  value: castlist.metadata?.emoji || '📋',
-                  placeholder: 'Enter an emoji (e.g., 🎭)',
                   required: false,
-                  min_length: 1,
+                  value: castlist.metadata?.emoji || '',
+                  placeholder: '📋',
                   max_length: 10
-                }]
+                }
               },
+
+              // Description field (Label + Text Input)
               {
-                type: 1, // Action Row
-                components: [{
+                type: 18, // Label
+                label: 'Description',
+                description: 'Optional description for this castlist',
+                component: {
                   type: 4, // Text Input
                   custom_id: 'castlist_description',
-                  label: 'Description',
                   style: 2, // Paragraph
-                  value: castlist.metadata?.description || '',
-                  placeholder: 'Enter a brief description',
                   required: false,
+                  value: castlist.metadata?.description || '',
+                  placeholder: 'Describe this castlist...',
                   max_length: 200
-                }]
+                }
+              },
+
+              // NEW: Season selector (Label + String Select)
+              {
+                type: 18, // Label
+                label: 'Associated Season',
+                description: 'Link this castlist to a specific season (optional)',
+                component: {
+                  type: 3, // String Select
+                  custom_id: 'season_id',
+                  placeholder: 'Choose a season...',
+                  required: false,
+                  min_values: 0, // Allow deselecting all
+                  max_values: 1,
+                  options: seasonOptions
+                }
               }
             ]
           }
@@ -542,23 +616,64 @@ export function handleEditInfoModal(req, res, client, custom_id) {
   return (async () => {
     try {
       const guildId = req.body.guild_id;
+      const userId = req.body.member?.user?.id || req.body.user?.id;
       console.log(`📋 Updating castlist info for ${castlistId}`);
 
-      // Extract form values
-      const newName = components[0].components[0].value?.trim();
-      const newEmoji = components[1].components[0].value?.trim() || '📋';
-      const newDescription = components[2].components[0].value?.trim() || '';
+      // Extract form values from Components V2 structure (Label + component)
+      const fields = {};
 
-      // Update the castlist
-      await castlistManager.updateCastlist(guildId, castlistId, {
-        name: newName,
-        metadata: {
-          emoji: newEmoji,
-          description: newDescription
+      components.forEach(comp => {
+        // Skip Text Display components (type 10)
+        if (comp.type === 10) return;
+
+        // Handle Label components (type 18)
+        if (comp.type === 18 && comp.component) {
+          const innerComp = comp.component;
+
+          if (innerComp.custom_id === 'castlist_name') {
+            fields.name = innerComp.value?.trim();
+          } else if (innerComp.custom_id === 'castlist_emoji') {
+            fields.emoji = innerComp.value?.trim() || '📋';
+          } else if (innerComp.custom_id === 'castlist_description') {
+            fields.description = innerComp.value?.trim() || '';
+          } else if (innerComp.custom_id === 'season_id') {
+            // Extract season selection (String Select)
+            const selectedValues = innerComp.values || [];
+
+            if (selectedValues.length === 0) {
+              // User deselected all (min_values: 0)
+              fields.seasonId = 'none';
+            } else {
+              fields.seasonId = selectedValues[0]; // "none" or actual config ID
+            }
+          }
         }
       });
 
-      console.log(`✅ Updated castlist ${castlistId}: name="${newName}", emoji="${newEmoji}"`);
+      // Prepare updates object
+      const updates = {
+        name: fields.name,
+        metadata: {
+          emoji: fields.emoji,
+          description: fields.description
+        },
+        modifiedBy: userId
+      };
+
+      // Handle season association
+      if (fields.seasonId === 'none') {
+        // User selected "No Season" - remove association (uses placements.global)
+        updates.seasonId = null;
+      } else if (fields.seasonId) {
+        // User selected a season
+        updates.seasonId = fields.seasonId;
+      }
+      // If fields.seasonId is undefined, season field wasn't in modal (shouldn't happen)
+
+      // Update the castlist
+      await castlistManager.updateCastlist(guildId, castlistId, updates);
+
+      console.log(`✅ Updated castlist ${castlistId}: name="${fields.name}", emoji="${fields.emoji}", seasonId=${fields.seasonId || 'unchanged'}`);
 
       // Refresh the UI with the castlist still selected
       const hubData = await createCastlistHub(guildId, {

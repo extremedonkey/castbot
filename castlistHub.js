@@ -254,23 +254,40 @@ async function createCastlistDetailsSection(guildId, castlist) {
     const tribesList = tribesUsingCastlist.map(roleId => {
       const tribe = tribes[roleId];
       if (!tribe) return null;
-      
+
       // Get tribe emoji (default to 🏕️ if not set)
       const emoji = tribe.emoji || '🏕️';
       return `${emoji} <@&${roleId}>`;
     }).filter(Boolean);
-    
+
     tribesDisplay = tribesList.join('\n');
   } else {
     tribesDisplay = '-# No tribes currently using this castlist';
   }
-  
+
+  // Get season name if associated
+  let seasonLine = '';
+  if (castlist.seasonId) {
+    const season = playerData[guildId]?.applicationConfigs?.[castlist.seasonId];
+
+    if (season) {
+      // Season exists - display with emoji
+      const { getSeasonStageEmoji } = await import('./seasonSelector.js');
+      const stageEmoji = getSeasonStageEmoji(season.stage || 'planning');
+      seasonLine = `-# Season: ${stageEmoji} ${season.seasonName}\n`;
+    } else {
+      // Season was deleted
+      seasonLine = `-# Season: ⚠️ Deleted season (ID: ${castlist.seasonId})\n`;
+    }
+  }
+
   // Build the details section
   const content = `> **\`${castlist.metadata?.emoji || '📋'} ${castlist.name}\`**\n` +
     `-# ${castlist.metadata?.description || 'No description'}\n` +
-    `-# Type: ${castlist.type} | Created: <t:${Math.floor((castlist.createdAt || Date.now()) / 1000)}:R>` +
-    (castlist.isVirtual ? '\n-# ⚠️ Legacy castlist - will be upgraded on first edit' : '') +
-    `\n\n**Tribes Using This Castlist:**\n${tribesDisplay}`;
+    `-# Type: ${castlist.type} | Created: <t:${Math.floor((castlist.createdAt || Date.now()) / 1000)}:R>\n` +
+    seasonLine + // Season line (if any)
+    (castlist.isVirtual ? `-# ⚠️ Legacy castlist - will be upgraded on first edit\n` : '') +
+    `\n**Tribes Using This Castlist:**\n${tribesDisplay}`;
   
   return {
     type: 10, // Text Display

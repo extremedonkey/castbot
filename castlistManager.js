@@ -155,7 +155,26 @@ export class CastlistManager {
     // Apply updates
     if (updates.name !== undefined) castlist.name = updates.name;
     if (updates.type !== undefined) castlist.type = updates.type;
-    if (updates.seasonId !== undefined) castlist.seasonId = updates.seasonId;
+
+    // Handle season association
+    if (updates.seasonId !== undefined) {
+      if (updates.seasonId === null) {
+        // Remove season association
+        delete castlist.seasonId;
+        console.log(`[CASTLIST] Removed season association from '${castlist.name}'`);
+      } else {
+        // Set season association
+        castlist.seasonId = updates.seasonId;
+
+        // Validate season exists (optional logging)
+        const season = playerData[guildId]?.applicationConfigs?.[updates.seasonId];
+        if (season) {
+          console.log(`[CASTLIST] Associated '${castlist.name}' with season '${season.seasonName}'`);
+        } else {
+          console.warn(`[CASTLIST] Warning: Season ${updates.seasonId} not found for castlist '${castlist.name}'`);
+        }
+      }
+    }
     
     if (updates.settings) {
       castlist.settings = { ...castlist.settings, ...updates.settings };
