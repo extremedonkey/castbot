@@ -233,14 +233,8 @@ export async function handleCastlistButton(req, res, client, custom_id) {
           type: 9, // Modal
           data: {
             custom_id: `castlist_edit_info_modal_${castlistId}`,
-            title: 'Edit Castlist Info',
+            title: 'Manage Castlist Info',
             components: [
-              // Header text
-              {
-                type: 10, // Text Display
-                content: '### Castlist Information\n\nEdit the details below:'
-              },
-
               // Name field (Label + Text Input)
               {
                 type: 18, // Label
@@ -257,18 +251,33 @@ export async function handleCastlistButton(req, res, client, custom_id) {
                 }
               },
 
-              // Emoji field (Label + Text Input)
+              // Season selector (Label + String Select) - MOVED TO SECOND
               {
                 type: 18, // Label
-                label: 'Emoji',
-                description: 'Single emoji to represent this castlist',
+                label: 'Associated Season',
+                description: 'What season is this Castlist for?',
+                component: {
+                  type: 3, // String Select
+                  custom_id: 'season_id',
+                  placeholder: 'Choose a season...',
+                  required: false,
+                  min_values: 0, // Allow deselecting all
+                  max_values: 1,
+                  options: seasonOptions
+                }
+              },
+
+              // Season Emoji field (Label + Text Input)
+              {
+                type: 18, // Label
+                label: 'Season Emoji',
                 component: {
                   type: 4, // Text Input
                   custom_id: 'castlist_emoji',
                   style: 1, // Short
                   required: false,
                   value: castlist.metadata?.emoji || '',
-                  placeholder: '📋',
+                  placeholder: 'Single emoji to represent this Castlist.',
                   max_length: 10
                 }
               },
@@ -286,22 +295,6 @@ export async function handleCastlistButton(req, res, client, custom_id) {
                   value: castlist.metadata?.description || '',
                   placeholder: 'Describe this castlist...',
                   max_length: 200
-                }
-              },
-
-              // NEW: Season selector (Label + String Select)
-              {
-                type: 18, // Label
-                label: 'Associated Season',
-                description: 'Link this castlist to a specific season (optional)',
-                component: {
-                  type: 3, // String Select
-                  custom_id: 'season_id',
-                  placeholder: 'Choose a season...',
-                  required: false,
-                  min_values: 0, // Allow deselecting all
-                  max_values: 1,
-                  options: seasonOptions
                 }
               }
             ]

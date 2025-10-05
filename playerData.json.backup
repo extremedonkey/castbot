@@ -1871,6 +1871,23 @@
         "createdBy": "391415444084490240",
         "createdAt": 1758635465491,
         "lastUpdated": 1758635465491
+      },
+      "config_1759634522896_391415444084490240": {
+        "buttonText": "Apply to S16 The NU Season",
+        "explanatoryText": "New things are happening!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1759634522900,
+        "lastUpdated": 1759634522900,
+        "seasonId": "season_cac1b81de8914c79",
+        "seasonName": "S16 The NU Season",
+        "questions": []
       }
     },
     "ownerInfo": {
@@ -2532,9 +2549,9 @@
           "migratedFrom": "virtual_SGFzem8",
           "migrationDate": 1758812609810
         },
-        "modifiedAt": 1759634423243,
+        "modifiedAt": 1759635070382,
         "modifiedBy": "391415444084490240",
-        "seasonId": "config_1751549410029_391415444084490240"
+        "seasonId": "season_cac1b81de8914c79"
       },
       "default": {
         "id": "default",
