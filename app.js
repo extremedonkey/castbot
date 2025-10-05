@@ -27986,28 +27986,30 @@ Are you sure you want to continue?`;
         const user = req.body.member?.user || req.body.user;
         console.log(`Processing castlist2 navigation: ${custom_id} | User: ${user?.username || 'Unknown'}#${user?.discriminator || '0000'} (${user?.id || 'Unknown ID'})`);
         
-        // Parse new format: castlist2_nav_${action}_${tribeIndex}_${tribePage}_${castlistName}
-        // Example: castlist2_nav_next_page_0_0_default
+        // Parse new format: castlist2_nav_${action}_${tribeIndex}_${tribePage}_${castlistName}_${displayMode}
+        // Example: castlist2_nav_next_page_0_0_default_view
+        // Example: castlist2_nav_next_page_0_0_legacyList_edit
         // We need to be careful because action can contain underscores (next_page, last_tribe, etc.)
-        
+
         // Remove the 'castlist2_nav_' prefix
         const withoutPrefix = custom_id.substring('castlist2_nav_'.length);
         const parts = withoutPrefix.split('_');
-        
+
         // Since actions can have underscores, we need to work backwards from the end
-        // Last part is castlistName, second-to-last is tribePage, third-to-last is tribeIndex
-        if (parts.length < 3) {
+        // Last part is displayMode, second-to-last is castlistName, third-to-last is tribePage, fourth-to-last is tribeIndex
+        if (parts.length < 4) {
           throw new Error('Invalid navigation custom_id format');
         }
+
+        const displayMode = parts[parts.length - 1] || 'view'; // Default to view if missing
+        const castlistName = parts[parts.length - 2];
+        const currentTribePage = parseInt(parts[parts.length - 3]);
+        const currentTribeIndex = parseInt(parts[parts.length - 4]);
+
+        // Everything before the last 4 parts is the action
+        const action = parts.slice(0, parts.length - 4).join('_');
         
-        const castlistName = parts[parts.length - 1];
-        const currentTribePage = parseInt(parts[parts.length - 2]);
-        const currentTribeIndex = parseInt(parts[parts.length - 3]);
-        
-        // Everything before the last 3 parts is the action
-        const action = parts.slice(0, parts.length - 3).join('_');
-        
-        console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistName, user: `${user?.username}#${user?.discriminator} (${user?.id})` });
+        console.log('Parsed navigation:', { action, currentTribeIndex, currentTribePage, castlistName, displayMode, user: `${user?.username}#${user?.discriminator} (${user?.id})` });
         
         // Ignore disabled buttons
         if (action.startsWith('disabled_')) {
@@ -28094,10 +28096,10 @@ Are you sure you want to continue?`;
         // Create new navigation state
         const navigationState = createNavigationState(orderedTribes, scenario, newTribeIndex, newTribePage);
         
-        // Send updated response
-        await sendCastlist2Response(req, guild, orderedTribes, castlistName, navigationState, req.body.member, req.body.channel_id);
-        
-        console.log(`Successfully navigated to tribe ${newTribeIndex + 1}, page ${newTribePage + 1}`);
+        // Send updated response (preserve displayMode for edit mode navigation)
+        await sendCastlist2Response(req, guild, orderedTribes, castlistName, navigationState, req.body.member, req.body.channel_id, displayMode);
+
+        console.log(`Successfully navigated to tribe ${newTribeIndex + 1}, page ${newTribePage + 1} in ${displayMode} mode`);
 
       } catch (error) {
         console.error('Error handling castlist2 navigation:', error);

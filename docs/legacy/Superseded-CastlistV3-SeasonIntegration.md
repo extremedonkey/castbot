@@ -1,3 +1,5 @@
+# THIS DESIGN HAS BEEN SUPERCEDED - DO NOT RELY ON THIS - VALIDATE WITH AS BUIT CODE
+
 # CastlistV3 Season Integration Design
 
 ## Overview

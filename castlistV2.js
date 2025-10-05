@@ -458,20 +458,21 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
  * Creates context-aware navigation buttons for complex tribe/page navigation
  * @param {Object} navigationState - Complete navigation state
  * @param {string} castlistName - Name of the castlist
+ * @param {string} displayMode - Display mode ('view' or 'edit') to preserve across navigation
  * @returns {ActionRowBuilder} Action row with navigation buttons
  */
-function createNavigationButtons(navigationState, castlistName) {
+function createNavigationButtons(navigationState, castlistName, displayMode = 'view') {
     const { currentTribeIndex, currentTribePage, totalTribes, scenario, tribes } = navigationState;
     const currentTribe = tribes[currentTribeIndex];
     const row = new ActionRowBuilder();
-    
+
     // Determine navigation context
     const isFirstTribe = currentTribeIndex === 0;
     const isLastTribe = currentTribeIndex === totalTribes - 1;
     const isFirstPageOfTribe = currentTribePage === 0;
     const isLastPageOfTribe = currentTribePage === currentTribe.totalPages - 1;
     const isMultiPageTribe = currentTribe.totalPages > 1;
-    
+
     // Last button logic
     let lastLabel, lastDisabled, lastAction;
     if (isFirstTribe && isFirstPageOfTribe) {
@@ -487,7 +488,7 @@ function createNavigationButtons(navigationState, castlistName) {
         lastDisabled = false;
         lastAction = 'last_tribe';
     }
-    
+
     // Next button logic
     let nextLabel, nextDisabled, nextAction;
     if (isLastTribe && isLastPageOfTribe) {
@@ -503,16 +504,17 @@ function createNavigationButtons(navigationState, castlistName) {
         nextDisabled = false;
         nextAction = 'next_tribe';
     }
-    
-    // Create simplified arrow buttons (blue when enabled)
+
+    // Encode displayMode in custom_id to preserve edit mode across navigation
+    // Format: castlist2_nav_${action}_${tribeIndex}_${tribePage}_${castlistName}_${displayMode}
     const lastButton = new ButtonBuilder()
-        .setCustomId(`castlist2_nav_${lastAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}`)
+        .setCustomId(`castlist2_nav_${lastAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}_${displayMode}`)
         .setLabel("◀")
         .setStyle(lastDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
         .setDisabled(lastDisabled);
-    
+
     const nextButton = new ButtonBuilder()
-        .setCustomId(`castlist2_nav_${nextAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}`)
+        .setCustomId(`castlist2_nav_${nextAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}_${displayMode}`)
         .setLabel("▶")
         .setStyle(nextDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
         .setDisabled(nextDisabled);
@@ -835,7 +837,7 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistName, na
   }
 
   // Create navigation buttons (now includes viral growth buttons)
-  const navigationRow = createNavigationButtons(navigationState, castlistName);
+  const navigationRow = createNavigationButtons(navigationState, castlistName, displayMode);
 
   // Create complete layout
   const responseData = createCastlistV2Layout(
