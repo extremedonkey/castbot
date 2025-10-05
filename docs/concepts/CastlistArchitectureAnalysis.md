@@ -6,6 +6,135 @@ This document provides a comprehensive architectural analysis of the castlist sy
 
 ## 📊 Current Architecture (Updated)
 
+### 🏗️ System Architecture Overview (Sun 5 October - Troubleshooting Castlist Placements Editor)
+
+**Complete execution flow including Placements Editor:**
+
+```mermaid
+graph TB
+    subgraph "User Entry Points"
+        UH["Castlist Hub<br/>(castlistHub.js)"]
+        UC["/castlist Command<br/>(app.js)"]
+        UB["show_castlist2 Button"]
+    end
+
+    subgraph "Router Layer - app.js"
+        R1["Button Router<br/>castlist_placements_*"]
+        R2["show_castlist2 Handler<br/>app.js:4778"]
+        R3["edit_placement Handler<br/>app.js:7865"]
+        R4["save_placement Handler<br/>app.js:28659"]
+    end
+
+    subgraph "Castlist Handlers - castlistHandlers.js"
+        CH["handleCastlistButton()<br/>Line 66"]
+        CHR["Redirect Logic<br/>Lines 114-164"]
+    end
+
+    subgraph "Data Access Layer"
+        CM["CastlistManager<br/>(castlistManager.js)"]
+        VA["Virtual Adapter<br/>(castlistVirtualAdapter.js)"]
+        PD["Storage Layer<br/>(storage.js)"]
+        CU["Castlist Utils<br/>(castlistUtils.js)"]
+    end
+
+    subgraph "Display Layer - castlistV2.js"
+        BCD["buildCastlist2ResponseData()<br/>Line 796"]
+        CTS["createTribeSection()<br/>Line 320"]
+        CPC["createPlayerCard()<br/>(inline)"]
+        CNB["createNavigationButtons()"]
+    end
+
+    subgraph "Data Storage"
+        CONF["castlistConfigs<br/>{castlistId: entity}"]
+        TRIBES["tribes<br/>{roleId: tribe data}"]
+        PLACE["placements<br/>{seasonId|global: {userId: data}}"]
+        LEGACY["Legacy<br/>(tribe.castlist strings)"]
+    end
+
+    subgraph "Modal & Response Flow"
+        M1["Edit Placement Modal<br/>(shows current value)"]
+        M2["Save Placement Modal<br/>(validates & saves)"]
+        UPD["UPDATE_MESSAGE<br/>(refresh castlist)"]
+    end
+
+    %% User Flow
+    UH -->|"Click Placements Button"| R1
+    R1 -->|"Dispatch to Handler"| CH
+    CH -->|"Check Permissions"| CHR
+    CHR -->|"Modify req.body.data.custom_id<br/>to show_castlist2_{id}_edit"| R2
+
+    %% Display Flow
+    R2 -->|"Parse castlistId & mode"| CU
+    R2 -->|"getCastlist()"| CM
+    CM -->|"Handle virtual/real"| VA
+    VA -->|"loadPlayerData()"| PD
+    PD -->|"Read"| CONF
+    PD -->|"Read"| TRIBES
+
+    R2 -->|"Build tribes array<br/>with seasonId context"| BCD
+    BCD -->|"displayMode='edit'"| CTS
+
+    %% Placement Loading
+    CTS -->|"Load placements from<br/>placements[seasonId] or .global"| PD
+    PD -->|"Read"| PLACE
+    CTS -->|"Create player cards<br/>with edit buttons"| CPC
+
+    %% Edit Flow
+    CPC -->|"User clicks<br/>edit_placement_{userId}_{seasonContext}_..."| R3
+    R3 -->|"Load current placement"| PD
+    R3 -->|"Show modal"| M1
+
+    %% Save Flow
+    M1 -->|"User submits<br/>save_placement_*"| R4
+    R4 -->|"Validate input"| R4
+    R4 -->|"Save to placements[seasonContext][userId]"| PD
+    PD -->|"Write"| PLACE
+    R4 -->|"clearRequestCache()"| PD
+    R4 -->|"Rebuild castlist with<br/>navigation state preserved"| BCD
+    BCD -->|"Same flow as display"| CTS
+    R4 -->|"Send UPDATE_MESSAGE"| UPD
+
+    %% Navigation
+    CTS -->|"Create nav buttons"| CNB
+
+    %% Styling
+    style R1 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style R2 fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
+    style R3 fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style R4 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style CH fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style CHR fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:#fff
+    style BCD fill:#2d3748,stroke:#1a202c,stroke-width:3px,color:#e2e8f0
+    style CTS fill:#2d3748,stroke:#1a202c,stroke-width:2px,color:#e2e8f0
+    style CPC fill:#2d3748,stroke:#1a202c,stroke-width:2px,color:#e2e8f0
+    style VA fill:#4a5568,stroke:#2d3748,stroke-width:3px,color:#e2e8f0
+    style CM fill:#4a5568,stroke:#2d3748,stroke-width:2px,color:#e2e8f0
+    style PLACE fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff
+    style M1 fill:#f59e0b,stroke:#d97706,stroke-width:2px,color:#fff
+    style M2 fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+    style UPD fill:#10b981,stroke:#059669,stroke-width:2px,color:#fff
+```
+
+**Key Components:**
+
+1. **Entry Point**: Castlist Hub → `castlist_placements_{castlistId}` button
+2. **Handler Routing**: `castlistHandlers.js:82-164` → Redirects to `show_castlist2_{id}_edit`
+3. **Display Builder**: `buildCastlist2ResponseData()` → `createTribeSection()` (loads placements)
+4. **Placements Data**: Stored in `placements[seasonId][userId]` or `placements.global[userId]`
+5. **Edit Flow**:
+   - Click edit button → Modal with current value
+   - Submit → Save to placements namespace
+   - Rebuild castlist with navigation state preserved
+   - UPDATE_MESSAGE response
+
+**Critical Insights:**
+
+- ✅ **buildCastlist2ResponseData()** is now in `castlistV2.js` (was flagged as problematic in app.js)
+- ✅ **Season Context**: Determined by `castlist.seasonId` → routes to correct placement namespace
+- ✅ **Navigation Preservation**: All context encoded in button IDs (castlistId, tribeIndex, tribePage, displayMode)
+- ✅ **Permission Check**: Placements button requires `ManageRoles` permission
+- ⚠️ **Data Access**: Placements still accessed directly via `playerData.placements` (not abstracted)
+
 ### System Overview - Dark Mode Friendly
 
 ```mermaid
