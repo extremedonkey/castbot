@@ -4815,9 +4815,20 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const { determineCastlistToShow } = await import('./utils/castlistUtils.js');
       const { determineDisplayScenario, createNavigationState, reorderTribes } = await import('./castlistV2.js');
       
-      // Determine which castlist to show  
+      // Determine which castlist to show
       const playerData = await loadPlayerData();
-      const castlistName = await determineCastlistToShow(guildId, userId, requestedCastlist);
+      let castlistName = await determineCastlistToShow(guildId, userId, requestedCastlist);
+
+      // If requestedCastlist is a castlistId, look up the real name for display
+      // (Keep requestedCastlist as ID for tribe matching, but use name for display)
+      if (requestedCastlist && (requestedCastlist.startsWith('castlist_') || requestedCastlist === 'default')) {
+        const castlistEntity = playerData[guildId]?.castlistConfigs?.[requestedCastlist];
+        if (castlistEntity?.name) {
+          castlistName = castlistEntity.name;
+          console.log(`Resolved castlistId '${requestedCastlist}' to name '${castlistName}' for display`);
+        }
+      }
+
       console.log('Determined castlist to show:', castlistName);
       
       // Get tribes for this castlist (using existing logic from app.js)
