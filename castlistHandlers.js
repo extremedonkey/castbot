@@ -144,14 +144,22 @@ export async function handleCastlistSelect(req, res, client) {
   if (selectedCastlistId === 'create_new') {
     console.log(`📋 Creating new castlist for guild ${body.guild_id}`);
 
-    // Show the Edit Info modal but for a new castlist
-    const modal = await createEditInfoModalForNew(body.guild_id);
+    try {
+      // Show the Edit Info modal but for a new castlist
+      const modal = await createEditInfoModalForNew(body.guild_id);
 
-    // Send modal response directly to Discord
-    return res.send({
-      type: 9, // MODAL
-      data: modal
-    });
+      console.log('📋 Modal structure:', JSON.stringify(modal, null, 2));
+      console.log('📋 Sending modal response with type 9...');
+
+      // Send modal response directly to Discord
+      return res.send({
+        type: 9, // MODAL
+        data: modal
+      });
+    } catch (error) {
+      console.error('❌ Error creating modal:', error);
+      throw error;
+    }
   }
 
   // For all other selections, use ButtonHandlerFactory
