@@ -7892,18 +7892,34 @@ To fix this:
     } else if (custom_id.startsWith('edit_placement_')) {
       // Handle placement edit button - show modal (MIGRATED TO FACTORY)
       // 🔧 FIX: Parse full navigation context from button ID
-      // Format: edit_placement_{userId}_{seasonContext}_{castlistName}_{tribeIndex}_{tribePage}_{displayMode}
-      const parts = custom_id.split('_');
-      const playerId = parts[2];
+      // Format: edit_placement_{userId}_{seasonContext}_{castlistId}_{tribeIndex}_{tribePage}_{displayMode}
+      // CRITICAL: Both seasonContext AND castlistId can contain underscores!
+      // Example: edit_placement_123_season_abc_castlist_456_system_0_0_edit
 
-      // Find displayMode (last part) to know where seasonContext ends
+      // Work backwards from the end (these are always single parts)
+      const parts = custom_id.split('_');
       const displayMode = parts[parts.length - 1]; // 'edit' or 'view'
       const tribePage = parts[parts.length - 2];
       const tribeIndex = parts[parts.length - 3];
-      const castlistName = parts[parts.length - 4];
 
-      // Everything between playerId and castlistName is seasonContext
-      const seasonContext = parts.slice(3, parts.length - 4).join('_') || 'global';
+      // The castlistId starts at a known position and extends backward
+      // Find the castlist by looking for "castlist_" pattern
+      let castlistIdStartIdx = -1;
+      for (let i = parts.length - 4; i >= 3; i--) {
+        if (parts[i] === 'castlist') {
+          castlistIdStartIdx = i;
+          break;
+        }
+      }
+
+      if (castlistIdStartIdx === -1) {
+        console.error(`❌ Could not find 'castlist' in button ID: ${custom_id}`);
+        throw new Error('Invalid button ID format - missing castlist identifier');
+      }
+
+      const playerId = parts[2];
+      const seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
+      const castlistId = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
 
       return ButtonHandlerFactory.create({
         id: 'edit_placement',
@@ -7920,13 +7936,13 @@ To fix this:
           const placement = placementNamespace?.[playerId]?.placement;
 
           console.log(`[PLACEMENT EDIT] Loading placement for player ${playerId} from namespace: ${seasonContext} (value: ${placement || 'none'})`);
-          console.log(`[PLACEMENT EDIT] Context: castlist=${castlistName}, tribe=${tribeIndex}, page=${tribePage}, mode=${displayMode}`);
+          console.log(`[PLACEMENT EDIT] Context: castlist=${castlistId}, tribe=${tribeIndex}, page=${tribePage}, mode=${displayMode}`);
 
           // Return modal structure with FULL navigation context preserved
           return {
             type: InteractionResponseType.MODAL,
             data: {
-              custom_id: `save_placement_${playerId}_${seasonContext}_${castlistName}_${tribeIndex}_${tribePage}_${displayMode}`,
+              custom_id: `save_placement_${playerId}_${seasonContext}_${castlistId}_${tribeIndex}_${tribePage}_${displayMode}`,
               title: "Edit Season Placement",
               components: [
                 {
@@ -28628,18 +28644,32 @@ Are you sure you want to continue?`;
       // Handle placement save from modal submission
       try {
         // 🔧 FIX: Parse full navigation context from modal custom_id
-        // Format: save_placement_{userId}_{seasonContext}_{castlistName}_{tribeIndex}_{tribePage}_{displayMode}
+        // Format: save_placement_{userId}_{seasonContext}_{castlistId}_{tribeIndex}_{tribePage}_{displayMode}
+        // CRITICAL: Both seasonContext AND castlistId can contain underscores!
         const parts = custom_id.split('_');
-        const playerId = parts[2];
 
-        // Parse navigation context from end
+        // Work backwards from the end (these are always single parts)
         const displayMode = parts[parts.length - 1];
         const tribePage = parseInt(parts[parts.length - 2]);
         const tribeIndex = parseInt(parts[parts.length - 3]);
-        const castlistName = parts[parts.length - 4];
 
-        // Everything between playerId and castlistName is seasonContext
-        const seasonContext = parts.slice(3, parts.length - 4).join('_') || 'global';
+        // Find the castlist by looking for "castlist_" pattern
+        let castlistIdStartIdx = -1;
+        for (let i = parts.length - 4; i >= 3; i--) {
+          if (parts[i] === 'castlist') {
+            castlistIdStartIdx = i;
+            break;
+          }
+        }
+
+        if (castlistIdStartIdx === -1) {
+          console.error(`❌ Could not find 'castlist' in modal ID: ${custom_id}`);
+          throw new Error('Invalid modal ID format - missing castlist identifier');
+        }
+
+        const playerId = parts[2];
+        const seasonContext = parts.slice(3, castlistIdStartIdx).join('_') || 'global';
+        const castlistId = parts.slice(castlistIdStartIdx, parts.length - 3).join('_');
 
         const guildId = req.body.guild_id;
         const channelId = req.body.channel_id;
@@ -28647,7 +28677,7 @@ Are you sure you want to continue?`;
         const userId = member?.user?.id;
 
         console.log(`✏️ DEBUG: Placement modal submitted for player ${playerId} (namespace: ${seasonContext})`);
-        console.log(`📍 DEBUG: Navigation context: castlist=${castlistName}, tribe=${tribeIndex}, page=${tribePage}, mode=${displayMode}`);
+        console.log(`📍 DEBUG: Navigation context: castlist=${castlistId}, tribe=${tribeIndex}, page=${tribePage}, mode=${displayMode}`);
 
         // Extract value from Label (type 18) component structure
         const placementInput = components[0].component.value?.trim();
@@ -28709,9 +28739,9 @@ Are you sure you want to continue?`;
         const guild = await client.guilds.fetch(guildId);
 
         // Load castlist configuration
-        const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistName];
+        const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
         if (!castlistEntity) {
-          throw new Error(`Castlist "${castlistName}" not found`);
+          throw new Error(`Castlist "${castlistId}" not found`);
         }
 
         // Build tribes array matching the original display
@@ -28758,17 +28788,17 @@ Are you sure you want to continue?`;
         const navigationState = createNavigationState(allTribes, scenario, tribeIndex, tribePage);
 
         // Build the response data with current navigation state
-        // CRITICAL: Pass castlistName (ID) for button encoding, not display name
+        // CRITICAL: Pass castlistId for button encoding, name for display
         const castlistResponse = await buildCastlist2ResponseData(
           guild,
           allTribes,
-          castlistName,  // This is the ID parsed from the modal
+          castlistId,  // ID for button encoding
           navigationState,
           member,
           channelId,
           null,
           displayMode,
-          castlistEntity?.name || castlistName  // Display name
+          castlistEntity?.name || castlistId  // Display name
         );
 
         // Send UPDATE_MESSAGE to refresh the UI (matches Safari modal pattern)
