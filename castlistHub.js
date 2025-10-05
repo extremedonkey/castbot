@@ -314,11 +314,10 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
   // For Post Castlist, use show_castlist2 directly to avoid redirect timeout
   let postCastlistCustomId = 'castlist_view'; // default when disabled
   if (enabled && castlistId) {
-    // Special handling for Active/Default castlist - always use "default" as ID
-    // For virtual castlists, use the encoded ID
-    // For real castlists, use the castlist ID (not name)
-    const targetId = castlistId === 'default' ? 'default' :
-                    (isVirtual ? castlistId : (castlistName || castlistId));
+    // Always use castlistId for consistency (show_castlist2 handles both IDs and names)
+    // For default castlist, use "default"
+    // For all others (virtual or real), use the castlistId
+    const targetId = castlistId === 'default' ? 'default' : castlistId;
     postCastlistCustomId = `show_castlist2_${targetId}`;
   }
 

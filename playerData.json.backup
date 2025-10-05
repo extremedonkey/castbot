@@ -2595,7 +2595,7 @@
       },
       "castlist_1759422854044_system": {
         "id": "castlist_1759422854044_system",
-        "name": "The OId Ask Tribe - NEW!",
+        "name": "oldasktribe",
         "type": "legacy",
         "createdAt": 1759422854045,
         "createdBy": "migration",
@@ -2606,13 +2606,13 @@
           "visibility": "public"
         },
         "metadata": {
-          "description": "Upgraded from legacy castlist 'The OId Ask Tribe'",
+          "description": "A very old tribe that needs asking",
           "emoji": "🏕️",
           "migratedFrom": "virtual_VGhlIE9JZCBBc2sgVHJpYmU",
           "migrationDate": 1759422854045
         },
-        "modifiedAt": 1759422874788,
-        "modifiedBy": "system"
+        "modifiedAt": 1759635989910,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {
