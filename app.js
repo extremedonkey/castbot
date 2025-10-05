@@ -7890,7 +7890,7 @@ To fix this:
       // 🔧 PHASE 1: Parse season context from button ID (format: edit_placement_{userId}_{seasonId or 'global'})
       const parts = custom_id.split('_');
       const playerId = parts[2];
-      const seasonContext = parts[3] || 'global';  // 'global' or 'season_abc123def456'
+      const seasonContext = parts.slice(3).join('_') || 'global';  // ✅ Handle seasonIds with underscores
 
       return ButtonHandlerFactory.create({
         id: 'edit_placement',
@@ -28611,7 +28611,7 @@ Are you sure you want to continue?`;
         // 🔧 PHASE 1: Parse season context from modal custom_id (format: save_placement_{userId}_{seasonId or 'global'})
         const parts = custom_id.split('_');
         const playerId = parts[2];
-        const seasonContext = parts[3] || 'global';
+        const seasonContext = parts.slice(3).join('_') || 'global';  // ✅ Handle seasonIds with underscores
 
         const guildId = req.body.guild_id;
         const channelId = req.body.channel_id;
@@ -28747,6 +28747,31 @@ Are you sure you want to continue?`;
         if (!restResponse.ok) {
           const errorText = await restResponse.text();
           console.error(`❌ REST API PATCH failed (${restResponse.status}):`, errorText);
+
+          // 🔧 Handle 404 gracefully - message might have been deleted or context changed
+          if (restResponse.status === 404) {
+            console.log('⚠️ Original castlist message not found, sending success confirmation instead');
+            // Send success message via webhook follow-up
+            await fetch(
+              `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`,
+              {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  components: [{
+                    type: 17, // Container
+                    components: [{
+                      type: 10, // Text Display
+                      content: `✅ Placement ${placementValue ? `**${placementValue}**` : 'cleared'} saved for <@${playerId}> in \`${seasonContext}\` namespace.\n\n-# Navigate back to the castlist to see the updated placement.`
+                    }]
+                  }],
+                  flags: (1 << 15) // IS_COMPONENTS_V2
+                })
+              }
+            );
+            return; // Success - don't throw error
+          }
+
           throw new Error(`REST API PATCH failed: ${restResponse.status} ${errorText}`);
         }
 
