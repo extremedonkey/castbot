@@ -7887,10 +7887,19 @@ To fix this:
       return handleCastlistTribeSelect(req, res, client, custom_id);
     } else if (custom_id.startsWith('edit_placement_')) {
       // Handle placement edit button - show modal (MIGRATED TO FACTORY)
-      // 🔧 PHASE 1: Parse season context from button ID (format: edit_placement_{userId}_{seasonId or 'global'})
+      // 🔧 FIX: Parse full navigation context from button ID
+      // Format: edit_placement_{userId}_{seasonContext}_{castlistName}_{tribeIndex}_{tribePage}_{displayMode}
       const parts = custom_id.split('_');
       const playerId = parts[2];
-      const seasonContext = parts.slice(3).join('_') || 'global';  // ✅ Handle seasonIds with underscores
+
+      // Find displayMode (last part) to know where seasonContext ends
+      const displayMode = parts[parts.length - 1]; // 'edit' or 'view'
+      const tribePage = parts[parts.length - 2];
+      const tribeIndex = parts[parts.length - 3];
+      const castlistName = parts[parts.length - 4];
+
+      // Everything between playerId and castlistName is seasonContext
+      const seasonContext = parts.slice(3, parts.length - 4).join('_') || 'global';
 
       return ButtonHandlerFactory.create({
         id: 'edit_placement',
@@ -7907,12 +7916,13 @@ To fix this:
           const placement = placementNamespace?.[playerId]?.placement;
 
           console.log(`[PLACEMENT EDIT] Loading placement for player ${playerId} from namespace: ${seasonContext} (value: ${placement || 'none'})`);
+          console.log(`[PLACEMENT EDIT] Context: castlist=${castlistName}, tribe=${tribeIndex}, page=${tribePage}, mode=${displayMode}`);
 
-          // Return modal structure with season context preserved
+          // Return modal structure with FULL navigation context preserved
           return {
             type: InteractionResponseType.MODAL,
             data: {
-              custom_id: `save_placement_${playerId}_${seasonContext}`,  // ✅ Include season for save handler
+              custom_id: `save_placement_${playerId}_${seasonContext}_${castlistName}_${tribeIndex}_${tribePage}_${displayMode}`,
               title: "Edit Season Placement",
               components: [
                 {
@@ -28608,10 +28618,19 @@ Are you sure you want to continue?`;
     } else if (custom_id.startsWith('save_placement_')) {
       // Handle placement save from modal submission
       try {
-        // 🔧 PHASE 1: Parse season context from modal custom_id (format: save_placement_{userId}_{seasonId or 'global'})
+        // 🔧 FIX: Parse full navigation context from modal custom_id
+        // Format: save_placement_{userId}_{seasonContext}_{castlistName}_{tribeIndex}_{tribePage}_{displayMode}
         const parts = custom_id.split('_');
         const playerId = parts[2];
-        const seasonContext = parts.slice(3).join('_') || 'global';  // ✅ Handle seasonIds with underscores
+
+        // Parse navigation context from end
+        const displayMode = parts[parts.length - 1];
+        const tribePage = parseInt(parts[parts.length - 2]);
+        const tribeIndex = parseInt(parts[parts.length - 3]);
+        const castlistName = parts[parts.length - 4];
+
+        // Everything between playerId and castlistName is seasonContext
+        const seasonContext = parts.slice(3, parts.length - 4).join('_') || 'global';
 
         const guildId = req.body.guild_id;
         const channelId = req.body.channel_id;
@@ -28619,6 +28638,7 @@ Are you sure you want to continue?`;
         const userId = member?.user?.id;
 
         console.log(`✏️ DEBUG: Placement modal submitted for player ${playerId} (namespace: ${seasonContext})`);
+        console.log(`📍 DEBUG: Navigation context: castlist=${castlistName}, tribe=${tribeIndex}, page=${tribePage}, mode=${displayMode}`);
 
         // Extract value from Label (type 18) component structure
         const placementInput = components[0].component.value?.trim();
@@ -28673,18 +28693,71 @@ Are you sure you want to continue?`;
 
         console.log(`🔄 Refreshing castlist with updated placement`);
 
-        // 🔧 FIX: Use Safari pattern - rebuild UI and send UPDATE_MESSAGE directly
-        // Extract castlist ID from message interaction context
-        const { extractCastlistData } = await import('./castlistV2.js');
+        // 🔧 FIX: Rebuild castlist using FULL navigation context (Safari pattern)
+        const { buildCastlist2ResponseData, createNavigationState } = await import('./castlistV2.js');
 
-        // Rebuild castlist with edit mode enabled
-        const castlistResponse = await extractCastlistData(
-          `show_castlist2_default_edit`,  // TODO: Extract actual castlist ID
-          guildId,
-          channelId,
+        // Fetch guild and rebuild tribes list (same as show_castlist2 handler)
+        const guild = await client.guilds.fetch(guildId);
+
+        // Load castlist configuration
+        const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistName];
+        if (!castlistEntity) {
+          throw new Error(`Castlist "${castlistName}" not found`);
+        }
+
+        // Build tribes array matching the original display
+        const allTribes = [];
+        const tribes = playerData[guildId]?.tribes || {};
+
+        for (const [roleId, tribe] of Object.entries(tribes)) {
+          const matchesCastlist = (
+            tribe.castlists?.includes(castlistName) ||
+            (castlistName === 'default' && (!tribe.castlists || tribe.castlists.length === 0))
+          );
+
+          if (matchesCastlist) {
+            const role = await guild.roles.fetch(roleId);
+            if (!role) continue;
+
+            const tribeMembers = Array.from(role.members.values());
+
+            allTribes.push({
+              ...tribe,
+              roleId,
+              name: role.name,
+              members: tribeMembers,
+              memberCount: tribeMembers.length,
+              castlistSettings: {
+                ...castlistEntity?.settings,
+                seasonId: castlistEntity?.seasonId
+              },
+              castlistId: castlistName,
+              guildId: guildId
+            });
+          }
+        }
+
+        // Determine scenario (same logic as show_castlist2)
+        const totalMembers = allTribes.reduce((sum, t) => sum + t.memberCount, 0);
+        const maxTribeSize = Math.max(...allTribes.map(t => t.memberCount));
+        let scenario = 'ideal';
+        if (maxTribeSize >= 9) {
+          scenario = 'multi-page';
+        }
+
+        // Create navigation state pointing to the EXACT same view
+        const navigationState = createNavigationState(allTribes, scenario, tribeIndex, tribePage);
+
+        // Build the response data with current navigation state
+        const castlistResponse = await buildCastlist2ResponseData(
+          guild,
+          allTribes,
+          castlistName,
+          navigationState,
           member,
+          channelId,
           null,
-          client
+          displayMode
         );
 
         // Send UPDATE_MESSAGE to refresh the UI (matches Safari modal pattern)
@@ -28695,6 +28768,7 @@ Are you sure you want to continue?`;
 
       } catch (error) {
         console.error('❌ Error in save_placement modal handler:', error);
+        console.error('Stack trace:', error.stack);
         // Send error as ephemeral message
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,

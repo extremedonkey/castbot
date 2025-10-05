@@ -186,7 +186,7 @@ function reorderTribes(tribes, userId = null, strategy = "default", castlistName
  * @param {Object} allPlacements - Pre-loaded placement data (global placements map)
  * @returns {Object} Player card section component
  */
-function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji, displayMode = 'view', tribeData = null, guildId = null, allPlacements = {}) {
+function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji, displayMode = 'view', tribeData = null, guildId = null, allPlacements = {}, castlistName = 'default', navigationState = null) {
     // Check if member has a placement prefix (from alumni_placements sorting)
     const prefix = member.displayPrefix || '';
     const displayName = capitalize(member.displayName);
@@ -269,9 +269,14 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
         // 🔧 PHASE 0: Get season identifier for button context
         const seasonContext = tribeData?.castlistSettings?.seasonId || 'global';
 
+        // 🔧 FIX: Encode full navigation state like nav buttons do
+        // Format: edit_placement_{userId}_{seasonContext}_{castlistName}_{tribeIndex}_{tribePage}_{displayMode}
+        const tribeIndex = navigationState?.currentTribeIndex ?? 0;
+        const tribePage = navigationState?.currentTribePage ?? 0;
+
         accessory = {
             type: 2, // Button
-            custom_id: `edit_placement_${member.user.id}_${seasonContext}`,  // Include season for correct namespace
+            custom_id: `edit_placement_${member.user.id}_${seasonContext}_${castlistName}_${tribeIndex}_${tribePage}_${displayMode}`,
             label: getOrdinalLabel(placement),
             style: 2, // Secondary
             emoji: { name: "✏️" }
@@ -312,7 +317,7 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
  * @param {string} displayMode - 'view' or 'edit' mode
  * @returns {Object} Tribe container component
  */
-async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, pageInfo, scenario, castlistName = 'default', displayMode = 'view') {
+async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, pageInfo, scenario, castlistName = 'default', displayMode = 'view', navigationState = null) {
     const { currentPage, totalPages, playersOnPage } = pageInfo;
     const pageMembers = playersOnPage;
 
@@ -403,7 +408,9 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             displayMode,
             tribe, // Pass tribe data for edit button
             guild.id, // Pass guild ID for placement lookup
-            allPlacements // Pass pre-loaded placement data (edit mode only)
+            allPlacements, // Pass pre-loaded placement data (edit mode only)
+            castlistName, // Pass castlist name for button context
+            navigationState // Pass navigation state for button context
         );
         
         playerCards.push(playerCard);
@@ -845,7 +852,8 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistName, na
       pageInfo,
       scenario,
       castlistName,
-      displayMode
+      displayMode,
+      navigationState // Pass navigation state for placement button context
     );
   }
 
