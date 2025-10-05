@@ -315,7 +315,7 @@ classDiagram
     "id": "castlist_1759422854044_system",
     "name": "Active Castlist22",
     "type": "system",
-    "seasonId": "config_1751549410029_user",  // ← NEW FIELD (links to specific season)
+    "seasonId": "season_abc123def456",  // ← NEW FIELD (actual seasonId from applicationConfig)
     "createdAt": 1759422854045,
     "createdBy": "migration",
     "settings": {
@@ -368,15 +368,15 @@ const seasonOptions = [
   // Most recent seasons first (up to 24)
   {
     label: '🎮 ReeceVivor S15!',
-    value: 'config_1751549410029_user',
+    value: 'season_abc123def456',  // ← applicationConfig.seasonId (NOT configId)
     description: 'Starting Phase • Updated: 10/2/2025',
-    default: currentSeasonId === 'config_1751549410029_user'
+    default: currentSeasonId === 'season_abc123def456'
   },
   {
     label: '📝 Season 14 - The Comeback',
-    value: 'config_1745123456789_user',
+    value: 'season_xyz789ghi012',  // ← applicationConfig.seasonId
     description: 'Complete • Updated: 9/15/2025',
-    default: currentSeasonId === 'config_1745123456789_user'
+    default: currentSeasonId === 'season_xyz789ghi012'
   },
   // ... up to 24 seasons
 
@@ -388,6 +388,79 @@ const seasonOptions = [
     default: !currentSeasonId  // Pre-select if no season
   }
 ];
+```
+
+---
+
+## 🔗 Data Structure: applicationConfigs vs seasonId
+
+### Important Distinction
+
+**applicationConfigs** is the current storage location for season data, but contains its own **seasonId** field:
+
+```json
+"applicationConfigs": {
+  "config_1759634522896_391415444084490240": {  // ← Config key (internal)
+    "seasonId": "season_cac1b81de8914c79",      // ← Actual season ID (use this!)
+    "seasonName": "S16 The NU Season",
+    "stage": "pre_swap",
+    "createdAt": 1759634522900,
+    "lastUpdated": 1759634522900,
+    "questions": []
+  }
+}
+```
+
+### What We Store in Castlists
+
+**Castlists store the SEASON ID, not the config ID:**
+
+```json
+"castlist_123_system": {
+  "seasonId": "season_cac1b81de8914c79"  // ← Links to applicationConfig.seasonId
+}
+```
+
+### Why This Matters
+
+**Future-proofing**: When seasons are eventually moved to their own top-level structure:
+
+```json
+// FUTURE structure (not implemented yet)
+{
+  "seasons": {
+    "season_cac1b81de8914c79": {  // ← seasonId becomes the key
+      "name": "S16 The NU Season",
+      "stage": "pre_swap"
+    }
+  },
+  "applicationConfigs": {
+    "config_123": {
+      "seasonId": "season_cac1b81de8914c79",  // ← Still links to season
+      "questions": []
+    }
+  },
+  "castlistConfigs": {
+    "castlist_456": {
+      "seasonId": "season_cac1b81de8914c79"  // ← No migration needed!
+    }
+  }
+}
+```
+
+**Result**: Castlists won't need migration when seasons are split out.
+
+### Lookup Pattern
+
+**Finding a season by seasonId:**
+
+```javascript
+// Current implementation (nested in applicationConfigs)
+const season = Object.values(playerData[guildId]?.applicationConfigs || {})
+  .find(config => config.seasonId === castlist.seasonId);
+
+// Future implementation (seasons as top-level)
+const season = playerData[guildId]?.seasons?.[castlist.seasonId];
 ```
 
 ---
@@ -436,9 +509,9 @@ if (buttonType === 'edit_info') {
 
     return {
       label: `${emoji} ${season.seasonName}`.substring(0, 100),
-      value: configId,
+      value: season.seasonId,  // ← Use applicationConfig.seasonId, not configId
       description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100),
-      default: configId === currentSeasonId
+      default: season.seasonId === currentSeasonId
     };
   });
 

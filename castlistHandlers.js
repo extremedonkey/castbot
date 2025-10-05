@@ -209,9 +209,9 @@ export async function handleCastlistButton(req, res, client, custom_id) {
 
           return {
             label: `${emoji} ${season.seasonName}`.substring(0, 100),
-            value: configId,
+            value: season.seasonId, // Use the actual seasonId, not configId
             description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100),
-            default: configId === currentSeasonId
+            default: season.seasonId === currentSeasonId
           };
         });
 

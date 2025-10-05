@@ -268,7 +268,9 @@ async function createCastlistDetailsSection(guildId, castlist) {
   // Get season name if associated
   let seasonLine = '';
   if (castlist.seasonId) {
-    const season = playerData[guildId]?.applicationConfigs?.[castlist.seasonId];
+    // Find season by seasonId (not by config key)
+    const season = Object.values(playerData[guildId]?.applicationConfigs || {})
+      .find(config => config.seasonId === castlist.seasonId);
 
     if (season) {
       // Season exists - display with emoji

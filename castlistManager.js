@@ -166,8 +166,9 @@ export class CastlistManager {
         // Set season association
         castlist.seasonId = updates.seasonId;
 
-        // Validate season exists (optional logging)
-        const season = playerData[guildId]?.applicationConfigs?.[updates.seasonId];
+        // Validate season exists (optional logging) - find by seasonId, not configId
+        const season = Object.values(playerData[guildId]?.applicationConfigs || {})
+          .find(config => config.seasonId === updates.seasonId);
         if (season) {
           console.log(`[CASTLIST] Associated '${castlist.name}' with season '${season.seasonName}'`);
         } else {

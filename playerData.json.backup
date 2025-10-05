@@ -2532,12 +2532,13 @@
           "migratedFrom": "virtual_SGFzem8",
           "migrationDate": 1758812609810
         },
-        "modifiedAt": 1759080421480,
-        "modifiedBy": "system"
+        "modifiedAt": 1759634423243,
+        "modifiedBy": "391415444084490240",
+        "seasonId": "config_1751549410029_391415444084490240"
       },
       "default": {
         "id": "default",
-        "name": "Active Castlist",
+        "name": "Active Castlist22",
         "type": "system",
         "createdAt": 1759326924851,
         "createdBy": "system",
@@ -2552,7 +2553,7 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1759326924879,
+        "modifiedAt": 1759423947379,
         "modifiedBy": "system"
       },
       "castlist_1759422070959_system": {
