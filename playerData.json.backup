@@ -1496,7 +1496,7 @@
     "tribes": {
       "1380906521084559401": {
         "emoji": null,
-        "castlist": "Active Castlist",
+        "castlist": "default",
         "showPlayerEmojis": true,
         "color": "#607d8b",
         "castlistId": "castlist_1758812609810_system",
@@ -1513,14 +1513,10 @@
       },
       "1391142520787832904": {
         "emoji": "👀",
-        "castlist": "default",
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "👀 BST (UTC+1) 👀",
-        "analyticsAdded": 1754751135102,
-        "castlistIds": [
-          "default"
-        ]
+        "analyticsAdded": 1754751135102
       },
       "1333822411912642630": {
         "emoji": "🧟‍♂️",
@@ -1567,14 +1563,10 @@
       },
       "1379077934953922611": {
         "emoji": null,
-        "castlist": "default",
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "Nyauu / +3 +/ GMT5 22",
-        "analyticsAdded": 1757442465942,
-        "castlistIds": [
-          "default"
-        ]
+        "analyticsAdded": 1757442465942
       },
       "1368969395795398716": {
         "name": "Tribe 1368969395795398716",
@@ -1600,14 +1592,10 @@
       },
       "1368969399251501126": {
         "emoji": "🪄",
-        "castlist": "default",
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "🪄 ar.3 🪄",
-        "analyticsAdded": 1759081799205,
-        "castlistIds": [
-          "default"
-        ]
+        "analyticsAdded": 1759081799205
       },
       "1388327092634124368": {
         "emoji": null,
@@ -1626,6 +1614,15 @@
         "analyticsName": "🧓 Ask 🧓",
         "analyticsAdded": 1759422827344,
         "castlistId": "castlist_1759422854044_system"
+      },
+      "1424250096698130603": {
+        "emoji": "🗝️",
+        "castlist": "legacyList",
+        "showPlayerEmojis": false,
+        "color": "#a84300",
+        "analyticsName": "🗝️ legacyList 🗝️",
+        "analyticsAdded": 1759638200118,
+        "castlistId": "castlist_1759638936214_system"
       }
     },
     "timezones": {
@@ -2555,12 +2552,12 @@
       },
       "default": {
         "id": "default",
-        "name": "Active Castlist22",
+        "name": "default",
         "type": "system",
         "createdAt": 1759326924851,
         "createdBy": "system",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -2570,8 +2567,8 @@
           "emoji": "📋",
           "isDefault": true
         },
-        "modifiedAt": 1759635197757,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1759639383328,
+        "modifiedBy": "system",
         "seasonId": "season_cac1b81de8914c79"
       },
       "castlist_1759422070959_system": {
@@ -2595,7 +2592,7 @@
       },
       "castlist_1759422854044_system": {
         "id": "castlist_1759422854044_system",
-        "name": "oldasktribe",
+        "name": "oldask",
         "type": "legacy",
         "createdAt": 1759422854045,
         "createdBy": "migration",
@@ -2611,8 +2608,27 @@
           "migratedFrom": "virtual_VGhlIE9JZCBBc2sgVHJpYmU",
           "migrationDate": 1759422854045
         },
-        "modifiedAt": 1759635989910,
+        "modifiedAt": 1759637997841,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1759638936214_system": {
+        "id": "castlist_1759638936214_system",
+        "name": "legacyList",
+        "type": "system",
+        "createdAt": 1759638936215,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'legacyList'",
+          "emoji": "📋",
+          "migratedFrom": "virtual_bGVnYWN5TGlzdA",
+          "migrationDate": 1759638936215
+        }
       }
     },
     "placements": {
