@@ -2948,6 +2948,11 @@
           "placement": 2,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-05T14:28:25.768Z"
+        },
+        "691850627189309492": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:50:01.041Z"
         }
       }
     }
@@ -3065,17 +3070,17 @@
     ]
   },
   "974318870057848842": {
-    "serverName": "Servivorg S12 - JURASSIC PARK (Second Chances)",
-    "icon": "https://cdn.discordapp.com/icons/974318870057848842/7e21787a39e859c1ad7707c2591a5b28.webp",
+    "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
+    "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 531,
+    "memberCount": 543,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1754143648501,
+    "lastUpdated": 1759676523986,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1381126640163360800>"
@@ -3108,6 +3113,15 @@
         "castlist": "default",
         "showPlayerEmojis": true,
         "color": "#66e9ab"
+      },
+      "1385242520161620039": {
+        "emoji": "1️⃣",
+        "castlist": "Season 1: Buffy",
+        "showPlayerEmojis": false,
+        "color": "#e74c3c",
+        "analyticsName": "1️⃣ S1 - Buffy 1️⃣",
+        "analyticsAdded": 1759676584249,
+        "castlistId": "castlist_1759676597377_system"
       }
     },
     "timezones": {},
@@ -3130,7 +3144,27 @@
         "createdBy": "391415444084490240",
         "stage": "active",
         "createdAt": 1749735756272,
-        "lastUpdated": 1749735756272
+        "lastUpdated": 1749735756272,
+        "seasonId": "season_aaa92150e4c646d3",
+        "seasonName": "Apply to be Reece's bestie",
+        "questions": []
+      },
+      "config_1759676660042_391415444084490240": {
+        "buttonText": "Apply to S1 - Buffy",
+        "explanatoryText": "Join S1 - Buffy!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1759676660046,
+        "lastUpdated": 1759676660046,
+        "seasonId": "season_8562dceec0454513",
+        "seasonName": "S1 - Buffy",
+        "questions": []
       }
     },
     "applications": {
@@ -3148,6 +3182,30 @@
     "rankings": {
       "1382716755968786513": {
         "391415444084490240": 5
+      }
+    },
+    "castlistConfigs": {
+      "castlist_1759676597377_system": {
+        "id": "castlist_1759676597377_system",
+        "name": "Season 1: Buffy",
+        "type": "system",
+        "createdAt": 1759676597377,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Castlist for Season 1: Buffy",
+          "emoji": "1️⃣",
+          "migratedFrom": "virtual_U2Vhc29uIDE6IEJ1ZmZ5",
+          "migrationDate": 1759676597377
+        },
+        "seasonId": "season_8562dceec0454513",
+        "modifiedAt": 1759676690051,
+        "modifiedBy": "391415444084490240"
       }
     }
   },

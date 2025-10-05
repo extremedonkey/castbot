@@ -197,36 +197,44 @@ export async function handleCastlistButton(req, res, client, custom_id) {
             return bTime - aTime;
           });
 
-        // CRITICAL: Hard limit to 24 seasons (Discord limit is 25 total including "No Season")
-        const maxSeasons = 24;
-        const selectedSeasons = allSeasons.slice(0, maxSeasons);
-        const droppedCount = allSeasons.length - maxSeasons;
-
-        const seasonOptions = selectedSeasons.map(([configId, season]) => {
-          const stage = season.stage || 'planning';
-          const emoji = getSeasonStageEmoji(stage);
-          const stageName = getSeasonStageName(stage);
-          const lastUpdate = new Date(season.lastUpdated || season.createdAt || 0);
-
-          return {
-            label: `${emoji} ${season.seasonName}`.substring(0, 100),
-            value: season.seasonId, // Use the actual seasonId, not configId
-            description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100),
-            default: season.seasonId === currentSeasonId
-          };
-        });
-
-        // Add "No Season" option at the BOTTOM (always included, position 25)
-        seasonOptions.push({
+        // Initialize with "No Season" option to ensure we always have at least one option
+        const seasonOptions = [{
           label: '🌟 No Season (Winners, Alumni, etc.)',
           value: 'none',
           description: 'Used where players are across multiple seasons',
           default: !currentSeasonId
-        });
+        }];
 
-        // Log if seasons were dropped
-        if (droppedCount > 0) {
-          console.log(`[CASTLIST] Showing ${maxSeasons} most recent seasons, ${droppedCount} older seasons not displayed`);
+        // Add actual seasons if they exist (limit to 24 to stay within Discord's 25 option limit)
+        if (allSeasons.length > 0) {
+          const maxSeasons = 24;
+          const selectedSeasons = allSeasons.slice(0, maxSeasons);
+          const droppedCount = allSeasons.length - maxSeasons;
+
+          // Add season options to the beginning of the array (before "No Season")
+          const actualSeasonOptions = selectedSeasons.map(([configId, season]) => {
+            const stage = season.stage || 'planning';
+            const emoji = getSeasonStageEmoji(stage);
+            const stageName = getSeasonStageName(stage);
+            const lastUpdate = new Date(season.lastUpdated || season.createdAt || 0);
+
+            return {
+              label: `${emoji} ${season.seasonName}`.substring(0, 100),
+              value: season.seasonId, // Use the actual seasonId, not configId
+              description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100),
+              default: season.seasonId === currentSeasonId
+            };
+          });
+
+          // Insert actual seasons at the beginning, keeping "No Season" at the end
+          seasonOptions.unshift(...actualSeasonOptions);
+
+          // Log if seasons were dropped
+          if (droppedCount > 0) {
+            console.log(`[CASTLIST] Showing ${maxSeasons} most recent seasons, ${droppedCount} older seasons not displayed`);
+          }
+        } else {
+          console.log(`[CASTLIST] No seasons found, showing only "No Season" option`);
         }
 
         // Create modal for editing castlist info with Components V2
