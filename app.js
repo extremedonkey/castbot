@@ -28155,13 +28155,17 @@ Are you sure you want to continue?`;
         
         const guildId = req.body.guild_id;
 
+        // 🔧 FIX: Load castlist entity BEFORE building tribes (needed for castlistSettings)
+        const playerData = await loadPlayerData();
+        const castlistEntity = playerData[guildId]?.castlistConfigs?.[castlistId];
+
         // Load and process tribe data (reuse castlist2 logic)
         const rawTribes = await getGuildTribes(guildId, castlistId);  // FIX: Use castlistId
         const guild = await client.guilds.fetch(guildId);
 
         // Use cached data where possible for better performance
         const roles = guild.roles.cache.size > 0 ? guild.roles.cache : await guild.roles.fetch();
-        
+
         // Force member refresh if cache appears stale (post-restart fix)
         let members = guild.members.cache;
         if (guild.members.cache.size === 0) {
@@ -28176,13 +28180,20 @@ Are you sure you want to continue?`;
         const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
           const role = roles.get(tribe.roleId);
           if (!role) return null;
-          
+
           const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
           return {
             ...tribe,
             name: role.name,
             memberCount: tribeMembers.size,
-            members: Array.from(tribeMembers.values())
+            members: Array.from(tribeMembers.values()),
+            // 🔧 FIX: Attach castlist settings for placement namespace resolution
+            castlistSettings: {
+              ...castlistEntity?.settings,
+              seasonId: castlistEntity?.seasonId
+            },
+            castlistId: castlistId,  // For consistency
+            guildId: guildId
           };
         }));
 
@@ -28225,10 +28236,8 @@ Are you sure you want to continue?`;
         
         // Create new navigation state
         const navigationState = createNavigationState(orderedTribes, scenario, newTribeIndex, newTribePage);
-        
-        // Look up display name for castlist
-        const playerData = await loadPlayerData();
-        const castlistEntity = playerData[req.body.guild_id]?.castlistConfigs?.[castlistId];
+
+        // Get display name from previously loaded castlist entity
         const castlistName = castlistEntity?.name || castlistId;
 
         // Send updated response (preserve displayMode for edit mode navigation)
