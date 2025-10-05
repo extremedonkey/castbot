@@ -35064,6 +35064,10 @@ Are you sure you want to continue?`;
       // Handle castlist Edit Info modal submission
       const { handleEditInfoModal } = await import('./castlistHandlers.js');
       return handleEditInfoModal(req, res, client, custom_id);
+    } else if (custom_id === 'castlist_create_new_modal') {
+      // Handle NEW castlist creation modal submission
+      const { handleCreateNewModal } = await import('./castlistHandlers.js');
+      return handleCreateNewModal(req, res, client);
 
     } else if (custom_id === 'health_monitor_schedule_modal') {
       // Handle health monitor scheduling modal submission

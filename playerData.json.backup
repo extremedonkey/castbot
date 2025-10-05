@@ -3192,7 +3192,7 @@
         "createdAt": 1759676597377,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -3204,8 +3204,67 @@
           "migrationDate": 1759676597377
         },
         "seasonId": "season_8562dceec0454513",
-        "modifiedAt": 1759676690051,
-        "modifiedBy": "391415444084490240"
+        "modifiedAt": 1759677029504,
+        "modifiedBy": "system"
+      }
+    },
+    "placements": {
+      "season_8562dceec0454513": {
+        "419881222760824832": {
+          "placement": 4,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:08:08.912Z"
+        },
+        "885537043629895690": {
+          "placement": 18,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:08:40.125Z"
+        },
+        "749332105942794314": {
+          "placement": 13,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:08:50.091Z"
+        },
+        "276520553400238081": {
+          "placement": 16,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:08:59.694Z"
+        },
+        "761034006682271765": {
+          "placement": 7,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:09:10.574Z"
+        },
+        "700105131517018182": {
+          "placement": 9,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:09:27.105Z"
+        },
+        "1142043228653232159": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:09:33.592Z"
+        },
+        "555868346197737482": {
+          "placement": 6,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:09:41.030Z"
+        },
+        "351034726120816642": {
+          "placement": 17,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:09:52.788Z"
+        },
+        "613201173239037953": {
+          "placement": 8,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:10:03.483Z"
+        },
+        "756383872379256933": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T15:10:11.102Z"
+        }
       }
     }
   },

@@ -77,6 +77,17 @@ export async function createCastlistHub(guildId, options = {}) {
     addedCount++;
   }
 
+  // Add "Create New Castlist" as SECOND option (if we haven't hit the limit)
+  if (addedCount < 25) {
+    selectMenu.addOptions({
+      label: 'Create New Castlist',
+      value: 'create_new',
+      description: 'Create a new custom castlist',
+      emoji: '✨'
+    });
+    addedCount++;
+  }
+
   // Sort remaining castlists: real first, then virtual (excluding default)
   const sortedCastlists = [...allCastlists.values()]
     .filter(c => c.id !== 'default') // Exclude default (already added)

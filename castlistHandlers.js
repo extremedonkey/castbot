@@ -11,6 +11,125 @@ import { loadPlayerData, savePlayerData } from './storage.js';
 import { PermissionFlagsBits } from 'discord.js';
 
 /**
+ * Create the Edit Info modal for a NEW castlist
+ * Similar to the edit modal but with no pre-filled values and a different submit handler
+ */
+async function createEditInfoModalForNew(guildId) {
+  // Import season helpers
+  const { getSeasonStageEmoji, getSeasonStageName } = await import('./seasonSelector.js');
+  const playerData = await loadPlayerData();
+  const seasons = playerData[guildId]?.applicationConfigs || {};
+
+  // Build season options (most recent first)
+  const allSeasons = Object.entries(seasons)
+    .sort(([,a], [,b]) => {
+      const aTime = a.lastUpdated || a.createdAt || 0;
+      const bTime = b.lastUpdated || b.createdAt || 0;
+      return bTime - aTime;
+    });
+
+  // Initialize with "No Season" option to ensure we always have at least one option
+  const seasonOptions = [{
+    label: '🌟 No Season (Winners, Alumni, etc.)',
+    value: 'none',
+    description: 'Used where players are across multiple seasons',
+    default: true // Default to "No Season" for new castlists
+  }];
+
+  // Add actual seasons if they exist (limit to 24 to stay within Discord's 25 option limit)
+  if (allSeasons.length > 0) {
+    const maxSeasons = 24;
+    const selectedSeasons = allSeasons.slice(0, maxSeasons);
+
+    const actualSeasonOptions = selectedSeasons.map(([configId, season]) => {
+      const stage = season.stage || 'planning';
+      const emoji = getSeasonStageEmoji(stage);
+      const stageName = getSeasonStageName(stage);
+      const lastUpdate = new Date(season.lastUpdated || season.createdAt || 0);
+
+      return {
+        label: `${emoji} ${season.seasonName}`.substring(0, 100),
+        value: season.seasonId,
+        description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`.substring(0, 100),
+        default: false
+      };
+    });
+
+    // Insert actual seasons at the beginning, keeping "No Season" at the end
+    seasonOptions.unshift(...actualSeasonOptions);
+  }
+
+  // Create modal for new castlist
+  return {
+    custom_id: 'castlist_create_new_modal',
+    title: 'Create New Castlist',
+    components: [
+      // Name field (Label + Text Input)
+      {
+        type: 18, // Label
+        label: 'Castlist Name',
+        component: {
+          type: 4, // Text Input
+          custom_id: 'castlist_name',
+          style: 1, // Short
+          required: true,
+          value: '', // Empty for new castlist
+          placeholder: 'Enter castlist name',
+          min_length: 1,
+          max_length: 100
+        }
+      },
+
+      // Season selector (Label + String Select)
+      {
+        type: 18, // Label
+        label: 'Associated Season',
+        description: 'What season is this Castlist for?',
+        component: {
+          type: 3, // String Select
+          custom_id: 'season_id',
+          placeholder: 'Choose a season...',
+          required: false,
+          min_values: 0,
+          max_values: 1,
+          options: seasonOptions
+        }
+      },
+
+      // Emoji field (Label + Text Input)
+      {
+        type: 18, // Label
+        label: 'Season Emoji',
+        component: {
+          type: 4, // Text Input
+          custom_id: 'castlist_emoji',
+          style: 1, // Short
+          required: false,
+          value: '📋', // Default emoji
+          placeholder: 'Enter an emoji (e.g., 📋)',
+          max_length: 10
+        }
+      },
+
+      // Description field (Label + Text Input)
+      {
+        type: 18, // Label
+        label: 'Description',
+        component: {
+          type: 4, // Text Input
+          custom_id: 'castlist_description',
+          style: 2, // Paragraph
+          required: false,
+          value: '', // Empty for new castlist
+          placeholder: 'Brief description of this castlist',
+          max_length: 200
+        }
+      }
+    ]
+  };
+}
+
+/**
  * Handle castlist selection from dropdown
  * Materializes virtual castlists immediately on selection
  */
@@ -21,6 +140,20 @@ export function handleCastlistSelect(req, res, client) {
     handler: async (context) => {
       let selectedCastlistId = context.values?.[0];
       console.log(`📋 Castlist selected: ${selectedCastlistId || 'none'}`);
+
+      // Handle "Create New Castlist" option
+      if (selectedCastlistId === 'create_new') {
+        console.log(`📋 Creating new castlist for guild ${context.guildId}`);
+
+        // Show the Edit Info modal but for a new castlist
+        const modal = await createEditInfoModalForNew(context.guildId);
+
+        // Return modal response directly (not UPDATE_MESSAGE)
+        return {
+          type: 9, // MODAL
+          data: modal
+        };
+      }
 
       // Materialize virtual castlists immediately on selection
       if (selectedCastlistId && castlistVirtualAdapter.isVirtualId(selectedCastlistId)) {
@@ -700,4 +833,123 @@ export function handleEditInfoModal(req, res, client, custom_id) {
       });
     }
   })();
+}/**
+ * Handle NEW castlist creation modal submission
+ * Creates a new castlist and returns to the hub with it selected
+ */
+export async function handleCreateNewModal(req, res, client) {
+  const { loadPlayerData, savePlayerData } = await import('./dataManager.js');
+  const { createCastlistHub } = await import('./castlistHub.js');
+  const { generateId } = await import('./utils.js');
+  const { body } = req;
+  const guildId = body.guild?.id || body.guild_id;
+  const userId = body.member?.user?.id || body.user?.id;
+
+  try {
+    // Extract modal field values
+    const fields = body.data?.components || [];
+    const values = {};
+
+    fields.forEach(component => {
+      const subComponent = component.component || component.components?.[0];
+      if (!subComponent) return;
+
+      const customId = subComponent.custom_id;
+
+      // Handle different component types
+      if (subComponent.type === 3) { // String Select
+        values[customId] = subComponent.values || [];
+      } else {
+        const value = subComponent.value;
+        if (customId && value !== undefined) {
+          values[customId] = value;
+        }
+      }
+    });
+
+    console.log('[CASTLIST] Creating new castlist with values:', values);
+
+    // Validate required fields
+    if (!values.castlist_name?.trim()) {
+      return res.send({
+        type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+        data: {
+          content: '❌ Castlist name is required.',
+          flags: 1 << 6 // EPHEMERAL
+        }
+      });
+    }
+
+    // Load player data
+    const playerData = await loadPlayerData();
+    if (!playerData[guildId]) {
+      playerData[guildId] = {};
+    }
+
+    // Initialize tribes if needed
+    if (!playerData[guildId].tribes) {
+      playerData[guildId].tribes = {};
+    }
+
+    // Generate unique ID for new castlist
+    const newId = generateId('castlist');
+
+    // Extract season selection (might be empty array if "No Season" was deselected)
+    const selectedSeasonId = values.season_id?.[0] || null;
+    const seasonId = selectedSeasonId === 'none' ? null : selectedSeasonId;
+
+    // Create the new castlist (tribe)
+    const newCastlist = {
+      id: newId,
+      name: values.castlist_name.trim(),
+      roleId: null, // No role assigned yet
+      members: [], // Empty member list
+      metadata: {
+        emoji: values.castlist_emoji?.trim() || '📋',
+        description: values.castlist_description?.trim() || '',
+        createdBy: userId,
+        createdAt: Date.now(),
+        lastModified: Date.now()
+      },
+      castlistSettings: {
+        sortStrategy: 'alphabetical', // Default sort
+        ...(seasonId && { seasonId }) // Only add seasonId if not null
+      }
+    };
+
+    // Save the new castlist
+    playerData[guildId].tribes[newId] = newCastlist;
+    await savePlayerData(playerData);
+
+    console.log(`[CASTLIST] Created new castlist ${newId}: "${newCastlist.name}" for guild ${guildId}`);
+
+    // Return to hub with new castlist selected
+    const hubData = await createCastlistHub(guildId, {
+      selectedCastlistId: newId,
+      activeButton: 'castlist_manage' // Default to manage view
+    });
+
+    // Add success message
+    if (hubData.textDisplay) {
+      const successText = `✨ **New Castlist Created!**\n\n**Name:** ${newCastlist.name}\n**Season:** ${seasonId ? `Linked to season ${seasonId}` : 'No season assigned'}\n**Emoji:** ${newCastlist.metadata.emoji}\n${newCastlist.metadata.description ? `**Description:** ${newCastlist.metadata.description}` : ''}`;
+
+      // Prepend success message to text display
+      hubData.textDisplay.content = successText + '\n\n' + hubData.textDisplay.content;
+    }
+
+    return res.send({
+      type: 7, // UPDATE_MESSAGE
+      data: hubData
+    });
+
+  } catch (error) {
+    console.error('[CASTLIST] Error creating new castlist:', error);
+    return res.send({
+      type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+      data: {
+        content: '❌ Failed to create castlist. Please try again.',
+        flags: 1 << 6 // EPHEMERAL
+      }
+    });
+  }
 }
