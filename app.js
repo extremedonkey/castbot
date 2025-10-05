@@ -4834,6 +4834,18 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
       console.log('Determined castlist to show:', castlistName);
 
+      // Resolve legacy castlist name to entity ID for navigation buttons
+      let castlistIdForNavigation = requestedCastlist;
+      if (!requestedCastlist.startsWith('castlist_') && requestedCastlist !== 'default') {
+        // requestedCastlist is a legacy name - find matching entity
+        const castlistConfigs = playerData[guildId]?.castlistConfigs || {};
+        const matchingEntity = Object.values(castlistConfigs).find(config => config.name === requestedCastlist);
+        if (matchingEntity?.id) {
+          castlistIdForNavigation = matchingEntity.id;
+          console.log(`✅ Resolved legacy name '${requestedCastlist}' to entity ID '${castlistIdForNavigation}'`);
+        }
+      }
+
       // Get tribes for this castlist (using existing logic from app.js)
       const guildTribes = playerData[guildId]?.tribes || {};
       const allTribes = [];
@@ -4845,7 +4857,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           // Legacy string matching
           tribe.castlist === castlistName ||
           // New entity ID matching
-          tribe.castlistId === requestedCastlist ||
+          tribe.castlistId === castlistIdForNavigation ||
           // Default castlist special cases
           (!tribe.castlist && !tribe.castlistId && (castlistName === 'default' || requestedCastlist === 'default')) ||
           (tribe.castlist === 'default' && (castlistName === 'Active Castlist' || requestedCastlist === 'default')) ||
@@ -4871,7 +4883,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
                 ...castlistEntity?.settings,
                 seasonId: castlistEntity?.seasonId  // CRITICAL: Enables season-based placements
               },
-              castlistId: requestedCastlist,  // For future placement namespace lookups
+              castlistId: castlistIdForNavigation,  // Use resolved entity ID for navigation
               guildId: guildId  // For accessing playerData placements
             });
           } catch (error) {
