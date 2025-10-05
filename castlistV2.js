@@ -108,7 +108,7 @@ function calculateTribePages(tribe, members) {
  * @param {number} currentTribePage - Current page within tribe
  * @returns {Object} Navigation state
  */
-function createNavigationState(tribes, scenario, currentTribeIndex = 0, currentTribePage = 0) {
+export function createNavigationState(tribes, scenario, currentTribeIndex = 0, currentTribePage = 0) {
     return {
         currentTribeIndex,
         currentTribePage,
