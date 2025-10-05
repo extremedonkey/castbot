@@ -28617,38 +28617,21 @@ Are you sure you want to continue?`;
         const channelId = req.body.channel_id;
         const member = req.body.member;
         const userId = member?.user?.id;
-        const castlistMessageId = req.body.message?.id;  // The castlist message we need to update
 
         console.log(`✏️ DEBUG: Placement modal submitted for player ${playerId} (namespace: ${seasonContext})`);
-        console.log(`📋 DEBUG: Castlist message ID to update: ${castlistMessageId}`);
-
-        // Send deferred response immediately (castlist refresh takes >3 seconds)
-        await res.send({
-          type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE
-        });
 
         // Extract value from Label (type 18) component structure
         const placementInput = components[0].component.value?.trim();
 
         // Validate: must be integer 1-99 or empty
         if (placementInput && !/^\d{1,2}$/.test(placementInput)) {
-          return fetch(
-            `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
-            {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                components: [{
-                  type: 17, // Container
-                  components: [{
-                    type: 10, // Text Display
-                    content: '❌ Please enter a whole number (1-99)'
-                  }]
-                }],
-                flags: (1 << 15) // IS_COMPONENTS_V2
-              })
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Please enter a whole number (1-99)',
+              flags: InteractionResponseFlags.EPHEMERAL
             }
-          );
+          });
         }
 
         // Convert to integer for storage
@@ -28688,119 +28671,38 @@ Are you sure you want to continue?`;
         const { clearRequestCache } = await import('./storage.js');
         clearRequestCache();
 
-        // Small delay to ensure file write completes (prevents race conditions)
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Refresh the castlist view with updated placement
-        const refreshCustomId = `show_castlist2_default_edit`;
-        const { extractCastlistData } = await import('./castlistV2.js');
-
-        // Extract castlist data with edit mode enabled  - retry once if JSON parse error
-        let castlistResponse;
-        let attempts = 0;
-        while (attempts < 2) {
-          try {
-            castlistResponse = await extractCastlistData(
-              refreshCustomId,
-              guildId,
-              channelId,
-              member,
-              null,
-              client
-            );
-            break; // Success
-          } catch (error) {
-            attempts++;
-            if (error.message.includes('JSON') && attempts < 2) {
-              console.log(`⚠️ JSON parse error on attempt ${attempts}, retrying after delay...`);
-              await new Promise(resolve => setTimeout(resolve, 200));
-            } else {
-              throw error; // Re-throw if not JSON error or out of retries
-            }
-          }
-        }
-
         console.log(`🔄 Refreshing castlist with updated placement`);
 
-        // Update the message via webhook
-        const webhookPayload = {
-          components: castlistResponse.components,  // Only send components, not other fields
-          flags: (1 << 15) // IS_COMPONENTS_V2
-        };
+        // 🔧 FIX: Use Safari pattern - rebuild UI and send UPDATE_MESSAGE directly
+        // Extract castlist ID from message interaction context
+        const { extractCastlistData } = await import('./castlistV2.js');
 
-        console.log(`📤 Using Discord REST API to update castlist message ${castlistMessageId} in channel ${channelId}`);
-
-        // Use Discord REST API with bot token (not webhook token)
-        // Webhook tokens can only edit messages from that specific interaction
-        const restResponse = await fetch(
-          `https://discord.com/api/v10/channels/${channelId}/messages/${castlistMessageId}`,
-          {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bot ${process.env.DISCORD_TOKEN}`
-            },
-            body: JSON.stringify(webhookPayload)
-          }
+        // Rebuild castlist with edit mode enabled
+        const castlistResponse = await extractCastlistData(
+          `show_castlist2_default_edit`,  // TODO: Extract actual castlist ID
+          guildId,
+          channelId,
+          member,
+          null,
+          client
         );
 
-        if (!restResponse.ok) {
-          const errorText = await restResponse.text();
-          console.error(`❌ REST API PATCH failed (${restResponse.status}):`, errorText);
-
-          // 🔧 Handle 404 gracefully - message might have been deleted or context changed
-          if (restResponse.status === 404) {
-            console.log('⚠️ Original castlist message not found, sending success confirmation instead');
-            // Send success message via webhook follow-up
-            await fetch(
-              `https://discord.com/api/v10/webhooks/${process.env.APP_ID}/${req.body.token}/messages/@original`,
-              {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  components: [{
-                    type: 17, // Container
-                    components: [{
-                      type: 10, // Text Display
-                      content: `✅ Placement ${placementValue ? `**${placementValue}**` : 'cleared'} saved for <@${playerId}> in \`${seasonContext}\` namespace.\n\n-# Navigate back to the castlist to see the updated placement.`
-                    }]
-                  }],
-                  flags: (1 << 15) // IS_COMPONENTS_V2
-                })
-              }
-            );
-            return; // Success - don't throw error
-          }
-
-          throw new Error(`REST API PATCH failed: ${restResponse.status} ${errorText}`);
-        }
-
-        console.log(`✅ Successfully updated castlist message with new placement`);
+        // Send UPDATE_MESSAGE to refresh the UI (matches Safari modal pattern)
+        return res.send({
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: castlistResponse
+        });
 
       } catch (error) {
         console.error('❌ Error in save_placement modal handler:', error);
-        // Try to send error message via webhook
-        try {
-          await fetch(
-            `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
-            {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                components: [{
-                  type: 17, // Container
-                  components: [{
-                    type: 10, // Text Display
-                    content: `❌ Error saving placement: ${error.message}`
-                  }]
-                }],
-                flags: (1 << 15) // IS_COMPONENTS_V2
-              })
-            }
-          );
-        } catch (webhookError) {
-          console.error('Failed to send error via webhook:', webhookError);
-        }
+        // Send error as ephemeral message
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `❌ Error saving placement: ${error.message}`,
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
       }
 
     } else if (custom_id.startsWith('condition_currency_modal_')) {
