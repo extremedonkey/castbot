@@ -4923,7 +4923,8 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const permissionChecker = memberObj && channelId ?
         async (m, c) => await canSendMessagesInChannel(m, c, client) :
         null;
-      const responseData = await buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, memberObj, channelId, permissionChecker, displayMode);
+      // Pass ID for lookups, name for display
+      const responseData = await buildCastlist2ResponseData(guild, tribes, requestedCastlist, navigationState, memberObj, channelId, permissionChecker, displayMode, castlistName);
 
       // Send as new message (not update) - this posts to the channel
       return res.send({
@@ -28749,15 +28750,17 @@ Are you sure you want to continue?`;
         const navigationState = createNavigationState(allTribes, scenario, tribeIndex, tribePage);
 
         // Build the response data with current navigation state
+        // CRITICAL: Pass castlistName (ID) for button encoding, not display name
         const castlistResponse = await buildCastlist2ResponseData(
           guild,
           allTribes,
-          castlistName,
+          castlistName,  // This is the ID parsed from the modal
           navigationState,
           member,
           channelId,
           null,
-          displayMode
+          displayMode,
+          castlistEntity?.name || castlistName  // Display name
         );
 
         // Send UPDATE_MESSAGE to refresh the UI (matches Safari modal pattern)

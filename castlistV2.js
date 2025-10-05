@@ -186,7 +186,7 @@ function reorderTribes(tribes, userId = null, strategy = "default", castlistName
  * @param {Object} allPlacements - Pre-loaded placement data (global placements map)
  * @returns {Object} Player card section component
  */
-function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji, displayMode = 'view', tribeData = null, guildId = null, allPlacements = {}, castlistName = 'default', navigationState = null) {
+function createPlayerCard(member, playerData, pronouns, timezone, formattedTime, showEmoji, displayMode = 'view', tribeData = null, guildId = null, allPlacements = {}, castlistId = 'default', navigationState = null) {
     // Check if member has a placement prefix (from alumni_placements sorting)
     const prefix = member.displayPrefix || '';
     const displayName = capitalize(member.displayName);
@@ -270,13 +270,13 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
         const seasonContext = tribeData?.castlistSettings?.seasonId || 'global';
 
         // 🔧 FIX: Encode full navigation state like nav buttons do
-        // Format: edit_placement_{userId}_{seasonContext}_{castlistName}_{tribeIndex}_{tribePage}_{displayMode}
+        // Format: edit_placement_{userId}_{seasonContext}_{castlistId}_{tribeIndex}_{tribePage}_{displayMode}
         const tribeIndex = navigationState?.currentTribeIndex ?? 0;
         const tribePage = navigationState?.currentTribePage ?? 0;
 
         accessory = {
             type: 2, // Button
-            custom_id: `edit_placement_${member.user.id}_${seasonContext}_${castlistName}_${tribeIndex}_${tribePage}_${displayMode}`,
+            custom_id: `edit_placement_${member.user.id}_${seasonContext}_${castlistId}_${tribeIndex}_${tribePage}_${displayMode}`,
             label: getOrdinalLabel(placement),
             style: 2, // Secondary
             emoji: { name: "✏️" }
@@ -317,7 +317,11 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
  * @param {string} displayMode - 'view' or 'edit' mode
  * @returns {Object} Tribe container component
  */
-async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, pageInfo, scenario, castlistName = 'default', displayMode = 'view', navigationState = null) {
+async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, timezones, pageInfo, scenario, castlistId = 'default', displayMode = 'view', navigationState = null, castlistName = null) {
+    // Fallback for backwards compatibility
+    if (!castlistName) {
+        castlistName = castlistId;
+    }
     const { currentPage, totalPages, playersOnPage } = pageInfo;
     const pageMembers = playersOnPage;
 
@@ -409,7 +413,7 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             tribe, // Pass tribe data for edit button
             guild.id, // Pass guild ID for placement lookup
             allPlacements, // Pass pre-loaded placement data (edit mode only)
-            castlistName, // Pass castlist name for button context
+            castlistId, // Pass castlist ID for button encoding (NOT display name)
             navigationState // Pass navigation state for button context
         );
         
@@ -789,7 +793,11 @@ function createCastlistRows(allCastlists, castlistTribes, includeAddButton = tru
  * @param {Function} permissionChecker - Optional function to check send permissions
  * @returns {Object} Response data ready to send
  */
-export async function buildCastlist2ResponseData(guild, tribes, castlistName, navigationState, member = null, channelId = null, permissionChecker = null, displayMode = 'view') {
+export async function buildCastlist2ResponseData(guild, tribes, castlistId, navigationState, member = null, channelId = null, permissionChecker = null, displayMode = 'view', castlistName = null) {
+  // If no display name provided, use ID for display (backwards compatibility)
+  if (!castlistName) {
+    castlistName = castlistId;
+  }
   const { currentTribeIndex, currentTribePage, scenario } = navigationState;
   const currentTribe = tribes[currentTribeIndex];
 
@@ -851,14 +859,15 @@ export async function buildCastlist2ResponseData(guild, tribes, castlistName, na
       timezones,
       pageInfo,
       scenario,
-      castlistName,
+      castlistId,  // Pass ID for button encoding
       displayMode,
-      navigationState // Pass navigation state for placement button context
+      navigationState, // Pass navigation state for placement button context
+      castlistName  // Pass display name for headers
     );
   }
 
   // Create navigation buttons (now includes viral growth buttons)
-  const navigationRow = createNavigationButtons(navigationState, castlistName, displayMode);
+  const navigationRow = createNavigationButtons(navigationState, castlistId, displayMode);
 
   // Create complete layout
   const responseData = createCastlistV2Layout(
