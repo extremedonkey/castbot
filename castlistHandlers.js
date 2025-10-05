@@ -59,7 +59,7 @@ async function createEditInfoModalForNew(guildId) {
     seasonOptions.unshift(...actualSeasonOptions);
   }
 
-  // Create modal for new castlist
+  // Create modal for new castlist using Components V2 with String Select
   return {
     custom_id: 'castlist_create_new_modal',
     title: 'Create New Castlist',
@@ -90,7 +90,7 @@ async function createEditInfoModalForNew(guildId) {
           custom_id: 'season_id',
           placeholder: 'Choose a season...',
           required: false,
-          min_values: 0,
+          min_values: 0, // Allow deselecting all
           max_values: 1,
           options: seasonOptions
         }
