@@ -4821,8 +4821,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
       // If requestedCastlist is a castlistId, look up the real name for display
       // (Keep requestedCastlist as ID for tribe matching, but use name for display)
+      let castlistEntity = null;
       if (requestedCastlist && (requestedCastlist.startsWith('castlist_') || requestedCastlist === 'default')) {
-        const castlistEntity = playerData[guildId]?.castlistConfigs?.[requestedCastlist];
+        castlistEntity = playerData[guildId]?.castlistConfigs?.[requestedCastlist];
         if (castlistEntity?.name) {
           castlistName = castlistEntity.name;
           console.log(`Resolved castlistId '${requestedCastlist}' to name '${castlistName}' for display`);
@@ -4830,7 +4831,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       }
 
       console.log('Determined castlist to show:', castlistName);
-      
+
       // Get tribes for this castlist (using existing logic from app.js)
       const guildTribes = playerData[guildId]?.tribes || {};
       const allTribes = [];
@@ -4862,7 +4863,14 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               roleId,
               name: role.name,
               members: tribeMembers,
-              memberCount: tribeMembers.length
+              memberCount: tribeMembers.length,
+              // 🔗 PHASE 2: Attach castlist settings AND seasonId for placement lookups
+              castlistSettings: {
+                ...castlistEntity?.settings,
+                seasonId: castlistEntity?.seasonId  // CRITICAL: Enables season-based placements
+              },
+              castlistId: requestedCastlist,  // For future placement namespace lookups
+              guildId: guildId  // For accessing playerData placements
             });
           } catch (error) {
             console.error(`Error fetching role ${roleId}:`, error);
@@ -7824,21 +7832,32 @@ To fix this:
       return handleCastlistTribeSelect(req, res, client, custom_id);
     } else if (custom_id.startsWith('edit_placement_')) {
       // Handle placement edit button - show modal (MIGRATED TO FACTORY)
-      const playerId = custom_id.replace('edit_placement_', '');
+      // 🔧 PHASE 1: Parse season context from button ID (format: edit_placement_{userId}_{seasonId or 'global'})
+      const parts = custom_id.split('_');
+      const playerId = parts[2];
+      const seasonContext = parts[3] || 'global';  // 'global' or 'season_abc123def456'
 
       return ButtonHandlerFactory.create({
         id: 'edit_placement',
         handler: async (context) => {
-          // Load current placement
+          // Load current placement from correct namespace
           const { loadPlayerData } = await import('./storage.js');
-          const playerData = await loadPlayerData();  // ✅ FIXED: Added await
-          const placement = playerData[context.guildId]?.placements?.global?.[playerId]?.placement;
+          const playerData = await loadPlayerData();
 
-          // Return modal structure
+          // 🔧 PHASE 1: Read from correct namespace based on season context
+          const placementNamespace = seasonContext === 'global'
+            ? playerData[context.guildId]?.placements?.global
+            : playerData[context.guildId]?.placements?.[seasonContext];
+
+          const placement = placementNamespace?.[playerId]?.placement;
+
+          console.log(`[PLACEMENT EDIT] Loading placement for player ${playerId} from namespace: ${seasonContext} (value: ${placement || 'none'})`);
+
+          // Return modal structure with season context preserved
           return {
             type: InteractionResponseType.MODAL,
             data: {
-              custom_id: `save_placement_${playerId}`,
+              custom_id: `save_placement_${playerId}_${seasonContext}`,  // ✅ Include season for save handler
               title: "Edit Season Placement",
               components: [
                 {
@@ -28534,14 +28553,18 @@ Are you sure you want to continue?`;
     } else if (custom_id.startsWith('save_placement_')) {
       // Handle placement save from modal submission
       try {
-        const playerId = custom_id.replace('save_placement_', '');
+        // 🔧 PHASE 1: Parse season context from modal custom_id (format: save_placement_{userId}_{seasonId or 'global'})
+        const parts = custom_id.split('_');
+        const playerId = parts[2];
+        const seasonContext = parts[3] || 'global';
+
         const guildId = req.body.guild_id;
         const channelId = req.body.channel_id;
         const member = req.body.member;
         const userId = member?.user?.id;
         const castlistMessageId = req.body.message?.id;  // The castlist message we need to update
 
-        console.log(`✏️ DEBUG: Placement modal submitted for player ${playerId}`);
+        console.log(`✏️ DEBUG: Placement modal submitted for player ${playerId} (namespace: ${seasonContext})`);
         console.log(`📋 DEBUG: Castlist message ID to update: ${castlistMessageId}`);
 
         // Send deferred response immediately (castlist refresh takes >3 seconds)
@@ -28578,30 +28601,30 @@ Are you sure you want to continue?`;
 
         // Load and update player data
         const { loadPlayerData, savePlayerData } = await import('./storage.js');
-        const playerData = await loadPlayerData();  // 🚨 CRITICAL FIX: Added await
+        const playerData = await loadPlayerData();
 
-        // Initialize structure if needed
+        // 🔧 PHASE 1: Initialize structure for target namespace
         if (!playerData[guildId]) {
           playerData[guildId] = {};
         }
         if (!playerData[guildId].placements) {
           playerData[guildId].placements = {};
         }
-        if (!playerData[guildId].placements.global) {
-          playerData[guildId].placements.global = {};
+        if (!playerData[guildId].placements[seasonContext]) {
+          playerData[guildId].placements[seasonContext] = {};
         }
 
-        // Save or delete GLOBAL placement
+        // 🔧 PHASE 1: Save or delete placement to correct namespace
         if (placementValue !== null) {
-          playerData[guildId].placements.global[playerId] = {
+          playerData[guildId].placements[seasonContext][playerId] = {
             placement: placementValue,
             updatedBy: userId,
             updatedAt: new Date().toISOString()
           };
-          console.log(`✅ Saved placement ${placementValue} for player ${playerId}`);
+          console.log(`✅ Saved placement ${placementValue} to ${seasonContext} for player ${playerId}`);
         } else {
-          delete playerData[guildId].placements.global[playerId];
-          console.log(`🗑️ Deleted placement for player ${playerId}`);
+          delete playerData[guildId].placements[seasonContext][playerId];
+          console.log(`🗑️ Deleted placement from ${seasonContext} for player ${playerId}`);
         }
 
         await savePlayerData(playerData);

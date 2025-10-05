@@ -1520,12 +1520,15 @@
       },
       "1333822411912642630": {
         "emoji": "🧟‍♂️",
-        "castlist": "Haszo",
+        "castlist": "legacyList",
         "showPlayerEmojis": false,
         "color": "#2ecc71",
         "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
         "analyticsAdded": 1754751381750,
-        "castlistId": "castlist_1758812609810_system"
+        "castlistId": "castlist_1758812609810_system",
+        "castlistIds": [
+          "castlist_1759638936214_system"
+        ]
       },
       "1335645032891547670": {
         "emoji": "🤷‍♀️",
@@ -2624,11 +2627,13 @@
           "visibility": "public"
         },
         "metadata": {
-          "description": "Upgraded from legacy castlist 'legacyList'",
+          "description": "Upgraded from legacy castlist 'legacyList'  aaa",
           "emoji": "📋",
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
-        }
+        },
+        "modifiedAt": 1759648265270,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {

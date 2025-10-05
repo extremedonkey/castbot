@@ -266,9 +266,12 @@ function createPlayerCard(member, playerData, pronouns, timezone, formattedTime,
             }
         };
 
+        // 🔧 PHASE 0: Get season identifier for button context
+        const seasonContext = tribeData?.castlistSettings?.seasonId || 'global';
+
         accessory = {
             type: 2, // Button
-            custom_id: `edit_placement_${member.user.id}`,  // No tribeId needed - placements are global
+            custom_id: `edit_placement_${member.user.id}_${seasonContext}`,  // Include season for correct namespace
             label: getOrdinalLabel(placement),
             style: 2, // Secondary
             emoji: { name: "✏️" }
@@ -321,7 +324,17 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
     let allPlacements = {};
     if (displayMode === 'edit') {
         const playerDataAll = await loadPlayerData();
-        allPlacements = playerDataAll[guild.id]?.placements?.global || {};
+
+        // 🔧 PHASE 0: Get season context from tribe data (passed via castlistSettings from Phase 2)
+        const seasonId = tribe.castlistSettings?.seasonId;
+
+        // Determine placement namespace: season-specific or global fallback
+        const placementNamespace = seasonId
+            ? playerDataAll[guild.id]?.placements?.[seasonId]      // Season-specific
+            : playerDataAll[guild.id]?.placements?.global;         // No Season fallback
+
+        allPlacements = placementNamespace || {};
+        console.log(`[PLACEMENT UI] Loading placements from namespace: ${seasonId || 'global'} (${Object.keys(allPlacements).length} placements found)`);
     }
 
     // Create header with proper format: Line 1 = castlist name, Line 2 = tribe info
