@@ -481,11 +481,11 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
 /**
  * Creates context-aware navigation buttons for complex tribe/page navigation
  * @param {Object} navigationState - Complete navigation state
- * @param {string} castlistName - Name of the castlist
+ * @param {string} castlistId - ID of the castlist (legacy names or new IDs like castlist_123_system)
  * @param {string} displayMode - Display mode ('view' or 'edit') to preserve across navigation
  * @returns {ActionRowBuilder} Action row with navigation buttons
  */
-function createNavigationButtons(navigationState, castlistName, displayMode = 'view') {
+function createNavigationButtons(navigationState, castlistId, displayMode = 'view') {
     const { currentTribeIndex, currentTribePage, totalTribes, scenario, tribes } = navigationState;
     const currentTribe = tribes[currentTribeIndex];
     const row = new ActionRowBuilder();
@@ -530,15 +530,16 @@ function createNavigationButtons(navigationState, castlistName, displayMode = 'v
     }
 
     // Encode displayMode in custom_id to preserve edit mode across navigation
-    // Format: castlist2_nav_${action}_${tribeIndex}_${tribePage}_${castlistName}_${displayMode}
+    // Format: castlist2_nav_${action}_${tribeIndex}_${tribePage}_${castlistId}_${displayMode}
+    // CRITICAL: Use castlistId (not name) to match getGuildTribes() parameter
     const lastButton = new ButtonBuilder()
-        .setCustomId(`castlist2_nav_${lastAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}_${displayMode}`)
+        .setCustomId(`castlist2_nav_${lastAction}_${currentTribeIndex}_${currentTribePage}_${castlistId}_${displayMode}`)
         .setLabel("◀")
         .setStyle(lastDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
         .setDisabled(lastDisabled);
 
     const nextButton = new ButtonBuilder()
-        .setCustomId(`castlist2_nav_${nextAction}_${currentTribeIndex}_${currentTribePage}_${castlistName}_${displayMode}`)
+        .setCustomId(`castlist2_nav_${nextAction}_${currentTribeIndex}_${currentTribePage}_${castlistId}_${displayMode}`)
         .setLabel("▶")
         .setStyle(nextDisabled ? ButtonStyle.Secondary : ButtonStyle.Primary)
         .setDisabled(nextDisabled);

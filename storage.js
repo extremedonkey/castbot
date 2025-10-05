@@ -230,14 +230,33 @@ export async function getPlayer(guildId, playerId) {
 }
 
 // Update getGuildTribes to include the color property from tribes
-export async function getGuildTribes(guildId, castlist = 'default') {
+export async function getGuildTribes(guildId, castlistIdentifier = 'default') {
   const data = await loadPlayerData();
   const tribes = [];
-  
+
   if (data[guildId]?.tribes) {
     Object.entries(data[guildId].tribes).forEach(([roleId, tribeData]) => {
       if (!tribeData) return; // Skip null/undefined tribe entries
-      if (tribeData.castlist === castlist) {
+
+      // ✅ FIX: Check BOTH legacy name field AND new ID field
+      // This supports:
+      // 1. Legacy castlists: tribe.castlist = "legacyList"
+      // 2. Migrated castlists: tribe.castlistId = "castlist_1759638936214_system"
+      // 3. Multi-castlist: tribe.castlistIds = ["default", "alumni_id"]
+      // 4. Default fallback: tribes with no castlist field
+      const matches = (
+        // Legacy name matching
+        tribeData.castlist === castlistIdentifier ||
+        // New single ID matching
+        tribeData.castlistId === castlistIdentifier ||
+        // Multi-castlist array support
+        (tribeData.castlistIds && Array.isArray(tribeData.castlistIds) &&
+         tribeData.castlistIds.includes(castlistIdentifier)) ||
+        // Default castlist fallback
+        (!tribeData.castlist && !tribeData.castlistId && !tribeData.castlistIds && castlistIdentifier === 'default')
+      );
+
+      if (matches) {
         // Include ALL tribe data to support new features like type and rankings
         tribes.push({
           roleId,
@@ -246,7 +265,7 @@ export async function getGuildTribes(guildId, castlist = 'default') {
       }
     });
   }
-  
+
   return tribes;
 }
 
