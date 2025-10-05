@@ -4836,14 +4836,22 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
 
       // Resolve legacy castlist name to entity ID for navigation buttons
       let castlistIdForNavigation = requestedCastlist;
+      console.log(`🔍 Resolution check: requestedCastlist='${requestedCastlist}', isID=${requestedCastlist.startsWith('castlist_')}, isDefault=${requestedCastlist === 'default'}`);
+
       if (!requestedCastlist.startsWith('castlist_') && requestedCastlist !== 'default') {
         // requestedCastlist is a legacy name - find matching entity
         const castlistConfigs = playerData[guildId]?.castlistConfigs || {};
+        console.log(`🔍 Searching ${Object.keys(castlistConfigs).length} castlist configs for name='${requestedCastlist}'`);
         const matchingEntity = Object.values(castlistConfigs).find(config => config.name === requestedCastlist);
+        console.log(`🔍 Found matching entity:`, matchingEntity ? `id=${matchingEntity.id}, name=${matchingEntity.name}` : 'NOT FOUND');
         if (matchingEntity?.id) {
           castlistIdForNavigation = matchingEntity.id;
           console.log(`✅ Resolved legacy name '${requestedCastlist}' to entity ID '${castlistIdForNavigation}'`);
+        } else {
+          console.log(`⚠️ Could not resolve legacy name '${requestedCastlist}' - no matching entity found`);
         }
+      } else {
+        console.log(`✅ Using requestedCastlist as-is: '${castlistIdForNavigation}' (already an ID or default)`);
       }
 
       // Get tribes for this castlist (using existing logic from app.js)
