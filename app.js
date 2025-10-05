@@ -27247,12 +27247,6 @@ Are you sure you want to continue?`;
             description: 'Recommended if you don\'t know what you\'re doing',
             value: 'default',
             emoji: { name: '✅' }
-          },
-          {
-            label: 'Alumni Season Placements',
-            description: 'Create castlist showing placements for a past season',
-            value: 'alumni_placements',
-            emoji: { name: '🏆' }
           }
         ];
         
@@ -27395,76 +27389,7 @@ Are you sure you want to continue?`;
           });
         }
         
-        // Show additional placement fields for alumni_placements type
-        if (selectedCastlist === 'alumni_placements') {
-          // Add season name field
-          modal.components.push({
-            type: 1, // Action Row
-            components: [
-              {
-                type: 4, // Text Input
-                custom_id: 'season_name',
-                label: 'Season Name (Optional)',
-                style: 1, // Short
-                min_length: 1,
-                max_length: 100,
-                required: false,
-                placeholder: 'e.g., LOSTvivor S2: We\'ve got to go back'
-              }
-            ]
-          });
-          
-          // Add 3rd place ID
-          modal.components.push({
-            type: 1, // Action Row
-            components: [
-              {
-                type: 4, // Text Input
-                custom_id: 'third_place_id',
-                label: '3rd Place ID',
-                style: 1, // Short
-                min_length: 17,
-                max_length: 20,
-                required: false,
-                placeholder: 'ID of the user who came third'
-              }
-            ]
-          });
-          
-          // Add 2nd place ID
-          modal.components.push({
-            type: 1, // Action Row
-            components: [
-              {
-                type: 4, // Text Input
-                custom_id: 'second_place_id',
-                label: '2nd Place ID',
-                style: 1, // Short
-                min_length: 17,
-                max_length: 20,
-                required: false,
-                placeholder: 'ID of the user who came second'
-              }
-            ]
-          });
-          
-          // Add 1st place ID  
-          modal.components.push({
-            type: 1, // Action Row
-            components: [
-              {
-                type: 4, // Text Input
-                custom_id: 'first_place_id',
-                label: '1st Place ID',
-                style: 1, // Short
-                min_length: 17,
-                max_length: 20,
-                required: false,
-                placeholder: 'ID of the user who came first'
-              }
-            ]
-          });
-        }
+        // Removed alumni_placements modal fields - using centralized placement system instead
 
         return res.send({
           type: InteractionResponseType.MODAL,
@@ -29749,47 +29674,9 @@ Are you sure you want to continue?`;
         let finalCastlist = selectedCastlist;
         if (selectedCastlist === 'new_custom' && customCastlistName) {
           finalCastlist = customCastlistName; // Preserve capitalization and spaces like /add_tribe command
-        } else if (selectedCastlist === 'alumni_placements') {
-          // For alumni placements, use the role name as the castlist name
-          finalCastlist = role.name;
         }
-        
-        // Extract placement data if this is an alumni_placements type
-        let rankings = {};
-        let seasonId = null;
-        let seasonName = null;
-        
-        if (selectedCastlist === 'alumni_placements') {
-          // Extract season name from modal (accounting for new field)
-          const seasonNameInput = components[1]?.components[0]?.value?.trim() || null;
-          
-          // Extract the placement IDs from modal components (shifted by 1 due to season field)
-          const thirdPlaceId = components[2]?.components[0]?.value?.trim() || null;
-          const secondPlaceId = components[3]?.components[0]?.value?.trim() || null;
-          const firstPlaceId = components[4]?.components[0]?.value?.trim() || null;
-          
-          // Create season if name was provided
-          if (seasonNameInput) {
-            const { createSeason } = await import('./storage.js');
-            seasonId = await createSeason(guildId, {
-              name: seasonNameInput,
-              userId: req.body.member.user.id,
-              source: 'alumni_castlist'
-            });
-            seasonName = seasonNameInput;
-          }
-          
-          // Build rankings object
-          if (firstPlaceId) {
-            rankings[firstPlaceId] = { placement: "1" };
-          }
-          if (secondPlaceId) {
-            rankings[secondPlaceId] = { placement: "2" };
-          }
-          if (thirdPlaceId) {
-            rankings[thirdPlaceId] = { placement: "3" };
-          }
-        }
+
+        // Removed alumni_placements processing - using centralized placement system instead
         
         // Load player data and check for conflicts
         const playerData = await loadPlayerData();
@@ -29830,19 +29717,7 @@ Are you sure you want to continue?`;
           analyticsAdded: Date.now()
         };
         
-        // Add alumni placements specific fields
-        if (selectedCastlist === 'alumni_placements') {
-          tribeData.type = 'alumni_placements';
-          tribeData.rankings = rankings;
-          if (seasonId) {
-            tribeData.seasonId = seasonId;
-            tribeData.seasonName = seasonName;
-            
-            // Link season to tribe
-            const { linkSeasonToEntity } = await import('./storage.js');
-            await linkSeasonToEntity(guildId, seasonId, 'tribes', roleId);
-          }
-        }
+        // Removed alumni_placements specific fields - using centralized placement system
         
         playerData[guildId].tribes[roleId] = tribeData;
         
@@ -29854,25 +29729,7 @@ Are you sure you want to continue?`;
         
         // Build success message content
         let successContent = `**${role.name}** has been added to the ${castlistDisplay}${emojiDisplay}.\n\n`;
-        
-        if (selectedCastlist === 'alumni_placements') {
-          const placementCount = Object.keys(rankings).length;
-          successContent += `🏆 **Alumni Season Placements Created**\n`;
-          if (seasonName) {
-            successContent += `📅 **Season:** ${seasonName}\n`;
-          }
-          successContent += `Added ${placementCount} placement${placementCount !== 1 ? 's' : ''}:\n`;
-          
-          // Show the placements that were added
-          for (const [userId, data] of Object.entries(rankings)) {
-            const placement = data.placement;
-            const medal = placement === "1" ? "🥇" : placement === "2" ? "🥈" : "🥉";
-            successContent += `${medal} Place ${placement}: <@${userId}>\n`;
-          }
-          successContent += `\nYou can add more placements later using the entity management system.`;
-        } else {
-          successContent += `Players can now view this tribe in the castlist once members are assigned to the role.`;
-        }
+        successContent += `Players can now view this tribe in the castlist once members are assigned to the role.`;
         
         // Create ComponentsV2 container for success message
         const successContainer = {

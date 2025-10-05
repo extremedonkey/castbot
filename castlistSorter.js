@@ -85,7 +85,7 @@ function sortByPlacements(members, tribeData, options = {}) {
       // Preserve the original member object and add properties directly
       // This maintains Discord.js object structure
       member.placement = parseInt(placementData.placement);
-      member.displayPrefix = `${placementData.placement}) `; // e.g., "5) "
+      member.displayPrefix = `\`${placementData.placement}\` `; // e.g., "`5` "
       ranked.push(member);
     } else {
       // Keep unranked members as-is (active players)

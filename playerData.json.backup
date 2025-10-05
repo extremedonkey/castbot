@@ -1643,24 +1643,27 @@
       },
       "1424390073075372043": {
         "emoji": "🅰️",
-        "castlist": "MultiA",
         "showPlayerEmojis": false,
         "color": "#2ecc71",
         "analyticsName": "🅰️ The Multi-TribeA 🅰️",
-        "analyticsAdded": 1759671564635,
-        "castlistId": "castlist_1759671866227_system"
+        "analyticsAdded": 1759671564635
       },
       "1424390164947664916": {
         "emoji": "🅱️",
-        "castlist": "MultiA",
         "showPlayerEmojis": false,
         "color": "#3498db",
         "analyticsName": "🅱️ The Multi-TribeB 🅱️",
         "analyticsAdded": 1759671585440,
-        "castlistId": "castlist_1759671885172_system",
+        "castlistId": "castlist_1759671885172_system"
+      },
+      "1424400564858650644": {
+        "name": "Tribe 1424400564858650644",
+        "emoji": "🏕️",
+        "color": "#e91e63",
         "castlistIds": [
           "castlist_1759671866227_system"
-        ]
+        ],
+        "castlist": "MultiA"
       }
     },
     "timezones": {
@@ -2695,7 +2698,7 @@
         "createdAt": 1759671866227,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
@@ -2706,8 +2709,8 @@
           "migratedFrom": "virtual_TXVsdGlB",
           "migrationDate": 1759671866227
         },
-        "modifiedAt": 1759672442941,
-        "modifiedBy": "391415444084490240",
+        "modifiedAt": 1759672601447,
+        "modifiedBy": "system",
         "seasonId": "season_9a8360f7864d4120"
       },
       "castlist_1759671885172_system": {
@@ -2891,6 +2894,46 @@
           "placement": 22,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-05T13:55:30.590Z"
+        },
+        "731547575211262128": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:04.334Z"
+        },
+        "415686124208390144": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:16.006Z"
+        },
+        "766410076608921661": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:23.110Z"
+        },
+        "630470402900230146": {
+          "placement": 8,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:34.627Z"
+        },
+        "1319912453248647170": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:41.582Z"
+        },
+        "863115100268789781": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:46.234Z"
+        },
+        "572291395365109770": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:28:16.970Z"
+        },
+        "480712959824363520": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:28:25.768Z"
         }
       }
     }
