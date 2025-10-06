@@ -207,6 +207,15 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'navigation'
   },
+
+  // === CASTLIST V3 ===
+  'castlist_create_new_button': {
+    label: 'Create New Castlist',
+    description: 'Create a new custom castlist',
+    emoji: '✨',
+    style: 'Success',
+    category: 'castlist'
+  },
   
   // === PRODUCTION SETUP ===
   'prod_setup': {

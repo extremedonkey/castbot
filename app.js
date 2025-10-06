@@ -7682,28 +7682,30 @@ To fix this:
       const { handleCastlistSelect } = await import('./castlistHandlers.js');
       return handleCastlistSelect(req, res, client);
     } else if (custom_id === 'castlist_create_new_button') {
-      // This button appears after selecting "Create New" from dropdown
-      // NOW we show the modal (following the proper hub pattern)
-      try {
-        const { createEditInfoModalForNew } = await import('./castlistHandlers.js');
-        const modal = await createEditInfoModalForNew(req.body.guild_id);
+      // Use ButtonHandlerFactory for proper handling
+      return ButtonHandlerFactory.create({
+        id: 'castlist_create_new_button',
+        handler: async (context) => {
+          try {
+            console.log('📋 Showing Create New Castlist modal from button');
+            const { createEditInfoModalForNew } = await import('./castlistHandlers.js');
+            const modal = await createEditInfoModalForNew(context.guildId);
 
-        console.log('📋 Showing Create New Castlist modal from button');
-
-        return res.send({
-          type: 9, // MODAL
-          data: modal
-        });
-      } catch (error) {
-        console.error('📋 Error creating modal:', error);
-        return res.send({
-          type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
-          data: {
-            content: '❌ Failed to create castlist modal. Please try again.',
-            flags: 64 // EPHEMERAL
+            // ButtonHandlerFactory checks for response.type and sends directly
+            // For modals, we need to return the full Discord response structure
+            return {
+              type: 9, // InteractionResponseType.MODAL
+              data: modal
+            };
+          } catch (error) {
+            console.error('📋 Error creating modal:', error);
+            return {
+              content: '❌ Failed to create castlist modal. Please try again.',
+              ephemeral: true
+            };
           }
-        });
-      }
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('castlist_delete')) {
       // Handle castlist deletion
       const { handleCastlistDelete } = await import('./castlistHandlers.js');
