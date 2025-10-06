@@ -906,9 +906,9 @@ export async function handleCreateNewModal(req, res, client) {
       playerData[guildId] = {};
     }
 
-    // Initialize tribes if needed
-    if (!playerData[guildId].tribes) {
-      playerData[guildId].tribes = {};
+    // Initialize castlistConfigs for V3 castlists
+    if (!playerData[guildId].castlistConfigs) {
+      playerData[guildId].castlistConfigs = {};
     }
 
     // Generate unique ID for new castlist
@@ -918,27 +918,29 @@ export async function handleCreateNewModal(req, res, client) {
     const selectedSeasonId = values.season_id?.[0] || null;
     const seasonId = selectedSeasonId === 'none' ? null : selectedSeasonId;
 
-    // Create the new castlist (tribe)
+    // Create the new castlist (V3 structure)
     const newCastlist = {
       id: newId,
       name: values.castlist_name.trim(),
-      roleId: null, // No role assigned yet
-      members: [], // Empty member list
+      type: 'custom', // User-created castlist
+      createdAt: Date.now(),
+      createdBy: userId,
+      settings: {
+        sortStrategy: 'alphabetical', // Default sort
+        showRankings: false,
+        maxDisplay: 25,
+        visibility: 'public',
+        ...(seasonId && { seasonId }) // Only add seasonId if not null
+      },
       metadata: {
         emoji: values.castlist_emoji?.trim() || '📋',
         description: values.castlist_description?.trim() || '',
-        createdBy: userId,
-        createdAt: Date.now(),
         lastModified: Date.now()
-      },
-      castlistSettings: {
-        sortStrategy: 'alphabetical', // Default sort
-        ...(seasonId && { seasonId }) // Only add seasonId if not null
       }
     };
 
-    // Save the new castlist
-    playerData[guildId].tribes[newId] = newCastlist;
+    // Save the new castlist to V3 location
+    playerData[guildId].castlistConfigs[newId] = newCastlist;
     await savePlayerData(playerData);
 
     console.log(`[CASTLIST] Created new castlist ${newId}: "${newCastlist.name}" for guild ${guildId}`);
