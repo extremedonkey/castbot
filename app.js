@@ -7680,16 +7680,49 @@ To fix this:
       // Special check for Create New Castlist to bypass handler and show modal directly
       const values = data.values || [];
       if (values[0] === 'create_new') {
-        // Handle Create New Castlist modal directly here
-        const { createEditInfoModalForNew } = await import('./castlistHandlers.js');
-        const modal = await createEditInfoModalForNew(req.body.guild_id);
+        console.log('📋 [DEBUG] Create New Castlist selected');
+        console.log('📋 [DEBUG] Guild ID:', req.body.guild_id);
 
-        console.log(`📋 Showing Create New Castlist modal for guild ${req.body.guild_id}`);
+        try {
+          // Handle Create New Castlist modal directly here
+          const { createEditInfoModalForNew } = await import('./castlistHandlers.js');
+          console.log('📋 [DEBUG] Function imported successfully');
 
-        return res.send({
-          type: 9, // MODAL
-          data: modal
-        });
+          const modal = await createEditInfoModalForNew(req.body.guild_id);
+          console.log('📋 [DEBUG] Modal created:', JSON.stringify(modal, null, 2));
+          console.log('📋 [DEBUG] Modal components count:', modal.components?.length);
+
+          // Validate modal structure
+          if (!modal.custom_id || !modal.title || !modal.components) {
+            console.error('📋 [ERROR] Invalid modal structure - missing required fields');
+            console.error('📋 [ERROR] Has custom_id?', !!modal.custom_id);
+            console.error('📋 [ERROR] Has title?', !!modal.title);
+            console.error('📋 [ERROR] Has components?', !!modal.components);
+          }
+
+          console.log(`📋 [DEBUG] Sending modal response with type 9 for guild ${req.body.guild_id}`);
+
+          const response = {
+            type: 9, // MODAL
+            data: modal
+          };
+
+          console.log('📋 [DEBUG] Full response being sent:', JSON.stringify(response, null, 2));
+
+          return res.send(response);
+        } catch (error) {
+          console.error('📋 [ERROR] Failed to create modal:', error);
+          console.error('📋 [ERROR] Stack trace:', error.stack);
+
+          // Send error response
+          return res.send({
+            type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+            data: {
+              content: '❌ Failed to create new castlist modal. Please try again.',
+              flags: 64 // EPHEMERAL
+            }
+          });
+        }
       }
 
       // Handle all other castlist selections normally

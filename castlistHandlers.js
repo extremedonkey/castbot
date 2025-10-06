@@ -40,6 +40,9 @@ export async function createEditInfoModalForNew(guildId) {
 
   const seasons = playerData[guildId].applicationConfigs || {};
 
+  console.log('📋 [DEBUG] createEditInfoModalForNew - Guild data initialized');
+  console.log('📋 [DEBUG] createEditInfoModalForNew - Seasons found:', Object.keys(seasons).length);
+
   // Build season options (most recent first)
   const allSeasons = Object.entries(seasons)
     .sort(([,a], [,b]) => {
@@ -80,7 +83,7 @@ export async function createEditInfoModalForNew(guildId) {
   }
 
   // Create modal for new castlist using Components V2 with String Select
-  return {
+  const modalData = {
     custom_id: 'castlist_create_new_modal',
     title: 'Create New Castlist',
     components: [
@@ -147,6 +150,12 @@ export async function createEditInfoModalForNew(guildId) {
       }
     ]
   };
+
+  console.log('📋 [DEBUG] createEditInfoModalForNew - Modal structure created');
+  console.log('📋 [DEBUG] createEditInfoModalForNew - Components count:', modalData.components.length);
+  console.log('📋 [DEBUG] createEditInfoModalForNew - Season options count:', seasonOptions.length);
+
+  return modalData;
 }
 
 /**
