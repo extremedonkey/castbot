@@ -93,7 +93,6 @@ export async function createEditInfoModalForNew(guildId) {
           custom_id: 'castlist_name',
           style: 1, // Short
           required: true,
-          value: '', // Empty for new castlist
           placeholder: 'Enter castlist name',
           min_length: 1,
           max_length: 100
@@ -108,9 +107,9 @@ export async function createEditInfoModalForNew(guildId) {
         component: {
           type: 3, // String Select
           custom_id: 'season_id',
-          placeholder: 'Choose a season...',
+          placeholder: 'Choose a season (or No Season for cross-season)',
           required: false,
-          min_values: 0, // Allow deselecting all
+          min_values: 1, // Discord requires at least 1 in modals
           max_values: 1,
           options: seasonOptions
         }
@@ -140,7 +139,6 @@ export async function createEditInfoModalForNew(guildId) {
           custom_id: 'castlist_description',
           style: 2, // Paragraph
           required: false,
-          value: '', // Empty for new castlist
           placeholder: 'Brief description of this castlist',
           max_length: 200
         }
