@@ -860,7 +860,7 @@ export function handleEditInfoModal(req, res, client, custom_id) {
  * Creates a new castlist and returns to the hub with it selected
  */
 export async function handleCreateNewModal(req, res, client) {
-  const { loadPlayerData, savePlayerData } = await import('./dataManager.js');
+  const { loadPlayerData, savePlayerData } = await import('./storage.js');
   const { createCastlistHub } = await import('./castlistHub.js');
   const { generateId } = await import('./utils.js');
   const { body } = req;
