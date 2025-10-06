@@ -7,7 +7,7 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';
 import { createCastlistHub, CastlistButtonType } from './castlistHub.js';
 import { castlistManager } from './castlistManager.js';
 import { castlistVirtualAdapter } from './castlistVirtualAdapter.js';
-import { loadPlayerData, savePlayerData } from './dataManager.js';
+import { loadPlayerData, savePlayerData } from './storage.js';
 import { PermissionFlagsBits } from 'discord.js';
 
 /**
@@ -39,9 +39,6 @@ export async function createEditInfoModalForNew(guildId) {
   }
 
   const seasons = playerData[guildId].applicationConfigs || {};
-
-  console.log('📋 [DEBUG] createEditInfoModalForNew - Guild data initialized');
-  console.log('📋 [DEBUG] createEditInfoModalForNew - Seasons found:', Object.keys(seasons).length);
 
   // Build season options (most recent first)
   const allSeasons = Object.entries(seasons)
@@ -151,10 +148,6 @@ export async function createEditInfoModalForNew(guildId) {
     ]
   };
 
-  console.log('📋 [DEBUG] createEditInfoModalForNew - Modal structure created');
-  console.log('📋 [DEBUG] createEditInfoModalForNew - Components count:', modalData.components.length);
-  console.log('📋 [DEBUG] createEditInfoModalForNew - Season options count:', seasonOptions.length);
-
   return modalData;
 }
 
@@ -163,14 +156,26 @@ export async function createEditInfoModalForNew(guildId) {
  * Materializes virtual castlists immediately on selection
  */
 export async function handleCastlistSelect(req, res, client) {
-  // Note: create_new is now handled directly in app.js to bypass ButtonHandlerFactory
-  // This function only handles regular castlist selections
   return ButtonHandlerFactory.create({
     id: 'castlist_select',
     updateMessage: true,
     handler: async (context) => {
       let selectedCastlistId = context.values?.[0];
       console.log(`📋 Processing castlist selection: ${selectedCastlistId}`);
+
+      // Handle "Create New" selection - update hub to show create UI
+      if (selectedCastlistId === 'create_new') {
+        console.log('📋 Create New Castlist selected - updating hub state');
+
+        // Return hub with special "create_new" state
+        // This will show a button to trigger the actual creation modal
+        const hubData = await createCastlistHub(context.guildId, {
+          selectedCastlistId: 'create_new',  // Special state
+          activeButton: 'create_new'         // Special button state
+        });
+
+        return hubData;
+      }
 
       // Materialize virtual castlists immediately on selection
       if (selectedCastlistId && castlistVirtualAdapter.isVirtualId(selectedCastlistId)) {

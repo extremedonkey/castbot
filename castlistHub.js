@@ -150,8 +150,34 @@ export async function createCastlistHub(guildId, options = {}) {
   
   // If a castlist is selected, show details and management options
   if (selectedCastlistId && selectedCastlistId !== 'none') {
+    // Special handling for "Create New" state
+    if (selectedCastlistId === 'create_new') {
+      // Separator
+      container.components.push({ type: 14 });
+
+      // Create new castlist UI
+      container.components.push({
+        type: 10, // Text Display
+        content: `### ✨ Create New Castlist\n\nClick the button below to create a new custom castlist.\n\nYou'll be able to:\n• Set a custom name and emoji\n• Link it to a season (optional)\n• Add a description\n• Manage tribes and members`
+      });
+
+      // Button to trigger the creation modal
+      container.components.push({
+        type: 1, // Action Row
+        components: [{
+          type: 2, // Button
+          custom_id: 'castlist_create_new_button',
+          label: 'Create New Castlist',
+          style: 3, // Success (green)
+          emoji: { name: '✨' }
+        }]
+      });
+
+      return { components: [container], flags: (1 << 15) };
+    }
+
     const castlist = await castlistManager.getCastlist(guildId, selectedCastlistId);
-    
+
     if (castlist) {
       // Separator
       container.components.push({ type: 14 });
