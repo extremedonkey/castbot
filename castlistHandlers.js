@@ -967,8 +967,14 @@ export async function handleCreateNewModal(req, res, client) {
     return res.send({
       type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
       data: {
-        content: '❌ Failed to create castlist. Please try again.',
-        flags: 1 << 6 // EPHEMERAL
+        components: [{
+          type: 17, // Container
+          components: [{
+            type: 10, // Text Display
+            content: '❌ Failed to create castlist. Please try again.'
+          }]
+        }],
+        flags: (1 << 15) | (1 << 6) // IS_COMPONENTS_V2 + EPHEMERAL
       }
     });
   }
