@@ -7,7 +7,7 @@ import { ButtonHandlerFactory } from './buttonHandlerFactory.js';
 import { createCastlistHub, CastlistButtonType } from './castlistHub.js';
 import { castlistManager } from './castlistManager.js';
 import { castlistVirtualAdapter } from './castlistVirtualAdapter.js';
-import { loadPlayerData, savePlayerData } from './storage.js';
+import { loadPlayerData, savePlayerData } from './dataManager.js';
 import { PermissionFlagsBits } from 'discord.js';
 
 /**
@@ -18,7 +18,27 @@ export async function createEditInfoModalForNew(guildId) {
   // Import season helpers
   const { getSeasonStageEmoji, getSeasonStageName } = await import('./seasonSelector.js');
   const playerData = await loadPlayerData();
-  const seasons = playerData[guildId]?.applicationConfigs || {};
+
+  // Initialize guild data structure if it doesn't exist
+  if (!playerData[guildId]) {
+    console.log(`📋 Initializing guild data for ${guildId}`);
+    playerData[guildId] = {
+      tribes: {},
+      applicationConfigs: {},
+      placements: { global: {} }
+    };
+    await savePlayerData(playerData);
+  }
+
+  // Ensure required structures exist
+  if (!playerData[guildId].tribes) {
+    playerData[guildId].tribes = {};
+  }
+  if (!playerData[guildId].applicationConfigs) {
+    playerData[guildId].applicationConfigs = {};
+  }
+
+  const seasons = playerData[guildId].applicationConfigs || {};
 
   // Build season options (most recent first)
   const allSeasons = Object.entries(seasons)
