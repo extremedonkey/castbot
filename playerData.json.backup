@@ -3074,14 +3074,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 543,
+    "memberCount": 545,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1759676523986,
+    "lastUpdated": 1759743558533,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1381126640163360800>"

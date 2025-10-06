@@ -912,7 +912,7 @@ export async function handleCreateNewModal(req, res, client) {
     }
 
     // Generate unique ID for new castlist
-    const newId = generateId('castlist');
+    const newId = `castlist_${Date.now()}_${guildId}`;
 
     // Extract season selection (might be empty array if "No Season" was deselected)
     const selectedSeasonId = values.season_id?.[0] || null;
