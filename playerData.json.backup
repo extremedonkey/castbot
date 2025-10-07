@@ -1501,7 +1501,8 @@
         "showPlayerEmojis": true,
         "color": "#607d8b",
         "castlistIds": [
-          "default"
+          "default",
+          "castlist_1759760768839_1331657596087566398"
         ]
       },
       "1333822520737927281": {
@@ -1590,7 +1591,10 @@
         "emoji": "🏕️",
         "type": "default",
         "castlistId": "virtual_VGhlQmVzdA",
-        "castlist": "TheBest"
+        "castlist": "llllll",
+        "castlistIds": [
+          "castlist_1759760768839_1331657596087566398"
+        ]
       },
       "1368969399251501126": {
         "emoji": "🪄",
@@ -1678,6 +1682,23 @@
           "391415444084490240": {
             "placement": "1"
           }
+        }
+      },
+      "castlist_1759760454082_1331657596087566398": {
+        "id": "castlist_1759760454082_1331657596087566398",
+        "name": "hguyjgh",
+        "roleId": null,
+        "members": [],
+        "metadata": {
+          "emoji": "📋",
+          "description": "jknjk",
+          "createdBy": "391415444084490240",
+          "createdAt": 1759760454082,
+          "lastModified": 1759760454082
+        },
+        "castlistSettings": {
+          "sortStrategy": "alphabetical",
+          "seasonId": "season_cac1b81de8914c79"
         }
       }
     },
@@ -2748,6 +2769,47 @@
         },
         "modifiedAt": 1759671896374,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1759760768839_1331657596087566398": {
+        "id": "castlist_1759760768839_1331657596087566398",
+        "name": "WE GOT IT",
+        "type": "custom",
+        "createdAt": 1759760768839,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_875934ef5b7b49ee"
+        },
+        "metadata": {
+          "emoji": "😎",
+          "description": "yeah we did",
+          "lastModified": 1759760768840
+        },
+        "seasonId": "season_9a8360f7864d4120",
+        "modifiedAt": 1759760913571,
+        "modifiedBy": "391415444084490240"
+      },
+      "castlist_1759840537867_1331657596087566398": {
+        "id": "castlist_1759840537867_1331657596087566398",
+        "name": "SingleClick",
+        "type": "custom",
+        "createdAt": 1759840537869,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_cac1b81de8914c79"
+        },
+        "metadata": {
+          "emoji": "🖱️",
+          "description": "test",
+          "lastModified": 1759840537869
+        }
       }
     },
     "placements": {

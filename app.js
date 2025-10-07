@@ -7681,31 +7681,11 @@ To fix this:
       // This includes 'create_new' which should update the hub state, not show a modal directly
       const { handleCastlistSelect } = await import('./castlistHandlers.js');
       return handleCastlistSelect(req, res, client);
+    /* Streamlined: castlist_create_new_button no longer needed
+       The select menu now directly shows the modal when "Create New" is selected
     } else if (custom_id === 'castlist_create_new_button') {
-      // Use ButtonHandlerFactory for proper handling
-      return ButtonHandlerFactory.create({
-        id: 'castlist_create_new_button',
-        handler: async (context) => {
-          try {
-            console.log('📋 Showing Create New Castlist modal from button');
-            const { createEditInfoModalForNew } = await import('./castlistHandlers.js');
-            const modal = await createEditInfoModalForNew(context.guildId);
-
-            // ButtonHandlerFactory checks for response.type and sends directly
-            // For modals, we need to return the full Discord response structure
-            return {
-              type: 9, // InteractionResponseType.MODAL
-              data: modal
-            };
-          } catch (error) {
-            console.error('📋 Error creating modal:', error);
-            return {
-              content: '❌ Failed to create castlist modal. Please try again.',
-              ephemeral: true
-            };
-          }
-        }
-      })(req, res, client);
+      // DEPRECATED - Select menu handles this directly now
+    */
     } else if (custom_id.startsWith('castlist_delete')) {
       // Handle castlist deletion
       const { handleCastlistDelete } = await import('./castlistHandlers.js');
