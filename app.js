@@ -3490,6 +3490,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'cast_player',
         'cast_tentative',
         'cast_reject',
+        // Castlist V3 system
+        'castlist_delete',
+        'castlist_edit_info',
+        'castlist_manage_tribes',
         // Conditional logic system
         'condition_manager',
         'condition_edit',

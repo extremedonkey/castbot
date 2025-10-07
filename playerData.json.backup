@@ -2829,6 +2829,25 @@
           "description": "Kill it",
           "lastModified": 1759840784557
         }
+      },
+      "castlist_1759841295819_1331657596087566398": {
+        "id": "castlist_1759841295819_1331657596087566398",
+        "name": "The Modal Test!",
+        "type": "custom",
+        "createdAt": 1759841295819,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_cac1b81de8914c79"
+        },
+        "metadata": {
+          "emoji": "🧪",
+          "description": "Will this work?!",
+          "lastModified": 1759841295819
+        }
       }
     },
     "placements": {
