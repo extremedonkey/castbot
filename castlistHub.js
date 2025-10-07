@@ -150,8 +150,7 @@ export async function createCastlistHub(guildId, options = {}) {
   
   // If a castlist is selected, show details and management options
   if (selectedCastlistId && selectedCastlistId !== 'none') {
-    // Note: "create_new" is now handled directly in the select handler
-    // and shows the modal immediately, so we shouldn't reach here with that ID
+    // Note: "create_new" won't reach here - it triggers a modal directly from the select handler
 
     const castlist = await castlistManager.getCastlist(guildId, selectedCastlistId);
 

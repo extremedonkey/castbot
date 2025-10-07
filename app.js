@@ -7678,14 +7678,9 @@ To fix this:
       })(req, res, client);
     } else if (custom_id === 'castlist_select') {
       // Handle all castlist selections through the standard handler
-      // This includes 'create_new' which should update the hub state, not show a modal directly
+      // 'create_new' selection triggers modal directly, others update hub view
       const { handleCastlistSelect } = await import('./castlistHandlers.js');
       return handleCastlistSelect(req, res, client);
-    /* Streamlined: castlist_create_new_button no longer needed
-       The select menu now directly shows the modal when "Create New" is selected
-    } else if (custom_id === 'castlist_create_new_button') {
-      // DEPRECATED - Select menu handles this directly now
-    */
     } else if (custom_id.startsWith('castlist_delete')) {
       // Handle castlist deletion
       const { handleCastlistDelete } = await import('./castlistHandlers.js');

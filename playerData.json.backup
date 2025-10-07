@@ -2810,6 +2810,25 @@
           "description": "test",
           "lastModified": 1759840537869
         }
+      },
+      "castlist_1759840784557_1331657596087566398": {
+        "id": "castlist_1759840784557_1331657596087566398",
+        "name": "KillTheButton",
+        "type": "custom",
+        "createdAt": 1759840784557,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_03859e4abc554bb5"
+        },
+        "metadata": {
+          "emoji": "🍽️",
+          "description": "Kill it",
+          "lastModified": 1759840784557
+        }
       }
     },
     "placements": {
@@ -3136,14 +3155,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 545,
+    "memberCount": 547,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1759743558533,
+    "lastUpdated": 1759841164886,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1381126640163360800>"

@@ -209,14 +209,8 @@ export const BUTTON_REGISTRY = {
   },
 
   // === CASTLIST V3 ===
-  'castlist_create_new_button': {
-    label: 'Create New Castlist',
-    description: 'Create a new custom castlist',
-    emoji: '✨',
-    style: 'Success',
-    category: 'castlist'
-  },
-  
+  // Note: castlist_create_new_button removed - select menu now directly shows modal
+
   // === PRODUCTION SETUP ===
   'prod_setup': {
     label: 'Setup',
