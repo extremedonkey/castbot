@@ -1343,13 +1343,13 @@ const client = new Client({
     GatewayIntentBits.MessageContent
   ],
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
-  // Ultra-cautious cache limits to prevent unbounded memory growth
-  // Updated for large servers (500+ members) - provides adequate cache headroom
+  // Cache limits: Only limit MessageManager to prevent unbounded message cache growth
+  // GuildMemberManager/UserManager are naturally bounded by server membership
   // NOTE: RoleManager and ChannelManager are NOT limited per Discord.js recommendations
   makeCache: Options.cacheWithLimits({
-    MessageManager: 50,        // Limit message cache (messages are large objects)
-    GuildMemberManager: 4000,  // Supports large servers with 500+ members + multi-server buffer
-    UserManager: 1000          // Handles unique users across multiple large servers
+    MessageManager: 50        // Limit message cache (messages are large objects)
+    // GuildMemberManager: REMOVED - caused mid-operation evictions leading to "Supplied parameter is not a User nor a Role" errors
+    // UserManager: REMOVED - redundant with member caching, saves memory (6.69MB -> 0.97MB)
   })
 });
 
