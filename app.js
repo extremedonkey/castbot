@@ -2083,18 +2083,35 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       console.log(`Fetching members for guild ${fullGuild.name} (${fullGuild.memberCount} total)`);
       const members = await fullGuild.members.fetch({ force: true });
 
+      // Filter out standalone castlists (Castlist V3 tribes with roleId: null or invalid)
+      const validRawTribes = rawTribes.filter(tribe => {
+        if (!tribe.roleId || typeof tribe.roleId !== 'string' || !/^\d{17,20}$/.test(tribe.roleId)) {
+          console.warn(`🛡️ Filtering out tribe with invalid roleId: ${tribe.roleId || 'null'} (likely standalone Castlist V3)`);
+          return false;
+        }
+        return true;
+      });
+
       // Process tribes and gather member data
-      const tribesWithMembers = await Promise.all(rawTribes.map(async (tribe) => {
-        const role = await fullGuild.roles.fetch(tribe.roleId);
-        if (!role) {
-          console.warn(`Role not found for tribe ${tribe.roleId} on server ${fullGuild.name} (${fullGuild.id}), skipping...`);
+      const tribesWithMembers = await Promise.all(validRawTribes.map(async (tribe) => {
+        // Try-catch around role fetch for defensive error handling
+        let role;
+        try {
+          role = await fullGuild.roles.fetch(tribe.roleId);
+        } catch (error) {
+          console.warn(`❌ Error fetching role ${tribe.roleId}: ${error.message}`);
           return null;
         }
-        
+
+        if (!role || !role.name) {
+          console.warn(`⚠️ Role ${tribe.roleId} not found or incomplete on server ${fullGuild.name} (${fullGuild.id}), skipping...`);
+          return null;
+        }
+
         const tribeMembers = members.filter(member => member.roles.cache.has(role.id));
         return {
           ...tribe,
-          name: role.name,
+          name: role.name || tribe.name || `Tribe ${tribe.roleId}`,  // Null-safe fallback
           memberCount: tribeMembers.size,
           members: Array.from(tribeMembers.values())
         };

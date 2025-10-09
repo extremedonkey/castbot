@@ -152,11 +152,11 @@ function reorderTribes(tribes, userId = null, strategy = "default", castlistName
                 }
             }
             
-            // Sort user tribes alphabetically
-            userTribes.sort((a, b) => a.name.localeCompare(b.name));
-            
-            // Sort other tribes alphabetically  
-            otherTribes.sort((a, b) => a.name.localeCompare(b.name));
+            // Sort user tribes alphabetically (null-safe)
+            userTribes.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+            // Sort other tribes alphabetically (null-safe)
+            otherTribes.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             
             console.log(`User-first ordering: User ${userId} is in ${userTribes.length} tribe(s), showing ${userTribes.map(t => t.name).join(', ')} first`);
             
@@ -164,7 +164,7 @@ function reorderTribes(tribes, userId = null, strategy = "default", castlistName
             return [...userTribes, ...otherTribes];
             
         case "alphabetical":
-            return [...tribes].sort((a, b) => a.name.localeCompare(b.name));
+            return [...tribes].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         case "size":
             return [...tribes].sort((a, b) => b.memberCount - a.memberCount);
         case "default":

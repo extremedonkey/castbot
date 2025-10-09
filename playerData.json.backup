@@ -477,14 +477,14 @@
     ],
     "icon": "https://cdn.discordapp.com/icons/1127596863885934652/21246f7f1ab8a24074a5bdb6ae3b6ba2.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 85,
+    "memberCount": 84,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1688910442087,
-    "lastUpdated": 1759258327962,
+    "lastUpdated": 1760019729400,
     "ownerInfo": {
       "username": "extremedonkey",
       "globalName": "Reece",
@@ -694,14 +694,14 @@
     "serverName": "CastBot",
     "icon": "https://cdn.discordapp.com/icons/1331657596087566398/84e48ab9d15d35611b80ce584bb80f95.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 27,
+    "memberCount": 29,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1759258332080,
+    "lastUpdated": 1760019732851,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -1661,15 +1661,6 @@
         "analyticsAdded": 1759671585440,
         "castlistId": "castlist_1759671885172_system"
       },
-      "1424400564858650644": {
-        "name": "Tribe 1424400564858650644",
-        "emoji": "🏕️",
-        "color": "#e91e63",
-        "castlistIds": [
-          "castlist_1759671866227_system"
-        ],
-        "castlist": "MultiA"
-      },
       "1368969397418590338": {
         "emoji": null,
         "castlist": "ar.2",
@@ -1700,6 +1691,14 @@
           "sortStrategy": "alphabetical",
           "seasonId": "season_cac1b81de8914c79"
         }
+      },
+      "1424400564858650644": {
+        "emoji": "🅰️",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": "#e91e63",
+        "analyticsName": "🅰️ Season: Multi-A! 🅰️",
+        "analyticsAdded": 1760020667612
       }
     },
     "timezones": {
@@ -1966,19 +1965,17 @@
       "config_1759672397657_391415444084490240": {
         "buttonText": "Apply to S8 Multi-A",
         "explanatoryText": "Multiples of 8 everywhere!",
-        "completionDescription": "Thank you for completing your application! A host will review it soon.",
-        "completionImage": null,
         "channelFormat": "📝%name%-app",
-        "targetChannelId": null,
-        "categoryId": null,
-        "buttonStyle": "Primary",
-        "createdBy": "391415444084490240",
-        "stage": "draft",
-        "createdAt": 1759672397658,
-        "lastUpdated": 1759672397658,
+        "stage": "active",
         "seasonId": "season_9a8360f7864d4120",
         "seasonName": "S8 Multi-A",
-        "questions": []
+        "questions": [],
+        "targetChannelId": "1337754151655833694",
+        "categoryId": "1334493817231114271",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "createdAt": 1760021728748,
+        "lastUpdated": 1760021728748
       }
     },
     "ownerInfo": {
@@ -2193,16 +2190,6 @@
         "rankings": {
           "391415444084490240": 2
         }
-      },
-      "1422657665896681513": {
-        "userId": "391415444084490240",
-        "channelId": "1422657665896681513",
-        "username": "extremedonkey",
-        "displayName": "ReeceBot",
-        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "📝reecebot-app",
-        "createdAt": "2025-09-30T18:53:40.721Z",
-        "configId": "config_1751549410029_391415444084490240"
       }
     },
     "rankings": {
@@ -2727,28 +2714,6 @@
         "modifiedBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79"
       },
-      "castlist_1759671866227_system": {
-        "id": "castlist_1759671866227_system",
-        "name": "MultiA",
-        "type": "system",
-        "createdAt": 1759671866227,
-        "createdBy": "migration",
-        "settings": {
-          "sortStrategy": "placements",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Minor Edit",
-          "emoji": "8️⃣",
-          "migratedFrom": "virtual_TXVsdGlB",
-          "migrationDate": 1759671866227
-        },
-        "modifiedAt": 1759759923534,
-        "modifiedBy": "391415444084490240",
-        "seasonId": "season_9a8360f7864d4120"
-      },
       "castlist_1759671885172_system": {
         "id": "castlist_1759671885172_system",
         "name": "MultiB",
@@ -3095,14 +3060,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 547,
+    "memberCount": 545,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1759841164886,
+    "lastUpdated": 1760019728927,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1381126640163360800>"
