@@ -2779,6 +2779,24 @@
         },
         "modifiedAt": 1759671896374,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1760202315299_1331657596087566398": {
+        "id": "castlist_1760202315299_1331657596087566398",
+        "name": "Modal Create > Container Flow",
+        "type": "custom",
+        "createdAt": 1760202315299,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "",
+          "lastModified": 1760202315299
+        }
       }
     },
     "placements": {

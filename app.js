@@ -832,21 +832,27 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   
   // Build container components array with pagination support
   const containerComponents = [
+    // COMMENTED OUT 2025-10-12: Change Season feature not currently in use
+    // {
+    //   type: 9, // Section with accessory
+    //   components: [
+    //     {
+    //       type: 10, // Text Display component
+    //       content: menuTitle
+    //     }
+    //   ],
+    //   accessory: {
+    //     type: 2, // Button
+    //     custom_id: 'prod_change_season',
+    //     label: 'Change Szn',
+    //     style: 2, // Secondary
+    //     emoji: { name: '🔃' }
+    //   }
+    // },
+    // Display menu title without Section (simple Text Display instead)
     {
-      type: 9, // Section with accessory
-      components: [
-        {
-          type: 10, // Text Display component
-          content: menuTitle
-        }
-      ],
-      accessory: {
-        type: 2, // Button
-        custom_id: 'prod_change_season',
-        label: 'Change Szn',
-        style: 2, // Secondary
-        emoji: { name: '🔃' }
-      }
+      type: 10, // Text Display
+      content: menuTitle
     },
     {
       type: 14 // Separator after title
