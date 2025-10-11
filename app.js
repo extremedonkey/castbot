@@ -11160,9 +11160,10 @@ Your server is now ready for Tycoons gameplay!`;
         id: 'safari_manage_items',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
+        deferred: true,  // Prevent 3-second timeout for large data files
         handler: async (context) => {
           console.log(`📦 DEBUG: Item management UI opened for guild ${context.guildId}`);
-          
+
           // Create entity management UI
           const uiResponse = await createEntityManagementUI({
             entityType: 'item',
@@ -11172,7 +11173,7 @@ Your server is now ready for Tycoons gameplay!`;
             searchTerm: '',
             mode: 'edit'
           });
-          
+
           return {
             ...uiResponse,
             ephemeral: true
