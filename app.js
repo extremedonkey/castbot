@@ -155,7 +155,7 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
 
   refreshedComponents.push({
     type: 10, // Text Display
-    content: `# 📝 Season Applications | Manage casting for your season!\n### Manage Questions (${config.seasonName})${pageInfo}`
+    content: `## 📝 Season Applications | Manage casting for your season!\n> \`❓ **Manage Questions**\`${pageInfo}`
   });
   
   if (config.questions.length === 0) {
@@ -6728,7 +6728,7 @@ To fix this:
           const seasonManagementComponents = [
             {
               type: 10, // Text Display
-              content: `## Season Applications | Create & Manage your Casting Process!`
+              content: `## 📝 Season Applications | Manage casting for your season!`
             },
             {
               type: 14 // Separator
