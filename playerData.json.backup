@@ -1949,33 +1949,36 @@
         "buttonText": "Apply to Reece's Modal Regression Szn",
         "explanatoryText": "This better work!!!",
         "channelFormat": "📝%name%-app",
-        "stage": "awaiting_selections",
+        "stage": "active",
         "seasonId": "season_1deffdb1dac8496b",
         "seasonName": "Reece's Modal Regression Szn",
         "questions": [
           {
             "id": "question_9d27484463e949e5",
             "order": 1,
-            "questionTitle": "Seikatsu no imi",
-            "questionText": "Seikatsu no imi wa nandeskka",
+            "questionTitle": "Seikatsu no imisadasdsadsadasdasdasdasdasdasdasdasdasdasdadsdsadasdadasdasdasdasdasdasdasdadsdsadasz",
+            "questionText": "Change the Image URL title to  \nImage Link (Optional)\n\nChange the Image URL label description to:\nShows an image when the player loads the question.\n\nChange the placeholder text to:\nMust be hosted on discord",
             "imageURL": "",
-            "createdAt": 1760196843742
+            "createdAt": 1760196843742,
+            "lastUpdated": 1760197632920
           },
           {
             "id": "question_06587253a4be4e66",
             "order": 2,
             "questionTitle": "What is the meaning of life??",
             "questionText": "Enter the url of an image hosted on discord (https://cdn.dis",
-            "imageURL": "",
-            "createdAt": 1760197098185
+            "imageURL": "https://static.wikia.nocookie.net/mario/images/d/dc/Mario_%282%29.png/revision/latest?cb=20250720063134",
+            "createdAt": 1760197098185,
+            "lastUpdated": 1760197847886
           }
         ],
-        "targetChannelId": null,
-        "categoryId": null,
-        "buttonStyle": "Primary",
+        "targetChannelId": "1337754151655833694",
+        "categoryId": "1334493817231114271",
+        "buttonStyle": "Danger",
         "createdBy": "391415444084490240",
-        "createdAt": 1760196873740,
-        "lastUpdated": 1760196873740
+        "createdAt": 1760197889737,
+        "lastUpdated": 1760197889737,
+        "productionRole": "1333822520737927281"
       }
     },
     "ownerInfo": {
@@ -2191,15 +2194,16 @@
           "391415444084490240": 2
         }
       },
-      "1425859244384583680": {
+      "1426598104852992094": {
         "userId": "391415444084490240",
-        "channelId": "1425859244384583680",
+        "channelId": "1426598104852992094",
         "username": "extremedonkey",
         "displayName": "ReeceBot",
         "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
         "channelName": "📝reecebot-app",
-        "createdAt": "2025-10-09T14:55:37.175Z",
-        "configId": "config_1759672397657_391415444084490240"
+        "createdAt": "2025-10-11T15:51:35.153Z",
+        "configId": "config_1760196737532_391415444084490240",
+        "currentQuestion": 1
       }
     },
     "rankings": {

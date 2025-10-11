@@ -6970,13 +6970,13 @@ To fix this:
                 },
                 {
                   type: 18, // Label component
-                  label: 'Image URL (Optional)',
-                  description: 'Discord CDN image URL to display with this question',
+                  label: 'Question Image Link (Optional)',
+                  description: 'Shows image when player loads the question. To use, upload image to discord then select \'Copy Link\'.',
                   component: {
                     type: 4, // Text Input
                     custom_id: 'imageURL',
                     style: 1, // Short
-                    placeholder: 'https://cdn.discordapp.com/...',
+                    placeholder: 'Must be a discord URL e.g. https://cdn.discordapp.com/...',
                     value: question.imageURL || '',
                     required: false,
                     max_length: 500
@@ -7410,13 +7410,13 @@ To fix this:
                 },
                 {
                   type: 18, // Label component
-                  label: 'Image URL (Optional)',
-                  description: 'Discord CDN image URL to display with this question',
+                  label: 'Question Image Link (Optional)',
+                  description: 'Shows image when player loads the question. To use, upload image to discord then select \'Copy Link\'.',
                   component: {
                     type: 4, // Text Input
                     custom_id: 'imageURL',
                     style: 1, // Short
-                    placeholder: 'https://cdn.discordapp.com/...',
+                    placeholder: 'Must be a discord URL e.g. https://cdn.discordapp.com/...',
                     required: false,
                     max_length: 500
                   }
