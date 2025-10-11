@@ -30087,7 +30087,16 @@ Are you sure you want to continue?`;
           // Update season name and description
           config.seasonName = seasonName;
           config.explanatoryText = seasonDescription || `Join ${seasonName}!`;
-          config.buttonText = `Apply to ${seasonName}`; // Update button text to match new name
+
+          // Truncate button text if needed (Discord limit: 80 chars)
+          // "Apply to " = 9 chars, leaving 71 chars for season name
+          let buttonText = `Apply to ${seasonName}`;
+          if (buttonText.length > 80) {
+            // Truncate season name to 68 chars (9 + 68 + 2 = 79 for "..")
+            const truncatedName = seasonName.substring(0, 68) + '..';
+            buttonText = `Apply to ${truncatedName}`;
+          }
+          config.buttonText = buttonText;
           config.lastUpdated = Date.now();
 
           await savePlayerData(playerData);
@@ -30103,9 +30112,16 @@ Are you sure you want to continue?`;
           const seasonId = `season_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
           configId = `config_${Date.now()}_${req.body.member.user.id}`;
 
+          // Truncate button text if needed (Discord limit: 80 chars)
+          let buttonText = `Apply to ${seasonName}`;
+          if (buttonText.length > 80) {
+            const truncatedName = seasonName.substring(0, 68) + '..';
+            buttonText = `Apply to ${truncatedName}`;
+          }
+
           // Create the new config with season data
           playerData[guildId].applicationConfigs[configId] = {
-            buttonText: `Apply to ${seasonName}`,
+            buttonText: buttonText,
             explanatoryText: seasonDescription || `Join ${seasonName}!`,
             completionDescription: 'Thank you for completing your application! A host will review it soon.',
             completionImage: null,

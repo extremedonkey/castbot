@@ -121,9 +121,17 @@ export async function createSeasonSelector(guildId, options = {}) {
     const stage = season.stage || 'planning';
     const emoji = getSeasonStageEmoji(stage);
 
+    // Truncate season name to ensure label doesn't exceed 100 chars
+    // Emoji is 2 chars + space is 1 char = 3 chars reserved
+    const maxNameLength = 97;
+    let truncatedName = season.seasonName || 'Unnamed Season';
+    if (truncatedName.length > maxNameLength) {
+      truncatedName = truncatedName.substring(0, maxNameLength - 2) + '..';
+    }
+
     // Build option object
     const option = {
-      label: `${emoji} ${season.seasonName}`.substring(0, 100),
+      label: `${emoji} ${truncatedName}`,
       value: configId
     };
 
