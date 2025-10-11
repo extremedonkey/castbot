@@ -2190,6 +2190,16 @@
         "rankings": {
           "391415444084490240": 2
         }
+      },
+      "1425859244384583680": {
+        "userId": "391415444084490240",
+        "channelId": "1425859244384583680",
+        "username": "extremedonkey",
+        "displayName": "ReeceBot",
+        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
+        "channelName": "📝reecebot-app",
+        "createdAt": "2025-10-09T14:55:37.175Z",
+        "configId": "config_1759672397657_391415444084490240"
       }
     },
     "rankings": {

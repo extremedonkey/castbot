@@ -58,7 +58,12 @@
       "Bash(git merge:*)",
       "Bash(pm2 status:*)",
       "Read(//home/reece/.config/**)",
-      "Read(//home/reece/.claude/**)"
+      "Read(//home/reece/.claude/**)",
+      "Bash(/tmp/find_comment_blocks.sh:*)",
+      "Bash(bash:*)",
+      "Bash(for line in 1737 32569)",
+      "Bash(do echo \"=== Line $line ===\")",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

@@ -149,13 +149,13 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
   const refreshedComponents = [];
   
   // Title with pagination info
-  const pageInfo = config.questions.length <= questionsPerPage 
-    ? '' 
-    : ` (Page ${currentPage + 1}/${totalPages})`;
-  
+  const pageInfo = config.questions.length <= questionsPerPage
+    ? ''
+    : ` \`(Page ${currentPage + 1}/${totalPages})\``;
+
   refreshedComponents.push({
     type: 10, // Text Display
-    content: `## ❔ Manage Questions: ${config.seasonName}${pageInfo}`
+    content: `# 📝 Season Applications | Manage casting for your season!\n### Manage Questions (${config.seasonName})${pageInfo}`
   });
   
   if (config.questions.length === 0) {

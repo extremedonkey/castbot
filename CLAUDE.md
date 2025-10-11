@@ -357,20 +357,26 @@ Create `/RaP/[NUM]_[DATE]_[Feature]_Analysis.md` when facing:
    - Check `/RaP/.counter` for last used number
    - Format: `0999_20250926_FeatureName_Analysis.md`
 
-2. **Essential Elements**:
+2. **Context Preservation**: When a RaP is triggered by a user prompt:
+   - **ALWAYS save the user's full, unmodified original prompt** in the RaP document
+   - Include it in a dedicated "Original Context" or "Trigger Prompt" section
+   - This preserves the exact problem statement and context for future reference
+   - Helps future-you understand what specifically prompted the deep analysis
+
+3. **Essential Elements**:
    - 🤔 Plain English problem explanation (what's actually broken)
    - 🏛️ Historical context (the "organic growth story")
    - 📊 Mermaid diagrams (RED=bad, YELLOW=maybe, GREEN=good)
    - 💡 Clear solution with rationale
    - ⚠️ Risk assessment when applicable
 
-3. **Cross-Reference**: Link related RaP documents
+4. **Cross-Reference**: Link related RaP documents
    ```markdown
    Related: [Safari Performance](/RaP/0998_20250926_Safari_Performance_Analysis.md)
    Follows: [Castlist Refactor](/RaP/1000_20250926_CastlistRefactor_Analysis.md)
    ```
 
-4. **Writing Style**:
+5. **Writing Style**:
    - Use metaphors to explain complex concepts
    - Tell the story of technical debt (it always has one)
    - Make architecture decisions memorable
