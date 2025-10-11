@@ -121,18 +121,24 @@ export async function createSeasonSelector(guildId, options = {}) {
     const stage = season.stage || 'planning';
     const emoji = getSeasonStageEmoji(stage);
 
-    // Use season description if it exists, otherwise blank
-    let description = season.description || '';
-    // Discord select option descriptions max at 100 characters
-    if (description.length > 100) {
-      description = description.substring(0, 98) + '..';
+    // Build option object
+    const option = {
+      label: `${emoji} ${season.seasonName}`.substring(0, 100),
+      value: configId
+    };
+
+    // Only add description if it exists and has content
+    // Discord requires description to be either undefined or length >= 1
+    if (season.description && season.description.trim().length > 0) {
+      let description = season.description;
+      // Discord select option descriptions max at 100 characters
+      if (description.length > 100) {
+        description = description.substring(0, 98) + '..';
+      }
+      option.description = description;
     }
 
-    seasonOptions.push({
-      label: `${emoji} ${season.seasonName}`.substring(0, 100),
-      value: configId,
-      description: description
-    });
+    seasonOptions.push(option);
   });
   
   // Handle overflow (25+ seasons)
