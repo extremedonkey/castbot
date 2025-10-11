@@ -129,8 +129,9 @@ export async function createSeasonSelector(guildId, options = {}) {
 
     // Only add description if it exists and has content
     // Discord requires description to be either undefined or length >= 1
-    if (season.description && season.description.trim().length > 0) {
-      let description = season.description;
+    // Season data stores this in 'explanatoryText' field
+    if (season.explanatoryText && season.explanatoryText.trim().length > 0) {
+      let description = season.explanatoryText;
       // Discord select option descriptions max at 100 characters
       if (description.length > 100) {
         description = description.substring(0, 98) + '..';
