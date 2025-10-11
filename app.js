@@ -126,21 +126,25 @@ import {
 } from './mapExplorer.js';
 
 // Helper function to refresh question management UI
-async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
-  console.log(`🔧 DEBUG: refreshQuestionManagementUI called with configId: ${configId}, currentPage: ${currentPage}`);
-  
+/**
+ * Build question management UI data (for ButtonHandlerFactory handlers)
+ * @param {Object} config - Season configuration
+ * @param {string} configId - Configuration ID
+ * @param {number} currentPage - Current page number
+ * @returns {Object} Components data structure (no response wrapper)
+ */
+function buildQuestionManagementUI(config, configId, currentPage = 0) {
+  console.log(`🔧 DEBUG: buildQuestionManagementUI called with configId: ${configId}, currentPage: ${currentPage}`);
+
   // Validate required parameters
   if (!configId) {
-    console.error('🚨 ERROR: configId is undefined in refreshQuestionManagementUI');
-    return res.send({
-      type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-      data: {
-        content: '❌ Internal error: Missing configuration ID.',
-        flags: InteractionResponseFlags.EPHEMERAL
-      }
-    });
+    console.error('🚨 ERROR: configId is undefined in buildQuestionManagementUI');
+    return {
+      content: '❌ Internal error: Missing configuration ID.',
+      ephemeral: true
+    };
   }
-  
+
   const questionsPerPage = 5;
   const totalPages = Math.max(1, Math.ceil(config.questions.length / questionsPerPage));
   const startIndex = currentPage * questionsPerPage;
@@ -317,12 +321,28 @@ async function refreshQuestionManagementUI(res, config, configId, currentPage = 
     };
     navComponents.push(navRow);
   }
-  
+
+  // Return just the components (for ButtonHandlerFactory)
+  return {
+    components: [refreshedContainer, ...navComponents]
+  };
+}
+
+/**
+ * Refresh question management UI (old-style wrapper for direct res.send())
+ * @param {Object} res - Express response object
+ * @param {Object} config - Season configuration
+ * @param {string} configId - Configuration ID
+ * @param {number} currentPage - Current page number
+ */
+async function refreshQuestionManagementUI(res, config, configId, currentPage = 0) {
+  const responseData = buildQuestionManagementUI(config, configId, currentPage);
+
   return res.send({
     type: InteractionResponseType.UPDATE_MESSAGE,
     data: {
       flags: (1 << 15), // IS_COMPONENTS_V2
-      components: [refreshedContainer, ...navComponents]
+      ...responseData
     }
   });
 }
@@ -7104,8 +7124,8 @@ To fix this:
           }
           
           console.log(`✅ SUCCESS: season_delete_cancel - returning to manage questions for ${config.seasonName}`);
-          // Return to the manage questions interface
-          return refreshQuestionManagementUI(null, config, configId, 1);
+          // Return to the manage questions interface (use helper for ButtonHandlerFactory)
+          return buildQuestionManagementUI(config, configId, 1);
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_delete_')) {

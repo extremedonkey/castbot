@@ -1822,7 +1822,7 @@
         "buttonText": "Test out CastBot Apps!",
         "explanatoryText": "asdsa",
         "channelFormat": "📝%name%-app",
-        "stage": "active",
+        "stage": "awaiting_selections",
         "seasonId": "season_03859e4abc554bb5",
         "seasonName": "ReeceVivor S15!",
         "questions": [
@@ -1908,8 +1908,8 @@
         "buttonStyle": "Primary",
         "productionRole": null,
         "createdBy": "391415444084490240",
-        "createdAt": 1759258376440,
-        "lastUpdated": 1759258376440,
+        "createdAt": 1760194498087,
+        "lastUpdated": 1760194498087,
         "welcomeDescription": "In season_question_edit_config_*, please add a next Text Input called \"Image URL\", optional, with the placeholder text of \"Enter the url of an image hosted on discord (https://cdn.discor..) to include.\"\nUnder the question configuration, save the URL of the image the user provided (e.g. imageURL).\nIn app_continue_*, when the container loads, if a question has a non-empty imageURL, create a ComponentsV2.md Media Gallery (type = 12) component directly below the questionText and attempt to load the imageURL in the component.",
         "welcomeTitle": "Welcome!"
       },
