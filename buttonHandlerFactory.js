@@ -1592,7 +1592,14 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'application_management'
   },
-  
+  'season_edit_info_*': {
+    label: 'Edit Season',
+    description: 'Edit season name and description',
+    emoji: '✏️',
+    style: 'Secondary',
+    category: 'application_management'
+  },
+
   'season_nav_prev_*': {
     label: 'Previous Page',
     description: 'Navigate to previous page in season management',

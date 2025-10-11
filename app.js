@@ -281,12 +281,21 @@ function buildQuestionManagementUI(config, configId, currentPage = 0) {
           style: nextDisabled ? 2 : 1, // Secondary : Primary
           disabled: nextDisabled
         },
+        // Delete Season button commented out - castlists can now link to seasons
+        // Uncomment when we implement proper cascade handling
+        // {
+        //   type: 2, // Button
+        //   custom_id: `season_delete_${configId}`,
+        //   label: "Delete Season",
+        //   style: 4, // Danger
+        //   emoji: { name: '🗑️' }
+        // }
         {
           type: 2, // Button
-          custom_id: `season_delete_${configId}`,
-          label: "Delete Season",
-          style: 4, // Danger
-          emoji: { name: '🗑️' }
+          custom_id: `season_edit_info_${configId}`,
+          label: "Edit Season",
+          style: 2, // Secondary
+          emoji: { name: '✏️' }
         }
       ]
     };
@@ -310,12 +319,20 @@ function buildQuestionManagementUI(config, configId, currentPage = 0) {
           style: 2, // Secondary
           disabled: true
         },
+        // Delete Season button commented out - castlists can now link to seasons
+        // {
+        //   type: 2, // Button
+        //   custom_id: `season_delete_${configId}`,
+        //   label: "Delete Season",
+        //   style: 4, // Danger
+        //   emoji: { name: '🗑️' }
+        // }
         {
           type: 2, // Button
-          custom_id: `season_delete_${configId}`,
-          label: "Delete Season",
-          style: 4, // Danger
-          emoji: { name: '🗑️' }
+          custom_id: `season_edit_info_${configId}`,
+          label: "Edit Season",
+          style: 2, // Secondary
+          emoji: { name: '✏️' }
         }
       ]
     };
@@ -7126,6 +7143,65 @@ To fix this:
           console.log(`✅ SUCCESS: season_delete_cancel - returning to manage questions for ${config.seasonName}`);
           // Return to the manage questions interface (use helper for ButtonHandlerFactory)
           return buildQuestionManagementUI(config, configId, 1);
+        }
+      })(req, res, client);
+    } else if (custom_id.startsWith('season_edit_info_')) {
+      // Handle edit season info button clicks - show modal with pre-populated values
+      return ButtonHandlerFactory.create({
+        id: 'season_edit_info',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        handler: async (context, req, res) => {
+          console.log(`✏️ START: season_edit_info - user ${context.userId}`);
+
+          // Extract configId: season_edit_info_{configId}
+          const configId = context.customId.replace('season_edit_info_', '');
+
+          // Load player data to get existing season details
+          const playerData = await loadPlayerData();
+          const config = playerData[context.guildId]?.applicationConfigs?.[configId];
+
+          if (!config) {
+            return {
+              content: '❌ Season configuration not found.',
+              ephemeral: true
+            };
+          }
+
+          // Create modal with pre-populated values
+          const seasonModal = new ModalBuilder()
+            .setCustomId(`season_modal:${configId}`)
+            .setTitle('Manage Season Details');
+
+          const seasonNameInput = new TextInputBuilder()
+            .setCustomId('season_name')
+            .setLabel('Season Name')
+            .setPlaceholder('e.g., "Season 12 - Jurassic Park"')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true)
+            .setMaxLength(100)
+            .setValue(config.seasonName || ''); // Pre-populate with existing value
+
+          const seasonDescInput = new TextInputBuilder()
+            .setCustomId('season_description')
+            .setLabel('Season Description')
+            .setPlaceholder('Brief description of this season (optional)')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(false)
+            .setMaxLength(500)
+            .setValue(config.explanatoryText || ''); // Pre-populate with existing value
+
+          const nameRow = new ActionRowBuilder().addComponents(seasonNameInput);
+          const descRow = new ActionRowBuilder().addComponents(seasonDescInput);
+          seasonModal.addComponents(nameRow, descRow);
+
+          console.log(`✅ SUCCESS: season_edit_info - showing edit modal for ${config.seasonName}`);
+
+          // For modal responses, send directly via res instead of returning
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: seasonModal.toJSON()
+          });
         }
       })(req, res, client);
     } else if (custom_id.startsWith('season_delete_')) {
@@ -19455,8 +19531,8 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             if (selectedValue === 'create_new_season') {
               // Show season creation modal
               const seasonModal = new ModalBuilder()
-                .setCustomId('create_season_modal')
-                .setTitle('Create New Season');
+                .setCustomId('season_modal:create')
+                .setTitle('Manage Season Details');
 
               const seasonNameInput = new TextInputBuilder()
                 .setCustomId('season_name')
@@ -29897,20 +29973,47 @@ Are you sure you want to continue?`;
           }
         });
       }
-    } else if (custom_id === 'create_season_modal') {
+    } else if (custom_id === 'create_season_modal' || custom_id.startsWith('season_modal:')) {
       try {
-        console.log('Processing create_season_modal submission');
-        
+        // Handle both legacy 'create_season_modal' and new 'season_modal:*' patterns
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
         const seasonName = components[0].components[0].value;
         const seasonDescription = components[1].components[0].value || '';
-        
-        // Generate UUID-based season ID
-        const seasonId = `season_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
-        const configId = `config_${Date.now()}_${req.body.member.user.id}`;
-        
-        // Create new season config
+
+        // Parse custom_id to detect create vs edit mode
+        // Format: 'season_modal:create' or 'season_modal:{configId}'
+        let isEditMode = false;
+        let configId = null;
+
+        if (custom_id.startsWith('season_modal:')) {
+          const parts = custom_id.split(':');
+          if (parts.length !== 2) {
+            console.error(`❌ Invalid season_modal custom_id format: ${custom_id}`);
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Invalid modal format. Please try again.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+
+          const mode = parts[1];
+          if (mode === 'create') {
+            isEditMode = false;
+            console.log('📝 Processing season creation (new pattern)');
+          } else {
+            isEditMode = true;
+            configId = mode;
+            console.log(`✏️ Processing season edit for configId: ${configId}`);
+          }
+        } else {
+          // Legacy 'create_season_modal' pattern
+          isEditMode = false;
+          console.log('📝 Processing season creation (legacy pattern)');
+        }
+
         const playerData = await loadPlayerData();
         if (!playerData[guildId]) {
           playerData[guildId] = { players: {}, tribes: {}, timezones: {}, pronounRoleIDs: [] };
@@ -29918,37 +30021,73 @@ Are you sure you want to continue?`;
         if (!playerData[guildId].applicationConfigs) {
           playerData[guildId].applicationConfigs = {};
         }
-        
-        // Create the new config with season data
-        playerData[guildId].applicationConfigs[configId] = {
-          buttonText: `Apply to ${seasonName}`,
-          explanatoryText: seasonDescription || `Join ${seasonName}!`,
-          completionDescription: 'Thank you for completing your application! A host will review it soon.',
-          completionImage: null,
-          channelFormat: '📝%name%-app',
-          targetChannelId: null,
-          categoryId: null,
-          buttonStyle: 'Primary',
-          createdBy: req.body.member.user.id,
-          stage: 'draft', // Start as draft since it needs channel/category setup
-          createdAt: Date.now(),
-          lastUpdated: Date.now(),
-          seasonId: seasonId,
-          seasonName: seasonName,
-          questions: []
-        };
-        
-        await savePlayerData(playerData);
-        
-        // Use the refreshQuestionManagementUI function for consistent UI
-        return refreshQuestionManagementUI(res, playerData[guildId].applicationConfigs[configId], configId, 0);
+
+        if (isEditMode) {
+          // EDIT MODE: Update existing season config
+          const config = playerData[guildId].applicationConfigs?.[configId];
+
+          if (!config) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Season configuration not found.',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+
+          // Update season name and description
+          config.seasonName = seasonName;
+          config.explanatoryText = seasonDescription || `Join ${seasonName}!`;
+          config.buttonText = `Apply to ${seasonName}`; // Update button text to match new name
+          config.lastUpdated = Date.now();
+
+          await savePlayerData(playerData);
+
+          console.log(`✅ SUCCESS: Season "${seasonName}" updated (configId: ${configId})`);
+
+          // Return to question management UI (UPDATE_MESSAGE pattern)
+          return refreshQuestionManagementUI(res, config, configId, 0);
+
+        } else {
+          // CREATE MODE: Create new season config
+          // Generate UUID-based season ID
+          const seasonId = `season_${crypto.randomUUID().replace(/-/g, '').substring(0, 16)}`;
+          configId = `config_${Date.now()}_${req.body.member.user.id}`;
+
+          // Create the new config with season data
+          playerData[guildId].applicationConfigs[configId] = {
+            buttonText: `Apply to ${seasonName}`,
+            explanatoryText: seasonDescription || `Join ${seasonName}!`,
+            completionDescription: 'Thank you for completing your application! A host will review it soon.',
+            completionImage: null,
+            channelFormat: '📝%name%-app',
+            targetChannelId: null,
+            categoryId: null,
+            buttonStyle: 'Primary',
+            createdBy: req.body.member.user.id,
+            stage: 'draft', // Start as draft since it needs channel/category setup
+            createdAt: Date.now(),
+            lastUpdated: Date.now(),
+            seasonId: seasonId,
+            seasonName: seasonName,
+            questions: []
+          };
+
+          await savePlayerData(playerData);
+
+          console.log(`✅ SUCCESS: Season "${seasonName}" created (configId: ${configId})`);
+
+          // Use the refreshQuestionManagementUI function for consistent UI
+          return refreshQuestionManagementUI(res, playerData[guildId].applicationConfigs[configId], configId, 0);
+        }
 
       } catch (error) {
-        console.error('Error in create_season_modal handler:', error);
+        console.error('Error in season_modal handler:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error creating season. Please try again.',
+            content: '❌ Error processing season. Please try again.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

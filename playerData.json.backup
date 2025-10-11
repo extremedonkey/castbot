@@ -1913,38 +1913,6 @@
         "welcomeDescription": "In season_question_edit_config_*, please add a next Text Input called \"Image URL\", optional, with the placeholder text of \"Enter the url of an image hosted on discord (https://cdn.discor..) to include.\"\nUnder the question configuration, save the URL of the image the user provided (e.g. imageURL).\nIn app_continue_*, when the container loads, if a question has a non-empty imageURL, create a ComponentsV2.md Media Gallery (type = 12) component directly below the questionText and attempt to load the imageURL in the component.",
         "welcomeTitle": "Welcome!"
       },
-      "config_1757436209072_391415444084490240": {
-        "buttonText": "Apply to test123",
-        "explanatoryText": "test",
-        "channelFormat": "📝%name%-app",
-        "stage": "awaiting_selections",
-        "seasonId": "season_875934ef5b7b49ee",
-        "seasonName": "test123",
-        "questions": [
-          {
-            "id": "question_4e29cafb9e6e4e2e",
-            "order": 1,
-            "questionTitle": "asdsa",
-            "questionText": "asdas",
-            "imageURL": "",
-            "createdAt": 1757443342897
-          },
-          {
-            "id": "question_3cf9146606a045f0",
-            "order": 2,
-            "questionTitle": "12312",
-            "questionText": "adwsdas",
-            "imageURL": "",
-            "createdAt": 1757443336483
-          }
-        ],
-        "targetChannelId": null,
-        "categoryId": null,
-        "buttonStyle": "Success",
-        "createdBy": "391415444084490240",
-        "createdAt": 1758635465491,
-        "lastUpdated": 1758635465491
-      },
       "config_1759634522896_391415444084490240": {
         "buttonText": "Apply to S16 The NU Season",
         "explanatoryText": "New things are happening!",
