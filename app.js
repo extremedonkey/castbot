@@ -155,11 +155,11 @@ function buildQuestionManagementUI(config, configId, currentPage = 0) {
   // Title with pagination info
   const pageInfo = config.questions.length <= questionsPerPage
     ? ''
-    : ` \`(Page ${currentPage + 1}/${totalPages})\``;
+    : ` \`Page ${currentPage + 1}/${totalPages}\``;
 
   refreshedComponents.push({
     type: 10, // Text Display
-    content: `## 📝 Season Applications | Manage casting for your season!\n### :question: Manage Questions${pageInfo}`
+    content: `## :pencil: Season Applications | Manage Season Casting\n### :question: Manage Questions (${config.seasonName})${pageInfo}`
   });
   
   if (config.questions.length === 0) {
@@ -6748,7 +6748,7 @@ To fix this:
           const seasonManagementComponents = [
             {
               type: 10, // Text Display
-              content: `## 📝 Season Applications | Manage casting for your season!`
+              content: `## :pencil: Season Applications | Manage Season Casting`
             },
             {
               type: 14 // Separator
