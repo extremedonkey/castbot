@@ -7461,11 +7461,24 @@ To fix this:
           
           // Show the standard application button modal
           const modal = createApplicationButtonModal();
-          
+
+          // Update modal title with season name (Discord limit: 45 chars)
+          const seasonName = existingConfig.seasonName || 'Season';
+          const titlePrefix = 'Apply to ';
+          const maxTitleLength = 45;
+          const maxSeasonNameLength = maxTitleLength - titlePrefix.length;
+
+          let truncatedSeasonName = seasonName;
+          if (truncatedSeasonName.length > maxSeasonNameLength) {
+            truncatedSeasonName = truncatedSeasonName.substring(0, maxSeasonNameLength - 2) + '..';
+          }
+
+          modal.setTitle(`${titlePrefix}${truncatedSeasonName}`);
+
           // Pre-fill the modal with existing values if available
           modal.components[0].components[0].setValue(existingConfig.buttonText || '');
           modal.components[1].components[0].setValue(existingConfig.explanatoryText || '');
-          
+
           // Modify the custom_id to indicate this is for an existing config
           modal.setCustomId(`application_button_modal_${configId}`);
           

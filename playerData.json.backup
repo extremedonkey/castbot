@@ -1942,16 +1942,16 @@
         "categoryId": "1334493817231114271",
         "buttonStyle": "Primary",
         "createdBy": "391415444084490240",
-        "createdAt": 1760021728748,
-        "lastUpdated": 1760021728748
+        "createdAt": 1760199051003,
+        "lastUpdated": 1760199051003
       },
       "config_1760196737532_391415444084490240": {
-        "buttonText": "Apply to Reece's Modal Regression Szn",
-        "explanatoryText": "This better work!!!",
+        "buttonText": "Apply to S17 Reece's Modal Regression Szn - testing the limits of strings since 1988! What a crazy insane man",
+        "explanatoryText": "The greatest season ever played in any ORG! Literally wild, so many people played from many different walks of life.  Literally wild, so many people played from many different walks of life.  Literally wild, so many people played from many different walks of life.  Literally wild, so many people played from many different walks of life.  Literally wild, so many people played from many different walks of life.  Literally wild, so many people played from many different walks of life.",
         "channelFormat": "📝%name%-app",
         "stage": "active",
         "seasonId": "season_1deffdb1dac8496b",
-        "seasonName": "Reece's Modal Regression Szn",
+        "seasonName": "S17 Reece's Modal Regression Szn - testing the limits of strings since 1988! What a crazy insane man",
         "questions": [
           {
             "id": "question_9d27484463e949e5",
@@ -1977,7 +1977,7 @@
         "buttonStyle": "Danger",
         "createdBy": "391415444084490240",
         "createdAt": 1760197889737,
-        "lastUpdated": 1760197889737,
+        "lastUpdated": 1760198807697,
         "productionRole": "1333822520737927281"
       }
     },
@@ -2204,6 +2204,16 @@
         "createdAt": "2025-10-11T15:51:35.153Z",
         "configId": "config_1760196737532_391415444084490240",
         "currentQuestion": 1
+      },
+      "1426602985223360593": {
+        "userId": "391415444084490240",
+        "channelId": "1426602985223360593",
+        "username": "extremedonkey",
+        "displayName": "ReeceBot",
+        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
+        "channelName": "📝reecebot-app",
+        "createdAt": "2025-10-11T16:10:58.267Z",
+        "configId": "config_1759672397657_391415444084490240"
       }
     },
     "rankings": {
