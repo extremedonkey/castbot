@@ -50,7 +50,7 @@ const SAFE_TEST_BUTTONS = {
     priority: 6
   },
   'applications': {
-    custom_id: 'prod_season_applications',
+    custom_id: 'season_management_menu',
     label: '📝 Applications',
     style: 1, // Primary (blue)
     priority: 5
@@ -112,7 +112,7 @@ const FEATURE_PATTERNS = {
     /application/i,
     /season.*app/i,
     /apply_/,
-    /prod_season_applications/,
+    /season_management_menu/,
     /applicationManager/
   ]
 };

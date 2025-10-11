@@ -3374,10 +3374,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           lastMessage.components.length > 0) {
         
         // Check if this message contains production menu buttons
-        const hasProductionMenuButton = lastMessage.components.some(row => 
-          row.components && row.components.some(component => 
+        const hasProductionMenuButton = lastMessage.components.some(row =>
+          row.components && row.components.some(component =>
             component.customId && (
-              component.customId === 'prod_season_applications' ||
+              component.customId === 'season_management_menu' ||
               component.customId === 'prod_manage_pronouns_timezones' ||
               component.customId === 'prod_manage_tribes' ||
               component.customId === 'prod_setup' ||

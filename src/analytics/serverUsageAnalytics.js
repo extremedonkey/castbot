@@ -348,7 +348,7 @@ function detectFeatureUsage(entries) {
     }
     
     // 📝 Season Applications - season_app_* and apply_* buttons
-    if (customId.includes('season_app') || customId.includes('apply_') || customId.includes('prod_season_applications')) {
+    if (customId.includes('season_app') || customId.includes('apply_') || customId.includes('season_management_menu')) {
       features.seasonApplications++;
     }
     
