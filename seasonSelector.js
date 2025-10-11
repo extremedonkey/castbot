@@ -120,13 +120,18 @@ export async function createSeasonSelector(guildId, options = {}) {
   showingSeasons.forEach(([configId, season]) => {
     const stage = season.stage || 'planning';
     const emoji = getSeasonStageEmoji(stage);
-    const stageName = getSeasonStageName(stage);
-    const lastUpdate = new Date(season.lastUpdated || season.createdAt || 0);
-    
+
+    // Use season description if it exists, otherwise blank
+    let description = season.description || '';
+    // Discord select option descriptions max at 100 characters
+    if (description.length > 100) {
+      description = description.substring(0, 98) + '..';
+    }
+
     seasonOptions.push({
       label: `${emoji} ${season.seasonName}`.substring(0, 100),
       value: configId,
-      description: `${stageName} • Updated: ${lastUpdate.toLocaleDateString()}`
+      description: description
     });
   });
   
