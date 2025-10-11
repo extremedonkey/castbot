@@ -7168,39 +7168,44 @@ To fix this:
             };
           }
 
-          // Create modal with pre-populated values
-          const seasonModal = new ModalBuilder()
-            .setCustomId(`season_modal:${configId}`)
-            .setTitle('Manage Season Details');
-
-          const seasonNameInput = new TextInputBuilder()
-            .setCustomId('season_name')
-            .setLabel('Season Name')
-            .setPlaceholder('e.g., "Season 12 - Jurassic Park"')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setMaxLength(100)
-            .setValue(config.seasonName || ''); // Pre-populate with existing value
-
-          const seasonDescInput = new TextInputBuilder()
-            .setCustomId('season_description')
-            .setLabel('Season Description')
-            .setPlaceholder('Brief description of this season (optional)')
-            .setStyle(TextInputStyle.Paragraph)
-            .setRequired(false)
-            .setMaxLength(500)
-            .setValue(config.explanatoryText || ''); // Pre-populate with existing value
-
-          const nameRow = new ActionRowBuilder().addComponents(seasonNameInput);
-          const descRow = new ActionRowBuilder().addComponents(seasonDescInput);
-          seasonModal.addComponents(nameRow, descRow);
-
           console.log(`✅ SUCCESS: season_edit_info - showing edit modal for ${config.seasonName}`);
 
-          // For modal responses, send directly via res instead of returning
+          // Show modal with pre-populated values using modern Label components (Type 18)
           return res.send({
             type: InteractionResponseType.MODAL,
-            data: seasonModal.toJSON()
+            data: {
+              custom_id: `season_modal:${configId}`,
+              title: 'Manage Season Details',
+              components: [
+                {
+                  type: 18, // Label component
+                  label: 'Season Name',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'season_name',
+                    style: 1, // Short
+                    placeholder: 'e.g., "Season 12 - Jurassic Park"',
+                    required: true,
+                    max_length: 100,
+                    value: config.seasonName || '' // Pre-populate with existing value
+                  }
+                },
+                {
+                  type: 18, // Label component
+                  label: 'Season Description',
+                  description: 'Brief description of this season (optional)',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'season_description',
+                    style: 2, // Paragraph
+                    placeholder: 'Describe your season...',
+                    required: false,
+                    max_length: 500,
+                    value: config.explanatoryText || '' // Pre-populate with existing value
+                  }
+                }
+              ]
+            }
           });
         }
       })(req, res, client);
@@ -19529,35 +19534,40 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Handle seasons entity type specially
           if (entityType === 'seasons') {
             if (selectedValue === 'create_new_season') {
-              // Show season creation modal
-              const seasonModal = new ModalBuilder()
-                .setCustomId('season_modal:create')
-                .setTitle('Manage Season Details');
-
-              const seasonNameInput = new TextInputBuilder()
-                .setCustomId('season_name')
-                .setLabel('Season Name')
-                .setPlaceholder('e.g., "Season 12 - Jurassic Park"')
-                .setStyle(TextInputStyle.Short)
-                .setRequired(true)
-                .setMaxLength(100);
-
-              const seasonDescInput = new TextInputBuilder()
-                .setCustomId('season_description')
-                .setLabel('Season Description')
-                .setPlaceholder('Brief description of this season (optional)')
-                .setStyle(TextInputStyle.Paragraph)
-                .setRequired(false)
-                .setMaxLength(500);
-
-              const nameRow = new ActionRowBuilder().addComponents(seasonNameInput);
-              const descRow = new ActionRowBuilder().addComponents(seasonDescInput);
-              seasonModal.addComponents(nameRow, descRow);
-
-              // For modal responses, send directly via res instead of returning
+              // Show season creation modal using modern Label components (Type 18)
               return res.send({
                 type: InteractionResponseType.MODAL,
-                data: seasonModal.toJSON()
+                data: {
+                  custom_id: 'season_modal:create',
+                  title: 'Manage Season Details',
+                  components: [
+                    {
+                      type: 18, // Label component
+                      label: 'Season Name',
+                      component: {
+                        type: 4, // Text Input
+                        custom_id: 'season_name',
+                        style: 1, // Short
+                        placeholder: 'e.g., "Season 12 - Jurassic Park"',
+                        required: true,
+                        max_length: 100
+                      }
+                    },
+                    {
+                      type: 18, // Label component
+                      label: 'Season Description',
+                      description: 'Brief description of this season (optional)',
+                      component: {
+                        type: 4, // Text Input
+                        custom_id: 'season_description',
+                        style: 2, // Paragraph
+                        placeholder: 'Describe your season...',
+                        required: false,
+                        max_length: 500
+                      }
+                    }
+                  ]
+                }
               });
             } else {
               // Selected an existing season - show season management UI
@@ -29978,8 +29988,11 @@ Are you sure you want to continue?`;
         // Handle both legacy 'create_season_modal' and new 'season_modal:*' patterns
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
-        const seasonName = components[0].components[0].value;
-        const seasonDescription = components[1].components[0].value || '';
+
+        // Parse values from Label components (Type 18)
+        // Label structure: components[i].component.value (singular 'component')
+        const seasonName = components[0].component.value;
+        const seasonDescription = components[1].component.value || '';
 
         // Parse custom_id to detect create vs edit mode
         // Format: 'season_modal:create' or 'season_modal:{configId}'

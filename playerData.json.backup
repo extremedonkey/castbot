@@ -1944,6 +1944,32 @@
         "createdBy": "391415444084490240",
         "createdAt": 1760021728748,
         "lastUpdated": 1760021728748
+      },
+      "config_1760196737532_391415444084490240": {
+        "buttonText": "Apply to Reece's Modal Regression Szn",
+        "explanatoryText": "This better work!!!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1760196737532,
+        "lastUpdated": 1760196762494,
+        "seasonId": "season_1deffdb1dac8496b",
+        "seasonName": "Reece's Modal Regression Szn",
+        "questions": [
+          {
+            "id": "question_9d27484463e949e5",
+            "order": 1,
+            "questionTitle": "Seikatsu no imi",
+            "questionText": "Seikatsu no imi wa nandeskka",
+            "imageURL": "",
+            "createdAt": 1760196843742
+          }
+        ]
       }
     },
     "ownerInfo": {
