@@ -1948,16 +1948,8 @@
       "config_1760196737532_391415444084490240": {
         "buttonText": "Apply to Reece's Modal Regression Szn",
         "explanatoryText": "This better work!!!",
-        "completionDescription": "Thank you for completing your application! A host will review it soon.",
-        "completionImage": null,
         "channelFormat": "📝%name%-app",
-        "targetChannelId": null,
-        "categoryId": null,
-        "buttonStyle": "Primary",
-        "createdBy": "391415444084490240",
-        "stage": "draft",
-        "createdAt": 1760196737532,
-        "lastUpdated": 1760196762494,
+        "stage": "awaiting_selections",
         "seasonId": "season_1deffdb1dac8496b",
         "seasonName": "Reece's Modal Regression Szn",
         "questions": [
@@ -1968,8 +1960,22 @@
             "questionText": "Seikatsu no imi wa nandeskka",
             "imageURL": "",
             "createdAt": 1760196843742
+          },
+          {
+            "id": "question_06587253a4be4e66",
+            "order": 2,
+            "questionTitle": "What is the meaning of life??",
+            "questionText": "Enter the url of an image hosted on discord (https://cdn.dis",
+            "imageURL": "",
+            "createdAt": 1760197098185
           }
-        ]
+        ],
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "createdAt": 1760196873740,
+        "lastUpdated": 1760196873740
       }
     },
     "ownerInfo": {

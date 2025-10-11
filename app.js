@@ -6933,46 +6933,57 @@ To fix this:
             };
           }
           
-          // Show edit modal
-          const modal = new ModalBuilder()
-            .setCustomId(`season_edit_question_modal_${configId}_${questionIndex}`)
-            .setTitle('Edit Question');
-            
-          const titleInput = new TextInputBuilder()
-            .setCustomId('questionTitle')
-            .setLabel('Question Title')
-            .setStyle(TextInputStyle.Short)
-            .setValue(question.questionTitle || '')
-            .setRequired(true)
-            .setMaxLength(100);
-            
-          const textInput = new TextInputBuilder()
-            .setCustomId('questionText')
-            .setLabel('Enter your application question')
-            .setStyle(TextInputStyle.Paragraph)
-            .setValue(question.questionText || '')
-            .setRequired(true)
-            .setMaxLength(1000);
-            
-          const imageInput = new TextInputBuilder()
-            .setCustomId('imageURL')
-            .setLabel('Image URL')
-            .setPlaceholder('Enter the url of an image hosted on discord (https://cdn.discor..) to include.')
-            .setStyle(TextInputStyle.Short)
-            .setValue(question.imageURL || '')
-            .setRequired(false)
-            .setMaxLength(500);
-            
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(titleInput),
-            new ActionRowBuilder().addComponents(textInput),
-            new ActionRowBuilder().addComponents(imageInput)
-          );
-          
           console.log(`✅ SUCCESS: season_question_edit - modal created`);
+
+          // Show edit modal using modern Label components (Type 18)
           return {
             type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
+            data: {
+              custom_id: `season_edit_question_modal_${configId}_${questionIndex}`,
+              title: 'Edit Question',
+              components: [
+                {
+                  type: 18, // Label component
+                  label: 'Question Title',
+                  description: 'Short, descriptive title for this question',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'questionTitle',
+                    style: 1, // Short
+                    value: question.questionTitle || '',
+                    required: true,
+                    max_length: 100
+                  }
+                },
+                {
+                  type: 18, // Label component
+                  label: 'Question Text',
+                  description: 'The full question applicants will answer',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'questionText',
+                    style: 2, // Paragraph
+                    value: question.questionText || '',
+                    required: true,
+                    max_length: 1000
+                  }
+                },
+                {
+                  type: 18, // Label component
+                  label: 'Image URL (Optional)',
+                  description: 'Discord CDN image URL to display with this question',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'imageURL',
+                    style: 1, // Short
+                    placeholder: 'https://cdn.discordapp.com/...',
+                    value: question.imageURL || '',
+                    required: false,
+                    max_length: 500
+                  }
+                }
+              ]
+            }
           };
         }
       })(req, res, client);
@@ -7362,45 +7373,56 @@ To fix this:
           const currentPage = parseInt(parts.pop()); // Get page from end
           const configId = parts.join('_'); // Join remaining parts as configId
           
-          // Show new question modal
-          const modal = new ModalBuilder()
-            .setCustomId(`season_new_question_modal_${configId}_${currentPage}`)
-            .setTitle('Create New Question');
-            
-          const titleInput = new TextInputBuilder()
-            .setCustomId('questionTitle')
-            .setLabel('Question Title')
-            .setStyle(TextInputStyle.Short)
-            .setPlaceholder('Why do you want to join our season?')
-            .setRequired(true)
-            .setMaxLength(100);
-            
-          const textInput = new TextInputBuilder()
-            .setCustomId('questionText')
-            .setLabel('Enter your application question')
-            .setStyle(TextInputStyle.Paragraph)
-            .setPlaceholder('Please provide a detailed explanation about...')
-            .setRequired(true)
-            .setMaxLength(1000);
-            
-          const imageInput = new TextInputBuilder()
-            .setCustomId('imageURL')
-            .setLabel('Image URL')
-            .setPlaceholder('Enter the url of an image hosted on discord (https://cdn.discor..) to include.')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false)
-            .setMaxLength(500);
-            
-          modal.addComponents(
-            new ActionRowBuilder().addComponents(titleInput),
-            new ActionRowBuilder().addComponents(textInput),
-            new ActionRowBuilder().addComponents(imageInput)
-          );
-          
           console.log(`✅ SUCCESS: season_new_question_config - modal created`);
+
+          // Show new question modal using modern Label components (Type 18)
           return {
             type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
+            data: {
+              custom_id: `season_new_question_modal_${configId}_${currentPage}`,
+              title: 'Create New Question',
+              components: [
+                {
+                  type: 18, // Label component
+                  label: 'Question Title',
+                  description: 'Short, descriptive title for this question',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'questionTitle',
+                    style: 1, // Short
+                    placeholder: 'Why do you want to join our season?',
+                    required: true,
+                    max_length: 100
+                  }
+                },
+                {
+                  type: 18, // Label component
+                  label: 'Question Text',
+                  description: 'The full question applicants will answer',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'questionText',
+                    style: 2, // Paragraph
+                    placeholder: 'Please provide a detailed explanation about...',
+                    required: true,
+                    max_length: 1000
+                  }
+                },
+                {
+                  type: 18, // Label component
+                  label: 'Image URL (Optional)',
+                  description: 'Discord CDN image URL to display with this question',
+                  component: {
+                    type: 4, // Text Input
+                    custom_id: 'imageURL',
+                    style: 1, // Short
+                    placeholder: 'https://cdn.discordapp.com/...',
+                    required: false,
+                    max_length: 500
+                  }
+                }
+              ]
+            }
           };
         }
       })(req, res, client);
@@ -30116,9 +30138,12 @@ Are you sure you want to continue?`;
         const configId = parts.join('_'); // Join remaining parts as configId
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
-        const questionTitle = components[0].components[0].value;
-        const questionText = components[1].components[0].value;
-        const imageURL = components[2].components[0].value;
+
+        // Parse values from Label components (Type 18)
+        // Label structure: components[i].component.value (singular 'component')
+        const questionTitle = components[0].component.value;
+        const questionText = components[1].component.value;
+        const imageURL = components[2].component.value;
         
         // Load player data
         const playerData = await loadPlayerData();
@@ -30181,9 +30206,12 @@ Are you sure you want to continue?`;
         const questionIndex = parseInt(remaining.substring(lastUnderscoreIndex + 1));
         const guildId = req.body.guild_id;
         const components = req.body.data.components;
-        const questionTitle = components[0].components[0].value;
-        const questionText = components[1].components[0].value;
-        const imageURL = components[2].components[0].value;
+
+        // Parse values from Label components (Type 18)
+        // Label structure: components[i].component.value (singular 'component')
+        const questionTitle = components[0].component.value;
+        const questionText = components[1].component.value;
+        const imageURL = components[2].component.value;
         
         // Load player data
         const playerData = await loadPlayerData();
