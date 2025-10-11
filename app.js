@@ -115,7 +115,9 @@ import {
   ButtonRegistry,
   MenuFactory,
   BUTTON_REGISTRY,
-  MENU_FACTORY
+  MENU_FACTORY,
+  sendDeferredResponse,
+  updateDeferredResponse
 } from './buttonHandlerFactory.js';
 import { createEntityManagementUI } from './entityManagementUI.js';
 import { getBotEmoji, formatBotEmoji } from './botEmojis.js';
@@ -31834,6 +31836,7 @@ Are you sure you want to continue?`;
       try {
         const member = req.body.member;
         const guildId = req.body.guild_id;
+        const token = req.body.token;
 
         // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to create stores.')) return;
@@ -31857,6 +31860,9 @@ Are you sure you want to continue?`;
 
         console.log(`🏪 DEBUG: Creating store "${storeName}" for guild ${guildId} with redirect`);
 
+        // DEFER IMMEDIATELY to prevent 3-second timeout
+        await sendDeferredResponse(res, true);
+
         // Import Safari manager functions
         const { createStore, loadSafariContent } = await import('./safariManager.js');
         const { createStoreItemManagementUI } = await import('./entityManagementUI.js');
@@ -31875,12 +31881,9 @@ Are you sure you want to continue?`;
 
         if (!newStore) {
           // Fallback if store wasn't found for some reason
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: `✅ Store created but couldn't load management interface. Store ID: \`${newStoreId}\``,
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
+          return updateDeferredResponse(token, {
+            content: `✅ Store created but couldn't load management interface. Store ID: \`${newStoreId}\``,
+            flags: InteractionResponseFlags.EPHEMERAL
           });
         }
 
@@ -31897,18 +31900,29 @@ Are you sure you want to continue?`;
           searchTerm: ''
         });
 
-        // Return UPDATE_MESSAGE to show the store management interface
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: uiResponse
-        });
+        // Update the deferred response with the store management interface
+        return updateDeferredResponse(token, uiResponse);
 
       } catch (error) {
         console.error('Error creating store with redirect:', error);
+
+        // Determine error message
+        let errorMessage = '❌ Error creating store. Please try again.';
+        if (error.code === 'DUPLICATE_STORE') {
+          errorMessage = `❌ ${error.message}`;
+        }
+
+        // If we already sent deferred response, update it; otherwise send error
+        if (req.body.token && res.headersSent) {
+          return updateDeferredResponse(req.body.token, {
+            content: errorMessage,
+            flags: InteractionResponseFlags.EPHEMERAL
+          });
+        }
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: '❌ Error creating store. Please try again.',
+            content: errorMessage,
             flags: InteractionResponseFlags.EPHEMERAL
           }
         });

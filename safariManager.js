@@ -1934,13 +1934,24 @@ async function postButtonToChannel(guildId, buttonId, channelId, client) {
 async function createStore(guildId, storeData, userId) {
     try {
         console.log(`🏪 DEBUG: Creating store for guild ${guildId} by user ${userId}`);
-        
+
         const safariData = await loadSafariContent();
-        
+
         if (!safariData[guildId]) {
             safariData[guildId] = { buttons: {}, safaris: {}, applications: {}, stores: {}, items: {} };
         }
-        
+
+        // Check for duplicate store name (case-insensitive)
+        const existingStores = Object.values(safariData[guildId].stores || {});
+        const duplicateStore = existingStores.find(s =>
+            s.name.toLowerCase() === storeData.name.toLowerCase()
+        );
+        if (duplicateStore) {
+            const error = new Error(`Store "${storeData.name}" already exists`);
+            error.code = 'DUPLICATE_STORE';
+            throw error;
+        }
+
         const storeId = generateButtonId(storeData.name); // Reuse ID generation
         
         const store = {
