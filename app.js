@@ -4352,9 +4352,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
             };
           }
           
-          // Get updated movement display
-          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate);
-          
+          // Get updated movement display (with isDeferred=true since we're updating)
+          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate, true);
+
           console.log(`✅ SUCCESS: safari_navigate_refresh - refreshed display`);
           return {
             ...movementDisplay,
@@ -4373,9 +4373,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       return ButtonHandlerFactory.create({
         id: custom_id,
         ephemeral: true,
+        deferred: true, // CHANGED: Now deferred due to inventory checks
         handler: async (context) => {
           console.log(`🗺️ START: safari_navigate - user ${context.userId}, coordinate ${coordinate}`);
-          
+
           // Verify this button is for the correct user
           if (context.userId !== targetUserId) {
             return {
@@ -4383,7 +4384,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               ephemeral: true
             };
           }
-          
+
           // Check if coordinate is 'none' (player not initialized)
           if (coordinate === 'none') {
             return {
@@ -4391,10 +4392,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               ephemeral: true
             };
           }
-          
+
           // Import movement display function
           const { getMovementDisplay, getPlayerLocation } = await import('./mapMovement.js');
-          
+
           // Verify player is at this location
           const mapState = await getPlayerLocation(context.guildId, context.userId);
           if (!mapState || mapState.currentCoordinate !== coordinate) {
@@ -4403,7 +4404,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
               ephemeral: true
             };
           }
-          
+
           // Delete the arrival message
           try {
             await DiscordRequest(`channels/${context.channelId}/messages/${context.messageId}`, {
@@ -4413,9 +4414,9 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
           } catch (error) {
             console.error('Error deleting arrival message:', error);
           }
-          
-          // Get and return movement display as ephemeral response
-          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate);
+
+          // Get movement display with expensive inventory checks
+          const movementDisplay = await getMovementDisplay(context.guildId, context.userId, coordinate, true);
           
           // Store the interaction token for later editing
           // We'll use a simple in-memory cache for this demo

@@ -1949,7 +1949,7 @@
         "buttonText": "A NEW button name!",
         "explanatoryText": "New new new",
         "channelFormat": "📝%name%-app",
-        "stage": "active",
+        "stage": "awaiting_selections",
         "seasonId": "season_1deffdb1dac8496b",
         "seasonName": "S17 Reece's Modal Regression Szn - testing the limits of strings since 1988! What a crazy insane man",
         "questions": [
@@ -1977,8 +1977,8 @@
         "buttonStyle": "Danger",
         "productionRole": "1333822520737927281",
         "createdBy": "391415444084490240",
-        "createdAt": 1760199891801,
-        "lastUpdated": 1760199891801
+        "createdAt": 1760207677911,
+        "lastUpdated": 1760207677911
       }
     },
     "ownerInfo": {

@@ -88,6 +88,13 @@ export const EDIT_CONFIGS = {
         label: 'Consumable Item',
         default: 'No'
       },
+      reverseBlacklist: {
+        type: 'text',
+        maxLength: 1000,
+        required: false,
+        label: 'Reverse Blacklist Coordinates',
+        placeholder: 'A1, B2, C3 (comma-separated)'
+      },
       tags: { type: 'tags', maxTags: SAFARI_LIMITS.MAX_TAGS_PER_ITEM, label: 'Tags (comma separated)' }
     },
     content: {

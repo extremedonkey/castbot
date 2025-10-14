@@ -271,8 +271,26 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
             break;
             
         case 'properties':
-            // Properties are handled by select menu, not modal
-            return null;
+            // Properties: consumable, defaultItem, reverseBlacklist
+            // Note: consumable and defaultItem are handled by select menus in the UI
+            // Only reverseBlacklist needs a text input modal
+            components.push({
+                type: 1, // ActionRow
+                components: [{
+                    type: 4, // Text Input
+                    custom_id: 'reverseBlacklist',
+                    label: 'Reverse Blacklist Coordinates',
+                    style: 2, // Paragraph
+                    value: currentValues.reverseBlacklist ?
+                        (Array.isArray(currentValues.reverseBlacklist) ?
+                            currentValues.reverseBlacklist.join(', ') :
+                            currentValues.reverseBlacklist) : '',
+                    placeholder: 'A1, B2, C3 (comma-separated coordinates)',
+                    required: false,
+                    max_length: 1000
+                }]
+            });
+            break;
             
         case 'stamina':
             // Stamina: staminaBoost and consumable settings
@@ -587,7 +605,19 @@ export function parseModalSubmission(modalData, fieldGroupId) {
                     // Store in nested settings
                     fields['settings.storeownerText'] = value || '';
                     break;
-                    
+
+                case 'reverseBlacklist':
+                    // Parse comma-separated coordinates
+                    if (value) {
+                        const coords = value.split(',')
+                            .map(coord => coord.trim().toUpperCase())
+                            .filter(coord => coord.match(/^[A-Z]\d+$/));
+                        fields[fieldId] = coords.length > 0 ? coords : [];
+                    } else {
+                        fields[fieldId] = [];
+                    }
+                    break;
+
                 default:
                     // Store as-is for text fields
                     fields[fieldId] = value || '';

@@ -375,12 +375,36 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
     
     if (showBlacklisted && blacklistedWithInfo.length > 0) {
         legend += `\n**Blacklisted Cells:** ${blacklistedWithInfo.join(', ')}\n`;
+
+        // NEW: Show reverse blacklist coverage
+        const reverseBlacklistInfo = await getReverseBlacklistItemSummary(guildId);
+        if (reverseBlacklistInfo.length > 0) {
+            legend += `\n**Reverse Blacklist Items:**\n`;
+            reverseBlacklistInfo.forEach(info => {
+                legend += `• ${info.emoji} ${info.name}: ${info.coordinates.join(', ')}\n`;
+            });
+        }
     }
-    
+
     return {
         type: 10, // Text Display
         content: `## 🗺️ Player Locations\n\n${gridDisplay}${legend}`
     };
+}
+
+// New helper function for reverse blacklist items
+async function getReverseBlacklistItemSummary(guildId) {
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const items = safariData[guildId]?.items || {};
+
+    return Object.entries(items)
+        .filter(([id, item]) => item.reverseBlacklist?.length > 0)
+        .map(([id, item]) => ({
+            name: item.name,
+            emoji: item.emoji || '📦',
+            coordinates: item.reverseBlacklist
+        }));
 }
 
 // Helper functions

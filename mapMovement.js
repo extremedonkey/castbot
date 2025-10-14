@@ -201,10 +201,18 @@ export async function movePlayer(guildId, userId, newCoordinate, client, options
         // Check if target coordinate is blacklisted
         const targetMove = validMoves.find(move => move.coordinate === newCoordinate);
         if (targetMove && targetMove.blacklisted) {
-            return {
-                success: false,
-                message: `⛔ You cannot access that location. It has been restricted.`
-            };
+            // Check for reverse blacklist unlock
+            const reverseBlacklistCoverage = await getPlayerReverseBlacklistCoverage(guildId, userId);
+
+            if (!reverseBlacklistCoverage.includes(newCoordinate)) {
+                return {
+                    success: false,
+                    message: `⛔ You cannot access that location. It has been restricted.`
+                };
+            }
+
+            // Player has item that unlocks this coordinate
+            console.log(`✅ Player ${userId} using reverse blacklist item to access ${newCoordinate}`);
         }
     }
     
@@ -388,44 +396,72 @@ export async function updateChannelPermissions(guildId, userId, oldCoordinate, n
 }
 
 // Get movement display for a coordinate channel (Components V2 format)
-export async function getMovementDisplay(guildId, userId, coordinate) {
+export async function getMovementDisplay(guildId, userId, coordinate, isDeferred = false) {
+    // For non-deferred calls, return deferred response immediately
+    if (!isDeferred) {
+        const { InteractionResponseType, InteractionResponseFlags } = await import('discord-interactions');
+        return {
+            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { flags: InteractionResponseFlags.EPHEMERAL }
+        };
+    }
+
+    // Expensive operations below...
     const canMove = await canPlayerMove(guildId, userId);
     const entityId = `player_${userId}`;
     const validMoves = await getValidMoves(coordinate, 'adjacent_8', guildId);
-    
+
+    // Get player's reverse blacklist coverage for unlocking blacklisted coordinates
+    const reverseBlacklistCoverage = await getPlayerReverseBlacklistCoverage(guildId, userId);
+
     let description = '';
     let actionRows = [];
-    
+
     // Get grid dimensions for bounds checking
     const gridDimensions = await getMapGridDimensions(guildId);
     const col = coordinate.charCodeAt(0) - 65; // A=0, B=1, etc.
     const row = parseInt(coordinate.substring(1)) - 1; // 1-based to 0-based
-    
+
     // Create 3x3 grid layout for movement buttons
     const movesByDirection = {};
     validMoves.forEach(move => {
         const directionKey = move.direction.split(' ')[1].toLowerCase(); // northwest, north, etc.
         movesByDirection[directionKey] = move;
     });
-    
+
     // Helper to create button for direction
     const createButton = (dir, dirLabel, targetCol, targetRow) => {
         const isOutOfBounds = targetCol < 0 || targetCol >= gridDimensions.width || targetRow < 0 || targetRow >= gridDimensions.height;
         const targetCoordinate = !isOutOfBounds ? String.fromCharCode(65 + targetCol) + (targetRow + 1) : null;
-        
+
         if (movesByDirection[dir] && !isOutOfBounds) {
             const move = movesByDirection[dir];
             // Check if coordinate is blacklisted
             if (move.blacklisted) {
-                return {
-                    type: 2,
-                    custom_id: `blacklisted_${dir}`,
-                    label: `🚫 ${dirLabel}`,
-                    style: 2, // Secondary
-                    disabled: true
-                };
+                // Check if player has item that unlocks this coordinate
+                const isUnlocked = reverseBlacklistCoverage.includes(move.coordinate);
+
+                if (isUnlocked) {
+                    // Green button for reverse blacklist unlock (same label, different color)
+                    return {
+                        type: 2,
+                        custom_id: move.customId,
+                        label: `${dirLabel} (${targetCoordinate})`, // Same as normal
+                        style: canMove ? 3 : 2, // Success (green) if can move, Secondary if out of stamina
+                        disabled: !canMove
+                    };
+                } else {
+                    // Standard blacklisted button (disabled with 🚫)
+                    return {
+                        type: 2,
+                        custom_id: `blacklisted_${dir}`,
+                        label: `🚫 ${dirLabel}`,
+                        style: 2, // Secondary
+                        disabled: true
+                    };
+                }
             }
-            
+
             // Valid move (not blacklisted)
             return {
                 type: 2,
@@ -599,4 +635,35 @@ export async function getMapGridDimensions(guildId) {
 export async function getMapGridSize(guildId) {
     const dimensions = await getMapGridDimensions(guildId);
     return Math.max(dimensions.width, dimensions.height); // Return the larger dimension
+}
+
+// Get player's reverse blacklist coverage based on inventory items
+export async function getPlayerReverseBlacklistCoverage(guildId, userId) {
+    const { loadPlayerData } = await import('./storage.js');
+    const playerData = await loadPlayerData();
+    const inventory = playerData[guildId]?.players?.[userId]?.safari?.inventory || {};
+
+    // Fast-path: Empty inventory = no unlocks
+    if (Object.keys(inventory).length === 0) {
+        return [];
+    }
+
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const items = safariData[guildId]?.items || {};
+
+    const unlockedCoordinates = new Set();
+
+    // Check each inventory item for reverse blacklist
+    for (const [itemId, quantity] of Object.entries(inventory)) {
+        // Only items with quantity > 0 grant access
+        if (quantity > 0) {
+            const item = items[itemId];
+            if (item?.reverseBlacklist && Array.isArray(item.reverseBlacklist)) {
+                item.reverseBlacklist.forEach(coord => unlockedCoordinates.add(coord));
+            }
+        }
+    }
+
+    return Array.from(unlockedCoordinates);
 }
