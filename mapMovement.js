@@ -414,6 +414,10 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
     // Get player's reverse blacklist coverage for unlocking blacklisted coordinates
     const reverseBlacklistCoverage = await getPlayerReverseBlacklistCoverage(guildId, userId);
 
+    if (reverseBlacklistCoverage.length > 0) {
+        console.log(`🔓 Movement display - Player ${userId} has reverse blacklist coverage for: ${reverseBlacklistCoverage.join(', ')}`);
+    }
+
     let description = '';
     let actionRows = [];
 
@@ -440,6 +444,7 @@ export async function getMovementDisplay(guildId, userId, coordinate, isDeferred
             if (move.blacklisted) {
                 // Check if player has item that unlocks this coordinate
                 const isUnlocked = reverseBlacklistCoverage.includes(move.coordinate);
+                console.log(`🚫 Blacklisted coordinate ${move.coordinate} - Unlocked by item: ${isUnlocked}`);
 
                 if (isUnlocked) {
                     // Green button for reverse blacklist unlock (same label, different color)
@@ -655,11 +660,15 @@ export async function getPlayerReverseBlacklistCoverage(guildId, userId) {
     const unlockedCoordinates = new Set();
 
     // Check each inventory item for reverse blacklist
-    for (const [itemId, quantity] of Object.entries(inventory)) {
+    for (const [itemId, itemData] of Object.entries(inventory)) {
+        // Handle both old format (direct number) and new format (object with quantity property)
+        const quantity = typeof itemData === 'number' ? itemData : (itemData?.quantity || 0);
+
         // Only items with quantity > 0 grant access
         if (quantity > 0) {
             const item = items[itemId];
             if (item?.reverseBlacklist && Array.isArray(item.reverseBlacklist)) {
+                console.log(`🔓 Player has ${quantity}x ${item.name || itemId} unlocking: ${item.reverseBlacklist.join(', ')}`);
                 item.reverseBlacklist.forEach(coord => unlockedCoordinates.add(coord));
             }
         }

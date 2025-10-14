@@ -903,10 +903,11 @@
           ],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "B2",
+              "currentLocation": "B4",
               "exploredCoordinates": [
                 "A1",
-                "B2"
+                "B2",
+                "B4"
               ],
               "itemsFound": [],
               "movementHistory": [
@@ -924,15 +925,25 @@
                   "from": "A1",
                   "to": "B2",
                   "timestamp": "2025-09-23T15:38:48.717Z"
+                },
+                {
+                  "from": "B2",
+                  "to": "B4",
+                  "timestamp": "2025-10-14T15:58:20.357Z"
+                },
+                {
+                  "from": "B4",
+                  "to": "B4",
+                  "timestamp": "2025-10-14T15:58:26.676Z"
                 }
               ]
             }
           },
           "points": {
             "stamina": {
-              "current": 3,
-              "maximum": 3,
-              "lastRegeneration": "2025-09-06T05:33:52.335Z",
+              "current": 999,
+              "maximum": 999,
+              "lastRegeneration": "2025-10-14T15:58:07.022Z",
               "regenConfig": "hourly"
             }
           },
@@ -3040,14 +3051,14 @@
     "serverName": "EpochORG S5: Incan Empire",
     "icon": "https://cdn.discordapp.com/icons/1240325979214188615/156095a9edb1de2f24dfac78d2904a04.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 58,
+    "memberCount": 59,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1715787157587,
-    "lastUpdated": 1759258329983,
+    "lastUpdated": 1760456387808,
     "players": {},
     "tribes": {
       "1241383870260056095": {
@@ -3123,14 +3134,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 545,
+    "memberCount": 547,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1760019728927,
+    "lastUpdated": 1760456385427,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1381126640163360800>"
