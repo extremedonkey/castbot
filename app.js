@@ -980,7 +980,12 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('castlist_test')
       .setLabel('Compact Castlist')
       .setStyle(ButtonStyle.Secondary)  // Grey for secondary action
-      .setEmoji('🍒')
+      .setEmoji('🍒'),
+    new ButtonBuilder()
+      .setCustomId('playerdata_export')
+      .setLabel('Export PlayerData')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('💾')
   ];
 
   // Danger Zone section buttons
@@ -10838,6 +10843,119 @@ Your server is now ready for Tycoons gameplay!`;
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
               content: '❌ Error exporting Safari data. Please try again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+      }
+    } else if (custom_id === 'playerdata_export') {
+      // Handle PlayerData export (similar to Safari export but for playerData.json)
+      try {
+        const guildId = req.body.guild_id;
+        const token = req.body.token;
+        const userId = req.body.member.user.id;
+
+        // Security check - only allow specific Discord ID (same as reece_stuff_menu)
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log(`📤 DEBUG: Exporting PlayerData for guild ${guildId}`);
+
+        // Defer the response immediately
+        res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+
+        // Load and export playerData for this guild
+        const { loadPlayerData } = await import('./storage.js');
+        const allPlayerData = await loadPlayerData();
+        const guildData = allPlayerData[guildId];
+
+        if (!guildData) {
+          // Send follow-up message via webhook
+          const webhookUrl = `https://discord.com/api/v10/webhooks/${APPLICATION_ID}/${token}/messages/@original`;
+
+          await fetch(webhookUrl, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bot ${client.token}`
+            },
+            body: JSON.stringify({
+              content: '❌ No PlayerData found for this server.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            })
+          });
+          return;
+        }
+
+        // Prepare the export JSON
+        const exportData = {
+          exportVersion: '1.0',
+          exportDate: new Date().toISOString(),
+          guildId: guildId,
+          guildName: guildData.serverName || 'Unknown',
+          dataType: 'playerData',
+          data: guildData
+        };
+
+        const exportJson = JSON.stringify(exportData, null, 2);
+        console.log(`📤 DEBUG: PlayerData export length: ${exportJson.length} characters`);
+
+        // Create the export file attachment
+        const { AttachmentBuilder } = await import('discord.js');
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `playerdata-export-${guildId}-${timestamp}.json`;
+
+        const attachment = new AttachmentBuilder(Buffer.from(exportJson), {
+          name: filename,
+          description: `PlayerData export for ${guildData.serverName || guildId}`
+        });
+
+        // Send follow-up message with attachment via webhook
+        const webhookUrl = `https://discord.com/api/v10/webhooks/${APPLICATION_ID}/${token}/messages/@original`;
+
+        // Create form data for file upload
+        const { FormData, File } = await import('formdata-node');
+        const form = new FormData();
+
+        form.append('payload_json', JSON.stringify({
+          content: `✅ **PlayerData Export Complete**\n\n**Server:** ${guildData.serverName || 'Unknown'}\n**Guild ID:** ${guildId}\n**Export Size:** ${(exportJson.length / 1024).toFixed(1)} KB\n**Players:** ${Object.keys(guildData.players || {}).length}\n\nThis file contains all playerData.json entries for this server.`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }));
+
+        form.append('files[0]', new File([Buffer.from(exportJson)], filename, { type: 'application/json' }));
+
+        await fetch(webhookUrl, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bot ${client.token}`
+          },
+          body: form
+        });
+
+        console.log(`✅ PlayerData export sent successfully for guild ${guildId}`);
+        return;
+
+      } catch (error) {
+        console.error('Error in playerdata_export:', error);
+
+        // If we haven't sent a response yet, send error response
+        if (!res.headersSent) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error exporting PlayerData. Please try again.',
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
