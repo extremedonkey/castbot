@@ -371,6 +371,12 @@ function createEntityDisplay(entity, entityType, safariConfig) {
             if (entity.metadata?.defaultItem === 'Yes') {
                 lines.push(`**Default Item**: Yes`);
             }
+            if (entity.staminaBoost !== undefined && entity.staminaBoost !== null && entity.staminaBoost !== 0) {
+                lines.push(`**Stamina Boost**: ${entity.staminaBoost}`);
+            }
+            if (entity.reverseBlacklist && entity.reverseBlacklist.length > 0) {
+                lines.push(`**Reverse Blacklist**: ${entity.reverseBlacklist.join(', ')}`);
+            }
             break;
             
         case 'store':
