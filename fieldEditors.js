@@ -271,29 +271,11 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
             break;
             
         case 'properties':
-            // Properties: consumable, defaultItem, reverseBlacklist
-            // Note: consumable and defaultItem are handled by select menus in the UI
-            // Only reverseBlacklist needs a text input modal
-            components.push({
-                type: 1, // ActionRow
-                components: [{
-                    type: 4, // Text Input
-                    custom_id: 'reverseBlacklist',
-                    label: 'Reverse Blacklist Coordinates',
-                    style: 2, // Paragraph
-                    value: currentValues.reverseBlacklist ?
-                        (Array.isArray(currentValues.reverseBlacklist) ?
-                            currentValues.reverseBlacklist.join(', ') :
-                            currentValues.reverseBlacklist) : '',
-                    placeholder: 'A1, B2, C3 (comma-separated coordinates)',
-                    required: false,
-                    max_length: 1000
-                }]
-            });
-            break;
+            // Properties are handled by select menus, not modal
+            return null;
             
         case 'stamina':
-            // Stamina: staminaBoost and consumable settings
+            // Movement settings: staminaBoost and reverse blacklist coordinates
             components.push({
                 type: 1, // ActionRow
                 components: [{
@@ -307,9 +289,26 @@ function createItemFieldModal(itemId, fieldGroupId, group, currentValues) {
                     max_length: 2
                 }]
             });
-            
+
+            // Add reverse blacklist field for unlocking restricted coordinates
+            components.push({
+                type: 1, // ActionRow
+                components: [{
+                    type: 4, // Text Input
+                    custom_id: 'reverseBlacklist',
+                    label: 'Reverse Blacklist Coordinates',
+                    style: 2, // Paragraph
+                    value: currentValues.reverseBlacklist ?
+                        (Array.isArray(currentValues.reverseBlacklist) ?
+                            currentValues.reverseBlacklist.join(', ') :
+                            currentValues.reverseBlacklist) : '',
+                    placeholder: 'Unlocks restricted cells (e.g., A1, B2, C3)',
+                    required: false,
+                    max_length: 1000
+                }]
+            });
+
             // Note: consumable is handled as a select in the UI, not in the modal
-            // The consumable field is shared with the properties group
             break;
     }
     
