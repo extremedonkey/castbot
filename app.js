@@ -997,7 +997,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setEmoji('📤'),
     new ButtonBuilder()
       .setCustomId('playerdata_import')
-      .setLabel('Import playerData')
+      .setLabel('Import playerData (Server)')
       .setStyle(ButtonStyle.Success)
       .setEmoji('📥')
   ];
@@ -10902,17 +10902,11 @@ Your server is now ready for Tycoons gameplay!`;
         const { loadPlayerData } = await import('./storage.js');
         const allPlayerData = await loadPlayerData();
 
-        // Prepare the export JSON (full file)
-        const exportData = {
-          exportVersion: '1.0',
-          exportDate: new Date().toISOString(),
-          dataType: 'playerData_full',
-          description: 'Complete playerData.json export with all guilds',
-          guildCount: Object.keys(allPlayerData).filter(k => k !== '/* Server ID */' && k !== 'environmentConfig').length,
-          data: allPlayerData
-        };
+        // Calculate stats for the message
+        const guildCount = Object.keys(allPlayerData).filter(k => k !== '/* Server ID */' && k !== 'environmentConfig').length;
 
-        const exportJson = JSON.stringify(exportData, null, 2);
+        // Export raw playerData (no metadata wrapper - for direct file replacement)
+        const exportJson = JSON.stringify(allPlayerData, null, 2);
         console.log(`📤 DEBUG: Full playerData export length: ${exportJson.length} characters`);
 
         // Create the export file attachment
@@ -10929,10 +10923,11 @@ Your server is now ready for Tycoons gameplay!`;
 
         form.append('payload_json', JSON.stringify({
           content: `✅ **Full playerData Export Complete**\n\n` +
-                  `**All Guilds:** ${exportData.guildCount} servers\n` +
+                  `**All Guilds:** ${guildCount} servers\n` +
                   `**Export Size:** ${(exportJson.length / 1024).toFixed(1)} KB\n` +
                   `**Export Date:** ${new Date().toLocaleString()}\n\n` +
-                  `⚠️ This file contains ALL server data from playerData.json`,
+                  `⚠️ This file contains ALL server data from playerData.json\n` +
+                  `💾 Can be used as direct replacement for playerData.json`,
           flags: InteractionResponseFlags.EPHEMERAL
         }));
 
