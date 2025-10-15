@@ -903,7 +903,7 @@
           ],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "B2",
+              "currentLocation": "B1",
               "exploredCoordinates": [
                 "A1",
                 "B2",
@@ -985,6 +985,11 @@
                   "from": "C3",
                   "to": "B2",
                   "timestamp": "2025-10-14T16:11:04.958Z"
+                },
+                {
+                  "from": "B2",
+                  "to": "B1",
+                  "timestamp": "2025-10-14T16:12:49.042Z"
                 }
               ]
             }

@@ -983,9 +983,14 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setEmoji('🍒'),
     new ButtonBuilder()
       .setCustomId('playerdata_export')
-      .setLabel('Export PlayerData')
+      .setLabel('Export playerdata')
       .setStyle(ButtonStyle.Primary)
-      .setEmoji('💾')
+      .setEmoji('💾'),
+    new ButtonBuilder()
+      .setCustomId('playerdata_import')
+      .setLabel('Import playerdata')
+      .setStyle(ButtonStyle.Success)
+      .setEmoji('📥')
   ];
 
   // Danger Zone section buttons
@@ -10923,26 +10928,28 @@ Your server is now ready for Tycoons gameplay!`;
           description: `PlayerData export for ${guildData.serverName || guildId}`
         });
 
-        // Send follow-up message with attachment via webhook
+        // Use Discord API directly to send the follow-up with file
         const applicationId = req.body.application_id;
-        const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
+        const followUpUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}`;
 
-        // Create form data for file upload
-        const { FormData, File } = await import('formdata-node');
+        // Create FormData with the file (using form-data package like Safari)
+        const FormData = (await import('form-data')).default;
         const form = new FormData();
 
         form.append('payload_json', JSON.stringify({
-          content: `✅ **PlayerData Export Complete**\n\n**Server:** ${guildData.serverName || 'Unknown'}\n**Guild ID:** ${guildId}\n**Export Size:** ${(exportJson.length / 1024).toFixed(1)} KB\n**Players:** ${Object.keys(guildData.players || {}).length}\n\nThis file contains all playerData.json entries for this server.`,
+          content: `✅ **playerdata Export Complete**\n\n**Server:** ${guildData.serverName || 'Unknown'}\n**Guild ID:** ${guildId}\n**Export Size:** ${(exportJson.length / 1024).toFixed(1)} KB\n**Players:** ${Object.keys(guildData.players || {}).length}\n\nThis file contains all playerData.json entries for this server.`,
           flags: InteractionResponseFlags.EPHEMERAL
         }));
 
-        form.append('files[0]', new File([Buffer.from(exportJson)], filename, { type: 'application/json' }));
+        form.append('files[0]', Buffer.from(exportJson, 'utf8'), {
+          filename: filename,
+          contentType: 'application/json'
+        });
 
-        await fetch(webhookUrl, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bot ${client.token}`
-          },
+        // Send the follow-up message with the file
+        await fetch(followUpUrl, {
+          method: 'POST',
+          headers: form.getHeaders(),
           body: form
         });
 
@@ -10963,6 +10970,186 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
       }
+    } else if (custom_id === 'playerdata_import') {
+      // Handle playerdata import with file upload (similar to Safari import)
+      try {
+        const member = req.body.member;
+        const guildId = req.body.guild_id;
+        const channelId = req.body.channel_id;
+        const userId = member.user.id;
+
+        // Security check - only allow specific Discord ID (same as reece_stuff_menu)
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log(`📥 DEBUG: Starting file-based playerdata import for guild ${guildId}`);
+
+        // Send instructions and set up message collector
+        res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: `📥 **playerdata Import - File Upload**\n\n` +
+                    `Please upload your playerdata export JSON file now.\n` +
+                    `Simply drag and drop the file into this channel or use the attachment button.\n\n` +
+                    `⚠️ **WARNING:** This will REPLACE all current playerdata for this server!\n\n` +
+                    `⏱️ Waiting for your file upload... (60 second timeout)`,
+            components: [{
+              type: 1,
+              components: [{
+                type: 2,
+                style: 4,
+                label: 'Cancel Import',
+                custom_id: 'playerdata_import_cancel',
+                emoji: { name: '❌' }
+              }]
+            }],
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+
+        // Set up message collector to wait for file upload
+        const channel = await client.channels.fetch(channelId);
+        const filter = m => m.author.id === userId && m.attachments.size > 0;
+
+        const collector = channel.createMessageCollector({
+          filter,
+          time: 60000, // 60 second timeout
+          max: 1 // Only collect one message
+        });
+
+        collector.on('collect', async (message) => {
+          try {
+            console.log(`📥 DEBUG: File upload detected from user ${userId}`);
+
+            // Get the first attachment
+            const attachment = message.attachments.first();
+
+            // Validate it's a JSON file
+            if (!attachment.name.endsWith('.json')) {
+              await message.reply({
+                content: '❌ Please upload a JSON file (`.json` extension required).',
+                ephemeral: true
+              });
+              return;
+            }
+
+            // Fetch the file content
+            const response = await fetch(attachment.url);
+            const jsonContent = await response.text();
+
+            console.log(`📥 DEBUG: Downloaded file ${attachment.name}, size: ${jsonContent.length} characters`);
+
+            // Parse and validate the JSON
+            let importData;
+            try {
+              importData = JSON.parse(jsonContent);
+            } catch (parseError) {
+              await message.reply({
+                content: '❌ Invalid JSON format. Please check your file.',
+                ephemeral: true
+              });
+              return;
+            }
+
+            // Check if it's a playerdata export
+            if (importData.dataType !== 'playerData' || !importData.data) {
+              await message.reply({
+                content: '❌ This doesn\'t appear to be a playerdata export file.',
+                ephemeral: true
+              });
+              return;
+            }
+
+            // Import the playerdata
+            const { loadPlayerData, savePlayerData } = await import('./storage.js');
+            const allPlayerData = await loadPlayerData();
+
+            // Replace the guild data
+            const oldDataSize = allPlayerData[guildId] ?
+              Object.keys(allPlayerData[guildId].players || {}).length : 0;
+
+            allPlayerData[guildId] = importData.data;
+            await savePlayerData(allPlayerData);
+
+            const newDataSize = Object.keys(importData.data.players || {}).length;
+
+            console.log(`✅ DEBUG: playerdata import completed for guild ${guildId}`);
+
+            // Send success message
+            await message.reply({
+              content: `✅ **playerdata Import Successful!**\n\n` +
+                      `**Server:** ${importData.guildName || 'Unknown'}\n` +
+                      `**Guild ID:** ${importData.guildId}\n` +
+                      `**Import Date:** ${new Date(importData.exportDate).toLocaleDateString()}\n` +
+                      `**Players:** ${oldDataSize} → ${newDataSize}\n\n` +
+                      `All playerdata has been successfully imported!`,
+              ephemeral: true
+            });
+
+            // Delete the uploaded file message for privacy
+            try {
+              await message.delete();
+            } catch (err) {
+              console.log('Could not delete import file message:', err.message);
+            }
+
+          } catch (error) {
+            console.error('Error processing playerdata import file:', error);
+            await message.reply({
+              content: `❌ **Import Failed**\n\nError: ${error.message}\n\nPlease check your JSON file format and try again.`,
+              ephemeral: true
+            });
+          }
+        });
+
+        collector.on('end', (collected, reason) => {
+          if (reason === 'time' && collected.size === 0) {
+            // Edit the original message to show timeout
+            const token = req.body.token;
+            const editUrl = `https://discord.com/api/v10/webhooks/${req.body.application_id}/${token}/messages/@original`;
+
+            fetch(editUrl, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bot ${client.token}`
+              },
+              body: JSON.stringify({
+                content: '⏱️ **Import Timed Out**\n\nNo file was uploaded within 60 seconds.',
+                components: []
+              })
+            }).catch(console.error);
+          }
+        });
+
+        return;
+
+      } catch (error) {
+        console.error('Error in playerdata_import:', error);
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Error starting import process. Please try again.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+    } else if (custom_id === 'playerdata_import_cancel') {
+      // Handle playerdata import cancellation
+      return res.send({
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: {
+          content: '❌ **Import Cancelled**\n\nplayerdata import has been cancelled.',
+          components: []
+        }
+      });
     } else if (custom_id === 'safari_open_import_modal') {
       // Handle opening the import modal
       try {
