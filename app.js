@@ -33760,27 +33760,39 @@ Are you sure you want to continue?`;
         });
       }
     } else if (custom_id.startsWith('player_command_modal_')) {
-      // Handle player command modal submission
-      try {
-        const coord = custom_id.replace('player_command_modal_', '');
-        const guildId = req.body.guild_id;
-        const channelId = req.body.channel_id;
-        const userId = req.body.member.user.id;
-        
-        // Get the command entered by the player
-        const command = components[0].components[0].value?.trim().toLowerCase();
-        
-        console.log(`⌨️ DEBUG: Player command submitted - coord: ${coord}, command: "${command}"`);
-        
-        if (!command) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Please enter a command.',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
-          });
+      // Handle player command modal submission with deferred response
+      const coord = custom_id.replace('player_command_modal_', '');
+      const guildId = req.body.guild_id;
+      const channelId = req.body.channel_id;
+      const userId = req.body.member.user.id;
+      const token = req.body.token;
+      const applicationId = req.body.application_id;
+
+      // Get the command entered by the player
+      const command = components[0].components[0].value?.trim().toLowerCase();
+
+      console.log(`⌨️ DEBUG: Player command submitted - coord: ${coord}, command: "${command}"`);
+
+      if (!command) {
+        return res.send({
+          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            content: '❌ Please enter a command.',
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+      }
+
+      // Send deferred response immediately to prevent timeout
+      await res.send({
+        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+          flags: InteractionResponseFlags.EPHEMERAL
         }
+      });
+
+      // Now do the expensive operations asynchronously
+      try {
         
         // Load safari data and find matching action
         const { loadSafariContent } = await import('./safariManager.js');
@@ -33847,10 +33859,10 @@ Are you sure you want to continue?`;
             console.error('Error logging player command:', logError);
           }
           
-          // Return the result
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: result
+          // Edit the deferred response with the result
+          await DiscordRequest(`webhooks/${applicationId}/${token}/messages/@original`, {
+            method: 'PATCH',
+            body: result
           });
         } else {
           // No matching command found
@@ -33919,11 +33931,12 @@ Are you sure you want to continue?`;
               console.error('Error logging player command:', logError);
             }
 
-            // Return the result
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: result
+            // Edit the deferred response with the result
+            await DiscordRequest(`webhooks/${applicationId}/${token}/messages/@original`, {
+              method: 'PATCH',
+              body: result
             });
+            return;
           }
 
           // Still no match found - proceed with existing executeOn:"false" logic
@@ -33992,11 +34005,12 @@ Are you sure you want to continue?`;
               console.error('Error logging player command:', logError);
             }
             
-            // Return the result
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: result
+            // Edit the deferred response with the result
+            await DiscordRequest(`webhooks/${applicationId}/${token}/messages/@original`, {
+              method: 'PATCH',
+              body: result
             });
+            return;
           } else {
             // No false actions found, show default message
             const locationName = safariData[guildId]?.maps?.[activeMapId]?.coordinates?.[coord]?.baseContent?.title || `location ${coord}`;
@@ -34023,9 +34037,10 @@ Are you sure you want to continue?`;
               console.error('Error logging player command:', logError);
             }
             
-            return res.send({
-              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-              data: {
+            // Edit the deferred response with the "nothing happened" message
+            await DiscordRequest(`webhooks/${applicationId}/${token}/messages/@original`, {
+              method: 'PATCH',
+              body: {
                 components: [{
                   type: 17, // Container
                   accent_color: 0x808080, // Gray
@@ -34044,9 +34059,10 @@ Are you sure you want to continue?`;
         
       } catch (error) {
         console.error('Error in player_command_modal handler:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
+        // Edit the deferred response with error message
+        await DiscordRequest(`webhooks/${applicationId}/${token}/messages/@original`, {
+          method: 'PATCH',
+          body: {
             content: '❌ Error processing command.',
             flags: InteractionResponseFlags.EPHEMERAL
           }
