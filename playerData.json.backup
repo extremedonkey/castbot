@@ -701,7 +701,7 @@
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1760019732851,
+    "lastUpdated": 1760537130283,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -3189,14 +3189,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 547,
+    "memberCount": 549,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1760456385427,
+    "lastUpdated": 1760527334205,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1381126640163360800>"
@@ -5826,129 +5826,6 @@
     "firstInstalled": 1756997555052,
     "installationMethod": "command"
   },
-  "1389538775352348737": {
-    "serverName": "CastBot Regression Yellow zz",
-    "icon": "https://cdn.discordapp.com/icons/1389538775352348737/9fd8f80fbe4b3b4eb8d55b1fa40cba7f.webp",
-    "ownerId": "391415444084490240",
-    "memberCount": 3,
-    "description": null,
-    "vanityURLCode": null,
-    "preferredLocale": "en-US",
-    "partnered": false,
-    "verified": false,
-    "createdTimestamp": 1751362260426,
-    "lastUpdated": 1759258334039,
-    "ownerInfo": {
-      "username": "extremedonkey",
-      "globalName": "Reece",
-      "discriminator": "0",
-      "tag": "extremedonkey"
-    },
-    "analyticsVersion": "1.0",
-    "players": {
-      "1086246253819613274": {
-        "safari": {
-          "currency": 700,
-          "history": [],
-          "lastInteraction": 1757692319781,
-          "achievements": [],
-          "inventory": {
-            "nurturer_361363": {
-              "quantity": 10,
-              "numAttacksAvailable": 0
-            }
-          },
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757692349638
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757692352051
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757692354650
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757692357653
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757692362467
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757693624200
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757693628783
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757693632878
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757693647170
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757693843841
-            }
-          ],
-          "mapProgress": {},
-          "points": {
-            "stamina": {
-              "current": 3,
-              "maximum": 3,
-              "lastRegeneration": "2025-09-12T15:51:59.782Z",
-              "regenConfig": "hourly"
-            }
-          }
-        }
-      }
-    },
-    "tribes": {
-      "1416063109063508008": {
-        "emoji": "🐈",
-        "castlist": "default",
-        "showPlayerEmojis": false,
-        "color": "#e91e63",
-        "analyticsName": "🐈 Prod 🐈",
-        "analyticsAdded": 1757686378119
-      }
-    },
-    "timezones": {},
-    "pronounRoleIDs": [],
-    "firstInstalled": 1757180914930,
-    "installationMethod": "command"
-  },
   "1419678967585050841": {
     "serverName": "CastBot Regression Black",
     "icon": null,
@@ -6268,5 +6145,121 @@
     "pronounRoleIDs": [],
     "firstInstalled": 1758649697859,
     "installationMethod": "command"
+  },
+  "1389538775352348737": {
+    "players": {},
+    "tribes": {},
+    "timezones": {
+      "1428021809822961665": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1428021811760726117": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1428021813673332878": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1428021816248631340": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1428021818135937076": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1428021819889287241": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1428021821785247796": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1428021823152459928": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1428021825333366924": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1428021827329851434": {
+        "offset": -3,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1428021829250846800": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1428021830861590692": {
+        "offset": -2.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1428021832778383477": {
+        "offset": 0,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1428021835248697515": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
+      },
+      "1428021836821565482": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1428021838939947120": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1428021840424468514": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1428021842550984806": {
+        "offset": 10,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1428021843952013484": {
+        "offset": 11,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
+      },
+      "1428021845906423868": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
+      }
+    },
+    "pronounRoleIDs": [
+      "1428021800016678992",
+      "1428021801484554252",
+      "1428021803540021419",
+      "1428021805263753359",
+      "1428021807889252424",
+      "1390502675858067456",
+      "1390502644761759886",
+      "1390502696649232404"
+    ]
   }
 }

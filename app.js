@@ -980,15 +980,24 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('castlist_test')
       .setLabel('Compact Castlist')
       .setStyle(ButtonStyle.Secondary)  // Grey for secondary action
-      .setEmoji('🍒'),
+      .setEmoji('🍒')
+  ];
+
+  // Player Data section buttons
+  const playerDataButtons = [
     new ButtonBuilder()
-      .setCustomId('playerdata_export')
-      .setLabel('Export playerdata')
-      .setStyle(ButtonStyle.Primary)
+      .setCustomId('playerdata_export_all')
+      .setLabel('Export All playerData')
+      .setStyle(ButtonStyle.Danger)
       .setEmoji('💾'),
     new ButtonBuilder()
+      .setCustomId('playerdata_export')
+      .setLabel('Export playerData')
+      .setStyle(ButtonStyle.Primary)
+      .setEmoji('📤'),
+    new ButtonBuilder()
       .setCustomId('playerdata_import')
-      .setLabel('Import playerdata')
+      .setLabel('Import playerData')
       .setStyle(ButtonStyle.Success)
       .setEmoji('📥')
   ];
@@ -1032,6 +1041,7 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   const analyticsRow = new ActionRowBuilder().addComponents(analyticsButtons);
   const adminToolsRow = new ActionRowBuilder().addComponents(adminToolsButtons);
   const dangerZoneRow = new ActionRowBuilder().addComponents(dangerZoneButtons);
+  const playerDataRow = new ActionRowBuilder().addComponents(playerDataButtons);
   
   // Create back button
   const backButton = [
@@ -1073,6 +1083,14 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       content: `> **\`☢️ Danger Zone\`**`
     },
     dangerZoneRow.toJSON(), // Danger zone buttons
+    {
+      type: 14 // Separator
+    },
+    {
+      type: 10, // Text Display component
+      content: `> **\`📊 Player Data\`**`
+    },
+    playerDataRow.toJSON(), // Player data buttons
     {
       type: 14 // Separator
     },
@@ -10853,6 +10871,100 @@ Your server is now ready for Tycoons gameplay!`;
           });
         }
       }
+    } else if (custom_id === 'playerdata_export_all') {
+      // Handle Export All PlayerData (entire playerData.json file with all guilds)
+      try {
+        const userId = req.body.member.user.id;
+        const token = req.body.token;
+
+        // Security check - only allow specific Discord ID
+        if (userId !== '391415444084490240') {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Access denied. This feature is restricted.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
+        console.log(`📤 DEBUG: Exporting ALL playerData (full file)`);
+
+        // Defer the response immediately
+        res.send({
+          type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+          data: {
+            flags: InteractionResponseFlags.EPHEMERAL
+          }
+        });
+
+        // Load entire playerData
+        const { loadPlayerData } = await import('./storage.js');
+        const allPlayerData = await loadPlayerData();
+
+        // Prepare the export JSON (full file)
+        const exportData = {
+          exportVersion: '1.0',
+          exportDate: new Date().toISOString(),
+          dataType: 'playerData_full',
+          description: 'Complete playerData.json export with all guilds',
+          guildCount: Object.keys(allPlayerData).filter(k => k !== '/* Server ID */' && k !== 'environmentConfig').length,
+          data: allPlayerData
+        };
+
+        const exportJson = JSON.stringify(exportData, null, 2);
+        console.log(`📤 DEBUG: Full playerData export length: ${exportJson.length} characters`);
+
+        // Create the export file attachment
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = `playerdata-FULL-export-${timestamp}.json`;
+
+        // Use Discord API directly to send the follow-up with file
+        const applicationId = req.body.application_id;
+        const followUpUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}`;
+
+        // Create FormData with the file
+        const FormData = (await import('form-data')).default;
+        const form = new FormData();
+
+        form.append('payload_json', JSON.stringify({
+          content: `✅ **Full playerData Export Complete**\n\n` +
+                  `**All Guilds:** ${exportData.guildCount} servers\n` +
+                  `**Export Size:** ${(exportJson.length / 1024).toFixed(1)} KB\n` +
+                  `**Export Date:** ${new Date().toLocaleString()}\n\n` +
+                  `⚠️ This file contains ALL server data from playerData.json`,
+          flags: InteractionResponseFlags.EPHEMERAL
+        }));
+
+        form.append('files[0]', Buffer.from(exportJson, 'utf8'), {
+          filename: filename,
+          contentType: 'application/json'
+        });
+
+        // Send the follow-up message with the file
+        await fetch(followUpUrl, {
+          method: 'POST',
+          headers: form.getHeaders(),
+          body: form
+        });
+
+        console.log(`✅ Full playerData export sent successfully`);
+        return;
+
+      } catch (error) {
+        console.error('Error in playerdata_export_all:', error);
+
+        // If we haven't sent a response yet, send error response
+        if (!res.headersSent) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error exporting full playerData. Please try again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+      }
     } else if (custom_id === 'playerdata_export') {
       // Handle PlayerData export (similar to Safari export but for playerData.json)
       try {
@@ -10937,7 +11049,7 @@ Your server is now ready for Tycoons gameplay!`;
         const form = new FormData();
 
         form.append('payload_json', JSON.stringify({
-          content: `✅ **playerdata Export Complete**\n\n**Server:** ${guildData.serverName || 'Unknown'}\n**Guild ID:** ${guildId}\n**Export Size:** ${(exportJson.length / 1024).toFixed(1)} KB\n**Players:** ${Object.keys(guildData.players || {}).length}\n\nThis file contains all playerData.json entries for this server.`,
+          content: `✅ **playerData Export Complete**\n\n**Server:** ${guildData.serverName || 'Unknown'}\n**Guild ID:** ${guildId}\n**Export Size:** ${(exportJson.length / 1024).toFixed(1)} KB\n**Players:** ${Object.keys(guildData.players || {}).length}\n\nThis file contains all playerData.json entries for this server.`,
           flags: InteractionResponseFlags.EPHEMERAL
         }));
 
@@ -10995,10 +11107,10 @@ Your server is now ready for Tycoons gameplay!`;
         res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `📥 **playerdata Import - File Upload**\n\n` +
-                    `Please upload your playerdata export JSON file now.\n` +
+            content: `📥 **playerData Import - File Upload**\n\n` +
+                    `Please upload your playerData export JSON file now.\n` +
                     `Simply drag and drop the file into this channel or use the attachment button.\n\n` +
-                    `⚠️ **WARNING:** This will REPLACE all current playerdata for this server!\n\n` +
+                    `⚠️ **WARNING:** This will REPLACE all current playerData for this server!\n\n` +
                     `⏱️ Waiting for your file upload... (60 second timeout)`,
             components: [{
               type: 1,
@@ -11058,10 +11170,10 @@ Your server is now ready for Tycoons gameplay!`;
               return;
             }
 
-            // Check if it's a playerdata export
+            // Check if it's a playerData export
             if (importData.dataType !== 'playerData' || !importData.data) {
               await message.reply({
-                content: '❌ This doesn\'t appear to be a playerdata export file.',
+                content: '❌ This doesn\'t appear to be a playerData export file.',
                 ephemeral: true
               });
               return;
@@ -11084,12 +11196,12 @@ Your server is now ready for Tycoons gameplay!`;
 
             // Send success message
             await message.reply({
-              content: `✅ **playerdata Import Successful!**\n\n` +
+              content: `✅ **playerData Import Successful!**\n\n` +
                       `**Server:** ${importData.guildName || 'Unknown'}\n` +
                       `**Guild ID:** ${importData.guildId}\n` +
                       `**Import Date:** ${new Date(importData.exportDate).toLocaleDateString()}\n` +
                       `**Players:** ${oldDataSize} → ${newDataSize}\n\n` +
-                      `All playerdata has been successfully imported!`,
+                      `All playerData has been successfully imported!`,
               ephemeral: true
             });
 
@@ -11142,11 +11254,11 @@ Your server is now ready for Tycoons gameplay!`;
         });
       }
     } else if (custom_id === 'playerdata_import_cancel') {
-      // Handle playerdata import cancellation
+      // Handle playerData import cancellation
       return res.send({
         type: InteractionResponseType.UPDATE_MESSAGE,
         data: {
-          content: '❌ **Import Cancelled**\n\nplayerdata import has been cancelled.',
+          content: '❌ **Import Cancelled**\n\nplayerData import has been cancelled.',
           components: []
         }
       });
