@@ -10883,7 +10883,8 @@ Your server is now ready for Tycoons gameplay!`;
 
         if (!guildData) {
           // Send follow-up message via webhook
-          const webhookUrl = `https://discord.com/api/v10/webhooks/${APPLICATION_ID}/${token}/messages/@original`;
+          const applicationId = req.body.application_id;
+          const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
 
           await fetch(webhookUrl, {
             method: 'PATCH',
@@ -10923,7 +10924,8 @@ Your server is now ready for Tycoons gameplay!`;
         });
 
         // Send follow-up message with attachment via webhook
-        const webhookUrl = `https://discord.com/api/v10/webhooks/${APPLICATION_ID}/${token}/messages/@original`;
+        const applicationId = req.body.application_id;
+        const webhookUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
 
         // Create form data for file upload
         const { FormData, File } = await import('formdata-node');
