@@ -987,12 +987,12 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   const playerDataButtons = [
     new ButtonBuilder()
       .setCustomId('playerdata_export_all')
-      .setLabel('Export All playerData')
-      .setStyle(ButtonStyle.Danger)
+      .setLabel('Export playerData (All)')
+      .setStyle(ButtonStyle.Primary)
       .setEmoji('💾'),
     new ButtonBuilder()
       .setCustomId('playerdata_export')
-      .setLabel('Export playerData')
+      .setLabel('Export playerData (Server)')
       .setStyle(ButtonStyle.Primary)
       .setEmoji('📤'),
     new ButtonBuilder()

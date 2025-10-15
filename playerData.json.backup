@@ -6147,119 +6147,2386 @@
     "installationMethod": "command"
   },
   "1389538775352348737": {
-    "players": {},
-    "tribes": {},
+    "serverName": "CastBot Regression Yellow zz",
+    "icon": "https://cdn.discordapp.com/icons/1389538775352348737/9fd8f80fbe4b3b4eb8d55b1fa40cba7f.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 3,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1751362260426,
+    "lastUpdated": 1760538980146,
+    "players": {
+      "233762709932474370": {
+        "emojiCode": "<:Geo:1396856830281388144>",
+        "age": "30",
+        "safari": {
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "currency": 1450,
+          "lastInteraction": 1758949572454,
+          "history": [],
+          "storeHistory": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {}
+        }
+      },
+      "455951495272202240": {
+        "emojiCode": "<:Natadwen:1396856838158417931>",
+        "age": "29",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949573124,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      },
+      "572291395365109770": {
+        "emojiCode": "<:Megan:1396856854314745957>",
+        "age": "26",
+        "safari": {
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "D5",
+              "exploredCoordinates": [
+                "A1",
+                "D5"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:03:07.676Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:03:07.691Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "D5",
+                  "timestamp": "2025-08-04T15:44:57.228Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-04T15:03:07.676Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": true,
+          "currency": 1450,
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "history": [],
+          "storeHistory": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "lastInteraction": 1758949574209
+        }
+      },
+      "391415444084490240": {
+        "age": "32",
+        "emojiCode": "<:ReeceBot:1396856819690766460>",
+        "vanityRoles": [
+          "1398904036643831818"
+        ],
+        "safari": {
+          "currency": 10382,
+          "history": [],
+          "lastInteraction": 1758949571427,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 15,
+              "numAttacksAvailable": 15
+            },
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": {
+              "quantity": 1,
+              "numAttacksAvailable": 1
+            },
+            "lance_of_ruin_627670": {
+              "quantity": 2,
+              "numAttacksAvailable": 0
+            },
+            "dupe99_263476": {
+              "quantity": 22,
+              "numAttacksAvailable": 0
+            },
+            "bait_530852": {
+              "quantity": 4,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757693950304
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758028371006
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758028409849
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758028413325
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758028416611
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758029284150
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758036850666
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758036865080
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758039293299
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758039308695
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758039310479
+            }
+          ],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "B1",
+              "exploredCoordinates": [
+                "A1",
+                "B2",
+                "B4",
+                "B3",
+                "C2",
+                "B1",
+                "A2",
+                "C3"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-06T05:33:52.335Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-09-06T05:33:52.356Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "B2",
+                  "timestamp": "2025-09-23T15:38:48.717Z"
+                },
+                {
+                  "from": "B2",
+                  "to": "B4",
+                  "timestamp": "2025-10-14T15:58:20.357Z"
+                },
+                {
+                  "from": "B4",
+                  "to": "B4",
+                  "timestamp": "2025-10-14T15:58:26.676Z"
+                },
+                {
+                  "from": "B4",
+                  "to": "B3",
+                  "timestamp": "2025-10-14T15:59:43.849Z"
+                },
+                {
+                  "from": "B3",
+                  "to": "B2",
+                  "timestamp": "2025-10-14T16:06:25.146Z"
+                },
+                {
+                  "from": "B2",
+                  "to": "C2",
+                  "timestamp": "2025-10-14T16:06:59.079Z"
+                },
+                {
+                  "from": "C2",
+                  "to": "B1",
+                  "timestamp": "2025-10-14T16:08:53.714Z"
+                },
+                {
+                  "from": "B1",
+                  "to": "B2",
+                  "timestamp": "2025-10-14T16:09:34.012Z"
+                },
+                {
+                  "from": "B2",
+                  "to": "A2",
+                  "timestamp": "2025-10-14T16:09:53.412Z"
+                },
+                {
+                  "from": "A2",
+                  "to": "B2",
+                  "timestamp": "2025-10-14T16:10:04.163Z"
+                },
+                {
+                  "from": "B2",
+                  "to": "C3",
+                  "timestamp": "2025-10-14T16:10:18.831Z"
+                },
+                {
+                  "from": "C3",
+                  "to": "B2",
+                  "timestamp": "2025-10-14T16:11:04.958Z"
+                },
+                {
+                  "from": "B2",
+                  "to": "B1",
+                  "timestamp": "2025-10-14T16:12:49.042Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 999,
+              "maximum": 999,
+              "lastRegeneration": "2025-10-14T15:58:07.022Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false
+        }
+      },
+      "251452487997980673": {
+        "emojiCode": "<:Patrick:1396856834236747977>",
+        "age": "20",
+        "vanityRoles": []
+      },
+      "705936744595587112": {
+        "emojiCode": null
+      },
+      "696456309762949141": {
+        "age": "22",
+        "emojiCode": "<:Mike:1396856858475495454>",
+        "vanityRoles": [
+          "1368969393819746336",
+          "1401201426436456468"
+        ],
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949574712,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      },
+      "468655730975703041": {
+        "age": "45",
+        "emojiCode": "<:Serviver:1396856842994585651>",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949575612,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      },
+      "538540453973327873": {
+        "age": "22",
+        "emojiCode": "<:kayl:1396856849126522991>",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949576106,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-06T11:59:31.130Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-06T11:59:31.166Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-06T11:59:31.130Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false
+        }
+      },
+      "443545183997657120": {
+        "emojiCode": null
+      },
+      "1328366050848411658": {
+        "emojiCode": null,
+        "safari": {
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-04T13:22:16.559Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-04T13:22:16.572Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 10,
+              "maximum": 10,
+              "lastRegeneration": "2025-08-04T13:22:16.559Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false,
+          "currency": 1450,
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "history": [],
+          "storeHistory": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "lastInteraction": 1758949579940
+        }
+      },
+      "676262975132139522": {
+        "emojiCode": "<:Belle:1382413449342091405>",
+        "age": "28",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949576576,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:22:47.269Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:22:47.287Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-04T15:22:47.269Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false
+        }
+      },
+      "977455730300956683": {
+        "emojiCode": "<:morgane:1382413461094535281>",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949578222,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        },
+        "age": "37"
+      },
+      "480712959824363520": {
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949580434,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        },
+        "inventory": {
+          "nurturer_361363": {
+            "quantity": 1
+          }
+        }
+      },
+      "1088078919409881098": {
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949585265,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      },
+      "208197633846542336": {
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949578942,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        },
+        "emojiCode": "<:DieselFuryy:1396856824904552609>"
+      },
+      "235148962103951360": {
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949586549,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1752919246680": {
+              "currentLocation": "H5",
+              "exploredCoordinates": [
+                "H5"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-07-19T11:23:54.463Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-07-19T11:23:54.490Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A2",
+                  "timestamp": "2025-07-19T11:24:21.119Z"
+                },
+                {
+                  "from": "A2",
+                  "to": "H5",
+                  "timestamp": "2025-07-19T14:28:00.551Z"
+                }
+              ]
+            },
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:00:28.944Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-04T15:00:28.957Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-08-04T15:00:28.944Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false
+        }
+      },
+      "1319912453248647170": {
+        "safari": {
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-08-04T13:26:29.641Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-08-04T13:26:29.657Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-08-04T13:26:29.641Z",
+              "regenConfig": "hourly"
+            }
+          },
+          "isPaused": false,
+          "currency": 1450,
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "history": [],
+          "storeHistory": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "lastInteraction": 1758949587066
+        }
+      },
+      "1086246253819613274": {
+        "age": "60s",
+        "safari": {
+          "currency": 1450,
+          "history": [],
+          "lastInteraction": 1758949588297,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758038829691
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758038835139
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758038841436
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758038847196
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758039196659
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1758039233731
+            }
+          ],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "E2",
+              "exploredCoordinates": [
+                "A1",
+                "E2"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-06T02:17:57.193Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-09-06T02:17:57.204Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "E2",
+                  "timestamp": "2025-09-16T15:47:46.268Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-09-06T02:17:57.193Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "1100826875435163780": {
+        "age": "16"
+      },
+      "1372636989408673964": {},
+      "731547575211262128": {},
+      "admin": {
+        "safari": {
+          "inventory": {
+            "nurturer_361363_391415444084490240_player": {
+              "quantity": 5
+            }
+          }
+        }
+      },
+      "630470402900230146": {
+        "safari": {
+          "currency": 260,
+          "history": [],
+          "lastInteraction": 1758949579426,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "B2",
+              "exploredCoordinates": [
+                "A1",
+                "B2"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-09-23T06:25:50.067Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-09-23T06:25:50.086Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "B2",
+                  "timestamp": "2025-09-23T15:36:40.599Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 999,
+              "maximum": 999,
+              "lastRegeneration": "2025-09-23T15:40:44.995Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      }
+    },
+    "tribes": {
+      "1380906521084559401": {
+        "emoji": null,
+        "castlist": "default",
+        "showPlayerEmojis": true,
+        "color": "#607d8b",
+        "castlistIds": [
+          "default",
+          "castlist_1759760768839_1331657596087566398"
+        ]
+      },
+      "1333822520737927281": {
+        "emoji": null,
+        "showPlayerEmojis": false,
+        "color": "#3498db",
+        "analyticsName": "🤖Mr CastBot",
+        "analyticsAdded": 1751070525853
+      },
+      "1391142520787832904": {
+        "emoji": "👀",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "👀 BST (UTC+1) 👀",
+        "analyticsAdded": 1754751135102
+      },
+      "1333822411912642630": {
+        "emoji": "🧟‍♂️",
+        "castlist": "legacyList",
+        "showPlayerEmojis": false,
+        "color": "#2ecc71",
+        "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
+        "analyticsAdded": 1754751381750,
+        "castlistIds": [
+          "castlist_1759638936214_system"
+        ]
+      },
+      "1335645032891547670": {
+        "emoji": "🤷‍♀️",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "🤷‍♀️ Any 🤷‍♀️",
+        "analyticsAdded": 1756021096260,
+        "castlistIds": [
+          "default"
+        ]
+      },
+      "1409191262279700622": {
+        "emoji": "🐻‍❄️",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": "#000001",
+        "analyticsName": "🐻‍❄️ LOSTvivor Alumni 🐻‍❄️",
+        "analyticsAdded": 1756048042925,
+        "type": "alumni_placements",
+        "rankings": {
+          "977455730300956683": {
+            "placement": "1"
+          },
+          "572291395365109770": {
+            "placement": "2"
+          },
+          "391415444084490240": {
+            "placement": "3"
+          }
+        },
+        "castlistIds": [
+          "default"
+        ]
+      },
+      "1379077934953922611": {
+        "emoji": null,
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "Nyauu / +3 +/ GMT5 22",
+        "analyticsAdded": 1757442465942
+      },
+      "1368969395795398716": {
+        "name": "Tribe 1368969395795398716",
+        "emoji": "🏕️",
+        "type": "default"
+      },
+      "1368969393819746336": {
+        "name": "Tribe 1368969393819746336",
+        "emoji": "🏕️",
+        "type": "default"
+      },
+      "1415062472007749765": {
+        "name": "Tribe 1415062472007749765",
+        "emoji": "🏕️",
+        "type": "default"
+      },
+      "1401201426436456468": {
+        "name": "Tribe 1401201426436456468",
+        "emoji": "🏕️",
+        "type": "default",
+        "castlistId": "virtual_VGhlQmVzdA",
+        "castlist": "llllll",
+        "castlistIds": [
+          "castlist_1759760768839_1331657596087566398"
+        ]
+      },
+      "1368969399251501126": {
+        "emoji": "🪄",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "🪄 ar.3 🪄",
+        "analyticsAdded": 1759081799205
+      },
+      "1388327092634124368": {
+        "emoji": null,
+        "castlist": "TheBest",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "SendMessages",
+        "analyticsAdded": 1759245471727,
+        "castlistId": "castlist_1759422070959_system"
+      },
+      "1335645031226277959": {
+        "emoji": "🧓",
+        "castlist": "The OId Ask Tribe",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "🧓 Ask 🧓",
+        "analyticsAdded": 1759422827344,
+        "castlistId": "castlist_1759422854044_system"
+      },
+      "1424250096698130603": {
+        "emoji": "🗝️",
+        "castlist": "legacyList",
+        "showPlayerEmojis": false,
+        "color": "#a84300",
+        "analyticsName": "🗝️ legacyList 🗝️",
+        "analyticsAdded": 1759638200118,
+        "castlistId": "castlist_1759638936214_system"
+      },
+      "1424348388027007016": {
+        "emoji": "💩",
+        "castlist": "ForeverLegacyCastlist",
+        "showPlayerEmojis": false,
+        "color": "#9b59b6",
+        "analyticsName": "💩 ForeverLegacyRole 💩",
+        "analyticsAdded": 1759661561330
+      },
+      "1424348666336116786": {
+        "emoji": "🐈",
+        "castlist": "ForeverLegacyCastlist",
+        "showPlayerEmojis": false,
+        "color": "#e91e63",
+        "analyticsName": "🐈 ForeverLegacySecondRole 🐈",
+        "analyticsAdded": 1759661638995
+      },
+      "1424390073075372043": {
+        "emoji": "🅰️",
+        "showPlayerEmojis": false,
+        "color": "#2ecc71",
+        "analyticsName": "🅰️ The Multi-TribeA 🅰️",
+        "analyticsAdded": 1759671564635
+      },
+      "1424390164947664916": {
+        "emoji": "🅱️",
+        "showPlayerEmojis": false,
+        "color": "#3498db",
+        "analyticsName": "🅱️ The Multi-TribeB 🅱️",
+        "analyticsAdded": 1759671585440,
+        "castlistId": "castlist_1759671885172_system"
+      },
+      "1368969397418590338": {
+        "emoji": null,
+        "castlist": "ar.2",
+        "showPlayerEmojis": false,
+        "color": null,
+        "analyticsName": "ar.2",
+        "analyticsAdded": 1759674806361,
+        "type": "alumni_placements",
+        "rankings": {
+          "391415444084490240": {
+            "placement": "1"
+          }
+        }
+      },
+      "castlist_1759760454082_1331657596087566398": {
+        "id": "castlist_1759760454082_1331657596087566398",
+        "name": "hguyjgh",
+        "roleId": null,
+        "members": [],
+        "metadata": {
+          "emoji": "📋",
+          "description": "jknjk",
+          "createdBy": "391415444084490240",
+          "createdAt": 1759760454082,
+          "lastModified": 1759760454082
+        },
+        "castlistSettings": {
+          "sortStrategy": "alphabetical",
+          "seasonId": "season_cac1b81de8914c79"
+        }
+      },
+      "1424400564858650644": {
+        "emoji": "🅰️",
+        "castlist": "default",
+        "showPlayerEmojis": false,
+        "color": "#e91e63",
+        "analyticsName": "🅰️ Season: Multi-A! 🅰️",
+        "analyticsAdded": 1760020667612
+      }
+    },
     "timezones": {
-      "1428021809822961665": {
+      "1391142497484275712": {
         "offset": -8,
         "dstObserved": true,
         "standardName": "PST (UTC-8)"
       },
-      "1428021811760726117": {
+      "1391142499283763300": {
         "offset": -7,
         "dstObserved": true,
         "standardName": "PST (UTC-8)"
       },
-      "1428021813673332878": {
+      "1391142500936192042": {
         "offset": -7,
         "dstObserved": true,
         "standardName": "MST (UTC-7)"
       },
-      "1428021816248631340": {
+      "1391142502429495328": {
         "offset": -6,
         "dstObserved": true,
         "standardName": "MST (UTC-7)"
       },
-      "1428021818135937076": {
+      "1391142506049048686": {
         "offset": -6,
         "dstObserved": true,
         "standardName": "CST (UTC-6)"
       },
-      "1428021819889287241": {
+      "1391142507446014125": {
         "offset": -5,
         "dstObserved": true,
         "standardName": "CST (UTC-6)"
       },
-      "1428021821785247796": {
+      "1391142509316411443": {
         "offset": -5,
         "dstObserved": true,
         "standardName": "EST (UTC-5)"
       },
-      "1428021823152459928": {
+      "1391142510859915358": {
         "offset": -4,
         "dstObserved": true,
         "standardName": "EST (UTC-5)"
       },
-      "1428021825333366924": {
-        "offset": -4,
-        "dstObserved": true,
-        "standardName": "AST (UTC-4)"
-      },
-      "1428021827329851434": {
-        "offset": -3,
-        "dstObserved": true,
-        "standardName": "AST (UTC-4)"
-      },
-      "1428021829250846800": {
+      "1391142516262174780": {
         "offset": -3.5,
         "dstObserved": true,
         "standardName": "NST (UTC-3:30)"
       },
-      "1428021830861590692": {
+      "1391142517944357025": {
         "offset": -2.5,
         "dstObserved": true,
         "standardName": "NST (UTC-3:30)"
       },
-      "1428021832778383477": {
+      "1391142519148118140": {
         "offset": 0,
         "dstObserved": false,
         "standardName": null
       },
-      "1428021835248697515": {
+      "1391142520787832904": {
         "offset": 1,
         "dstObserved": true,
         "standardName": "GMT (UTC+0)"
       },
-      "1428021836821565482": {
+      "1391142522428067842": {
         "offset": 1,
         "dstObserved": true,
         "standardName": "CET (UTC+1)"
       },
-      "1428021838939947120": {
+      "1391142524285882551": {
         "offset": 2,
         "dstObserved": true,
         "standardName": "CET (UTC+1)"
       },
-      "1428021840424468514": {
+      "1391142526072914060": {
         "offset": 8,
         "dstObserved": false,
         "standardName": null
       },
-      "1428021842550984806": {
+      "1391142527826002000": {
         "offset": 10,
         "dstObserved": false,
         "standardName": null
       },
-      "1428021843952013484": {
+      "1391142529482752175": {
         "offset": 11,
         "dstObserved": true,
         "standardName": "AEST (UTC+10)"
       },
-      "1428021845906423868": {
+      "1401201424783642624": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1401201426436456468": {
+        "offset": -3,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1368969401067372625": {
+        "offset": 4
+      },
+      "1409024736490422364": {
         "offset": 12,
         "dstObserved": true,
         "standardName": "NZST (UTC+12)"
       }
     },
     "pronounRoleIDs": [
-      "1428021800016678992",
-      "1428021801484554252",
-      "1428021803540021419",
-      "1428021805263753359",
-      "1428021807889252424",
-      "1390502675858067456",
-      "1390502644761759886",
-      "1390502696649232404"
-    ]
+      "1335645024154812669",
+      "1335645022774886490",
+      "1335645026168082532",
+      "1335645029674254347",
+      "1335645027497545811",
+      "1335645031226277959",
+      "1335645032891547670",
+      "1335645034380525708",
+      "1368969399251501126"
+    ],
+    "applicationConfigs": {
+      "config_1751549410029_391415444084490240": {
+        "buttonText": "Test out CastBot Apps!",
+        "explanatoryText": "asdsa",
+        "channelFormat": "📝%name%-app",
+        "stage": "awaiting_selections",
+        "seasonId": "season_03859e4abc554bb5",
+        "seasonName": "ReeceVivor S15!",
+        "questions": [
+          {
+            "id": "question_16591fb65b054d5b",
+            "order": 1,
+            "questionTitle": "Name & Location",
+            "questionText": "To start off, please confirm the following information:\n* First and last name\n* General Location (State/Province)\n\n*Please also make sure to set your age, pronouns, and timezone using the CastBot buttons above*",
+            "createdAt": 1751550324378,
+            "lastUpdated": 1751558051761
+          },
+          {
+            "id": "question_cffec0ffc9b34ffc",
+            "order": 2,
+            "questionTitle": "Who Referred You?",
+            "questionText": "Who referred you to Power Grab, if anyone? How did you hear about Power Grab?",
+            "createdAt": 1751550341294,
+            "lastUpdated": 1751558060611
+          },
+          {
+            "id": "question_ce56543655724962",
+            "order": 3,
+            "questionTitle": "ORG History",
+            "questionText": "Tell us about your ORG history! What ORG’s have you played in the last 2 years? How did you do in those ORG’s?",
+            "createdAt": 1751550416660,
+            "lastUpdated": 1751558066038
+          },
+          {
+            "id": "question_40ae12331112420a",
+            "order": 4,
+            "questionTitle": "Competitions",
+            "questionText": "There are no direct competitions in Power Grab. Do you think you will thrive in this atmosphere? Why or why not?",
+            "createdAt": 1751550458949
+          },
+          {
+            "id": "question_d7366853139149d8",
+            "order": 5,
+            "questionTitle": "Level of Activity",
+            "questionText": "**Power Grab is a fast-paced game lasting 18 days with an Elimination Ceremony almost every night at 10pm EST. We expect you to be present and active within the game.**\n\nDo you foresee any conflicts or potential reasons you may not be able to fully participate? Are you playing any other games during the season time frame, and if so, will you be able to commit to Power Grab? \n\nOn a scale of 1-5, with 1 being the least and 5 being the most, how active of a player do you expect to be?",
+            "createdAt": 1751558157182
+          },
+          {
+            "id": "question_a98a777038114063",
+            "order": 6,
+            "questionTitle": "Season Theme",
+            "questionText": "What about the theme of the season in particular speaks to you?",
+            "createdAt": 1751558188974
+          },
+          {
+            "id": "question_1e1fa7c35d1b4510",
+            "order": 7,
+            "questionTitle": "Who won't you play with?",
+            "questionText": "Is there anyone in the community you **will not** play with? We want to provide a fun, safe, and enjoyable experience to the best of our ability. We will keep this information private between production and you. \n\nPlease provide the first & last name of the player(s) as well as their discord handles or other handles/usernames (if you did not play with them on discord).",
+            "createdAt": 1751558253064
+          },
+          {
+            "id": "question_019c96f5b4fa41fe",
+            "order": 8,
+            "questionTitle": "Random Questions",
+            "questionText": "Please answer these three questions: \n\n1. Are you a cat person, a dog person, or both….or neither?\n\n2. Pick the traits that fit you the best:\na. Loyal and Enthusiastic\nb. Independent and Mysterious\nc. Curious and Quirky\nAdaptable and Unpredictable\n\n3. When you are at a party, how likely are you to be the person in the following scenarios (please rate on a scale of 1-10)?\na. Hostess with the mostest, chatting everyone up\nb. Hanging out with your small squad of homies in the corner, doing your own thing\nc. Hiding in a room and only sneaking out for food and drink…your extroverted friends forced you to come",
+            "createdAt": 1751550470684,
+            "lastUpdated": 1751558347136
+          },
+          {
+            "id": "question_e40e1050b202465f",
+            "order": 9,
+            "questionTitle": "Final Pitch",
+            "questionText": "Please give us your final elevator pitch as to why you should be cast for Power Grab!",
+            "createdAt": 1751558361166
+          },
+          {
+            "id": "question_048587aa52f84d75",
+            "order": 10,
+            "questionTitle": "Photo & Interview",
+            "questionText": "There are 2 things you must complete in order to finish your application! We need a photo and an interview.  \n\nPlease note that we **do** consider submitting a photo and an interview a prerequisite to applying for the game.  If you do complete your application and are ultimately not cast, we will add a bump (point) to your chat to give you extra consideration for future seasons.\n\n**Photo**\n-Please submit a photo and make sure everything is in frame (see examples below).\n-Waist-up, make sure all body parts are in frame. Make sure the photo is good quality!\n-We actually recommend that you do not include pets in your photo for the season.\n\nThis video may also help- https://www.youtube.com/watch?v=KeIlXFmFu84. \n\n**Interview**\nYou will need to schedule an interview with Brandon. \n\nDeadline for your materials and interviews are on July 30th, however, we recommend submitting as early as possible in case we choose to cast earlier depending on the pool.\n\nThank you for submitting an application!",
+            "createdAt": 1751558448013,
+            "imageURL": "https://cdn.discordapp.com/attachments/1390375522806009899/1390380890521075723/image.png?ex=68680c9c&is=6866bb1c&hm=9bb8da0c7652f63bb749f81a0e8c61679c6ee90975acfbd361919e783c18b278&",
+            "lastUpdated": 1751563470002
+          }
+        ],
+        "targetChannelId": "1337754151655833694",
+        "categoryId": "1334493817231114271",
+        "buttonStyle": "Primary",
+        "productionRole": null,
+        "createdBy": "391415444084490240",
+        "createdAt": 1760194498087,
+        "lastUpdated": 1760194498087,
+        "welcomeDescription": "In season_question_edit_config_*, please add a next Text Input called \"Image URL\", optional, with the placeholder text of \"Enter the url of an image hosted on discord (https://cdn.discor..) to include.\"\nUnder the question configuration, save the URL of the image the user provided (e.g. imageURL).\nIn app_continue_*, when the container loads, if a question has a non-empty imageURL, create a ComponentsV2.md Media Gallery (type = 12) component directly below the questionText and attempt to load the imageURL in the component.",
+        "welcomeTitle": "Welcome!"
+      },
+      "config_1759634522896_391415444084490240": {
+        "buttonText": "Apply to S16 The NU Season",
+        "explanatoryText": "New things are happening!",
+        "completionDescription": "Thank you for completing your application! A host will review it soon.",
+        "completionImage": null,
+        "channelFormat": "📝%name%-app",
+        "targetChannelId": null,
+        "categoryId": null,
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "stage": "draft",
+        "createdAt": 1759634522900,
+        "lastUpdated": 1759634522900,
+        "seasonId": "season_cac1b81de8914c79",
+        "seasonName": "S16 The NU Season",
+        "questions": []
+      },
+      "config_1759672397657_391415444084490240": {
+        "buttonText": "Apply to S8 Multi-A",
+        "explanatoryText": "Multiples of 8 everywhere!",
+        "channelFormat": "📝%name%-app",
+        "stage": "active",
+        "seasonId": "season_9a8360f7864d4120",
+        "seasonName": "S8 Multi-A",
+        "questions": [],
+        "targetChannelId": "1337754151655833694",
+        "categoryId": "1334493817231114271",
+        "buttonStyle": "Primary",
+        "createdBy": "391415444084490240",
+        "createdAt": 1760199051003,
+        "lastUpdated": 1760199051003
+      },
+      "config_1760196737532_391415444084490240": {
+        "buttonText": "A NEW button name!",
+        "explanatoryText": "New new new",
+        "channelFormat": "📝%name%-app",
+        "stage": "awaiting_selections",
+        "seasonId": "season_1deffdb1dac8496b",
+        "seasonName": "S17 Reece's Modal Regression Szn - testing the limits of strings since 1988! What a crazy insane man",
+        "questions": [
+          {
+            "id": "question_9d27484463e949e5",
+            "order": 1,
+            "questionTitle": "Seikatsu no imisadasdsadsadasdasdasdasdasdasdasdasdasdasdadsdsadasdadasdasdasdasdasdasdasdadsdsadasz",
+            "questionText": "Change the Image URL title to  \nImage Link (Optional)\n\nChange the Image URL label description to:\nShows an image when the player loads the question.\n\nChange the placeholder text to:\nMust be hosted on discord",
+            "imageURL": "",
+            "createdAt": 1760196843742,
+            "lastUpdated": 1760197632920
+          },
+          {
+            "id": "question_06587253a4be4e66",
+            "order": 2,
+            "questionTitle": "What is the meaning of life??",
+            "questionText": "Enter the url of an image hosted on discord (https://cdn.dis",
+            "imageURL": "https://static.wikia.nocookie.net/mario/images/d/dc/Mario_%282%29.png/revision/latest?cb=20250720063134",
+            "createdAt": 1760197098185,
+            "lastUpdated": 1760197847886
+          }
+        ],
+        "targetChannelId": "1335678517907816530",
+        "categoryId": "1334493817231114271",
+        "buttonStyle": "Danger",
+        "productionRole": "1333822520737927281",
+        "createdBy": "391415444084490240",
+        "createdAt": 1760207677911,
+        "lastUpdated": 1760207677911
+      }
+    },
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "applications": {
+      "13989237782597430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297437099": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297430099": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasdasdasasdas dasd",
+        "rankings": {
+          "391415444084490240": 5
+        },
+        "castingStatus": "cast"
+      },
+      "1398923712597430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297447099": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778295430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297430299": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297630099": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923722597430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778297448099": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398923778245430091": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "139892377829330299": {
+        "userId": "1086246253819613274",
+        "channelId": "1398923778297430099",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-07-27T07:03:40.314Z",
+        "configId": "config_1751549410029_391415444084490240",
+        "playerNotes": "asdasd",
+        "rankings": {
+          "391415444084490240": 1
+        },
+        "castingStatus": "reject"
+      },
+      "1398919977020555284_0_config_1751549410029": {
+        "rankings": {
+          "391415444084490240": 5
+        }
+      },
+      "1398923778297430099_1_config_1751549410029": {
+        "rankings": {
+          "391415444084490240": 2
+        }
+      },
+      "1426598104852992094": {
+        "userId": "391415444084490240",
+        "channelId": "1426598104852992094",
+        "username": "extremedonkey",
+        "displayName": "ReeceBot",
+        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
+        "channelName": "📝reecebot-app",
+        "createdAt": "2025-10-11T15:51:35.153Z",
+        "configId": "config_1760196737532_391415444084490240",
+        "currentQuestion": 1
+      },
+      "1426602985223360593": {
+        "userId": "391415444084490240",
+        "channelId": "1426602985223360593",
+        "username": "extremedonkey",
+        "displayName": "ReeceBot",
+        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
+        "channelName": "📝reecebot-app",
+        "createdAt": "2025-10-11T16:10:58.267Z",
+        "configId": "config_1759672397657_391415444084490240"
+      },
+      "1426604944873619486": {
+        "userId": "391415444084490240",
+        "channelId": "1426604944873619486",
+        "username": "extremedonkey",
+        "displayName": "ReeceBot",
+        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
+        "channelName": "📝reecebot-app",
+        "createdAt": "2025-10-11T16:18:46.870Z",
+        "configId": "config_1760196737532_391415444084490240",
+        "currentQuestion": 1
+      },
+      "1426606186131882178": {
+        "userId": "391415444084490240",
+        "channelId": "1426606186131882178",
+        "username": "extremedonkey",
+        "displayName": "ReeceBot",
+        "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
+        "channelName": "📝reecebot-app",
+        "createdAt": "2025-10-11T16:23:42.422Z",
+        "configId": "config_1760196737532_391415444084490240"
+      }
+    },
+    "rankings": {
+      "1382698115748073574": {
+        "391415444084490240": 2,
+        "1086246253819613274": 2,
+        "676262975132139522": 5
+      },
+      "1382700344600952959": {
+        "1086246253819613274": 2,
+        "391415444084490240": 5
+      },
+      "1382721883556024340": {
+        "391415444084490240": 5
+      },
+      "1382713657749930076": {
+        "391415444084490240": 3
+      },
+      "1398809112610865183": {
+        "391415444084490240": 3
+      },
+      "1398864305008545823_0_config_1749305698427": {
+        "391415444084490240": 4
+      },
+      "1398874028789465178_0_config_1753587914351": {
+        "391415444084490240": 5
+      },
+      "1398865589887434783": {
+        "391415444084490240": 1
+      },
+      "1398923778297430099_1_config_1751549410029": {
+        "391415444084490240": 4
+      }
+    },
+    "reactionMappings": {},
+    "availability": {
+      "391415444084490240": [
+        10,
+        11,
+        12,
+        13,
+        19,
+        20,
+        21
+      ],
+      "1086246253819613274": [
+        0,
+        1,
+        2,
+        3,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        18,
+        19,
+        20,
+        21
+      ]
+    },
+    "availabilityMessages": {
+      "1403064271067414579": {
+        "slots": [
+          {
+            "emoji": "1️⃣",
+            "utcHour": 18
+          },
+          {
+            "emoji": "2️⃣",
+            "utcHour": 19
+          },
+          {
+            "emoji": "3️⃣",
+            "utcHour": 20
+          },
+          {
+            "emoji": "4️⃣",
+            "utcHour": 21
+          },
+          {
+            "emoji": "5️⃣",
+            "utcHour": 22
+          },
+          {
+            "emoji": "6️⃣",
+            "utcHour": 23
+          },
+          {
+            "emoji": "7️⃣",
+            "utcHour": 0
+          },
+          {
+            "emoji": "8️⃣",
+            "utcHour": 1
+          },
+          {
+            "emoji": "9️⃣",
+            "utcHour": 2
+          },
+          {
+            "emoji": "🔟",
+            "utcHour": 3
+          },
+          {
+            "emoji": "🇦",
+            "utcHour": 4
+          },
+          {
+            "emoji": "🇧",
+            "utcHour": 5
+          },
+          {
+            "emoji": "🇨",
+            "utcHour": 6
+          },
+          {
+            "emoji": "🇩",
+            "utcHour": 7
+          },
+          {
+            "emoji": "🇪",
+            "utcHour": 8
+          },
+          {
+            "emoji": "🇫",
+            "utcHour": 9
+          },
+          {
+            "emoji": "🇬",
+            "utcHour": 10
+          },
+          {
+            "emoji": "🇭",
+            "utcHour": 11
+          },
+          {
+            "emoji": "🇮",
+            "utcHour": 12
+          },
+          {
+            "emoji": "🇯",
+            "utcHour": 13
+          }
+        ],
+        "startHour": 17,
+        "channelId": "1337754151655833694",
+        "createdAt": 1754587006661
+      },
+      "1403064362989519009": {
+        "slots": [
+          {
+            "emoji": "1️⃣",
+            "utcHour": 18
+          },
+          {
+            "emoji": "2️⃣",
+            "utcHour": 19
+          },
+          {
+            "emoji": "3️⃣",
+            "utcHour": 20
+          },
+          {
+            "emoji": "4️⃣",
+            "utcHour": 21
+          },
+          {
+            "emoji": "5️⃣",
+            "utcHour": 22
+          },
+          {
+            "emoji": "6️⃣",
+            "utcHour": 23
+          },
+          {
+            "emoji": "7️⃣",
+            "utcHour": 0
+          },
+          {
+            "emoji": "8️⃣",
+            "utcHour": 1
+          },
+          {
+            "emoji": "9️⃣",
+            "utcHour": 2
+          },
+          {
+            "emoji": "🔟",
+            "utcHour": 3
+          },
+          {
+            "emoji": "🇦",
+            "utcHour": 4
+          },
+          {
+            "emoji": "🇧",
+            "utcHour": 5
+          },
+          {
+            "emoji": "🇨",
+            "utcHour": 6
+          },
+          {
+            "emoji": "🇩",
+            "utcHour": 7
+          },
+          {
+            "emoji": "🇪",
+            "utcHour": 8
+          },
+          {
+            "emoji": "🇫",
+            "utcHour": 9
+          },
+          {
+            "emoji": "🇬",
+            "utcHour": 10
+          },
+          {
+            "emoji": "🇭",
+            "utcHour": 11
+          },
+          {
+            "emoji": "🇮",
+            "utcHour": 12
+          },
+          {
+            "emoji": "🇯",
+            "utcHour": 13
+          }
+        ],
+        "startHour": 17,
+        "channelId": "1337754151655833694",
+        "createdAt": 1754587030707
+      },
+      "1405542651603718265": {
+        "slots": [
+          {
+            "emoji": "1️⃣",
+            "utcHour": 14
+          },
+          {
+            "emoji": "2️⃣",
+            "utcHour": 15
+          },
+          {
+            "emoji": "3️⃣",
+            "utcHour": 16
+          },
+          {
+            "emoji": "4️⃣",
+            "utcHour": 17
+          },
+          {
+            "emoji": "5️⃣",
+            "utcHour": 18
+          },
+          {
+            "emoji": "6️⃣",
+            "utcHour": 19
+          },
+          {
+            "emoji": "7️⃣",
+            "utcHour": 20
+          },
+          {
+            "emoji": "8️⃣",
+            "utcHour": 21
+          },
+          {
+            "emoji": "9️⃣",
+            "utcHour": 22
+          },
+          {
+            "emoji": "🔟",
+            "utcHour": 23
+          },
+          {
+            "emoji": "🇦",
+            "utcHour": 0
+          },
+          {
+            "emoji": "🇧",
+            "utcHour": 1
+          },
+          {
+            "emoji": "🇨",
+            "utcHour": 2
+          },
+          {
+            "emoji": "🇩",
+            "utcHour": 3
+          },
+          {
+            "emoji": "🇪",
+            "utcHour": 4
+          },
+          {
+            "emoji": "🇫",
+            "utcHour": 5
+          },
+          {
+            "emoji": "🇬",
+            "utcHour": 6
+          },
+          {
+            "emoji": "🇭",
+            "utcHour": 7
+          },
+          {
+            "emoji": "🇮",
+            "utcHour": 8
+          },
+          {
+            "emoji": "🇯",
+            "utcHour": 9
+          }
+        ],
+        "startHour": 13,
+        "channelId": "1396134920954450074",
+        "createdAt": 1755177897632
+      },
+      "1409154227569426432": {
+        "slots": [
+          {
+            "emoji": "1️⃣",
+            "utcHour": 13
+          },
+          {
+            "emoji": "2️⃣",
+            "utcHour": 14
+          },
+          {
+            "emoji": "3️⃣",
+            "utcHour": 15
+          },
+          {
+            "emoji": "4️⃣",
+            "utcHour": 16
+          },
+          {
+            "emoji": "5️⃣",
+            "utcHour": 17
+          },
+          {
+            "emoji": "6️⃣",
+            "utcHour": 18
+          },
+          {
+            "emoji": "7️⃣",
+            "utcHour": 19
+          },
+          {
+            "emoji": "8️⃣",
+            "utcHour": 20
+          },
+          {
+            "emoji": "9️⃣",
+            "utcHour": 21
+          },
+          {
+            "emoji": "🔟",
+            "utcHour": 22
+          },
+          {
+            "emoji": "🇦",
+            "utcHour": 23
+          },
+          {
+            "emoji": "🇧",
+            "utcHour": 0
+          },
+          {
+            "emoji": "🇨",
+            "utcHour": 1
+          },
+          {
+            "emoji": "🇩",
+            "utcHour": 2
+          },
+          {
+            "emoji": "🇪",
+            "utcHour": 3
+          },
+          {
+            "emoji": "🇫",
+            "utcHour": 4
+          },
+          {
+            "emoji": "🇬",
+            "utcHour": 5
+          },
+          {
+            "emoji": "🇭",
+            "utcHour": 6
+          },
+          {
+            "emoji": "🇮",
+            "utcHour": 7
+          },
+          {
+            "emoji": "🇯",
+            "utcHour": 8
+          }
+        ],
+        "startHour": 12,
+        "channelId": "1337754151655833694",
+        "createdAt": 1756038966969
+      }
+    },
+    "activeSeason": {
+      "id": "config_1751549410029_391415444084490240",
+      "name": "ReeceVivor S15!",
+      "stage": "planning"
+    },
+    "castlistConfigs": {
+      "castlist_1758812609810_system": {
+        "id": "castlist_1758812609810_system",
+        "name": "Haszo",
+        "type": "legacy",
+        "createdAt": 1758812609810,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "New format castlist Haszo",
+          "emoji": "📋",
+          "accentColor": 10181046,
+          "migratedFrom": "virtual_SGFzem8",
+          "migrationDate": 1758812609810
+        },
+        "modifiedAt": 1759671055123,
+        "modifiedBy": "system",
+        "seasonId": "season_875934ef5b7b49ee"
+      },
+      "default": {
+        "id": "default",
+        "name": "default",
+        "type": "system",
+        "createdAt": 1759326924851,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1759639383328,
+        "modifiedBy": "system",
+        "seasonId": "season_cac1b81de8914c79"
+      },
+      "castlist_1759422070959_system": {
+        "id": "castlist_1759422070959_system",
+        "name": "TheBest",
+        "type": "legacy",
+        "createdAt": 1759422070960,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Legacy castlist: TheBest",
+          "emoji": "📋",
+          "migratedFrom": "virtual_VGhlQmVzdA",
+          "migrationDate": 1759422070960
+        }
+      },
+      "castlist_1759422854044_system": {
+        "id": "castlist_1759422854044_system",
+        "name": "oldask",
+        "type": "legacy",
+        "createdAt": 1759422854045,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "A very old tribe that needs asking",
+          "emoji": "🏕️",
+          "migratedFrom": "virtual_VGhlIE9JZCBBc2sgVHJpYmU",
+          "migrationDate": 1759422854045
+        },
+        "modifiedAt": 1759637997841,
+        "modifiedBy": "391415444084490240"
+      },
+      "castlist_1759638936214_system": {
+        "id": "castlist_1759638936214_system",
+        "name": "noLongerLegacy",
+        "type": "system",
+        "createdAt": 1759638936215,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "The new and improved list!",
+          "emoji": "✨",
+          "migratedFrom": "virtual_bGVnYWN5TGlzdA",
+          "migrationDate": 1759638936215
+        },
+        "modifiedAt": 1759663735196,
+        "modifiedBy": "391415444084490240",
+        "seasonId": "season_cac1b81de8914c79"
+      },
+      "castlist_1759671885172_system": {
+        "id": "castlist_1759671885172_system",
+        "name": "MultiB",
+        "type": "system",
+        "createdAt": 1759671885172,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "",
+          "emoji": "🅱️",
+          "migratedFrom": "virtual_TXVsdGlC",
+          "migrationDate": 1759671885172
+        },
+        "modifiedAt": 1759671896374,
+        "modifiedBy": "391415444084490240"
+      },
+      "castlist_1760202315299_1331657596087566398": {
+        "id": "castlist_1760202315299_1331657596087566398",
+        "name": "Modal Create > Container Flow",
+        "type": "custom",
+        "createdAt": 1760202315299,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "",
+          "lastModified": 1760202315299
+        }
+      }
+    },
+    "placements": {
+      "global": {
+        "676262975132139522": {
+          "placement": 44,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:35:10.001Z"
+        },
+        "977455730300956683": {
+          "placement": 8,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-09-30T16:45:38.122Z"
+        },
+        "391415444084490240": {
+          "placement": 22,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-01T14:10:03.351Z"
+        },
+        "683102296380276766": {
+          "placement": 7,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-09-30T16:57:54.319Z"
+        },
+        "208197633846542336": {
+          "placement": 6,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T11:14:58.941Z"
+        },
+        "538540453973327873": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T11:15:58.030Z"
+        },
+        "468655730975703041": {
+          "placement": 3,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T11:33:49.194Z"
+        },
+        "572291395365109770": {
+          "placement": 7,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:12:47.507Z"
+        }
+      },
+      "season_cac1b81de8914c79": {
+        "630470402900230146": {
+          "placement": 99,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T08:53:29.161Z"
+        },
+        "538540453973327873": {
+          "placement": 33,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:26:36.016Z"
+        },
+        "208197633846542336": {
+          "placement": 12,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:10:03.816Z"
+        },
+        "233762709932474370": {
+          "placement": 98,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:23:25.050Z"
+        },
+        "572291395365109770": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:26:04.047Z"
+        },
+        "676262975132139522": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:34:58.622Z"
+        }
+      },
+      "season_cac1b81de8914c79_castlist_1759638936214": {
+        "233762709932474370": {
+          "placement": 11,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:14:43.159Z"
+        }
+      },
+      "season_875934ef5b7b49ee": {
+        "676262975132139522": {
+          "placement": 6,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:41:04.774Z"
+        },
+        "683102296380276766": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:12:28.750Z"
+        },
+        "391415444084490240": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:39:13.505Z"
+        },
+        "977455730300956683": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T09:39:18.865Z"
+        },
+        "630470402900230146": {
+          "placement": 3,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:40:20.709Z"
+        },
+        "538540453973327873": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:40:36.120Z"
+        },
+        "572291395365109770": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:40:41.665Z"
+        },
+        "208197633846542336": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:40:48.177Z"
+        },
+        "233762709932474370": {
+          "placement": 4,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:40:59.298Z"
+        },
+        "468655730975703041": {
+          "placement": 9,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T12:42:28.312Z"
+        }
+      },
+      "season_9a8360f7864d4120": {
+        "1088078919409881098": {
+          "placement": 7,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T13:55:04.401Z"
+        },
+        "676262975132139522": {
+          "placement": 4,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T13:55:10.409Z"
+        },
+        "208197633846542336": {
+          "placement": 9,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T13:55:15.434Z"
+        },
+        "538540453973327873": {
+          "placement": 3,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T13:55:21.047Z"
+        },
+        "383455201182613514": {
+          "placement": 22,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T13:55:30.590Z"
+        },
+        "731547575211262128": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:04.334Z"
+        },
+        "415686124208390144": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:16.006Z"
+        },
+        "766410076608921661": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:23.110Z"
+        },
+        "630470402900230146": {
+          "placement": 8,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:34.627Z"
+        },
+        "1319912453248647170": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:41.582Z"
+        },
+        "863115100268789781": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:16:46.234Z"
+        },
+        "572291395365109770": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:28:16.970Z"
+        },
+        "480712959824363520": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:28:25.768Z"
+        },
+        "691850627189309492": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-05T14:50:01.041Z"
+        }
+      }
+    }
   }
 }
