@@ -376,13 +376,10 @@ export async function createPlayerLocationMap(guildId, client = null, options = 
     if (showBlacklisted && blacklistedWithInfo.length > 0) {
         legend += `\n**Blacklisted Cells:** ${blacklistedWithInfo.join(', ')}\n`;
 
-        // NEW: Show reverse blacklist coverage
-        const reverseBlacklistInfo = await getReverseBlacklistItemSummary(guildId);
-        if (reverseBlacklistInfo.length > 0) {
-            legend += `\n**Reverse Blacklist Items:**\n`;
-            reverseBlacklistInfo.forEach(info => {
-                legend += `• ${info.emoji} ${info.name}: ${info.coordinates.join(', ')}\n`;
-            });
+        // Show reverse blacklist coverage using common function
+        const reverseBlacklistLegend = await formatReverseBlacklistLegend(guildId);
+        if (reverseBlacklistLegend) {
+            legend += `\n${reverseBlacklistLegend}`;
         }
     }
 
@@ -405,6 +402,30 @@ async function getReverseBlacklistItemSummary(guildId) {
             emoji: item.emoji || '📦',
             coordinates: item.reverseBlacklist
         }));
+}
+
+/**
+ * Format reverse blacklist items legend text
+ * @param {string} guildId - The guild ID
+ * @returns {Promise<string>} Formatted legend text (empty string if no items)
+ */
+export async function formatReverseBlacklistLegend(guildId) {
+    console.log(`🔍 DEBUG formatReverseBlacklistLegend: Called for guild ${guildId}`);
+    const reverseBlacklistInfo = await getReverseBlacklistItemSummary(guildId);
+    console.log(`🔍 DEBUG formatReverseBlacklistLegend: Found ${reverseBlacklistInfo.length} items:`, JSON.stringify(reverseBlacklistInfo, null, 2));
+
+    if (reverseBlacklistInfo.length === 0) {
+        console.log(`🔍 DEBUG formatReverseBlacklistLegend: No items found, returning empty string`);
+        return '';
+    }
+
+    let legend = '**Reverse Blacklist Items:**\n';
+    reverseBlacklistInfo.forEach(info => {
+        legend += `• ${info.emoji} ${info.name}: ${info.coordinates.join(', ')}\n`;
+    });
+
+    console.log(`🔍 DEBUG formatReverseBlacklistLegend: Generated legend:\n${legend}`);
+    return legend;
 }
 
 // Helper functions

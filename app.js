@@ -22420,12 +22420,33 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             });
 
             // Add legend for overlay colors
-            containerComponents.push({
-              type: 10,  // Text Display
-              content: `**Legend:**
+            let legendContent = `**Legend:**
 🟥 Red overlay = Blacklisted (restricted access)
 🟩 Green overlay = Reverse blacklist unlock available
-⬜ No overlay = Normal access`
+⬜ No overlay = Normal access`;
+
+            console.log(`🔍 DEBUG Map Explorer: About to call formatReverseBlacklistLegend for guild ${context.guildId}`);
+
+            // Add reverse blacklist items legend
+            const { formatReverseBlacklistLegend } = await import('./playerLocationManager.js');
+            const reverseBlacklistLegend = await formatReverseBlacklistLegend(context.guildId);
+
+            console.log(`🔍 DEBUG Map Explorer: formatReverseBlacklistLegend returned:`, reverseBlacklistLegend);
+            console.log(`🔍 DEBUG Map Explorer: reverseBlacklistLegend is truthy?`, !!reverseBlacklistLegend);
+            console.log(`🔍 DEBUG Map Explorer: reverseBlacklistLegend length:`, reverseBlacklistLegend?.length);
+
+            if (reverseBlacklistLegend) {
+              console.log(`🔍 DEBUG Map Explorer: Adding reverse blacklist legend to content`);
+              legendContent += `\n\n${reverseBlacklistLegend}`;
+            } else {
+              console.log(`🔍 DEBUG Map Explorer: NOT adding reverse blacklist legend (falsy value)`);
+            }
+
+            console.log(`🔍 DEBUG Map Explorer: Final legendContent:\n${legendContent}`);
+
+            containerComponents.push({
+              type: 10,  // Text Display
+              content: legendContent
             });
 
             containerComponents.push({
