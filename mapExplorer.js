@@ -1569,16 +1569,48 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
   try {
     console.log(`🎨 Generating blacklist overlay for guild ${guildId}`);
 
+    // Clean the URL (remove any trailing & or whitespace)
+    const cleanUrl = originalImageUrl.trim().replace(/&+$/, '');
+    console.log(`🔗 Clean URL: ${cleanUrl}`);
+
     // Step 1: Download original map image from Discord CDN
-    const imageResponse = await fetch(originalImageUrl);
+    const imageResponse = await fetch(cleanUrl);
+
+    // Check if the fetch was successful
+    if (!imageResponse.ok) {
+      console.error(`❌ Failed to fetch image from Discord CDN: ${imageResponse.status} ${imageResponse.statusText}`);
+      console.error(`❌ URL: ${originalImageUrl}`);
+      return originalImageUrl; // Return original URL as fallback
+    }
+
+    // Check content type to ensure it's an image
+    const contentType = imageResponse.headers.get('content-type');
+    if (!contentType || !contentType.startsWith('image/')) {
+      console.error(`❌ Invalid content type from Discord CDN: ${contentType}`);
+      console.error(`❌ URL: ${originalImageUrl}`);
+      return originalImageUrl; // Return original URL as fallback
+    }
+
     const imageBuffer = await Buffer.from(await imageResponse.arrayBuffer());
+
+    // Validate buffer is not empty
+    if (!imageBuffer || imageBuffer.length === 0) {
+      console.error(`❌ Empty image buffer from Discord CDN`);
+      return originalImageUrl;
+    }
 
     // Step 2: Get image dimensions
     const metadata = await sharp(imageBuffer).metadata();
-    const cellWidth = metadata.width / gridSize;
-    const cellHeight = metadata.height / gridSize;
 
-    console.log(`📐 Map dimensions: ${metadata.width}x${metadata.height}, Cell size: ${cellWidth}x${cellHeight}`);
+    // Account for border (80px on each side)
+    const borderSize = 80;
+    const innerWidth = metadata.width - (borderSize * 2);
+    const innerHeight = metadata.height - (borderSize * 2);
+    const cellWidth = innerWidth / gridSize;
+    const cellHeight = innerHeight / gridSize;
+
+    console.log(`📐 Map dimensions: ${metadata.width}x${metadata.height} (with ${borderSize}px border)`);
+    console.log(`📐 Inner dimensions: ${innerWidth}x${innerHeight}, Cell size: ${cellWidth}x${cellHeight}`);
 
     // Step 3: Get blacklisted coordinates
     const blacklistedCoords = await getBlacklistedCoordinates(guildId);
@@ -1595,13 +1627,13 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
     // Step 5: Create overlay rectangles
     const overlays = [];
 
-    // Helper function to convert coordinate to pixel position
+    // Helper function to convert coordinate to pixel position (accounting for border)
     const coordToPosition = (coord) => {
       const col = coord.charCodeAt(0) - 65;  // A=0, B=1, etc.
       const row = parseInt(coord.substring(1)) - 1;  // 1-based to 0-based
       return {
-        left: Math.floor(col * cellWidth),
-        top: Math.floor(row * cellHeight)
+        left: Math.floor(borderSize + (col * cellWidth)),
+        top: Math.floor(borderSize + (row * cellHeight))
       };
     };
 
