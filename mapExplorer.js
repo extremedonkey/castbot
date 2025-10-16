@@ -116,10 +116,17 @@ async function uploadImageToDiscord(guild, imagePath, filename) {
     });
 
     // Return the Discord CDN URL - cleaned of trailing ampersand
+    // Also return message/channel IDs so we can fetch fresh URLs later
     const rawUrl = message.attachments.first().url;
     const cleanUrl = rawUrl.trim().replace(/&+$/, '');
     console.log(`📤 Upload: Raw URL had trailing &: ${rawUrl.endsWith('&')}, Clean URL: ${cleanUrl}`);
-    return cleanUrl;
+    console.log(`📤 Upload: Storage message ID: ${message.id}, Channel ID: ${storageChannel.id}`);
+
+    return {
+      url: cleanUrl,
+      messageId: message.id,
+      channelId: storageChannel.id
+    };
   } catch (error) {
     console.error('❌ Failed to upload image to Discord:', error);
     throw error;
@@ -440,7 +447,8 @@ async function createMapGrid(guild, userId) {
     
     // Upload map image to Discord and get CDN URL
     progressMessages.push('📤 Uploading map image to Discord...');
-    const discordImageUrl = await uploadImageToDiscord(guild, outputPath, `${mapId}.png`);
+    const uploadResult = await uploadImageToDiscord(guild, outputPath, `${mapId}.png`);
+    const discordImageUrl = uploadResult.url || uploadResult; // Backwards compatibility
     console.log(`📤 Map image uploaded to Discord CDN: ${discordImageUrl}`);
     progressMessages.push('✅ Map image uploaded to Discord CDN');
     
@@ -516,6 +524,8 @@ async function createMapGrid(guild, userId) {
       gridSize: Math.max(gridWidth, gridHeight), // Keep for backwards compatibility
       imageFile: outputPath.replace(__dirname + '/', ''),
       discordImageUrl: discordImageUrl, // Store Discord CDN URL
+      mapStorageMessageId: uploadResult.messageId, // Store for URL refresh
+      mapStorageChannelId: uploadResult.channelId, // Store for URL refresh
       category: category.id,
       createdAt: new Date().toISOString(),
       createdBy: userId,
@@ -1024,11 +1034,13 @@ async function updateMapImage(guild, userId, mapUrl) {
     
     // Upload the updated map to Discord
     progressMessages.push('📤 Uploading updated map to Discord...');
-    const discordImageUrl = await uploadImageToDiscord(guild, outputPath, `${activeMapId}_updated.png`);
+    const uploadResult = await uploadImageToDiscord(guild, outputPath, `${activeMapId}_updated.png`);
     progressMessages.push('✅ Map image uploaded to Discord CDN');
-    
-    // Update map data with new image URL
-    mapData.discordImageUrl = discordImageUrl;
+
+    // Update map data with new image URL and storage info
+    mapData.discordImageUrl = uploadResult.url || uploadResult; // Backwards compatibility
+    mapData.mapStorageMessageId = uploadResult.messageId;
+    mapData.mapStorageChannelId = uploadResult.channelId;
     mapData.lastUpdated = new Date().toISOString();
     mapData.updatedBy = userId;
     
@@ -1263,7 +1275,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
     
     // Upload map image to Discord and get CDN URL
     progressMessages.push('📤 Uploading map image to Discord...');
-    const discordImageUrl = await uploadImageToDiscord(guild, outputPath, `${mapId}.png`);
+    const uploadResult = await uploadImageToDiscord(guild, outputPath, `${mapId}.png`);
+    const discordImageUrl = uploadResult.url || uploadResult; // Backwards compatibility
     console.log(`📤 Map image uploaded to Discord CDN: ${discordImageUrl}`);
     progressMessages.push('✅ Map image uploaded to Discord CDN');
     
@@ -1364,6 +1377,8 @@ async function createMapGridWithCustomImage(guild, userId, mapUrl, gridWidth = 7
       gridSize: Math.max(gridWidth, gridHeight), // Keep for backwards compatibility
       imageFile: outputPath.replace(__dirname + '/', ''),
       discordImageUrl: discordImageUrl, // Store Discord CDN URL
+      mapStorageMessageId: uploadResult.messageId, // Store for URL refresh
+      mapStorageChannelId: uploadResult.channelId, // Store for URL refresh
       category: category.id,
       categories: categories.map(cat => cat.id), // Store all category IDs
       createdAt: new Date().toISOString(),
@@ -1572,17 +1587,42 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
   try {
     console.log(`🎨 Generating blacklist overlay for guild ${guildId}`);
 
-    // Clean the URL (remove any trailing & or whitespace)
-    const cleanUrl = originalImageUrl.trim().replace(/&+$/, '');
-    console.log(`🔗 Clean URL: ${cleanUrl}`);
+    // Step 1: Get fresh URL by fetching the storage message
+    // Discord CDN URLs expire after 24h, so we need to fetch fresh auth parameters
+    let freshImageUrl = originalImageUrl;
 
-    // Step 1: Download original map image from Discord CDN
-    const imageResponse = await fetch(cleanUrl);
+    try {
+      const safariData = await loadSafariContent();
+      const activeMapId = safariData[guildId]?.maps?.active;
+      const mapData = safariData[guildId]?.maps?.[activeMapId];
+
+      // If we have storage message info, fetch fresh URL
+      if (mapData?.mapStorageMessageId && mapData?.mapStorageChannelId) {
+        console.log(`🔄 Fetching fresh URL from storage message ${mapData.mapStorageMessageId}`);
+        const { DiscordRequest } = await import('./utils.js');
+
+        const message = await DiscordRequest(
+          `channels/${mapData.mapStorageChannelId}/messages/${mapData.mapStorageMessageId}`,
+          { method: 'GET' }
+        );
+
+        if (message?.attachments?.[0]?.url) {
+          freshImageUrl = message.attachments[0].url.trim().replace(/&+$/, '');
+          console.log(`✅ Got fresh URL with updated auth parameters`);
+        }
+      }
+    } catch (fetchError) {
+      console.warn(`⚠️ Could not fetch fresh URL, using stored URL: ${fetchError.message}`);
+      freshImageUrl = originalImageUrl.trim().replace(/&+$/, '');
+    }
+
+    // Step 2: Download map image from Discord CDN
+    const imageResponse = await fetch(freshImageUrl);
 
     // Check if the fetch was successful
     if (!imageResponse.ok) {
       console.error(`❌ Failed to fetch image from Discord CDN: ${imageResponse.status} ${imageResponse.statusText}`);
-      console.error(`❌ URL: ${originalImageUrl}`);
+      console.error(`❌ URL: ${freshImageUrl}`);
       return originalImageUrl; // Return original URL as fallback
     }
 
@@ -1590,7 +1630,7 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
     const contentType = imageResponse.headers.get('content-type');
     if (!contentType || !contentType.startsWith('image/')) {
       console.error(`❌ Invalid content type from Discord CDN: ${contentType}`);
-      console.error(`❌ URL: ${originalImageUrl}`);
+      console.error(`❌ URL: ${freshImageUrl}`);
       return originalImageUrl; // Return original URL as fallback
     }
 
@@ -1711,7 +1751,8 @@ export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSi
 
     // Step 8: Upload to Discord and get CDN URL
     const guild = await client.guilds.fetch(guildId);
-    const discordUrl = await uploadImageToDiscord(guild, tempFilePath, `map_overlay_${Date.now()}.png`);
+    const uploadResult = await uploadImageToDiscord(guild, tempFilePath, `map_overlay_${Date.now()}.png`);
+    const discordUrl = uploadResult.url || uploadResult; // Backwards compatibility
 
     // Step 9: Clean up temporary file
     await fs.unlink(tempFilePath);
