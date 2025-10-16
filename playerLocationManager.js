@@ -499,3 +499,6 @@ export const LocationUtils = {
     createPlayerLocationMap,
     getNearbyPlayers
 };
+
+// Export reverse blacklist utilities
+export { getReverseBlacklistItemSummary };
