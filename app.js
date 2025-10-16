@@ -22350,23 +22350,24 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
     } else if (custom_id === 'safari_map_explorer') {
       // Handle Map Explorer menu display - using Components V2 with Container (MIGRATED TO FACTORY)
       const shouldUpdateMessage = await shouldUpdateProductionMenuMessage(req.body.channel_id);
-      
+
       return ButtonHandlerFactory.create({
         id: 'safari_map_explorer',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         updateMessage: shouldUpdateMessage,
         ephemeral: true,
+        deferred: true,  // Enable deferred response for overlay generation
         handler: async (context) => {
           console.log(`🗺️ DEBUG: Opening Map Explorer interface for guild ${context.guildId}`);
-          
+
           // Load safari content to check for existing maps
           const { loadSafariContent } = await import('./safariManager.js');
           const safariData = await loadSafariContent();
           const guildMaps = safariData[context.guildId]?.maps || {};
           const activeMapId = guildMaps.active;
           const hasActiveMap = activeMapId && guildMaps[activeMapId];
-          
+
           // Create header text based on map status
           let headerText;
           if (hasActiveMap) {
@@ -22375,7 +22376,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           } else {
             headerText = `# 🗺️ Map Explorer\n\n**No active map found**\nCreate a new map to begin exploration!`;
           }
-          
+
           // Build container components starting with text display
           const containerComponents = [
             {
@@ -22386,21 +22387,47 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
               type: 14 // Separator
             }
           ];
-          
-          // Add Media Gallery if there's an active map with Discord CDN URL
+
+          // Add Media Gallery with overlay if there's an active map with Discord CDN URL
           if (hasActiveMap && guildMaps[activeMapId].discordImageUrl) {
-            console.log(`🖼️ DEBUG: Adding map image from Discord CDN: ${guildMaps[activeMapId].discordImageUrl}`);
-            
+            console.log(`🖼️ DEBUG: Generating blacklist overlay for map from Discord CDN: ${guildMaps[activeMapId].discordImageUrl}`);
+
+            // Generate overlay image with blacklist indicators
+            let imageUrl = guildMaps[activeMapId].discordImageUrl;
+            try {
+              const { generateBlacklistOverlay } = await import('./mapExplorer.js');
+              imageUrl = await generateBlacklistOverlay(
+                context.guildId,
+                guildMaps[activeMapId].discordImageUrl,  // Original clean map
+                guildMaps[activeMapId].gridSize,
+                context.client
+              );
+              console.log(`✅ Using overlaid image: ${imageUrl}`);
+            } catch (error) {
+              console.error(`❌ Error generating overlay, using original: ${error.message}`);
+              // Fallback to original image
+            }
+
             containerComponents.push({
               type: 12, // Media Gallery
               items: [
                 {
                   media: {
-                    url: guildMaps[activeMapId].discordImageUrl
+                    url: imageUrl
                   }
                 }
               ]
             });
+
+            // Add legend for overlay colors
+            containerComponents.push({
+              type: 10,  // Text Display
+              content: `**Legend:**
+🟥 Red overlay = Blacklisted (restricted access)
+🟩 Green overlay = Reverse blacklist unlock available
+⬜ No overlay = Normal access`
+            });
+
             containerComponents.push({
               type: 14 // Separator
             });

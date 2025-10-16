@@ -1549,11 +1549,147 @@ export async function updateBlacklistedCoordinates(guildId, coordinatesList) {
 export async function getBlacklistedCoordinates(guildId) {
   const safariData = await loadSafariContent();
   const activeMapId = safariData[guildId]?.maps?.active;
-  
+
   if (!activeMapId) return [];
-  
+
   const mapData = safariData[guildId]?.maps?.[activeMapId];
   return mapData?.blacklistedCoordinates || [];
+}
+
+/**
+ * Generate a map image with blacklist overlays
+ *
+ * @param {string} guildId - Guild ID
+ * @param {string} originalImageUrl - Discord CDN URL of original clean map
+ * @param {number} gridSize - Map grid size (e.g., 7 for 7x7)
+ * @param {Object} client - Discord.js client instance
+ * @returns {Promise<string>} Discord CDN URL of overlaid image
+ */
+export async function generateBlacklistOverlay(guildId, originalImageUrl, gridSize, client) {
+  try {
+    console.log(`🎨 Generating blacklist overlay for guild ${guildId}`);
+
+    // Step 1: Download original map image from Discord CDN
+    const imageResponse = await fetch(originalImageUrl);
+    const imageBuffer = await Buffer.from(await imageResponse.arrayBuffer());
+
+    // Step 2: Get image dimensions
+    const metadata = await sharp(imageBuffer).metadata();
+    const cellWidth = metadata.width / gridSize;
+    const cellHeight = metadata.height / gridSize;
+
+    console.log(`📐 Map dimensions: ${metadata.width}x${metadata.height}, Cell size: ${cellWidth}x${cellHeight}`);
+
+    // Step 3: Get blacklisted coordinates
+    const blacklistedCoords = await getBlacklistedCoordinates(guildId);
+    console.log(`🚫 Found ${blacklistedCoords.length} blacklisted cells: ${blacklistedCoords.join(', ')}`);
+
+    // Step 4: Get reverse blacklist items
+    const { getReverseBlacklistItemSummary } = await import('./playerLocationManager.js');
+    const reverseBlacklistItems = await getReverseBlacklistItemSummary(guildId);
+    const reverseBlacklistCoords = new Set(
+      reverseBlacklistItems.flatMap(item => item.coordinates)
+    );
+    console.log(`🔓 Found ${reverseBlacklistCoords.size} reverse blacklist unlock coordinates`);
+
+    // Step 5: Create overlay rectangles
+    const overlays = [];
+
+    // Helper function to convert coordinate to pixel position
+    const coordToPosition = (coord) => {
+      const col = coord.charCodeAt(0) - 65;  // A=0, B=1, etc.
+      const row = parseInt(coord.substring(1)) - 1;  // 1-based to 0-based
+      return {
+        left: Math.floor(col * cellWidth),
+        top: Math.floor(row * cellHeight)
+      };
+    };
+
+    // Red overlay for blacklisted cells
+    for (const coord of blacklistedCoords) {
+      const pos = coordToPosition(coord);
+
+      // Create red semi-transparent rectangle
+      const redOverlay = await sharp({
+        create: {
+          width: Math.floor(cellWidth),
+          height: Math.floor(cellHeight),
+          channels: 4,
+          background: { r: 255, g: 0, b: 0, alpha: 0.3 }  // 30% red
+        }
+      }).png().toBuffer();
+
+      overlays.push({
+        input: redOverlay,
+        top: pos.top,
+        left: pos.left
+      });
+    }
+
+    // Green overlay for reverse blacklist unlocks (on top of red)
+    for (const coord of reverseBlacklistCoords) {
+      if (blacklistedCoords.includes(coord)) {
+        const pos = coordToPosition(coord);
+
+        // Create green semi-transparent rectangle
+        const greenOverlay = await sharp({
+          create: {
+            width: Math.floor(cellWidth),
+            height: Math.floor(cellHeight),
+            channels: 4,
+            background: { r: 0, g: 255, b: 0, alpha: 0.4 }  // 40% green
+          }
+        }).png().toBuffer();
+
+        overlays.push({
+          input: greenOverlay,
+          top: pos.top,
+          left: pos.left
+        });
+      }
+    }
+
+    console.log(`🎨 Created ${overlays.length} overlay rectangles`);
+
+    // If no overlays needed, return original URL
+    if (overlays.length === 0) {
+      console.log(`⏭️ No overlays needed, returning original image`);
+      return originalImageUrl;
+    }
+
+    // Step 6: Composite all overlays onto the original image
+    const overlaidImage = await sharp(imageBuffer)
+      .composite(overlays)
+      .png()
+      .toBuffer();
+
+    // Step 7: Save to temporary file
+    const tempDir = path.join(__dirname, 'temp');
+    if (!await fs.access(tempDir).then(() => true).catch(() => false)) {
+      await fs.mkdir(tempDir, { recursive: true });
+    }
+
+    const tempFilePath = path.join(tempDir, `map_overlay_${guildId}_${Date.now()}.png`);
+    await sharp(overlaidImage).toFile(tempFilePath);
+
+    console.log(`💾 Saved overlaid image to: ${tempFilePath}`);
+
+    // Step 8: Upload to Discord and get CDN URL
+    const guild = await client.guilds.fetch(guildId);
+    const discordUrl = await uploadImageToDiscord(guild, tempFilePath, `map_overlay_${Date.now()}.png`);
+
+    // Step 9: Clean up temporary file
+    await fs.unlink(tempFilePath);
+    console.log(`🗑️ Cleaned up temporary file: ${tempFilePath}`);
+
+    console.log(`✅ Generated overlay image: ${discordUrl}`);
+    return discordUrl;
+
+  } catch (error) {
+    console.error('❌ Error generating blacklist overlay:', error);
+    // Fallback: Return original image URL if overlay fails
+    return originalImageUrl;
+  }
 }
 
 // Export functions
