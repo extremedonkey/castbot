@@ -114,9 +114,12 @@ async function uploadImageToDiscord(guild, imagePath, filename) {
       content: `Map image for ${guild.name}`,
       files: [attachment]
     });
-    
-    // Return the Discord CDN URL
-    return message.attachments.first().url;
+
+    // Return the Discord CDN URL - cleaned of trailing ampersand
+    const rawUrl = message.attachments.first().url;
+    const cleanUrl = rawUrl.trim().replace(/&+$/, '');
+    console.log(`📤 Upload: Raw URL had trailing &: ${rawUrl.endsWith('&')}, Clean URL: ${cleanUrl}`);
+    return cleanUrl;
   } catch (error) {
     console.error('❌ Failed to upload image to Discord:', error);
     throw error;
