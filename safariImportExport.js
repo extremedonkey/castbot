@@ -61,6 +61,7 @@ export async function importSafariData(guildId, importJson) {
             stores: { created: 0, updated: 0 },
             items: { created: 0, updated: 0 },
             maps: { created: 0, updated: 0 },
+            customActions: { created: 0, updated: 0 },
             config: false
         };
         
@@ -177,7 +178,51 @@ export async function importSafariData(guildId, importJson) {
                 }
             }
         }
-        
+
+        // Import Custom Actions with smart merge
+        if (importData.customActions) {
+            if (!currentData[guildId].buttons) {
+                currentData[guildId].buttons = {};
+            }
+
+            for (const [buttonId, buttonData] of Object.entries(importData.customActions)) {
+                if (currentData[guildId].buttons[buttonId]) {
+                    // Update existing Custom Action
+                    const existing = currentData[guildId].buttons[buttonId];
+                    currentData[guildId].buttons[buttonId] = {
+                        ...buttonData,
+                        metadata: {
+                            // Preserve runtime fields
+                            createdBy: existing.metadata?.createdBy,
+                            createdAt: existing.metadata?.createdAt,
+                            usageCount: existing.metadata?.usageCount || 0,
+                            // Update from import
+                            tags: buttonData.metadata?.tags || [],
+                            lastModified: Date.now()
+                        },
+                        // Preserve coordinates as-is (user creates matching map manually)
+                        coordinates: buttonData.coordinates || []
+                    };
+                    summary.customActions.updated++;
+                } else {
+                    // Create new Custom Action
+                    currentData[guildId].buttons[buttonId] = {
+                        ...buttonData,
+                        metadata: {
+                            createdBy: null,  // No creator info on import
+                            createdAt: Date.now(),
+                            lastModified: Date.now(),
+                            usageCount: 0,
+                            tags: buttonData.metadata?.tags || []
+                        },
+                        // Preserve coordinates as-is (user creates matching map manually)
+                        coordinates: buttonData.coordinates || []
+                    };
+                    summary.customActions.created++;
+                }
+            }
+        }
+
         // Import safari config (merge with existing)
         if (importData.safariConfig) {
             currentData[guildId].safariConfig = {
@@ -368,11 +413,11 @@ function validateImportData(data) {
         throw new Error('Import data must be a valid JSON object');
     }
     
-    const validSections = ['stores', 'items', 'safariConfig', 'maps'];
+    const validSections = ['stores', 'items', 'safariConfig', 'maps', 'customActions'];
     const hasValidSection = validSections.some(section => data[section]);
-    
+
     if (!hasValidSection) {
-        throw new Error('Import data must contain at least one of: stores, items, or safariConfig');
+        throw new Error('Import data must contain at least one of: stores, items, safariConfig, maps, or customActions');
     }
     
     // Basic structure validation
@@ -390,6 +435,10 @@ function validateImportData(data) {
     
     if (data.maps && typeof data.maps !== 'object') {
         throw new Error('Maps section must be an object');
+    }
+
+    if (data.customActions && typeof data.customActions !== 'object') {
+        throw new Error('Custom Actions section must be an object');
     }
 }
 
@@ -421,7 +470,14 @@ export function formatImportSummary(summary) {
         if (summary.maps.updated > 0) mapText.push(`${summary.maps.updated} updated`);
         parts.push(`🗺️ **Maps:** ${mapText.join(', ')}`);
     }
-    
+
+    if (summary.customActions?.created > 0 || summary.customActions?.updated > 0) {
+        const actionText = [];
+        if (summary.customActions.created > 0) actionText.push(`${summary.customActions.created} created`);
+        if (summary.customActions.updated > 0) actionText.push(`${summary.customActions.updated} updated`);
+        parts.push(`🔘 **Custom Actions:** ${actionText.join(', ')}`);
+    }
+
     if (summary.config) {
         parts.push(`⚙️ **Config:** Updated`);
     }

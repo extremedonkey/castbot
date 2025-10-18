@@ -12,9 +12,10 @@
 This document provides a comprehensive design for adding **Custom Actions** (buttons) export/import functionality to the Safari Import/Export system. Currently, Safari exports only include stores, items, maps, and config—missing the critical interactive behaviors defined by Custom Actions. This enhancement will enable full Safari template portability.
 
 ### Current State
-- ✅ **Exported**: Stores, Items, Maps (coordinates + buttons array), Safari Config
-- ❌ **Missing**: Custom Actions (button definitions with action sequences)
-- ❌ **Missing**: Anchor message regeneration after import
+- ✅ **Phase 0**: Refresh Anchors "All" feature - COMPLETE
+- ✅ **Phase 1**: Custom Actions Export - COMPLETE
+- ⏳ **Phase 2**: Custom Actions Import - IN PROGRESS
+- 📅 **Phase 3**: Deferred (manual workflow via Phase 0)
 
 ### Implementation Scope
 1. Add Custom Actions filtering and export
@@ -236,7 +237,11 @@ const coordinatesList = coordinatesInput
 
 ---
 
-### Phase 1: Export Custom Actions
+### Phase 1: Export Custom Actions ✅ IMPLEMENTED
+
+**Status:** Complete and deployed (2025-10-18)
+**Implementation:** `safariImportExport.js:23, 318-359`
+**Test Results:** 43 Custom Actions exported successfully, all runtime fields filtered correctly
 
 #### 1.1 Add Custom Actions Export Filter
 
