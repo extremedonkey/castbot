@@ -19,7 +19,8 @@ export async function exportSafariData(guildId) {
             stores: filterStoresForExport(guildData.stores || {}),
             items: filterItemsForExport(guildData.items || {}),
             safariConfig: filterConfigForExport(guildData.safariConfig || {}),
-            maps: filterMapsForExport(guildData.maps || {})
+            maps: filterMapsForExport(guildData.maps || {}),
+            customActions: filterCustomActionsForExport(guildData.buttons || {})
         };
         
         // Use compact JSON format to save characters
@@ -311,6 +312,49 @@ function filterConfigForExport(config) {
         ...(config.round3GoodProbability !== undefined && { round3GoodProbability: config.round3GoodProbability })
         // Exclude: currentRound, lastRoundTimestamp (runtime fields)
     };
+    return filtered;
+}
+
+/**
+ * Filter Custom Actions for export (exclude runtime/Discord-specific fields)
+ * @param {Object} buttons - Custom Actions data from safariContent.json
+ * @returns {Object} Filtered Custom Actions for export
+ */
+function filterCustomActionsForExport(buttons) {
+    const filtered = {};
+
+    for (const [id, button] of Object.entries(buttons)) {
+        filtered[id] = {
+            // Core Identity
+            id: button.id,
+            name: button.name,
+            label: button.label,
+            emoji: button.emoji,
+            style: button.style,
+
+            // Action Sequence (preserve completely)
+            actions: button.actions || [],
+
+            // Trigger Configuration
+            trigger: button.trigger,
+
+            // Conditions
+            conditions: button.conditions || { logic: "AND", items: [] },
+
+            // Map Integration (CRITICAL - preserve for Phase 2 import)
+            coordinates: button.coordinates || [],
+
+            // Optional Fields
+            ...(button.description && { description: button.description }),
+
+            // Metadata - FILTER OUT runtime fields but keep tags
+            metadata: {
+                tags: button.metadata?.tags || []
+                // Exclude: createdBy, createdAt, lastModified, usageCount (runtime data)
+            }
+        };
+    }
+
     return filtered;
 }
 
