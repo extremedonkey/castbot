@@ -22438,7 +22438,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const playerLocationsButton = new ButtonBuilder()
             .setCustomId('map_player_locations')
             .setLabel('Player Locations')
-            .setStyle(ButtonStyle.Primary)
+            .setStyle(ButtonStyle.Success) // Blue style as requested
             .setEmoji('👥');
           
           // Legacy create button - MARKED FOR REMOVAL (map_update has replaced this)
@@ -22483,11 +22483,11 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
             .setEmoji('⏸️')
             .setDisabled(!hasActiveMap); // Only enable if there's an active map
 
-          // First row: Main map management buttons
-          const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, playerLocationsButton]);
-          
-          // Second row: Admin functions (map_create removed - use map_update instead)
-          const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, refreshAnchorsButton, pausedPlayersButton]);
+          // First row: Main map management buttons + Refresh Anchors
+          const mapButtonRow1 = new ActionRowBuilder().addComponents([createUpdateButton, deleteButton, refreshAnchorsButton]);
+
+          // Second row: Admin functions with Player Locations moved here
+          const mapButtonRow2 = new ActionRowBuilder().addComponents([blacklistButton, playerLocationsButton, pausedPlayersButton]);
           
           // Create back button
           const backButton = new ButtonBuilder()

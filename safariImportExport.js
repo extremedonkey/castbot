@@ -141,6 +141,12 @@ export async function importSafariData(guildId, importJson) {
                 if (currentData[guildId].maps[mapId]) {
                     // Update existing map - merge coordinates
                     const existingMap = currentData[guildId].maps[mapId];
+
+                    // Update map-level fields
+                    if (mapData.blacklistedCoordinates) {
+                        existingMap.blacklistedCoordinates = mapData.blacklistedCoordinates;
+                    }
+
                     for (const [coord, coordData] of Object.entries(mapData.coordinates || {})) {
                         if (existingMap.coordinates[coord]) {
                             // Update existing coordinate - preserve runtime fields
@@ -148,6 +154,12 @@ export async function importSafariData(guildId, importJson) {
                                 ...existingMap.coordinates[coord],
                                 baseContent: coordData.baseContent,
                                 buttons: coordData.buttons,
+                                // Update stores array if provided
+                                ...(coordData.stores !== undefined && { stores: coordData.stores }),
+                                // Update hidden commands if provided
+                                ...(coordData.hiddenCommands !== undefined && { hiddenCommands: coordData.hiddenCommands }),
+                                // Update special events if provided
+                                ...(coordData.specialEvents !== undefined && { specialEvents: coordData.specialEvents }),
                                 metadata: {
                                     ...existingMap.coordinates[coord].metadata,
                                     lastModified: Date.now()
@@ -320,7 +332,9 @@ function filterMapsForExport(maps) {
             id: mapData.id,
             name: mapData.name,
             gridSize: mapData.gridSize,
-            coordinates: {}
+            coordinates: {},
+            // Include blacklisted coordinates if they exist
+            ...(mapData.blacklistedCoordinates && { blacklistedCoordinates: mapData.blacklistedCoordinates })
         };
         
         // Filter coordinates - exclude runtime fields
@@ -329,8 +343,14 @@ function filterMapsForExport(maps) {
                 baseContent: coordData.baseContent,
                 buttons: coordData.buttons || [],
                 cellType: coordData.cellType,
-                discovered: coordData.discovered
-                // Exclude: channelId, anchorMessageId, navigation (runtime fields)
+                discovered: coordData.discovered,
+                // Include stores array if it exists (CRITICAL for proper import)
+                ...(coordData.stores && { stores: coordData.stores }),
+                // Include hidden commands if they exist
+                ...(coordData.hiddenCommands && { hiddenCommands: coordData.hiddenCommands }),
+                // Include special events if they exist
+                ...(coordData.specialEvents && { specialEvents: coordData.specialEvents })
+                // Exclude: channelId, anchorMessageId, navigation, fogMapUrl (runtime fields)
             };
         }
     }
