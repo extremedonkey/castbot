@@ -760,7 +760,7 @@ export async function handleMapAdminBlacklistModal(context, req) {
  */
 export async function handleMapAdminRefreshAnchors(context) {
   console.log(`🔄 START: map_admin_refresh_anchors - user ${context.userId}`);
-  
+
   return {
     type: InteractionResponseType.MODAL,
     data: {
@@ -768,18 +768,17 @@ export async function handleMapAdminRefreshAnchors(context) {
       title: 'Refresh Anchor Messages',
       components: [
         {
-          type: 1, // Action Row
-          components: [
-            {
-              type: 4, // Text Input
-              custom_id: 'coordinates_to_refresh',
-              label: 'Coordinates to Refresh',
-              style: 2, // Paragraph
-              placeholder: 'Enter coordinates separated by commas (e.g., G7, H8, A1)',
-              required: true,
-              max_length: 500
-            }
-          ]
+          type: 18, // Label (modern pattern)
+          label: 'Coordinates to Refresh',
+          description: 'Enter coordinates separated by commas (e.g., G7, H8, A1) or type All to update all anchors.',
+          component: {
+            type: 4, // Text Input
+            custom_id: 'coordinates_to_refresh',
+            style: 2, // Paragraph
+            placeholder: 'Enter coordinates or type All',
+            required: true,
+            max_length: 500
+          }
         }
       ]
     }
@@ -794,41 +793,76 @@ export async function handleMapAdminRefreshAnchors(context) {
  */
 export async function handleMapAdminRefreshAnchorsModal(context, req) {
   console.log(`🔄 START: map_admin_refresh_anchors_modal - user ${context.userId}`);
-  
+
   // Get the input value
-  const coordinatesInput = req.body.data.components[0].components[0].value || '';
-  
-  // Parse coordinates - split by comma and clean up
+  const coordinatesInput = req.body.data.components[0].component.value || '';
+
+  // Check for "All" keyword (case-insensitive)
+  if (coordinatesInput.trim().toLowerCase() === 'all') {
+    console.log(`🔄 User requested refresh of ALL anchors in guild ${context.guildId}`);
+
+    // Use existing updateAllGuildAnchors function
+    const { updateAllGuildAnchors } = await import('./anchorMessageManager.js');
+    const results = await updateAllGuildAnchors(context.guildId);
+
+    console.log(`✅ SUCCESS: map_admin_refresh_anchors_modal - refreshed ALL anchor messages: ${results.success} succeeded, ${results.failed} failed`);
+
+    let responseContent = `## 🔄 Anchor Refresh Results (All Anchors)\n\n`;
+    responseContent += `✅ **Successfully refreshed**: ${results.success}\n`;
+    responseContent += `❌ **Failed to refresh**: ${results.failed}\n\n`;
+
+    if (results.failed > 0 && results.errors.length > 0) {
+      responseContent += `⚠️ **Failed coordinates**: ${results.errors.join(', ')}\n`;
+      responseContent += `Check logs for detailed error information.`;
+    } else if (results.success > 0) {
+      responseContent += `🎉 **All anchor messages refreshed successfully!**`;
+    }
+
+    return {
+      flags: (1 << 15), // IS_COMPONENTS_V2
+      components: [{
+        type: 17, // Container
+        accent_color: 0x2ecc71, // Green for success
+        components: [{
+          type: 10, // Text Display
+          content: responseContent
+        }]
+      }],
+      ephemeral: true
+    };
+  }
+
+  // Otherwise, parse as comma-separated coordinates (existing logic)
   const coordinatesList = coordinatesInput
     .split(',')
     .map(coord => coord.trim().toUpperCase())
     .filter(coord => coord.match(/^[A-Z]\d+$/)); // Validate format (e.g., A1, B2)
-  
+
   if (coordinatesList.length === 0) {
     return {
-      content: '❌ **No valid coordinates found**\n\nPlease enter coordinates in format: A1, B2, C3, etc.',
+      content: '❌ **No valid coordinates found**\n\nPlease enter coordinates in format: A1, B2, C3, etc. or type "All" to refresh all anchors.',
       ephemeral: true
     };
   }
-  
+
   // Refresh anchor messages using the anchor manager
   const { forceUpdateAnchors } = await import('./anchorMessageManager.js');
   const results = await forceUpdateAnchors(context.guildId, coordinatesList);
-  
+
   console.log(`✅ SUCCESS: map_admin_refresh_anchors_modal - refreshed ${results.success}/${coordinatesList.length} anchor messages`);
-  
+
   let responseContent = `## 🔄 Anchor Refresh Results\n\n`;
   responseContent += `✅ **Successfully refreshed**: ${results.success}\n`;
   responseContent += `❌ **Failed to refresh**: ${results.failed}\n`;
   responseContent += `📍 **Coordinates processed**: ${coordinatesList.join(', ')}\n\n`;
-  
+
   if (results.failed > 0 && results.errors.length > 0) {
     responseContent += `⚠️ **Failed coordinates**: ${results.errors.join(', ')}\n`;
     responseContent += `Check logs for detailed error information.`;
   } else if (results.success > 0) {
     responseContent += `🎉 **All anchor messages refreshed successfully!**`;
   }
-  
+
   return {
     flags: (1 << 15), // IS_COMPONENTS_V2
     components: [{
