@@ -770,7 +770,7 @@ export async function handleMapAdminRefreshAnchors(context) {
         {
           type: 18, // Label (modern pattern)
           label: 'Coordinates to Refresh',
-          description: 'Enter coordinates separated by commas (e.g., G7, H8, A1) or type All to update all anchors.',
+          description: "Enter coordinates separated by commas (e.g., G7, H8, A1) or type 'All' to update all anchors.",
           component: {
             type: 4, // Text Input
             custom_id: 'coordinates_to_refresh',
