@@ -35671,33 +35671,75 @@ Are you sure you want to continue?`;
       // Handle refresh anchors modal submission
       try {
         const guildId = req.body.guild_id;
-        const { handleMapAdminRefreshAnchorsModal } = await import('./safariMapAdmin.js');
-        
-        // Create context for the handler
-        const context = {
-          guildId: guildId,
-          userId: req.body.member?.user?.id || req.body.user?.id
-        };
-        
-        const result = await handleMapAdminRefreshAnchorsModal(context, req);
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            ...result,
-            flags: result.flags | InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
+        const token = req.body.token;
+        const applicationId = req.body.application_id;
+
+        // Check if user requested "All" (which takes a long time)
+        const coordinatesInput = req.body.data.components[0]?.component?.value || '';
+        const isRefreshAll = coordinatesInput.trim().toLowerCase() === 'all';
+
+        if (isRefreshAll) {
+          // Defer immediately for "All" refresh (takes ~60 seconds for 49 anchors)
+          res.send({
+            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+
+          // Process in background and edit deferred response
+          const { handleMapAdminRefreshAnchorsModal } = await import('./safariMapAdmin.js');
+          const context = {
+            guildId: guildId,
+            userId: req.body.member?.user?.id || req.body.user?.id
+          };
+
+          const result = await handleMapAdminRefreshAnchorsModal(context, req);
+
+          // Edit the deferred response with results
+          const editUrl = `https://discord.com/api/v10/webhooks/${applicationId}/${token}/messages/@original`;
+          await fetch(editUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ...result,
+              flags: result.flags | InteractionResponseFlags.EPHEMERAL
+            })
+          });
+
+          return;
+        } else {
+          // Specific coordinates - fast enough for synchronous response
+          const { handleMapAdminRefreshAnchorsModal } = await import('./safariMapAdmin.js');
+          const context = {
+            guildId: guildId,
+            userId: req.body.member?.user?.id || req.body.user?.id
+          };
+
+          const result = await handleMapAdminRefreshAnchorsModal(context, req);
+
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              ...result,
+              flags: result.flags | InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
+
       } catch (error) {
         console.error('Error handling refresh anchors modal:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error refreshing anchor messages. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
+
+        // If response not sent yet, send error
+        if (!res.headersSent) {
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+              content: '❌ Error refreshing anchor messages. Please try again.',
+              flags: InteractionResponseFlags.EPHEMERAL
+            }
+          });
+        }
       }
       
     } else if (custom_id.startsWith('castlist_edit_info_modal_')) {

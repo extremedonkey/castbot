@@ -451,9 +451,24 @@ function validateImportData(data) {
 
 ---
 
-### Phase 3: Anchor Message Regeneration
+### Phase 3: Anchor Message Regeneration (DEFERRED - Use Manual Workflow)
 
-After importing Custom Actions, anchor messages must be updated to display the new buttons.
+**Status:** Deferred in favor of manual workflow via Phase 0
+
+**Manual Workflow:**
+1. User creates map with same coordinates in destination server
+2. User exports Safari from source server (includes Custom Actions)
+3. User imports to destination server
+4. User opens Map Explorer → Refresh Anchors → Types "All"
+5. All anchor messages regenerate with imported Custom Actions
+
+**Why Defer Automatic Regeneration:**
+- Phase 0 provides atomic "refresh all" function
+- User has full control over timing
+- Simpler implementation path
+- Avoids edge cases with missing channels/messages
+
+After importing Custom Actions, anchor messages can be manually updated to display the new buttons.
 
 #### 3.1 Add Anchor Regeneration
 
