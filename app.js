@@ -850,13 +850,45 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
    * @returns {boolean} True if within limits, false otherwise
    */
   function validateContainerLimits(components) {
-    const maxComponents = 25; // Discord's container component limit
-    
+    const maxComponents = 40; // Discord's Components V2 limit (was incorrectly set to 25)
+
+    // Detailed component breakdown
+    console.log(`📊 COMPONENT BREAKDOWN:`);
+    console.log(`📊 Total top-level components: ${components.length}`);
+
+    const breakdown = {};
+    components.forEach((comp, index) => {
+      const typeName = {
+        1: 'ActionRow',
+        2: 'Button',
+        9: 'Section',
+        10: 'TextDisplay',
+        14: 'Separator',
+        17: 'Container'
+      }[comp.type] || `Unknown(${comp.type})`;
+
+      breakdown[typeName] = (breakdown[typeName] || 0) + 1;
+
+      // Log details for complex components
+      if (comp.type === 1) { // ActionRow
+        const buttonCount = comp.components?.length || 0;
+        console.log(`📊   [${index}] ActionRow with ${buttonCount} buttons`);
+      } else if (comp.type === 9) { // Section
+        console.log(`📊   [${index}] Section with ${comp.components?.length || 0} children + ${comp.accessory ? '1 accessory' : 'no accessory'}`);
+      } else {
+        console.log(`📊   [${index}] ${typeName}`);
+      }
+    });
+
+    console.log(`📊 Component type summary:`, breakdown);
+
     if (components.length > maxComponents) {
-      console.error(`Container exceeds component limit: ${components.length}/${maxComponents}`);
+      console.error(`❌ Container exceeds component limit: ${components.length}/${maxComponents}`);
+      console.error(`❌ Need to remove ${components.length - maxComponents} components`);
       return false;
     }
-    
+
+    console.log(`✅ Component count OK: ${components.length}/${maxComponents}`);
     return true;
   }
   

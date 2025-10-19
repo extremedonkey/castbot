@@ -1737,7 +1737,8 @@
           "391415444084490240": {
             "placement": "1"
           }
-        }
+        },
+        "castlistId": "castlist_1760866350518_system"
       },
       "castlist_1759760454082_1331657596087566398": {
         "id": "castlist_1759760454082_1331657596087566398",
@@ -2780,6 +2781,25 @@
         },
         "modifiedAt": 1759671896374,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1760866350518_system": {
+        "id": "castlist_1760866350518_system",
+        "name": "ar.2",
+        "type": "system",
+        "createdAt": 1760866350518,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": true,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'ar.2'",
+          "emoji": "🏆",
+          "migratedFrom": "virtual_YXIuMg",
+          "migrationDate": 1760866350518
+        }
       }
     },
     "placements": {
@@ -2795,9 +2815,9 @@
           "updatedAt": "2025-09-30T16:45:38.122Z"
         },
         "391415444084490240": {
-          "placement": 22,
+          "placement": 15,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-01T14:10:03.351Z"
+          "updatedAt": "2025-10-19T09:32:50.680Z"
         },
         "683102296380276766": {
           "placement": 7,
