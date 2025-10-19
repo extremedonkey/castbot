@@ -1207,29 +1207,19 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_progress')
       .setLabel('Safari Progress')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🚀')
-  ];
-  
-  // Advanced Configuration section buttons (formerly Legacy)
-  const advancedConfigButtons = [
+      .setEmoji('🚀'),
     new ButtonBuilder()
       .setCustomId('safari_customize_terms')
-      .setLabel('Safari Settings')
+      .setLabel('Settings')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️'),
-    new ButtonBuilder()
-      .setCustomId('safari_player_inventory')
-      .setLabel('Player Inventory')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🪪')
+      .setEmoji('⚙️')
   ];
-  
+
   // TODO: Flag for deletion - Check if safari_manage_safari_buttons handler is still needed
   // TODO: Flag for deletion - Check if safari_navigate handlers and dependencies can be removed
-  
+
   const safariDetailsRow = new ActionRowBuilder().addComponents(safariDetailsButtons);
   const mapAdminRow = new ActionRowBuilder().addComponents(mapAdminButtons);
-  const advancedConfigRow = new ActionRowBuilder().addComponents(advancedConfigButtons);
   
   // Create back button
   const backButton = [
@@ -1263,14 +1253,6 @@ async function createSafariMenu(guildId, userId, member) {
       content: `> **\`🗺️ Map Administration\`**`
     },
     mapAdminRow.toJSON(),
-    {
-      type: 14 // Separator
-    },
-    {
-      type: 10, // Text Display component
-      content: `> **\`🕐 Advanced Configuration\`**`
-    },
-    advancedConfigRow.toJSON(),
     {
       type: 14 // Separator
     },
@@ -9601,22 +9583,25 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'safari_player_inventory') {
-      // Handle "My Inventory" player inventory display (MIGRATED TO FACTORY)
-      return ButtonHandlerFactory.create({
-        id: 'safari_player_inventory',
-        handler: async (context) => {
-          console.log(`🥚 DEBUG: User ${context.userId} viewing inventory in guild ${context.guildId}`);
-          
-          // Start at page 0 when opening inventory
-          const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, context.userId, context.member, 0);
-          
-          console.log(`📤 DEBUG: About to send inventory response for user ${context.userId}`);
-          console.log(`📋 DEBUG: Data keys: ${Object.keys(inventoryDisplay)}`);
-          
-          return inventoryDisplay;
-        }
-      })(req, res, client);
+    // COMMENTED OUT 2025-01-19: Removed safari_player_inventory from Safari Menu
+    // Button still exists in other contexts (playerManagement.js, safariManager.js)
+    // as navigation element, but no longer accessible from main Safari Menu
+    // } else if (custom_id === 'safari_player_inventory') {
+    //   // Handle "My Inventory" player inventory display (MIGRATED TO FACTORY)
+    //   return ButtonHandlerFactory.create({
+    //     id: 'safari_player_inventory',
+    //     handler: async (context) => {
+    //       console.log(`🥚 DEBUG: User ${context.userId} viewing inventory in guild ${context.guildId}`);
+    //
+    //       // Start at page 0 when opening inventory
+    //       const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, context.userId, context.member, 0);
+    //
+    //       console.log(`📤 DEBUG: About to send inventory response for user ${context.userId}`);
+    //       console.log(`📋 DEBUG: Data keys: ${Object.keys(inventoryDisplay)}`);
+    //
+    //       return inventoryDisplay;
+    //     }
+    //   })(req, res, client);
     } else if (custom_id.startsWith('safari_attack_player_disabled_')) {
       // Handle disabled attack button click
       console.log(`⚔️ DEBUG: User clicked disabled attack button`);
