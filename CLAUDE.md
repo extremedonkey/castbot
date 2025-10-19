@@ -198,6 +198,7 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 - **MAP TECHNICAL** → [docs/features/SafariMapTechnical.md](docs/features/SafariMapTechnical.md) - Developer reference
 - **MAP ISSUES** → [docs/features/SafariMapIssues.md](docs/features/SafariMapIssues.md) - Known issues & roadmap
 - **MAP MOVEMENT** → [docs/features/SafariMapMovement.md](docs/features/SafariMapMovement.md)
+- **IMPORT/EXPORT** → [docs/features/SafariImportExport.md](docs/features/SafariImportExport.md) - Full Safari template portability
 - **POINTS SYSTEM** → [docs/features/SafariPoints.md](docs/features/SafariPoints.md)
 - **SAFARI PROGRESS** → [docs/features/SafariProgress.md](docs/features/SafariProgress.md)
 - **PLAYER LOCATIONS** → [docs/features/PlayerLocationManager.md](docs/features/PlayerLocationManager.md)
