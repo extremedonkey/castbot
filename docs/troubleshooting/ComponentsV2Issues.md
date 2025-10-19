@@ -518,6 +518,106 @@ return {
 - Multiple children cause Discord to reject the response with "interaction failed"
 - Confirmed via experimental testing in `castlist_test` button
 
+### 11. Ephemeral Flag Not Working with Components V2
+
+**Symptom**: Messages appear public (visible to everyone) even though handler has `ephemeral: true` in ButtonHandlerFactory config
+
+**Root Cause**: Multiple issues causing ephemeral to fail:
+1. ButtonHandlerFactory `ephemeral: true` config doesn't automatically add flag to response
+2. Plain `{ content }` responses don't properly support ephemeral flag
+3. Missing `InteractionResponseFlags.EPHEMERAL` in response flags
+
+**Fix**: Always use full Components V2 Container format with explicit ephemeral flag
+
+```javascript
+// ❌ WRONG - Ephemeral config without flag in response
+return ButtonHandlerFactory.create({
+  id: 'my_button',
+  ephemeral: true,  // This alone doesn't make it ephemeral!
+  handler: async (context) => {
+    return {
+      flags: (1 << 15),  // Missing EPHEMERAL flag
+      components: [container]
+    };
+  }
+})(req, res, client);
+
+// ❌ WRONG - Plain content without Components V2 Container
+return {
+  content: 'This message should be private'  // Won't be ephemeral
+};
+
+// ✅ CORRECT - Full Components V2 Container + Explicit Ephemeral Flag
+return {
+  flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,  // Both flags required
+  components: [{
+    type: 17, // Container
+    accent_color: 0x5865f2,
+    components: [
+      {
+        type: 10, // Text Display
+        content: 'This message is now properly ephemeral'
+      }
+    ]
+  }]
+};
+```
+
+**Critical Discovery**:
+- **ButtonHandlerFactory `ephemeral: true` is NOT sufficient** - it's a configuration hint, not automatic
+- **Must explicitly add `InteractionResponseFlags.EPHEMERAL` to response flags**
+- **Plain `{ content }` format doesn't properly support ephemeral** - must use full Container structure
+- **Both flags required**: `(1 << 15) | InteractionResponseFlags.EPHEMERAL`
+- Affected handlers: `safari_manage_currency`, `safari_currency_view_all`, `safari_currency_reset_all`
+
+**Pattern Applied To**:
+- Currency management interfaces
+- Admin-only views that should be private
+- Any response that should only be visible to the command user
+
+### 12. Button Custom ID Pattern Conflicts
+
+**Symptom**: Wrong handler executes, showing completely unrelated interface (e.g., "Configure Drops" instead of "Reset Currency")
+
+**Root Cause**: Broad pattern matching with `startsWith()` accidentally captures more specific button IDs
+
+**Critical Example**:
+```javascript
+// ❌ WRONG - Pattern conflict
+} else if (custom_id.startsWith('safari_currency_reset_')) {
+  // This handler was meant for: safari_currency_reset_buttonId_actionIndex
+  // But it ALSO matches: safari_currency_reset_confirm
+  // Result: Wrong handler executes!
+}
+
+// ✅ CORRECT - Exclude specific patterns
+} else if (custom_id.startsWith('safari_currency_reset_') && custom_id !== 'safari_currency_reset_confirm') {
+  // Now only matches: safari_currency_reset_buttonId_actionIndex
+  // Excludes: safari_currency_reset_confirm (handled elsewhere)
+}
+```
+
+**Fix**: Always exclude specific button IDs when using broad patterns
+
+**Prevention Strategy**:
+1. **Check for conflicts** when adding new pattern-based handlers
+2. **Use more specific patterns** when possible (e.g., check for required underscores)
+3. **Order handlers carefully** - put specific handlers BEFORE broad patterns
+4. **Add exclusion conditions** for known conflicts
+5. **Test button IDs** that might match multiple patterns
+
+**Real-World Bug**:
+- `safari_currency_reset_confirm` was matching `safari_currency_reset_` pattern
+- Users clicking "Reset All Currency" → "Confirm" button saw "Configure Drops" interface
+- Bug was subtle because both patterns seemed unrelated
+- Fix required explicit exclusion: `custom_id !== 'safari_currency_reset_confirm'`
+
+**Pattern Conflict Checklist**:
+- [ ] Does your pattern overlap with existing handlers?
+- [ ] Are there specific button IDs that should be excluded?
+- [ ] Is your pattern handler before or after specific handlers in the chain?
+- [ ] Have you tested button IDs that start with your pattern?
+
 ## Quick Reference
 
 **Always Remember**:

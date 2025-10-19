@@ -316,11 +316,15 @@ export async function importSafariData(guildId, importJson, context = {}) {
             }
 
             for (const [buttonId, buttonData] of Object.entries(importData.customActions)) {
+                // Initialize limit tracking for all actions (resets claimedBy)
+                const actionsWithLimits = (buttonData.actions || []).map(initializeActionLimitTracking);
+
                 if (currentData[guildId].buttons[buttonId]) {
                     // Update existing Custom Action
                     const existing = currentData[guildId].buttons[buttonId];
                     currentData[guildId].buttons[buttonId] = {
                         ...buttonData,
+                        actions: actionsWithLimits,  // Use initialized actions
                         metadata: {
                             // Preserve runtime fields
                             createdBy: existing.metadata?.createdBy,
@@ -338,6 +342,7 @@ export async function importSafariData(guildId, importJson, context = {}) {
                     // Create new Custom Action
                     currentData[guildId].buttons[buttonId] = {
                         ...buttonData,
+                        actions: actionsWithLimits,  // Use initialized actions
                         metadata: {
                             createdBy: null,  // No creator info on import
                             createdAt: Date.now(),
@@ -483,19 +488,83 @@ function filterMapsForExport(maps) {
  */
 function filterConfigForExport(config) {
     const filtered = {
+        // Currency & Inventory
         currencyName: config.currencyName,
-        inventoryName: config.inventoryName,
         currencyEmoji: config.currencyEmoji,
+        inventoryName: config.inventoryName,
+        ...(config.inventoryEmoji !== undefined && { inventoryEmoji: config.inventoryEmoji }),
+        ...(config.defaultStartingCurrencyValue !== undefined && { defaultStartingCurrencyValue: config.defaultStartingCurrencyValue }),
+
+        // Events
         ...(config.goodEventName !== undefined && { goodEventName: config.goodEventName }),
         ...(config.badEventName !== undefined && { badEventName: config.badEventName }),
         ...(config.goodEventEmoji !== undefined && { goodEventEmoji: config.goodEventEmoji }),
         ...(config.badEventEmoji !== undefined && { badEventEmoji: config.badEventEmoji }),
+
+        // Round Probabilities
         ...(config.round1GoodProbability !== undefined && { round1GoodProbability: config.round1GoodProbability }),
         ...(config.round2GoodProbability !== undefined && { round2GoodProbability: config.round2GoodProbability }),
-        ...(config.round3GoodProbability !== undefined && { round3GoodProbability: config.round3GoodProbability })
-        // Exclude: currentRound, lastRoundTimestamp (runtime fields)
+        ...(config.round3GoodProbability !== undefined && { round3GoodProbability: config.round3GoodProbability }),
+
+        // Stamina Settings
+        ...(config.staminaRegenerationMinutes !== undefined && { staminaRegenerationMinutes: config.staminaRegenerationMinutes }),
+        ...(config.maxStamina !== undefined && { maxStamina: config.maxStamina }),
+
+        // Player Menu Settings
+        ...(config.showGlobalCommandsButton !== undefined && { showGlobalCommandsButton: config.showGlobalCommandsButton })
+
+        // Exclude: currentRound, lastRoundTimestamp, safariLogChannelId (runtime/server-specific fields)
     };
     return filtered;
+}
+
+/**
+ * Filter a single action to remove runtime limit tracking
+ * @param {Object} action - Action object
+ * @returns {Object} Filtered action
+ */
+function filterActionForExport(action) {
+    const filtered = {
+        type: action.type,
+        order: action.order,
+        config: { ...action.config },
+        executeOn: action.executeOn
+    };
+
+    // If action has limit tracking, preserve limit TYPE but remove claimedBy (runtime tracking)
+    if (filtered.config.limit) {
+        filtered.config.limit = {
+            type: filtered.config.limit.type  // Keep "once_globally", "once_per_player", "unlimited"
+            // Exclude: claimedBy (runtime tracking - will be reset on import)
+        };
+    }
+
+    return filtered;
+}
+
+/**
+ * Initialize limit tracking for imported actions
+ * @param {Object} action - Action object from import
+ * @returns {Object} Action with initialized limit tracking
+ */
+function initializeActionLimitTracking(action) {
+    const initialized = { ...action };
+
+    // Initialize claimedBy based on limit type
+    if (initialized.config?.limit) {
+        const limitType = initialized.config.limit.type;
+
+        if (limitType === 'once_globally') {
+            // Single user ID - initialize as null (nobody claimed yet)
+            initialized.config.limit.claimedBy = null;
+        } else if (limitType === 'once_per_player') {
+            // Array of user IDs - initialize as empty array
+            initialized.config.limit.claimedBy = [];
+        }
+        // For 'unlimited', no claimedBy field needed
+    }
+
+    return initialized;
 }
 
 /**
@@ -515,8 +584,8 @@ function filterCustomActionsForExport(buttons) {
             emoji: button.emoji,
             style: button.style,
 
-            // Action Sequence (preserve completely)
-            actions: button.actions || [],
+            // Action Sequence - FILTER each action to remove limit tracking
+            actions: (button.actions || []).map(filterActionForExport),
 
             // Trigger Configuration
             trigger: button.trigger,

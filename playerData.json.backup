@@ -8389,18 +8389,48 @@
     "players": {
       "391415444084490240": {
         "safari": {
-          "currency": 999,
+          "currency": 939,
           "history": [],
           "lastInteraction": 1760851630935,
           "achievements": [],
-          "inventory": {},
+          "inventory": {
+            "super_potion_322766": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
+          },
           "cooldowns": {},
           "buttonUses": {},
-          "storeHistory": []
+          "storeHistory": [
+            {
+              "itemId": "super_potion_322766",
+              "storeId": "pokemart_481320",
+              "price": 60,
+              "timestamp": 1760851707178
+            }
+          ]
         }
       }
     },
     "tribes": {},
-    "timezones": {}
+    "timezones": {},
+    "serverName": "CastBot Regression Pink",
+    "icon": "https://cdn.discordapp.com/icons/1400065575090389045/bd1ee1bc1ff3abca14f2d2ba9455716f.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 2,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1753872045062,
+    "lastUpdated": 1760851814070,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0"
   }
 }
