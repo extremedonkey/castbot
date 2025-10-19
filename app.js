@@ -4942,18 +4942,40 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
       const guildTribes = playerData[guildId]?.tribes || {};
       const allTribes = [];
 
+      // Audit tribes object for invalid keys (data corruption check)
+      const invalidKeys = Object.keys(guildTribes).filter(key => !/^\d{17,19}$/.test(key));
+      if (invalidKeys.length > 0) {
+        console.error(`❌ [CASTLIST] Found ${invalidKeys.length} invalid keys in tribes object:`, invalidKeys);
+        console.error(`❌ [CASTLIST] This indicates data corruption - these should be Discord role IDs only`);
+      }
+
       for (const [roleId, tribe] of Object.entries(guildTribes)) {
-        // Check both legacy 'castlist' field and new 'castlistId' field
+        // Validate role ID is a Discord snowflake (17-19 digit numeric string)
+        if (!/^\d{17,19}$/.test(roleId)) {
+          console.warn(`⚠️ [CASTLIST] Skipping invalid role ID in tribes: ${roleId} (not a Discord snowflake)`);
+          continue;  // Skip to next tribe
+        }
+
+        // Check legacy 'castlist', transitional 'castlistId', and current 'castlistIds' array
         // Special handling for Active/Default castlist
         const matchesCastlist = (
           // Legacy string matching
           tribe.castlist === castlistName ||
-          // New entity ID matching
+          // Transitional entity ID matching (singular)
           tribe.castlistId === castlistIdForNavigation ||
+          // CURRENT: Multi-castlist array matching (PRIMARY FORMAT)
+          (tribe.castlistIds && Array.isArray(tribe.castlistIds) &&
+           tribe.castlistIds.includes(castlistIdForNavigation)) ||
           // Default castlist special cases
-          (!tribe.castlist && !tribe.castlistId && (castlistName === 'default' || requestedCastlist === 'default')) ||
-          (tribe.castlist === 'default' && (castlistName === 'Active Castlist' || requestedCastlist === 'default')) ||
-          (tribe.castlistId === 'default' && (castlistName === 'Active Castlist' || requestedCastlist === 'default'))
+          (!tribe.castlist && !tribe.castlistId && !tribe.castlistIds &&
+           (castlistName === 'default' || requestedCastlist === 'default')) ||
+          (tribe.castlist === 'default' &&
+           (castlistName === 'Active Castlist' || requestedCastlist === 'default')) ||
+          (tribe.castlistId === 'default' &&
+           (castlistName === 'Active Castlist' || requestedCastlist === 'default')) ||
+          // Array support for default castlist
+          (tribe.castlistIds?.includes('default') &&
+           (castlistName === 'Active Castlist' || requestedCastlist === 'default'))
         );
 
         if (matchesCastlist) {

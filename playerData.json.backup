@@ -1587,14 +1587,14 @@
       },
       "1333822411912642630": {
         "emoji": "🧟‍♂️",
-        "castlist": "legacyList",
         "showPlayerEmojis": false,
         "color": "#2ecc71",
         "analyticsName": "🧟‍♂️ 👑 Castbot MVPs 🧟‍♂️",
         "analyticsAdded": 1754751381750,
         "castlistIds": [
           "castlist_1759638936214_system"
-        ]
+        ],
+        "castlist": "noLongerLegacy"
       },
       "1335645032891547670": {
         "emoji": "🤷‍♀️",
@@ -1652,16 +1652,6 @@
         "emoji": "🏕️",
         "type": "default"
       },
-      "1401201426436456468": {
-        "name": "Tribe 1401201426436456468",
-        "emoji": "🏕️",
-        "type": "default",
-        "castlistId": "virtual_VGhlQmVzdA",
-        "castlist": "llllll",
-        "castlistIds": [
-          "castlist_1759760768839_1331657596087566398"
-        ]
-      },
       "1368969399251501126": {
         "emoji": "🪄",
         "showPlayerEmojis": false,
@@ -1671,7 +1661,6 @@
       },
       "1388327092634124368": {
         "emoji": null,
-        "castlist": "TheBest",
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "SendMessages",
@@ -1679,12 +1668,10 @@
       },
       "1335645031226277959": {
         "emoji": "🧓",
-        "castlist": "The OId Ask Tribe",
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "🧓 Ask 🧓",
-        "analyticsAdded": 1759422827344,
-        "castlistId": "castlist_1760870188704_system"
+        "analyticsAdded": 1759422827344
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -1697,7 +1684,6 @@
       },
       "1424348388027007016": {
         "emoji": "💩",
-        "castlist": "ForeverLegacyCastlist",
         "showPlayerEmojis": false,
         "color": "#9b59b6",
         "analyticsName": "💩 ForeverLegacyRole 💩",
@@ -1705,7 +1691,6 @@
       },
       "1424348666336116786": {
         "emoji": "🐈",
-        "castlist": "ForeverLegacyCastlist",
         "showPlayerEmojis": false,
         "color": "#e91e63",
         "analyticsName": "🐈 ForeverLegacySecondRole 🐈",
@@ -1757,6 +1742,22 @@
         "color": "#e91e63",
         "analyticsName": "🅰️ Season: Multi-A! 🅰️",
         "analyticsAdded": 1760020667612
+      },
+      "1429437994984800256": {
+        "emoji": "☎️",
+        "showPlayerEmojis": false,
+        "color": "#e74c3c",
+        "analyticsName": "☎️ telethonTest ☎️",
+        "analyticsAdded": 1760875071897,
+        "castlistIds": [
+          "castlist_1760875170871_system"
+        ],
+        "castlist": "castTelethonYeah"
+      },
+      "1425702665806938183": {
+        "name": "Tribe 1425702665806938183",
+        "emoji": "🏕️",
+        "color": "#e91e63"
       }
     },
     "timezones": {
@@ -2734,7 +2735,7 @@
       },
       "castlist_1759638936214_system": {
         "id": "castlist_1759638936214_system",
-        "name": "noLongerLegacy",
+        "name": "Castbot MVPs",
         "type": "system",
         "createdAt": 1759638936215,
         "createdBy": "migration",
@@ -2750,7 +2751,7 @@
           "migratedFrom": "virtual_bGVnYWN5TGlzdA",
           "migrationDate": 1759638936215
         },
-        "modifiedAt": 1759663735196,
+        "modifiedAt": 1760871539022,
         "modifiedBy": "391415444084490240",
         "seasonId": "season_cac1b81de8914c79"
       },
@@ -2775,24 +2776,27 @@
         "modifiedAt": 1759671896374,
         "modifiedBy": "391415444084490240"
       },
-      "castlist_1760870188704_system": {
-        "id": "castlist_1760870188704_system",
-        "name": "The OId Ask Tribe",
+      "castlist_1760875170871_system": {
+        "id": "castlist_1760875170871_system",
+        "name": "castTelethonYeah",
         "type": "system",
-        "createdAt": 1760870188704,
+        "createdAt": 1760875170871,
         "createdBy": "migration",
         "settings": {
-          "sortStrategy": "alphabetical",
+          "sortStrategy": "placements",
           "showRankings": false,
           "maxDisplay": 25,
           "visibility": "public"
         },
         "metadata": {
-          "description": "Upgraded from legacy castlist 'The OId Ask Tribe'",
-          "emoji": "🏕️",
-          "migratedFrom": "virtual_VGhlIE9JZCBBc2sgVHJpYmU",
-          "migrationDate": 1760870188704
-        }
+          "description": "Woo! Telethon! We love telethon!",
+          "emoji": "☎️",
+          "migratedFrom": "virtual_Y2FzdFRlbGV0aG9u",
+          "migrationDate": 1760875170871
+        },
+        "seasonId": "season_03859e4abc554bb5",
+        "modifiedAt": 1760875400658,
+        "modifiedBy": "system"
       }
     },
     "placements": {
@@ -2999,6 +3003,13 @@
           "placement": 2,
           "updatedBy": "391415444084490240",
           "updatedAt": "2025-10-05T14:50:01.041Z"
+        }
+      },
+      "season_03859e4abc554bb5": {
+        "1372636989408673964": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-19T12:03:37.486Z"
         }
       }
     }
@@ -6893,16 +6904,6 @@
         "name": "Tribe 1415062472007749765",
         "emoji": "🏕️",
         "type": "default"
-      },
-      "1401201426436456468": {
-        "name": "Tribe 1401201426436456468",
-        "emoji": "🏕️",
-        "type": "default",
-        "castlistId": "virtual_VGhlQmVzdA",
-        "castlist": "llllll",
-        "castlistIds": [
-          "castlist_1759760768839_1331657596087566398"
-        ]
       },
       "1368969399251501126": {
         "emoji": "🪄",
