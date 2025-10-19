@@ -523,9 +523,20 @@ function createPlayerNotesSection(channelId, appIndex, playerData, guildId, conf
 }
 
 /**
- * Check if user has admin permissions (any of: Manage Channels, Manage Guild, Manage Roles, Administrator)
+ * Determine if user has admin permissions (production team member)
+ *
+ * This function gates access to Production Menu vs Player Menu:
+ * - ADMIN: createProductionMenuInterface() - full server management
+ * - PLAYER: createPlayerManagementUI() - personal profile only
+ *
+ * Entry points using this check:
+ * 1. /menu slash command (line ~2345)
+ * 2. viral_menu button from /castlist (line ~6124)
+ *
+ * Checks any of: ManageChannels | ManageGuild | ManageRoles | Administrator
+ *
  * @param {Object} member - Discord member object from interaction
- * @returns {boolean} True if user has admin permissions
+ * @returns {boolean} True if user has any admin permission
  */
 function hasAdminPermissions(member) {
   if (!member || !member.permissions) return false;
@@ -756,11 +767,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setCustomId('prod_safari_menu')
       .setLabel('Safari')
       .setStyle(ButtonStyle.Success)
-      .setEmoji('🦁'),
-    new ButtonBuilder()
-      .setCustomId('prod_player_menu')
-      .setLabel('🪪 Player Profile')
-      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🦁')
+    // prod_player_menu moved to header Section accessory
   ];
   
   const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
@@ -832,27 +840,22 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   
   // Build container components array with pagination support
   const containerComponents = [
-    // COMMENTED OUT 2025-10-12: Change Season feature not currently in use
-    // {
-    //   type: 9, // Section with accessory
-    //   components: [
-    //     {
-    //       type: 10, // Text Display component
-    //       content: menuTitle
-    //     }
-    //   ],
-    //   accessory: {
-    //     type: 2, // Button
-    //     custom_id: 'prod_change_season',
-    //     label: 'Change Szn',
-    //     style: 2, // Secondary
-    //     emoji: { name: '🔃' }
-    //   }
-    // },
-    // Display menu title without Section (simple Text Display instead)
+    // Title Section with Player Menu button accessory
     {
-      type: 10, // Text Display
-      content: menuTitle
+      type: 9, // Section with accessory
+      components: [
+        {
+          type: 10, // Text Display component
+          content: menuTitle
+        }
+      ],
+      accessory: {
+        type: 2, // Button
+        custom_id: 'prod_player_menu',
+        label: 'Player Menu',
+        style: 2, // Secondary
+        emoji: { name: '🪪' }
+      }
     },
     {
       type: 14 // Separator after title
@@ -16839,66 +16842,33 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'prod_player_menu') {
-      // My Profile button - available to users with admin permissions
-      try {
-        const userId = req.body.member.user.id;
-        const guildId = req.body.guild_id;
-        const guild = await client.guilds.fetch(guildId);
-        const member = req.body.member;
-        
-        // Security check - require admin permissions
-        const userPermissions = BigInt(member.permissions || '0');
-        const requiredPermissions = PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild;
-        
-        if (!(userPermissions & requiredPermissions)) {
-          return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-              content: '❌ Access denied. This feature requires admin permissions (Manage Roles, Channels, or Guild).',
-              flags: InteractionResponseFlags.EPHEMERAL
-            }
+      // Player Menu button - admin preview of player experience (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'prod_player_menu',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        ephemeral: true,
+        handler: async (context) => {
+          const { guildId, userId, client } = context;
+
+          const playerData = await loadPlayerData();
+          const guild = await client.guilds.fetch(guildId);
+          const guildMember = await guild.members.fetch(userId);
+
+          return await createPlayerManagementUI({
+            mode: PlayerManagementMode.PLAYER,
+            targetMember: guildMember,
+            playerData,
+            guildId,
+            userId,
+            channelId: context.channelId,
+            showUserSelect: false,
+            showVanityRoles: false,
+            title: 'CastBot | Player Menu',
+            client
           });
         }
-
-        // Load player data and current member
-        console.log('🔍 DEBUG: My Profile button clicked, loading player interface...');
-        const playerData = await loadPlayerData();
-        const guildMember = await guild.members.fetch(userId);
-        
-        // Create player management UI using the new module
-        const managementUI = await createPlayerManagementUI({
-          mode: PlayerManagementMode.PLAYER,
-          targetMember: guildMember,
-          playerData,
-          guildId,
-          userId,
-          channelId: req.body.channel_id,
-          showUserSelect: false,
-          showVanityRoles: false,
-          title: 'CastBot | My Profile',
-          client
-        });
-        
-        console.log('🔍 DEBUG: Player management UI created, sending...');
-        
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            ...managementUI,
-            flags: (managementUI.flags || 0) | InteractionResponseFlags.EPHEMERAL
-          }
-        });
-        
-      } catch (error) {
-        console.error('Error accessing My Profile:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error accessing My Profile. Check logs for details.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      })(req, res, client);
     } else if (custom_id === 'prod_timezone_react') {
       // Execute same logic as player_set_timezone command (available to all users)
       try {

@@ -207,6 +207,14 @@ export const BUTTON_REGISTRY = {
     style: 'Primary',
     category: 'navigation'
   },
+  'prod_player_menu': {
+    label: 'Player Menu',
+    description: 'View player menu experience (admin preview)',
+    emoji: '🪪',
+    style: 'Secondary',
+    category: 'navigation',
+    parent: 'menu'
+  },
 
   // === CASTLIST V3 ===
   // Note: castlist_create_new_button removed - select menu now directly shows modal
