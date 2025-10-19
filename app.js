@@ -22681,14 +22681,15 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const actionCount = Object.keys(safariData[context.guildId]?.buttons || {}).length;
           
           const confirmationText = `## ⚠️ Delete Entire Map
-          
+
 **Map:** ${mapData.name || 'Adventure Map'}
 **Grid Size:** ${mapData.gridWidth || mapData.gridSize || 7}x${mapData.gridHeight || mapData.gridSize || 7}
 **Coordinates:** ${coordinateCount} locations
 **Custom Actions:** ${actionCount} actions
 
 **This action cannot be undone.** The following will be permanently deleted:
-• All map coordinates and Discord channels
+• **All ${coordinateCount} Discord channels** (one for each map location)
+• All map coordinates and location data
 • All custom actions for this guild
 • All location content (stores, drops, etc.)
 • Map category and images
