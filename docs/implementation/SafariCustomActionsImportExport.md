@@ -14,8 +14,18 @@ This document provides a comprehensive design for adding **Custom Actions** (but
 ### Current State
 - ✅ **Phase 0**: Refresh Anchors "All" feature - COMPLETE
 - ✅ **Phase 1**: Custom Actions Export - COMPLETE
-- ⏳ **Phase 2**: Custom Actions Import - IN PROGRESS
+- ✅ **Phase 2**: Custom Actions Import - COMPLETE
 - 📅 **Phase 3**: Deferred (manual workflow via Phase 0)
+- 🚨 **CRITICAL ISSUE FOUND**: Map ID Mismatch (see [SafariImportMapIDMismatch.md](./SafariImportMapIDMismatch.md))
+
+### Known Issues
+
+**Map ID Mismatch (HIGH PRIORITY):**
+Import creates "ghost maps" instead of updating active map. This blocks cross-server migrations.
+- **Impact:** Imported data exists but is invisible (anchors show default template)
+- **Cause:** Import matches by exact map ID instead of "active map" concept
+- **Solution:** See [SafariImportMapIDMismatch.md](./SafariImportMapIDMismatch.md) for comprehensive fix
+- **Status:** Design complete, ready for implementation
 
 ### Implementation Scope
 1. Add Custom Actions filtering and export
