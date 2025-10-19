@@ -22500,8 +22500,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           // Create back button
           const backButton = new ButtonBuilder()
             .setCustomId('prod_safari_menu')
-            .setLabel('⬅ Safari Menu')
-            .setStyle(ButtonStyle.Secondary);
+            .setLabel('← Safari')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🦁');
           
           const backRow = new ActionRowBuilder().addComponents([backButton]);
           
