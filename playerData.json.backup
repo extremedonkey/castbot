@@ -1727,17 +1727,10 @@
       },
       "1368969397418590338": {
         "emoji": null,
-        "castlist": "ar.2",
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "ar.2",
-        "analyticsAdded": 1759674806361,
-        "type": "alumni_placements",
-        "rankings": {
-          "391415444084490240": {
-            "placement": "1"
-          }
-        }
+        "analyticsAdded": 1759674806361
       },
       "castlist_1759760454082_1331657596087566398": {
         "id": "castlist_1759760454082_1331657596087566398",

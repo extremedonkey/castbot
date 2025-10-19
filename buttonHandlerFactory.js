@@ -1485,7 +1485,7 @@ export const BUTTON_REGISTRY = {
 
   // === APPLICATION MANAGEMENT SYSTEM ===
   'season_management_menu': {
-    label: 'Season Applications',
+    label: 'Apps',
     description: 'Comprehensive season-based application management system',
     emoji: '📝',
     style: 'Primary',

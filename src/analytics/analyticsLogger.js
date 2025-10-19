@@ -13,7 +13,7 @@ const BUTTON_LABEL_MAP = {
   'prod_manage_pronouns_timezones': '💜 Manage Pronouns/Timezones',
   'prod_manage_tribes': '🔥 Manage Tribes',
   'admin_manage_player': '🧑‍🤝‍🧑 Manage Players',
-  'season_management_menu': '📝 Season Applications',
+  'season_management_menu': '📝 Apps',
   'prod_setup_tycoons': '💰 Tycoons',
   'prod_analytics_dump': '📊 Analytics',
   'prod_live_analytics': '🔴 Live Analytics',

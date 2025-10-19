@@ -731,7 +731,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   adminButtons.push(
     new ButtonBuilder()
       .setCustomId('season_management_menu')
-      .setLabel('Season Applications')
+      .setLabel('Apps')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('📝')
   );
