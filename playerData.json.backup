@@ -8401,6 +8401,10 @@
             "bulbasaur_449582": {
               "quantity": 1,
               "numAttacksAvailable": 0
+            },
+            "pikachu_601425": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
             }
           },
           "cooldowns": {},

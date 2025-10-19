@@ -10209,10 +10209,10 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('prod_safari_menu')
-            .setLabel('← Back to Safari')
+            .setCustomId('safari_customize_terms')
+            .setLabel('← Safari Settings')
             .setStyle(2) // Secondary
-            .setEmoji('🦁');
+            .setEmoji('⚙️');
           
           const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
           const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
@@ -10527,10 +10527,10 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('prod_safari_menu')
-            .setLabel('← Back to Safari')
+            .setCustomId('safari_customize_terms')
+            .setLabel('← Safari Settings')
             .setStyle(2) // Secondary
-            .setEmoji('🦁');
+            .setEmoji('⚙️');
           
           const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
           const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
@@ -10670,10 +10670,10 @@ Your server is now ready for Tycoons gameplay!`;
           
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('prod_safari_menu')
-            .setLabel('← Back to Safari')
+            .setCustomId('safari_customize_terms')
+            .setLabel('← Safari Settings')
             .setStyle(2) // Secondary
-            .setEmoji('🦁');
+            .setEmoji('⚙️');
           
           const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
           const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
