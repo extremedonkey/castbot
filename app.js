@@ -16855,7 +16855,7 @@ Your server is now ready for Tycoons gameplay!`;
           const guild = await client.guilds.fetch(guildId);
           const guildMember = await guild.members.fetch(userId);
 
-          return await createPlayerManagementUI({
+          const response = await createPlayerManagementUI({
             mode: PlayerManagementMode.PLAYER,
             targetMember: guildMember,
             playerData,
@@ -16867,6 +16867,12 @@ Your server is now ready for Tycoons gameplay!`;
             title: 'CastBot | Player Menu',
             client
           });
+
+          // Explicitly add EPHEMERAL flag (ButtonHandlerFactory ephemeral: true is NOT automatic)
+          return {
+            ...response,
+            flags: (response.flags || 0) | InteractionResponseFlags.EPHEMERAL
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'prod_timezone_react') {
