@@ -693,7 +693,7 @@ export function handleCastlistTribeSelect(req, res, client, custom_id) {
 
 
 /**
- * Handle castlist deletion
+ * Handle castlist deletion - shows confirmation dialog
  */
 export function handleCastlistDelete(req, res, client, custom_id) {
   const castlistId = custom_id.replace('castlist_delete_', '');
@@ -734,7 +734,96 @@ export function handleCastlistDelete(req, res, client, custom_id) {
           };
         }
 
-        // Delete the castlist
+        // Prevent deletion of default castlist
+        if (castlistId === 'default') {
+          return {
+            components: [{
+              type: 17,
+              accent_color: 0xe74c3c, // Red
+              components: [{
+                type: 10,
+                content: '❌ **Cannot Delete Default Castlist**\n\nThe default castlist is protected and cannot be deleted. All tribes must belong to at least one castlist.'
+              }]
+            }]
+          };
+        }
+
+        // Get tribe count
+        const tribes = await castlistManager.getTribesUsingCastlist(context.guildId, castlistId);
+        const tribesCount = tribes.length;
+
+        // Show confirmation dialog
+        console.log(`⚠️ Showing confirmation for castlist '${castlist.name}' (${tribesCount} tribes)`);
+
+        return {
+          components: [{
+            type: 17,
+            accent_color: 0xe74c3c, // Red for destructive action
+            components: [
+              {
+                type: 10,
+                content: `# ⚠️ Confirm Delete Castlist\n\n**Castlist:** ${castlist.name}\n**Type:** ${castlist.isVirtual ? 'Legacy (Virtual)' : castlist.type}\n**Linked Tribes:** ${tribesCount}\n\nThis will:\n- ${castlist.isVirtual ? 'Remove all tribe references' : 'Delete the castlist entity'}\n- Clean up all castlist-related data from ${tribesCount} tribe(s)\n- Preserve non-castlist tribe data (emoji, color, analytics)\n\n**⚠️ This action cannot be undone.**`
+              },
+              { type: 14 }, // Separator
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2,
+                    style: 4, // Danger (red)
+                    label: 'Confirm Delete',
+                    custom_id: `castlist_delete_confirm_${castlistId}`,
+                    emoji: { name: '🗑️' }
+                  },
+                  {
+                    type: 2,
+                    style: 2, // Secondary (grey)
+                    label: 'Cancel',
+                    custom_id: 'castlist_hub_main',
+                    emoji: { name: '↩️' }
+                  }
+                ]
+              }
+            ]
+          }]
+        };
+
+      } catch (error) {
+        console.error(`❌ ERROR: castlist_delete - ${error.message}`);
+        return {
+          components: [{
+            type: 17,
+            components: [{
+              type: 10,
+              content: '❌ Error preparing deletion. Please try again.'
+            }]
+          }]
+        };
+      }
+    }
+  })(req, res, client);
+}
+
+/**
+ * Handle castlist deletion confirmation
+ */
+export function handleCastlistDeleteConfirm(req, res, client, custom_id) {
+  const castlistId = custom_id.replace('castlist_delete_confirm_', '');
+
+  return ButtonHandlerFactory.create({
+    id: 'castlist_delete_confirm',
+    requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels,
+    permissionName: 'Manage Roles or Manage Channels',
+    updateMessage: true,
+    handler: async (context) => {
+      try {
+        console.log(`✅ CONFIRM: castlist_delete - user ${context.userId} confirming deletion of ${castlistId}`);
+
+        // Get castlist name before deletion (for logging)
+        const castlist = await castlistManager.getCastlist(context.guildId, castlistId);
+        const castlistName = castlist?.name || 'Unknown';
+
+        // Perform the deletion
         const result = await castlistManager.deleteCastlist(context.guildId, castlistId);
 
         if (!result.success) {
@@ -749,17 +838,19 @@ export function handleCastlistDelete(req, res, client, custom_id) {
           };
         }
 
-        // Success - refresh the hub with cleared selection
+        // Success - return to hub with cleared selection
+        console.log(`✅ SUCCESS: castlist_delete_confirm - deleted '${castlistName}' (${result.virtual ? 'virtual' : 'real'}), cleaned ${result.cleanedCount} tribe references`);
+
+        // Return to castlist hub
         const hubData = await createCastlistHub(context.guildId, {
-          selectedCastlistId: null, // Clear selection
+          selectedCastlistId: null,
           activeButton: null
         });
 
-        console.log(`✅ SUCCESS: castlist_delete - deleted '${castlist.name}' (${result.virtual ? 'virtual' : 'real'}) and unlinked from ${result.cleanedCount} tribes`);
         return hubData;
 
       } catch (error) {
-        console.error(`❌ ERROR: castlist_delete - ${error.message}`);
+        console.error(`❌ ERROR: castlist_delete_confirm - ${error.message}`);
         return {
           components: [{
             type: 17,

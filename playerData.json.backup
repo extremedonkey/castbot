@@ -1683,7 +1683,8 @@
         "showPlayerEmojis": false,
         "color": null,
         "analyticsName": "🧓 Ask 🧓",
-        "analyticsAdded": 1759422827344
+        "analyticsAdded": 1759422827344,
+        "castlistId": "castlist_1760870188704_system"
       },
       "1424250096698130603": {
         "emoji": "🗝️",
@@ -2773,6 +2774,25 @@
         },
         "modifiedAt": 1759671896374,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1760870188704_system": {
+        "id": "castlist_1760870188704_system",
+        "name": "The OId Ask Tribe",
+        "type": "system",
+        "createdAt": 1760870188704,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'The OId Ask Tribe'",
+          "emoji": "🏕️",
+          "migratedFrom": "virtual_VGhlIE9JZCBBc2sgVHJpYmU",
+          "migrationDate": 1760870188704
+        }
       }
     },
     "placements": {

@@ -3564,6 +3564,7 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
         'cast_reject',
         // Castlist V3 system
         'castlist_delete',
+        'castlist_delete_confirm',
         'castlist_edit_info',
         'castlist_manage_tribes',
         // Conditional logic system
@@ -7879,8 +7880,12 @@ To fix this:
       // 'create_new' selection triggers modal directly, others update hub view
       const { handleCastlistSelect } = await import('./castlistHandlers.js');
       return handleCastlistSelect(req, res, client);
-    } else if (custom_id.startsWith('castlist_delete')) {
-      // Handle castlist deletion
+    } else if (custom_id.startsWith('castlist_delete_confirm_')) {
+      // Handle castlist deletion confirmation (SPECIFIC PATTERN FIRST)
+      const { handleCastlistDeleteConfirm } = await import('./castlistHandlers.js');
+      return handleCastlistDeleteConfirm(req, res, client, custom_id);
+    } else if (custom_id.startsWith('castlist_delete_') && !custom_id.startsWith('castlist_delete_confirm_')) {
+      // Handle castlist deletion (BROAD PATTERN SECOND with exclusion)
       const { handleCastlistDelete } = await import('./castlistHandlers.js');
       return handleCastlistDelete(req, res, client, custom_id);
     } else if (custom_id.startsWith('castlist_create_')) {

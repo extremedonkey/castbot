@@ -326,7 +326,14 @@ export const BUTTON_REGISTRY = {
   },
   'castlist_delete': {
     label: 'Delete Castlist',
-    description: 'Delete selected castlist and unlink tribes',
+    description: 'Shows confirmation dialog for castlist deletion',
+    emoji: '🗑️',
+    style: 'Danger',
+    category: 'castlist'
+  },
+  'castlist_delete_confirm': {
+    label: 'Confirm Delete Castlist',
+    description: 'Confirms deletion of a castlist after warning',
     emoji: '🗑️',
     style: 'Danger',
     category: 'castlist'
