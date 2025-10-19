@@ -22421,7 +22421,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           const playerLocationsButton = new ButtonBuilder()
             .setCustomId('map_player_locations')
             .setLabel('Player Locations')
-            .setStyle(ButtonStyle.Success) // Blue style as requested
+            .setStyle(ButtonStyle.Secondary) // Grey style
             .setEmoji('👥');
           
           // Legacy create button - MARKED FOR REMOVAL (map_update has replaced this)

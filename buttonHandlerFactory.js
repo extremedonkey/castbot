@@ -1147,7 +1147,7 @@ export const BUTTON_REGISTRY = {
     label: 'Player Locations',
     description: 'View all player locations on the map',
     emoji: '👥',
-    style: 'Primary',
+    style: 'Secondary',
     category: 'safari_map_admin',
     requiresPermission: 'ManageRoles'
   },
