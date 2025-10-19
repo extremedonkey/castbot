@@ -4003,128 +4003,6 @@
       }
     }
   },
-  "1195996661185511434": {
-    "serverName": "Zeldavivor",
-    "icon": "https://cdn.discordapp.com/icons/1195996661185511434/294b3ca83eb4fefc2a1ac43aeea70cb3.webp",
-    "ownerId": "391415444084490240",
-    "memberCount": 35,
-    "description": null,
-    "vanityURLCode": null,
-    "preferredLocale": "en-US",
-    "partnered": false,
-    "verified": false,
-    "createdTimestamp": 1705218224570,
-    "lastUpdated": 1759258328916,
-    "ownerInfo": {
-      "username": "extremedonkey",
-      "globalName": "Reece",
-      "discriminator": "0",
-      "tag": "extremedonkey"
-    },
-    "analyticsVersion": "1.0",
-    "players": {},
-    "tribes": {
-      "1204580983349973032": {
-        "emoji": "✨",
-        "castlist": "sevenSages",
-        "showPlayerEmojis": false,
-        "color": "#2ecc71",
-        "analyticsName": "✨ Seven Sages ✨",
-        "analyticsAdded": 1760887625905,
-        "castlistId": "castlist_1760887790383_system"
-      },
-      "1216419032228692049": {
-        "emoji": "6️⃣",
-        "castlist": "theSixSages",
-        "showPlayerEmojis": false,
-        "color": "#1abc9c",
-        "analyticsName": "6️⃣ Six Sages 6️⃣",
-        "analyticsAdded": 1760887752572,
-        "castlistId": "castlist_1760887794893_system"
-      }
-    },
-    "timezones": {
-      "1381279534070108242": {
-        "offset": -7
-      },
-      "1381279535743373516": {
-        "offset": -6
-      },
-      "1381279537333014529": {
-        "offset": -5
-      },
-      "1381279539921162332": {
-        "offset": -4
-      },
-      "1381279542135492658": {
-        "offset": 0
-      },
-      "1381279544127787059": {
-        "offset": 1
-      },
-      "1381279545855836244": {
-        "offset": 2
-      },
-      "1381279547173109812": {
-        "offset": 8
-      },
-      "1381279548917940256": {
-        "offset": 10
-      }
-    },
-    "pronounRoleIDs": [
-      "1381279521776603197",
-      "1381279523365978184",
-      "1381279524976726247",
-      "1381279526469763183",
-      "1381279528042758286",
-      "1381279529431207959",
-      "1381279531335290943",
-      "1381279532933320824"
-    ],
-    "firstInstalled": 1749392292379,
-    "installationMethod": "command",
-    "castlistConfigs": {
-      "castlist_1760887790383_system": {
-        "id": "castlist_1760887790383_system",
-        "name": "sevenSages",
-        "type": "system",
-        "createdAt": 1760887790383,
-        "createdBy": "migration",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Upgraded from legacy castlist 'sevenSages'",
-          "emoji": "📋",
-          "migratedFrom": "virtual_c2V2ZW5TYWdlcw",
-          "migrationDate": 1760887790383
-        }
-      },
-      "castlist_1760887794893_system": {
-        "id": "castlist_1760887794893_system",
-        "name": "theSixSages",
-        "type": "system",
-        "createdAt": 1760887794893,
-        "createdBy": "migration",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Upgraded from legacy castlist 'theSixSages'",
-          "emoji": "📋",
-          "migratedFrom": "virtual_dGhlU2l4U2FnZXM",
-          "migrationDate": 1760887794893
-        }
-      }
-    }
-  },
   "1023409443603488810": {
     "serverName": "$ҽɾҽɳiťყ Sųɾvivøɾ",
     "icon": "https://cdn.discordapp.com/icons/1023409443603488810/e317b53ab4437f104f7373cdfa5a353f.webp",
@@ -4155,14 +4033,14 @@
     "serverName": "EmeraldORG: Fire Emblem Three Houses",
     "icon": "https://cdn.discordapp.com/icons/1385042963310055515/4bea7eb65723bab308c21c06332836be.webp",
     "ownerId": "676262975132139522",
-    "memberCount": 114,
+    "memberCount": 113,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1750290375307,
-    "lastUpdated": 1760772056474,
+    "lastUpdated": 1760888739956,
     "ownerInfo": {
       "username": "deadlybelle",
       "globalName": "Belle",
@@ -8395,5 +8273,51 @@
       "tag": "extremedonkey"
     },
     "analyticsVersion": "1.0"
+  },
+  "1195996661185511434": {
+    "tribes": {
+      "1204580983349973032": {
+        "emoji": null,
+        "castlist": "Seven Sages",
+        "showPlayerEmojis": false,
+        "color": "#2ecc71",
+        "analyticsName": "Seven Sages",
+        "analyticsAdded": 1760889955661
+      },
+      "1216419032228692049": {
+        "emoji": null,
+        "castlist": "sixSages",
+        "showPlayerEmojis": false,
+        "color": "#1abc9c",
+        "analyticsName": "Six Sages",
+        "analyticsAdded": 1760889982300,
+        "castlistIds": [
+          "castlist_1760890094505_system"
+        ]
+      }
+    },
+    "players": {},
+    "timezones": {},
+    "castlistConfigs": {
+      "castlist_1760890094505_system": {
+        "id": "castlist_1760890094505_system",
+        "name": "sixSages",
+        "type": "system",
+        "createdAt": 1760890094505,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'sixSages'",
+          "emoji": "📋",
+          "migratedFrom": "virtual_c2l4U2FnZXM",
+          "migrationDate": 1760890094505
+        }
+      }
+    }
   }
 }
