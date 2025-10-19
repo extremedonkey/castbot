@@ -9871,7 +9871,8 @@ Your server is now ready for Tycoons gameplay!`;
               storeTransactions: true,
               buttonActions: true,
               mapMovement: true,
-              attacks: true
+              attacks: true,
+              customActions: true
             }
           };
           
@@ -10155,7 +10156,8 @@ Your server is now ready for Tycoons gameplay!`;
                 storeTransactions: true,
                 buttonActions: true,
                 mapMovement: true,
-                attacks: true
+                attacks: true,
+                customActions: true
               }
             };
           }
@@ -10473,7 +10475,8 @@ Your server is now ready for Tycoons gameplay!`;
                 storeTransactions: true,
                 buttonActions: true,
                 mapMovement: true,
-                attacks: true
+                attacks: true,
+                customActions: true
               }
             };
           }
@@ -10612,7 +10615,8 @@ Your server is now ready for Tycoons gameplay!`;
                 storeTransactions: true,
                 buttonActions: true,
                 mapMovement: true,
-                attacks: true
+                attacks: true,
+                customActions: true
               }
             };
           }
