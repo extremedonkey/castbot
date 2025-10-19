@@ -34115,7 +34115,7 @@ Are you sure you want to continue?`;
           if (action?.trigger?.type === 'modal') {
             const phrases = action.trigger.phrases || [];
             if (phrases.some(phrase => phrase.toLowerCase() === command)) {
-              matchingAction = action;
+              matchingAction = { ...action, id: actionId };  // Include actionId as id property
               break;
             }
           }
@@ -34423,24 +34423,24 @@ Are you sure you want to continue?`;
             if (action?.trigger?.type === 'modal') {
               const phrases = action.trigger.phrases || [];
               if (phrases.some(phrase => phrase.toLowerCase() === command)) {
-                matchingAction = action;
+                matchingAction = { ...action, id: actionId };  // Include actionId as id property
                 break;
               }
             }
           }
-          
+
           if (matchingAction) {
             console.log(`✅ Found matching action for command "${command}"`);
-            
+
             // Execute the action
             const { executeButtonActions } = await import('./safariManager.js');
-            
+
             // Create proper interaction object for the execution
             const interactionData = {
               token: req.body.token,
               applicationId: req.body.application_id
             };
-            
+
             const result = await executeButtonActions(
               guildId,
               matchingAction.id,  // Use the button ID, not the actions array

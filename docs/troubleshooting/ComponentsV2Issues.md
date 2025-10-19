@@ -622,7 +622,7 @@ return {
 
 **Always Remember**:
 1. **Components V2 is mandatory** - User explicitly stated this
-2. **updateMessage: true** for select handlers to prevent duplication  
+2. **updateMessage: true** for select handlers to prevent duplication
 3. **Type 3 for selects**, Type 14 for separators, Type 17 for containers
 4. **Never use content field** with Components V2 flag
 5. **Comprehensive error logging** with consistent patterns
@@ -632,5 +632,26 @@ return {
 9. **Register all buttons in BUTTON_REGISTRY** - Even dynamic pattern handlers
 10. **Use proper emoji formats** - Unicode or Discord objects, never :shortcut: format
 11. **Sections support only ONE child component** - Despite docs claiming 1-3
+12. **Ephemeral requires explicit flag** - `(1 << 15) | InteractionResponseFlags.EPHEMERAL` in response
+13. **ButtonHandlerFactory ephemeral config is NOT automatic** - Must add flag to response
+14. **Plain content doesn't support ephemeral** - Must use full Container structure
+15. **Check for pattern conflicts** - `startsWith()` can match unintended button IDs
+
+**Ephemeral Quick Pattern**:
+```javascript
+// ALWAYS use this format for ephemeral responses:
+return {
+  flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+  components: [{ type: 17, components: [...] }]
+};
+```
+
+**Pattern Matching Quick Check**:
+```javascript
+// ALWAYS exclude specific IDs from broad patterns:
+if (custom_id.startsWith('pattern_') && custom_id !== 'pattern_specific') {
+  // Your handler
+}
+```
 
 **When in doubt**: Reference existing working Components V2 implementations in the codebase rather than creating new patterns.

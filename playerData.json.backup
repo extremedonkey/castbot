@@ -8389,13 +8389,13 @@
     "players": {
       "391415444084490240": {
         "safari": {
-          "currency": 939,
+          "currency": 999,
           "history": [],
-          "lastInteraction": 1760851630935,
+          "lastInteraction": 1760852704183,
           "achievements": [],
           "inventory": {
             "super_potion_322766": {
-              "quantity": 1,
+              "quantity": 2,
               "numAttacksAvailable": 0
             }
           },
@@ -8407,6 +8407,12 @@
               "storeId": "pokemart_481320",
               "price": 60,
               "timestamp": 1760851707178
+            },
+            {
+              "itemId": "super_potion_322766",
+              "storeId": "pokemart_481320",
+              "price": 60,
+              "timestamp": 1760851990204
             }
           ]
         }
