@@ -179,8 +179,12 @@ export async function createStoreSelectionUI(options) {
   const backButton = new ButtonBuilder()
     .setCustomId(backButtonId)
     .setLabel(backButtonLabel)
-    .setStyle(ButtonStyle.Secondary)
-    .setEmoji(backButtonEmoji);
+    .setStyle(ButtonStyle.Secondary);
+
+  // Only set emoji if provided (ButtonBuilder.setEmoji() doesn't accept null)
+  if (backButtonEmoji) {
+    backButton.setEmoji(backButtonEmoji);
+  }
 
   const backRow = new ActionRowBuilder().addComponents(backButton);
 

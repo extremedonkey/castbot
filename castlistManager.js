@@ -222,9 +222,63 @@ export class CastlistManager {
 
     for (const [roleId, tribe] of Object.entries(tribes)) {
       if (!tribe) continue; // Skip null/undefined tribe entries
-      if (tribe.castlistId === castlistId) {
+
+      let isLinked = false;
+      let wasInMultipleCastlists = false;
+
+      // Check multi-castlist format (array)
+      if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
+        if (tribe.castlistIds.includes(castlistId)) {
+          isLinked = true;
+
+          // Track if tribe was in multiple castlists before removal
+          wasInMultipleCastlists = tribe.castlistIds.length > 1;
+
+          // Remove this castlist from the array
+          tribe.castlistIds = tribe.castlistIds.filter(id => id !== castlistId);
+
+          // If array is now empty, delete the field
+          if (tribe.castlistIds.length === 0) {
+            delete tribe.castlistIds;
+          } else {
+            // Tribe still in other castlists - update legacy castlist field to first remaining
+            const firstCastlist = tribe.castlistIds[0];
+            if (firstCastlist === 'default') {
+              tribe.castlist = 'default';
+            } else {
+              // Get the name of the first remaining castlist
+              const firstCastlistEntity = await this.getCastlist(guildId, firstCastlist);
+              if (firstCastlistEntity) {
+                tribe.castlist = firstCastlistEntity.name;
+              }
+            }
+          }
+        }
+      }
+
+      // Check single ID format
+      if (!wasInMultipleCastlists && tribe.castlistId === castlistId) {
+        isLinked = true;
         delete tribe.castlistId;
-        // Keep legacy castlist field for backwards compatibility
+      }
+
+      // Check virtual/legacy format
+      if (!isLinked && castlistVirtualAdapter.isVirtualId(castlistId)) {
+        const legacyName = castlistVirtualAdapter.decodeVirtualId(castlistId);
+        if (tribe.castlist === legacyName) {
+          isLinked = true;
+        }
+      }
+
+      // Clean up castlist-related fields if tribe is no longer in ANY castlist
+      if (isLinked) {
+        if (!tribe.castlistId && !tribe.castlistIds) {
+          // Tribe is no longer in any castlist - remove all castlist-related fields
+          delete tribe.castlist;     // Legacy string field
+          delete tribe.type;         // Legacy type field (alumni_placements, etc.)
+          delete tribe.rankings;     // Tribe-level rankings
+        }
+
         cleanedCount++;
       }
     }
@@ -232,7 +286,7 @@ export class CastlistManager {
     // If virtual castlist, just clean tribe references (no real data to delete)
     if (castlist.isVirtual) {
       await savePlayerData(playerData);
-      console.log(`[CASTLIST] Unlinked virtual castlist '${castlist.name}' from ${cleanedCount} tribes`);
+      console.log(`[CASTLIST] Deleted virtual castlist '${castlist.name}' and cleaned ${cleanedCount} tribe references`);
       return { success: true, virtual: true, cleanedCount };
     }
 
@@ -244,7 +298,7 @@ export class CastlistManager {
     // Save changes
     await savePlayerData(playerData);
 
-    console.log(`[CASTLIST] Deleted castlist '${castlist.name}' (${castlistId}) and unlinked from ${cleanedCount} tribes`);
+    console.log(`[CASTLIST] Deleted castlist '${castlist.name}' (${castlistId}) and cleaned ${cleanedCount} tribe references`);
 
     return { success: true, virtual: false, cleanedCount };
   }
