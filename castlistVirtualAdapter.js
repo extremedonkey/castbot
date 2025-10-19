@@ -255,11 +255,17 @@ export class CastlistVirtualAdapter {
     }
     playerData[guildId].castlistConfigs[realId] = realCastlist;
     
-    // Update tribes to point to real ID
+    // Update tribes to point to real ID using plural array format
     const tribes = playerData[guildId].tribes || {};
     for (const tribeId of virtual.tribes) {
       if (tribes[tribeId]) {
-        tribes[tribeId].castlistId = realId;
+        // Use plural array format for multi-castlist support
+        if (!tribes[tribeId].castlistIds) {
+          tribes[tribeId].castlistIds = [];
+        }
+        if (!tribes[tribeId].castlistIds.includes(realId)) {
+          tribes[tribeId].castlistIds.push(realId);
+        }
         // Keep old string during transition for safety
         // tribes[tribeId].castlist remains unchanged
       }

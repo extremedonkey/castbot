@@ -694,14 +694,14 @@
     "serverName": "CastBot",
     "icon": "https://cdn.discordapp.com/icons/1331657596087566398/84e48ab9d15d35611b80ce584bb80f95.webp",
     "ownerId": "391415444084490240",
-    "memberCount": 29,
+    "memberCount": 30,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1737562311909,
-    "lastUpdated": 1760537130283,
+    "lastUpdated": 1760886120725,
     "players": {
       "233762709932474370": {
         "emojiCode": "<:Geo:1396856830281388144>",
@@ -1748,11 +1748,7 @@
         "showPlayerEmojis": false,
         "color": "#e74c3c",
         "analyticsName": "☎️ telethonTest ☎️",
-        "analyticsAdded": 1760875071897,
-        "castlistIds": [
-          "castlist_1760875170871_system"
-        ],
-        "castlist": "castTelethonYeah"
+        "analyticsAdded": 1760875071897
       },
       "1425702665806938183": {
         "name": "Tribe 1425702665806938183",
@@ -2775,28 +2771,6 @@
         },
         "modifiedAt": 1759671896374,
         "modifiedBy": "391415444084490240"
-      },
-      "castlist_1760875170871_system": {
-        "id": "castlist_1760875170871_system",
-        "name": "castTelethonYeah",
-        "type": "system",
-        "createdAt": 1760875170871,
-        "createdBy": "migration",
-        "settings": {
-          "sortStrategy": "placements",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Woo! Telethon! We love telethon!",
-          "emoji": "☎️",
-          "migratedFrom": "virtual_Y2FzdFRlbGV0aG9u",
-          "migrationDate": 1760875170871
-        },
-        "seasonId": "season_03859e4abc554bb5",
-        "modifiedAt": 1760875400658,
-        "modifiedBy": "system"
       }
     },
     "placements": {
@@ -4049,7 +4023,26 @@
     },
     "analyticsVersion": "1.0",
     "players": {},
-    "tribes": {},
+    "tribes": {
+      "1204580983349973032": {
+        "emoji": "✨",
+        "castlist": "sevenSages",
+        "showPlayerEmojis": false,
+        "color": "#2ecc71",
+        "analyticsName": "✨ Seven Sages ✨",
+        "analyticsAdded": 1760887625905,
+        "castlistId": "castlist_1760887790383_system"
+      },
+      "1216419032228692049": {
+        "emoji": "6️⃣",
+        "castlist": "theSixSages",
+        "showPlayerEmojis": false,
+        "color": "#1abc9c",
+        "analyticsName": "6️⃣ Six Sages 6️⃣",
+        "analyticsAdded": 1760887752572,
+        "castlistId": "castlist_1760887794893_system"
+      }
+    },
     "timezones": {
       "1381279534070108242": {
         "offset": -7
@@ -4090,7 +4083,47 @@
       "1381279532933320824"
     ],
     "firstInstalled": 1749392292379,
-    "installationMethod": "command"
+    "installationMethod": "command",
+    "castlistConfigs": {
+      "castlist_1760887790383_system": {
+        "id": "castlist_1760887790383_system",
+        "name": "sevenSages",
+        "type": "system",
+        "createdAt": 1760887790383,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'sevenSages'",
+          "emoji": "📋",
+          "migratedFrom": "virtual_c2V2ZW5TYWdlcw",
+          "migrationDate": 1760887790383
+        }
+      },
+      "castlist_1760887794893_system": {
+        "id": "castlist_1760887794893_system",
+        "name": "theSixSages",
+        "type": "system",
+        "createdAt": 1760887794893,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'theSixSages'",
+          "emoji": "📋",
+          "migratedFrom": "virtual_dGhlU2l4U2FnZXM",
+          "migrationDate": 1760887794893
+        }
+      }
+    }
   },
   "1023409443603488810": {
     "serverName": "$ҽɾҽɳiťყ Sųɾvivøɾ",
@@ -6929,15 +6962,6 @@
         "analyticsName": "🧓 Ask 🧓",
         "analyticsAdded": 1759422827344,
         "castlistId": "castlist_1759422854044_system"
-      },
-      "1424250096698130603": {
-        "emoji": "🗝️",
-        "castlist": "legacyList",
-        "showPlayerEmojis": false,
-        "color": "#a84300",
-        "analyticsName": "🗝️ legacyList 🗝️",
-        "analyticsAdded": 1759638200118,
-        "castlistId": "castlist_1759638936214_system"
       },
       "1424348388027007016": {
         "emoji": "💩",
