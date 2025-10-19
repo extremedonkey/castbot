@@ -1,4 +1,4 @@
-import { 
+import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
@@ -15,6 +15,7 @@ import {
 import { createPlayerCard, extractCastlistData, createCastlistRows } from './castlistV2.js';
 import { getPlayer, updatePlayer, getGuildPronouns, getGuildTimezones, loadPlayerData } from './storage.js';
 import { hasStoresInGuild, getEligiblePlayersFixed, getCustomTerms } from './safariManager.js';
+import { createBackButton } from './src/ui/backButtonFactory.js';
 
 /**
  * Player management modes
@@ -330,12 +331,9 @@ export async function createPlayerManagementUI(options) {
     components: []
   };
 
-  // Add Menu button (far left)
+  // Add Menu button (far left) - using centralized factory
   if (mode === PlayerManagementMode.ADMIN) {
-    menuRow.components.push(new ButtonBuilder()
-      .setCustomId('prod_menu_back')
-      .setLabel('◀️ Menu')
-      .setStyle(ButtonStyle.Secondary));
+    menuRow.components.push(createBackButton('prod_menu_back'));
   }
 
   // Only add menu row if it has buttons (admin mode)

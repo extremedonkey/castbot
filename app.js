@@ -83,6 +83,7 @@ import {
   buildCastlist2ResponseData
 } from './castlistV2.js';
 import { MenuBuilder } from './menuBuilder.js';
+import { createBackButton } from './src/ui/backButtonFactory.js';
 import {
   PlayerManagementMode,
   PlayerButtonType,
@@ -3464,15 +3465,10 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async fun
   }
 
   // Helper function to create back button for production submenus
+  // Now uses centralized Back Button Factory for consistency
   function createBackToMainMenuButton() {
     return new ActionRowBuilder()
-      .addComponents(
-        new ButtonBuilder()
-          .setCustomId('prod_menu_back')
-          .setLabel('Menu')
-          .setStyle(ButtonStyle.Secondary)
-          .setEmoji('⬅️')
-      );
+      .addComponents(createBackButton('prod_menu_back'));
   }
 
   // Helper function to send production submenu response with consistent UX
@@ -6824,15 +6820,9 @@ To fix this:
             selectRow.toJSON()
           ];
 
-          // Add Back to Main Menu button (following LEAN standards)
+          // Add Back to Main Menu button (using centralized factory)
           const backRow = new ActionRowBuilder()
-            .addComponents(
-              new ButtonBuilder()
-                .setCustomId('prod_menu_back')
-                .setLabel('← Menu')
-                .setStyle(ButtonStyle.Secondary)
-                // No emoji for main menu back button per LeanUserInterfaceDesign.md
-            );
+            .addComponents(createBackButton('prod_menu_back'));
 
           seasonManagementComponents.push(
             { type: 14 }, // Separator

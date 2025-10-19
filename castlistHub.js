@@ -7,6 +7,7 @@ import { ButtonBuilder, StringSelectMenuBuilder, ActionRowBuilder } from 'discor
 import { ButtonStyle } from 'discord-api-types/v10';
 import { castlistManager } from './castlistManager.js';
 import { loadPlayerData } from './storage.js';
+import { createBackButton } from './src/ui/backButtonFactory.js';
 
 /**
  * Button types for castlist management
@@ -231,15 +232,10 @@ export async function createCastlistHub(guildId, options = {}) {
     });
   }
   
-  // Navigation
+  // Navigation (using centralized Back Button Factory)
   container.components.push({ type: 14 });
   const navButtons = new ActionRowBuilder()
-    .addComponents(
-      new ButtonBuilder()
-        .setCustomId('prod_menu_back')
-        .setLabel('← Menu')
-        .setStyle(ButtonStyle.Secondary)
-    );
+    .addComponents(createBackButton('prod_menu_back'));
   container.components.push(navButtons.toJSON());
   
   return {
