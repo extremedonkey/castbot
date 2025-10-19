@@ -815,31 +815,13 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
 
-  // Add Initial Setup button second
+  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help)
   adminActionButtons2.push(
     new ButtonBuilder()
       .setCustomId('prod_setup')
-      .setLabel('Initial Setup')
+      .setLabel('Tools')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪛')
-  );
-
-  // Add Availability button
-  adminActionButtons2.push(
-    new ButtonBuilder()
-      .setCustomId('prod_availability')
-      .setLabel('Availability')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🕐')
-  );
-  
-  // Add Need Help button
-  adminActionButtons2.push(
-    new ButtonBuilder()
-      .setLabel('Need Help?')
-      .setStyle(ButtonStyle.Link)
-      .setEmoji('❓')
-      .setURL('https://discord.gg/H7MpJEjkwT')
   );
   
   const adminActionRow2 = new ActionRowBuilder().addComponents(adminActionButtons2);
@@ -6484,7 +6466,7 @@ To fix this:
             components: [
               {
                 type: 10, // Text Display
-                content: `## CastBot | Initial Setup`
+                content: `## CastBot | Tools`
               },
               {
                 type: 14 // Separator
@@ -6505,6 +6487,34 @@ To fix this:
                     label: 'Run Setup',
                     style: 1, // Primary (Blue)
                     emoji: { name: '🪛' }
+                  },
+                  {
+                    type: 2, // Button
+                    custom_id: 'prod_availability',
+                    label: 'Availability',
+                    style: 2, // Secondary (Grey)
+                    emoji: { name: '🕐' }
+                  },
+                  {
+                    type: 2, // Button - Link style
+                    label: 'Need Help?',
+                    style: 5, // Link
+                    emoji: { name: '❓' },
+                    url: 'https://discord.gg/H7MpJEjkwT'
+                  }
+                ]
+              },
+              {
+                type: 14 // Separator
+              },
+              {
+                type: 1, // ActionRow for back button
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: 'prod_menu_back',
+                    label: '← Menu',
+                    style: 2 // Secondary
                   }
                 ]
               }
