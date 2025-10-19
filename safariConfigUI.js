@@ -88,7 +88,14 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
                 },
                 {
                     type: 2, // Button
-                    custom_id: 'safari_import_data', 
+                    custom_id: 'safari_configure_log',
+                    label: 'Logs',
+                    style: 2, // Secondary
+                    emoji: { name: '📊' }
+                },
+                {
+                    type: 2, // Button
+                    custom_id: 'safari_import_data',
                     label: 'Import',
                     style: 2, // Secondary (grey)
                     emoji: { name: '⚙️' }

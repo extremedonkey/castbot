@@ -1210,11 +1210,6 @@ async function createSafariMenu(guildId, userId, member) {
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('⚙️'),
     new ButtonBuilder()
-      .setCustomId('safari_configure_log')
-      .setLabel('Logs')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📊'),
-    new ButtonBuilder()
       .setCustomId('safari_manage_currency')
       .setLabel('Manage Currency')
       .setStyle(ButtonStyle.Secondary)
