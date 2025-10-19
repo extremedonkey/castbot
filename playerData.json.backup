@@ -8282,7 +8282,11 @@
         "showPlayerEmojis": false,
         "color": "#2ecc71",
         "analyticsName": "Seven Sages",
-        "analyticsAdded": 1760889955661
+        "analyticsAdded": 1760889955661,
+        "castlistIds": [
+          "castlist_1760890159342_system",
+          "castlist_1760890094505_system"
+        ]
       },
       "1216419032228692049": {
         "emoji": null,
@@ -8294,6 +8298,24 @@
         "castlistIds": [
           "castlist_1760890094505_system"
         ]
+      },
+      "1214346856683937893": {
+        "name": "Tribe 1214346856683937893",
+        "emoji": "🏕️",
+        "color": "#a84300",
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "Active Castlist"
+      },
+      "1208391402413621339": {
+        "name": "Tribe 1208391402413621339",
+        "emoji": "🏕️",
+        "color": "#3498db",
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "Active Castlist"
       }
     },
     "players": {},
@@ -8312,10 +8334,85 @@
           "visibility": "public"
         },
         "metadata": {
-          "description": "Upgraded from legacy castlist 'sixSages'",
-          "emoji": "📋",
+          "description": "Woot",
+          "emoji": "🔯",
           "migratedFrom": "virtual_c2l4U2FnZXM",
           "migrationDate": 1760890094505
+        },
+        "modifiedAt": 1760890117321,
+        "modifiedBy": "391415444084490240"
+      },
+      "castlist_1760890159342_system": {
+        "id": "castlist_1760890159342_system",
+        "name": "Seven Sages",
+        "type": "system",
+        "createdAt": 1760890159342,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "placements",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Upgraded from legacy castlist 'Seven Sages'",
+          "emoji": "📋",
+          "migratedFrom": "virtual_U2V2ZW4gU2FnZXM",
+          "migrationDate": 1760890159342
+        },
+        "modifiedAt": 1760890201465,
+        "modifiedBy": "system"
+      },
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1760890290908,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1760890290948,
+        "modifiedBy": "system"
+      }
+    },
+    "serverName": "Zeldavivor",
+    "icon": "https://cdn.discordapp.com/icons/1195996661185511434/294b3ca83eb4fefc2a1ac43aeea70cb3.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 35,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1705218224570,
+    "lastUpdated": 1760890143303,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "placements": {
+      "global": {
+        "630470402900230146": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-19T16:09:31.457Z"
+        },
+        "700105131517018182": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-19T16:09:37.234Z"
         }
       }
     }

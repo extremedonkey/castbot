@@ -177,7 +177,6 @@ export async function createCastlistHub(guildId, options = {}) {
         castlist.name  // Pass castlist name for show_castlist2
       );
       container.components.push(managementButtons.buttonRow1.toJSON());
-      container.components.push(managementButtons.buttonRow2.toJSON());
       container.components.push(managementButtons.deleteRow.toJSON());
       
       // Separator before hot-swappable area
@@ -213,7 +212,6 @@ export async function createCastlistHub(guildId, options = {}) {
 
     const disabledButtons = createManagementButtons(null, false, null, false, null);
     container.components.push(disabledButtons.buttonRow1.toJSON());
-    container.components.push(disabledButtons.buttonRow2.toJSON());
     container.components.push(disabledButtons.deleteRow.toJSON());
     
     // Disabled placeholder
@@ -319,7 +317,7 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
   const buttonRow1 = new ActionRowBuilder();
   const suffix = castlistId ? `_${castlistId}` : '';
 
-  // Row 1: View, Edit Info, Manage Tribes, Customize
+  // Row 1: Post Castlist, Edit Info, Manage Tribes, Placements, Order
   // For Post Castlist, use show_castlist2 directly to avoid redirect timeout
   let postCastlistCustomId = 'castlist_view'; // default when disabled
   if (enabled && castlistId) {
@@ -350,31 +348,20 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setEmoji('🏕️')
       .setDisabled(!enabled),
     new ButtonBuilder()
+      .setCustomId(`castlist_placements${suffix}`)
+      .setLabel('Placements')
+      .setStyle(activeButton === CastlistButtonType.PLACEMENTS ? ButtonStyle.Primary : ButtonStyle.Secondary)
+      .setEmoji('🥇')
+      .setDisabled(!enabled),
+    new ButtonBuilder()
       .setCustomId(`castlist_order${suffix}`)
       .setLabel('Order')
       .setStyle(activeButton === CastlistButtonType.ORDER ? ButtonStyle.Primary : ButtonStyle.Secondary)
       .setEmoji('🔄')
-      .setDisabled(!enabled),
-    new ButtonBuilder()
-      .setCustomId(`castlist_swap_merge${suffix}`)
-      .setLabel('Swap/Merge')
-      .setStyle(activeButton === CastlistButtonType.SWAP_MERGE ? ButtonStyle.Primary : ButtonStyle.Secondary)
-      .setEmoji('🔀')
       .setDisabled(!enabled)
   );
 
-  // Row 2: Tribes & Placements button and Delete button
-  const buttonRow2 = new ActionRowBuilder();
-  buttonRow2.addComponents(
-    new ButtonBuilder()
-      .setCustomId(`castlist_placements${suffix}`)
-      .setLabel('Tribes & Placements')
-      .setStyle(activeButton === CastlistButtonType.PLACEMENTS ? ButtonStyle.Primary : ButtonStyle.Secondary)
-      .setEmoji('🔥')
-      .setDisabled(!enabled)
-  );
-
-  // Row 3: Delete button (red, disabled when no castlist selected OR when default)
+  // Row 2: Delete and Swap/Merge buttons
   const deleteRow = new ActionRowBuilder();
   const isDefaultCastlist = castlistId === 'default';
   deleteRow.addComponents(
@@ -383,10 +370,16 @@ function createManagementButtons(castlistId, enabled = true, activeButton = null
       .setLabel('Delete Castlist')
       .setStyle(ButtonStyle.Danger)
       .setEmoji('🗑️')
-      .setDisabled(!enabled || isDefaultCastlist) // Disable for default
+      .setDisabled(!enabled || isDefaultCastlist), // Disable for default
+    new ButtonBuilder()
+      .setCustomId(`castlist_swap_merge${suffix}`)
+      .setLabel('Swap/Merge')
+      .setStyle(ButtonStyle.Secondary) // Always secondary (not implemented yet)
+      .setEmoji('🔀')
+      .setDisabled(true) // Always disabled - not implemented yet
   );
 
-  return { buttonRow1, buttonRow2, deleteRow };
+  return { buttonRow1, deleteRow };
 }
 
 /**
