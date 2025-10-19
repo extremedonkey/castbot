@@ -1176,7 +1176,12 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_rounds_menu')
       .setLabel('Rounds')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⏳')
+      .setEmoji('⏳'),
+    new ButtonBuilder()
+      .setCustomId('safari_manage_currency')
+      .setLabel('Currency')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💰')
   ];
   
   // Map Administration section buttons
@@ -1209,11 +1214,6 @@ async function createSafariMenu(guildId, userId, member) {
       .setLabel('Safari Settings')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('⚙️'),
-    new ButtonBuilder()
-      .setCustomId('safari_manage_currency')
-      .setLabel('Manage Currency')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💰'),
     new ButtonBuilder()
       .setCustomId('safari_player_inventory')
       .setLabel('Player Inventory')
@@ -9397,7 +9397,7 @@ Your server is now ready for Tycoons gameplay!`;
           const containerComponents = [
             {
               type: 10, // Text Display component
-              content: `## 💰 Manage Currency\n\nCurrency system overview and management tools.`
+              content: `## 💰 Manage Currency\n\nUse the currency feature in Challenges, Idol Hunts or Safari. You can use it combination with the Stores and Items feature for an economy system.\n\nYou can manually assign players currency, or use the Actions system to automate currency collection. You can also update currency from the 🧭 \`Player Admin\` menu, and configure currency in the ⚙️ \`Customize\` menu.`
             },
             {
               type: 10, // Text Display component

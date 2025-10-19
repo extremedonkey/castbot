@@ -527,10 +527,11 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
   'safari_manage_currency': {
-    label: '💰 Manage Currency',
+    label: 'Currency',
     description: 'Safari currency management - view all, set player currency, reset all',
     emoji: '💰',
-    style: 'Primary',
+    style: 'Secondary',
+    parent: 'prod_safari_menu',
     category: 'safari'
   },
   'safari_manage_items': {
