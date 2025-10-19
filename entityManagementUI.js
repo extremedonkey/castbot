@@ -464,14 +464,13 @@ async function createEditModeUI(entityType, entityId, entity, activeFieldGroup, 
         }
     }
     
-    // Create action row with conditional admin test button
+    // Create action row with back button
     const actionRowComponents = [
         {
             type: 2, // Button
             style: 2, // Secondary
-            label: '← Safari',
-            custom_id: 'prod_safari_menu',
-            emoji: { name: '🦁' }
+            label: '← Menu',
+            custom_id: 'prod_menu_back'
         }
     ];
     

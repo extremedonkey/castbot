@@ -774,8 +774,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     new ButtonBuilder()
       .setCustomId('safari_map_admin')
       .setLabel('Player Admin')
-      .setStyle(ButtonStyle.Danger)
-      .setEmoji('🛡️'),
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🧭'),
     new ButtonBuilder()
       .setCustomId('safari_rounds_menu')
       .setLabel('Rounds')
@@ -790,8 +790,8 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
 
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
 
-  // Add new administrative action row (Advanced Features - Safari menu only now)
-  const adminActionButtons = [
+  // Create Advanced Features row (Safari + Analytics + Tools)
+  const advancedFeaturesButtons = [
     new ButtonBuilder()
       .setCustomId('prod_safari_menu')
       .setLabel('Safari')
@@ -799,14 +799,9 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setEmoji('🦁')
   ];
 
-  const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
-  
-  // Create new action row for Analytics, Initial Setup, Availability, and Need Help
-  const adminActionButtons2 = [];
-
-  // Add Analytics button only for specific user (Reece) - first in row
+  // Add Analytics button only for specific user (Reece) - second in row
   if (userId === '391415444084490240') {
-    adminActionButtons2.push(
+    advancedFeaturesButtons.push(
       new ButtonBuilder()
         .setCustomId('reece_stuff_menu')
         .setLabel('Analytics')
@@ -815,16 +810,16 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
 
-  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help)
-  adminActionButtons2.push(
+  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help) - third in row
+  advancedFeaturesButtons.push(
     new ButtonBuilder()
       .setCustomId('prod_setup')
       .setLabel('Tools')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🪛')
   );
-  
-  const adminActionRow2 = new ActionRowBuilder().addComponents(adminActionButtons2);
+
+  const advancedFeaturesRow = new ActionRowBuilder().addComponents(advancedFeaturesButtons);
   
   /**
    * Validate container component limits to prevent Discord API errors
@@ -930,8 +925,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       type: 10, // Text Display component
       content: `> **\`💎 Advanced Features\`**`
     },
-    adminActionRow.toJSON(), // Safari advanced configuration
-    adminActionRow2.toJSON(), // Additional action buttons (Analytics, Initial Setup, Availability, Help)
+    advancedFeaturesRow.toJSON(), // Safari + Analytics + Tools (single row)
     {
       type: 14 // Separator before credit
     },

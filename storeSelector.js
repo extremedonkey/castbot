@@ -20,9 +20,9 @@ export async function createStoreSelectionUI(options) {
     entityId = null,
     preSelectedStores = [],
     title = '🏪 Select Store',
-    backButtonId = 'prod_safari_menu',
-    backButtonLabel = '← Safari',
-    backButtonEmoji = '🦁',
+    backButtonId = 'prod_menu_back',
+    backButtonLabel = '← Menu',
+    backButtonEmoji = null,
     searchTerm = ''
   } = options;
 

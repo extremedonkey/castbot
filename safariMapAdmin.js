@@ -70,10 +70,9 @@ function createUserSelectUI(guildId) {
           type: 1, // Action Row
           components: [{
             type: 2, // Button
-            custom_id: 'prod_safari_menu',
-            label: '← Safari',
-            style: 2,
-            emoji: { name: '🦁' }
+            custom_id: 'prod_menu_back',
+            label: '← Menu',
+            style: 2
           }]
         }
       ]
@@ -277,10 +276,9 @@ async function createPlayerViewUI(guildId, userId) {
     components: [
       {
         type: 2, // Button
-        custom_id: 'prod_safari_menu',
-        label: '← Safari',
-        style: 2, // Secondary
-        emoji: { name: '🦁' }
+        custom_id: 'prod_menu_back',
+        label: '← Menu',
+        style: 2 // Secondary
       }
     ]
   });
