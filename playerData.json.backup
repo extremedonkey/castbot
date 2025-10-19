@@ -5682,150 +5682,6 @@
     "firstInstalled": 1755957958850,
     "installationMethod": "command"
   },
-  "1400065575090389045": {
-    "serverName": "CastBot Regression Pink",
-    "icon": "https://cdn.discordapp.com/icons/1400065575090389045/bd1ee1bc1ff3abca14f2d2ba9455716f.webp",
-    "ownerId": "391415444084490240",
-    "memberCount": 2,
-    "description": null,
-    "vanityURLCode": null,
-    "preferredLocale": "en-US",
-    "partnered": false,
-    "verified": false,
-    "createdTimestamp": 1753872045062,
-    "lastUpdated": 1759258334442,
-    "ownerInfo": {
-      "username": "extremedonkey",
-      "globalName": "Reece",
-      "discriminator": "0",
-      "tag": "extremedonkey"
-    },
-    "analyticsVersion": "1.0",
-    "players": {
-      "391415444084490240": {
-        "safari": {
-          "currency": 0,
-          "history": [],
-          "lastInteraction": 1757004909802,
-          "achievements": [],
-          "inventory": {},
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [],
-          "mapProgress": {
-            "map_3x1_1757431573115": {
-              "currentLocation": "C1",
-              "exploredCoordinates": [
-                "A1",
-                "A2",
-                "B1",
-                "C1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "A1",
-                  "timestamp": "2025-09-09T15:27:11.287Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "A2",
-                  "timestamp": "2025-09-09T15:27:17.190Z"
-                },
-                {
-                  "from": "A2",
-                  "to": "A1",
-                  "timestamp": "2025-09-09T15:32:59.269Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "B1",
-                  "timestamp": "2025-09-09T15:33:11.864Z"
-                },
-                {
-                  "from": "B1",
-                  "to": "C1",
-                  "timestamp": "2025-09-09T15:33:28.339Z"
-                }
-              ]
-            },
-            "map_1x1_1757432118477": {
-              "currentLocation": "A1",
-              "exploredCoordinates": [
-                "A1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "A1",
-                  "timestamp": "2025-09-09T15:35:43.905Z"
-                }
-              ]
-            },
-            "map_20x1_1757432228391": {
-              "currentLocation": "F1",
-              "exploredCoordinates": [
-                "A1",
-                "B1",
-                "C1",
-                "D1",
-                "E1",
-                "F1"
-              ],
-              "itemsFound": [],
-              "movementHistory": [
-                {
-                  "from": null,
-                  "to": "A1",
-                  "timestamp": "2025-09-09T15:42:07.576Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "B1",
-                  "timestamp": "2025-09-09T15:42:14.034Z"
-                },
-                {
-                  "from": "B1",
-                  "to": "C1",
-                  "timestamp": "2025-09-09T15:42:24.141Z"
-                },
-                {
-                  "from": "C1",
-                  "to": "D1",
-                  "timestamp": "2025-09-09T15:42:32.971Z"
-                },
-                {
-                  "from": "D1",
-                  "to": "E1",
-                  "timestamp": "2025-09-09T15:42:40.799Z"
-                },
-                {
-                  "from": "E1",
-                  "to": "F1",
-                  "timestamp": "2025-09-09T15:42:47.685Z"
-                }
-              ]
-            }
-          },
-          "points": {
-            "stamina": {
-              "current": 3,
-              "maximum": 3,
-              "lastRegeneration": "2025-09-09T15:42:07.576Z",
-              "regenConfig": "hourly"
-            }
-          }
-        }
-      }
-    },
-    "tribes": {},
-    "timezones": {},
-    "pronounRoleIDs": [],
-    "firstInstalled": 1756997555052,
-    "installationMethod": "command"
-  },
   "1419678967585050841": {
     "serverName": "CastBot Regression Black",
     "icon": null,
@@ -8528,5 +8384,23 @@
         }
       }
     }
+  },
+  "1400065575090389045": {
+    "players": {
+      "391415444084490240": {
+        "safari": {
+          "currency": 999,
+          "history": [],
+          "lastInteraction": 1760851630935,
+          "achievements": [],
+          "inventory": {},
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": []
+        }
+      }
+    },
+    "tribes": {},
+    "timezones": {}
   }
 }

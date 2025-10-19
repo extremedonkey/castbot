@@ -9425,7 +9425,7 @@ Your server is now ready for Tycoons gameplay!`;
           };
           
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag (ephemeral handled by factory)
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + Ephemeral
             components: [container]
           };
         }
@@ -13545,24 +13545,37 @@ Your server is now ready for Tycoons gameplay!`;
             .filter(([userId, player]) => player.safari?.currency !== undefined)
             .sort(([, a], [, b]) => (b.safari?.currency || 0) - (a.safari?.currency || 0));
           
-          let content = '## 👥 All Currency Balances\n\n';
-          
+          let contentText = '## 👥 All Currency Balances\n\n';
+
           if (playersWithCurrency.length === 0) {
-            content += '*No players have currency yet.*\n\nPlayers will appear here once they interact with Safari buttons that grant currency.';
+            contentText += '*No players have currency yet.*\n\nPlayers will appear here once they interact with Safari buttons that grant currency.';
           } else {
-            content += `**Total Players:** ${playersWithCurrency.length}\n\n`;
+            contentText += `**Total Players:** ${playersWithCurrency.length}\n\n`;
             playersWithCurrency.forEach(([userId, player], index) => {
               const rank = index + 1;
               const currency = player.safari?.currency || 0;
-              const lastInteraction = player.safari?.lastInteraction 
+              const lastInteraction = player.safari?.lastInteraction
                 ? new Date(player.safari.lastInteraction).toLocaleDateString()
                 : 'Unknown';
-              content += `**${rank}.** <@${userId}>\n`;
-              content += `└ Balance: **${currency} coins** | Last active: ${lastInteraction}\n\n`;
+              contentText += `**${rank}.** <@${userId}>\n`;
+              contentText += `└ Balance: **${currency} coins** | Last active: ${lastInteraction}\n\n`;
             });
           }
-          
-          return { content };
+
+          // Return Components V2 format for proper ephemeral support
+          return {
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17, // Container
+              accent_color: 0xf1c40f, // Gold color
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: contentText
+                }
+              ]
+            }]
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_currency_set_player') {
@@ -13681,7 +13694,7 @@ Your server is now ready for Tycoons gameplay!`;
           };
           
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2 flag
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + Ephemeral
             components: [container]
           };
         }
@@ -15268,8 +15281,8 @@ Your server is now ready for Tycoons gameplay!`;
           return await showGiveCurrencyConfig(context.guildId, buttonId, actionIndex, customTerms);
         }
       })(req, res, client);
-    } else if (custom_id.startsWith('safari_currency_reset_')) {
-      // Handle reset claims for give_currency
+    } else if (custom_id.startsWith('safari_currency_reset_') && custom_id !== 'safari_currency_reset_confirm') {
+      // Handle reset claims for give_currency (not the confirm button for resetting all currency)
       return ButtonHandlerFactory.create({
         id: 'safari_currency_reset',
         requiresPermission: PermissionFlagsBits.ManageRoles,
@@ -22279,9 +22292,20 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           if (playersResetCount > 0) {
             await savePlayerData(playerData);
           }
-          
+
+          // Return Components V2 format for proper ephemeral support
           return {
-            content: `✅ **Currency Reset Complete!**\n\n**Players affected:** ${playersResetCount}\n**Total currency reset:** ${totalCurrencyReset} coins\n\nAll player balances have been set to 0.`
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+            components: [{
+              type: 17, // Container
+              accent_color: 0x27ae60, // Green for success
+              components: [
+                {
+                  type: 10, // Text Display
+                  content: `✅ **Currency Reset Complete!**\n\n**Players affected:** ${playersResetCount}\n**Total currency reset:** ${totalCurrencyReset} coins\n\nAll player balances have been set to 0.`
+                }
+              ]
+            }]
           };
         }
       })(req, res, client);
