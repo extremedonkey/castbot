@@ -46,7 +46,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
     });
 
     // Get current settings display
-    const currentSettingsDisplay = await createCurrentSettingsDisplay(currentConfig);
+    const currentSettingsDisplay = await createCurrentSettingsDisplay(guildId, currentConfig);
 
     // Create Components V2 Container
     const containerComponents = [
@@ -216,10 +216,11 @@ export function processFieldGroupSubmission(groupKey, modalData) {
 
 /**
  * Create current settings display for the main interface
- * @param {Object} config - Current safari configuration  
+ * @param {string} guildId - Discord guild ID
+ * @param {Object} config - Current safari configuration
  * @returns {string} Formatted settings display
  */
-async function createCurrentSettingsDisplay(config) {
+async function createCurrentSettingsDisplay(guildId, config) {
     const currencyEmoji = config.currencyEmoji || '🪙';
     const currencyName = config.currencyName || 'Dollars';
     const inventoryName = config.inventoryName || 'Inventory';
@@ -284,7 +285,15 @@ async function createCurrentSettingsDisplay(config) {
     // Add Player Menu Settings
     const enableGlobalCommands = config.enableGlobalCommands !== false;
     display += `**🕹️ Player Menu**\n`;
-    display += `• Global Commands Button: ${enableGlobalCommands ? '✅ Enabled' : '❌ Disabled'}\n`;
+    display += `• Global Commands Button: ${enableGlobalCommands ? '✅ Enabled' : '❌ Disabled'}\n\n`;
+
+    // Add Safari Log Status
+    const { loadSafariContent } = await import('./safariManager.js');
+    const safariData = await loadSafariContent();
+    const logSettings = safariData[guildId]?.safariLogSettings || { enabled: false };
+
+    display += `**📊 Safari Log**\n`;
+    display += `• Status: ${logSettings.enabled ? '🟢 Enabled' : '🔴 Disabled'}\n`;
 
     return display;
 }
