@@ -9366,13 +9366,14 @@ Your server is now ready for Tycoons gameplay!`;
           ];
           
           const managementRow = new ActionRowBuilder().addComponents(managementButtons);
-          
+
           // Create back button
           const backButton = new ButtonBuilder()
             .setCustomId('prod_safari_menu')
-            .setLabel('⬅ Back to Safari')
-            .setStyle(ButtonStyle.Secondary);
-          
+            .setLabel('← Safari')
+            .setStyle(ButtonStyle.Secondary)
+            .setEmoji('🦁');
+
           const backRow = new ActionRowBuilder().addComponents(backButton);
           
           // Create summary content

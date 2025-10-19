@@ -93,24 +93,24 @@ return {
 
 ## 🔙 Navigation Standards
 - **Back Button Format**:
-  - **To Main Menu**: `← Menu` (no emoji, just arrow + "Menu")
-  - **To Feature Menu**: `🦁 Safari` (feature emoji + name)
+  - **To Main Menu**: `← Menu` (arrow + "Menu", no emoji)
+  - **To Feature Menu**: `← Safari` (arrow + feature name) with feature emoji
   - Custom ID: `prod_menu_back` or `{feature}_back`
   - Style: Always `ButtonStyle.Secondary` (grey)
   - Position: Bottom-left, after separator
-  
+
 - **Examples**:
   ```javascript
   // Back to main production menu
   new ButtonBuilder()
     .setCustomId('prod_menu_back')
-    .setLabel('← Menu')  // Just arrow + Menu
+    .setLabel('← Menu')  // Arrow + Menu, no emoji
     .setStyle(ButtonStyle.Secondary)
-  
+
   // Back to Safari menu (2nd level)
   new ButtonBuilder()
-    .setCustomId('safari_menu_back')
-    .setLabel('Safari')
+    .setCustomId('prod_safari_menu')
+    .setLabel('← Safari')  // Arrow + feature name
     .setStyle(ButtonStyle.Secondary)
     .setEmoji('🦁')  // Feature emoji
   ```
