@@ -578,10 +578,19 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
   'safari_configure_log': {
-    label: '📊 Logs',
+    label: 'Logs',
     description: 'Configure Safari Log channel and settings',
     emoji: '📊',
     style: 'Secondary',
+    parent: 'safari_customize_terms',
+    category: 'safari'
+  },
+  'safari_config_reset_defaults': {
+    label: 'Reset',
+    description: 'Reset all Safari customizations to default values',
+    emoji: '🔄',
+    style: 'Danger',
+    parent: 'safari_customize_terms',
     category: 'safari'
   },
   'safari_log_toggle': {

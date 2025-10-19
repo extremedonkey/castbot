@@ -9907,13 +9907,13 @@ Your server is now ready for Tycoons gameplay!`;
             .setStyle(2) // Secondary
             .setEmoji('🧪')
             .setDisabled(!logSettings.enabled || !logSettings.logChannelId);
-          
+
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('prod_safari_menu')
-            .setLabel('← Back to Safari')
+            .setCustomId('safari_customize_terms')
+            .setLabel('← Safari Settings')
             .setStyle(2) // Secondary
-            .setEmoji('🦁');
+            .setEmoji('⚙️');
           
           const toggleRow = new ActionRowBuilder().addComponents(toggleButton);
           const configRow = new ActionRowBuilder().addComponents(channelButton, logTypesButton, testButton);
@@ -10725,33 +10725,21 @@ Your server is now ready for Tycoons gameplay!`;
       })(req, res, client);
     } else if (custom_id === 'safari_config_reset_defaults') {
       // Handle reset to defaults button
-      try {
-        const member = req.body.member;
-        
-        // Check admin permissions
-        if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to reset Safari settings.')) return;
-        
-        console.log(`⚙️ DEBUG: Showing reset confirmation interface`);
-        
-        // Create reset confirmation interface
-        const { createResetConfirmationUI } = await import('./safariConfigUI.js');
-        const confirmationData = createResetConfirmationUI();
-        
-        return res.send({
-          type: InteractionResponseType.UPDATE_MESSAGE,
-          data: confirmationData
-        });
-        
-      } catch (error) {
-        console.error('Error in safari_config_reset_defaults:', error);
-        return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: '❌ Error showing reset confirmation. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
-        });
-      }
+      return ButtonHandlerFactory.create({
+        id: 'safari_config_reset_defaults',
+        requiresPermission: PermissionFlagsBits.ManageRoles,
+        permissionName: 'Manage Roles',
+        updateMessage: true,
+        handler: async (context) => {
+          console.log(`⚙️ DEBUG: Showing reset confirmation interface`);
+
+          // Create reset confirmation interface
+          const { createResetConfirmationUI } = await import('./safariConfigUI.js');
+          const confirmationData = createResetConfirmationUI();
+
+          return confirmationData;
+        }
+      })(req, res, client);
     } else if (custom_id === 'safari_config_confirm_reset') {
       // Handle confirmed reset to defaults
       try {

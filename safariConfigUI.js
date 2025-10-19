@@ -45,6 +45,9 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         emoji: { name: '🕹️' }
     });
 
+    // Get current settings display
+    const currentSettingsDisplay = await createCurrentSettingsDisplay(currentConfig);
+
     // Create Components V2 Container
     const containerComponents = [
         {
@@ -52,8 +55,8 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
             content: `## ⚙️ Customize Safari Settings\n\nPersonalize your Safari experience with custom terminology, event names, and game mechanics.\n\n**Current Settings:**`
         },
         {
-            type: 10, // Text Display component  
-            content: createCurrentSettingsDisplay(currentConfig)
+            type: 10, // Text Display component
+            content: currentSettingsDisplay
         },
         {
             type: 14 // Separator
@@ -73,7 +76,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
             type: 1, // Action Row
             components: [
                 {
-                    type: 2, // Button  
+                    type: 2, // Button
                     custom_id: 'prod_safari_menu',
                     label: '← Back to Safari',
                     style: 2, // Secondary
@@ -81,17 +84,17 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
                 },
                 {
                     type: 2, // Button
-                    custom_id: 'safari_export_data',
-                    label: 'Export',
-                    style: 2, // Secondary (grey)
-                    emoji: { name: '⚙️' }
-                },
-                {
-                    type: 2, // Button
                     custom_id: 'safari_configure_log',
                     label: 'Logs',
                     style: 2, // Secondary
                     emoji: { name: '📊' }
+                },
+                {
+                    type: 2, // Button
+                    custom_id: 'safari_export_data',
+                    label: 'Export',
+                    style: 2, // Secondary (grey)
+                    emoji: { name: '⚙️' }
                 },
                 {
                     type: 2, // Button
@@ -103,7 +106,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
                 {
                     type: 2, // Button
                     custom_id: 'safari_config_reset_defaults',
-                    label: 'Reset to Defaults',
+                    label: 'Reset',
                     style: 4, // Danger
                     emoji: { name: '🔄' }
                 }
@@ -216,19 +219,19 @@ export function processFieldGroupSubmission(groupKey, modalData) {
  * @param {Object} config - Current safari configuration  
  * @returns {string} Formatted settings display
  */
-function createCurrentSettingsDisplay(config) {
+async function createCurrentSettingsDisplay(config) {
     const currencyEmoji = config.currencyEmoji || '🪙';
     const currencyName = config.currencyName || 'Dollars';
     const inventoryName = config.inventoryName || 'Inventory';
     const inventoryEmoji = config.inventoryEmoji || '🧰';
-    
+
     let display = `**🪙 Currency & Inventory**\n`;
     display += `• Currency Name: ${currencyName}\n`;
     display += `• Currency Emoji: ${currencyEmoji}\n`;
     display += `• Inventory Name: ${inventoryName}\n`;
     display += `• Inventory Emoji: ${inventoryEmoji}\n`;
     display += `• Default Starting Currency: ${config.defaultStartingCurrencyValue || 100}\n\n`;
-    
+
     if (config.goodEventName || config.badEventName || config.goodEventEmoji || config.badEventEmoji) {
         display += `**☄️ Events**\n`;
         if (config.goodEventName) {
@@ -245,9 +248,9 @@ function createCurrentSettingsDisplay(config) {
         }
         display += `\n`;
     }
-    
-    if (config.round1GoodProbability !== undefined || 
-        config.round2GoodProbability !== undefined || 
+
+    if (config.round1GoodProbability !== undefined ||
+        config.round2GoodProbability !== undefined ||
         config.round3GoodProbability !== undefined) {
         display += `**🎲 Round Harvest Probabilities**\n`;
         if (config.round1GoodProbability !== undefined) {
@@ -265,7 +268,23 @@ function createCurrentSettingsDisplay(config) {
             const badPercent = 100 - goodPercent;
             display += `• Round 3: Good ${goodPercent}% | Bad ${badPercent}%\n`;
         }
+        display += `\n`;
     }
+
+    // Add Stamina Settings
+    const { getDefaultPointsConfig } = await import('./pointsManager.js');
+    const staminaConfig = getDefaultPointsConfig();
+    const regenMinutes = Math.floor(staminaConfig.stamina.regeneration.interval / 60000);
+    const maxStamina = staminaConfig.stamina.defaultMax;
+
+    display += `**⚡ Stamina Settings**\n`;
+    display += `• Regeneration Time: ${regenMinutes} minutes\n`;
+    display += `• Max Stamina: ${maxStamina}\n\n`;
+
+    // Add Player Menu Settings
+    const enableGlobalCommands = config.enableGlobalCommands !== false;
+    display += `**🕹️ Player Menu**\n`;
+    display += `• Global Commands Button: ${enableGlobalCommands ? '✅ Enabled' : '❌ Disabled'}\n`;
 
     return display;
 }
