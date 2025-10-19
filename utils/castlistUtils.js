@@ -24,10 +24,22 @@ export async function calculateCastlistFields(guild, roleIdOrOption, castlistNam
 
     const guildData = await loadPlayerData();
     const guildTribes = guildData[guild.id]?.tribes || {};
-    
+
+    // Find castlist entity by name
+    const castlistConfigs = guildData[guild.id]?.castlistConfigs || {};
+    const castlistEntity = Object.values(castlistConfigs).find(c => c.name === castlistName);
+    const castlistId = castlistEntity?.id;
+
     // Count existing tribes in this castlist (excluding the one being updated)
+    // Check all three formats: legacy string, singular ID, and array IDs
     const existingTribes = Object.entries(guildTribes)
-      .filter(([id, tribe]) => tribe.castlist === castlistName && id !== roleId)
+      .filter(([id, tribe]) => {
+        if (id === roleId) return false; // Exclude current tribe
+        // Match by legacy name, singular ID, or array IDs
+        return tribe.castlist === castlistName ||
+               (castlistId && tribe.castlistId === castlistId) ||
+               (castlistId && tribe.castlistIds?.includes(castlistId));
+      })
       .map(([id]) => id);
     
     console.log(`Found ${existingTribes.length} existing tribes in castlist "${castlistName}"`);
@@ -176,12 +188,24 @@ export async function determineCastlistToShow(guildId, userId, requestedCastlist
     return requestedCastlist;
   }
 
-  // Get all unique castlists in this guild
-  const castlists = new Set(
-    Object.values(tribes)
-      .filter(tribe => tribe?.castlist)
-      .map(tribe => tribe.castlist)
-  );
+  // Get all unique castlists in this guild (check all three formats)
+  const castlists = new Set();
+
+  for (const tribe of Object.values(tribes)) {
+    if (!tribe) continue;
+    // Legacy string format
+    if (tribe.castlist) {
+      castlists.add(tribe.castlist);
+    }
+    // Singular ID format
+    if (tribe.castlistId) {
+      castlists.add(tribe.castlistId);
+    }
+    // Array format (current)
+    if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
+      tribe.castlistIds.forEach(id => castlists.add(id));
+    }
+  }
 
   // If only one castlist exists, use it
   if (castlists.size <= 1) {
@@ -190,20 +214,25 @@ export async function determineCastlistToShow(guildId, userId, requestedCastlist
 
   // Find which castlists the user appears in
   const userCastlists = new Set();
-  
+
   // If no client provided, fall back to default castlist
   if (!client) {
     return 'default';
   }
-  
+
   for (const [tribeId, tribe] of Object.entries(tribes)) {
-    if (!tribe?.castlist) continue;
-    
+    if (!tribe) continue;
+
     try {
       const guild = await client.guilds.fetch(guildId);
       const member = await guild.members.fetch(userId);
       if (member.roles.cache.has(tribeId)) {
-        userCastlists.add(tribe.castlist);
+        // Add all castlists this tribe belongs to
+        if (tribe.castlist) userCastlists.add(tribe.castlist);
+        if (tribe.castlistId) userCastlists.add(tribe.castlistId);
+        if (tribe.castlistIds && Array.isArray(tribe.castlistIds)) {
+          tribe.castlistIds.forEach(id => userCastlists.add(id));
+        }
       }
     } catch (error) {
       console.error(`Error checking user roles for castlist determination:`, error);

@@ -8011,17 +8011,38 @@ To fix this:
         const guildTribes = playerData[guildId]?.tribes || {};
         const allTribes = [];
 
+        // Validate tribes object for invalid keys
+        const invalidKeys = Object.keys(guildTribes).filter(key => !/^\d{17,19}$/.test(key));
+        if (invalidKeys.length > 0) {
+          console.error(`❌ [CASTLIST NAV] Found ${invalidKeys.length} invalid keys in tribes object:`, invalidKeys);
+        }
+
         for (const [roleId, tribe] of Object.entries(guildTribes)) {
-          // 🔧 Check both legacy 'castlist' field and new 'castlistId' field
+          // Validate role ID is a Discord snowflake
+          if (!/^\d{17,19}$/.test(roleId)) {
+            console.warn(`⚠️ [CASTLIST NAV] Skipping invalid role ID: ${roleId}`);
+            continue;
+          }
+
+          // Check legacy 'castlist', transitional 'castlistId', and current 'castlistIds' array
           const matchesCastlist = (
             // Legacy string matching
             tribe.castlist === castlistName ||
-            // New entity ID matching
+            // Transitional entity ID matching (singular)
             tribe.castlistId === requestedCastlistId ||
+            // CURRENT: Multi-castlist array matching (PRIMARY FORMAT)
+            (tribe.castlistIds && Array.isArray(tribe.castlistIds) &&
+             tribe.castlistIds.includes(requestedCastlistId)) ||
             // Default castlist special cases
-            (!tribe.castlist && !tribe.castlistId && (castlistName === 'default' || requestedCastlistId === 'default')) ||
-            (tribe.castlist === 'default' && (castlistName === 'Active Castlist' || requestedCastlistId === 'default')) ||
-            (tribe.castlistId === 'default' && (castlistName === 'Active Castlist' || requestedCastlistId === 'default'))
+            (!tribe.castlist && !tribe.castlistId && !tribe.castlistIds &&
+             (castlistName === 'default' || requestedCastlistId === 'default')) ||
+            (tribe.castlist === 'default' &&
+             (castlistName === 'Active Castlist' || requestedCastlistId === 'default')) ||
+            (tribe.castlistId === 'default' &&
+             (castlistName === 'Active Castlist' || requestedCastlistId === 'default')) ||
+            // Array support for default castlist
+            (tribe.castlistIds?.includes('default') &&
+             (castlistName === 'Active Castlist' || requestedCastlistId === 'default'))
           );
 
           if (matchesCastlist) {
@@ -29328,12 +29349,27 @@ Are you sure you want to continue?`;
         const allTribes = [];
         const tribes = playerData[guildId]?.tribes || {};
 
+        // Validate tribes object for invalid keys
+        const invalidKeys = Object.keys(tribes).filter(key => !/^\d{17,19}$/.test(key));
+        if (invalidKeys.length > 0) {
+          console.error(`❌ [EDIT PLACEMENT] Found ${invalidKeys.length} invalid keys in tribes object:`, invalidKeys);
+        }
+
         for (const [roleId, tribe] of Object.entries(tribes)) {
-          // 🔧 FIX: Use SAME matching logic as show_castlist2 handler
+          // Validate role ID is a Discord snowflake
+          if (!/^\d{17,19}$/.test(roleId)) {
+            console.warn(`⚠️ [EDIT PLACEMENT] Skipping invalid role ID: ${roleId}`);
+            continue;
+          }
+
+          // Check legacy 'castlist', transitional 'castlistId', and current 'castlistIds' array
           const matchesCastlist = (
             tribe.castlist === castlistEntity?.name ||              // Legacy name matching
-            tribe.castlistId === castlistId ||                      // New ID matching
-            (!tribe.castlist && !tribe.castlistId && castlistId === 'default')  // Default fallback
+            tribe.castlistId === castlistId ||                      // Transitional ID matching
+            (tribe.castlistIds && Array.isArray(tribe.castlistIds) &&
+             tribe.castlistIds.includes(castlistId)) ||             // CURRENT: Multi-castlist array
+            (!tribe.castlist && !tribe.castlistId && !tribe.castlistIds &&
+             castlistId === 'default')  // Default fallback
           );
 
           if (matchesCastlist) {
