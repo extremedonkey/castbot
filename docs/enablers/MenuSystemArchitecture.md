@@ -4,6 +4,8 @@
 
 The Menu System Architecture provides a centralized, standardized approach to menu creation and management in CastBot. This system works alongside [ButtonHandlerFactory.md](ButtonHandlerFactory.md) and follows visual standards from [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md).
 
+**📋 Current Menu Structure**: See [MenuHierarchy.md](../ui/MenuHierarchy.md) for the complete visual menu tree and navigation flow. This document describes the **architectural patterns** and migration strategy, while MenuHierarchy.md shows the **actual current structure**.
+
 ## Problem Solved
 
 - **Code Duplication**: Eliminate inline menu building scattered throughout app.js
@@ -238,6 +240,7 @@ MenuBuilder.getMigrationStats()
 
 ## Related Documentation
 
+- **[MenuHierarchy.md](../ui/MenuHierarchy.md)** - Visual menu tree and current structure
 - [ButtonHandlerFactory.md](ButtonHandlerFactory.md) - Button system architecture
 - [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md) - Visual design standards
 - [ComponentsV2.md](../standards/ComponentsV2.md) - Discord Components V2 details

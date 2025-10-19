@@ -713,7 +713,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   const hasTimezones = playerData[guildId]?.timezones && Object.keys(playerData[guildId].timezones).length > 0;
   const hasRoles = hasPronouns || hasTimezones;
   
-  // Create admin control buttons (reorganized)
+  // Create admin control buttons (reorganized for Castlists, Applications and Season Management section)
   const adminButtons = [];
 
   // Only show CastlistV3 hub to Reece during development
@@ -727,19 +727,22 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
 
+  // Add Season Applications (moved from Advanced Features, changed to Secondary)
+  adminButtons.push(
+    new ButtonBuilder()
+      .setCustomId('season_management_menu')
+      .setLabel('Season Applications')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📝')
+  );
+
   // Standard admin buttons
   adminButtons.push(
     new ButtonBuilder()
       .setCustomId('admin_manage_player')
       .setLabel('Players')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧑‍🤝‍🧑')
-  );
-  
-  // Castlist button removed - now using Change Season in header
-  
-  // Add remaining management buttons
-  adminButtons.push(
+      .setEmoji('🧑‍🤝‍🧑'),
     new ButtonBuilder()
       .setCustomId('prod_manage_tribes')
       .setLabel('Tribes')
@@ -755,22 +758,47 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
   // Live Analytics button moved to Reece Stuff submenu
   
   const adminRow = new ActionRowBuilder().addComponents(adminButtons);
-  
-  // Add new administrative action row (misc features)
-  const adminActionButtons = [
+
+  // Create Safari features row (Idol Hunts, Challenges and Safari section)
+  const safariFeatureButtons = [
     new ButtonBuilder()
-      .setCustomId('season_management_menu')
-      .setLabel('Season Applications')
-      .setStyle(ButtonStyle.Primary)
-      .setEmoji('📝'),
+      .setCustomId('safari_store_manage_items')
+      .setLabel('Stores')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🏪'),
+    new ButtonBuilder()
+      .setCustomId('safari_manage_items')
+      .setLabel('Items')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('📦'),
+    new ButtonBuilder()
+      .setCustomId('safari_map_admin')
+      .setLabel('Player Admin')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🛡️'),
+    new ButtonBuilder()
+      .setCustomId('safari_rounds_menu')
+      .setLabel('Rounds')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⏳'),
+    new ButtonBuilder()
+      .setCustomId('safari_manage_currency')
+      .setLabel('Currency')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('💰')
+  ];
+
+  const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
+
+  // Add new administrative action row (Advanced Features - Safari menu only now)
+  const adminActionButtons = [
     new ButtonBuilder()
       .setCustomId('prod_safari_menu')
       .setLabel('Safari')
       .setStyle(ButtonStyle.Success)
       .setEmoji('🦁')
-    // prod_player_menu moved to header Section accessory
   ];
-  
+
   const adminActionRow = new ActionRowBuilder().addComponents(adminActionButtons);
   
   // Create new action row for Analytics, Initial Setup, Availability, and Need Help
@@ -870,7 +898,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     {
       type: 10, // Text Display component
-      content: `> **\`✏️ Manage\`**`
+      content: `> **\`✏️ Castlists, Applications and Season Management\`**`
     },
     adminRow.toJSON(), // Admin management buttons
     {
@@ -878,10 +906,18 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     },
     {
       type: 10, // Text Display component
+      content: `> **\`🦁 Idol Hunts, Challenges and Safari\`**`
+    },
+    safariFeatureRow.toJSON(), // Safari feature buttons (Stores, Items, Player Admin, Rounds, Currency)
+    {
+      type: 14 // Separator after Safari features row
+    },
+    {
+      type: 10, // Text Display component
       content: `> **\`💎 Advanced Features\`**`
     },
-    adminActionRow.toJSON(), // New administrative action buttons
-    adminActionRow2.toJSON(), // Additional action buttons (Analytics, Availability, Help)
+    adminActionRow.toJSON(), // Safari advanced configuration
+    adminActionRow2.toJSON(), // Additional action buttons (Analytics, Initial Setup, Availability, Help)
     {
       type: 14 // Separator before credit
     },
@@ -1158,36 +1194,7 @@ async function createSafariMenu(guildId, userId, member) {
     roundResultsLabel = 'Results'; // Fallback
   }
   
-  // Safari Administration section buttons (renamed from Safari Details)
-  const safariDetailsButtons = [
-    new ButtonBuilder()
-      .setCustomId('safari_store_manage_items')
-      .setLabel('Stores')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🏪'),
-    new ButtonBuilder()
-      .setCustomId('safari_manage_items')
-      .setLabel('Items')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('📦'),
-    new ButtonBuilder()
-      .setCustomId('safari_map_admin')
-      .setLabel('Player Admin')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🧭'),
-    new ButtonBuilder()
-      .setCustomId('safari_rounds_menu')
-      .setLabel('Rounds')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⏳'),
-    new ButtonBuilder()
-      .setCustomId('safari_manage_currency')
-      .setLabel('Currency')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💰')
-  ];
-  
-  // Map Administration section buttons
+  // Advanced Safari Configuration section buttons (Map-related features)
   const mapAdminButtons = [
     new ButtonBuilder()
       .setCustomId('safari_map_explorer')
@@ -1218,7 +1225,6 @@ async function createSafariMenu(guildId, userId, member) {
   // TODO: Flag for deletion - Check if safari_manage_safari_buttons handler is still needed
   // TODO: Flag for deletion - Check if safari_navigate handlers and dependencies can be removed
 
-  const safariDetailsRow = new ActionRowBuilder().addComponents(safariDetailsButtons);
   const mapAdminRow = new ActionRowBuilder().addComponents(mapAdminButtons);
   
   // Create back button
@@ -1235,22 +1241,14 @@ async function createSafariMenu(guildId, userId, member) {
   const containerComponents = [
     {
       type: 10, // Text Display component
-      content: `## 🦁 Safari | Idol Hunts, Challenges & More\n\nCreate engaging ORG experiences with interactive stores, items, currencies, and custom actions!`
+      content: `## 🦁 Safari | Idol Hunts, Challenges & More\n\nAdvanced map configuration, custom actions, and location management.`
     },
     {
       type: 14 // Separator
     },
     {
       type: 10, // Text Display component
-      content: `> **\`🦁 Safari Administration\`**`
-    },
-    safariDetailsRow.toJSON(),
-    {
-      type: 14 // Separator
-    },
-    {
-      type: 10, // Text Display component
-      content: `> **\`🗺️ Map Administration\`**`
+      content: `> **\`🦁 Advanced Safari Configuration\`**`
     },
     mapAdminRow.toJSON(),
     {
@@ -9354,10 +9352,9 @@ Your server is now ready for Tycoons gameplay!`;
 
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('prod_safari_menu')
-            .setLabel('← Safari')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🦁');
+            .setCustomId('prod_menu_back')
+            .setLabel('← Menu')
+            .setStyle(ButtonStyle.Secondary);
 
           const backRow = new ActionRowBuilder().addComponents(backButton);
           
@@ -22464,10 +22461,9 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           
           // Create back button
           const backButton = new ButtonBuilder()
-            .setCustomId('prod_safari_menu')
-            .setLabel('← Safari')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🦁');
+            .setCustomId('prod_menu_back')
+            .setLabel('← Menu')
+            .setStyle(ButtonStyle.Secondary);
           
           const backRow = new ActionRowBuilder().addComponents([backButton]);
           
@@ -25781,10 +25777,9 @@ Are you sure you want to continue?`;
           
           // Back button
           const backButton = new ButtonBuilder()
-            .setCustomId('safari_menu')
-            .setLabel('← Safari')
-            .setStyle(ButtonStyle.Secondary)
-            .setEmoji('🦁');
+            .setCustomId('prod_menu_back')
+            .setLabel('← Menu')
+            .setStyle(ButtonStyle.Secondary);
           
           const backRow = new ActionRowBuilder().addComponents([backButton]);
           

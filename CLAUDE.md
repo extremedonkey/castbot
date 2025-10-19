@@ -241,6 +241,7 @@ npm run logs-prod -- --filter "user ID"  # Filtered logs
 
 **UI/UX Design:**
 - **📐 LEAN USER INTERFACE DESIGN** → [docs/ui/LeanUserInterfaceDesign.md](docs/ui/LeanUserInterfaceDesign.md)
+- **📋 MENU HIERARCHY** → [docs/ui/MenuHierarchy.md](docs/ui/MenuHierarchy.md) - Visual menu tree and navigation flow
 
 ## 🛠️ Development Standards
 
