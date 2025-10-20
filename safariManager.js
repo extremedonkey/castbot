@@ -3795,12 +3795,13 @@ async function getCustomTerms(guildId) {
             currencyEmoji: config.currencyEmoji || '🪙',
             inventoryEmoji: config.inventoryEmoji || '🧰',
             defaultStartingCurrencyValue: config.defaultStartingCurrencyValue || 100,
-            
+            defaultStartingCoordinate: config.defaultStartingCoordinate || 'A1',
+
             // Game settings - Challenge Game Logic
             round1GoodProbability: config.round1GoodProbability || 75,
             round2GoodProbability: config.round2GoodProbability || 50,
             round3GoodProbability: config.round3GoodProbability || 25,
-            
+
             // Event details
             goodEventName: config.goodEventName || 'Clear Skies',
             badEventName: config.badEventName || 'Meteor Strike',
@@ -3808,7 +3809,7 @@ async function getCustomTerms(guildId) {
             badEventMessage: config.badEventMessage || 'Meteors rain down! Only the protected survive!',
             goodEventEmoji: config.goodEventEmoji || '☀️',
             badEventEmoji: config.badEventEmoji || '☄️',
-            
+
             // Game state
             currentRound: config.currentRound || 1,
             totalRounds: config.totalRounds || 3, // Default to 3 rounds for backwards compatibility

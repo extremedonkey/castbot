@@ -303,38 +303,47 @@ async function createPlayerViewUI(guildId, userId) {
 /**
  * Initialize player on map
  */
-export async function initializePlayerOnMap(guildId, userId, coordinate = 'A1', client = null) {
+export async function initializePlayerOnMap(guildId, userId, coordinate = null, client = null) {
   const playerData = await loadPlayerData();
   const safariData = await loadSafariContent();
-  
+
+  // Get stamina & location config (per-server with .env fallback)
+  const { getStaminaConfig, initializePlayerSafari, grantDefaultItems } = await import('./safariManager.js');
+  const staminaConfig = await getStaminaConfig(guildId);
+
+  // Use configured starting coordinate if not explicitly provided
+  if (!coordinate) {
+    coordinate = staminaConfig.defaultStartingCoordinate;
+    console.log(`🗺️ Using configured starting coordinate: ${coordinate}`);
+  }
+
   // Get default starting currency from config
   const defaultCurrency = safariData[guildId]?.safariConfig?.defaultStartingCurrencyValue || 100;
-  
+
   // Use universal safari initialization to ensure ALL required fields exist
-  const { initializePlayerSafari, grantDefaultItems } = await import('./safariManager.js');
   initializePlayerSafari(playerData, guildId, userId, defaultCurrency);
-  
+
   // Grant default items to the player
   await grantDefaultItems(playerData, guildId, userId);
-  
+
   const player = playerData[guildId].players[userId];
   // Ensure map-specific structures exist
   if (!player.safari.mapProgress) player.safari.mapProgress = {};
   if (!player.safari.points) player.safari.points = {};
-  
-  // Initialize stamina with default config values
-  const { getDefaultPointsConfig } = await import('./pointsManager.js');
-  const staminaConfig = getDefaultPointsConfig().stamina;
+
+  // Initialize stamina with per-server config values
   player.safari.points.stamina = {
-    current: staminaConfig.defaultMax,
-    maximum: staminaConfig.defaultMax,
+    current: staminaConfig.startingStamina,
+    maximum: staminaConfig.maxStamina,
     lastRegeneration: new Date().toISOString(),
     regenConfig: 'hourly' // Regenerate 1 stamina per hour
   };
-  
+
+  console.log(`⚡ Initialized player stamina: ${staminaConfig.startingStamina}/${staminaConfig.maxStamina} (regen: ${staminaConfig.regenerationMinutes}min)`);
+
   // Get active map (optional - no longer required)
   const activeMapId = safariData[guildId]?.maps?.active;
-  
+
   // Only initialize map progress if a map exists
   if (activeMapId) {
     // Initialize map progress

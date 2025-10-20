@@ -803,9 +803,9 @@
           "1398904036643831818"
         ],
         "safari": {
-          "currency": 144,
+          "currency": 100,
           "history": [],
-          "lastInteraction": 1760972347592,
+          "lastInteraction": 1760980552586,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -815,176 +815,36 @@
           },
           "cooldowns": {},
           "buttonUses": {},
-          "storeHistory": [
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1757693950304
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758028371006
-            },
-            {
-              "itemId": "territory_forager_404120",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758028409849
-            },
-            {
-              "itemId": "territory_forager_404120",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758028413325
-            },
-            {
-              "itemId": "territory_forager_404120",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758028416611
-            },
-            {
-              "itemId": "territory_forager_404120",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758029284150
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758036850666
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758036865080
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758039293299
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758039308695
-            },
-            {
-              "itemId": "nurturer_361363",
-              "storeId": "the_hatchery_637531",
-              "price": 30,
-              "timestamp": 1758039310479
-            }
-          ],
+          "storeHistory": [],
           "mapProgress": {
             "map_7x7_1753981993871": {
-              "currentLocation": "B1",
+              "currentLocation": "A1",
               "exploredCoordinates": [
-                "A1",
-                "B2",
-                "B4",
-                "B3",
-                "C2",
-                "B1",
-                "A2",
-                "C3"
+                "A1"
               ],
               "itemsFound": [],
               "movementHistory": [
                 {
                   "from": null,
                   "to": "A1",
-                  "timestamp": "2025-09-06T05:33:52.335Z"
+                  "timestamp": "2025-10-20T17:15:52.588Z"
                 },
                 {
                   "from": "A1",
                   "to": "A1",
-                  "timestamp": "2025-09-06T05:33:52.356Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "B2",
-                  "timestamp": "2025-09-23T15:38:48.717Z"
-                },
-                {
-                  "from": "B2",
-                  "to": "B4",
-                  "timestamp": "2025-10-14T15:58:20.357Z"
-                },
-                {
-                  "from": "B4",
-                  "to": "B4",
-                  "timestamp": "2025-10-14T15:58:26.676Z"
-                },
-                {
-                  "from": "B4",
-                  "to": "B3",
-                  "timestamp": "2025-10-14T15:59:43.849Z"
-                },
-                {
-                  "from": "B3",
-                  "to": "B2",
-                  "timestamp": "2025-10-14T16:06:25.146Z"
-                },
-                {
-                  "from": "B2",
-                  "to": "C2",
-                  "timestamp": "2025-10-14T16:06:59.079Z"
-                },
-                {
-                  "from": "C2",
-                  "to": "B1",
-                  "timestamp": "2025-10-14T16:08:53.714Z"
-                },
-                {
-                  "from": "B1",
-                  "to": "B2",
-                  "timestamp": "2025-10-14T16:09:34.012Z"
-                },
-                {
-                  "from": "B2",
-                  "to": "A2",
-                  "timestamp": "2025-10-14T16:09:53.412Z"
-                },
-                {
-                  "from": "A2",
-                  "to": "B2",
-                  "timestamp": "2025-10-14T16:10:04.163Z"
-                },
-                {
-                  "from": "B2",
-                  "to": "C3",
-                  "timestamp": "2025-10-14T16:10:18.831Z"
-                },
-                {
-                  "from": "C3",
-                  "to": "B2",
-                  "timestamp": "2025-10-14T16:11:04.958Z"
-                },
-                {
-                  "from": "B2",
-                  "to": "B1",
-                  "timestamp": "2025-10-14T16:12:49.042Z"
+                  "timestamp": "2025-10-20T17:15:52.622Z"
                 }
               ]
             }
           },
           "points": {
             "stamina": {
-              "current": 999,
-              "maximum": 999,
-              "lastRegeneration": "2025-10-14T15:58:07.022Z",
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-10-20T17:15:52.588Z",
               "regenConfig": "hourly"
             }
-          },
-          "isPaused": false
+          }
         }
       },
       "251452487997980673": {
@@ -1544,6 +1404,47 @@
               "current": 999,
               "maximum": 999,
               "lastRegeneration": "2025-09-23T15:40:44.995Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "719547106318352496": {
+        "safari": {
+          "currency": 100,
+          "history": [],
+          "lastInteraction": 1760980807317,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "mapProgress": {
+            "map_7x7_1753981993871": {
+              "currentLocation": "A1",
+              "exploredCoordinates": [
+                "A1"
+              ],
+              "itemsFound": [],
+              "movementHistory": [
+                {
+                  "from": null,
+                  "to": "A1",
+                  "timestamp": "2025-10-20T17:20:07.317Z"
+                }
+              ]
+            }
+          },
+          "points": {
+            "stamina": {
+              "current": 3,
+              "maximum": 3,
+              "lastRegeneration": "2025-10-20T17:20:07.317Z",
               "regenConfig": "hourly"
             }
           }
