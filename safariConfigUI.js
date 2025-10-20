@@ -52,7 +52,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
     const containerComponents = [
         {
             type: 10, // Text Display component
-            content: `## ⚙️ Customize Safari Settings\n\nPersonalize your Safari experience with custom terminology, event names, and game mechanics.\n\n**Current Settings:**`
+            content: `## ⚙️ Customize Settings\n\nPersonalize your experience with custom terminology, event names, and game mechanics.\n\n**Current Settings:**`
         },
         {
             type: 10, // Text Display component
@@ -77,10 +77,10 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
             components: [
                 {
                     type: 2, // Button
-                    custom_id: 'prod_safari_menu',
-                    label: '← Safari',
+                    custom_id: 'prod_production_menu',
+                    label: '← Back',
                     style: 2, // Secondary
-                    emoji: { name: '🦁' }
+                    emoji: { name: '🏠' }
                 },
                 {
                     type: 2, // Button
@@ -284,8 +284,16 @@ async function createCurrentSettingsDisplay(guildId, config) {
 
     // Add Player Menu Settings
     const enableGlobalCommands = config.enableGlobalCommands !== false;
+    const inventoryVisibilityMode = config.inventoryVisibilityMode || 'always';
+    const inventoryModeLabels = {
+        'always': 'Always Show',
+        'initialized_only': 'After Initialization Only',
+        'standard': 'After 1st Initialize + 1st Round',
+        'never': 'Never Show'
+    };
     display += `**🕹️ Player Menu**\n`;
-    display += `• Global Commands Button: ${enableGlobalCommands ? '✅ Enabled' : '❌ Disabled'}\n\n`;
+    display += `• Global Commands Button: ${enableGlobalCommands ? '✅ Enabled' : '❌ Disabled'}\n`;
+    display += `• Inventory Button: ${inventoryModeLabels[inventoryVisibilityMode]}\n\n`;
 
     // Add Safari Log Status
     const { loadSafariContent } = await import('./safariManager.js');

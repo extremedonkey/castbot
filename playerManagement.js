@@ -429,8 +429,8 @@ export async function createPlayerManagementUI(options) {
           const playerMapData = activeMapId ? playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId] : null;
           const hasMapLocation = playerMapData?.currentLocation !== undefined;
 
-          // Get inventory visibility mode from configuration (default to 'standard' for backward compatibility)
-          const inventoryVisibilityMode = safariConfig.inventoryVisibilityMode || 'standard';
+          // Get inventory visibility mode from configuration (default to 'always' - most user-friendly for new servers)
+          const inventoryVisibilityMode = safariConfig.inventoryVisibilityMode || 'always';
 
           // Determine if inventory button should be shown based on configuration
           let showInventory = false;

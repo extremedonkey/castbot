@@ -778,29 +778,34 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('🧭'),
     new ButtonBuilder()
-      .setCustomId('safari_rounds_menu')
-      .setLabel('Rounds')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⏳'),
-    new ButtonBuilder()
       .setCustomId('safari_manage_currency')
       .setLabel('Currency')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('💰')
+      .setEmoji('💰'),
+    new ButtonBuilder()
+      .setCustomId('safari_customize_terms')
+      .setLabel('Settings')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⚙️')
   ];
 
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
 
-  // Create Advanced Features row (Safari + Analytics + Tools)
+  // Create Advanced Features row (Safari + Rounds + Analytics + Tools)
   const advancedFeaturesButtons = [
     new ButtonBuilder()
       .setCustomId('prod_safari_menu')
       .setLabel('Safari')
       .setStyle(ButtonStyle.Success)
-      .setEmoji('🦁')
+      .setEmoji('🦁'),
+    new ButtonBuilder()
+      .setCustomId('safari_rounds_menu')
+      .setLabel('Rounds')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⏳')
   ];
 
-  // Add Analytics button only for specific user (Reece) - second in row
+  // Add Analytics button only for specific user (Reece) - third in row
   if (userId === '391415444084490240') {
     advancedFeaturesButtons.push(
       new ButtonBuilder()
@@ -811,7 +816,7 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
 
-  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help) - third in row
+  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help) - fourth in row
   advancedFeaturesButtons.push(
     new ButtonBuilder()
       .setCustomId('prod_setup')
@@ -1223,12 +1228,7 @@ async function createSafariMenu(guildId, userId, member) {
       .setCustomId('safari_progress')
       .setLabel('Safari Progress')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🚀'),
-    new ButtonBuilder()
-      .setCustomId('safari_customize_terms')
-      .setLabel('Settings')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⚙️')
+      .setEmoji('🚀')
   ];
 
   // TODO: Flag for deletion - Check if safari_manage_safari_buttons handler is still needed
@@ -9856,9 +9856,9 @@ Your server is now ready for Tycoons gameplay!`;
           const safariData = await loadSafariContent();
           const safariConfig = safariData[context.guildId]?.safariConfig || {};
 
-          // Determine current settings (default to true/standard for backward compatibility)
+          // Determine current settings (default to true/always - 'always' is most user-friendly for new servers)
           const currentEnabled = safariConfig.enableGlobalCommands !== false;
-          const currentInventoryMode = safariConfig.inventoryVisibilityMode || 'standard';
+          const currentInventoryMode = safariConfig.inventoryVisibilityMode || 'always';
 
           // Create Components V2 modal with Label + String Select (following safari_store_stock pattern)
           const modal = {
@@ -9893,7 +9893,7 @@ Your server is now ready for Tycoons gameplay!`;
               },
               {
                 type: 18, // Label (Components V2)
-                label: 'Inventory Button Visibility Requirements',
+                label: 'Player Inventory Button',
                 description: 'Choose when inventory button appears in /menu',
                 component: {
                   type: 3, // String Select (Components V2)
@@ -9903,10 +9903,10 @@ Your server is now ready for Tycoons gameplay!`;
                   max_values: 1,
                   options: [
                     {
-                      label: 'Standard (Initialize + Round 1+)',
-                      value: 'standard',
-                      description: 'Show after player initialized AND game started',
-                      default: currentInventoryMode === 'standard'
+                      label: 'Always Show',
+                      value: 'always',
+                      description: 'Show inventory button to all users in /menu',
+                      default: currentInventoryMode === 'always'
                     },
                     {
                       label: 'After Initialization Only',
@@ -9915,15 +9915,15 @@ Your server is now ready for Tycoons gameplay!`;
                       default: currentInventoryMode === 'initialized_only'
                     },
                     {
-                      label: 'Always Show',
-                      value: 'always',
-                      description: 'Show inventory button to all players',
-                      default: currentInventoryMode === 'always'
+                      label: 'After 1st Initialize + 1st Round',
+                      value: 'standard',
+                      description: 'Show after player initialized AND Safari Rounds started',
+                      default: currentInventoryMode === 'standard'
                     },
                     {
                       label: 'Never Show',
                       value: 'never',
-                      description: 'Hide inventory button completely',
+                      description: 'Hide, only visible via shop interface',
                       default: currentInventoryMode === 'never'
                     }
                   ]
