@@ -26382,11 +26382,16 @@ Are you sure you want to continue?`;
         handler: async (context) => {
           const targetUserId = context.customId.split('_').pop();
           console.log(`🛡️ START: safari_init_player for user ${targetUserId}`);
-          
+
           const { initializePlayerOnMap, createMapAdminUI } = await import('./safariMapAdmin.js');
-          
+          const { getStaminaConfig } = await import('./safariManager.js');
+
           try {
-            await initializePlayerOnMap(context.guildId, targetUserId, 'A1', context.client);
+            // Get per-server stamina config (includes defaultStartingCoordinate)
+            const staminaConfig = await getStaminaConfig(context.guildId);
+            const startingCoordinate = staminaConfig.defaultStartingCoordinate || 'A1';
+
+            await initializePlayerOnMap(context.guildId, targetUserId, startingCoordinate, context.client);
             
             // Return updated player view
             const ui = await createMapAdminUI({
