@@ -33290,8 +33290,8 @@ Are you sure you want to continue?`;
           }
 
           const mapData = safariData[guildId]?.maps?.configurations?.[activeMapId];
-          if (!mapData?.coordinateChannels?.[coordinate]) {
-            const available = Object.keys(mapData?.coordinateChannels || {}).slice(0, 10).join(', ');
+          if (!mapData?.[coordinate]) {
+            const available = Object.keys(mapData || {}).filter(k => /^[A-Z][0-9]{1,2}$/.test(k)).slice(0, 10).join(', ');
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
               data: {
