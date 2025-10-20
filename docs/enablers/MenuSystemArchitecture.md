@@ -74,6 +74,7 @@ Use ButtonHandlerFactory with MenuBuilder:
   return ButtonHandlerFactory.create({
     id: 'show_castlist_menu',
     handler: async (context) => {
+      // 🚨 CRITICAL: MenuBuilder.create() is async - MUST use await!
       const menu = await MenuBuilder.create('castlist_menu', context);
       return {
         flags: (1 << 15), // IS_COMPONENTS_V2
@@ -172,6 +173,7 @@ MenuRegistry.search('safari')             // Returns all safari-related menus
 - Forget IS_COMPONENTS_V2 flag
 - Skip permission checks
 - Mix legacy and new patterns in same menu
+- **Forget `await` when calling MenuBuilder.create()** - causes silent failures!
 
 ## Migration Success Stories
 
@@ -210,8 +212,8 @@ const setupContainer = {
   ]
 };
 
-// After (3 lines)
-const setupContainer = MenuBuilder.create('setup_menu', context);
+// After (3 lines) - 🚨 CRITICAL: Must use await!
+const setupContainer = await MenuBuilder.create('setup_menu', context);
 ```
 
 **Lessons Learned**:
@@ -219,6 +221,62 @@ const setupContainer = MenuBuilder.create('setup_menu', context);
 - ButtonHandlerFactory integration is seamless
 - Menu structure in MENU_REGISTRY is more maintainable
 - Handler code becomes self-documenting (MenuBuilder.create makes intent clear)
+- **🚨 CRITICAL**: Always `await` MenuBuilder.create() - forgetting causes "interaction failed" with no error logs!
+
+## Common Pitfalls
+
+### 1. Missing `await` on MenuBuilder.create() 🚨
+
+**Symptom**: Discord shows "This interaction failed" but logs show successful handler execution with no errors.
+
+**Root Cause**: `MenuBuilder.create()` is async, but called without `await`. This returns a Promise instead of the menu container, which Discord rejects.
+
+**Example of Bug**:
+```javascript
+// ❌ WRONG - Missing await
+handler: async (context) => {
+  const setupContainer = MenuBuilder.create('setup_menu', context); // Returns Promise!
+  return {
+    flags: (1 << 15),
+    components: [setupContainer] // Discord receives: [Promise { <pending> }]
+  };
+}
+```
+
+**Correct Pattern**:
+```javascript
+// ✅ CORRECT - With await
+handler: async (context) => {
+  const setupContainer = await MenuBuilder.create('setup_menu', context); // Returns Container!
+  return {
+    flags: (1 << 15),
+    components: [setupContainer] // Discord receives: [{ type: 17, ... }]
+  };
+}
+```
+
+**Why It's Hard to Debug**:
+- Handler logs show "✅ SUCCESS" because no exception is thrown
+- The Promise is created successfully, just not resolved
+- Discord silently rejects the malformed response
+- Similar to the `await loadPlayerData()` bug pattern in CLAUDE.md
+
+**Prevention**:
+- Always check if a function is `async` before calling it
+- If function signature shows `async`, you MUST `await` it
+- Add console logs to verify data structure: `console.log('Container type:', typeof setupContainer)`
+
+### 2. Menu Not Registered
+
+**Symptom**: Error: "Menu X not found in MENU_REGISTRY"
+
+**Fix**: Add menu configuration to MENU_REGISTRY before using MenuBuilder.create()
+
+### 3. Invalid Component Structure
+
+**Symptom**: Discord rejects response even with correct async/await
+
+**Fix**: Ensure menu components follow Components V2 standards (type 17 Container, type 10 Text Display, etc.)
 
 ## Integration with ButtonHandlerFactory
 

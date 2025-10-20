@@ -6245,7 +6245,7 @@ To fix this:
           console.log(`🔍 START: prod_setup - user ${context.userId}`);
 
           // Create setup menu using MenuBuilder
-          const setupContainer = MenuBuilder.create('setup_menu', context);
+          const setupContainer = await MenuBuilder.create('setup_menu', context);
 
           console.log(`✅ SUCCESS: prod_setup - showing setup interface via MenuBuilder`);
 
