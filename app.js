@@ -33292,22 +33292,25 @@ Are you sure you want to continue?`;
             });
           }
 
-          // Debug: Check different possible paths
-          console.log(`🗺️ DEBUG: maps object keys = ${Object.keys(safariData[guildId]?.maps || {}).join(', ')}`);
-          console.log(`🗺️ DEBUG: Has maps.configurations = ${!!safariData[guildId]?.maps?.configurations}`);
-          console.log(`🗺️ DEBUG: Has maps[activeMapId] = ${!!safariData[guildId]?.maps?.[activeMapId]}`);
-
-          // Try different paths
+          // Get map data - coordinates are nested under mapData.coordinates
           const mapData = safariData[guildId]?.maps?.configurations?.[activeMapId]
                        || safariData[guildId]?.maps?.[activeMapId];
 
-          console.log(`🗺️ DEBUG: mapData exists = ${!!mapData}`);
-          console.log(`🗺️ DEBUG: mapData keys = ${Object.keys(mapData || {}).join(', ')}`);
-          console.log(`🗺️ DEBUG: mapData[${coordinate}] exists = ${!!mapData?.[coordinate]}`);
+          if (!mapData) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ Could not find map data for active map',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
 
-          if (!mapData?.[coordinate]) {
-            const available = Object.keys(mapData || {}).filter(k => /^[A-Z][0-9]{1,2}$/.test(k)).slice(0, 10).join(', ');
-            console.log(`🗺️ DEBUG: Available coordinates = ${available}`);
+          // Coordinates are nested under mapData.coordinates
+          const coordinates = mapData.coordinates || {};
+
+          if (!coordinates[coordinate]) {
+            const available = Object.keys(coordinates).filter(k => /^[A-Z][0-9]{1,2}$/.test(k)).slice(0, 10).join(', ');
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
               data: {
@@ -33317,7 +33320,7 @@ Are you sure you want to continue?`;
             });
           }
 
-          console.log(`✅ Coordinate "${coordinate}" validated successfully`);
+          console.log(`✅ Coordinate "${coordinate}" validated successfully in map "${mapData.name}"`);
 
           // Update with uppercase version
           updates.defaultStartingCoordinate = coordinate;
