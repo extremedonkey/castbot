@@ -9,34 +9,50 @@ import { loadSafariContent, saveSafariContent } from './safariManager.js';
 // Initialize points for a new entity
 export async function initializeEntityPoints(guildId, entityId, pointTypes = ['stamina']) {
     const safariData = await loadSafariContent();
-    
+
     if (!safariData[guildId]) {
         safariData[guildId] = {};
     }
-    
+
     if (!safariData[guildId].entityPoints) {
         safariData[guildId].entityPoints = {};
     }
-    
+
     if (!safariData[guildId].entityPoints[entityId]) {
         safariData[guildId].entityPoints[entityId] = {};
     }
-    
-    const pointsConfig = safariData[guildId]?.pointsConfig?.definitions || getDefaultPointsConfig();
-    
+
     // Initialize each point type for this entity
     for (const pointType of pointTypes) {
         if (!safariData[guildId].entityPoints[entityId][pointType]) {
-            const config = pointsConfig[pointType];
-            safariData[guildId].entityPoints[entityId][pointType] = {
-                current: config.defaultMax,
-                max: config.defaultMax,
-                lastRegeneration: Date.now(),
-                lastUse: Date.now()
-            };
+            if (pointType === 'stamina') {
+                // Use per-server stamina config with .env fallback
+                const { getStaminaConfig } = await import('./safariManager.js');
+                const staminaConfig = await getStaminaConfig(guildId);
+
+                safariData[guildId].entityPoints[entityId][pointType] = {
+                    current: staminaConfig.startingStamina,
+                    max: staminaConfig.maxStamina,
+                    lastRegeneration: Date.now(),
+                    lastUse: Date.now()
+                };
+
+                console.log(`⚡ Initialized ${entityId} stamina: ${staminaConfig.startingStamina}/${staminaConfig.maxStamina} (regen: ${staminaConfig.regenerationMinutes}min)`);
+            } else {
+                // Other point types use default config
+                const pointsConfig = safariData[guildId]?.pointsConfig?.definitions || getDefaultPointsConfig();
+                const config = pointsConfig[pointType];
+
+                safariData[guildId].entityPoints[entityId][pointType] = {
+                    current: config.defaultMax,
+                    max: config.defaultMax,
+                    lastRegeneration: Date.now(),
+                    lastUse: Date.now()
+                };
+            }
         }
     }
-    
+
     await saveSafariContent(safariData);
     return safariData[guildId].entityPoints[entityId];
 }
@@ -62,24 +78,46 @@ export function getDefaultPointsConfig() {
 // Get current points for an entity with automatic regeneration
 export async function getEntityPoints(guildId, entityId, pointType) {
     const safariData = await loadSafariContent();
-    
+
     // Ensure entity points exist
     if (!safariData[guildId]?.entityPoints?.[entityId]?.[pointType]) {
         await initializeEntityPoints(guildId, entityId, [pointType]);
         return await getEntityPoints(guildId, entityId, pointType);
     }
-    
+
     const pointData = safariData[guildId].entityPoints[entityId][pointType];
-    const config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
-    
+
+    // Get config - use per-server stamina config for stamina, default for others
+    let config;
+    if (pointType === 'stamina') {
+        const { getStaminaConfig } = await import('./safariManager.js');
+        const staminaConfig = await getStaminaConfig(guildId);
+
+        // Convert to getDefaultPointsConfig format for regeneration calculation
+        config = {
+            displayName: "Stamina",
+            emoji: "⚡",
+            defaultMax: staminaConfig.maxStamina,
+            defaultMin: 0,
+            regeneration: {
+                type: "full_reset",
+                interval: staminaConfig.regenerationMinutes * 60000, // Convert minutes to milliseconds
+                amount: "max"
+            },
+            visibility: "hidden"
+        };
+    } else {
+        config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
+    }
+
     // Apply regeneration based on elapsed time
     const regenerated = calculateRegeneration(pointData, config);
-    
+
     if (regenerated.hasChanged) {
         safariData[guildId].entityPoints[entityId][pointType] = regenerated.data;
         await saveSafariContent(safariData);
     }
-    
+
     return regenerated.data;
 }
 
@@ -144,18 +182,32 @@ export async function hasEnoughPoints(guildId, entityId, pointType, amount) {
 export async function getTimeUntilRegeneration(guildId, entityId, pointType) {
     const safariData = await loadSafariContent();
     const pointData = safariData[guildId]?.entityPoints?.[entityId]?.[pointType];
-    
+
     if (!pointData) return "Not initialized";
-    
-    const config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
-    
+
+    // Get config - use per-server stamina config for stamina, default for others
+    let config;
+    if (pointType === 'stamina') {
+        const { getStaminaConfig } = await import('./safariManager.js');
+        const staminaConfig = await getStaminaConfig(guildId);
+
+        config = {
+            regeneration: {
+                type: "full_reset",
+                interval: staminaConfig.regenerationMinutes * 60000
+            }
+        };
+    } else {
+        config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
+    }
+
     if (pointData.current >= pointData.max) {
         return "Full";
     }
-    
+
     const now = Date.now();
     let nextRegenTime;
-    
+
     if (config.regeneration.type === 'full_reset') {
         nextRegenTime = pointData.lastUse + config.regeneration.interval;
     } else {
@@ -253,8 +305,22 @@ export async function initializePointsConfig(guildId, customConfig = null) {
 export async function getPointsDisplay(guildId, entityId, pointType) {
     const points = await getEntityPoints(guildId, entityId, pointType);
     const safariData = await loadSafariContent();
-    const config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
-    
+
+    // Get config - use per-server stamina config for stamina, default for others
+    let config;
+    if (pointType === 'stamina') {
+        const { getStaminaConfig } = await import('./safariManager.js');
+        const staminaConfig = await getStaminaConfig(guildId);
+
+        config = {
+            displayName: "Stamina",
+            emoji: "⚡",
+            visibility: "hidden"
+        };
+    } else {
+        config = safariData[guildId]?.pointsConfig?.definitions?.[pointType] || getDefaultPointsConfig()[pointType];
+    }
+
     if (config.visibility === 'hidden') {
         // For MVP, just return if they can use the points
         if (points.current > 0) {
@@ -266,14 +332,14 @@ export async function getPointsDisplay(guildId, entityId, pointType) {
     } else if (config.visibility === 'bar') {
         // Future: return bar representation
         const percentage = (points.current / points.max) * 100;
-        return { 
-            canUse: points.current > 0, 
+        return {
+            canUse: points.current > 0,
             display: `${config.emoji} ${'█'.repeat(Math.floor(percentage/10))}${'░'.repeat(10-Math.floor(percentage/10))} ${points.current}/${points.max}`
         };
     } else {
         // Default: show numbers
-        return { 
-            canUse: points.current > 0, 
+        return {
+            canUse: points.current > 0,
             display: `${config.emoji} ${points.current}/${points.max} ${config.displayName}`
         };
     }

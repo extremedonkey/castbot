@@ -664,9 +664,9 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'safari'
   },
-  'stamina_global_config': {
-    label: 'Stamina Settings',
-    description: 'Global stamina configuration (admin only)',
+  'stamina_location_config': {
+    label: 'Stamina & Location',
+    description: 'Per-server stamina and starting location configuration',
     emoji: '⚡',
     style: 'Secondary',
     category: 'safari_admin'

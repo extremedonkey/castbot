@@ -7605,6 +7605,45 @@ async function getItemStock(guildId, storeId, itemId) {
     return storeItem.stock;
 }
 
+/**
+ * Get stamina configuration for a guild (per-server with .env fallback)
+ * Replaces global .env stamina settings with per-server configuration
+ *
+ * @param {string} guildId - Guild ID
+ * @returns {Promise<Object>} Stamina configuration object
+ *
+ * @example
+ * const config = await getStaminaConfig(guildId);
+ * // Returns: { startingStamina: 1, maxStamina: 1, regenerationMinutes: 3, defaultStartingCoordinate: 'A1' }
+ */
+export async function getStaminaConfig(guildId) {
+    const safariData = await loadSafariContent();
+    const safariConfig = safariData[guildId]?.safariConfig || {};
+
+    // Read from safariConfig first, fall back to .env (backward compatible)
+    const config = {
+        startingStamina: safariConfig.startingStamina !== undefined
+            ? safariConfig.startingStamina
+            : parseInt(process.env.STAMINA_MAX || '1'),
+
+        maxStamina: safariConfig.maxStamina !== undefined
+            ? safariConfig.maxStamina
+            : parseInt(process.env.STAMINA_MAX || '1'),
+
+        regenerationMinutes: safariConfig.staminaRegenerationMinutes !== undefined
+            ? safariConfig.staminaRegenerationMinutes
+            : parseInt(process.env.STAMINA_REGEN_MINUTES || '3'),
+
+        defaultStartingCoordinate: safariConfig.defaultStartingCoordinate || 'A1'
+    };
+
+    // Debug logging to show config source (helps diagnose issues)
+    const source = safariConfig.startingStamina !== undefined ? 'safariConfig' : '.env';
+    console.log(`⚡ Stamina config for guild ${guildId}: source=${source}, starting=${config.startingStamina}, max=${config.maxStamina}, regen=${config.regenerationMinutes}min, coordinate=${config.defaultStartingCoordinate}`);
+
+    return config;
+}
+
 export {
     createCustomButton,
     getCustomButton,

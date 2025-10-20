@@ -9797,63 +9797,108 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    } else if (custom_id === 'stamina_global_config') {
-      // Handle global stamina configuration button - ADMIN ONLY
+    } else if (custom_id === 'stamina_location_config') {
+      // Handle per-server stamina & location configuration button
       return ButtonHandlerFactory.create({
-        id: 'stamina_global_config',
+        id: 'stamina_location_config',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          console.log(`⚡ DEBUG: User ${context.userId} attempting to access global stamina config`);
-          
-          // Check if user is the specific admin
-          if (context.userId !== '391415444084490240') {
-            console.log(`❌ Access denied: User ${context.userId} is not authorized for global stamina config`);
-            return {
-              content: '❌ Access denied. This feature is restricted to bot administrators.',
-              ephemeral: true
-            };
-          }
-          
-          // Get current stamina configuration
-          const { getDefaultPointsConfig } = await import('./pointsManager.js');
-          const currentConfig = getDefaultPointsConfig();
-          const currentRegenMinutes = Math.floor(currentConfig.stamina.regeneration.interval / 60000);
-          const currentMaxStamina = currentConfig.stamina.defaultMax;
-          
-          // Create stamina settings modal
-          const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = await import('discord.js');
-          
-          const modal = new ModalBuilder()
-            .setCustomId('stamina_global_config_modal')
-            .setTitle('⚡ Global Stamina Settings');
-          
-          const regenTimeInput = new TextInputBuilder()
-            .setCustomId('stamina_regen_minutes')
-            .setLabel('Stamina Regen Time (mins) - 720mins = 12hrs')
-            .setStyle(TextInputStyle.Short)
-            .setValue(currentRegenMinutes.toString())
-            .setRequired(true)
-            .setMinLength(1)
-            .setMaxLength(6);
-          
-          const maxStaminaInput = new TextInputBuilder()
-            .setCustomId('stamina_max_value')
-            .setLabel('Max Stamina')
-            .setStyle(TextInputStyle.Short)
-            .setValue(currentMaxStamina.toString())
-            .setRequired(true)
-            .setMinLength(1)
-            .setMaxLength(3);
-          
-          const firstActionRow = new ActionRowBuilder().addComponents(regenTimeInput);
-          const secondActionRow = new ActionRowBuilder().addComponents(maxStaminaInput);
-          
-          modal.addComponents(firstActionRow, secondActionRow);
-          
+          console.log(`⚡ DEBUG: User ${context.userId} accessing stamina & location config for guild ${context.guildId}`);
+
+          // Get current stamina configuration (per-server with .env fallback)
+          const { getStaminaConfig } = await import('./safariManager.js');
+          const currentConfig = await getStaminaConfig(context.guildId);
+
+          // Create modern Components V2 modal with Label components
+          const modal = {
+            custom_id: 'stamina_location_config_modal',
+            title: 'Stamina & Location Settings',
+            components: [
+              // Instructions
+              {
+                type: 10, // Text Display
+                content: '### Configure Safari Initialization\n\n' +
+                         'These settings control default values for this server.\n' +
+                         'Leave fields empty to use global defaults.'
+              },
+
+              // Label 1: Starting Stamina
+              {
+                type: 18, // Label
+                label: 'Starting Stamina',
+                description: 'Initial stamina for new players (0-99)',
+                component: {
+                  type: 4, // Text Input
+                  custom_id: 'starting_stamina',
+                  style: 1, // Short
+                  min_length: 1,
+                  max_length: 2,
+                  placeholder: currentConfig.startingStamina.toString(),
+                  value: currentConfig.startingStamina.toString(),
+                  required: true
+                }
+              },
+
+              // Label 2: Max Stamina
+              {
+                type: 18, // Label
+                label: 'Max Stamina',
+                description: 'Maximum stamina capacity (1-99)',
+                component: {
+                  type: 4, // Text Input
+                  custom_id: 'max_stamina',
+                  style: 1, // Short
+                  min_length: 1,
+                  max_length: 2,
+                  placeholder: currentConfig.maxStamina.toString(),
+                  value: currentConfig.maxStamina.toString(),
+                  required: true
+                }
+              },
+
+              // Label 3: Regeneration Minutes
+              {
+                type: 18, // Label
+                label: 'Regeneration Time (minutes)',
+                description: 'Time to regenerate 1 stamina (1-1440)',
+                component: {
+                  type: 4, // Text Input
+                  custom_id: 'regen_minutes',
+                  style: 1, // Short
+                  min_length: 1,
+                  max_length: 4,
+                  placeholder: currentConfig.regenerationMinutes.toString(),
+                  value: currentConfig.regenerationMinutes.toString(),
+                  required: true
+                }
+              },
+
+              // Separator
+              { type: 14 },
+
+              // Label 4: Default Starting Coordinate
+              {
+                type: 18, // Label
+                label: 'Default Starting Coordinate',
+                description: 'Initial map position (e.g., A1, B3, G7)',
+                component: {
+                  type: 4, // Text Input
+                  custom_id: 'default_starting_coordinate',
+                  style: 1, // Short
+                  min_length: 2,
+                  max_length: 4,
+                  placeholder: 'A1',
+                  value: currentConfig.defaultStartingCoordinate,
+                  required: true
+                }
+              }
+            ]
+          };
+
           return {
             type: InteractionResponseType.MODAL,
-            data: modal.toJSON()
+            data: modal
           };
         }
       })(req, res, client);
@@ -33295,79 +33340,115 @@ Are you sure you want to continue?`;
           }
         });
       }
-    } else if (custom_id === 'stamina_global_config_modal') {
-      // Handle global stamina configuration modal submission - ADMIN ONLY
+    } else if (custom_id === 'stamina_location_config_modal') {
+      // Handle per-server stamina & location configuration modal submission
       try {
+        const guildId = req.body.guild_id;
         const member = req.body.member;
         const userId = member.user.id;
-        
-        // Check admin permissions and specific user ID
+
+        // Check admin permissions
         if (!requirePermission(req, res, PERMISSIONS.MANAGE_ROLES, 'You need Manage Roles permission to configure stamina settings.')) return;
-        
-        if (userId !== '391415444084490240') {
-          console.log(`❌ Access denied: User ${userId} is not authorized for global stamina config`);
+
+        // Extract modal values from Label components (Components V2 format)
+        const components = req.body.data.components;
+
+        // Skip Text Display (index 0), extract from Label components
+        const startingStaminaValue = components[1]?.component?.value;
+        const maxStaminaValue = components[2]?.component?.value;
+        const regenMinutesValue = components[3]?.component?.value;
+        // Skip Separator (index 4)
+        const coordinateValue = components[5]?.component?.value;
+
+        // Parse values
+        const startingStamina = parseInt(startingStaminaValue);
+        const maxStamina = parseInt(maxStaminaValue);
+        const regenMinutes = parseInt(regenMinutesValue);
+        const coordinate = coordinateValue.trim().toUpperCase();
+
+        // Validation Chain
+        const errors = [];
+
+        // 1. Starting Stamina (0-99)
+        if (isNaN(startingStamina) || startingStamina < 0 || startingStamina > 99) {
+          errors.push(`Starting Stamina must be 0-99 (got "${startingStaminaValue}")`);
+        }
+
+        // 2. Max Stamina (1-99, must be >= starting)
+        if (isNaN(maxStamina) || maxStamina < 1 || maxStamina > 99) {
+          errors.push(`Max Stamina must be 1-99 (got "${maxStaminaValue}")`);
+        } else if (maxStamina < startingStamina) {
+          errors.push(`Max Stamina (${maxStamina}) must be >= Starting Stamina (${startingStamina})`);
+        }
+
+        // 3. Regen Minutes (1-1440 = max 1 day)
+        if (isNaN(regenMinutes) || regenMinutes < 1 || regenMinutes > 1440) {
+          errors.push(`Regen Time must be 1-1440 minutes (got "${regenMinutesValue}")`);
+        }
+
+        // 4. Coordinate Format
+        const coordinatePattern = /^[A-Z][0-9]{1,2}$/;
+        if (!coordinatePattern.test(coordinate)) {
+          errors.push(`Invalid coordinate format: "${coordinate}" (use A1, B3, etc.)`);
+        }
+
+        // 5. Coordinate Exists in Active Map
+        const { loadSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+        const activeMapId = safariData[guildId]?.maps?.active;
+
+        if (!activeMapId) {
+          errors.push('No active map found - create a map first');
+        } else {
+          const mapData = safariData[guildId]?.maps?.configurations?.[activeMapId];
+          if (!mapData?.coordinateChannels?.[coordinate]) {
+            const available = Object.keys(mapData?.coordinateChannels || {}).slice(0, 10).join(', ');
+            errors.push(`Coordinate "${coordinate}" not found in map. Available: ${available}`);
+          }
+        }
+
+        // If errors, show ephemeral error message
+        if (errors.length > 0) {
+          console.log(`❌ Validation errors in stamina & location config: ${errors.join('; ')}`);
           return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
-              content: '❌ Access denied. This feature is restricted to bot administrators.',
+              content: '❌ **Validation Errors**\n\n' + errors.map(e => `• ${e}`).join('\n'),
               flags: InteractionResponseFlags.EPHEMERAL
             }
           });
         }
-        
-        // Extract modal values
-        const components = req.body.data.components;
-        const regenMinutes = parseInt(components[0]?.components[0]?.value || '3');
-        const maxStamina = parseInt(components[1]?.components[0]?.value || '1');
-        
-        // Validate inputs
-        if (isNaN(regenMinutes) || regenMinutes < 1 || regenMinutes > 10080) { // Max 1 week
-          throw new Error('Regeneration time must be between 1 and 10080 minutes (1 week)');
-        }
-        
-        if (isNaN(maxStamina) || maxStamina < 1 || maxStamina > 999) {
-          throw new Error('Max stamina must be between 1 and 999');
-        }
-        
-        console.log(`⚡ DEBUG: Updating global stamina config - Regen: ${regenMinutes}min, Max: ${maxStamina}`);
-        
-        // Update environment variables (requires app restart to take effect)
-        const fs = await import('fs');
-        const path = await import('path');
-        
-        const envPath = path.join(process.cwd(), '.env');
-        let envContent = fs.readFileSync(envPath, 'utf8');
-        
-        // Update or add the stamina environment variables
-        const updateEnvVar = (content, key, value) => {
-          const regex = new RegExp(`^${key}=.*$`, 'm');
-          if (regex.test(content)) {
-            return content.replace(regex, `${key}=${value}`);
-          } else {
-            return content + `\n${key}=${value}`;
-          }
-        };
-        
-        envContent = updateEnvVar(envContent, 'STAMINA_REGEN_MINUTES', regenMinutes);
-        envContent = updateEnvVar(envContent, 'STAMINA_MAX', maxStamina);
-        
-        fs.writeFileSync(envPath, envContent);
-        
-        console.log(`✅ SUCCESS: Global stamina config updated - requires restart to take effect`);
-        
+
+        console.log(`⚡ DEBUG: Updating stamina & location config for guild ${guildId} - Starting: ${startingStamina}, Max: ${maxStamina}, Regen: ${regenMinutes}min, Coordinate: ${coordinate}`);
+
+        // Save to safariConfig (per-server configuration)
+        if (!safariData[guildId]) safariData[guildId] = {};
+        if (!safariData[guildId].safariConfig) safariData[guildId].safariConfig = {};
+
+        safariData[guildId].safariConfig.startingStamina = startingStamina;
+        safariData[guildId].safariConfig.maxStamina = maxStamina;
+        safariData[guildId].safariConfig.staminaRegenerationMinutes = regenMinutes;
+        safariData[guildId].safariConfig.defaultStartingCoordinate = coordinate;
+
+        const { saveSafariContent } = await import('./safariManager.js');
+        await saveSafariContent(safariData);
+
+        console.log(`✅ SUCCESS: Stamina & location config updated for guild ${guildId} (changes take effect immediately)`);
+
+        // Refresh the Settings UI (matches pattern of other modal handlers)
+        const { getCustomTerms } = await import('./safariManager.js');
+        const updatedConfig = await getCustomTerms(guildId);
+
+        const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
+        const customizationUI = await createSafariCustomizationUI(guildId, updatedConfig);
+
         return res.send({
-          type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-          data: {
-            content: `✅ **Global Stamina Settings Updated**\n\n` +
-                    `🔄 **Regeneration Time:** ${regenMinutes} minutes\n` +
-                    `⚡ **Max Stamina:** ${maxStamina}\n\n` +
-                    `⚠️ **Note:** App restart required for changes to take effect.`,
-            flags: InteractionResponseFlags.EPHEMERAL
-          }
+          type: InteractionResponseType.UPDATE_MESSAGE,
+          data: customizationUI
         });
-        
+
       } catch (error) {
-        console.error('Error updating global stamina config:', error);
+        console.error('Error updating stamina & location config:', error);
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {

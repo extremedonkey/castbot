@@ -27,11 +27,11 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         });
     });
 
-    // Add global stamina settings button (admin only)
+    // Add stamina & location settings button
     fieldGroupButtons.push({
         type: 2, // Button
-        custom_id: 'stamina_global_config',
-        label: 'Stamina Settings',
+        custom_id: 'stamina_location_config',
+        label: 'Stamina & Location',
         style: 2, // Secondary
         emoji: { name: '⚡' }
     });
@@ -271,15 +271,15 @@ async function createCurrentSettingsDisplay(guildId, config) {
         display += `\n`;
     }
 
-    // Add Stamina Settings
-    const { getDefaultPointsConfig } = await import('./pointsManager.js');
-    const staminaConfig = getDefaultPointsConfig();
-    const regenMinutes = Math.floor(staminaConfig.stamina.regeneration.interval / 60000);
-    const maxStamina = staminaConfig.stamina.defaultMax;
+    // Add Stamina & Location Settings (per-server with .env fallback)
+    const { getStaminaConfig } = await import('./safariManager.js');
+    const staminaConfig = await getStaminaConfig(guildId);
 
-    display += `**⚡ Stamina Settings**\n`;
-    display += `• Regeneration Time: ${regenMinutes} minutes\n`;
-    display += `• Max Stamina: ${maxStamina}\n\n`;
+    display += `**⚡ Stamina & Location**\n`;
+    display += `• Starting Stamina: ${staminaConfig.startingStamina}\n`;
+    display += `• Max Stamina: ${staminaConfig.maxStamina}\n`;
+    display += `• Regeneration Time: ${staminaConfig.regenerationMinutes} minutes\n`;
+    display += `• Default Starting Coordinate: ${staminaConfig.defaultStartingCoordinate}\n\n`;
 
     // Add Player Menu Settings
     const enableGlobalCommands = config.enableGlobalCommands !== false;
