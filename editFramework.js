@@ -151,12 +151,13 @@ export const EDIT_CONFIGS = {
         }
       },
       rounds: {
-        label: 'Round Customization',
-        description: 'Set probability percentages for good events in each round',
+        label: 'Rounds & Location',
+        description: 'Set round probabilities and default starting location',
         fields: {
           round1GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 1 Good %', placeholder: '75' },
           round2GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 2 Good %', placeholder: '50' },
-          round3GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 3 Good %', placeholder: '25' }
+          round3GoodProbability: { type: 'number', min: 0, max: 100, required: false, label: 'Round 3 Good %', placeholder: '25' },
+          defaultStartingCoordinate: { type: 'text', maxLength: 4, required: false, label: 'Starting Coordinate', placeholder: 'A1' }
         }
       }
     },

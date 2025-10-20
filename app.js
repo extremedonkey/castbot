@@ -9810,17 +9810,17 @@ Your server is now ready for Tycoons gameplay!`;
           const { getStaminaConfig } = await import('./safariManager.js');
           const currentConfig = await getStaminaConfig(context.guildId);
 
-          // Create modern Components V2 modal with Label components
+          // Create modern Components V2 modal with Label components (4 components - under 5 limit)
           const modal = {
             custom_id: 'stamina_location_config_modal',
-            title: 'Stamina & Location Settings',
+            title: 'Stamina Settings',
             components: [
               // Instructions
               {
                 type: 10, // Text Display
-                content: '### Configure Safari Initialization\n\n' +
-                         'These settings control default values for this server.\n' +
-                         'Leave fields empty to use global defaults.'
+                content: '### Configure Stamina Settings\n\n' +
+                         'These settings control stamina for this server.\n' +
+                         'Configure starting location in Rounds & Location.'
               },
 
               // Label 1: Starting Stamina
@@ -9870,26 +9870,6 @@ Your server is now ready for Tycoons gameplay!`;
                   max_length: 4,
                   placeholder: currentConfig.regenerationMinutes.toString(),
                   value: currentConfig.regenerationMinutes.toString(),
-                  required: true
-                }
-              },
-
-              // Separator
-              { type: 14 },
-
-              // Label 4: Default Starting Coordinate
-              {
-                type: 18, // Label
-                label: 'Default Starting Coordinate',
-                description: 'Initial map position (e.g., A1, B3, G7)',
-                component: {
-                  type: 4, // Text Input
-                  custom_id: 'default_starting_coordinate',
-                  style: 1, // Short
-                  min_length: 2,
-                  max_length: 4,
-                  placeholder: 'A1',
-                  value: currentConfig.defaultStartingCoordinate,
                   required: true
                 }
               }
@@ -33277,7 +33257,54 @@ Are you sure you want to continue?`;
           // Use the emoji name if it's a valid emoji, otherwise default to 🧰
           updates.inventoryEmoji = emoji.name || '🧰';
         }
-        
+
+        // Validate defaultStartingCoordinate if present (from Rounds & Location modal)
+        if (groupKey === 'rounds' && updates.defaultStartingCoordinate) {
+          const coordinate = updates.defaultStartingCoordinate.trim().toUpperCase();
+
+          // Coordinate Format validation
+          const coordinatePattern = /^[A-Z][0-9]{1,2}$/;
+          if (!coordinatePattern.test(coordinate)) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ Invalid coordinate format: "${coordinate}" (use A1, B3, G7, etc.)`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+
+          // Coordinate Exists in Active Map validation
+          const { loadSafariContent } = await import('./safariManager.js');
+          const safariData = await loadSafariContent();
+          const activeMapId = safariData[guildId]?.maps?.active;
+
+          if (!activeMapId) {
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: '❌ No active map found - create a map first before setting starting coordinate',
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+
+          const mapData = safariData[guildId]?.maps?.configurations?.[activeMapId];
+          if (!mapData?.coordinateChannels?.[coordinate]) {
+            const available = Object.keys(mapData?.coordinateChannels || {}).slice(0, 10).join(', ');
+            return res.send({
+              type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+              data: {
+                content: `❌ Coordinate "${coordinate}" not found in active map.\n\nAvailable coordinates: ${available}`,
+                flags: InteractionResponseFlags.EPHEMERAL
+              }
+            });
+          }
+
+          // Update with uppercase version
+          updates.defaultStartingCoordinate = coordinate;
+        }
+
         // Validate and parse defaultStartingCurrencyValue if present
         if (updates.defaultStartingCurrencyValue !== undefined) {
           const value = String(updates.defaultStartingCurrencyValue).trim();
@@ -33357,14 +33384,11 @@ Are you sure you want to continue?`;
         const startingStaminaValue = components[1]?.component?.value;
         const maxStaminaValue = components[2]?.component?.value;
         const regenMinutesValue = components[3]?.component?.value;
-        // Skip Separator (index 4)
-        const coordinateValue = components[5]?.component?.value;
 
         // Parse values
         const startingStamina = parseInt(startingStaminaValue);
         const maxStamina = parseInt(maxStaminaValue);
         const regenMinutes = parseInt(regenMinutesValue);
-        const coordinate = coordinateValue.trim().toUpperCase();
 
         // Validation Chain
         const errors = [];
@@ -33386,27 +33410,6 @@ Are you sure you want to continue?`;
           errors.push(`Regen Time must be 1-1440 minutes (got "${regenMinutesValue}")`);
         }
 
-        // 4. Coordinate Format
-        const coordinatePattern = /^[A-Z][0-9]{1,2}$/;
-        if (!coordinatePattern.test(coordinate)) {
-          errors.push(`Invalid coordinate format: "${coordinate}" (use A1, B3, etc.)`);
-        }
-
-        // 5. Coordinate Exists in Active Map
-        const { loadSafariContent } = await import('./safariManager.js');
-        const safariData = await loadSafariContent();
-        const activeMapId = safariData[guildId]?.maps?.active;
-
-        if (!activeMapId) {
-          errors.push('No active map found - create a map first');
-        } else {
-          const mapData = safariData[guildId]?.maps?.configurations?.[activeMapId];
-          if (!mapData?.coordinateChannels?.[coordinate]) {
-            const available = Object.keys(mapData?.coordinateChannels || {}).slice(0, 10).join(', ');
-            errors.push(`Coordinate "${coordinate}" not found in map. Available: ${available}`);
-          }
-        }
-
         // If errors, show ephemeral error message
         if (errors.length > 0) {
           console.log(`❌ Validation errors in stamina & location config: ${errors.join('; ')}`);
@@ -33419,21 +33422,22 @@ Are you sure you want to continue?`;
           });
         }
 
-        console.log(`⚡ DEBUG: Updating stamina & location config for guild ${guildId} - Starting: ${startingStamina}, Max: ${maxStamina}, Regen: ${regenMinutes}min, Coordinate: ${coordinate}`);
+        console.log(`⚡ DEBUG: Updating stamina config for guild ${guildId} - Starting: ${startingStamina}, Max: ${maxStamina}, Regen: ${regenMinutes}min`);
 
         // Save to safariConfig (per-server configuration)
+        const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
+        const safariData = await loadSafariContent();
+
         if (!safariData[guildId]) safariData[guildId] = {};
         if (!safariData[guildId].safariConfig) safariData[guildId].safariConfig = {};
 
         safariData[guildId].safariConfig.startingStamina = startingStamina;
         safariData[guildId].safariConfig.maxStamina = maxStamina;
         safariData[guildId].safariConfig.staminaRegenerationMinutes = regenMinutes;
-        safariData[guildId].safariConfig.defaultStartingCoordinate = coordinate;
 
-        const { saveSafariContent } = await import('./safariManager.js');
         await saveSafariContent(safariData);
 
-        console.log(`✅ SUCCESS: Stamina & location config updated for guild ${guildId} (changes take effect immediately)`);
+        console.log(`✅ SUCCESS: Stamina config updated for guild ${guildId} (changes take effect immediately)`);
 
         // Refresh the Settings UI (matches pattern of other modal handlers)
         const { getCustomTerms } = await import('./safariManager.js');

@@ -665,8 +665,8 @@ export const BUTTON_REGISTRY = {
     category: 'safari'
   },
   'stamina_location_config': {
-    label: 'Stamina & Location',
-    description: 'Per-server stamina and starting location configuration',
+    label: 'Stamina Settings',
+    description: 'Per-server stamina configuration (location in Rounds)',
     emoji: '⚡',
     style: 'Secondary',
     category: 'safari_admin'

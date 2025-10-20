@@ -27,11 +27,11 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
         });
     });
 
-    // Add stamina & location settings button
+    // Add stamina settings button
     fieldGroupButtons.push({
         type: 2, // Button
         custom_id: 'stamina_location_config',
-        label: 'Stamina & Location',
+        label: 'Stamina Settings',
         style: 2, // Secondary
         emoji: { name: '⚡' }
     });
@@ -271,15 +271,15 @@ async function createCurrentSettingsDisplay(guildId, config) {
         display += `\n`;
     }
 
-    // Add Stamina & Location Settings (per-server with .env fallback)
+    // Add Stamina Settings (per-server with .env fallback)
     const { getStaminaConfig } = await import('./safariManager.js');
     const staminaConfig = await getStaminaConfig(guildId);
 
-    display += `**⚡ Stamina & Location**\n`;
+    display += `**⚡ Stamina Settings**\n`;
     display += `• Starting Stamina: ${staminaConfig.startingStamina}\n`;
     display += `• Max Stamina: ${staminaConfig.maxStamina}\n`;
     display += `• Regeneration Time: ${staminaConfig.regenerationMinutes} minutes\n`;
-    display += `• Default Starting Coordinate: ${staminaConfig.defaultStartingCoordinate}\n\n`;
+    display += `• Default Starting Coordinate: ${staminaConfig.defaultStartingCoordinate} *(see Rounds)*\n\n`;
 
     // Add Player Menu Settings
     const enableGlobalCommands = config.enableGlobalCommands !== false;
