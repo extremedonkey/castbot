@@ -33279,6 +33279,9 @@ Are you sure you want to continue?`;
           const safariData = await loadSafariContent();
           const activeMapId = safariData[guildId]?.maps?.active;
 
+          console.log(`🗺️ DEBUG: Coordinate validation - checking "${coordinate}"`);
+          console.log(`🗺️ DEBUG: activeMapId = ${activeMapId}`);
+
           if (!activeMapId) {
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -33290,8 +33293,13 @@ Are you sure you want to continue?`;
           }
 
           const mapData = safariData[guildId]?.maps?.configurations?.[activeMapId];
+          console.log(`🗺️ DEBUG: mapData exists = ${!!mapData}`);
+          console.log(`🗺️ DEBUG: mapData keys = ${Object.keys(mapData || {}).join(', ')}`);
+          console.log(`🗺️ DEBUG: mapData[${coordinate}] exists = ${!!mapData?.[coordinate]}`);
+
           if (!mapData?.[coordinate]) {
             const available = Object.keys(mapData || {}).filter(k => /^[A-Z][0-9]{1,2}$/.test(k)).slice(0, 10).join(', ');
+            console.log(`🗺️ DEBUG: Available coordinates = ${available}`);
             return res.send({
               type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
               data: {
@@ -33300,6 +33308,8 @@ Are you sure you want to continue?`;
               }
             });
           }
+
+          console.log(`✅ Coordinate "${coordinate}" validated successfully`);
 
           // Update with uppercase version
           updates.defaultStartingCoordinate = coordinate;
