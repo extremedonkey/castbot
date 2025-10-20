@@ -9856,8 +9856,9 @@ Your server is now ready for Tycoons gameplay!`;
           const safariData = await loadSafariContent();
           const safariConfig = safariData[context.guildId]?.safariConfig || {};
 
-          // Determine current setting (default to true for backward compatibility)
+          // Determine current settings (default to true/standard for backward compatibility)
           const currentEnabled = safariConfig.enableGlobalCommands !== false;
+          const currentInventoryMode = safariConfig.inventoryVisibilityMode || 'standard';
 
           // Create Components V2 modal with Label + String Select (following safari_store_stock pattern)
           const modal = {
@@ -9886,6 +9887,44 @@ Your server is now ready for Tycoons gameplay!`;
                       value: 'false',
                       description: 'Hide global command button from /menu',
                       default: currentEnabled === false
+                    }
+                  ]
+                }
+              },
+              {
+                type: 18, // Label (Components V2)
+                label: 'Inventory Button Visibility Requirements',
+                description: 'Choose when inventory button appears in /menu',
+                component: {
+                  type: 3, // String Select (Components V2)
+                  custom_id: 'inventory_visibility_mode',
+                  placeholder: 'Choose visibility mode...',
+                  min_values: 1,
+                  max_values: 1,
+                  options: [
+                    {
+                      label: 'Standard (Initialize + Round 1+)',
+                      value: 'standard',
+                      description: 'Show after player initialized AND game started',
+                      default: currentInventoryMode === 'standard'
+                    },
+                    {
+                      label: 'After Initialization Only',
+                      value: 'initialized_only',
+                      description: 'Show as soon as player joins Safari',
+                      default: currentInventoryMode === 'initialized_only'
+                    },
+                    {
+                      label: 'Always Show',
+                      value: 'always',
+                      description: 'Show inventory button to all players',
+                      default: currentInventoryMode === 'always'
+                    },
+                    {
+                      label: 'Never Show',
+                      value: 'never',
+                      description: 'Hide inventory button completely',
+                      default: currentInventoryMode === 'never'
                     }
                   ]
                 }
@@ -33334,20 +33373,27 @@ Are you sure you want to continue?`;
 
         console.log(`🕹️ DEBUG: User ${userId} submitting player menu config for guild ${guildId}`);
 
-        // Extract value from Label component with String Select (following safari_store_stock pattern)
+        // Extract values from Label components with String Select (following safari_store_stock pattern)
         const components = req.body.data.components;
         let enableGlobalCommands = false;
+        let inventoryVisibilityMode = 'standard';
 
-        // Modal has Label components with nested string select
+        // Modal has Label components with nested string selects - extract both
         for (const component of components) {
           if (component.component?.type === 3) { // String Select in Label
+            const customId = component.component.custom_id;
             const selectedValue = component.component.values?.[0];
-            enableGlobalCommands = selectedValue === 'true';
-            break;
+
+            if (customId === 'enable_global_commands') {
+              enableGlobalCommands = selectedValue === 'true';
+            } else if (customId === 'inventory_visibility_mode') {
+              inventoryVisibilityMode = selectedValue || 'standard';
+            }
           }
         }
 
         console.log(`🕹️ DEBUG: enableGlobalCommands setting: ${enableGlobalCommands}`);
+        console.log(`🕹️ DEBUG: inventoryVisibilityMode setting: ${inventoryVisibilityMode}`);
 
         // Load and update safari configuration
         const { loadSafariContent, saveSafariContent } = await import('./safariManager.js');
@@ -33363,6 +33409,7 @@ Are you sure you want to continue?`;
 
         // Update the configuration
         safariData[guildId].safariConfig.enableGlobalCommands = enableGlobalCommands;
+        safariData[guildId].safariConfig.inventoryVisibilityMode = inventoryVisibilityMode;
         await saveSafariContent(safariData);
 
         const updatedConfig = safariData[guildId].safariConfig;
@@ -33374,10 +33421,18 @@ Are you sure you want to continue?`;
         const customizationUI = await createSafariCustomizationUI(guildId, updatedConfig);
 
         // Add success message to customization UI using Components V2
+        const inventoryModeLabels = {
+          'standard': 'Standard (Initialize + Round 1+)',
+          'initialized_only': 'After Initialization Only',
+          'always': 'Always Show',
+          'never': 'Never Show'
+        };
+
         const successMessage = {
           type: 10, // Text Display
           content: `✅ **Player Menu Settings Updated**\n\n` +
-                  `🕹️ **Global Commands:** ${enableGlobalCommands ? 'Enabled' : 'Disabled'}\n\n` +
+                  `🕹️ **Global Commands:** ${enableGlobalCommands ? 'Enabled' : 'Disabled'}\n` +
+                  `📦 **Inventory Button:** ${inventoryModeLabels[inventoryVisibilityMode]}\n\n` +
                   `Players will ${enableGlobalCommands ? 'see' : 'not see'} the "Enter Command" button in their /menu.\n\n`
         };
 

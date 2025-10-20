@@ -419,21 +419,42 @@ export async function createPlayerManagementUI(options) {
       if (targetMember && client) {
         try {
           // Check if player has been initialized in Safari system
-          const { loadSafariContent, getCoordinateFromChannelId } = await import('./safariManager.js');
+          const { getCoordinateFromChannelId } = await import('./safariManager.js');
           const { loadPlayerData } = await import('./storage.js');
-          const safariData = await loadSafariContent();
           const playerData = await loadPlayerData();
-          
+
           // Player is initialized if they have Safari data structure
           const isInitialized = playerData[guildId]?.players?.[targetMember.id]?.safari !== undefined;
           const activeMapId = safariData[guildId]?.maps?.active;
           const playerMapData = activeMapId ? playerData[guildId]?.players?.[userId]?.safari?.mapProgress?.[activeMapId] : null;
           const hasMapLocation = playerMapData?.currentLocation !== undefined;
-          
-          console.log(`🔍 Safari button check for ${targetMember.displayName}: initialized=${isInitialized}, hasMap=${hasMapLocation}, round=${currentRound}`);
-          
-          // Only show Safari buttons if player has been initialized AND not Round 0
-          if (isInitialized && currentRound && currentRound !== 0) {
+
+          // Get inventory visibility mode from configuration (default to 'standard' for backward compatibility)
+          const inventoryVisibilityMode = safariConfig.inventoryVisibilityMode || 'standard';
+
+          // Determine if inventory button should be shown based on configuration
+          let showInventory = false;
+          switch (inventoryVisibilityMode) {
+            case 'always':
+              showInventory = true;
+              break;
+            case 'never':
+              showInventory = false;
+              break;
+            case 'initialized_only':
+              showInventory = isInitialized;
+              break;
+            case 'standard':
+            default:
+              // Original logic: initialized AND round started (not 0)
+              showInventory = isInitialized && currentRound && currentRound !== 0;
+              break;
+          }
+
+          console.log(`🔍 Safari button check for ${targetMember.displayName}: initialized=${isInitialized}, hasMap=${hasMapLocation}, round=${currentRound}, mode=${inventoryVisibilityMode}, showInventory=${showInventory}`);
+
+          // Show Safari buttons based on configuration
+          if (showInventory) {
             // Get custom terms for inventory name and emoji
             const customTerms = await getCustomTerms(guildId);
             
