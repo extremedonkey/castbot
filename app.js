@@ -33292,7 +33292,15 @@ Are you sure you want to continue?`;
             });
           }
 
-          const mapData = safariData[guildId]?.maps?.configurations?.[activeMapId];
+          // Debug: Check different possible paths
+          console.log(`🗺️ DEBUG: maps object keys = ${Object.keys(safariData[guildId]?.maps || {}).join(', ')}`);
+          console.log(`🗺️ DEBUG: Has maps.configurations = ${!!safariData[guildId]?.maps?.configurations}`);
+          console.log(`🗺️ DEBUG: Has maps[activeMapId] = ${!!safariData[guildId]?.maps?.[activeMapId]}`);
+
+          // Try different paths
+          const mapData = safariData[guildId]?.maps?.configurations?.[activeMapId]
+                       || safariData[guildId]?.maps?.[activeMapId];
+
           console.log(`🗺️ DEBUG: mapData exists = ${!!mapData}`);
           console.log(`🗺️ DEBUG: mapData keys = ${Object.keys(mapData || {}).join(', ')}`);
           console.log(`🗺️ DEBUG: mapData[${coordinate}] exists = ${!!mapData?.[coordinate]}`);
