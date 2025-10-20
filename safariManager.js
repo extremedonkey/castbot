@@ -3892,7 +3892,10 @@ async function updateCustomTerms(guildId, terms) {
         if (terms.defaultStartingCurrencyValue !== undefined) {
             safariData[guildId].safariConfig.defaultStartingCurrencyValue = parseInt(terms.defaultStartingCurrencyValue) || 100;
         }
-        
+        if (terms.defaultStartingCoordinate !== undefined) {
+            safariData[guildId].safariConfig.defaultStartingCoordinate = terms.defaultStartingCoordinate || 'A1';
+        }
+
         // Update game settings - Challenge Game Logic
         if (terms.round1GoodProbability !== undefined) {
             safariData[guildId].safariConfig.round1GoodProbability = terms.round1GoodProbability;
