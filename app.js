@@ -791,21 +791,16 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
 
   const safariFeatureRow = new ActionRowBuilder().addComponents(safariFeatureButtons);
 
-  // Create Advanced Features row (Safari + Rounds + Analytics + Tools)
+  // Create Advanced Features row (Safari + Analytics + Rounds + Tools)
   const advancedFeaturesButtons = [
     new ButtonBuilder()
       .setCustomId('prod_safari_menu')
       .setLabel('Safari')
       .setStyle(ButtonStyle.Success)
-      .setEmoji('🦁'),
-    new ButtonBuilder()
-      .setCustomId('safari_rounds_menu')
-      .setLabel('Rounds')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji('⏳')
+      .setEmoji('🦁')
   ];
 
-  // Add Analytics button only for specific user (Reece) - third in row
+  // Add Analytics button only for specific user (Reece) - second in row
   if (userId === '391415444084490240') {
     advancedFeaturesButtons.push(
       new ButtonBuilder()
@@ -816,7 +811,16 @@ async function createProductionMenuInterface(guild, playerData, guildId, userId 
     );
   }
 
-  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help) - fourth in row
+  // Add Rounds button - third in row (or second if Analytics not shown)
+  advancedFeaturesButtons.push(
+    new ButtonBuilder()
+      .setCustomId('safari_rounds_menu')
+      .setLabel('Rounds')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('⏳')
+  );
+
+  // Add Tools button (renamed from Initial Setup, contains Setup/Availability/Help) - fourth in row (or third if Analytics not shown)
   advancedFeaturesButtons.push(
     new ButtonBuilder()
       .setCustomId('prod_setup')
