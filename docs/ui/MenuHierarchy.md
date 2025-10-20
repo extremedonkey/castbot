@@ -218,7 +218,7 @@ const menu = await MenuBuilder.create('menu_id', context);
 **Current State**: Most menus still built inline in app.js
 
 **Priority Order**:
-1. ✅ Simple submenus (setup, tribes) - Not started
+1. 🟢 Simple submenus: setup ✅ (migrated Jan 2025), tribes ⚱️ (pending)
 2. ⚱️ Complex menus (safari, seasons) - Legacy
 3. ⚱️ Dynamic menus (production, player) - Legacy
 

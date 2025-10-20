@@ -190,12 +190,10 @@ export const BUTTON_REGISTRY = {
   
   // Navigation
   'prod_menu_back': {
-    label: '⬅ Menu',
+    label: '← Menu',
     description: 'Return to main production menu',
     emoji: '⬅',
-    style: 'Primary',
-    parent: 'reece_stuff_menu',
-    restrictedUser: '391415444084490240',
+    style: 'Secondary',
     category: 'navigation'
   },
   
@@ -225,9 +223,18 @@ export const BUTTON_REGISTRY = {
     description: 'Setup CastBot pronoun and timezone roles for server',
     emoji: '⚙️',
     style: 'Primary',
-    category: 'admin'
+    category: 'admin',
+    menu: 'setup_menu'
   },
-  
+  'setup_castbot': {
+    label: 'Run Setup',
+    description: 'Execute initial CastBot setup - creates pronoun and timezone roles',
+    emoji: '🪛',
+    style: 'Primary',
+    category: 'admin',
+    parent: 'prod_setup'
+  },
+
   // === RESTART TESTING TRACKER ===
   'restart_test_not_tested': {
     label: '⏳ Not Tested',

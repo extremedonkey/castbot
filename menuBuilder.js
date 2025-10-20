@@ -8,6 +8,66 @@
  * As menus are migrated from legacy inline patterns, they get registered here
  */
 export const MENU_REGISTRY = {
+  // Setup Menu - Initial server configuration
+  'setup_menu': {
+    title: 'CastBot | Tools',
+    accent: 0x3498DB, // Blue for standard menus
+    sections: [
+      {
+        // Main setup section with description and action buttons
+        components: [
+          {
+            type: 10, // Text Display
+            content: 'Click the button below to set up CastBot. This will add Pronoun and Timezone roles to your server, and set up CastBot to use those roles, allowing prod and players to set their own pronouns, timezones and age for the castlists.\n\n💡 This setup can be run multiple times safely. If you already have pronoun roles in your server, CastBot will detect them and use them.'
+          },
+          { type: 14 }, // Separator
+          {
+            type: 1, // ActionRow
+            components: [
+              {
+                type: 2, // Button
+                custom_id: 'setup_castbot',
+                label: 'Run Setup',
+                style: 1, // Primary (Blue)
+                emoji: { name: '🪛' }
+              },
+              {
+                type: 2, // Button
+                custom_id: 'prod_availability',
+                label: 'Availability',
+                style: 2, // Secondary (Grey)
+                emoji: { name: '🕐' }
+              },
+              {
+                type: 2, // Button - Link style
+                label: 'Need Help?',
+                style: 5, // Link
+                emoji: { name: '❓' },
+                url: 'https://discord.gg/H7MpJEjkwT'
+              }
+            ]
+          }
+        ]
+      },
+      {
+        // Navigation section
+        components: [
+          {
+            type: 1, // ActionRow for back button
+            components: [
+              {
+                type: 2, // Button
+                custom_id: 'prod_menu_back',
+                label: '← Menu',
+                style: 2 // Secondary
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+
   // Example structure for future migrations:
   // 'main_menu': {
   //   title: 'CastBot | Production Menu',
