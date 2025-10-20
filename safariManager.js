@@ -7621,7 +7621,10 @@ export async function getStaminaConfig(guildId) {
     const safariData = await loadSafariContent();
     const safariConfig = safariData[guildId]?.safariConfig || {};
 
-    console.log(`🗺️ DEBUG getStaminaConfig: safariConfig.defaultStartingCoordinate = "${safariConfig.defaultStartingCoordinate}"`);
+    // Get custom terms (which includes per-server coordinate override)
+    const customTerms = await getCustomTerms(guildId);
+
+    console.log(`🗺️ DEBUG getStaminaConfig: customTerms.defaultStartingCoordinate = "${customTerms.defaultStartingCoordinate}"`);
     console.log(`🗺️ DEBUG getStaminaConfig: safariConfig keys = ${Object.keys(safariConfig).join(', ')}`);
 
     // Read from safariConfig first, fall back to .env (backward compatible)
@@ -7638,7 +7641,7 @@ export async function getStaminaConfig(guildId) {
             ? safariConfig.staminaRegenerationMinutes
             : parseInt(process.env.STAMINA_REGEN_MINUTES || '3'),
 
-        defaultStartingCoordinate: safariConfig.defaultStartingCoordinate || 'A1'
+        defaultStartingCoordinate: customTerms.defaultStartingCoordinate || 'A1'
     };
 
     // Debug logging to show config source (helps diagnose issues)
