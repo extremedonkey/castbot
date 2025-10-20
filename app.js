@@ -8120,7 +8120,22 @@ To fix this:
           // Load player data and create main production menu
           const playerData = await loadPlayerData();
           const menuData = await createProductionMenuInterface(context.guild, playerData, context.guildId, context.userId);
-          
+
+          return menuData;
+        }
+      })(req, res, client);
+    } else if (custom_id === 'prod_production_menu') {
+      // Handle Back to Main Production Menu from Settings (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'prod_production_menu',
+        requiresPermission: PermissionFlagsBits.ManageRoles | PermissionFlagsBits.ManageChannels | PermissionFlagsBits.ManageGuild,
+        permissionName: 'Manage Roles, Manage Channels, or Manage Server',
+        updateMessage: true,
+        handler: async (context) => {
+          // Load player data and create main production menu
+          const playerData = await loadPlayerData();
+          const menuData = await createProductionMenuInterface(context.guild, playerData, context.guildId, context.userId);
+
           return menuData;
         }
       })(req, res, client);

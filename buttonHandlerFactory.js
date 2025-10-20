@@ -196,7 +196,13 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'navigation'
   },
-  
+  'prod_production_menu': {
+    label: '← Back',
+    description: 'Return to main production menu (from Settings)',
+    style: 'Secondary',
+    category: 'navigation'
+  },
+
   // === GENERAL NAVIGATION ===
   'viral_menu': {
     label: '📋 Open Prod Menu',

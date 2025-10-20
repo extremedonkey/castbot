@@ -79,8 +79,7 @@ export async function createSafariCustomizationUI(guildId, currentConfig) {
                     type: 2, // Button
                     custom_id: 'prod_production_menu',
                     label: '← Back',
-                    style: 2, // Secondary
-                    emoji: { name: '🏠' }
+                    style: 2 // Secondary
                 },
                 {
                     type: 2, // Button
