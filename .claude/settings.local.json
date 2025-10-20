@@ -66,7 +66,10 @@
       "Bash(done)",
       "Bash(curl -I \"https://cdn.discordapp.com/attachments/1390800615646433280/1400526752891277332/map_7x7_1753981993871.png?ex=688cf5ae&is=688ba42e&hm=7543100969f493dea57ca72234caf4bff8ffe237426aaa9b733923c4cc5cb7e3\")",
       "Bash(curl -s \"https://cdn.discordapp.com/attachments/1390800615646433280/1400526752891277332/map_7x7_1753981993871.png?ex=688cf5ae&is=688ba42e&hm=7543100969f493dea57ca72234caf4bff8ffe237426aaa9b733923c4cc5cb7e3\")",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(curl -s \"https://ibb.co/Rkd1wvc6\" -o /tmp/user_error.html)",
+      "Bash(curl -s \"https://i.ibb.co/1tj3WvTX/image.png\" -o /tmp/user_error.png)",
+      "Bash(for line in 4810 4908 5108 5955 6196 6982)"
     ],
     "deny": [],
     "ask": []

@@ -1753,7 +1753,11 @@
       "1425702665806938183": {
         "name": "Tribe 1425702665806938183",
         "emoji": "🏕️",
-        "color": "#e91e63"
+        "color": "#e91e63",
+        "castlistIds": [
+          "castlist_1760891080792_1331657596087566398"
+        ],
+        "castlist": "My Cool Castlist"
       }
     },
     "timezones": {
@@ -2771,6 +2775,25 @@
         },
         "modifiedAt": 1759671896374,
         "modifiedBy": "391415444084490240"
+      },
+      "castlist_1760891080792_1331657596087566398": {
+        "id": "castlist_1760891080792_1331657596087566398",
+        "name": "My Cool Castlist",
+        "type": "custom",
+        "createdAt": 1760891080792,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_9a8360f7864d4120"
+        },
+        "metadata": {
+          "emoji": "😎",
+          "description": "",
+          "lastModified": 1760891080792
+        }
       }
     },
     "placements": {
@@ -8284,20 +8307,15 @@
         "analyticsName": "Seven Sages",
         "analyticsAdded": 1760889955661,
         "castlistIds": [
-          "castlist_1760890159342_system",
-          "castlist_1760890094505_system"
+          "castlist_1760890159342_system"
         ]
       },
       "1216419032228692049": {
         "emoji": null,
-        "castlist": "sixSages",
         "showPlayerEmojis": false,
         "color": "#1abc9c",
         "analyticsName": "Six Sages",
-        "analyticsAdded": 1760889982300,
-        "castlistIds": [
-          "castlist_1760890094505_system"
-        ]
+        "analyticsAdded": 1760889982300
       },
       "1214346856683937893": {
         "name": "Tribe 1214346856683937893",
@@ -8321,27 +8339,6 @@
     "players": {},
     "timezones": {},
     "castlistConfigs": {
-      "castlist_1760890094505_system": {
-        "id": "castlist_1760890094505_system",
-        "name": "sixSages",
-        "type": "system",
-        "createdAt": 1760890094505,
-        "createdBy": "migration",
-        "settings": {
-          "sortStrategy": "alphabetical",
-          "showRankings": false,
-          "maxDisplay": 25,
-          "visibility": "public"
-        },
-        "metadata": {
-          "description": "Woot",
-          "emoji": "🔯",
-          "migratedFrom": "virtual_c2l4U2FnZXM",
-          "migrationDate": 1760890094505
-        },
-        "modifiedAt": 1760890117321,
-        "modifiedBy": "391415444084490240"
-      },
       "castlist_1760890159342_system": {
         "id": "castlist_1760890159342_system",
         "name": "Seven Sages",

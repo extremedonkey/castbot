@@ -105,6 +105,13 @@ export class PM2ErrorLogger {
     try {
       if (fs.existsSync(config.error)) {
         const errorContent = fs.readFileSync(config.error, 'utf8');
+
+        // Detect log rotation - if file size < last position, log was rotated
+        if (errorContent.length < positions.error) {
+          console.log('[PM2Logger] 🔄 Log rotation detected on error log - resetting position');
+          positions.error = 0;
+        }
+
         if (errorContent.length > positions.error) {
           const newErrors = errorContent.slice(positions.error);
           const errorLines = newErrors.split('\n')
@@ -126,6 +133,13 @@ export class PM2ErrorLogger {
     try {
       if (fs.existsSync(config.out)) {
         const outContent = fs.readFileSync(config.out, 'utf8');
+
+        // Detect log rotation - if file size < last position, log was rotated
+        if (outContent.length < positions.out) {
+          console.log('[PM2Logger] 🔄 Log rotation detected on output log - resetting position');
+          positions.out = 0;
+        }
+
         if (outContent.length > positions.out) {
           const newOut = outContent.slice(positions.out);
           const criticalLines = newOut.split('\n')
@@ -296,10 +310,10 @@ export class PM2ErrorLogger {
 
         await channel.send(message);
         console.log(`[PM2Logger] 📋 PM2 logs posted to Discord (${logs.length} lines)`);
-
-        // Save positions after successful post
-        this.savePositions(monitoringState.positions);
       }
+
+      // Always save positions, even if no errors found (prevents stale position tracking)
+      this.savePositions(monitoringState.positions);
     } catch (error) {
       console.error('[PM2Logger] Log check error (non-critical):', error);
       // Don't throw - this should never break the bot

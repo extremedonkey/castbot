@@ -575,15 +575,19 @@ export function getAdjacentRow(currentRow, direction) {
  */
 export async function createGlobalItemsUI(guildId, client = null) {
   console.log(`🎁 Creating Global Items UI for guild ${guildId}`);
-  
+
   // Load data
   const safariData = await loadSafariContent();
   const playerData = await loadPlayerData();
-  
+
   // First try to get data for the specific guild
   let guildData = safariData[guildId] || {};
   let activeMapId = guildData.maps?.active;
-  
+
+  console.log(`🔍 DEBUG: guildData.maps exists: ${!!guildData.maps}`);
+  console.log(`🔍 DEBUG: activeMapId: ${activeMapId}`);
+  console.log(`🔍 DEBUG: guildData.maps?.[activeMapId] exists: ${!!guildData.maps?.[activeMapId]}`);
+
   // If no map found for this guild, find first guild with an active map
   // This allows production team to view from any channel
   if (!activeMapId || !guildData.maps?.[activeMapId]) {
@@ -592,7 +596,7 @@ export async function createGlobalItemsUI(guildId, client = null) {
     // Find first guild with an active map
     for (const searchGuildId in safariData) {
       if (searchGuildId === '/* Guild ID */' || !safariData[searchGuildId]) continue;
-      
+
       const searchGuildData = safariData[searchGuildId];
       if (searchGuildData.maps?.active && searchGuildData.maps[searchGuildData.maps.active]) {
         console.log(`✅ Found active map in guild ${searchGuildId}`);
@@ -602,9 +606,10 @@ export async function createGlobalItemsUI(guildId, client = null) {
       }
     }
   }
-  
+
   // If still no map found, return error
   if (!activeMapId || !guildData.maps?.[activeMapId]) {
+    console.log(`❌ No active map found after search`);
     return {
       components: [{
         type: 17, // Container
@@ -616,11 +621,13 @@ export async function createGlobalItemsUI(guildId, client = null) {
       flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL
     };
   }
-  
+
   const mapData = guildData.maps[activeMapId];
   const coordinates = mapData.coordinates || {};
   const buttons = guildData.buttons || {};
   const items = guildData.items || {};
+
+  console.log(`🔍 DEBUG: Found map with ${Object.keys(coordinates).length} coordinates, ${Object.keys(buttons).length} buttons`);
   
   // Build content - only coordinates with once_globally give_item actions
   let content = `# 🎁 Global Items Overview\n\n`;
@@ -645,11 +652,15 @@ export async function createGlobalItemsUI(guildId, client = null) {
       if (!button || !button.actions) continue;
       
       // Filter to only once_globally give_item actions
-      const globalItemActions = button.actions.filter(action => 
-        action.type === 'give_item' && 
+      const globalItemActions = button.actions.filter(action =>
+        action.type === 'give_item' &&
         action.config?.limit?.type === 'once_globally'
       );
-      
+
+      if (globalItemActions.length > 0) {
+        console.log(`🔍 DEBUG: Found ${globalItemActions.length} global items in button ${buttonId} at ${coord}`);
+      }
+
       if (globalItemActions.length === 0) continue;
       
       if (!hasGlobalItems) {
@@ -692,7 +703,9 @@ export async function createGlobalItemsUI(guildId, client = null) {
   if (!hasContent) {
     content += `*No global items (once_globally give_item actions) found on this map.*\n`;
   }
-  
+
+  console.log(`🔍 DEBUG: Final result - hasContent: ${hasContent}, coordSections: ${coordSections.length}`);
+
   // Build components with dividers between coordinates
   const components = [];
   
