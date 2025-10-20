@@ -6,6 +6,21 @@ The Menu System Architecture provides a centralized, standardized approach to me
 
 **📋 Current Menu Structure**: See [MenuHierarchy.md](../ui/MenuHierarchy.md) for the complete visual menu tree and navigation flow. This document describes the **architectural patterns** and migration strategy, while MenuHierarchy.md shows the **actual current structure**.
 
+### Document Scope
+
+**This document covers:**
+- MENU_REGISTRY structure and implementation
+- MenuBuilder class and patterns
+- Migration strategy from legacy inline menus
+- Technical pitfalls (async/await, ephemeral flags)
+
+**For visual/UX standards, see [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md):**
+- Menu header formatting (icons, titles)
+- Section organization patterns
+- Button styling hierarchy
+- Space optimization techniques
+- Component structure templates
+
 ## Problem Solved
 
 - **Code Duplication**: Eliminate inline menu building scattered throughout app.js
@@ -21,14 +36,19 @@ Central repository of all menu configurations:
 ```javascript
 MENU_REGISTRY = {
   'menu_id': {
-    title: 'Menu Title',
-    accent: 0x3498DB,      // Accent color
+    title: '🎯 Menu Title | Key Features',  // LEAN format: icon + title + subtitle (see LeanUserInterfaceDesign.md)
+    accent: 0x3498DB,      // Accent color (see LEAN doc for color guidelines)
     ephemeral: true,       // REQUIRED: true for admin menus (default), false only for player-visible content
     builder: 'customBuilder', // Optional custom builder
-    sections: []           // Menu sections
+    sections: []           // Menu sections (see Step 1 below for structure)
   }
 }
 ```
+
+**Title Format** (from [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md)):
+- Pattern: `icon + Title + | + Key Features`
+- Example: `🦁 Safari | Idol Hunts, Challenges & More`
+- Renders as: `## 🦁 Safari | Idol Hunts, Challenges & More`
 
 ### 2. MenuBuilder Class
 Handles menu creation and legacy tracking:
@@ -53,21 +73,20 @@ Add menu configuration to MENU_REGISTRY:
 ```javascript
 // In menuBuilder.js
 MENU_REGISTRY['castlist_menu'] = {
-  title: 'CastBot | Castlist Management',
+  title: '📋 Castlist Management | View & Edit',  // LEAN format with icon
   accent: 0x9b59b6, // Purple for castlists
   ephemeral: true, // REQUIRED: Admin menu (always true unless explicitly player-visible)
   sections: [
     {
-      label: '📊 View Castlists',
-      components: [] // Will be populated by builder
-    },
-    {
-      label: '✏️ Manage',
-      components: [] // Buttons added here
+      // Section structure follows LEAN standards
+      // See LeanUserInterfaceDesign.md for component patterns
+      components: [] // Will be populated by builder or custom components
     }
   ]
 };
 ```
+
+**Note**: Section structure and component layout should follow patterns from [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md).
 
 ### Step 2: Create Handler
 Use ButtonHandlerFactory with MenuBuilder:
@@ -99,22 +118,18 @@ MenuBuilder.trackLegacyMenu('menu_location', 'Menu description');
 
 ## Menu Standards
 
-### Visual Standards (from LeanUserInterfaceDesign.md)
-- **Header**: `## Menu Title`
-- **Sections**: `> **\`📊 Section Name\`**`
-- **Separators**: Between logical sections only
-- **Buttons**: Maximum 5 per ActionRow
-- **Components**: Maximum 25 per container
+**For visual/UX standards** (headers, sections, buttons, styling), see **[LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md)**.
 
-### Technical Standards
-- **Response Format**: Components V2 (type 17 container)
+### Technical Standards (MenuSystem-Specific)
+- **Response Format**: Components V2 (type 17 container) - see [ComponentsV2.md](../standards/ComponentsV2.md)
 - **Flags**: Always include `(1 << 15)` for IS_COMPONENTS_V2
 - **Ephemeral (CRITICAL)**: Admin menus MUST be ephemeral (`(1 << 15) | InteractionResponseFlags.EPHEMERAL`)
   - **Rule**: All menus are ephemeral by default
   - **Exception**: Only make non-ephemeral when explicitly needed for player-visible content
   - **Reason**: Players must not see admin game mechanics/configuration
-- **Permissions**: Check before showing admin menus
+- **Permissions**: Check before showing admin menus (via ButtonHandlerFactory `requiresPermission`)
 - **Error Handling**: Use ButtonHandlerFactory patterns
+- **Async/Await**: ALWAYS `await` MenuBuilder.create() - see Common Pitfalls below
 
 ## Migration Strategy
 
@@ -170,21 +185,22 @@ MenuRegistry.search('safari')             // Returns all safari-related menus
 ## Best Practices
 
 ### DO ✅
-- Register all new menus in MENU_REGISTRY
-- Follow LeanUserInterfaceDesign.md visual standards
-- Use MenuBuilder.create() for new menus
-- Add tracking to legacy menus immediately
-- Test menu limits (5 buttons/row, 25 components/container)
-- **Always include EPHEMERAL flag** for admin menus: `(1 << 15) | InteractionResponseFlags.EPHEMERAL`
-- Set `ephemeral: true` in MENU_REGISTRY for documentation (default assumption)
+- **Register menus** in MENU_REGISTRY with proper LEAN title format (`🎯 Title | Subtitle`)
+- **Follow [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md)** for all visual standards
+- **Use `await`** when calling MenuBuilder.create() (it's async!)
+- **Include EPHEMERAL flag** for admin menus: `(1 << 15) | InteractionResponseFlags.EPHEMERAL`
+- **Add tracking** to legacy menus immediately for visibility
+- **Test menu limits** (5 buttons/row, 40 components/container)
+- **Set `ephemeral: true`** in MENU_REGISTRY (default assumption)
 
 ### DON'T ❌
-- Build menus inline in handlers
-- Exceed Discord component limits
-- Forget IS_COMPONENTS_V2 flag
-- Skip permission checks
-- Mix legacy and new patterns in same menu
-- **Forget `await` when calling MenuBuilder.create()** - causes silent failures!
+- ❌ Build menus inline in handlers (defeats centralization)
+- ❌ Exceed Discord component limits
+- ❌ Forget IS_COMPONENTS_V2 flag
+- ❌ Skip permission checks
+- ❌ Mix legacy and MenuSystem patterns in same menu
+- ❌ **Forget `await` when calling MenuBuilder.create()** - causes "interaction failed" with no error logs!
+- ❌ **Omit icon from menu title** - violates LEAN standards
 
 ## Migration Success Stories
 
@@ -198,17 +214,20 @@ MenuRegistry.search('safari')             // Returns all safari-related menus
 - 80+ lines of inline component construction in handler
 - No central menu definition
 - Menu structure scattered in handler logic
+- Missing LEAN title icon formatting
 
 **After**:
 - Handler reduced to 15 lines (80% reduction)
-- Menu structure centralized in MENU_REGISTRY
+- Menu structure centralized in MENU_REGISTRY with LEAN-compliant title: `🪛 CastBot | Tools`
 - All buttons registered in BUTTON_REGISTRY
+- Proper ephemeral flag for admin privacy
 
 **Benefits Realized**:
 1. ✅ Menu structure is now reusable and testable
 2. ✅ Handler is clean and focused on routing
 3. ✅ Changes to menu structure don't require touching handler code
 4. ✅ Menu appears in registry with proper tracking
+5. ✅ Follows LEAN visual standards (icon in title)
 
 **Code Comparison**:
 ```javascript
@@ -217,7 +236,7 @@ const setupContainer = {
   type: 17,
   accent_color: 0x3498DB,
   components: [
-    { type: 10, content: `## CastBot | Tools` },
+    { type: 10, content: `## CastBot | Tools` },  // ❌ Missing icon!
     { type: 14 },
     // ... 70+ more lines of component definitions
   ]
@@ -225,6 +244,7 @@ const setupContainer = {
 
 // After (3 lines) - 🚨 CRITICAL: Must use await!
 const setupContainer = await MenuBuilder.create('setup_menu', context);
+// MENU_REGISTRY['setup_menu'].title = '🪛 CastBot | Tools'  // ✅ LEAN compliant
 ```
 
 **Lessons Learned**:
@@ -233,6 +253,7 @@ const setupContainer = await MenuBuilder.create('setup_menu', context);
 - Menu structure in MENU_REGISTRY is more maintainable
 - Handler code becomes self-documenting (MenuBuilder.create makes intent clear)
 - **🚨 CRITICAL**: Always `await` MenuBuilder.create() - forgetting causes "interaction failed" with no error logs!
+- **🚨 CRITICAL**: Include icon in title field to follow LEAN standards
 
 ## Common Pitfalls
 
@@ -407,11 +428,38 @@ MenuBuilder.getMigrationStats()
 
 ## Related Documentation
 
-- **[MenuHierarchy.md](../ui/MenuHierarchy.md)** - Visual menu tree and current structure
-- [ButtonHandlerFactory.md](ButtonHandlerFactory.md) - Button system architecture
-- [LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md) - Visual design standards
-- [ComponentsV2.md](../standards/ComponentsV2.md) - Discord Components V2 details
+### Primary Dependencies
+- **[LeanUserInterfaceDesign.md](../ui/LeanUserInterfaceDesign.md)** - 🎨 **Visual/UX standards** - ALL menus must follow LEAN patterns
+  - Title formatting (icon + Title | Subtitle)
+  - Section organization and headers
+  - Button styling hierarchy
+  - Space optimization techniques
+- **[ButtonHandlerFactory.md](ButtonHandlerFactory.md)** - 🔘 **Handler patterns** - Integrates with MenuBuilder
+- **[MenuHierarchy.md](../ui/MenuHierarchy.md)** - 📋 **Current structure** - Visual menu tree
+
+### Supporting Documentation
+- [ComponentsV2.md](../standards/ComponentsV2.md) - Discord Components V2 technical details
 - [DefinitionOfDone.md](../workflow/DefinitionOfDone.md) - Development standards
+
+### Document Relationship
+
+```
+LeanUserInterfaceDesign.md     MenuSystemArchitecture.md
+        (WHAT)                          (HOW)
+           |                               |
+           v                               v
+   Visual Standards  ──────────→   Implementation Patterns
+   - Title format                  - MENU_REGISTRY
+   - Sections                      - MenuBuilder.create()
+   - Buttons                       - Migration strategy
+   - Layout                        - Common pitfalls
+           |                               |
+           └───────────────┬───────────────┘
+                           v
+                  Implemented Menu
+                (follows LEAN visually,
+                 built via MenuSystem)
+```
 
 ## Conclusion
 

@@ -131,3 +131,16 @@ return {
 [← Menu]
 ```
 **Result**: 9 buttons + navigation in just 5 ActionRows with clear visual separation
+
+---
+
+## 🔧 Implementation
+
+**For technical implementation using MenuBuilder**, see **[MenuSystemArchitecture.md](../enablers/MenuSystemArchitecture.md)**:
+- MENU_REGISTRY structure
+- MenuBuilder.create() usage
+- Handler patterns with ButtonHandlerFactory
+- Migration from legacy inline menus
+- Common pitfalls (async/await, ephemeral flags)
+
+**Relationship**: This document defines WHAT menus should look like (visual standards). MenuSystemArchitecture defines HOW to build them (implementation patterns).
