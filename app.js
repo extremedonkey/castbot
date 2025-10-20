@@ -33431,29 +33431,9 @@ Are you sure you want to continue?`;
 
         console.log(`✅ SUCCESS: Player menu configuration updated for guild ${guildId}`);
 
-        // Show success message and redirect back to customization
+        // Refresh customization UI with updated config (consistent with other field group modals)
         const { createSafariCustomizationUI } = await import('./safariConfigUI.js');
         const customizationUI = await createSafariCustomizationUI(guildId, updatedConfig);
-
-        // Add success message to customization UI using Components V2
-        const inventoryModeLabels = {
-          'standard': 'Standard (Initialize + Round 1+)',
-          'initialized_only': 'After Initialization Only',
-          'always': 'Always Show',
-          'never': 'Never Show'
-        };
-
-        const successMessage = {
-          type: 10, // Text Display
-          content: `✅ **Player Menu Settings Updated**\n\n` +
-                  `🕹️ **Global Commands:** ${enableGlobalCommands ? 'Enabled' : 'Disabled'}\n` +
-                  `📦 **Inventory Button:** ${inventoryModeLabels[inventoryVisibilityMode]}\n\n` +
-                  `Players will ${enableGlobalCommands ? 'see' : 'not see'} the "Enter Command" button in their /menu.\n\n`
-        };
-
-        // Insert success message at the top of the container
-        customizationUI.components[0].components.unshift(successMessage);
-        customizationUI.components[0].components.splice(1, 0, { type: 14 }); // Add separator
 
         return res.send({
           type: InteractionResponseType.UPDATE_MESSAGE,
