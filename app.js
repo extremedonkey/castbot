@@ -9369,25 +9369,24 @@ Your server is now ready for Tycoons gameplay!`;
           }
         });
       }
-    // COMMENTED OUT 2025-01-19: Removed safari_player_inventory from Safari Menu
-    // Button still exists in other contexts (playerManagement.js, safariManager.js)
-    // as navigation element, but no longer accessible from main Safari Menu
-    // } else if (custom_id === 'safari_player_inventory') {
-    //   // Handle "My Inventory" player inventory display (MIGRATED TO FACTORY)
-    //   return ButtonHandlerFactory.create({
-    //     id: 'safari_player_inventory',
-    //     handler: async (context) => {
-    //       console.log(`🥚 DEBUG: User ${context.userId} viewing inventory in guild ${context.guildId}`);
-    //
-    //       // Start at page 0 when opening inventory
-    //       const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, context.userId, context.member, 0);
-    //
-    //       console.log(`📤 DEBUG: About to send inventory response for user ${context.userId}`);
-    //       console.log(`📋 DEBUG: Data keys: ${Object.keys(inventoryDisplay)}`);
-    //
-    //       return inventoryDisplay;
-    //     }
-    //   })(req, res, client);
+    // RESTORED 2025-10-20: Handler was commented out 2025-01-19, but button still exists in 10 locations
+    // (playerManagement.js, safariManager.js, app.js) causing "interaction failed" errors
+    } else if (custom_id === 'safari_player_inventory') {
+      // Handle "My Inventory" player inventory display (MIGRATED TO FACTORY)
+      return ButtonHandlerFactory.create({
+        id: 'safari_player_inventory',
+        handler: async (context) => {
+          console.log(`🥚 DEBUG: User ${context.userId} viewing inventory in guild ${context.guildId}`);
+
+          // Start at page 0 when opening inventory
+          const inventoryDisplay = await createPlayerInventoryDisplay(context.guildId, context.userId, context.member, 0);
+
+          console.log(`📤 DEBUG: About to send inventory response for user ${context.userId}`);
+          console.log(`📋 DEBUG: Data keys: ${Object.keys(inventoryDisplay)}`);
+
+          return inventoryDisplay;
+        }
+      })(req, res, client);
     } else if (custom_id.startsWith('safari_attack_player_disabled_')) {
       // Handle disabled attack button click
       console.log(`⚔️ DEBUG: User clicked disabled attack button`);

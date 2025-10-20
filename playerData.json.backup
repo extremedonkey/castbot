@@ -713,8 +713,8 @@
             "nest_guardian_461600": 1,
             "raider_499497": 1
           },
-          "currency": 1450,
-          "lastInteraction": 1758949572454,
+          "currency": 144,
+          "lastInteraction": 1760972349301,
           "history": [],
           "storeHistory": [],
           "achievements": [],
@@ -726,9 +726,9 @@
         "emojiCode": "<:Natadwen:1396856838158417931>",
         "age": "29",
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949573124,
+          "lastInteraction": 1760972350409,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -781,7 +781,7 @@
             }
           },
           "isPaused": true,
-          "currency": 1450,
+          "currency": 144,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -793,7 +793,7 @@
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
-          "lastInteraction": 1758949574209
+          "lastInteraction": 1760972350967
         }
       },
       "391415444084490240": {
@@ -803,33 +803,15 @@
           "1398904036643831818"
         ],
         "safari": {
-          "currency": 10382,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949571427,
+          "lastInteraction": 1760972347592,
           "achievements": [],
           "inventory": {
-            "nurturer_361363": {
-              "quantity": 15,
-              "numAttacksAvailable": 15
-            },
+            "nurturer_361363": 1,
             "territory_forager_404120": 1,
             "nest_guardian_461600": 1,
-            "raider_499497": {
-              "quantity": 1,
-              "numAttacksAvailable": 1
-            },
-            "lance_of_ruin_627670": {
-              "quantity": 2,
-              "numAttacksAvailable": 0
-            },
-            "dupe99_263476": {
-              "quantity": 22,
-              "numAttacksAvailable": 0
-            },
-            "bait_530852": {
-              "quantity": 4,
-              "numAttacksAvailable": 0
-            }
+            "raider_499497": 1
           },
           "cooldowns": {},
           "buttonUses": {},
@@ -1021,9 +1003,9 @@
           "1401201426436456468"
         ],
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949574712,
+          "lastInteraction": 1760972352026,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1040,9 +1022,9 @@
         "age": "45",
         "emojiCode": "<:Serviver:1396856842994585651>",
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949575612,
+          "lastInteraction": 1760972352978,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1059,9 +1041,9 @@
         "age": "22",
         "emojiCode": "<:kayl:1396856849126522991>",
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949576106,
+          "lastInteraction": 1760972353601,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1140,7 +1122,7 @@
             }
           },
           "isPaused": false,
-          "currency": 1450,
+          "currency": 144,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -1152,16 +1134,16 @@
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
-          "lastInteraction": 1758949579940
+          "lastInteraction": 1760972357921
         }
       },
       "676262975132139522": {
         "emojiCode": "<:Belle:1382413449342091405>",
         "age": "28",
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949576576,
+          "lastInteraction": 1760972354631,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1207,9 +1189,9 @@
       "977455730300956683": {
         "emojiCode": "<:morgane:1382413461094535281>",
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949578222,
+          "lastInteraction": 1760972355134,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1225,9 +1207,9 @@
       },
       "480712959824363520": {
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949580434,
+          "lastInteraction": 1760972358460,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1247,9 +1229,9 @@
       },
       "1088078919409881098": {
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949585265,
+          "lastInteraction": 1760972359642,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1264,9 +1246,9 @@
       },
       "208197633846542336": {
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949578942,
+          "lastInteraction": 1760972356278,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1282,9 +1264,9 @@
       },
       "235148962103951360": {
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949586549,
+          "lastInteraction": 1760972360175,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1388,7 +1370,7 @@
             }
           },
           "isPaused": false,
-          "currency": 1450,
+          "currency": 144,
           "inventory": {
             "nurturer_361363": 1,
             "territory_forager_404120": 1,
@@ -1400,15 +1382,15 @@
           "achievements": [],
           "cooldowns": {},
           "buttonUses": {},
-          "lastInteraction": 1758949587066
+          "lastInteraction": 1760972361222
         }
       },
       "1086246253819613274": {
         "age": "60s",
         "safari": {
-          "currency": 1450,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949588297,
+          "lastInteraction": 1760972348712,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -1501,17 +1483,25 @@
       "admin": {
         "safari": {
           "inventory": {
-            "nurturer_361363_391415444084490240_player": {
-              "quantity": 5
-            }
-          }
+            "nurturer_361363": 1,
+            "territory_forager_404120": 1,
+            "nest_guardian_461600": 1,
+            "raider_499497": 1
+          },
+          "currency": 144,
+          "history": [],
+          "achievements": [],
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [],
+          "lastInteraction": 1760972366028
         }
       },
       "630470402900230146": {
         "safari": {
-          "currency": 260,
+          "currency": 144,
           "history": [],
-          "lastInteraction": 1758949579426,
+          "lastInteraction": 1760972356797,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -3061,14 +3051,14 @@
     "serverName": "EpochORG S5: Incan Empire",
     "icon": "https://cdn.discordapp.com/icons/1240325979214188615/156095a9edb1de2f24dfac78d2904a04.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 60,
+    "memberCount": 61,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1715787157587,
-    "lastUpdated": 1760766991446,
+    "lastUpdated": 1760970015372,
     "players": {},
     "tribes": {
       "1241383870260056095": {
@@ -3144,14 +3134,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 553,
+    "memberCount": 556,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1760847999020,
+    "lastUpdated": 1760970012966,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1381126640163360800>"
@@ -5500,14 +5490,14 @@
     "serverName": "EpochORG S4: Ancient Egypt",
     "icon": "https://cdn.discordapp.com/icons/1209015985798127696/fab803057622fa548002ca6920f860ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 76,
+    "memberCount": 77,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1708322273445,
-    "lastUpdated": 1760848000807,
+    "lastUpdated": 1760970014872,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Tylenol Boy",
