@@ -6250,7 +6250,7 @@ To fix this:
           console.log(`✅ SUCCESS: prod_setup - showing setup interface via MenuBuilder`);
 
           return {
-            flags: (1 << 15), // IS_COMPONENTS_V2 (MANDATORY)
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL (admin UI)
             components: [setupContainer]
           };
         }

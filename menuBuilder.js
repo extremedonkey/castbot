@@ -12,6 +12,7 @@ export const MENU_REGISTRY = {
   'setup_menu': {
     title: 'CastBot | Tools',
     accent: 0x3498DB, // Blue for standard menus
+    ephemeral: true, // REQUIRED: Admin menu (default for all menus unless explicitly set to false)
     sections: [
       {
         // Main setup section with description and action buttons

@@ -23,6 +23,7 @@ MENU_REGISTRY = {
   'menu_id': {
     title: 'Menu Title',
     accent: 0x3498DB,      // Accent color
+    ephemeral: true,       // REQUIRED: true for admin menus (default), false only for player-visible content
     builder: 'customBuilder', // Optional custom builder
     sections: []           // Menu sections
   }
@@ -54,6 +55,7 @@ Add menu configuration to MENU_REGISTRY:
 MENU_REGISTRY['castlist_menu'] = {
   title: 'CastBot | Castlist Management',
   accent: 0x9b59b6, // Purple for castlists
+  ephemeral: true, // REQUIRED: Admin menu (always true unless explicitly player-visible)
   sections: [
     {
       label: '📊 View Castlists',
@@ -73,11 +75,14 @@ Use ButtonHandlerFactory with MenuBuilder:
 } else if (custom_id === 'show_castlist_menu') {
   return ButtonHandlerFactory.create({
     id: 'show_castlist_menu',
+    ephemeral: true, // Config hint (optional)
     handler: async (context) => {
       // 🚨 CRITICAL: MenuBuilder.create() is async - MUST use await!
       const menu = await MenuBuilder.create('castlist_menu', context);
       return {
-        flags: (1 << 15), // IS_COMPONENTS_V2
+        // 🚨 CRITICAL: Must explicitly add EPHEMERAL flag for admin menus!
+        // ButtonHandlerFactory ephemeral config is NOT sufficient
+        flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
         components: [menu]
       };
     }
@@ -104,6 +109,10 @@ MenuBuilder.trackLegacyMenu('menu_location', 'Menu description');
 ### Technical Standards
 - **Response Format**: Components V2 (type 17 container)
 - **Flags**: Always include `(1 << 15)` for IS_COMPONENTS_V2
+- **Ephemeral (CRITICAL)**: Admin menus MUST be ephemeral (`(1 << 15) | InteractionResponseFlags.EPHEMERAL`)
+  - **Rule**: All menus are ephemeral by default
+  - **Exception**: Only make non-ephemeral when explicitly needed for player-visible content
+  - **Reason**: Players must not see admin game mechanics/configuration
 - **Permissions**: Check before showing admin menus
 - **Error Handling**: Use ButtonHandlerFactory patterns
 
@@ -166,6 +175,8 @@ MenuRegistry.search('safari')             // Returns all safari-related menus
 - Use MenuBuilder.create() for new menus
 - Add tracking to legacy menus immediately
 - Test menu limits (5 buttons/row, 25 components/container)
+- **Always include EPHEMERAL flag** for admin menus: `(1 << 15) | InteractionResponseFlags.EPHEMERAL`
+- Set `ephemeral: true` in MENU_REGISTRY for documentation (default assumption)
 
 ### DON'T ❌
 - Build menus inline in handlers
@@ -278,6 +289,52 @@ handler: async (context) => {
 
 **Fix**: Ensure menu components follow Components V2 standards (type 17 Container, type 10 Text Display, etc.)
 
+### 4. Missing EPHEMERAL Flag 🚨
+
+**Symptom**: Admin menu appears public (visible to all users) instead of private
+
+**Root Cause**: ButtonHandlerFactory `ephemeral: true` config is NOT sufficient - must explicitly add `InteractionResponseFlags.EPHEMERAL` to response flags
+
+**Example of Bug**:
+```javascript
+// ❌ WRONG - Config alone doesn't make it ephemeral
+return ButtonHandlerFactory.create({
+  id: 'admin_menu',
+  ephemeral: true, // This is just a hint!
+  handler: async (context) => {
+    const menu = await MenuBuilder.create('admin_menu', context);
+    return {
+      flags: (1 << 15), // Missing EPHEMERAL flag
+      components: [menu] // Will be PUBLIC!
+    };
+  }
+})(req, res, client);
+```
+
+**Correct Pattern**:
+```javascript
+// ✅ CORRECT - Explicit EPHEMERAL flag
+return ButtonHandlerFactory.create({
+  id: 'admin_menu',
+  ephemeral: true, // Config hint (optional)
+  handler: async (context) => {
+    const menu = await MenuBuilder.create('admin_menu', context);
+    return {
+      flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // Both flags!
+      components: [menu] // Now ephemeral
+    };
+  }
+})(req, res, client);
+```
+
+**Why It Matters**:
+- Admin menus contain game mechanics and configuration
+- Players must not see admin interfaces
+- Public menus leak strategy and spoil game experience
+- **Default assumption**: All menus are ephemeral unless explicitly non-ephemeral
+
+**Reference**: See ComponentsV2Issues.md #11 for detailed explanation
+
 ## Integration with ButtonHandlerFactory
 
 Menus and buttons work together:
@@ -304,8 +361,13 @@ Example flow:
 // Handler connects them
 ButtonHandlerFactory.create({
   id: 'show_castlist_menu',
+  ephemeral: true,
   handler: async (context) => {
-    return MenuBuilder.create('castlist_menu', context);
+    const menu = await MenuBuilder.create('castlist_menu', context);
+    return {
+      flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
+      components: [menu]
+    };
   }
 })
 ```
