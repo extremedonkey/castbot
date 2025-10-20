@@ -805,7 +805,7 @@
         "safari": {
           "currency": 100,
           "history": [],
-          "lastInteraction": 1760980552586,
+          "lastInteraction": 1760981117390,
           "achievements": [],
           "inventory": {
             "nurturer_361363": 1,
@@ -827,21 +827,16 @@
                 {
                   "from": null,
                   "to": "A1",
-                  "timestamp": "2025-10-20T17:15:52.588Z"
-                },
-                {
-                  "from": "A1",
-                  "to": "A1",
-                  "timestamp": "2025-10-20T17:15:52.622Z"
+                  "timestamp": "2025-10-20T17:25:17.392Z"
                 }
               ]
             }
           },
           "points": {
             "stamina": {
-              "current": 3,
-              "maximum": 3,
-              "lastRegeneration": "2025-10-20T17:15:52.588Z",
+              "current": 99,
+              "maximum": 99,
+              "lastRegeneration": "2025-10-20T17:25:17.392Z",
               "regenConfig": "hourly"
             }
           }
@@ -1436,6 +1431,11 @@
                   "from": null,
                   "to": "A1",
                   "timestamp": "2025-10-20T17:20:07.317Z"
+                },
+                {
+                  "from": "A1",
+                  "to": "A1",
+                  "timestamp": "2025-10-20T17:20:07.353Z"
                 }
               ]
             }

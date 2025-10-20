@@ -7621,6 +7621,9 @@ export async function getStaminaConfig(guildId) {
     const safariData = await loadSafariContent();
     const safariConfig = safariData[guildId]?.safariConfig || {};
 
+    console.log(`🗺️ DEBUG getStaminaConfig: safariConfig.defaultStartingCoordinate = "${safariConfig.defaultStartingCoordinate}"`);
+    console.log(`🗺️ DEBUG getStaminaConfig: safariConfig keys = ${Object.keys(safariConfig).join(', ')}`);
+
     // Read from safariConfig first, fall back to .env (backward compatible)
     const config = {
         startingStamina: safariConfig.startingStamina !== undefined
