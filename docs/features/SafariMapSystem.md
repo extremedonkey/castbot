@@ -30,7 +30,8 @@ The Safari Map System transforms Discord into an interactive grid-based explorat
 
 ### Getting Started
 1. **Join the Adventure**: Click "Start Exploring" in `/menu` → Map Explorer
-2. **Initial Placement**: System places you at starting coordinate (default: A1)
+2. **Initial Placement**: System places you at starting coordinate (per-server configurable, default: A1)
+   - Admins can change starting location via Settings → Stamina Settings → Starting Coordinate
 3. **Navigation**: Click the Navigate button to see movement options
 4. **Movement**: Select a direction to move (costs 1 stamina)
 5. **Exploration**: Discover new locations, items, and stores

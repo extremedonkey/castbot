@@ -331,52 +331,65 @@ Integrate with Safari's custom terms system:
 - Regeneration interval is hard-coded to `180000ms` (3 minutes)
 - All servers use the same configuration
 
-### Future Enhancement: Per-Server Configuration
+### ✅ Per-Server Configuration (Implemented January 2025)
 
-To make stamina configurable per server:
+**Status**: LIVE in production
 
-1. **Modify getDefaultPointsConfig()** to check for server-specific settings:
-```javascript
-export function getDefaultPointsConfig(guildId = null) {
-    // Check for guild-specific config first
-    if (guildId) {
-        const guildConfig = getGuildStaminaConfig(guildId);
-        if (guildConfig) return guildConfig;
-    }
-    
-    // Fall back to defaults
-    return {
-        stamina: {
-            displayName: "Stamina",
-            emoji: "⚡",
-            defaultMax: 1,
-            defaultMin: 0,
-            regeneration: {
-                type: "full_reset",
-                interval: 180000, // 3 minutes
-                amount: "max"
-            },
-            visibility: "hidden"
-        }
-    };
-}
-```
+Stamina and starting location are now fully configurable per server through the Safari Settings UI.
 
-2. **Store server configurations** in safariContent.json:
+#### User Interface
+
+Admins can configure stamina settings via Discord:
+1. `/menu` → Production Menu → Settings
+2. Click **"⚡ Stamina Settings"** button
+3. Configure the following fields:
+   - **Starting Stamina** (0-99): Initial stamina when player joins
+   - **Max Stamina** (1-99): Maximum stamina capacity
+   - **Regeneration Time** (1-1440 minutes): Time for full stamina restoration
+   - **Starting Coordinate** (e.g., "D2"): Where players spawn on the map
+
+#### Implementation Details
+
+Configuration is stored in `safariContent.json` under `safariConfig`:
 ```json
 {
   "guildId": {
-    "pointsConfig": {
-      "stamina": {
-        "defaultMax": 5,
-        "regeneration": {
-          "interval": 600000  // 10 minutes
-        }
-      }
+    "safariConfig": {
+      "startingStamina": 99,
+      "maxStamina": 99,
+      "staminaRegenerationMinutes": 720,
+      "defaultStartingCoordinate": "D2"
     }
   }
 }
 ```
+
+Accessed via `getStaminaConfig()` in `safariManager.js`:
+```javascript
+const { getStaminaConfig } = await import('./safariManager.js');
+const config = await getStaminaConfig(guildId);
+// Returns: {
+//   startingStamina: 99,
+//   maxStamina: 99,
+//   regenerationMinutes: 720,
+//   defaultStartingCoordinate: 'D2'
+// }
+```
+
+#### Key Features
+
+- **Per-Server Defaults**: Each server has independent stamina/location configuration
+- **Environment Fallback**: Reads from `.env` if server config not set
+- **Modal Pre-Population**: Settings modal shows current values when opened
+- **Coordinate Validation**: Validates coordinate exists in active map before saving
+- **Initialization Integration**: New players spawn with configured stamina at configured location
+
+#### Files Modified
+
+- `safariManager.js`: Added `getStaminaConfig()` function, updated `updateCustomTerms()` to save coordinate
+- `app.js`: Updated `safari_init_player` to use `getStaminaConfig()` instead of hardcoded values
+- `safariConfigUI.js`: Added stamina settings button and modal to Settings interface
+- `safariMapAdmin.js`: Modified `initializePlayerOnMap()` to accept coordinate parameter
 
 ## Future Enhancements
 
