@@ -62,5 +62,13 @@
     "status": "success",
     "messageId": "1429982274295697609",
     "executionTime": 912
+  },
+  {
+    "timestamp": "2025-10-21T00:05:24.074Z",
+    "type": "DM",
+    "target": "391415444084490240",
+    "status": "failed",
+    "error": "component.toJSON is not a function",
+    "executionTime": 423
   }
 ]
