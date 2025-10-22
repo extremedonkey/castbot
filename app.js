@@ -35908,13 +35908,6 @@ async function generateEmojisForRole(guild, role) {
 client.on('messageReactionAdd', async (reaction, user) => {
   try {
     if (user.bot) return;
-    
-    const guildInfo = reaction.message.guild 
-      ? `${reaction.message.guild.name} (${reaction.message.guild.id})` 
-      : 'DM';
-    const channelName = reaction.message.channel?.name || reaction.message.channel?.id || 'unknown';
-    
-    console.log(`🔍 DEBUG: Reaction added - Server: ${guildInfo} #${channelName}, Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id}, Bot: ${user.bot}, System: ${user.system || 'false'})`);
 
     // When a reaction is received, check if the structure is partial
     if (reaction.partial) {
@@ -35951,8 +35944,12 @@ client.on('messageReactionAdd', async (reaction, user) => {
     }
     
     if (availabilityData) {
-      console.log(`Processing availability reaction for user ${user.id}`);
-      
+      const guildInfo = reaction.message.guild
+        ? `${reaction.message.guild.name} (${reaction.message.guild.id})`
+        : 'DM';
+      const channelName = reaction.message.channel?.name || reaction.message.channel?.id || 'unknown';
+      console.log(`🔍 DEBUG: Availability reaction added - Server: ${guildInfo} #${channelName}, Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id})`);
+
       // Find which time slot this emoji corresponds to
       const slot = availabilityData.slots.find(s => s.emoji === reaction.emoji.name);
       if (!slot) {
@@ -35987,14 +35984,14 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
     // Check in-memory cache first, then persistent storage
     let roleMapping = client.roleReactions?.get(reaction.message.id);
-    
+
     if (!roleMapping) {
       // Try to load from persistent storage
       const guildId = reaction.message.guild.id;
       roleMapping = await getReactionMapping(guildId, reaction.message.id);
-      
+
       if (!roleMapping) return; // No mapping found
-      
+
       // Cache it for future use
       if (!client.roleReactions) client.roleReactions = new Map();
       client.roleReactions.set(reaction.message.id, roleMapping);
@@ -36004,6 +36001,9 @@ client.on('messageReactionAdd', async (reaction, user) => {
     if (!roleId) return;
 
     const guild = reaction.message.guild;
+    const channelName = reaction.message.channel?.name || reaction.message.channel?.id || 'unknown';
+    console.log(`🔍 DEBUG: Role reaction added - Server: ${guild.name} (${guild.id}) #${channelName}, Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id})`);
+
     const member = await guild.members.fetch(user.id);
 
     // Check if client is ready before doing permission checks
@@ -36067,13 +36067,6 @@ client.on('messageReactionAdd', async (reaction, user) => {
 client.on('messageReactionRemove', async (reaction, user) => {
   try {
     if (user.bot) return;
-    
-    const guildInfo = reaction.message.guild 
-      ? `${reaction.message.guild.name} (${reaction.message.guild.id})` 
-      : 'DM';
-    const channelName = reaction.message.channel?.name || reaction.message.channel?.id || 'unknown';
-    
-    console.log(`🔍 DEBUG: Reaction removed - Server: ${guildInfo} #${channelName}, Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id}, Bot: ${user.bot}, System: ${user.system || 'false'})`);
 
     // When a reaction is received, check if the structure is partial
     if (reaction.partial) {
@@ -36109,8 +36102,12 @@ client.on('messageReactionRemove', async (reaction, user) => {
     }
     
     if (availabilityData) {
-      console.log(`Removing availability reaction for user ${user.id}`);
-      
+      const guildInfo = reaction.message.guild
+        ? `${reaction.message.guild.name} (${reaction.message.guild.id})`
+        : 'DM';
+      const channelName = reaction.message.channel?.name || reaction.message.channel?.id || 'unknown';
+      console.log(`🔍 DEBUG: Availability reaction removed - Server: ${guildInfo} #${channelName}, Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id})`);
+
       // Find which time slot this emoji corresponds to
       const slot = availabilityData.slots.find(s => s.emoji === reaction.emoji.name);
       if (!slot) return;
@@ -36134,14 +36131,14 @@ client.on('messageReactionRemove', async (reaction, user) => {
 
     // Check in-memory cache first, then persistent storage
     let roleMapping = client.roleReactions?.get(reaction.message.id);
-    
+
     if (!roleMapping) {
       // Try to load from persistent storage
       const guildId = reaction.message.guild.id;
       roleMapping = await getReactionMapping(guildId, reaction.message.id);
-      
+
       if (!roleMapping) return; // No mapping found
-      
+
       // Cache it for future use
       if (!client.roleReactions) client.roleReactions = new Map();
       client.roleReactions.set(reaction.message.id, roleMapping);
@@ -36151,6 +36148,9 @@ client.on('messageReactionRemove', async (reaction, user) => {
     if (!roleId) return;
 
     const guild = reaction.message.guild;
+    const channelName = reaction.message.channel?.name || reaction.message.channel?.id || 'unknown';
+    console.log(`🔍 DEBUG: Role reaction removed - Server: ${guild.name} (${guild.id}) #${channelName}, Message: ${reaction.message.id}, Emoji: ${reaction.emoji.name}, User: ${user.tag} (ID: ${user.id})`);
+
     const member = await guild.members.fetch(user.id);
 
     // Add permission check here too - pass client directly
