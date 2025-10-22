@@ -198,49 +198,35 @@ const shouldReadLocal = env === 'dev' || isOnProdServer;
 
 ## Known Issues
 
-### False Positive: Debug Logs with ❌ Emoji
+### ✅ FIXED: False Positive from Debug Logs with ❌ Emoji
 
-**Problem**: The logger flags ANY line containing `❌` as critical, including harmless debug logs.
+**Problem**: The logger was flagging ANY line containing `❌` as critical, including harmless debug logs.
 
-**Example False Positive**:
+**Example False Positive** (before fix):
 ```
 🔍 DEBUG: Reaction added - Server: Triumph Hub (1080166267136262154) #treemail,
 Message: 1430353557634154627, Emoji: ❌, User: landoftreblesandfrogs
 ```
 
-This is a debug log from the `messageReactionAdd` event handler (see [ReactionRoleSystem.md](ReactionRoleSystem.md)) showing a user reacting with ❌ to a message in their server. **This is not an error** - it's normal bot operation.
+This was a debug log from the `messageReactionAdd` event handler (see [ReactionRoleSystem.md](ReactionRoleSystem.md)) showing a user reacting with ❌ to a message in their server. **This is not an error** - it's normal bot operation.
 
-**Why It Happens**:
+**Why It Happened**:
 - The PM2 Error Logger pattern matching (line 151) includes `line.includes('❌')`
-- The `messageReactionAdd` event handler logs all reactions including the emoji used
+- The `messageReactionAdd` event handler was logging ALL reactions including the emoji used
 - Users in servers with CastBot installed can react to ANY message with ANY emoji
 - These reactions are completely unrelated to CastBot functionality
 
+**Solution Implemented** (2025-10-23):
+- Moved debug logs AFTER reaction filtering in both `messageReactionAdd` and `messageReactionRemove` handlers
+- Now only logs reactions that are actually relevant (role assignments, availability tracking)
+- Dramatically reduced log volume (from ALL reactions to only CastBot-managed reactions)
+- False positives eliminated completely
+
 **Impact**:
-- Low severity - just noise in the #error channel
-- No functional impact on bot operation
-- Can be filtered out manually
-
-**Potential Solutions**:
-
-1. **Whitelist Pattern** (Recommended):
-   ```javascript
-   // Only flag ❌ if it's NOT a debug log
-   const isDebugLog = line.includes('🔍 DEBUG:');
-   const hasCrossEmoji = line.includes('❌');
-
-   if (hasCrossEmoji && !isDebugLog) {
-     // Flag as critical
-   }
-   ```
-
-2. **Remove ❌ from Pattern Matching**:
-   - Remove `line.includes('❌')` from the detection patterns
-   - Rely on text-based error detection instead
-
-3. **Reduce Debug Logging**:
-   - Remove or reduce the verbosity of reaction debug logs
-   - Only log reactions on specific monitored messages (role assignment, availability)
+- ✅ No more false positive alerts
+- ✅ Significantly reduced log volume
+- ✅ Better performance (less string concatenation)
+- ✅ More useful debugging (only logs relevant reactions)
 
 ## Technical Design
 

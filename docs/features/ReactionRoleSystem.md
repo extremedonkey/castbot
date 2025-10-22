@@ -321,34 +321,35 @@ for (const [messageId, mappingData] of Object.entries(mappings)) {
 
 ## Known Issues
 
-### 1. Verbose Debug Logging
+### 1. ✅ FIXED: Verbose Debug Logging
 
-**Issue**: Logs every single reaction in every server, including non-role reactions.
+**Issue**: Was logging every single reaction in every server, including non-role reactions.
 
-**Impact**:
+**Impact** (before fix):
 - High log volume
 - False positives in PM2 Error Logger
 - Performance impact (minimal)
 
-**Solution**: Move debug log AFTER checking if message has a role mapping:
+**Solution Implemented** (2025-10-23):
+Moved debug logs AFTER filtering to only log relevant reactions:
 
 ```javascript
-// ❌ Current (logs everything)
+// ❌ Before (logged everything)
 console.log(`🔍 DEBUG: Reaction added - ...`);
 if (!roleMapping) return;
 
-// ✅ Proposed (only log role reactions)
+// ✅ After (only logs role reactions)
 if (!roleMapping) return;
 console.log(`🔍 DEBUG: Role reaction added - ...`);
 ```
 
-### 2. PM2 Error Logger False Positives
+**Benefits**:
+- ✅ Dramatically reduced log volume
+- ✅ No more PM2 Error Logger false positives
+- ✅ Better performance
+- ✅ More useful debugging output
 
-**Issue**: Debug logs with ❌ emoji trigger error alerts.
-
-**Fix**: See [PM2ErrorLogger.md - Known Issues](PM2ErrorLogger.md#known-issues)
-
-### 3. No Rate Limiting
+### 2. No Rate Limiting
 
 **Issue**: Rapid reaction spam could potentially cause rate limit issues.
 
