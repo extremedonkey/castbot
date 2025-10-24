@@ -7372,6 +7372,153 @@ To fix this:
         }
       })(req, res, client);
 
+    } else if (custom_id === 'dm_view_tips') {
+      // PoC: Media Gallery carousel with CastBot feature screenshots
+      return ButtonHandlerFactory.create({
+        id: 'dm_view_tips',
+        handler: async (context) => {
+          console.log(`💡 PoC: dm_view_tips clicked - showing Media Gallery carousel`);
+
+          // UPDATE_MESSAGE with Media Gallery (Type 12)
+          // Demonstrates carousel/swipe functionality with 4 CastBot screenshots
+          return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              components: [
+                {
+                  type: 17, // Container
+                  accent_color: 0x9b59b6, // Purple for tips/features
+                  components: [
+                    {
+                      type: 10, // Text Display
+                      content: '## 💡 CastBot Features\n\n**Swipe through these screenshots to explore what you can do!**\n\n📱 Mobile: Swipe left/right\n🖥️ Desktop: Click images to view'
+                    },
+                    { type: 14 }, // Separator
+                    {
+                      type: 12, // Media Gallery - CAROUSEL!
+                      items: [
+                        {
+                          media: {
+                            url: 'https://cdn.discordapp.com/attachments/1393487920886845482/1395848590521536543/image.png?ex=68fc7b0d&is=68fb298d&hm=01ed8d2e32ed9721757791ccf03f417768ac14cf57ceb12da2b0700bfc0c7ae8&'
+                          },
+                          description: '🦁 Safari System - Create adventure challenges with maps, items, and player progression'
+                        },
+                        {
+                          media: {
+                            url: 'https://cdn.discordapp.com/attachments/1395819813640601742/1395845331568165027/image.png?ex=68fc7804&is=68fb2684&hm=e16fb5ccb48e9b2ad50679c35d6c1584080e9ab55fa26adae0d83d0a974a7dd1&'
+                          },
+                          description: '📋 Dynamic Castlists - Organize cast members with placements, alumni, and custom formatting'
+                        },
+                        {
+                          media: {
+                            url: 'https://cdn.discordapp.com/attachments/1395819813640601742/1395844807884144640/image.png?ex=68fc7787&is=68fb2607&hm=0b5cc8728f40a35ff749aedc67d23fd9ea7349e10442700ad440d952b6fe1e3f&'
+                          },
+                          description: '🏆 Cast Rankings - Let players anonymously vote on applicants with visual ranking interface'
+                        },
+                        {
+                          media: {
+                            url: 'https://cdn.discordapp.com/attachments/1396857713165602867/1396858075406930000/image.png?ex=68fcdb75&is=68fb89f5&hm=dc33bebc1e252aa63715a879a0813e3ae820dd367e7461437071d846485882af&'
+                          },
+                          description: '🎬 Season Management - Configure applications, questions, and production workflows'
+                        }
+                      ]
+                    },
+                    { type: 14 }, // Separator
+                    {
+                      type: 10,
+                      content: '> **`📸 Media Gallery Demo`**\n• 4 real CastBot screenshots\n• Native Discord carousel/swipe\n• Works in DMs and channels\n• UPDATE_MESSAGE (no REST API!)'
+                    },
+                    { type: 14 }, // Separator before back button
+                    {
+                      type: 1, // Action Row
+                      components: [
+                        {
+                          type: 2, // Button
+                          custom_id: 'dm_back_to_welcome',
+                          label: '← Back to Welcome',
+                          style: 2, // Secondary (grey)
+                          emoji: { name: '🏠' }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
+    } else if (custom_id === 'dm_back_to_welcome') {
+      // Navigate back to welcome message from tips
+      return ButtonHandlerFactory.create({
+        id: 'dm_back_to_welcome',
+        handler: async (context) => {
+          console.log(`🏠 Navigating back to welcome message`);
+
+          // Re-send the original welcome message structure
+          const { default: DiscordMessenger } = await import('./discordMessenger.js');
+          const user = await context.client.users.fetch(context.userId);
+          const dmChannel = await user.createDM();
+
+          // Recreate welcome message structure (same as initial send)
+          return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              components: [
+                {
+                  type: 17,
+                  accent_color: 0x3498DB,
+                  components: [
+                    {
+                      type: 10,
+                      content: '## 🎭 Welcome to CastBot!\n\nThank you for trying the DM demo! CastBot helps you run online reality game seasons with powerful features:'
+                    },
+                    { type: 14 },
+                    {
+                      type: 10,
+                      content: '> **`💚 Key Features`**\n• 🎬 Season management & applications\n• 🏆 Cast rankings & voting systems\n• 🦁 Safari adventure challenges\n• 📋 Dynamic castlist displays\n• ⏰ Timezone & pronoun roles'
+                    },
+                    { type: 14 },
+                    {
+                      type: 10,
+                      content: '> **`💬 Need Help?`**\nJoin our support server for:\n• ✅ Feature tutorials & guides\n• 🔧 Technical support\n• 🎯 New feature announcements\n• 👥 Community discussions'
+                    },
+                    { type: 14 },
+                    {
+                      type: 1,
+                      components: [
+                        {
+                          type: 2,
+                          custom_id: 'dm_poc_button',
+                          label: 'Try Interactive Button',
+                          style: 3,
+                          emoji: { name: '👋' }
+                        },
+                        {
+                          type: 2,
+                          custom_id: 'dm_view_tips',
+                          label: 'View Tips',
+                          style: 1,
+                          emoji: { name: '💡' }
+                        },
+                        {
+                          type: 2,
+                          label: 'Join CastBot Server',
+                          style: 5,
+                          url: 'https://discord.gg/H7MpJEjkwT',
+                          emoji: { name: '💬' }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'castlist_test') {
       // EXPERIMENTAL: Test rendering castlist with multiple Text Display components in Section
       // DELETE THIS AFTER TESTING - This is temporary for Components V2 research

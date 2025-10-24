@@ -184,6 +184,13 @@ export const BUTTON_REGISTRY = {
     style: 'Success',
     category: 'testing'
   },
+  'dm_view_tips': {
+    label: 'View Tips',
+    description: 'Show Media Gallery carousel with CastBot feature screenshots',
+    emoji: '💡',
+    style: 'Primary',
+    category: 'testing'
+  },
   // EXPERIMENTAL: Delete after testing Components V2 Section behavior
   'castlist_test': {
     label: 'Castlist Test',

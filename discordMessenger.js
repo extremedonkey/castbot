@@ -376,6 +376,13 @@ class DiscordMessenger {
                     emoji: { name: '👋' }
                   },
                   {
+                    type: 2, // Button
+                    custom_id: 'dm_view_tips',
+                    label: 'View Tips',
+                    style: 1, // Primary (blue)
+                    emoji: { name: '💡' }
+                  },
+                  {
                     type: 2, // Link Button
                     label: 'Join CastBot Server',
                     style: 5, // Link style
