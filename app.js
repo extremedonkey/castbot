@@ -7391,7 +7391,7 @@ To fix this:
                   components: [
                     {
                       type: 10, // Text Display
-                      content: '## 💡 CastBot Features\n\n**Swipe through these screenshots to explore what you can do!**\n\n📱 Mobile: Swipe left/right\n🖥️ Desktop: Click images to view'
+                      content: '## 💡 CastBot Features - Complete Tour\n\n**Swipe through all 10 screenshots to explore everything you can do!**\n\n📱 Mobile: Swipe left/right\n🖥️ Desktop: Click images to view\n🎯 Testing maximum Media Gallery capacity (10 items)'
                     },
                     { type: 14 }, // Separator
                     {
@@ -7432,13 +7432,37 @@ To fix this:
                             url: 'https://cdn.discordapp.com/attachments/1424036358522933268/1424037413315149894/Screenshot_20251004-221110.png?ex=68fcdbb0&is=68fb8a30&hm=da0da3efcecdbc00713aa5ff0c9a3a4db64b56bc1217e88067e44d22d5d27208&'
                           },
                           description: '📱 Mobile View - CastBot works seamlessly on mobile devices with responsive design'
+                        },
+                        {
+                          media: {
+                            url: 'https://cdn.discordapp.com/attachments/1413166085347217529/1413332595613372597/Screenshot_20250905-091814.png?ex=68fcce4d&is=68fb7ccd&hm=cf77f4acb404efda6f8d2a1144f78c9f81789fa3794edf30e1f1dfa776ff58a4&'
+                          },
+                          description: '🎮 Player Menu - Access your profile, seasons, and interactive features from one place'
+                        },
+                        {
+                          media: {
+                            url: 'https://cdn.discordapp.com/attachments/1413166085347217529/1413331729095196732/Screenshot_20250905-091519.png?ex=68fccd7e&is=68fb7bfe&hm=5fd5da0a7f633fc9c0d428defcd5d4e4687163f14630ac882a98dbf16a2e39cb&'
+                          },
+                          description: '🗺️ Safari Map Explorer - Interactive map system with fog of war and location tracking'
+                        },
+                        {
+                          media: {
+                            url: 'https://cdn.discordapp.com/attachments/1412433607137427596/1414027501461569568/image.png?ex=68fcb27b&is=68fb60fb&hm=6d326b8fd73ded4ed8766c3517aa41e528f014acd23819ae3bc80b947586bcf9&'
+                          },
+                          description: '📝 Application Builder - Create custom season applications with multiple question types'
+                        },
+                        {
+                          media: {
+                            url: 'https://cdn.discordapp.com/attachments/1412433607137427596/1413213874995597402/image.png?ex=68fc5fbc&is=68fb0e3c&hm=c58ab61bc4f76225c428d5f562b2e2a621cb17e77bac38b3490edf4bed731c08&'
+                          },
+                          description: '⚙️ Settings & Configuration - Fine-tune CastBot behavior for your server needs'
                         }
                       ]
                     },
                     { type: 14 }, // Separator
                     {
                       type: 10,
-                      content: '> **`📸 Media Gallery Demo`**\n• 6 real CastBot screenshots\n• Native Discord carousel/swipe\n• Works in DMs and channels\n• UPDATE_MESSAGE (no REST API!)'
+                      content: '> **`📸 Media Gallery Demo - MAX CAPACITY!`**\n• 10 real CastBot screenshots (Discord maximum!)\n• Native Discord carousel/swipe\n• Works in DMs and channels\n• UPDATE_MESSAGE (no REST API!)\n• Smooth performance at full capacity'
                     },
                     { type: 14 }, // Separator before back button
                     {
