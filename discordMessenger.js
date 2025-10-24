@@ -333,18 +333,32 @@ class DiscordMessenger {
    * @returns {Object} Result with response for button interaction
    */
   static async sendTestMessage(client, userId) {
-    console.log(`🔍 Sending test message to user ${userId}`);
+    console.log(`🔍 Sending ComponentsV2 test to DM for user ${userId}`);
 
-    // Ultra-simple test: Just plain text to verify DM works
-    const testMessage = "Hello World! This is a test message from CastBot.";
+    // Components V2 in DMs - simplest possible structure
+    // Container (Type 17) → Text Display (Type 10) with "Hello World"
+    const testMessage = {
+      components: [
+        {
+          type: 17, // Container
+          components: [
+            {
+              type: 10, // Text Display
+              content: 'Hello World! This is Components V2 in a DM.'
+            }
+          ]
+        }
+      ]
+    };
 
+    console.log('📤 Sending V2 structure:', JSON.stringify(testMessage, null, 2));
     const result = await this.sendDM(client, userId, testMessage);
 
     if (result.success) {
       return {
         success: true,
         response: {
-          content: '✅ Test message sent! Check your DMs.',
+          content: '✅ ComponentsV2 test sent to your DM!\n\n**Structure:** Container (Type 17) → Text Display (Type 10)\n**Content:** "Hello World! This is Components V2 in a DM."\n\nCheck if you see formatted text!',
           ephemeral: true
         }
       };
@@ -352,7 +366,7 @@ class DiscordMessenger {
       return {
         success: false,
         response: {
-          content: `❌ Failed to send test: ${result.error}`,
+          content: `❌ ComponentsV2 test failed: ${result.error}\n\nThis helps us understand DM limitations.`,
           ephemeral: true
         }
       };
