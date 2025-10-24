@@ -21,12 +21,24 @@ Components V2 is Discord's new component system that provides enhanced layout ca
 
 **ALL Discord UI in CastBot MUST use Components V2 pattern**. This is not optional.
 
+### Interaction Response Types Quick Reference
+
+| Response Type | Type # | Use When | Flags Allowed? | Creates New Message? |
+|--------------|--------|----------|----------------|---------------------|
+| **CHANNEL_MESSAGE_WITH_SOURCE** | 4 | Slash commands, new messages | ✅ Yes (include IS_COMPONENTS_V2) | ✅ Yes |
+| **UPDATE_MESSAGE** | 7 | Button clicks, wizard navigation | ❌ No (inherits from original) | ❌ No (edits existing) |
+| **DEFERRED_CHANNEL_MESSAGE** | 5 | Slow operations (>3 sec) | ✅ Yes (in follow-up) | ✅ Yes (after defer) |
+| **MODAL** | 9 | User input forms | N/A (different structure) | N/A (shows modal) |
+
+**Most Common Pattern:** Button clicks automatically use UPDATE_MESSAGE (ButtonHandlerFactory handles this).
+
 ### Key Requirements
 
-1. **Set the IS_COMPONENTS_V2 flag** for all messages:
+1. **Set the IS_COMPONENTS_V2 flag** for NEW messages only:
    ```javascript
-   const flags = 1 << 15; // IS_COMPONENTS_V2
+   const flags = 1 << 15; // IS_COMPONENTS_V2 (32768)
    ```
+   **Exception:** UPDATE_MESSAGE never uses flags (inherits from original message).
 
 2. **NEVER use `content` field** with Components V2:
    ```javascript
@@ -35,7 +47,7 @@ Components V2 is Discord's new component system that provides enhanced layout ca
      content: "Text here", // THIS WILL FAIL
      flags: flags
    };
-   
+
    // ✅ REQUIRED - Use Container + Text Display
    const response = {
      components: [{
@@ -550,14 +562,17 @@ return res.send({
 
 ## Common Pitfalls
 
-### 1. UPDATE_MESSAGE Flag Restrictions
+### 1. UPDATE_MESSAGE Flag Restrictions (CRITICAL)
+
+**UPDATE_MESSAGE (Type 7)** edits an existing message. It CANNOT have flags because the message already exists with its original flags.
+
 **❌ WRONG:** Including flags in UPDATE_MESSAGE responses
 ```javascript
 // This will cause "interaction failed"
 return res.send({
   type: InteractionResponseType.UPDATE_MESSAGE,
   data: {
-    flags: (1 << 15), // This causes Discord to reject the response
+    flags: (1 << 15), // ❌ Discord rejects: "Invalid flags for UPDATE_MESSAGE"
     components: [...]
   }
 });
@@ -568,19 +583,44 @@ return res.send({
 return res.send({
   type: InteractionResponseType.UPDATE_MESSAGE,
   data: {
-    components: [...] // No flags in data
+    components: [...] // ✅ No flags - inherits from original message
   }
 });
 ```
 
-**Exception**: When returning from ButtonHandlerFactory handlers, include flags in the return object - the factory will strip them for UPDATE_MESSAGE:
+**Why This Works:**
+- Original message was created with `flags: IS_COMPONENTS_V2`
+- UPDATE_MESSAGE edits that message (same message ID)
+- Components V2 context is inherited automatically
+- Container (type 17) works without re-specifying the flag
+
+**ButtonHandlerFactory Auto-Handles This:**
 ```javascript
-// In handler
-return {
-  flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL,
-  components: [...]
-}; // Factory handles flag stripping
+// ButtonHandlerFactory automatically detects button clicks and uses UPDATE_MESSAGE
+} else if (custom_id === 'my_button') {
+  return ButtonHandlerFactory.create({
+    id: 'my_button',
+    handler: async (context) => {
+      // You can include flags here - ButtonHandlerFactory strips them for UPDATE_MESSAGE
+      return {
+        flags: (1 << 15), // Factory strips this for UPDATE_MESSAGE
+        components: [{ type: 17, ... }]
+      };
+    }
+  })(req, res, client);
+}
 ```
+
+**When UPDATE_MESSAGE is Used:**
+- ✅ Button clicks in menus (navigating wizard steps)
+- ✅ Select menu interactions
+- ✅ Any MESSAGE_COMPONENT interaction (type 3)
+- ✅ DM interactions (works identically to channels!)
+
+**When CHANNEL_MESSAGE_WITH_SOURCE is Used:**
+- ✅ Slash commands (`/menu`, `/castlist`)
+- ✅ Creating new ephemeral messages
+- ✅ When you want to keep the original message intact
 
 ### 2. Mixing Legacy and V2
 **❌ WRONG:** Using `content` with V2 flag

@@ -163,6 +163,50 @@ await user.send({ components: [{ type: 17, ... }] });
 - REST API accepts raw JSON structures directly
 - Without `flags: 1 << 15`, Discord rejects Container (type 17) as invalid
 
+### 🔄 Wizard Navigation: UPDATE_MESSAGE
+
+**After the initial DM is sent, ALL wizard navigation uses UPDATE_MESSAGE (standard interaction response)!**
+
+```javascript
+// Button click handlers use UPDATE_MESSAGE (Type 7)
+// This EDITS the existing DM message (same message ID)
+} else if (custom_id === 'wizard_continue') {
+  return ButtonHandlerFactory.create({
+    id: 'wizard_continue',
+    handler: async (context) => {
+      return {
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: {
+          components: [{ type: 17, ... }] // Next wizard screen
+        }
+      };
+    }
+  })(req, res, client);
+}
+```
+
+**Critical Rules:**
+1. **NO FLAGS in UPDATE_MESSAGE** - Discord rejects them (see ComponentsV2.md #1)
+2. **Components V2 works natively** - Inherits from original message
+3. **ButtonHandlerFactory auto-strips flags** - Safe to include in return object
+
+**Wizard Flow Pattern:**
+```
+Step 1 (REST API):     Send initial DM with "Start Setup" button
+       ↓ user clicks
+Step 2 (UPDATE_MESSAGE): Same message changes to hierarchy check
+       ↓ user clicks "Continue"
+Step 3 (UPDATE_MESSAGE): Same message changes to timezone selection
+       ↓ user clicks "Next"
+Step 4 (UPDATE_MESSAGE): Same message changes to pronoun selection
+       ↓ user clicks "Finish"
+Step 5 (UPDATE_MESSAGE): Same message changes to completion screen
+```
+
+**Result:** One message in DM that morphs through wizard steps. Clean UX!
+
+**Reference:** [DiscordMessenger.md - Button Interactions in DMs](../docs/enablers/DiscordMessenger.md#button-interactions-in-dms-update_message)
+
 ---
 
 ### Welcome DM Flow

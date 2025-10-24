@@ -358,8 +358,95 @@ static async sendTestMessage(client, userId) {
 **Use REST API for:**
 - ✅ Components V2 with Container (type 17)
 - ✅ Full Components V2 features in DMs
-- ✅ Setup wizards, interactive DM flows
+- ✅ Setup wizards, interactive DM flows (initial send only!)
 - ✅ Any DM requiring Text Display, Separators, Media Gallery, etc.
+
+### Button Interactions in DMs: UPDATE_MESSAGE
+
+**After sending the initial DM via REST API, all button clicks use standard interaction responses!**
+
+When a user clicks a button in a DM, Discord sends a standard MESSAGE_COMPONENT interaction. Your handler responds with **UPDATE_MESSAGE (Type 7)** to edit the original message:
+
+```javascript
+// Button click handler (works identically for DMs and channels)
+} else if (custom_id === 'dm_wizard_button') {
+  return ButtonHandlerFactory.create({
+    id: 'dm_wizard_button',
+    handler: async (context) => {
+      // UPDATE_MESSAGE edits the button's message
+      return {
+        type: InteractionResponseType.UPDATE_MESSAGE,
+        data: {
+          components: [
+            {
+              type: 17, // Container
+              components: [
+                { type: 10, content: '## Next Step\n\nUpdated content!' }
+              ]
+            }
+          ]
+        }
+      };
+    }
+  })(req, res, client);
+}
+```
+
+**Critical Rules for UPDATE_MESSAGE:**
+
+1. **NO FLAGS** - Discord rejects UPDATE_MESSAGE with flags field
+   ```javascript
+   // ❌ WRONG
+   return {
+     type: InteractionResponseType.UPDATE_MESSAGE,
+     data: {
+       flags: (1 << 15), // Discord: "Invalid flags"
+       components: [...]
+     }
+   };
+
+   // ✅ CORRECT
+   return {
+     type: InteractionResponseType.UPDATE_MESSAGE,
+     data: {
+       components: [...] // No flags needed!
+     }
+   };
+   ```
+
+2. **Components V2 Works Natively** - UPDATE_MESSAGE inherits V2 context from original message
+   - Original message sent with `flags: IS_COMPONENTS_V2`
+   - UPDATE_MESSAGE automatically uses V2 for that message
+   - Container (type 17) works without re-specifying the flag
+
+3. **ButtonHandlerFactory Auto-Detects** - For button clicks, ButtonHandlerFactory automatically uses UPDATE_MESSAGE and strips flags
+
+**Complete DM Interaction Flow:**
+
+```mermaid
+sequenceDiagram
+    participant Bot as CastBot
+    participant REST as Discord REST API
+    participant DM as User's DM
+    participant Button as Button Click
+    participant Handler as ButtonHandlerFactory
+
+    Note over Bot,REST: ONCE: Initial DM Send
+    Bot->>REST: POST /channels/{dm_channel}/messages<br/>(flags: IS_COMPONENTS_V2, button)
+    REST->>DM: Message with button
+
+    Note over DM,Handler: AFTER: All Button Interactions
+    DM->>Button: User clicks button
+    Button->>Handler: Interaction (MESSAGE_COMPONENT)
+    Handler->>DM: UPDATE_MESSAGE<br/>(no flags, inherits V2)
+    Note over DM: Same message updates
+```
+
+**Why This Matters:**
+- ✅ Only ONE REST API call needed (initial send)
+- ✅ All subsequent interactions use standard ButtonHandlerFactory
+- ✅ Setup wizards work identically to channel menus
+- ✅ Clean UX: One message morphs through wizard steps
 
 ## Components V2 Compliance
 
