@@ -127,6 +127,44 @@ This means **Phase 1 is 90% complete** - we just need to:
 - **Visual Standards**: See [LeanUserInterfaceDesign.md](../docs/ui/LeanUserInterfaceDesign.md) - Icon + Title | Subtitle format
 - **Common Pitfalls**: See [ComponentsV2Issues.md](../docs/troubleshooting/ComponentsV2Issues.md) - Avoid "This interaction failed" errors
 
+---
+
+## 🚨 CRITICAL: Components V2 in Direct Messages
+
+**MUST READ BEFORE IMPLEMENTING DM WIZARD:**
+
+Discord.js's `user.send()` **DOES NOT SUPPORT** raw Components V2 JSON. You MUST use Discord REST API directly.
+
+**Required Pattern:**
+```javascript
+// ✅ CORRECT: Use REST API for Components V2 in DMs
+const dmChannel = await user.createDM();
+await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    flags: 1 << 15, // IS_COMPONENTS_V2 - MANDATORY!
+    components: [{ type: 17, ... }]
+  })
+});
+
+// ❌ WRONG: This fails with "component.toJSON is not a function"
+await user.send({ components: [{ type: 17, ... }] });
+```
+
+**Complete Implementation Guide:** [DiscordMessenger.md - Components V2 in Direct Messages](../docs/enablers/DiscordMessenger.md#components-v2-in-direct-messages-critical)
+
+**Why This Matters:**
+- Discord.js expects builder objects (ActionRowBuilder, etc.)
+- Raw JSON doesn't have `.toJSON()` method that Discord.js calls internally
+- REST API accepts raw JSON structures directly
+- Without `flags: 1 << 15`, Discord rejects Container (type 17) as invalid
+
+---
+
 ### Welcome DM Flow
 
 ```mermaid
@@ -309,14 +347,40 @@ const isFirstTime = !playerData[guildId]?.commandsUsed?.includes('menu');
 
 **Decision Needed:** Which detection method is most reliable?
 
-#### Gap 2: Server Welcome Message Capability
-**Problem:** Can we post a public message when bot joins server?
+#### Gap 2: Server Welcome Message Capability ✅ RESOLVED
+**Problem:** ~~Can we post a public message when bot joins server?~~ **SOLVED**
 
-**Research Needed:**
-- Discord API capabilities for posting on guildCreate
-- Default channel detection (system channel, general, etc.)
-- Permission requirements
-- Fallback if no suitable channel found
+**Solution Discovered (October 2025):**
+- ✅ Discord REST API supports Components V2 in DMs: `POST /channels/{dm_channel_id}/messages`
+- ✅ `flags: 1 << 15` (IS_COMPONENTS_V2) is REQUIRED for Container (type 17)
+- ✅ Discord.js `user.send()` does NOT work with raw Components V2 JSON (expects builders)
+- ✅ Bypass Discord.js using `fetch()` to Discord REST API directly
+
+**Reference:** See [DiscordMessenger.md](../docs/enablers/DiscordMessenger.md) section "Components V2 in Direct Messages (CRITICAL)" for complete implementation guide.
+
+**Implementation Pattern:**
+```javascript
+// Step 1: Get DM channel (Discord.js is fine for this)
+const dmChannel = await user.createDM();
+
+// Step 2: Send via REST API with IS_COMPONENTS_V2 flag
+await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    flags: 1 << 15, // CRITICAL: Required for Container!
+    components: [{ type: 17, ... }]
+  })
+});
+```
+
+**For Public Channel Messages:**
+- System channel available via `guild.systemChannel`
+- Use Discord.js `channel.send()` - Components V2 works natively (no REST API needed)
+- Check `SendMessages` permission first
 
 #### Gap 3: Existing Server Migration
 **Problem:** How to handle servers that already use CastBot?
@@ -1410,7 +1474,7 @@ This document aligns with and references the following CastBot architectural sta
 - **[MenuSystemArchitecture.md](../docs/enablers/MenuSystemArchitecture.md)** - Menu building patterns with MenuBuilder
 
 ### Discord Integration
-- **[DiscordMessenger.md](../docs/enablers/DiscordMessenger.md)** - Message sending patterns (welcome messages)
+- **[DiscordMessenger.md](../docs/enablers/DiscordMessenger.md)** - 🚨 **CRITICAL FOR DMs:** Components V2 in Direct Messages via REST API (required for setup wizard)
 - **[DiscordInteractionPatterns.md](../docs/standards/DiscordInteractionPatterns.md)** - Interaction handling
 
 ### Critical Implementation Rules

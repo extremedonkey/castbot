@@ -77,17 +77,22 @@ Send a message to a specific channel.
 #### `sendWelcomePackage(client, guild)`
 Send welcome messages when bot is added to a new server.
 
-**Behavior:**
+**Current Status:** Temporarily disabled (implementation ready but not launched).
+
+**Planned Behavior:**
 1. Sends DM to server owner with comprehensive welcome guide
 2. Posts in system channel if available
 3. Logs all attempts
+
+**Implementation Note:** The commented-out code (lines 152-237 in discordMessenger.js) uses legacy embeds. When enabled, this should be migrated to Components V2 using the REST API pattern documented in "Components V2 in Direct Messages" section.
 
 **Returns:**
 ```javascript
 {
   success: boolean,
   dmSent: boolean,
-  channelMessageSent: boolean
+  channelMessageSent: boolean,
+  note: string  // Currently: "Welcome messages temporarily disabled"
 }
 ```
 
@@ -99,6 +104,8 @@ Broadcast alerts to all server administrators.
 - `warning` - Yellow, attention needed
 - `error` - Red, problem occurred
 - `critical` - Dark red, immediate action required
+
+**Current Implementation:** Uses legacy embeds (not Components V2). Still reliable for admin alerts.
 
 **Returns:**
 ```javascript
@@ -113,12 +120,14 @@ Broadcast alerts to all server administrators.
 #### `sendTestMessage(client, userId)`
 Test message functionality (used by Msg Test button).
 
+**Implementation:** Demonstrates Components V2 in DMs via REST API (see "Components V2 in Direct Messages" section). Sends a formatted message with Container, Text Display, and Separator to prove the REST API approach works.
+
 **Returns:**
 ```javascript
 {
   success: boolean,
   response: {
-    content: string,
+    content: string,  // Interaction response confirming DM sent
     ephemeral: true
   }
 }
@@ -235,6 +244,123 @@ if (!result.success) {
 - Validates user can receive DMs
 - Returns clear error messages
 
+## Components V2 in Direct Messages (CRITICAL)
+
+### The Discord.js Builder Problem
+
+**Problem:** Discord.js's `user.send()` method expects **builder objects** (ActionRowBuilder, ButtonBuilder) and does NOT accept raw Components V2 JSON structures.
+
+```javascript
+// ❌ FAILS: Discord.js expects builders, not raw JSON
+await user.send({
+  components: [{ type: 17, ... }]  // Error: component.toJSON is not a function
+});
+```
+
+**Root Cause:** Discord.js internally calls `.toJSON()` on components, which raw objects don't have.
+
+### The Solution: Discord REST API
+
+To send Components V2 to DMs, bypass Discord.js and use the **Discord REST API directly**:
+
+```javascript
+// ✅ WORKS: Direct REST API call
+const dmChannel = await user.createDM();  // Still use Discord.js for this
+const response = await fetch(
+  `https://discord.com/api/v10/channels/${dmChannel.id}/messages`,
+  {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      flags: 1 << 15, // IS_COMPONENTS_V2 - REQUIRED!
+      components: [
+        {
+          type: 17, // Container
+          accent_color: 0x3498DB,
+          components: [
+            { type: 10, content: '## Hello World' },
+            { type: 14 }, // Separator
+            { type: 10, content: 'This is Components V2 in a DM!' }
+          ]
+        }
+      ]
+    })
+  }
+);
+```
+
+**Critical Requirements:**
+1. **`flags: 1 << 15`** (IS_COMPONENTS_V2) is MANDATORY
+   - Without this flag, Discord interprets your message as Components V1
+   - Components V1 only allows Action Row (type 1) at top level
+   - Container (type 17) is rejected: `"type must be one of (1,)"`
+2. Use `user.createDM()` to get DM channel ID (Discord.js is fine for this)
+3. Send via `POST /channels/{dm_channel_id}/messages` (raw fetch)
+
+### Implementation in sendTestMessage
+
+The `sendTestMessage()` method demonstrates this pattern:
+
+```javascript
+static async sendTestMessage(client, userId) {
+  // Step 1: Get DM channel (Discord.js is fine for this)
+  const user = await client.users.fetch(userId);
+  const dmChannel = await user.createDM();
+
+  // Step 2: Prepare Components V2 message with IS_COMPONENTS_V2 flag
+  const v2Message = {
+    flags: 1 << 15, // CRITICAL: Required for Container type 17!
+    components: [
+      {
+        type: 17, // Container
+        accent_color: 0x3498DB,
+        components: [
+          { type: 10, content: '## 🧪 REST API PoC' },
+          { type: 14 },
+          { type: 10, content: '✅ Components V2 works in DMs!' }
+        ]
+      }
+    ]
+  };
+
+  // Step 3: Send via Discord REST API
+  const response = await fetch(
+    `https://discord.com/api/v10/channels/${dmChannel.id}/messages`,
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(v2Message)
+    }
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(`Discord API returned ${response.status}`);
+  }
+
+  return await response.json();
+}
+```
+
+### When to Use Each Approach
+
+**Use Discord.js `user.send()` for:**
+- ✅ Plain text messages
+- ✅ Traditional embeds (legacy pattern)
+- ✅ Simple messages without Components V2
+
+**Use REST API for:**
+- ✅ Components V2 with Container (type 17)
+- ✅ Full Components V2 features in DMs
+- ✅ Setup wizards, interactive DM flows
+- ✅ Any DM requiring Text Display, Separators, Media Gallery, etc.
+
 ## Components V2 Compliance
 
 ### Automatic Formatting
@@ -244,21 +370,16 @@ When passing a string, the service automatically wraps it in proper Components V
 // You send this:
 DiscordMessenger.sendDM(client, userId, "Hello!");
 
-// Service formats as:
+// Service formats as (plain text for compatibility):
 {
-  flags: (1 << 15), // IS_COMPONENTS_V2
-  components: [{
-    type: 17, // Container
-    components: [{
-      type: 10, // Text Display
-      content: "Hello!"
-    }]
-  }]
+  content: "Hello!"
 }
 ```
 
-### Custom Components
-You can also pass pre-formatted Components V2 structures:
+**Note:** The `sendDM()` method currently uses Discord.js `user.send()`, which means it does NOT support Components V2 Container structures. For Components V2 in DMs, use the REST API pattern shown above or create a dedicated `sendDMWithComponents()` method.
+
+### Custom Components (For Channels, Not DMs)
+For channel messages, you can pass pre-formatted Components V2 structures:
 
 ```javascript
 const customMessage = {
@@ -273,7 +394,7 @@ const customMessage = {
   }]
 };
 
-await DiscordMessenger.sendDM(client, userId, customMessage);
+await DiscordMessenger.sendToChannel(client, channelId, customMessage);
 ```
 
 ## Future Features (Documented, Not Implemented)
