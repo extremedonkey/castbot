@@ -333,40 +333,69 @@ class DiscordMessenger {
    * @returns {Object} Result with response for button interaction
    */
   static async sendTestMessage(client, userId) {
-    console.log(`🔍 Sending ComponentsV2 test to DM for user ${userId}`);
+    console.log(`🔍 PoC: Sending ComponentsV2 via Discord REST API (bypassing Discord.js)`);
 
-    // Components V2 in DMs - simplest possible structure
-    // Container (Type 17) → Text Display (Type 10) with "Hello World"
-    const testMessage = {
-      components: [
-        {
-          type: 17, // Container
-          components: [
-            {
-              type: 10, // Text Display
-              content: 'Hello World! This is Components V2 in a DM.'
-            }
-          ]
-        }
-      ]
-    };
+    try {
+      // Step 1: Get or create DM channel
+      const user = await client.users.fetch(userId);
+      const dmChannel = await user.createDM();
+      console.log(`📬 DM Channel ID: ${dmChannel.id}`);
 
-    console.log('📤 Sending V2 structure:', JSON.stringify(testMessage, null, 2));
-    const result = await this.sendDM(client, userId, testMessage);
+      // Step 2: Prepare Components V2 message
+      const v2Message = {
+        components: [
+          {
+            type: 17, // Container
+            accent_color: 0x3498DB, // Blue accent
+            components: [
+              {
+                type: 10, // Text Display
+                content: '## 🧪 REST API PoC\n\nThis message was sent via Discord REST API, bypassing Discord.js builders!\n\n**Components V2 works in DMs!**'
+              },
+              { type: 14 }, // Separator
+              {
+                type: 10,
+                content: '> **`✅ Success`**\nContainer + Text Display + Separator all working!'
+              }
+            ]
+          }
+        ]
+      };
 
-    if (result.success) {
+      // Step 3: Send via Discord REST API
+      const discordApiUrl = `https://discord.com/api/v10/channels/${dmChannel.id}/messages`;
+      const response = await fetch(discordApiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bot ${process.env.DISCORD_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(v2Message)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ Discord API error:', errorData);
+        throw new Error(`Discord API returned ${response.status}: ${JSON.stringify(errorData)}`);
+      }
+
+      const messageData = await response.json();
+      console.log(`✅ REST API success! Message ID: ${messageData.id}`);
+
       return {
         success: true,
         response: {
-          content: '✅ ComponentsV2 test sent to your DM!\n\n**Structure:** Container (Type 17) → Text Display (Type 10)\n**Content:** "Hello World! This is Components V2 in a DM."\n\nCheck if you see formatted text!',
+          content: `✅ **PoC Success!** Components V2 sent via REST API!\n\n**Method:** Direct Discord REST API (bypassed Discord.js)\n**Endpoint:** \`POST /channels/${dmChannel.id}/messages\`\n**Structure:** Container → Text Display + Separator\n\n**Check your DMs for formatted message!**`,
           ephemeral: true
         }
       };
-    } else {
+
+    } catch (error) {
+      console.error('❌ REST API PoC failed:', error);
       return {
         success: false,
         response: {
-          content: `❌ ComponentsV2 test failed: ${result.error}\n\nThis helps us understand DM limitations.`,
+          content: `❌ REST API PoC failed: ${error.message}\n\nSee logs for details.`,
           ephemeral: true
         }
       };
