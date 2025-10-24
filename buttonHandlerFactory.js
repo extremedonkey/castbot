@@ -177,6 +177,13 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'admin'
   },
+  'dm_poc_button': {
+    label: 'Click Me!',
+    description: 'PoC button inside DM demonstrating UPDATE_MESSAGE with Components V2',
+    emoji: '👋',
+    style: 'Success',
+    category: 'testing'
+  },
   // EXPERIMENTAL: Delete after testing Components V2 Section behavior
   'castlist_test': {
     label: 'Castlist Test',

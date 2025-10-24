@@ -341,7 +341,7 @@ class DiscordMessenger {
       const dmChannel = await user.createDM();
       console.log(`📬 DM Channel ID: ${dmChannel.id}`);
 
-      // Step 2: Prepare Components V2 message
+      // Step 2: Prepare Components V2 message with button
       // CRITICAL: Must include flags field with IS_COMPONENTS_V2 flag!
       const v2Message = {
         flags: 1 << 15, // IS_COMPONENTS_V2 (32768) - REQUIRED for Container type 17!
@@ -358,6 +358,19 @@ class DiscordMessenger {
               {
                 type: 10,
                 content: '> **`✅ Success`**\nContainer + Text Display + Separator all working!'
+              },
+              { type: 14 }, // Another separator before button
+              {
+                type: 1, // Action Row
+                components: [
+                  {
+                    type: 2, // Button
+                    custom_id: 'dm_poc_button',
+                    label: 'Click Me!',
+                    style: 3, // Success (green)
+                    emoji: { name: '👋' }
+                  }
+                ]
               }
             ]
           }

@@ -7337,6 +7337,41 @@ To fix this:
           return result.response;
         }
       })(req, res, client);
+
+    } else if (custom_id === 'dm_poc_button') {
+      // PoC: Button click in DM demonstrating UPDATE_MESSAGE with Components V2
+      return ButtonHandlerFactory.create({
+        id: 'dm_poc_button',
+        handler: async (context) => {
+          console.log(`🧪 PoC: dm_poc_button clicked in DM by user ${context.userId}`);
+
+          // UPDATE_MESSAGE works identically in DMs and channels!
+          // No REST API needed - standard interaction response
+          return {
+            type: InteractionResponseType.UPDATE_MESSAGE,
+            data: {
+              components: [
+                {
+                  type: 17, // Container
+                  accent_color: 0x27ae60, // Green for success
+                  components: [
+                    {
+                      type: 10, // Text Display
+                      content: '## 👋 Hello World!\n\nThis message was updated via **UPDATE_MESSAGE** (standard interaction response).\n\n**No REST API needed for button responses!**'
+                    },
+                    { type: 14 }, // Separator
+                    {
+                      type: 10,
+                      content: '> **`🎯 Key Insight`**\n• REST API: Only for initial DM send\n• UPDATE_MESSAGE: Works natively with Components V2\n• Button handlers: Identical for channels & DMs!'
+                    }
+                  ]
+                }
+              ]
+            }
+          };
+        }
+      })(req, res, client);
+
     } else if (custom_id === 'castlist_test') {
       // EXPERIMENTAL: Test rendering castlist with multiple Text Display components in Section
       // DELETE THIS AFTER TESTING - This is temporary for Components V2 research
