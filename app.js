@@ -7411,6 +7411,12 @@ To fix this:
                         },
                         {
                           media: {
+                            url: 'https://cdn.discordapp.com/attachments/1395819813640601742/1395844571656884364/image.png?ex=68fc774f&is=68fb25cf&hm=f5d3be2960feb1a3c2abac64b94720c100e9f68ed7ca07c63cb668fbb0e566ce&'
+                          },
+                          description: '📊 Production Menu - Comprehensive admin interface for managing all CastBot features'
+                        },
+                        {
+                          media: {
                             url: 'https://cdn.discordapp.com/attachments/1395819813640601742/1395844807884144640/image.png?ex=68fc7787&is=68fb2607&hm=0b5cc8728f40a35ff749aedc67d23fd9ea7349e10442700ad440d952b6fe1e3f&'
                           },
                           description: '🏆 Cast Rankings - Let players anonymously vote on applicants with visual ranking interface'
@@ -7420,13 +7426,19 @@ To fix this:
                             url: 'https://cdn.discordapp.com/attachments/1396857713165602867/1396858075406930000/image.png?ex=68fcdb75&is=68fb89f5&hm=dc33bebc1e252aa63715a879a0813e3ae820dd367e7461437071d846485882af&'
                           },
                           description: '🎬 Season Management - Configure applications, questions, and production workflows'
+                        },
+                        {
+                          media: {
+                            url: 'https://cdn.discordapp.com/attachments/1424036358522933268/1424037413315149894/Screenshot_20251004-221110.png?ex=68fcdbb0&is=68fb8a30&hm=da0da3efcecdbc00713aa5ff0c9a3a4db64b56bc1217e88067e44d22d5d27208&'
+                          },
+                          description: '📱 Mobile View - CastBot works seamlessly on mobile devices with responsive design'
                         }
                       ]
                     },
                     { type: 14 }, // Separator
                     {
                       type: 10,
-                      content: '> **`📸 Media Gallery Demo`**\n• 4 real CastBot screenshots\n• Native Discord carousel/swipe\n• Works in DMs and channels\n• UPDATE_MESSAGE (no REST API!)'
+                      content: '> **`📸 Media Gallery Demo`**\n• 6 real CastBot screenshots\n• Native Discord carousel/swipe\n• Works in DMs and channels\n• UPDATE_MESSAGE (no REST API!)'
                     },
                     { type: 14 }, // Separator before back button
                     {
