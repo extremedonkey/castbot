@@ -341,34 +341,46 @@ class DiscordMessenger {
       const dmChannel = await user.createDM();
       console.log(`📬 DM Channel ID: ${dmChannel.id}`);
 
-      // Step 2: Prepare Components V2 message with button
+      // Step 2: Prepare Components V2 welcome message with CastBot branding
       // CRITICAL: Must include flags field with IS_COMPONENTS_V2 flag!
       const v2Message = {
         flags: 1 << 15, // IS_COMPONENTS_V2 (32768) - REQUIRED for Container type 17!
         components: [
           {
             type: 17, // Container
-            accent_color: 0x3498DB, // Blue accent
+            accent_color: 0x3498DB, // Blue - standard CastBot color
             components: [
               {
                 type: 10, // Text Display
-                content: '## 🧪 REST API PoC\n\nThis message was sent via Discord REST API, bypassing Discord.js builders!\n\n**Components V2 works in DMs!**'
+                content: '## 🎭 Welcome to CastBot!\n\nThank you for trying the DM demo! CastBot helps you run online reality game seasons with powerful features:'
               },
               { type: 14 }, // Separator
               {
                 type: 10,
-                content: '> **`✅ Success`**\nContainer + Text Display + Separator all working!'
+                content: '> **`💚 Key Features`**\n• 🎬 Season management & applications\n• 🏆 Cast rankings & voting systems\n• 🦁 Safari adventure challenges\n• 📋 Dynamic castlist displays\n• ⏰ Timezone & pronoun roles'
               },
-              { type: 14 }, // Another separator before button
+              { type: 14 }, // Separator
+              {
+                type: 10,
+                content: '> **`💬 Need Help?`**\nJoin our support server for:\n• ✅ Feature tutorials & guides\n• 🔧 Technical support\n• 🎯 New feature announcements\n• 👥 Community discussions'
+              },
+              { type: 14 }, // Separator before buttons
               {
                 type: 1, // Action Row
                 components: [
                   {
                     type: 2, // Button
                     custom_id: 'dm_poc_button',
-                    label: 'Click Me!',
+                    label: 'Try Interactive Button',
                     style: 3, // Success (green)
                     emoji: { name: '👋' }
+                  },
+                  {
+                    type: 2, // Link Button
+                    label: 'Join CastBot Server',
+                    style: 5, // Link style
+                    url: 'https://discord.gg/H7MpJEjkwT',
+                    emoji: { name: '💬' }
                   }
                 ]
               }
@@ -400,7 +412,7 @@ class DiscordMessenger {
       return {
         success: true,
         response: {
-          content: `✅ **PoC Success!** Components V2 sent via REST API!\n\n**Method:** Direct Discord REST API (bypassed Discord.js)\n**Endpoint:** \`POST /channels/${dmChannel.id}/messages\`\n**Structure:** Container → Text Display + Separator\n\n**Check your DMs for formatted message!**`,
+          content: `✅ **Welcome message sent to your DMs!**\n\n**Features Demonstrated:**\n• 🎨 Components V2 Container with blue accent\n• 📝 Text Display with markdown formatting\n• ➖ Visual separators for organization\n• 🎭 CastBot-branded emojis (🎬 🏆 🦁 💚)\n• 🔘 Interactive button (green "Try Interactive Button")\n• 🔗 Link button (opens support server)\n\n**Technical Details:**\n\`\`\`\nMethod: Discord REST API (bypassed Discord.js)\nEndpoint: POST /channels/${dmChannel.id}/messages\nFlags: IS_COMPONENTS_V2 (1 << 15)\nComponents: Container → 3 Text Displays + 2 Separators + 2 Buttons\n\`\`\`\n\n💡 **Click the green button in your DM to see UPDATE_MESSAGE in action!**`,
           ephemeral: true
         }
       };
