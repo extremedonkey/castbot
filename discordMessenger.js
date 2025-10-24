@@ -333,18 +333,10 @@ class DiscordMessenger {
    * @returns {Object} Result with response for button interaction
    */
   static async sendTestMessage(client, userId) {
-    console.log(`🔍 Sending ComponentsV2 test message to user ${userId}`);
+    console.log(`🔍 Sending test message to user ${userId}`);
 
-    // Start SIMPLE - just Container + Text Display (no flags for DMs!)
-    const testMessage = {
-      components: [{
-        type: 17, // Container
-        components: [{
-          type: 10, // Text Display
-          content: '## 🎭 ComponentsV2 Test in DM\n\nIf you can see this formatted message, ComponentsV2 works in Direct Messages!'
-        }]
-      }]
-    };
+    // Ultra-simple test: Just plain text to verify DM works
+    const testMessage = "Hello World! This is a test message from CastBot.";
 
     const result = await this.sendDM(client, userId, testMessage);
 
@@ -352,7 +344,7 @@ class DiscordMessenger {
       return {
         success: true,
         response: {
-          content: '✅ ComponentsV2 test sent! Check your DMs.\n\nSent: Container (Type 17) → Text Display (Type 10)\n\n**If you see formatted text, it works!**',
+          content: '✅ Test message sent! Check your DMs.',
           ephemeral: true
         }
       };
@@ -360,7 +352,7 @@ class DiscordMessenger {
       return {
         success: false,
         response: {
-          content: `❌ Failed to send ComponentsV2 test: ${result.error}`,
+          content: `❌ Failed to send test: ${result.error}`,
           ephemeral: true
         }
       };

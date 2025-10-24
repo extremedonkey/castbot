@@ -78,5 +78,37 @@
     "status": "failed",
     "error": "component.toJSON is not a function",
     "executionTime": 387
+  },
+  {
+    "timestamp": "2025-10-24T15:24:33.860Z",
+    "type": "DM",
+    "target": "391415444084490240",
+    "status": "failed",
+    "error": "component.toJSON is not a function",
+    "executionTime": 415
+  },
+  {
+    "timestamp": "2025-10-24T15:42:35.258Z",
+    "type": "DM",
+    "target": "391415444084490240",
+    "status": "failed",
+    "error": "component.toJSON is not a function",
+    "executionTime": 3
+  },
+  {
+    "timestamp": "2025-10-24T15:42:44.363Z",
+    "type": "DM",
+    "target": "391415444084490240",
+    "status": "failed",
+    "error": "component.toJSON is not a function",
+    "executionTime": 2
+  },
+  {
+    "timestamp": "2025-10-24T15:45:10.303Z",
+    "type": "DM",
+    "target": "391415444084490240",
+    "status": "failed",
+    "error": "component.toJSON is not a function",
+    "executionTime": 1
   }
 ]
