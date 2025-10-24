@@ -71,6 +71,12 @@ This means **Phase 1 is 90% complete** - we just need to:
 - **Setup Detection:** Determine if ANY administrator has run `/menu` or `/castlist`
   - Check for existing timezone/pronoun roles
   - Track in playerData.json for persistence
+- **Role Hierarchy Validation:** (CRITICAL - NEW REQUIREMENT)
+  - Check if CastBot's role is positioned above pronoun/timezone roles
+  - Provide visual guide showing how to fix hierarchy issues
+  - Test role management capabilities before proceeding
+  - Block setup continuation if hierarchy is incorrect
+  - Explanation: Discord bots can only manage roles BELOW their position
 - **Selective Setup:** Allow users to choose setup options:
   - Timezones only
   - Pronouns only
@@ -215,9 +221,63 @@ stateDiagram-v2
 }
 ```
 
-### Screen 2-4: Additional Wizard Screens
+### Screen 2: Role Hierarchy Check (NEW - CRITICAL)
 
-See implementation code below for proper Components V2 structure. All screens follow:
+```javascript
+// This screen appears BEFORE any role creation attempts
+{
+  type: 17,  // Container
+  accent_color: 0xf39c12,  // Orange for warning/attention
+  components: [
+    {
+      type: 10,
+      content: `## ⚠️ Role Check | Setup Requirement`
+    },
+    { type: 14 },
+    {
+      type: 10,
+      content: `**Discord requires CastBot's role to be positioned above any roles it manages.**\n\nChecking your server configuration...`
+    },
+    // IF HIERARCHY IS CORRECT:
+    {
+      type: 10,
+      content: `✅ **Great!** CastBot's role "CastBot" is in position #12\n\n**Can manage:**\n• ✅ Pronoun roles (will be created below position #12)\n• ✅ Timezone roles (will be created below position #12)`
+    },
+    // IF HIERARCHY IS WRONG:
+    {
+      type: 10,
+      content: `❌ **Action Required!** CastBot cannot manage roles above its position.\n\n**Current situation:**\n• CastBot role: Position #5\n• Existing pronoun roles: Position #8-10 (TOO HIGH)\n• Existing timezone roles: Position #11-15 (TOO HIGH)`
+    },
+    {
+      type: 10,
+      content: `> **\`📍 How to Fix\`**\n1. Go to Server Settings → Roles\n2. Find "CastBot" role (currently at position #5)\n3. Drag it ABOVE all pronoun/timezone roles\n4. Click "Save Changes"\n5. Return here and click "Test Again"`
+    },
+    {
+      type: 1,
+      components: [
+        {
+          type: 2,
+          custom_id: 'wizard_test_hierarchy',
+          label: 'Test Again',
+          style: 1,  // Primary
+          emoji: { name: '🔄' }
+        },
+        {
+          type: 2,
+          custom_id: 'wizard_skip_check',
+          label: 'Skip (Not Recommended)',
+          style: 4,  // Danger
+          emoji: { name: '⚠️' }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Screen 3-5: Additional Wizard Screens
+
+See implementation code for remaining screens. All follow Components V2 structure with:
 - Type 17 Container with accent_color
 - Type 10 Text Display for content (NEVER use content field directly)
 - Type 14 Separators between sections
@@ -535,12 +595,153 @@ export async function trackAdminInteraction(guildId, userId, action) {
 }
 ```
 
-2. **Create `setupWizard.js`** (UI Screens)
+2. **Create `setupWizard.js`** (UI Screens with Role Hierarchy Check)
 ```javascript
-import { executeSetup } from './roleManager.js';
+import { executeSetup, canBotManageRole } from './roleManager.js';
 import { markSetupCompleted } from './setupManager.js';
+import { loadPlayerData } from './storage.js';
 
-// Step 1: Welcome
+// NEW: Check role hierarchy before setup
+export async function checkRoleHierarchy(guild, client) {
+  const playerData = await loadPlayerData();
+  const guildData = playerData[guild.id];
+
+  const botMember = guild.members.me || guild.members.cache.get(client.user.id);
+  if (!botMember) {
+    return { canProceed: false, error: 'Bot member not found' };
+  }
+
+  const botHighestPosition = botMember.roles.highest.position;
+  const issues = [];
+  const manageable = [];
+
+  // Check existing pronoun roles
+  if (guildData?.pronounRoleIDs) {
+    for (const roleId of guildData.pronounRoleIDs) {
+      const role = guild.roles.cache.get(roleId);
+      if (role) {
+        const check = canBotManageRole(guild, roleId, client);
+        if (!check.canManage) {
+          issues.push({
+            name: role.name,
+            type: 'pronoun',
+            position: role.position,
+            reason: check.details
+          });
+        } else {
+          manageable.push(role.name);
+        }
+      }
+    }
+  }
+
+  // Check existing timezone roles
+  if (guildData?.timezones) {
+    for (const [tzName, roleId] of Object.entries(guildData.timezones)) {
+      const role = guild.roles.cache.get(roleId);
+      if (role) {
+        const check = canBotManageRole(guild, roleId, client);
+        if (!check.canManage) {
+          issues.push({
+            name: role.name,
+            type: 'timezone',
+            position: role.position,
+            reason: check.details
+          });
+        } else {
+          manageable.push(role.name);
+        }
+      }
+    }
+  }
+
+  return {
+    canProceed: issues.length === 0,
+    botPosition: botHighestPosition,
+    botRoleName: botMember.roles.highest.name,
+    issues,
+    manageable
+  };
+}
+
+// Step 1: Role Hierarchy Check (NEW)
+export async function createHierarchyCheckScreen(guild, client) {
+  const check = await checkRoleHierarchy(guild, client);
+
+  const components = [
+    {
+      type: 10,
+      content: `## ⚠️ Role Check | Setup Requirement`
+    },
+    { type: 14 },
+    {
+      type: 10,
+      content: `**Discord requires CastBot's role to be above any roles it manages.**\n\nChecking your server...`
+    }
+  ];
+
+  if (check.canProceed) {
+    // All good!
+    components.push({
+      type: 10,
+      content: `✅ **Perfect!** CastBot can manage all roles.\n\n**Bot role:** "${check.botRoleName}" (position #${check.botPosition})\n**Can manage:** ${check.manageable.length} existing roles\n\nYou're ready to proceed with setup!`
+    });
+    components.push({
+      type: 1,
+      components: [{
+        type: 2,
+        custom_id: 'wizard_hierarchy_continue',
+        label: 'Continue Setup',
+        style: 3,  // Success
+        emoji: { name: '✅' }
+      }]
+    });
+  } else {
+    // Show issues
+    const issueList = check.issues.map(i =>
+      `• ${i.name} (${i.type}, position #${i.position})`
+    ).join('\n');
+
+    components.push({
+      type: 10,
+      content: `❌ **Action Required!**\n\n**Bot role:** "${check.botRoleName}" (position #${check.botPosition})\n**Cannot manage these roles:**\n${issueList}`
+    });
+    components.push({
+      type: 10,
+      content: `> **\`📍 How to Fix\`**\n1. Open Server Settings → Roles\n2. Find "${check.botRoleName}" role\n3. Drag it ABOVE all pronoun/timezone roles\n4. Save changes\n5. Click "Test Again"`
+    });
+    components.push({
+      type: 1,
+      components: [
+        {
+          type: 2,
+          custom_id: 'wizard_test_hierarchy',
+          label: 'Test Again',
+          style: 1,  // Primary
+          emoji: { name: '🔄' }
+        },
+        {
+          type: 2,
+          custom_id: 'wizard_skip_hierarchy',
+          label: 'Skip Check',
+          style: 4,  // Danger
+          emoji: { name: '⚠️' }
+        }
+      ]
+    });
+  }
+
+  return {
+    flags: (1 << 15),
+    components: [{
+      type: 17,
+      accent_color: check.canProceed ? 0x27ae60 : 0xf39c12,  // Green if OK, orange if issues
+      components
+    }]
+  };
+}
+
+// Step 2: Welcome (after hierarchy check passes)
 export function createWelcomeScreen() {
   return {
     flags: (1 << 15),
@@ -686,7 +887,28 @@ export const BUTTON_REGISTRY = {
     style: 'Secondary',
     category: 'setup'
   },
-  // ... add all wizard buttons ...
+  // Role Hierarchy Check buttons (NEW)
+  'wizard_test_hierarchy': {
+    label: 'Test Again',
+    description: 'Re-test role hierarchy after fixing',
+    emoji: '🔄',
+    style: 'Primary',
+    category: 'setup'
+  },
+  'wizard_skip_hierarchy': {
+    label: 'Skip Check',
+    description: 'Skip role hierarchy check (not recommended)',
+    emoji: '⚠️',
+    style: 'Danger',
+    category: 'setup'
+  },
+  'wizard_hierarchy_continue': {
+    label: 'Continue Setup',
+    description: 'Continue after successful hierarchy check',
+    emoji: '✅',
+    style: 'Success',
+    category: 'setup'
+  }
 };
 ```
 
@@ -1198,6 +1420,94 @@ This document aligns with and references the following CastBot architectural sta
 4. **ALWAYS await async functions** like MenuBuilder.create() (MenuSystemArchitecture.md #1)
 5. **Explicitly add EPHEMERAL flag** for admin menus (ComponentsV2Issues.md #11)
 6. **Follow LEAN title format**: `## 🎯 Title | Subtitle` (LeanUserInterfaceDesign.md)
+
+---
+
+## 💡 First-Time Install UX/UI Design Philosophy
+
+### Overall Experience Flow
+
+**1. Immediate Acknowledgment (0-5 seconds)**
+- Bot joins → Instant DM to server owner
+- Clear value proposition in first message
+- Visual hierarchy guides eye to action buttons
+
+**2. Progressive Disclosure (30 seconds - 2 minutes)**
+- Start with role hierarchy check (prevent silent failures)
+- Only show complexity when needed (error states)
+- Each screen builds confidence with success indicators
+
+**3. Smart Defaults with Escape Hatches**
+- Pre-select common timezones (NA timezones checked by default)
+- "Skip" always available but styled as secondary option
+- Visual cues guide toward recommended path (green success buttons)
+
+### Key UX Decisions
+
+**Role Hierarchy Check as Gate**
+- **Why First**: Prevents frustrating "setup worked but roles don't assign" scenarios
+- **Visual Treatment**: Orange accent for attention, not red (not an error yet)
+- **Escape Hatch**: "Skip" button exists but labeled as dangerous
+- **Education**: Step-by-step fix instructions with exact UI paths
+
+**Timezone Simplification**
+- **Single Role System**: Huge UX win - no more "which role CST or CDT?"
+- **Visual Grouping**: Regions collapsed by default (NA, EU, APAC)
+- **Smart Detection**: Could auto-detect likely timezone from server region (future)
+
+**Welcome DM vs Channel Post**
+- **DM First**: Guaranteed delivery, no permission issues
+- **Personal Touch**: "Thank you for adding CastBot to **YourServer**"
+- **No Spam**: Other members don't see setup process
+- **Future Option**: "Post success message to channel" after setup
+
+### Visual Design Principles
+
+**Color Psychology**
+- 🟦 Blue (0x3498DB): Standard/neutral actions
+- 🟢 Green (0x27ae60): Success/proceed
+- 🟠 Orange (0xf39c12): Attention/warning
+- 🔴 Red (0xe74c3c): Danger/skip
+
+**Information Architecture**
+- **Headers**: `## 🎯 Action | Context` format
+- **Sections**: `> **\`📊 Section\`**` for visual breaks
+- **Instructions**: Numbered lists for step-by-step
+- **Status**: Checkmarks ✅ and X marks ❌ for instant recognition
+
+### Friction Reduction
+
+**Smart Recovery**
+- "Test Again" button after fixes (no restart needed)
+- Progress saved between sessions
+- Can return to setup from /menu anytime
+
+**Time Estimates**
+- "2-3 minutes" sets expectation
+- Each step shows progress (Step 2 of 4)
+- Quick wins first (hierarchy check is instant)
+
+**Error Prevention**
+- Role hierarchy check BEFORE attempting creation
+- Visual guide shows exact Discord UI locations
+- Warning when skipping recommended steps
+
+### Engagement Hooks
+
+**Immediate Value**
+- "Set up your server in 2 minutes"
+- "NEW: DST-aware roles" (timely with Nov 2 deadline)
+- Support/Donate buttons build community
+
+**Progressive Complexity**
+- Simple first choice (Start/Skip)
+- Advanced options hidden until needed
+- Power users can skip to /menu
+
+**Success Momentum**
+- Green checkmarks build confidence
+- "Perfect!" messaging when things work
+- Clear next steps after each success
 
 ---
 

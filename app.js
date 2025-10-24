@@ -1025,9 +1025,9 @@ async function createReeceStuffMenu(guildId, channelId = null) {
   const adminToolsButtons = [
     new ButtonBuilder()
       .setCustomId('test_role_hierarchy')
-      .setLabel('Test Role Hierarchy')
+      .setLabel('Check Roles')
       .setStyle(ButtonStyle.Secondary)
-      .setEmoji('🔧'),
+      .setEmoji('🔰'),
     new ButtonBuilder()
       .setCustomId('msg_test')
       .setLabel('Msg Test')

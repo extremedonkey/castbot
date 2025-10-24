@@ -92,9 +92,9 @@ export const BUTTON_REGISTRY = {
     category: 'analytics'
   },
   'test_role_hierarchy': {
-    label: 'Test Role Hierarchy',
+    label: 'Check Roles',
     description: 'Test and display role hierarchy information',
-    emoji: '🧪',
+    emoji: '🔰',
     style: 'Secondary',
     parent: 'reece_stuff_menu',
     restrictedUser: '391415444084490240',
