@@ -342,7 +342,9 @@ class DiscordMessenger {
       console.log(`📬 DM Channel ID: ${dmChannel.id}`);
 
       // Step 2: Prepare Components V2 message
+      // CRITICAL: Must include flags field with IS_COMPONENTS_V2 flag!
       const v2Message = {
+        flags: 1 << 15, // IS_COMPONENTS_V2 (32768) - REQUIRED for Container type 17!
         components: [
           {
             type: 17, // Container
