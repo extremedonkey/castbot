@@ -189,6 +189,154 @@ User clicks "Run Setup"
 
 ---
 
+## 🔬 Architectural Observations (Current Implementation)
+
+### Discord Role Cache Behavior
+
+**Discovery:** The `executeSetup()` function uses `guild.roles.cache` without explicitly refreshing it:
+
+```javascript
+// app.js:6208-6212
+const guild = await client.guilds.fetch(guildId);
+const setupResults = await executeSetup(guildId, guild);
+
+// roleManager.js:553 (inside executeSetup)
+const existingRole = guild.roles.cache.find(r => r.name === timezone.name);
+```
+
+**Observation:** The role cache is populated when the bot connects (READY event) and may not reflect recent role name changes made in Discord. Other commands like `/castlist` explicitly refresh the cache:
+
+```javascript
+// app.js:1986-1987 (castlist command)
+const fullGuild = await client.guilds.fetch(guildId, { force: true });
+await fullGuild.roles.fetch();  // Explicit cache refresh
+```
+
+### Infrastructure Fields (Forward-Compatible Architecture)
+
+**Current State:** Two fields exist in the data structure but are not yet utilized in logic:
+
+#### `dstObserved` Field
+- **Defined:** STANDARD_TIMEZONE_ROLES (roleManager.js:136-159)
+- **Stored:** playerData.json via roleManager.js:683
+- **Usage:** Currently stored for future DST switching functionality
+- **Example:** `{ name: 'CST (UTC-6)', offset: -6, dstObserved: true }`
+
+#### `standardName` Field
+- **Purpose:** Links daylight time roles to their standard time parent
+- **Example:** `{ name: 'PDT (UTC-7)', standardName: 'PST (UTC-8)' }`
+- **Storage:** roleManager.js:684 stores as `standardName: tz.standardName || null`
+- **Usage:** Infrastructure for future DST pair grouping operations
+
+**Note:** These fields represent forward-compatible infrastructure - the foundation exists for DST management features.
+
+### Storage Pattern: ID-Centric Architecture
+
+**Observation:** playerData.json stores only role IDs with metadata, never role names:
+
+```javascript
+// playerData.json structure
+"timezones": {
+  "1320094564731850803": {  // Role ID (Discord snowflake)
+    "offset": -6,
+    "dstObserved": true,
+    "standardName": "CST (UTC-6)"
+  }
+}
+// Role name is NOT stored - must be fetched from Discord
+```
+
+**Architecture Rationale:**
+- Discord role names can change anytime
+- Single source of truth (Discord API) for names
+- Smaller data storage footprint
+- Trade-off: Requires Discord API access to display role names
+
+### Two-Step Matching Process
+
+**Current Implementation:** `executeSetup()` uses a two-step process for timezone role matching:
+
+#### Step 1: Match by Name (STANDARD_TIMEZONE_ROLES → Discord)
+```javascript
+// roleManager.js:553
+for (const timezone of STANDARD_TIMEZONE_ROLES) {
+    // timezone.name = "CST (UTC-6)"
+    const existingRole = guild.roles.cache.find(r => r.name === timezone.name);
+    // Exact string match required
+}
+```
+
+#### Step 2: Check Tracking Status (Discord Role ID → playerData.json)
+```javascript
+// roleManager.js:557
+if (currentTimezones[existingRole.id]) {
+    // Role already tracked in CastBot
+}
+```
+
+**Characteristics:**
+- Name-driven detection (starts with STANDARD_TIMEZONE_ROLES names)
+- Exact match required for timezones (unlike pronouns which use fuzzy patterns)
+- Orphaned playerData entries (deleted/renamed Discord roles) are not detected during setup
+
+### Current Operations Inventory
+
+**Available Operations:**
+| Operation | Function | Location | Scope |
+|-----------|----------|----------|-------|
+| **CREATE** | `executeSetup()` | roleManager.js:452 | Creates roles, detects existing |
+| **READ** | `getGuildTimezones()` | storage.js:391 | Returns timezone configs |
+| **READ** | `getTimezoneOffset()` | storage.js:398 | Gets specific offset |
+| **DELETE** | `nukeRoles()` | roleManager.js:1233 | Removes ALL timezone/pronoun roles |
+
+**Characteristics of Current Operations:**
+- `executeSetup()` is idempotent - safe to re-run multiple times
+- `nukeRoles()` provides complete reset functionality (all-or-nothing approach)
+- No granular update/delete operations currently implemented
+
+### String Select Data Assembly
+
+**Implementation:** The timezone dropdown (playerManagement.js:870-942) combines data from multiple sources:
+
+```javascript
+// Data Assembly Process
+const timezones = await getGuildTimezones(guildId);  // From playerData.json
+const role = await guild.roles.fetch(roleId);         // From Discord API
+
+// String Select Option Structure
+{
+    label: role.name,                                    // Discord: "PDT (UTC-7)"
+    value: role.id,                                      // Discord: "1320094564..."
+    description: `UTC${offset >= 0 ? '+' : ''}${offset}`, // playerData: "UTC-7"
+    emoji: { name: '🌍' },                              // Hardcoded
+    default: currentTimezone?.id === role.id            // Calculated
+}
+```
+
+**Data Source Breakdown:**
+- **Label:** Current Discord role name (real-time from API)
+- **Value:** Discord role ID
+- **Description:** Calculated from stored offset in playerData.json
+- **Emoji:** Hardcoded in the component
+- **Default:** Runtime calculation based on user's current roles
+
+### Idempotency Characteristics
+
+**Current Behavior:** `executeSetup()` is idempotent based on role names:
+
+```javascript
+// Safe to re-run - will detect existing roles
+await executeSetup(guildId, guild);  // First run: creates roles
+await executeSetup(guildId, guild);  // Second run: detects existing, skips creation
+```
+
+**Matching Dependency:**
+- Idempotent when Discord role names remain unchanged
+- If admin renames role (e.g., "CST (UTC-6)" → "Central Time"), setup will create duplicate
+- Based on exact name matching for timezones (line 553)
+
+---
+
 ## 🆕 New Architecture: Single-Role Paradigm
 
 ### Core Principle
@@ -1551,24 +1699,58 @@ curl https://worldtimeapi.org/api/timezone/America/Chicago
 
 ## Conclusion
 
-The revised timezone DST architecture implements a **single-role paradigm** where:
+### Current Architecture Summary
 
-1. ✅ **One role = One timezone** (CT not CST+CDT)
-2. ✅ **Fuzzy matching** for smooth transition from legacy dual-roles
-3. ✅ **Role colors** for visual identification (regional grouping)
-4. ✅ **executeSetup() extension** for idempotent migration
-5. ✅ **DST-aware data structure** with dynamic offset updates
-6. ⏳ **Auto-toggle options modeled** (decision deferred to user)
+The timezone system currently implements a **dual-role approach** with the following characteristics:
 
-**Next Step:** Review proposed architecture and select:
-- Migration approach (executeSetup re-run vs script)
-- Auto-toggle option (Manual, API, Hybrid, or none)
-- Color scheme preferences (regional grouping vs other)
+**Infrastructure:**
+- 20 separate roles for DST/Standard time pairs (CST + CDT, EST + EDT, etc.)
+- Forward-compatible fields (`dstObserved`, `standardName`) stored but not yet utilized
+- ID-centric storage pattern (role IDs only, names fetched from Discord)
+- Exact name matching for timezone role detection
+- Idempotent `executeSetup()` function based on role names
 
-**Status:** ✅ Ready for Implementation Decision
+**Operations:**
+- CREATE via `executeSetup()` with role detection
+- READ via `getGuildTimezones()` and `getTimezoneOffset()`
+- DELETE via `nukeRoles()` (all-or-nothing approach)
+- No granular UPDATE operations currently implemented
+
+**Data Flow:**
+- Discord role cache populated at bot startup (READY event)
+- String Select combines Discord API (names), playerData.json (offsets), and hardcoded elements
+- Two-step matching: STANDARD_TIMEZONE_ROLES → Discord roles → playerData.json
+
+### Proposed Single-Role Architecture
+
+The proposed architecture would implement:
+
+1. **One role = One timezone** (CT not CST+CDT)
+2. **Fuzzy matching** for smooth transition from legacy dual-roles
+3. **Role colors** for visual identification (regional grouping)
+4. **executeSetup() extension** for idempotent migration
+5. **DST-aware data structure** with dynamic offset updates
+6. **Auto-toggle options modeled** (Manual, API, or Hybrid approaches)
+
+### Architectural Observations
+
+**Key Discoveries:**
+- Role cache behavior differs between commands (`executeSetup` vs `/castlist`)
+- Infrastructure fields exist for future DST features (forward-compatible design)
+- Storage pattern prioritizes single source of truth (Discord) for role names
+- Current operations provide foundational CRUD with specific characteristics
+- Data assembly for UI components combines multiple sources at runtime
+
+**Design Characteristics:**
+- Idempotency achieved through name-based matching
+- All-or-nothing deletion approach via `nukeRoles()`
+- Forward-compatible infrastructure allows future feature additions
+- ID-centric storage reduces data redundancy
+
+**Status:** ✅ Comprehensive Analysis Complete - Current State Documented
 
 ---
 
 *Analysis Date: 2025-01-10 (Revised)*
-*Next Review: After architecture approval*
-*Status: ✅ Comprehensive Design Complete - Awaiting Implementation Decision*
+*Latest Update: 2025-01-27 (Architectural Observations Added)*
+*Status: ✅ Current Architecture Fully Documented*
