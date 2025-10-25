@@ -1024,10 +1024,17 @@ if (wizardButtons.includes(custom_id)) {
 **Priority:** CRITICAL - Nov 2 deadline
 **Complexity:** MEDIUM - Role management + data migration
 
+**📚 DETAILED IMPLEMENTATION:** See [RaP/0990_Timezone_DST_Architecture_Analysis.md](/RaP/0990_20251010_Timezone_DST_Architecture_Analysis.md) for:
+- Complete technical architecture and data structures
+- Production data analysis (842 roles across 57 servers)
+- Selected migration strategy (Enhanced executeSetup)
+- DST toggle implementation options
+- Edge case handlers and risk mitigation
+
 #### Tasks:
 
 1. **Implement Manual DST Toggle** (2 hours)
-   - See original StreamlinedSetup_All.md Phase 3 section
+   - See RaP/0990 for complete implementation details
    - Add admin button in Reece Stuff Menu
    - toggleDSTForAllServers() function
 

@@ -16,9 +16,9 @@
 - 24% have DST-only roles (need standard counterparts)
 - 19% have custom/non-standard timezones
 
-### Recommended Migration Approach
+### ✅ DECISION MADE: Migration Approach (January 2025)
 
-✅ **PRIMARY: Enhanced executeSetup() with Smart Detection**
+**SELECTED STRATEGY: Enhanced executeSetup() with Smart Detection**
 - Add "Migrate Timezones (BETA)" button to prod_setup menu
 - Preview changes before execution
 - Server-by-server control
@@ -1440,38 +1440,167 @@ The following are **design options only** - no implementation decision made yet.
 
 ---
 
-### Option 1: Manual Button in reece_stuff_menu
+### Option 1: Manual Button in reece_stuff_menu (✅ SELECTED FOR INITIAL IMPLEMENTATION)
 
-**Description:** Admin-triggered toggle button that manually switches DST state
+**Updated Implementation with Modal UI (January 2025):**
 
-**Implementation:**
+**Description:** Admin-triggered modal interface for timezone DST management
+
+### How offset/currentOffset Fields Work
+
+**Field Relationship:**
 ```javascript
-// New button in reece_stuff_menu
+// In playerData.json for a timezone role
 {
-  type: 2, // Button
-  custom_id: 'admin_toggle_dst_all_timezones',
-  label: 'Toggle DST',
-  style: ButtonStyle.Primary,
-  emoji: { name: '🔄' }
+  // BACKWARDS COMPATIBILITY - All existing code reads this
+  "offset": -8,          // ← Time calculation code uses this TODAY
+
+  // NEW DST-AWARE FIELDS
+  "currentOffset": -8,   // ← Same value as offset (for now)
+  "standardOffset": -8,  // Pacific Standard Time (winter)
+  "dstOffset": -7,       // Pacific Daylight Time (summer)
+  "isDST": false,        // Currently in standard time
+
+  // When you toggle DST:
+  // 1. Set isDST = true
+  // 2. Set currentOffset = dstOffset (-7)
+  // 3. Set offset = currentOffset (-7) ← Updates legacy field!
 }
 
-// Handler
-} else if (custom_id === 'admin_toggle_dst_all_timezones') {
-  // Toggle isDST for all DST-observing timezones
-  const playerData = await loadPlayerData();
-  const timezones = playerData[guildId].timezones;
+// PRACTICAL EXAMPLE: March DST transition
+// Before toggle (Winter - PST):
+{
+  "offset": -8,          // playerManagement.js reads this
+  "currentOffset": -8,   // Same value
+  "standardOffset": -8,
+  "dstOffset": -7,
+  "isDST": false         // Winter time
+}
 
-  for (const [roleId, tzData] of Object.entries(timezones)) {
-    if (tzData.dstObserved) {
-      tzData.isDST = !tzData.isDST;
-      tzData.currentOffset = tzData.isDST ? tzData.dstOffset : tzData.standardOffset;
-      tzData.offset = tzData.currentOffset;  // Update backwards-compat field
-      tzData.lastToggled = Date.now();
+// After toggle (Summer - PDT):
+{
+  "offset": -7,          // ← CHANGED! Now shows PDT time
+  "currentOffset": -7,   // ← CHANGED! Matches offset
+  "standardOffset": -8,  // Unchanged (metadata)
+  "dstOffset": -7,       // Unchanged (metadata)
+  "isDST": true          // ← CHANGED! Summer time
+}
+```
+
+**Why Two Fields?**
+- `offset`: Existing code (`playerManagement.js:66`) reads this field
+- `currentOffset`: New field for clarity, mirrors `offset`
+- During transition, both fields have same value
+- Eventually deprecate `offset` in favor of `currentOffset`
+
+### Modal UI Implementation
+
+```javascript
+// Button in reece_stuff_menu opens modal
+{
+  type: 2,
+  custom_id: 'admin_advanced_timezone_management',
+  label: 'Timezone DST Manager',
+  style: 2, // Secondary
+  emoji: { name: '🌍' }
+}
+
+// Handler opens modal
+} else if (custom_id === 'admin_advanced_timezone_management') {
+  // Show modal with Role Select + String Select
+  const modal = {
+    type: 9, // MODAL response
+    data: {
+      custom_id: 'dst_toggle_modal',
+      title: 'Timezone DST Management',
+      components: [
+        // Instructions
+        {
+          type: 10, // Text Display
+          content: '### Select timezone to toggle DST\n\nChoose a timezone role and set its DST state.'
+        },
+        // Timezone role selector
+        {
+          type: 18, // Label
+          label: 'Select Timezone',
+          description: 'Choose which timezone to modify',
+          component: {
+            type: 6, // Role Select
+            custom_id: 'timezone_role_select',
+            placeholder: 'Choose timezone role...',
+            min_values: 1,
+            max_values: 1
+          }
+        },
+        // DST state selector
+        {
+          type: 18, // Label
+          label: 'DST State',
+          description: 'Set to Daylight (summer) or Standard (winter)',
+          component: {
+            type: 3, // String Select
+            custom_id: 'dst_state_select',
+            placeholder: 'Choose DST state...',
+            options: [
+              {
+                label: 'Standard Time (Winter)',
+                value: 'standard',
+                description: 'CST, PST, EST - regular offsets',
+                emoji: { name: '❄️' }
+              },
+              {
+                label: 'Daylight Time (Summer)',
+                value: 'daylight',
+                description: 'CDT, PDT, EDT - +1 hour offsets',
+                emoji: { name: '☀️' }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  };
+  return res.send(modal);
+}
+
+// Modal submission handler
+} else if (custom_id === 'dst_toggle_modal') {
+  const playerData = await loadPlayerData();
+  const selectedRoleId = req.body.data.values.timezone_role_select[0];
+  const dstState = req.body.data.values.dst_state_select[0];
+
+  // Update ALL servers that have this timezone role
+  let updatedCount = 0;
+  for (const [serverId, serverData] of Object.entries(playerData)) {
+    if (serverData.timezones?.[selectedRoleId]) {
+      const tz = serverData.timezones[selectedRoleId];
+      if (tz.dstObserved) {
+        const newIsDST = (dstState === 'daylight');
+
+        // Update the timezone data
+        tz.isDST = newIsDST;
+        tz.currentOffset = newIsDST ? tz.dstOffset : tz.standardOffset;
+        tz.offset = tz.currentOffset; // ← KEY: Update legacy field!
+        tz.lastToggled = Date.now();
+
+        updatedCount++;
+      }
     }
   }
 
   await savePlayerData(playerData);
-  return { content: '✅ DST toggled for all timezones' };
+
+  // Get role name for feedback
+  const guild = await client.guilds.fetch(guildId);
+  const role = guild.roles.cache.get(selectedRoleId);
+
+  return {
+    type: 4, // CHANNEL_MESSAGE_WITH_SOURCE
+    data: {
+      content: `✅ **DST Updated**\n${role?.name || 'Timezone'} set to ${dstState === 'daylight' ? '☀️ Daylight' : '❄️ Standard'} time\nUpdated in ${updatedCount} server(s)`,
+      flags: 64 // Ephemeral
+    }
+  };
 }
 ```
 
