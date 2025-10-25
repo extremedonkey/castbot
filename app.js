@@ -9296,13 +9296,18 @@ Your server is now ready for Tycoons gameplay!`;
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_roles_cancel') {
-      // Cancel the roles nuke operation (DELEGATED TO MODULE)
+      // Cancel the roles nuke operation - return to reece_stuff_menu
       return ButtonHandlerFactory.create({
         id: 'nuke_roles_cancel',
         updateMessage: true,
         handler: async (context) => {
-          const { handleNukeCancel } = await import('./dataNuker.js');
-          return handleNukeCancel(context);
+          // Return to Reece Stuff menu (admin menu)
+          const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
+
+          return {
+            ...reeceMenuData,
+            ephemeral: true
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'safari_create_button') {
