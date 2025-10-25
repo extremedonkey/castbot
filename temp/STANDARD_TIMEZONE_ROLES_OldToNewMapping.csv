@@ -1,0 +1,21 @@
+﻿Mapping to new structure,name,offset,dstObserved,standardName
+Pacific Time,PST (UTC-8),-8,TRUE,PST (UTC-8)
+Pacific Time,PDT (UTC-7),-7,TRUE,PST (UTC-8)
+Mountain Time,MST (UTC-7),-7,TRUE,MST (UTC-7)
+Mountain Time,MDT (UTC-6),-6,TRUE,MST (UTC-7)
+Central Time,CST (UTC-6),-6,TRUE,CST (UTC-6)
+Central Time,CDT (UTC-5),-5,TRUE,CST (UTC-6)
+Eastern Time,EST (UTC-5),-5,TRUE,EST (UTC-5)
+Eastern Time,EDT (UTC-4),-4,TRUE,EST (UTC-5)
+Atlantic Time,AST (UTC-4),-4,TRUE,AST (UTC-4)
+Atlantic Time,ADT (UTC-3),-3,TRUE,AST (UTC-4)
+Newfoundland Time,NST (UTC-3:30),-3.5,TRUE,NST (UTC-3:30)
+Newfoundland Time,NDT (UTC-2:30),-2.5,TRUE,NST (UTC-3:30)
+UK and Ireland,GMT (UTC+0),0,FALSE,
+UK and Ireland,BST (UTC+1),1,TRUE,GMT (UTC+0)
+Central European Time,CET (UTC+1),1,TRUE,CET (UTC+1)
+Central European Time,CEST (UTC+2),2,TRUE,CET (UTC+1)
+Western Australia and SE Asia,GMT+8 (UTC+8),8,FALSE,
+Australian Eastern Time,AEST (UTC+10),10,FALSE,
+Australian Eastern Time,AEDT (UTC+11),11,TRUE,AEST (UTC+10)
+New Zealand Time,NZST (UTC+12),12,TRUE,NZST (UTC+12)

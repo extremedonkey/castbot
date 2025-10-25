@@ -1,0 +1,842 @@
+﻿serverID,serverName,timezoneRoleID,offset,dstObserved,standardName,predictedCurrentTimeZone,Notes
+1008584295193006121,PatORG Hub,1393649577361412179,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1008584295193006121,PatORG Hub,1393649578947117147,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1008584295193006121,PatORG Hub,1393649580784091228,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1008584295193006121,PatORG Hub,1393649581757169686,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1008584295193006121,PatORG Hub,1393649583447474206,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1008584295193006121,PatORG Hub,1393649584286470216,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1008584295193006121,PatORG Hub,1393649585796284448,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1008584295193006121,PatORG Hub,1393649587591446630,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1008584295193006121,PatORG Hub,1393649589365772388,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1008584295193006121,PatORG Hub,1393649591966236772,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1008584295193006121,PatORG Hub,1393649590665744434,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1008584295193006121,PatORG Hub,1393649593253892281,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1008584295193006121,PatORG Hub,1393649594075975852,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1008584295193006121,PatORG Hub,1393649595858423871,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1008584295193006121,PatORG Hub,1393649597724889088,1,TRUE,CET (UTC+1),CET (UTC+1),
+1008584295193006121,PatORG Hub,1393649598685249590,2,TRUE,CET (UTC+1),CET (UTC+1),
+1008584295193006121,PatORG Hub,1393649600249856244,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1008584295193006121,PatORG Hub,1393649602221183017,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1008584295193006121,PatORG Hub,1393649603693514985,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1008584295193006121,PatORG Hub,1393649605324963972,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1019667534275936266,Boardvivor!,1372619235037282384,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1019667534275936266,Boardvivor!,1372619236350103612,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1019667534275936266,Boardvivor!,1372619237625168072,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1019667534275936266,Boardvivor!,1372619239038652488,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1019667534275936266,Boardvivor!,1393527239374671914,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1019667534275936266,Boardvivor!,1393527242688036924,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1019667534275936266,Boardvivor!,1393527241430007838,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1019667534275936266,Boardvivor!,1393527244282138644,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1019667534275936266,Boardvivor!,1372619239919325356,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1019667534275936266,Boardvivor!,1372619241756557542,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1019667534275936266,Boardvivor!,1393527247863943219,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1019667534275936266,Boardvivor!,1393527249399185409,1,TRUE,CET (UTC+1),CET (UTC+1),
+1019667534275936266,Boardvivor!,1372619243375296572,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1019667534275936266,Boardvivor!,1393527250502287424,2,TRUE,CET (UTC+1),CET (UTC+1),
+1019667534275936266,Boardvivor!,1372619246575554722,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1023409443603488810,$ҽɾҽɳiťყ Sųɾvivøɾ,1383140570138017973,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1023409443603488810,$ҽɾҽɳiťყ Sųɾvivøɾ,1383140571463417987,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1023409443603488810,$ҽɾҽɳiťყ Sųɾvivøɾ,1383140572948074534,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1023409443603488810,$ҽɾҽɳiťყ Sųɾvivøɾ,1383140574269407464,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1023409443603488810,$ҽɾҽɳiťყ Sųɾvivøɾ,1383140576010178722,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1023409443603488810,$ҽɾҽɳiťყ Sųɾvivøɾ,1383140577553547338,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1023409443603488810,$ҽɾҽɳiťყ Sųɾvivøɾ,1383140579143323800,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1023409443603488810,$ҽɾҽɳiťყ Sųɾvivøɾ,1383140580573315093,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1023409443603488810,$ҽɾҽɳiťყ Sųɾvivøɾ,1383140582238588948,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1035283158972764212,Pokevivor S15 - All Stars 2,1412072246347960331,5,,,UTC+5,Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1064589575500087396,🍓SILVIVOR NOW CASTING,1339849062249140266,-8,,,PST (UTC-8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1064589575500087396,🍓SILVIVOR NOW CASTING,1339849063528403059,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1064589575500087396,🍓SILVIVOR NOW CASTING,1339849065017376830,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1064589575500087396,🍓SILVIVOR NOW CASTING,1339849066569269318,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1064589575500087396,🍓SILVIVOR NOW CASTING,1339849067806593045,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1064589575500087396,🍓SILVIVOR NOW CASTING,1339849070377697302,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1064589575500087396,🍓SILVIVOR NOW CASTING,1340202984042139732,7,,,UTC+7,Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1064589575500087396,🍓SILVIVOR NOW CASTING,1339849071786983436,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1064589575500087396,🍓SILVIVOR NOW CASTING,1339849073070575626,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080166267136262154,Triumph Hub,1414291110108463155,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1080166267136262154,Triumph Hub,1414291111538851994,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1080166267136262154,Triumph Hub,1414291113199800431,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1080166267136262154,Triumph Hub,1414291114462154936,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1080166267136262154,Triumph Hub,1414291121273700404,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1080166267136262154,Triumph Hub,1414291124868218910,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1080166267136262154,Triumph Hub,1414291122733187214,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1080166267136262154,Triumph Hub,1414291126575304814,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1080166267136262154,Triumph Hub,1336344021416542342,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080166267136262154,Triumph Hub,1360889233929408563,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080166267136262154,Triumph Hub,1414291128550953093,1,TRUE,CET (UTC+1),CET (UTC+1),
+1080166267136262154,Triumph Hub,1336344022855188480,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080166267136262154,Triumph Hub,1336344024315068526,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080166267136262154,Triumph Hub,1336344025392742483,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080166267136262154,Triumph Hub,1360889235560857756,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080166267136262154,Triumph Hub,1414291130203377805,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1080166267136262154,Triumph Hub,1336344027301154860,11,,,AEDT (UTC+11),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080290501003067432,Maniac Games,1361094089415589909,-8,,,PST (UTC-8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080290501003067432,Maniac Games,1361094091152162989,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080290501003067432,Maniac Games,1361094092838408363,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080290501003067432,Maniac Games,1361094094524514555,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080290501003067432,Maniac Games,1361094095874949340,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080290501003067432,Maniac Games,1361094097774837760,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080290501003067432,Maniac Games,1361094099087921223,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080290501003067432,Maniac Games,1361094100446871802,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1080290501003067432,Maniac Games,1361094101860225236,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1081049511469785109,Petravivor S8: Dexter,1393410012793278597,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1081049511469785109,Petravivor S8: Dexter,1387543619208085626,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1081049511469785109,Petravivor S8: Dexter,1393410013854175244,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1081049511469785109,Petravivor S8: Dexter,1387543621166825472,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1081049511469785109,Petravivor S8: Dexter,1393410015703990342,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1081049511469785109,Petravivor S8: Dexter,1387543622714396672,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1081049511469785109,Petravivor S8: Dexter,1393410017088110632,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1081049511469785109,Petravivor S8: Dexter,1387543623758778440,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1081049511469785109,Petravivor S8: Dexter,1393410018443005992,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1081049511469785109,Petravivor S8: Dexter,1393410021282545704,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1081049511469785109,Petravivor S8: Dexter,1393410019856220181,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1081049511469785109,Petravivor S8: Dexter,1393410023060668501,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1081049511469785109,Petravivor S8: Dexter,1387543626627944640,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1081049511469785109,Petravivor S8: Dexter,1387543628519309402,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1081049511469785109,Petravivor S8: Dexter,1393410024587657249,1,TRUE,CET (UTC+1),CET (UTC+1),
+1081049511469785109,Petravivor S8: Dexter,1387543629584793744,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1081049511469785109,Petravivor S8: Dexter,1387543631535149237,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1081049511469785109,Petravivor S8: Dexter,1387543633959456839,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1081049511469785109,Petravivor S8: Dexter,1393410025539633174,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1081049511469785109,Petravivor S8: Dexter,1393410027552903289,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1088287200044666931,Power Grab ORG,1390491694092259378,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1088287200044666931,Power Grab ORG,1390491695455670313,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1088287200044666931,Power Grab ORG,1390491697292513430,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1088287200044666931,Power Grab ORG,1390491698970493041,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1088287200044666931,Power Grab ORG,1390491700383977543,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1088287200044666931,Power Grab ORG,1390491701990395944,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1088287200044666931,Power Grab ORG,1390491703432970381,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1088287200044666931,Power Grab ORG,1390491704884465785,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1088287200044666931,Power Grab ORG,1390491706620641280,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1088287200044666931,Power Grab ORG,1390491709489545238,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1088287200044666931,Power Grab ORG,1390491707832795157,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1088287200044666931,Power Grab ORG,1390491710517149839,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1088287200044666931,Power Grab ORG,1390491712279019620,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1088287200044666931,Power Grab ORG,1390491713692504106,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1088287200044666931,Power Grab ORG,1390491715151986801,1,TRUE,CET (UTC+1),CET (UTC+1),
+1088287200044666931,Power Grab ORG,1390491717568036934,2,TRUE,CET (UTC+1),CET (UTC+1),
+1088287200044666931,Power Grab ORG,1390491718884786186,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1088287200044666931,Power Grab ORG,1390491720248201398,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1088287200044666931,Power Grab ORG,1390491721598505024,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1088287200044666931,Power Grab ORG,1390491722902929418,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1127596863885934652,LOSTVivor,1129716603504828509,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1183707238922211380,Nul Points (Get The Podium Picture 2),1342572948782841908,-8,,,PST (UTC-8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1183707238922211380,Nul Points (Get The Podium Picture 2),1342572950796111964,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1183707238922211380,Nul Points (Get The Podium Picture 2),1342572952310255738,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1183707238922211380,Nul Points (Get The Podium Picture 2),1342572953589518408,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1183707238922211380,Nul Points (Get The Podium Picture 2),1342572954931953754,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1183707238922211380,Nul Points (Get The Podium Picture 2),1342572956424999042,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1183707238922211380,Nul Points (Get The Podium Picture 2),1342572957754593411,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1183707238922211380,Nul Points (Get The Podium Picture 2),1342572959394435082,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1183707238922211380,Nul Points (Get The Podium Picture 2),1342572960829145249,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1332141359783477279,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380745361773301860,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1332141259199877212,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380745363316805662,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1332141407758057562,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380745364348600322,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1332742311419052145,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380745365933789296,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1332742370537504900,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380745367796056156,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380745057908559974,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380745369981554699,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380743422796628109,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380745371629781104,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380745373408170064,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1198412959240699935,RVIVOR S7: Blink-182: One World Tour,1380745375421304962,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388527617069678662,-10,,,UTC-10,Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522386311348335,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522387565318146,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522388865683581,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522390203666504,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522391784657143,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522393516904468,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522394884378774,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522396243202140,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522397778444449,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522400819445781,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522399175147601,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522402756952086,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522404099129394,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522405990764605,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522407836254329,1,TRUE,CET (UTC+1),CET (UTC+1),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522409472294992,2,TRUE,CET (UTC+1),CET (UTC+1),
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388527799572369499,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522412932337846,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1203901346311438356,Parkvivor: Mythic Lands - S5: Into The Woods,1388522414761054260,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1209857629732470794,Serviver's server,1348278545696428124,-8,,,PST (UTC-8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348278547147657236,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348279475112116264,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348278548405817435,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348279476538048564,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348278549894664224,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348279477762916374,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348279479692296323,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348278550980988932,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348278553162158090,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348278554495811604,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348278555720548466,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1209857629732470794,Serviver's server,1348278557075439718,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1242640082838749216,Twilightvivor,1395584803579101355,-10,,,UTC-10,Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1242640082838749216,Twilightvivor,1370585457267707956,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1242640082838749216,Twilightvivor,1370585458714607636,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1242640082838749216,Twilightvivor,1370585460048531546,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1242640082838749216,Twilightvivor,1370585461528989807,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1242640082838749216,Twilightvivor,1370585462883745875,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1242640082838749216,Twilightvivor,1370585464595288174,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1242640082838749216,Twilightvivor,1370585466117554206,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1242640082838749216,Twilightvivor,1370585467380301926,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1242640082838749216,Twilightvivor,1370585469070479402,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943871513690256,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943873207930960,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943875976167494,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943877410619617,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943880032190474,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943881894592512,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943883492364498,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943886956855457,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943889687609498,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943892837531711,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943891650281662,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943894783557652,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943896213688442,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943898344390800,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943899535704217,1,TRUE,CET (UTC+1),CET (UTC+1),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943901683060870,2,TRUE,CET (UTC+1),CET (UTC+1),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943904409620550,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943907295035472,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943909014962216,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1249787622809665627,HolidORGs S21: Comic Colosseum,1417943910273253387,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1294676751913320618,HasChannel [HIATUS],1404097267916472345,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1294676751913320618,HasChannel [HIATUS],1404097269531414719,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1294676751913320618,HasChannel [HIATUS],1404097271397879869,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1294676751913320618,HasChannel [HIATUS],1404097272953831455,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1294676751913320618,HasChannel [HIATUS],1404097274203734046,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1294676751913320618,HasChannel [HIATUS],1404097275705298945,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1294676751913320618,HasChannel [HIATUS],1404097277097807955,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1294676751913320618,HasChannel [HIATUS],1404097279211733042,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1294676751913320618,HasChannel [HIATUS],1404097280562298920,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1294676751913320618,HasChannel [HIATUS],1404097283842117643,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1294676751913320618,HasChannel [HIATUS],1404097282432962601,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1294676751913320618,HasChannel [HIATUS],1404097286937510001,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1294676751913320618,HasChannel [HIATUS],1404097296110719026,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1294676751913320618,HasChannel [HIATUS],1404097297465475134,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1294676751913320618,HasChannel [HIATUS],1404097298782355456,1,TRUE,CET (UTC+1),CET (UTC+1),
+1294676751913320618,HasChannel [HIATUS],1404097300376060026,2,TRUE,CET (UTC+1),CET (UTC+1),
+1294676751913320618,HasChannel [HIATUS],1404097301672103996,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1294676751913320618,HasChannel [HIATUS],1404097302993309789,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1294676751913320618,HasChannel [HIATUS],1404097305161760778,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1294676751913320618,HasChannel [HIATUS],1404097307032551494,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1297188286191767603,EpochORG S7: Rumrunners,1320094467486908507,-8,,,PST (UTC-8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1297188286191767603,EpochORG S7: Rumrunners,1335635312508145728,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1297188286191767603,EpochORG S7: Rumrunners,1320094564731850803,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1297188286191767603,EpochORG S7: Rumrunners,1320094346288300124,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1297188286191767603,EpochORG S7: Rumrunners,1328044184673714248,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1297188286191767603,EpochORG S7: Rumrunners,1335635316077498409,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1297188286191767603,EpochORG S7: Rumrunners,1335635318027845754,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1297188286191767603,EpochORG S7: Rumrunners,1330207345619374131,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1297188286191767603,EpochORG S7: Rumrunners,1328044491860607118,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1297188286191767603,EpochORG S7: Rumrunners,1330207937330679938,13,,,TOT (UTC+13),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1302688077570904166,Chenbot's Dungeon,1395113727833149502,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1302688077570904166,Chenbot's Dungeon,1395113729900675143,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1302688077570904166,Chenbot's Dungeon,1395113731419279412,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1302688077570904166,Chenbot's Dungeon,1395113732811522203,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1302688077570904166,Chenbot's Dungeon,1395113734430527569,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1302688077570904166,Chenbot's Dungeon,1395113736095666396,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1302688077570904166,Chenbot's Dungeon,1395113737631039528,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1302688077570904166,Chenbot's Dungeon,1395113739811946727,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1302688077570904166,Chenbot's Dungeon,1395113741649186847,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1302688077570904166,Chenbot's Dungeon,1395113744698183891,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1302688077570904166,Chenbot's Dungeon,1395113742764736583,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1302688077570904166,Chenbot's Dungeon,1395113746099212388,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1302688077570904166,Chenbot's Dungeon,1395113748162941069,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1302688077570904166,Chenbot's Dungeon,1395113750079606888,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1302688077570904166,Chenbot's Dungeon,1395113751413391460,1,TRUE,CET (UTC+1),CET (UTC+1),
+1302688077570904166,Chenbot's Dungeon,1395113753166741665,2,TRUE,CET (UTC+1),CET (UTC+1),
+1302688077570904166,Chenbot's Dungeon,1395113756564000869,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1302688077570904166,Chenbot's Dungeon,1395113758107631647,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1302688077570904166,Chenbot's Dungeon,1395113759470518292,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1302688077570904166,Chenbot's Dungeon,1395113760451985472,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1308581797915005029,SERVIVORG S10 - DRIVE IN MADNESS,1333449345839665345,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1308581797915005029,SERVIVORG S10 - DRIVE IN MADNESS,1335668520448426024,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1308581797915005029,SERVIVORG S10 - DRIVE IN MADNESS,1333449388596527104,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1308581797915005029,SERVIVORG S10 - DRIVE IN MADNESS,1333449191187550349,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1308581797915005029,SERVIVORG S10 - DRIVE IN MADNESS,1333449533895479306,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1308581797915005029,SERVIVORG S10 - DRIVE IN MADNESS,1333449564304310353,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1308581797915005029,SERVIVORG S10 - DRIVE IN MADNESS,1333449594092130345,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1308581797915005029,SERVIVORG S10 - DRIVE IN MADNESS,1333449655153070123,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1308581797915005029,SERVIVORG S10 - DRIVE IN MADNESS,1335668521723494481,11,,,AEDT (UTC+11),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1382015616847970435,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1382015618022117497,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1382015620018602055,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1382015621331681355,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1382015623193694301,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1382015624498384977,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1382015625869918268,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1401488368554082304,4,,,UTC+4,Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1382015627090333798,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1382015628969378044,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1311967534161072150,Chronovivor S7: Animorphs (All Stars),1388445028816261172,12,,,NZST (UTC+12),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1314708482028474489,Irivivor S5: The Forks,1350537294721056819,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1314708482028474489,Irivivor S5: The Forks,1350537296637595809,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1314708482028474489,Irivivor S5: The Forks,1350537298252533912,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1314708482028474489,Irivivor S5: The Forks,1350537299720409270,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1314708482028474489,Irivivor S5: The Forks,1350537301016580128,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1314708482028474489,Irivivor S5: The Forks,1350537302346043404,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1314708482028474489,Irivivor S5: The Forks,1350537303868575766,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1314708482028474489,Irivivor S5: The Forks,1350537305399627776,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1314708482028474489,Irivivor S5: The Forks,1350537306754519113,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1315144926463262780,ExplORG HUB,1391246779093356615,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1315144926463262780,ExplORG HUB,1391246780485861406,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1315144926463262780,ExplORG HUB,1391246781647421545,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1315144926463262780,ExplORG HUB,1391246782897455178,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1315144926463262780,ExplORG HUB,1391246784331776152,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1315144926463262780,ExplORG HUB,1391246786034798722,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1315144926463262780,ExplORG HUB,1391246787372908555,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1315144926463262780,ExplORG HUB,1391246789088382996,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1315144926463262780,ExplORG HUB,1391246790380097626,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1315144926463262780,ExplORG HUB,1391246794368876575,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1315144926463262780,ExplORG HUB,1391246792363999285,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1315144926463262780,ExplORG HUB,1391246796054986882,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1315144926463262780,ExplORG HUB,1391246797380255817,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1315144926463262780,ExplORG HUB,1391246798781153320,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1315144926463262780,ExplORG HUB,1391246800081653971,1,TRUE,CET (UTC+1),CET (UTC+1),
+1315144926463262780,ExplORG HUB,1391246801448992778,2,TRUE,CET (UTC+1),CET (UTC+1),
+1315144926463262780,ExplORG HUB,1391246803084775484,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1315144926463262780,ExplORG HUB,1391246804422758422,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1315144926463262780,ExplORG HUB,1391246805571997697,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1315144926463262780,ExplORG HUB,1391246807538991204,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1322616164370743438,☾ Crescent Chronicles: Book 2: ﾒ Marks the Spot ⎈,1361774663856029908,-8,,,PST (UTC-8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1322616164370743438,☾ Crescent Chronicles: Book 2: ﾒ Marks the Spot ⎈,1361774665823031336,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1322616164370743438,☾ Crescent Chronicles: Book 2: ﾒ Marks the Spot ⎈,1361774666800173137,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1322616164370743438,☾ Crescent Chronicles: Book 2: ﾒ Marks the Spot ⎈,1361774674211639429,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1322616164370743438,☾ Crescent Chronicles: Book 2: ﾒ Marks the Spot ⎈,1361774675868389667,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1322616164370743438,☾ Crescent Chronicles: Book 2: ﾒ Marks the Spot ⎈,1361774677466415124,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1322616164370743438,☾ Crescent Chronicles: Book 2: ﾒ Marks the Spot ⎈,1361774678741483600,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1322616164370743438,☾ Crescent Chronicles: Book 2: ﾒ Marks the Spot ⎈,1361774679601447158,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1322616164370743438,☾ Crescent Chronicles: Book 2: ﾒ Marks the Spot ⎈,1361774681216127059,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1384327168737149060,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1384327170108952677,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1384327171446669393,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1384327172818206741,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1385805518731477102,-3.5,,,NST (UTC-3:30),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1385807290623332372,-3,,,ADT (UTC-3),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1384327174495932535,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1384327175544770702,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1384327177436397568,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1384327178979639336,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1327719801631801434,Ribbitvivor S11: Quidi Vidi,1384327180393381928,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362931509832716429,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362931511237541932,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362931513167057198,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362931514798768260,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362932798004006992,-2.5,,,NDT (UTC-2:30),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362931516740468856,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362931518376382464,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362931519689199617,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1363889263250505730,7,,,UTC+7,Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362931521144619069,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362934801899982929,9,,,UTC+9,Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1329883257772441750,ParamORG S3: After Laughter,1362931522281410732,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1330203988100120668,EpochORG S8: Armageddon,1330203988112572429,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1330203988100120668,EpochORG S8: Armageddon,1330203988112572428,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1330203988100120668,EpochORG S8: Armageddon,1330203988112572427,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1330203988100120668,EpochORG S8: Armageddon,1330203988112572426,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1330203988100120668,EpochORG S8: Armageddon,1330203988100120675,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1330203988100120668,EpochORG S8: Armageddon,1330203988100120674,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1330203988100120668,EpochORG S8: Armageddon,1330203988100120671,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1330203988100120668,EpochORG S8: Armageddon,1330203988100120669,12,,,NZST (UTC+12),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1331657596087566398,CastBot,1391142497484275712,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1331657596087566398,CastBot,1391142499283763300,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1331657596087566398,CastBot,1391142500936192042,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1331657596087566398,CastBot,1391142502429495328,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1331657596087566398,CastBot,1391142506049048686,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1331657596087566398,CastBot,1391142507446014125,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1331657596087566398,CastBot,1391142509316411443,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1331657596087566398,CastBot,1391142510859915358,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1331657596087566398,CastBot,1401201424783642624,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1331657596087566398,CastBot,1391142516262174780,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1331657596087566398,CastBot,1401201426436456468,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1331657596087566398,CastBot,1391142517944357025,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1331657596087566398,CastBot,1391142519148118140,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1331657596087566398,CastBot,1391142520787832904,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1331657596087566398,CastBot,1391142522428067842,1,TRUE,CET (UTC+1),CET (UTC+1),
+1331657596087566398,CastBot,1391142524285882551,2,TRUE,CET (UTC+1),CET (UTC+1),
+1331657596087566398,CastBot,1391142526072914060,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1331657596087566398,CastBot,1391142527826002000,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1331657596087566398,CastBot,1391142529482752175,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1331657596087566398,CastBot,1409024736490422364,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1355924499455021307,PatORG S36: Order Up,1381334605889667273,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1355924499455021307,PatORG S36: Order Up,1381334607378780271,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1355924499455021307,PatORG S36: Order Up,1381334608909697245,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1355924499455021307,PatORG S36: Order Up,1381343502889255022,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1355924499455021307,PatORG S36: Order Up,1381334610683760721,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1355924499455021307,PatORG S36: Order Up,1381343156146143364,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1355924499455021307,PatORG S36: Order Up,1381334612122538034,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1355924499455021307,PatORG S36: Order Up,1381334613628293151,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1355924499455021307,PatORG S36: Order Up,1381334615423324262,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1355924499455021307,PatORG S36: Order Up,1381334616832610337,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1355924499455021307,PatORG S36: Order Up,1381334618527236366,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1387700457480126525,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1365751181292474571,EpochORG: S9: Land Before Time,1365862091444977726,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1387700458809720864,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1365751181292474571,EpochORG: S9: Land Before Time,1365862092925829231,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1387700460193845330,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1365751181292474571,EpochORG: S9: Land Before Time,1365862094272200754,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1387700462387593288,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1365751181292474571,EpochORG: S9: Land Before Time,1365862095739944961,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1387700465541713940,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1365751181292474571,EpochORG: S9: Land Before Time,1381270476055248948,-3,,,ADT (UTC-3),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1387700463486500909,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1365751181292474571,EpochORG: S9: Land Before Time,1387700466909057154,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1365751181292474571,EpochORG: S9: Land Before Time,1365862096830595117,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1381227031924314173,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1365862098709647471,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1387700468305760347,1,TRUE,CET (UTC+1),CET (UTC+1),
+1365751181292474571,EpochORG: S9: Land Before Time,1365862100559466537,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1365862102757015663,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365751181292474571,EpochORG: S9: Land Before Time,1387700469953990687,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1365751181292474571,EpochORG: S9: Land Before Time,1387700471313207327,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1365865567227219968,CastBOTBREAK,1365865671174393986,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365865567227219968,CastBOTBREAK,1365865671988351061,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365865567227219968,CastBOTBREAK,1365865673644834898,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365865567227219968,CastBOTBREAK,1365865675117301810,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365865567227219968,CastBOTBREAK,1365865676501422240,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365865567227219968,CastBOTBREAK,1365865677813977089,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365865567227219968,CastBOTBREAK,1365865679592624171,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365865567227219968,CastBOTBREAK,1365865681198907432,5.5,,,UTC+5:30,Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365865567227219968,CastBOTBREAK,1365865682331504722,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365865567227219968,CastBOTBREAK,1365865684432715899,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365867557797625946,Reece's server,1365867720700067971,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365867557797625946,Reece's server,1365867721933193296,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365867557797625946,Reece's server,1365867725351686186,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365867557797625946,Reece's server,1365867728023584861,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365867557797625946,Reece's server,1365867729504174110,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365867557797625946,Reece's server,1365867730867191903,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365867557797625946,Reece's server,1365867732058505376,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365867557797625946,Reece's server,1365867733022937161,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1365867557797625946,Reece's server,1365867734931345458,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1366971214064521236,Battle Camp Org: Scout Camp [S2],1380911652827828315,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1366971214064521236,Battle Camp Org: Scout Camp [S2],1380911654497288423,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1366971214064521236,Battle Camp Org: Scout Camp [S2],1380911656535593050,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1366971214064521236,Battle Camp Org: Scout Camp [S2],1380911657953529889,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1366971214064521236,Battle Camp Org: Scout Camp [S2],1380922710300950588,-3,,,ADT (UTC-3),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1366971214064521236,Battle Camp Org: Scout Camp [S2],1380911659702554749,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1366971214064521236,Battle Camp Org: Scout Camp [S2],1380911661673615400,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1366971214064521236,Battle Camp Org: Scout Camp [S2],1380911663250935848,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1366971214064521236,Battle Camp Org: Scout Camp [S2],1380911664261763115,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1366971214064521236,Battle Camp Org: Scout Camp [S2],1380911666283286679,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1371534712786518046,Irivivor S6: French River,1391474601241870426,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1371534712786518046,Irivivor S6: French River,1391474788207427784,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1371534712786518046,Irivivor S6: French River,1391474646381105323,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1371534712786518046,Irivivor S6: French River,1391474547059982456,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1371534712786518046,Irivivor S6: French River,1391474983594758214,-3,,,ADT (UTC-3),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1371534712786518046,Irivivor S6: French River,1391474826920726679,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1371534712786518046,Irivivor S6: French River,1391474888446836746,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1371534712786518046,Irivivor S6: French River,1391474937583243294,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1371534712786518046,Irivivor S6: French River,1391474727268122725,12,,,NZST (UTC+12),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1378922128757493840,Irivivor S7: Gjoa Haven - Back To Basics,1419368164088873182,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1378922128757493840,Irivivor S7: Gjoa Haven - Back To Basics,1419368268455739552,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1378922128757493840,Irivivor S7: Gjoa Haven - Back To Basics,1419368073206698015,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1378922128757493840,Irivivor S7: Gjoa Haven - Back To Basics,1419368113123758161,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1378922128757493840,Irivivor S7: Gjoa Haven - Back To Basics,1419367997952229456,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1378922128757493840,Irivivor S7: Gjoa Haven - Back To Basics,1419368240563359884,3,,,UTC+3,Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078237940711538,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1385293602527379480,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078239609917533,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1385293604108501063,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078241417658418,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1385293605614391468,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078243133390962,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1385293607174537337,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078244378968184,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078247860244521,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078246191038484,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078249508605962,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1385293609154252942,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1385293610538373181,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078251144384584,1,TRUE,CET (UTC+1),CET (UTC+1),
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1385293611796533281,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1385293613616988283,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1385293615483584565,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078252335435797,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1385042963310055515,EmeraldORG: Fire Emblem Three Houses,1392078254361411725,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1385679393237635122,ThespiORG: S1 Wicked,1397276143933198529,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1385679393237635122,ThespiORG: S1 Wicked,1397276146021830666,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1385679393237635122,ThespiORG: S1 Wicked,1397276147267403837,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1385679393237635122,ThespiORG: S1 Wicked,1397276148760707195,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1385679393237635122,ThespiORG: S1 Wicked,1397276149813612619,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1385679393237635122,ThespiORG: S1 Wicked,1397276151667228853,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1385679393237635122,ThespiORG: S1 Wicked,1397276153059741786,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1385679393237635122,ThespiORG: S1 Wicked,1397276154997506132,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1385679393237635122,ThespiORG: S1 Wicked,1397276156725563435,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1385679393237635122,ThespiORG: S1 Wicked,1397276167886868551,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1385679393237635122,ThespiORG: S1 Wicked,1397276165403840554,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1385679393237635122,ThespiORG: S1 Wicked,1397276169220395048,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1385679393237635122,ThespiORG: S1 Wicked,1397276170902310922,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1385679393237635122,ThespiORG: S1 Wicked,1397276172902994041,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1385679393237635122,ThespiORG: S1 Wicked,1397276174291308665,1,TRUE,CET (UTC+1),CET (UTC+1),
+1385679393237635122,ThespiORG: S1 Wicked,1397276175621034205,2,TRUE,CET (UTC+1),CET (UTC+1),
+1385679393237635122,ThespiORG: S1 Wicked,1397276177017606215,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1385679393237635122,ThespiORG: S1 Wicked,1397276178548527145,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1385679393237635122,ThespiORG: S1 Wicked,1397276180075385024,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1385679393237635122,ThespiORG: S1 Wicked,1397276181589528740,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1387593603030978712,Active Seasons,1387594293778186282,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1387593603030978712,Active Seasons,1387594295627874314,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1387593603030978712,Active Seasons,1387594297167057007,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1387593603030978712,Active Seasons,1387594298412765279,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1387593603030978712,Active Seasons,1387594300589609023,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1387593603030978712,Active Seasons,1387594302372450374,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1387593603030978712,Active Seasons,1387594304205099088,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1387593603030978712,Active Seasons,1387594305765507194,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1387593603030978712,Active Seasons,1387594307762131034,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1387593603030978712,Active Seasons,1387594310752669887,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1387593603030978712,Active Seasons,1387594309225943090,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1387593603030978712,Active Seasons,1387594312287653918,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1387593603030978712,Active Seasons,1387594313923301408,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1387593603030978712,Active Seasons,1387594315336781956,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1387593603030978712,Active Seasons,1387594317161566448,1,TRUE,CET (UTC+1),CET (UTC+1),
+1387593603030978712,Active Seasons,1387594318654607401,2,TRUE,CET (UTC+1),CET (UTC+1),
+1387593603030978712,Active Seasons,1387598861861785633,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1387593603030978712,Active Seasons,1387594322156851231,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1387593603030978712,Active Seasons,1387594323549229097,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1387593603030978712,Active Seasons,1387594325545975808,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1390910419270500373,PatORG S37: Live From New York,1393248459355848726,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1390910419270500373,PatORG S37: Live From New York,1393248438753169528,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1390910419270500373,PatORG S37: Live From New York,1393248417420935298,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1390910419270500373,PatORG S37: Live From New York,1393249060374319266,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1390910419270500373,PatORG S37: Live From New York,1393248395384328435,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1390910419270500373,PatORG S37: Live From New York,1393248989658218576,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1390910419270500373,PatORG S37: Live From New York,1393248880472231987,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1390910419270500373,PatORG S37: Live From New York,1393248929520287866,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+1391246844264316928,The Snake ORG,1391257099933057044,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1391246844264316928,The Snake ORG,1391257101107462224,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1391246844264316928,The Snake ORG,1391257102407958618,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1391246844264316928,The Snake ORG,1391257103657730171,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1391246844264316928,The Snake ORG,1391257105075409016,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1391246844264316928,The Snake ORG,1391257106384027678,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1391246844264316928,The Snake ORG,1391257107302584374,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1391246844264316928,The Snake ORG,1391257108883701967,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1391246844264316928,The Snake ORG,1391257110951628940,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1391246844264316928,The Snake ORG,1391257113669402707,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1391246844264316928,The Snake ORG,1391257112285417492,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1391246844264316928,The Snake ORG,1391257114969903204,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1391246844264316928,The Snake ORG,1391257116165013514,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1391246844264316928,The Snake ORG,1391257117566042172,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1391246844264316928,The Snake ORG,1391257119101288539,1,TRUE,CET (UTC+1),CET (UTC+1),
+1391246844264316928,The Snake ORG,1391257125564448780,2,TRUE,CET (UTC+1),CET (UTC+1),
+1391246844264316928,The Snake ORG,1391257127355547648,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1391246844264316928,The Snake ORG,1391257128693665802,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1391246844264316928,The Snake ORG,1391257129712746547,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1391246844264316928,The Snake ORG,1391257131130290280,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749741847810122,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749744792211457,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749746583175209,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749747489144883,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749749279981669,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749750571831378,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749751851221124,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749753927536641,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749755768836218,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749758755049515,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749757484171335,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749760596344882,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749762248773802,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749763813507192,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749765214408788,1,TRUE,CET (UTC+1),CET (UTC+1),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749766971555881,2,TRUE,CET (UTC+1),CET (UTC+1),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749768426983583,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749769928544457,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749771329572975,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1393423620294049844,Survivor Chronicles: The Hidden Dynasty,1398749773124866159,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721673755459624,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721674711629857,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721676284755978,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721677580664862,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721678906196022,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721679984136284,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721681468919879,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721682827870259,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721683901481073,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721686959263754,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721685340127315,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721688322408510,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721689857261588,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721691438649416,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721693158440991,1,TRUE,CET (UTC+1),CET (UTC+1),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721694332715029,2,TRUE,CET (UTC+1),CET (UTC+1),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721695452463189,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721697478574162,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721698833207437,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1395719402908946462,Wiivivor S1: Smooth Moves,1395721700045230225,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1397251596601266308,EpochORG S10: Cold War,1397295745979256965,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1397251596601266308,EpochORG S10: Cold War,1397295747996844072,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1397251596601266308,EpochORG S10: Cold War,1397295748965601393,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1397251596601266308,EpochORG S10: Cold War,1397295750375014442,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1397251596601266308,EpochORG S10: Cold War,1397295752178303117,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1397251596601266308,EpochORG S10: Cold War,1397295754250289213,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1397251596601266308,EpochORG S10: Cold War,1397295756305760337,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1397251596601266308,EpochORG S10: Cold War,1397295758780137533,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1397251596601266308,EpochORG S10: Cold War,1397295763419304037,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1397251596601266308,EpochORG S10: Cold War,1397295766527017122,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1397251596601266308,EpochORG S10: Cold War,1397295764849430588,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1397251596601266308,EpochORG S10: Cold War,1397295767919657000,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1397251596601266308,EpochORG S10: Cold War,1397295769404571658,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1397251596601266308,EpochORG S10: Cold War,1397295770557743245,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1397251596601266308,EpochORG S10: Cold War,1397295772361556019,1,TRUE,CET (UTC+1),CET (UTC+1),
+1397251596601266308,EpochORG S10: Cold War,1397295773917384734,2,TRUE,CET (UTC+1),CET (UTC+1),
+1397251596601266308,EpochORG S10: Cold War,1397295775242784799,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1397251596601266308,EpochORG S10: Cold War,1397295776626905219,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1397251596601266308,EpochORG S10: Cold War,1397295785934061684,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1397251596601266308,EpochORG S10: Cold War,1397295790346604627,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1398832957111668847,something somthing panem and shit,1406405794265563206,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1398832957111668847,something somthing panem and shit,1406405795599487077,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1398832957111668847,something somthing panem and shit,1406405796820156436,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1398832957111668847,something somthing panem and shit,1406405798006886420,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1398832957111668847,something somthing panem and shit,1406405799202390096,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1398832957111668847,something somthing panem and shit,1406405800456359948,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1398832957111668847,something somthing panem and shit,1406405801853063333,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1398832957111668847,something somthing panem and shit,1406405803866456205,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1398832957111668847,something somthing panem and shit,1406405805305106453,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1398832957111668847,something somthing panem and shit,1406405808039788705,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1398832957111668847,something somthing panem and shit,1406405806777434272,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1398832957111668847,something somthing panem and shit,1406405809537155182,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1398832957111668847,something somthing panem and shit,1406405810606571572,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1398832957111668847,something somthing panem and shit,1406405811990691890,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1398832957111668847,something somthing panem and shit,1406405813219754134,1,TRUE,CET (UTC+1),CET (UTC+1),
+1398832957111668847,something somthing panem and shit,1406405814519988335,2,TRUE,CET (UTC+1),CET (UTC+1),
+1398832957111668847,something somthing panem and shit,1406405816029810893,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1398832957111668847,something somthing panem and shit,1406405817682362499,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1398832957111668847,something somthing panem and shit,1406405819213545503,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1398832957111668847,something somthing panem and shit,1406405820954054709,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656652423381,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656627126301,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656652423380,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656627126299,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656627126300,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656627126297,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656627126298,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656627126295,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656627126296,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656627126293,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656627126294,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656627126292,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656585445519,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656585445517,1,TRUE,CET (UTC+1),CET (UTC+1),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656585445518,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656585445516,2,TRUE,CET (UTC+1),CET (UTC+1),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656585445515,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656585445514,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656585445513,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1399124656585445511,Survivor Chronicles: Bonanza Creek,1399124656585445512,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383734382657718,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383735150215252,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383736593055805,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383737821728800,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383739269021838,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383740447490198,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383741722693755,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383743010082918,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383744381751399,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383747024032000,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383746009010297,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383748496363622,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383749784010906,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383751407341689,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383752644657252,1,TRUE,CET (UTC+1),CET (UTC+1),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383754024452228,2,TRUE,CET (UTC+1),CET (UTC+1),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383755416961024,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383756784177203,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383758176817242,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1399458131058229379,⋆｡°✩ 𝒞𝑜𝓈𝓂𝒾𝒸𝒶𝓁𝒾𝓉𝓎 ☆,1406383759271530589,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1402510782616567849,❥ SOLUNA,1408703063488856109,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1402510782616567849,❥ SOLUNA,1408703064939958314,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1402510782616567849,❥ SOLUNA,1408703066181603338,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1402510782616567849,❥ SOLUNA,1408703067565723699,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1402510782616567849,❥ SOLUNA,1408703068920348733,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1402510782616567849,❥ SOLUNA,1408703070430429245,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1402510782616567849,❥ SOLUNA,1408703071936188499,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1402510782616567849,❥ SOLUNA,1408703073517441182,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1402510782616567849,❥ SOLUNA,1408703075119792203,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1402510782616567849,❥ SOLUNA,1408703078160404511,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1402510782616567849,❥ SOLUNA,1408703076885598229,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1402510782616567849,❥ SOLUNA,1408703079666286632,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1402510782616567849,❥ SOLUNA,1408703081188687913,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1402510782616567849,❥ SOLUNA,1408703082925260850,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1402510782616567849,❥ SOLUNA,1408703084166778962,1,TRUE,CET (UTC+1),CET (UTC+1),
+1402510782616567849,❥ SOLUNA,1408703085873860650,2,TRUE,CET (UTC+1),CET (UTC+1),
+1402510782616567849,❥ SOLUNA,1408703086758854718,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1402510782616567849,❥ SOLUNA,1408703088449028096,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1402510782616567849,❥ SOLUNA,1408703089774559264,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1402510782616567849,❥ SOLUNA,1408703091104157797,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424739332587562,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424741106782238,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424742742294680,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424744881651834,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424746236149820,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424747947692202,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424750275264605,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424751583891496,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424752783593574,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424755455496263,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424754297737346,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424756734759086,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424762002800713,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424763806224415,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424765349855352,1,TRUE,CET (UTC+1),CET (UTC+1),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424766620471377,2,TRUE,CET (UTC+1),CET (UTC+1),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424768004849876,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424769183449161,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424770450128910,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1405603609361514616,"Survivor S1 Libéria - Lei, Neutralidade e Caos",1407424772123656347,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922294227795978,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922295582822471,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922297344167986,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922298736939160,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922299651162134,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922301349728379,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922302666735616,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922303874826273,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922305208484024,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922308853465260,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922306772959285,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922310401298513,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922311814516818,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922313500622950,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922314553397251,1,TRUE,CET (UTC+1),CET (UTC+1),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922315987976223,2,TRUE,CET (UTC+1),CET (UTC+1),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922317556777002,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922318840234148,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922320890990776,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1405609228919640308,Twilightvivor S4: Fire and Ice,1405922322132762719,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1410464953558896696,Big Sister Studios,1426613387680419882,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1410464953558896696,Big Sister Studios,1426613389840613519,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1410464953558896696,Big Sister Studios,1426613391501426902,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1410464953558896696,Big Sister Studios,1426613393149923430,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1410464953558896696,Big Sister Studios,1426613395058069738,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1410464953558896696,Big Sister Studios,1426613396656357409,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1410464953558896696,Big Sister Studios,1426613398480617634,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1410464953558896696,Big Sister Studios,1426613400531894323,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1410464953558896696,Big Sister Studios,1426613401744048301,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1410464953558896696,Big Sister Studios,1426613405267136675,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1410464953558896696,Big Sister Studios,1426613403811581952,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1410464953558896696,Big Sister Studios,1426613406965825597,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1410464953558896696,Big Sister Studios,1426613408450744414,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1410464953558896696,Big Sister Studios,1426613409696448574,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1410464953558896696,Big Sister Studios,1426613411768303716,1,TRUE,CET (UTC+1),CET (UTC+1),
+1410464953558896696,Big Sister Studios,1426613413265543189,2,TRUE,CET (UTC+1),CET (UTC+1),
+1410464953558896696,Big Sister Studios,1426613415123878019,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1410464953558896696,Big Sister Studios,1426613416684028025,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1410464953558896696,Big Sister Studios,1426613418181263631,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1410464953558896696,Big Sister Studios,1426613419875897467,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998251048599645,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998252860539050,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998254416887808,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998256132358174,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998257843503226,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998259193942038,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998261287026699,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998263992356948,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998267565768807,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998270543724585,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998269210071090,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998273177751553,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998274687963247,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998275958833193,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998277674307685,1,TRUE,CET (UTC+1),CET (UTC+1),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998279330926673,2,TRUE,CET (UTC+1),CET (UTC+1),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998281533063199,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998283558912101,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998284590710835,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1412290243251671143,Ultimate Survivor S14: Welcome to Horrorland,1412998286276694086,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241545804976158,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241547461857444,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241549001035778,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241551089799408,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241552306147545,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241554340384808,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241556018102462,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241557637234731,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241558887010378,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241562221346916,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241560678109236,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241563701940315,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241565329461350,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241567149785168,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241568596951060,1,TRUE,CET (UTC+1),CET (UTC+1),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241570081738883,2,TRUE,CET (UTC+1),CET (UTC+1),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241571654340779,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241573428527175,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241575039140054,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1418593741773738075,EpochORG S11: Polynesian Expansion,1422241576310014158,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+1421901043960250390,PatORG S38: All Night Long,1424569476170645618,-8,TRUE,PST (UTC-8),PST (UTC-8),
+1421901043960250390,PatORG S38: All Night Long,1424569478196363304,-7,TRUE,PST (UTC-8),PST (UTC-8),
+1421901043960250390,PatORG S38: All Night Long,1424569480012497028,-7,TRUE,MST (UTC-7),MST (UTC-7),
+1421901043960250390,PatORG S38: All Night Long,1424569481518387322,-6,TRUE,MST (UTC-7),MST (UTC-7),
+1421901043960250390,PatORG S38: All Night Long,1424569483028205643,-6,TRUE,CST (UTC-6),CST (UTC-6),
+1421901043960250390,PatORG S38: All Night Long,1424569484793876550,-5,TRUE,CST (UTC-6),CST (UTC-6),
+1421901043960250390,PatORG S38: All Night Long,1424569486152962049,-5,TRUE,EST (UTC-5),EST (UTC-5),
+1421901043960250390,PatORG S38: All Night Long,1424569487843266650,-4,TRUE,EST (UTC-5),EST (UTC-5),
+1421901043960250390,PatORG S38: All Night Long,1424569489416126607,-4,TRUE,AST (UTC-4),AST (UTC-4),
+1421901043960250390,PatORG S38: All Night Long,1424569492817707068,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1421901043960250390,PatORG S38: All Night Long,1424569490917560380,-3,TRUE,AST (UTC-4),AST (UTC-4),
+1421901043960250390,PatORG S38: All Night Long,1424569495321575577,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+1421901043960250390,PatORG S38: All Night Long,1424569497133518980,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+1421901043960250390,PatORG S38: All Night Long,1424569498639536212,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+1421901043960250390,PatORG S38: All Night Long,1424569500266795119,1,TRUE,CET (UTC+1),CET (UTC+1),
+1421901043960250390,PatORG S38: All Night Long,1424569501785133168,2,TRUE,CET (UTC+1),CET (UTC+1),
+1421901043960250390,PatORG S38: All Night Long,1424569503362056224,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+1421901043960250390,PatORG S38: All Night Long,1424569505417400373,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+1421901043960250390,PatORG S38: All Night Long,1424569507447439542,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+1421901043960250390,PatORG S38: All Night Long,1424569509167104102,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+867820987521564692,Retrograde,1374930816559349910,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+867820987521564692,Retrograde,1374930818119499977,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+867820987521564692,Retrograde,1374930819931574443,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+867820987521564692,Retrograde,1374930821189865482,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+867820987521564692,Retrograde,1374930822318129265,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+867820987521564692,Retrograde,1374930824050249862,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+867820987521564692,Retrograde,1374930825925099520,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+867820987521564692,Retrograde,1374930827045245150,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+867820987521564692,Retrograde,1374930829293129758,10,,,AEST (UTC+10),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+884543178185768981,Florivivor S19 - Hogwarts [CASTING],1408332860175286326,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+884543178185768981,Florivivor S19 - Hogwarts [CASTING],1408332745557409833,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+884543178185768981,Florivivor S19 - Hogwarts [CASTING],1408332600862445568,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+884543178185768981,Florivivor S19 - Hogwarts [CASTING],1408332444108722206,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+884543178185768981,Florivivor S19 - Hogwarts [CASTING],1408332994082639913,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+884543178185768981,Florivivor S19 - Hogwarts [CASTING],1408333100529750107,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+884543178185768981,Florivivor S19 - Hogwarts [CASTING],1408333224169574482,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+937513935391821906,Manhattan Ridge Town Elections,1395165786804326553,-8,TRUE,PST (UTC-8),PST (UTC-8),
+937513935391821906,Manhattan Ridge Town Elections,1395165788201291899,-7,TRUE,PST (UTC-8),PST (UTC-8),
+937513935391821906,Manhattan Ridge Town Elections,1395165789794992301,-7,TRUE,MST (UTC-7),MST (UTC-7),
+937513935391821906,Manhattan Ridge Town Elections,1395165796556210258,-6,TRUE,MST (UTC-7),MST (UTC-7),
+937513935391821906,Manhattan Ridge Town Elections,1395165798062100671,-6,TRUE,CST (UTC-6),CST (UTC-6),
+937513935391821906,Manhattan Ridge Town Elections,1395165799823577108,-5,TRUE,CST (UTC-6),CST (UTC-6),
+937513935391821906,Manhattan Ridge Town Elections,1395165801132326913,-5,TRUE,EST (UTC-5),EST (UTC-5),
+937513935391821906,Manhattan Ridge Town Elections,1395165803242061884,-4,TRUE,EST (UTC-5),EST (UTC-5),
+937513935391821906,Manhattan Ridge Town Elections,1395165804647022622,-4,TRUE,AST (UTC-4),AST (UTC-4),
+937513935391821906,Manhattan Ridge Town Elections,1395165807302152414,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+937513935391821906,Manhattan Ridge Town Elections,1395165805934546985,-3,TRUE,AST (UTC-4),AST (UTC-4),
+937513935391821906,Manhattan Ridge Town Elections,1395165808564375643,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+937513935391821906,Manhattan Ridge Town Elections,1395165810216931488,0,FALSE,,GMT (UTC+0),Missing standardName (legacy or custom)
+937513935391821906,Manhattan Ridge Town Elections,1395165811353849993,1,TRUE,GMT (UTC+0),GMT (UTC+0),
+937513935391821906,Manhattan Ridge Town Elections,1395165813627162746,1,TRUE,CET (UTC+1),CET (UTC+1),
+937513935391821906,Manhattan Ridge Town Elections,1395165815296364596,2,TRUE,CET (UTC+1),CET (UTC+1),
+937513935391821906,Manhattan Ridge Town Elections,1395165817305567302,8,FALSE,,GMT+8 (UTC+8),Missing standardName (legacy or custom)
+937513935391821906,Manhattan Ridge Town Elections,1395165818777763942,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)
+937513935391821906,Manhattan Ridge Town Elections,1395165820182724739,11,TRUE,AEST (UTC+10),AEST (UTC+10),
+937513935391821906,Manhattan Ridge Town Elections,1395165821684158557,12,TRUE,NZST (UTC+12),NZST (UTC+12),
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1353716900365860894,-7,,,PDT (UTC-7),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1353716901724815471,-6,,,MDT (UTC-6),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1353716903205408808,-5,,,CDT (UTC-5),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1353716904547717171,-4,,,EDT (UTC-4),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1401192833825771571,-3.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1401192835511877634,-2.5,TRUE,NST (UTC-3:30),NST (UTC-3:30),
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1353716905797750884,0,,,GMT (UTC+0),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1353716907026550798,1,,,BST (UTC+1),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1401192837239803986,1,TRUE,CET (UTC+1),CET (UTC+1),
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1353716908431638630,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1401207600363737098,2,,,CEST (UTC+2),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1401207657800536174,5.5,,,UTC+5:30,Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1353716909861765150,8,,,GMT+8 (UTC+8),Missing standardName (legacy or custom); Missing dstObserved (legacy or custom)
+974318870057848842,Servivorg S13 - FINAL DESTINATION (Blood vs Water 2),1401192838774915122,10,FALSE,,AEST (UTC+10),Missing standardName (legacy or custom)

@@ -1,0 +1,17 @@
+﻿name,Description,offset,offsetDST,dstObserved,standardName,standardName-DST
+PST / PDT,Pacific Time,-8,-7,yes,PST (UTC-8),PDT (UTC-7)
+MST / MDT,Mountain Time,-7,-6,yes,MST (UTC-7),MDT (UTC-6)
+CST / CDT,Central Time,-6,-5,yes,CST (UTC-6),CDT (UTC-5)
+EST / EDT,Eastern Time,-5,-4,yes,EST (UTC-5),EDT (UTC-4)
+AST / ADT,Atlantic Time,-4,-3,yes,AST (UTC-4),ADT (UTC-3)
+NST / NDT,Newfoundland Time,-3.5,-2.5,yes,NST (UTC-3:30),NDT (UTC-2:30)
+GMT / BST,UK and Ireland,0,1,yes,GMT (UTC+0),BST (UTC+1)
+CET / CEST,Central European Time,1,2,yes,CET (UTC+1),CEST (UTC+2)
+EET / EEST,Eastern European Time,2,3,yes,EET (UTC+2),EEST (UTC+3)
+SAST,South Africa Standard Time,2,,no,SAST (UTC+2),
+IST,India Time,5.5,,no,IST (UTC+5.5),
+ICT,Indochina Time,7,,no,ICT (UTC+7),
+GMT + 8,Western Australia and SE Asia,8,,no,GMT+8 (UTC+8),
+JST,Japan Time,9,,no,JST (UTC+9),
+AEST / AEDT,Australian Eastern Time,10,11,yes,AEST (UTC+10),AEDT (UTC+11)
+NZST / NZDT,New Zealand Time,12,13,yes,NZST (UTC+12),NZDT (UTC+13)
