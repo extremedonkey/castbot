@@ -823,6 +823,111 @@ logger.debug('BUTTON_FACTORY', 'Handler executed', {
 });
 ```
 
+## Button Debug Output System
+
+The ButtonHandlerFactory includes a built-in debug logging system that helps identify button status and migration progress. When testing buttons, you'll see debug messages like:
+
+```
+🔍 BUTTON DEBUG: Checking handlers for button_name [STATUS_INDICATOR]
+```
+
+### Status Indicators
+
+#### ✨ FACTORY
+The button is properly implemented using ButtonHandlerFactory pattern.
+
+**What this means:**
+- ✅ Button uses `ButtonHandlerFactory.create()`
+- ✅ Handler is registered in BUTTON_REGISTRY
+- ✅ Code is modern and maintainable
+
+**Example:**
+```
+🔍 BUTTON DEBUG: Checking handlers for map_delete_cancel [✨ FACTORY]
+```
+
+**What to do:**
+- Test the button to ensure it works
+- If it fails, check ComponentsV2Issues.md for common causes
+- Review the response structure returned by the handler
+
+#### 🪨 LEGACY
+The button is using the old handler pattern without ButtonHandlerFactory.
+
+**What this means:**
+- ❌ Button uses old `try/catch` with `res.send()` directly
+- ❌ Lots of boilerplate code (50+ lines)
+- ❌ Duplicated error handling across multiple handlers
+
+**Example:**
+```
+🔍 BUTTON DEBUG: Checking handlers for nuke_roles_confirm [🪨 LEGACY]
+🔍 BUTTON DEBUG: Checking handlers for nuke_roles_cancel [🪨 LEGACY]
+```
+
+**What to do:**
+- Migrate to ButtonHandlerFactory pattern (see Migration Strategy below)
+- Extract handler logic into separate module if it's complex
+- Add button to BUTTON_REGISTRY before factory conversion
+- Test thoroughly after conversion
+
+#### ⚱️ UNREGISTERED
+The button uses ButtonHandlerFactory but is NOT in BUTTON_REGISTRY.
+
+**What this means:**
+- ⚠️ Button handler executes twice (double execution)
+- ⚠️ Discord shows "This interaction failed"
+- ⚠️ Debugging becomes difficult without registry entry
+
+**What to do:**
+1. Add button to BUTTON_REGISTRY in buttonHandlerFactory.js
+2. Include label, description, emoji, and category
+3. Test again to verify single execution
+
+### Migration Priority
+
+**HIGH PRIORITY (>5 handlers each):**
+1. Handlers showing `[🪨 LEGACY]` repeatedly
+2. Dynamic pattern handlers (with `*` in custom_id)
+3. Popular user-facing buttons
+
+**MEDIUM PRIORITY:**
+1. Less frequently used handlers
+2. Admin-only buttons
+3. Buttons with simple logic
+
+**LOW PRIORITY:**
+1. Deprecated buttons (rare usage)
+2. Experimental features
+3. Upcoming removal candidates
+
+### Interpreting Failed Factories
+
+When a button shows `[✨ FACTORY]` but still fails with "This interaction failed":
+
+1. **Check the response structure** - See ComponentsV2Issues.md Issue #2 (Modal Responses)
+2. **Verify separator types** - Use `type: 14` for Components V2, NOT `type: 13`
+3. **Validate component types** - Reference ComponentsV2.md for valid types
+4. **Check emoji formats** - Use Unicode (🍎) not shortcuts (:apple:)
+5. **Ensure proper error handling** - Handler must catch and return user-friendly errors
+
+**Example Fix - Separator Type Error:**
+```javascript
+// ❌ WRONG - Will cause "This interaction failed"
+const containerComponents = [
+  textDisplay,
+  { type: 13 }, // Invalid separator type
+  buttonRow.toJSON()
+];
+
+// ✅ CORRECT - Components V2 separator
+const containerComponents = [
+  textDisplay,
+  { type: 14 }, // Valid Components V2 separator
+  buttonRow.toJSON()
+];
+```
+
 ## Troubleshooting
 
 ### Common Issues

@@ -907,9 +907,9 @@ async function createMapExplorerMenu(guildId) {
     // Build container components
     const containerComponents = [
       textDisplay,
-      { type: 13 }, // Separator
+      { type: 14 }, // Separator (Components V2)
       mapButtonRow.toJSON(),
-      { type: 14 }, // Thin separator
+      { type: 14 }, // Separator (Components V2)
       backRow.toJSON()
     ];
     
