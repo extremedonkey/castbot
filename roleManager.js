@@ -129,35 +129,166 @@ const REACTION_EMOJIS = [
     '🇦', '🇧', '🇨', '🇩', '🇪', '🇫', '🇬', '🇭', '🇮', '🇯'
 ];
 
-// Enhanced timezone structure optimized for Discord's 20-reaction limit
-// Prioritized list with most common timezones and both standard/daylight versions
+// NEW: Single-role timezone structure with DST awareness
+// Consolidated from 20 dual roles to 17 single roles with global DST state
+// Each role shows both states (e.g., "PST / PDT") and links to dstState.json via `id`
 const STANDARD_TIMEZONE_ROLES = [
-    // North American zones (most common for Discord communities)
-    { name: 'PST (UTC-8)', offset: -8, dstObserved: true, standardName: 'PST (UTC-8)' },
-    { name: 'PDT (UTC-7)', offset: -7, dstObserved: true, standardName: 'PST (UTC-8)' },
-    { name: 'MST (UTC-7)', offset: -7, dstObserved: true, standardName: 'MST (UTC-7)' },
-    { name: 'MDT (UTC-6)', offset: -6, dstObserved: true, standardName: 'MST (UTC-7)' },
-    { name: 'CST (UTC-6)', offset: -6, dstObserved: true, standardName: 'CST (UTC-6)' },
-    { name: 'CDT (UTC-5)', offset: -5, dstObserved: true, standardName: 'CST (UTC-6)' },
-    { name: 'EST (UTC-5)', offset: -5, dstObserved: true, standardName: 'EST (UTC-5)' },
-    { name: 'EDT (UTC-4)', offset: -4, dstObserved: true, standardName: 'EST (UTC-5)' },
-    { name: 'AST (UTC-4)', offset: -4, dstObserved: true, standardName: 'AST (UTC-4)' },
-    { name: 'ADT (UTC-3)', offset: -3, dstObserved: true, standardName: 'AST (UTC-4)' },
-    { name: 'NST (UTC-3:30)', offset: -3.5, dstObserved: true, standardName: 'NST (UTC-3:30)' },
-    { name: 'NDT (UTC-2:30)', offset: -2.5, dstObserved: true, standardName: 'NST (UTC-3:30)' },
-    
+    // North American zones
+    {
+        id: 'PT',
+        name: 'PST / PDT',
+        description: 'Pacific Time',
+        offset: -8,
+        offsetDST: -7,
+        dstObserved: true,
+        standardName: 'PST (UTC-8)',
+        standardNameDST: 'PDT (UTC-7)'
+    },
+    {
+        id: 'MT',
+        name: 'MST / MDT',
+        description: 'Mountain Time',
+        offset: -7,
+        offsetDST: -6,
+        dstObserved: true,
+        standardName: 'MST (UTC-7)',
+        standardNameDST: 'MDT (UTC-6)'
+    },
+    {
+        id: 'CT',
+        name: 'CST / CDT',
+        description: 'Central Time',
+        offset: -6,
+        offsetDST: -5,
+        dstObserved: true,
+        standardName: 'CST (UTC-6)',
+        standardNameDST: 'CDT (UTC-5)'
+    },
+    {
+        id: 'ET',
+        name: 'EST / EDT',
+        description: 'Eastern Time',
+        offset: -5,
+        offsetDST: -4,
+        dstObserved: true,
+        standardName: 'EST (UTC-5)',
+        standardNameDST: 'EDT (UTC-4)'
+    },
+    {
+        id: 'AT',
+        name: 'AST / ADT',
+        description: 'Atlantic Time',
+        offset: -4,
+        offsetDST: -3,
+        dstObserved: true,
+        standardName: 'AST (UTC-4)',
+        standardNameDST: 'ADT (UTC-3)'
+    },
+    {
+        id: 'NT',
+        name: 'NST / NDT',
+        description: 'Newfoundland Time',
+        offset: -3.5,
+        offsetDST: -2.5,
+        dstObserved: true,
+        standardName: 'NST (UTC-3:30)',
+        standardNameDST: 'NDT (UTC-2:30)'
+    },
+
     // European zones
-    { name: 'GMT (UTC+0)', offset: 0, dstObserved: false },
-    { name: 'BST (UTC+1)', offset: 1, dstObserved: true, standardName: 'GMT (UTC+0)' },
-    { name: 'CET (UTC+1)', offset: 1, dstObserved: true, standardName: 'CET (UTC+1)' },
-    { name: 'CEST (UTC+2)', offset: 2, dstObserved: true, standardName: 'CET (UTC+1)' },
-    
-    // Asia-Pacific zones
-    { name: 'GMT+8 (UTC+8)', offset: 8, dstObserved: false },
-    { name: 'AEST (UTC+10)', offset: 10, dstObserved: false },
-    { name: 'AEDT (UTC+11)', offset: 11, dstObserved: true, standardName: 'AEST (UTC+10)' },
-    { name: 'NZST (UTC+12)', offset: 12, dstObserved: true, standardName: 'NZST (UTC+12)' }
-    // Total: 20 roles - exactly at Discord's conservative limit
+    {
+        id: 'GMT',
+        name: 'GMT / BST',
+        description: 'UK and Ireland',
+        offset: 0,
+        offsetDST: 1,
+        dstObserved: true,
+        standardName: 'GMT (UTC+0)',
+        standardNameDST: 'BST (UTC+1)'
+    },
+    {
+        id: 'CET',
+        name: 'CET / CEST',
+        description: 'Central European Time',
+        offset: 1,
+        offsetDST: 2,
+        dstObserved: true,
+        standardName: 'CET (UTC+1)',
+        standardNameDST: 'CEST (UTC+2)'
+    },
+    {
+        id: 'EET',
+        name: 'EET / EEST',
+        description: 'Eastern European Time',
+        offset: 2,
+        offsetDST: 3,
+        dstObserved: true,
+        standardName: 'EET (UTC+2)',
+        standardNameDST: 'EEST (UTC+3)'
+    },
+
+    // Non-DST zones
+    {
+        id: 'SAST',
+        name: 'SAST',
+        description: 'South Africa Standard Time',
+        offset: 2,
+        dstObserved: false,
+        standardName: 'SAST (UTC+2)'
+    },
+    {
+        id: 'IST',
+        name: 'IST',
+        description: 'India Time',
+        offset: 5.5,
+        dstObserved: false,
+        standardName: 'IST (UTC+5.5)'
+    },
+    {
+        id: 'ICT',
+        name: 'ICT',
+        description: 'Indochina Time',
+        offset: 7,
+        dstObserved: false,
+        standardName: 'ICT (UTC+7)'
+    },
+    {
+        id: 'GMT8',
+        name: 'GMT+8',
+        description: 'Western Australia and SE Asia',
+        offset: 8,
+        dstObserved: false,
+        standardName: 'GMT+8 (UTC+8)'
+    },
+    {
+        id: 'JST',
+        name: 'JST',
+        description: 'Japan Time',
+        offset: 9,
+        dstObserved: false,
+        standardName: 'JST (UTC+9)'
+    },
+    {
+        id: 'AEST',
+        name: 'AEST / AEDT',
+        description: 'Australian Eastern Time',
+        offset: 10,
+        offsetDST: 11,
+        dstObserved: true,
+        standardName: 'AEST (UTC+10)',
+        standardNameDST: 'AEDT (UTC+11)'
+    },
+    {
+        id: 'NZST',
+        name: 'NZST / NZDT',
+        description: 'New Zealand Time',
+        offset: 12,
+        offsetDST: 13,
+        dstObserved: true,
+        standardName: 'NZST (UTC+12)',
+        standardNameDST: 'NZDT (UTC+13)'
+    }
+    // Total: 16 roles (down from 20!) - better Discord limit compliance
 ];
 
 /**

@@ -64,9 +64,27 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
   
   if (timezoneRole) {
     memberTimezone = timezoneRole.name;
-    
+
     try {
-      const offset = timezones[timezoneRole.id].offset;
+      const tzData = timezones[timezoneRole.id];
+      let offset;
+
+      // Feature toggle: Check if this timezone uses new DST system
+      if (tzData.timezoneId) {
+        // New system: read from dstState.json via getDSTOffset
+        const { getDSTOffset } = await import('./storage.js');
+        offset = getDSTOffset(tzData.timezoneId);
+
+        // Fallback to stored offset if DST state not found
+        if (offset === null) {
+          console.log(`⚠️ No DST state for ${tzData.timezoneId}, using stored offset`);
+          offset = tzData.offset;
+        }
+      } else {
+        // Legacy system: read offset directly from playerData
+        offset = tzData.offset;
+      }
+
       const now = new Date();
       const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
       const targetTime = new Date(utcTime + (offset * 3600000));
@@ -76,6 +94,7 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
         minute: '2-digit'
       });
     } catch (error) {
+      console.error('Error calculating timezone:', error);
       formattedTime = '';
     }
   }

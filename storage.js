@@ -400,6 +400,37 @@ export async function getTimezoneOffset(guildId, roleId) {
   return timezones[roleId]?.offset || 0;
 }
 
+// DST State Management Functions
+let dstStateCache = null;
+
+export async function loadDSTState() {
+  if (dstStateCache) return dstStateCache;
+
+  try {
+    const data = await fs.readFile('./dstState.json', 'utf8');
+    dstStateCache = JSON.parse(data);
+    console.log('✅ DST state loaded:', Object.keys(dstStateCache).length, 'timezones');
+    return dstStateCache;
+  } catch (error) {
+    console.warn('⚠️ dstState.json not found, using fallback');
+    return {};
+  }
+}
+
+export async function saveDSTState(state) {
+  dstStateCache = state;
+  await fs.writeFile('./dstState.json', JSON.stringify(state, null, 2));
+  console.log('✅ DST state saved');
+}
+
+export function getDSTOffset(timezoneId) {
+  if (!dstStateCache || !dstStateCache[timezoneId]) return null;
+  return dstStateCache[timezoneId].currentOffset;
+}
+
+// Initialize DST state cache on module load
+loadDSTState().catch(console.error);
+
 // Environment configuration functions
 export async function loadEnvironmentConfig() {
   const data = await loadPlayerData();
