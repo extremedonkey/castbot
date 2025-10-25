@@ -3040,14 +3040,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 563,
+    "memberCount": 564,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1761408943967,
+    "lastUpdated": 1761420367665,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1381126640163360800>"
@@ -8275,6 +8275,24 @@
     "players": {},
     "tribes": {},
     "timezones": {},
-    "pronounRoleIDs": []
+    "pronounRoleIDs": [],
+    "serverName": "CastBot Regression Pink",
+    "icon": "https://cdn.discordapp.com/icons/1400065575090389045/bd1ee1bc1ff3abca14f2d2ba9455716f.webp",
+    "ownerId": "391415444084490240",
+    "memberCount": 2,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1753872045062,
+    "lastUpdated": 1761420374063,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0"
   }
 }

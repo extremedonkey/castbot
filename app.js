@@ -1037,7 +1037,12 @@ async function createReeceStuffMenu(guildId, channelId = null) {
       .setCustomId('castlist_test')
       .setLabel('Compact Castlist')
       .setStyle(ButtonStyle.Secondary)  // Grey for secondary action
-      .setEmoji('🍒')
+      .setEmoji('🍒'),
+    new ButtonBuilder()
+      .setCustomId('admin_dst_toggle')
+      .setLabel('DST Manager')
+      .setStyle(ButtonStyle.Secondary)
+      .setEmoji('🌍')
   ];
 
   // Player Data section buttons
@@ -9159,6 +9164,103 @@ Your server is now ready for Tycoons gameplay!`;
           console.log(`✅ SUCCESS: test_role_hierarchy - completed with ${responseLines.length} lines`);
           return {
             content: response
+          };
+        }
+      })(req, res, client);
+    } else if (custom_id === 'admin_dst_toggle') {
+      // DST Toggle Manager - allows manual DST state changes for timezones
+      return ButtonHandlerFactory.create({
+        id: 'admin_dst_toggle',
+        ephemeral: true,
+        handler: async (context) => {
+          // Security check - only allow specific Discord ID
+          if (context.userId !== '391415444084490240') {
+            return {
+              content: 'Access denied. This feature is restricted.'
+            };
+          }
+
+          console.log('🌍 DEBUG: Opening DST Manager interface');
+
+          // Load DST state and playerData to get timezone roles
+          const { loadDSTState, loadPlayerData } = await import('./storage.js');
+          const dstState = await loadDSTState();
+          const playerData = await loadPlayerData();
+          const guildData = playerData[context.guildId] || {};
+          const timezones = guildData.timezones || {};
+
+          // Get timezone roles that use the new DST system
+          const dstTimezones = [];
+          for (const [roleId, tzData] of Object.entries(timezones)) {
+            if (tzData.timezoneId && dstState[tzData.timezoneId]) {
+              try {
+                const role = await context.guild.roles.fetch(roleId);
+                if (role) {
+                  const tzInfo = dstState[tzData.timezoneId];
+                  dstTimezones.push({
+                    roleId,
+                    roleName: role.name,
+                    timezoneId: tzData.timezoneId,
+                    currentState: tzInfo.isDST ? 'Daylight' : 'Standard',
+                    currentOffset: tzInfo.currentOffset,
+                    displayName: tzInfo.displayName
+                  });
+                }
+              } catch (e) {
+                console.log(`⚠️ Could not fetch role ${roleId}`);
+              }
+            }
+          }
+
+          // Check if server has any DST-aware timezones
+          if (dstTimezones.length === 0) {
+            return {
+              content: '⚠️ **No DST-aware timezones found**\n\nThis server doesn\'t have any timezone roles using the new DST system.\n\nTo enable DST management:\n1. Run `/menu` → Production Menu → Initial Setup\n2. Timezones will be migrated to the new system\n3. Return here to toggle DST states',
+              ephemeral: true
+            };
+          }
+
+          // Create dropdown options for each timezone
+          const options = dstTimezones.map(tz => ({
+            label: `${tz.timezoneId}: ${tz.displayName}`,
+            value: tz.timezoneId,
+            description: `Currently: ${tz.currentState} (UTC${tz.currentOffset >= 0 ? '+' : ''}${tz.currentOffset})`,
+            emoji: { name: tz.currentState === 'Daylight' ? '☀️' : '❄️' }
+          }));
+
+          // Create Components V2 string select for timezone selection
+          const timezoneSelect = {
+            type: 3, // String Select
+            custom_id: 'dst_timezone_select',
+            placeholder: 'Choose timezone to toggle DST...',
+            min_values: 1,
+            max_values: 1,
+            options: options.slice(0, 25) // Discord limit is 25 options
+          };
+
+          const selectRow = {
+            type: 1, // Action Row
+            components: [timezoneSelect]
+          };
+
+          // Build the response with Components V2 Container
+          const containerComponents = [
+            {
+              type: 10, // Text Display
+              content: `## 🌍 DST Toggle Manager\n\nSelect a timezone to toggle between Standard and Daylight Saving Time.\n\n**Available Timezones:** ${dstTimezones.length}`
+            },
+            selectRow
+          ];
+
+          const container = {
+            type: 17, // Container
+            components: containerComponents
+          };
+
+          return {
+            flags: (1 << 15), // IS_COMPONENTS_V2
+            components: [container],
+            ephemeral: true
           };
         }
       })(req, res, client);
@@ -19455,6 +19557,72 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
           }
         });
       }
+    } else if (custom_id === 'dst_timezone_select') {
+      // Handle DST timezone selection - toggle DST state
+      return ButtonHandlerFactory.create({
+        id: 'dst_timezone_select',
+        ephemeral: true,
+        handler: async (context) => {
+          const selectedTimezoneId = context.data.values[0];
+          console.log(`🌍 DEBUG: Toggling DST for timezone ${selectedTimezoneId}`);
+
+          // Load DST state
+          const { loadDSTState, saveDSTState } = await import('./storage.js');
+          const dstState = await loadDSTState();
+
+          const timezone = dstState[selectedTimezoneId];
+          if (!timezone) {
+            return {
+              content: `❌ Error: Timezone ${selectedTimezoneId} not found in DST state.`,
+              ephemeral: true
+            };
+          }
+
+          // Check if this timezone observes DST
+          if (!timezone.dstObserved) {
+            return {
+              content: `⚠️ **${timezone.displayName}** does not observe Daylight Saving Time.\n\nThis timezone maintains a constant UTC offset year-round.`,
+              ephemeral: true
+            };
+          }
+
+          // Toggle DST state
+          const oldState = timezone.isDST;
+          const newState = !oldState;
+
+          // Update the timezone data
+          timezone.isDST = newState;
+          timezone.currentOffset = newState ? timezone.dstOffset : timezone.standardOffset;
+
+          // Save the updated DST state
+          await saveDSTState(dstState);
+
+          // Create success message with details
+          const oldAbbrev = oldState ? timezone.dstAbbrev : timezone.standardAbbrev;
+          const newAbbrev = newState ? timezone.dstAbbrev : timezone.standardAbbrev;
+          const oldOffset = oldState ? timezone.dstOffset : timezone.standardOffset;
+          const newOffset = newState ? timezone.dstOffset : timezone.standardOffset;
+
+          const response = [
+            `✅ **DST State Updated**`,
+            '',
+            `**Timezone:** ${timezone.displayName}`,
+            `**Changed from:** ${oldAbbrev} (UTC${oldOffset >= 0 ? '+' : ''}${oldOffset}) ${oldState ? '☀️' : '❄️'}`,
+            `**Changed to:** ${newAbbrev} (UTC${newOffset >= 0 ? '+' : ''}${newOffset}) ${newState ? '☀️' : '❄️'}`,
+            '',
+            `This change affects all servers using the "${timezone.roleFormat}" role with the new DST system.`,
+            '',
+            `💡 **Note:** Players will see updated times immediately in castlists and other displays.`
+          ].join('\n');
+
+          console.log(`✅ DST toggled for ${selectedTimezoneId}: ${oldAbbrev} → ${newAbbrev}`);
+
+          return {
+            content: response,
+            ephemeral: true
+          };
+        }
+      })(req, res, client);
     } else if (custom_id === 'prod_edit_pronouns_select') {
       // Handle pronoun role selection for editing
       try {

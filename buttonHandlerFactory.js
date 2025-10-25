@@ -100,6 +100,24 @@ export const BUTTON_REGISTRY = {
     restrictedUser: '391415444084490240',
     category: 'testing'
   },
+  'admin_dst_toggle': {
+    label: 'DST Manager',
+    description: 'Manage Daylight Saving Time states for timezones',
+    emoji: '🌍',
+    style: 'Secondary',
+    parent: 'reece_stuff_menu',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
+  'dst_timezone_select': {
+    label: 'DST Timezone Select',
+    description: 'Select timezone to toggle DST state',
+    emoji: '🌍',
+    style: 'String Select',
+    parent: 'admin_dst_toggle',
+    restrictedUser: '391415444084490240',
+    category: 'admin'
+  },
   'nuke_roles': {
     label: 'Nuke Roles',
     description: 'Remove all roles from server (DANGEROUS)',
