@@ -2206,6 +2206,109 @@ async function detectCurrentDSTStates(useAPI = false) {
 
 ---
 
+## 🚀 Zero-Context Implementation Guide
+
+### File Locations & Changes Required
+
+#### 1. Create dstState.json
+**Location:** `/home/reece/castbot/dstState.json` (new file)
+```javascript
+{
+  "PT": {
+    "displayName": "Pacific Time",
+    "roleFormat": "PST / PDT",
+    "standardOffset": -8,
+    "dstOffset": -7,
+    "currentOffset": -8,
+    "isDST": false,
+    "standardAbbrev": "PST",
+    "dstAbbrev": "PDT",
+    "dstObserved": true
+  }
+  // ... rest of timezones from CSV
+}
+```
+
+#### 2. DST State Management Functions
+**Location:** `/home/reece/castbot/storage.js` (add to existing file)
+```javascript
+// Add after line 401 (end of getTimezoneOffset)
+let dstStateCache = null;
+
+export async function loadDSTState() {
+  if (dstStateCache) return dstStateCache;
+
+  try {
+    const data = await fs.readFile('./dstState.json', 'utf8');
+    dstStateCache = JSON.parse(data);
+    return dstStateCache;
+  } catch (error) {
+    console.warn('⚠️ dstState.json not found, using fallback');
+    return {};
+  }
+}
+
+export async function saveDSTState(state) {
+  dstStateCache = state;
+  await fs.writeFile('./dstState.json', JSON.stringify(state, null, 2));
+  console.log('✅ DST state saved');
+}
+
+export function getDSTOffset(timezoneId) {
+  if (!dstStateCache || !dstStateCache[timezoneId]) return null;
+  return dstStateCache[timezoneId].currentOffset;
+}
+```
+
+#### 3. Update Time Calculation
+**Location:** `/home/reece/castbot/playerManagement.js`
+**Lines:** 59-80 (formatPlayerTime function)
+```javascript
+// BEFORE (line 66):
+const offset = timezones[timezoneRole.id].offset;
+
+// AFTER:
+const tzData = timezones[timezoneRole.id];
+let offset;
+
+if (tzData.timezoneId) {
+  // New system: read from dstState.json
+  const { getDSTOffset } = await import('./storage.js');
+  offset = getDSTOffset(tzData.timezoneId) || tzData.offset;
+} else {
+  // Legacy: read from playerData.json
+  offset = tzData.offset;
+}
+```
+
+#### 4. Update STANDARD_TIMEZONE_ROLES
+**Location:** `/home/reece/castbot/roleManager.js`
+**Lines:** 134-161 (replace entire array)
+```javascript
+// From temp/STANDARD_TIMEZONE_ROLES_newRoles.csv
+const STANDARD_TIMEZONE_ROLES = [
+  {
+    id: "PT",
+    name: "PST / PDT",
+    description: "Pacific Time",
+    offset: -8,
+    offsetDST: -7,
+    dstObserved: true,
+    standardName: "PST (UTC-8)",
+    standardNameDST: "PDT (UTC-7)"
+  },
+  // ... rest from CSV
+];
+```
+
+### Feature Toggle for Backwards Compatibility
+
+**Key Principle:** Presence of `timezoneId` field determines new vs old system
+- Old: `{ "offset": -8 }`
+- New: `{ "timezoneId": "PT", "offset": -8 }`
+
+**No Breaking Changes:** The `offset` field exists in both structures
+
 ## Updated Implementation Checklist (dstState.json Architecture)
 
 ### Phase 1: Global DST State Setup (✅ DESIGNED - Tonight)
@@ -2290,6 +2393,30 @@ async function detectCurrentDSTStates(useAPI = false) {
   - [ ] All servers show new time instantly
 
 ### Phase 5: Testing & Validation
+
+#### Test Commands
+```bash
+# 1. Test backwards compatibility (before any migration)
+./scripts/dev/dev-restart.sh "Add dstState.json support"
+# Check castlist still works with old data
+
+# 2. Test dstState loading
+node -e "const {loadDSTState} = require('./storage.js'); loadDSTState().then(console.log)"
+
+# 3. Test time calculation with new system
+# Add console.log in playerManagement.js:
+console.log('Timezone data:', tzData, 'Offset:', offset);
+
+# 4. Verify DST toggle
+# Change dstState.json PT.isDST to true, PT.currentOffset to -7
+# Check if Pacific time shows 1 hour ahead
+```
+
+#### Rollback Plan
+If issues occur:
+1. Delete dstState.json
+2. Remove timezoneId fields from playerData.json
+3. System falls back to legacy offset fields automatically
 
 - [ ] **Test single-role creation** ("PST / PDT" format)
 - [ ] **Test fuzzy matching** with legacy role names
