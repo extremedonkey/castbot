@@ -2516,6 +2516,213 @@ const STANDARD_TIMEZONE_ROLES = [
   - [x] DST state loads properly (16 timezones)
   - [x] Toggle functionality ready for production
 
+## 🔄 Many-to-Many Timezone Mapping (CRITICAL DESIGN - January 27, 2025)
+
+### The Discovery: Player Role Assignments are Ephemeral
+
+**Key Insight (from Reece):**
+- CastBot does NOT store player→timezone assignments in playerData
+- We check Discord role membership at runtime only
+- Server admins can arbitrarily assign/unassign roles anytime
+- This provides flexibility BUT creates data quality issues
+
+**Real-world consequence:**
+- Server with 500 players, 20 have "PST (UTC-8)" role assigned
+- But it's currently July → those 20 should be in PDT zone!
+- Players chose wrong seasonal variant, admins never fixed it
+- When DST changes, time display becomes wrong for 6 months
+
+### The Solution: Many-to-Many Role→TimezoneId Mapping
+
+**Core principle:**
+```
+Multiple Discord roles (PST, PDT, Pacific) → ONE timezoneId (PT)
+All point to dstState["PT"].currentOffset
+When admin toggles DST, ALL variants update together
+```
+
+**Why this works:**
+1. Player with "PST (UTC-8)" role → has timezoneId="PT"
+2. Player with "PDT (UTC-7)" role → has timezoneId="PT"
+3. Player with "Pacific" role → has timezoneId="PT"
+4. Admin toggles DST in dstState["PT"].isDST = true
+5. **All three players see correct time immediately** ✅
+6. No player action needed, no role reassignment needed
+
+### Conversion Algorithm (Phase 2b)
+
+**When executeSetup() runs:**
+
+```javascript
+// NEW: Convert existing timezone roles to DST-aware system
+async function convertExistingTimezones(guild) {
+  const playerData = await loadPlayerData();
+  const timezones = playerData[guild.id]?.timezones || {};
+
+  const results = {
+    mapped: [],      // Successfully mapped
+    unmapped: [],    // Couldn't identify
+    stats: {}        // Count per timezoneId
+  };
+
+  // Map ALL roles to timezone IDs
+  for (const [roleId, tzData] of Object.entries(timezones)) {
+    if (tzData.timezoneId) continue; // Already converted
+
+    const role = await guild.roles.fetch(roleId).catch(() => null);
+    if (!role) continue;
+
+    // Detect using BOTH name patterns AND offset
+    const timezoneId = detectTimezoneId(role.name, tzData.offset);
+
+    if (timezoneId) {
+      // ADD timezoneId (preserves all other data!)
+      tzData.timezoneId = timezoneId;
+      results.mapped.push({
+        roleId,
+        roleName: role.name,
+        timezoneId,
+        playerCount: role.members.size
+      });
+
+      results.stats[timezoneId] = (results.stats[timezoneId] || 0) + 1;
+    } else {
+      results.unmapped.push({ roleId, roleName: role.name });
+    }
+  }
+
+  // Save updates
+  await savePlayerData(playerData);
+  return results;
+}
+
+function detectTimezoneId(roleName, offset) {
+  const name = roleName.toLowerCase();
+
+  // Pacific: offset -8 or -7, name includes PST/PDT/Pacific
+  if ((name.includes('pst') || name.includes('pdt') || name.includes('pacific'))
+      && (offset === -8 || offset === -7)) {
+    return 'PT';
+  }
+
+  // Mountain: offset -7 or -6, name includes MST/MDT/Mountain
+  if ((name.includes('mst') || name.includes('mdt') || name.includes('mountain'))
+      && (offset === -7 || offset === -6)) {
+    return 'MT';
+  }
+
+  // [Continue for all 16 timezones...]
+  return null;
+}
+```
+
+### Critical Code Changes Required
+
+#### 1. DST Manager - MUST Fix Deduplication Bug
+
+**Location:** `app.js:9170-9266` (admin_dst_toggle handler)
+
+**Current bug:** Creates duplicate timezone options in dropdown
+
+**Fix:** Deduplicate timezoneIds before building dropdown
+
+```javascript
+// BUGGY CODE (current):
+for (const [roleId, tzData] of Object.entries(timezones)) {
+  if (tzData.timezoneId && dstState[tzData.timezoneId]) {
+    dstTimezones.push({
+      roleId,
+      timezoneId: tzData.timezoneId,  // ← Duplicated if multiple roles!
+      // ...
+    });
+  }
+}
+
+// FIXED CODE:
+const seenTimezoneIds = new Set();
+const dstTimezones = [];
+
+for (const [roleId, tzData] of Object.entries(timezones)) {
+  if (tzData.timezoneId && dstState[tzData.timezoneId]) {
+    // Only add each timezoneId once
+    if (!seenTimezoneIds.has(tzData.timezoneId)) {
+      seenTimezoneIds.add(tzData.timezoneId);
+
+      const tzInfo = dstState[tzData.timezoneId];
+      dstTimezones.push({
+        timezoneId: tzData.timezoneId,
+        displayName: tzInfo.displayName,
+        currentState: tzInfo.isDST ? 'Daylight' : 'Standard',
+        currentOffset: tzInfo.currentOffset
+      });
+    }
+  }
+}
+```
+
+#### 2. Castlist - NO CHANGES NEEDED ✅
+
+**Why:** Already supports many-to-many by design
+- Player has ONE role (e.g., "PST (UTC-8)")
+- Role maps to timezoneId "PT"
+- Castlist reads dstState["PT"].currentOffset
+- Works seamlessly!
+
+#### 3. executeSetup() - Add Conversion Phase
+
+**Location:** `roleManager.js:583` (executeSetup function)
+
+**Add before existing logic:**
+```javascript
+// NEW: Convert existing roles to DST-aware system
+if (options?.convertTimezones !== false) {
+  console.log('🔄 Converting existing timezone roles...');
+  const conversionResults = await convertExistingTimezones(guild);
+  console.log(`✅ Mapped ${conversionResults.mapped.length} roles to timezoneIds`);
+}
+
+// Continue with existing setup...
+```
+
+### Data Quality Impact
+
+**Before conversion:**
+- Server: PST (UTC-8), PDT (UTC-7), CST (UTC-6), CDT (UTC-5)
+- Problems: Players sometimes pick wrong variant, admins confused
+- DST toggle: Doesn't exist
+
+**After conversion:**
+- Server: PST / PDT (timezoneId: PT), CST / CDT (timezoneId: CT)
+- Benefits: Roles clearly show both variants, players see correct time
+- DST toggle: Works globally, auto-fixes wrong variant choices!
+
+### Clarifying Questions Answered
+
+**Q: Do we delete old roles?**
+A: NO. Keep them. Players keep their assignments. Conversion just ADDS timezoneId.
+
+**Q: What about players with wrong seasonal role?**
+A: They keep that role! But now it maps to correct timezoneId. When admin toggles DST, they automatically show correct time. Next season when they re-select timezone, they pick "PST / PDT" instead.
+
+**Q: What if server has "PST", "PST (UTC-8)", AND "PST / PDT"?**
+A: All three map to timezoneId "PT". Dropdown deduplicates so admin sees just one "PT" toggle. All players on any variant see correct time.
+
+### Implementation Roadmap
+
+**Phase 2a: Fix DST Manager** (5 min)
+- Add deduplication logic
+- Test with multiple roles per timezone
+
+**Phase 2b: Add Conversion Function** (30 min)
+- Implement detectTimezoneId()
+- Add conversion algorithm
+- Integrate into executeSetup()
+
+**Phase 2c: Test** (30 min)
+- Run on test server with mixed roles
+- Verify conversion results
+- Check castlist time updates work
+
 ### 🔮 Next Steps (Not Yet Implemented)
 
 #### Phase 2: Migration Logic (Priority: HIGH)
