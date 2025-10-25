@@ -388,7 +388,28 @@ async function createTribeSection(tribe, tribeMembers, guild, pronounRoleIds, ti
             
             // Calculate current time in their timezone
             try {
-                const offset = timezones[timezoneRole.id].offset;
+                const tzData = timezones[timezoneRole.id];
+                let offset;
+
+                // Feature toggle: Check if this timezone uses new DST system
+                if (tzData.timezoneId) {
+                    // New system: read from dstState.json
+                    const { getDSTOffset, loadDSTState } = await import('./storage.js');
+                    await loadDSTState();
+                    offset = getDSTOffset(tzData.timezoneId);
+
+                    console.log(`🌍 [castlist] DST lookup for ${tzData.timezoneId}: offset=${offset}, stored=${tzData.offset}`);
+
+                    // Fallback to stored offset if DST state not found
+                    if (offset === null) {
+                        console.log(`⚠️ [castlist] No DST state for ${tzData.timezoneId}, using stored offset`);
+                        offset = tzData.offset;
+                    }
+                } else {
+                    // Legacy system: use stored offset
+                    offset = tzData.offset;
+                }
+
                 const now = new Date();
                 const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
                 const targetTime = new Date(utcTime + (offset * 3600000));
@@ -579,11 +600,29 @@ async function processMemberData(member, pronounRoleIds, timezones, guildId) {
     const timezoneRole = member.roles.cache.find(role => timezones[role.id]);
     
     if (timezoneRole) {
-        const offset = timezones[timezoneRole.id].offset;
-        timezone = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
-        
+        const tzData = timezones[timezoneRole.id];
+        let offset;
+
         // Calculate current time
         try {
+            // Feature toggle: Check if this timezone uses new DST system
+            if (tzData.timezoneId) {
+                // New system: read from dstState.json
+                const { getDSTOffset, loadDSTState } = await import('./storage.js');
+                await loadDSTState();
+                offset = getDSTOffset(tzData.timezoneId);
+
+                // Fallback to stored offset if DST state not found
+                if (offset === null) {
+                    offset = tzData.offset;
+                }
+            } else {
+                // Legacy system: use stored offset
+                offset = tzData.offset;
+            }
+
+            timezone = offset >= 0 ? `UTC+${offset}` : `UTC${offset}`;
+
             const now = new Date();
             const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
             const targetTime = new Date(utcTime + (offset * 3600000));

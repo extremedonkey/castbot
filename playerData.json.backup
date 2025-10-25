@@ -285,7 +285,8 @@
         "offset": -8
       },
       "1335635312508145728": {
-        "offset": -7
+        "offset": -7,
+        "timezoneId": "MT"
       },
       "1328044184673714248": {
         "offset": 0
@@ -1759,6 +1760,82 @@
         "offset": 12,
         "dstObserved": true,
         "standardName": "NZST (UTC+12)"
+      },
+      "1431726492223672381": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1431726501602132139": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1431726503325864238": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1431726505569943633": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1431726507297869936": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1431726509957054639": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
+      },
+      "1431726511932575975": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1431726513988042852": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)"
+      },
+      "1431726516210766007": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)"
+      },
+      "1431726518358380547": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)"
+      },
+      "1431726520430366810": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)"
+      },
+      "1431726522649280532": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)"
+      },
+      "1431726524641447936": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)"
+      },
+      "1431726526789058682": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
+      },
+      "1431726529041141822": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
       }
     },
     "pronounRoleIDs": [
@@ -2706,6 +2783,25 @@
           "emoji": "😎",
           "description": "",
           "lastModified": 1760891080792
+        }
+      },
+      "castlist_1761424028120_1331657596087566398": {
+        "id": "castlist_1761424028120_1331657596087566398",
+        "name": "MST Test",
+        "type": "custom",
+        "createdAt": 1761424028120,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public",
+          "seasonId": "season_cac1b81de8914c79"
+        },
+        "metadata": {
+          "emoji": "⛰️",
+          "description": "Testin' the MSTzz",
+          "lastModified": 1761424028120
         }
       }
     },

@@ -72,8 +72,13 @@ export async function createPlayerDisplaySection(player, playerData, guildId) {
       // Feature toggle: Check if this timezone uses new DST system
       if (tzData.timezoneId) {
         // New system: read from dstState.json via getDSTOffset
-        const { getDSTOffset } = await import('./storage.js');
+        const { getDSTOffset, loadDSTState } = await import('./storage.js');
+
+        // Ensure DST state is loaded
+        await loadDSTState();
         offset = getDSTOffset(tzData.timezoneId);
+
+        console.log(`🌍 DST lookup for ${tzData.timezoneId}: offset=${offset}, stored=${tzData.offset}`);
 
         // Fallback to stored offset if DST state not found
         if (offset === null) {
