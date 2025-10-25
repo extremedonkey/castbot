@@ -2928,14 +2928,14 @@
     "serverName": "EpochORG S6: Buccaneers",
     "icon": "https://cdn.discordapp.com/icons/1266913708123361303/c6692f2c83b69e4de2cce0c5806380ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 68,
+    "memberCount": 67,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1722126166135,
-    "lastUpdated": 1760848001604,
+    "lastUpdated": 1761408946551,
     "players": {},
     "tribes": {
       "1267501924639571988": {
@@ -3040,14 +3040,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 560,
+    "memberCount": 563,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1761153283839,
+    "lastUpdated": 1761408943967,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1381126640163360800>"
@@ -5396,14 +5396,14 @@
     "serverName": "EpochORG S4: Ancient Egypt",
     "icon": "https://cdn.discordapp.com/icons/1209015985798127696/fab803057622fa548002ca6920f860ac.webp",
     "ownerId": "696456309762949141",
-    "memberCount": 77,
+    "memberCount": 78,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1708322273445,
-    "lastUpdated": 1760970014872,
+    "lastUpdated": 1761408945634,
     "ownerInfo": {
       "username": "mpschettig",
       "globalName": "Tylenol Boy",
@@ -8154,72 +8154,6 @@
       }
     }
   },
-  "1400065575090389045": {
-    "players": {
-      "391415444084490240": {
-        "safari": {
-          "currency": 51,
-          "history": [],
-          "lastInteraction": 1760854694409,
-          "achievements": [],
-          "inventory": {
-            "super_potion_322766": {
-              "quantity": 1,
-              "numAttacksAvailable": 0
-            },
-            "bulbasaur_449582": {
-              "quantity": 1,
-              "numAttacksAvailable": 0
-            },
-            "pikachu_601425": {
-              "quantity": 1,
-              "numAttacksAvailable": 0
-            }
-          },
-          "cooldowns": {},
-          "buttonUses": {},
-          "storeHistory": [
-            {
-              "itemId": "super_potion_322766",
-              "storeId": "pokemart_481320",
-              "price": 60,
-              "timestamp": 1760854713007
-            }
-          ]
-        }
-      }
-    },
-    "tribes": {},
-    "timezones": {},
-    "serverName": "CastBot Regression Pink",
-    "icon": "https://cdn.discordapp.com/icons/1400065575090389045/bd1ee1bc1ff3abca14f2d2ba9455716f.webp",
-    "ownerId": "391415444084490240",
-    "memberCount": 2,
-    "description": null,
-    "vanityURLCode": null,
-    "preferredLocale": "en-US",
-    "partnered": false,
-    "verified": false,
-    "createdTimestamp": 1753872045062,
-    "lastUpdated": 1760856911379,
-    "ownerInfo": {
-      "username": "extremedonkey",
-      "globalName": "Reece",
-      "discriminator": "0",
-      "tag": "extremedonkey"
-    },
-    "analyticsVersion": "1.0",
-    "pronounRoleIDs": [
-      "1431579915849039944",
-      "1431579917723893831",
-      "1431579919757869178",
-      "1431579922048221276",
-      "1431579924233191454",
-      "1431579926615822426",
-      "1431579929245384714",
-      "1431579931472822333"
-    ]
-  },
   "1195996661185511434": {
     "tribes": {
       "1204580983349973032": {
@@ -8336,5 +8270,101 @@
         }
       }
     }
+  },
+  "1400065575090389045": {
+    "players": {},
+    "tribes": {},
+    "timezones": {
+      "1431679076254355567": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)"
+      },
+      "1431679079605735539": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)"
+      },
+      "1431679081287647232": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)"
+      },
+      "1431679082839543821": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)"
+      },
+      "1431679085343674388": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)"
+      },
+      "1431679087281307788": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1431679089051172904": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)"
+      },
+      "1431679090716573766": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1431679092125728943": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)"
+      },
+      "1431679094218690712": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)"
+      },
+      "1431679096093540413": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)"
+      },
+      "1431679098203275414": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)"
+      },
+      "1431679100094906420": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)"
+      },
+      "1431679101818638498": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)"
+      },
+      "1431679103563464845": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)"
+      },
+      "1431679105753022474": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)"
+      }
+    },
+    "pronounRoleIDs": [
+      "1431579915849039944",
+      "1431579917723893831",
+      "1431579919757869178",
+      "1431579922048221276",
+      "1431579924233191454",
+      "1431579926615822426",
+      "1431579929245384714",
+      "1431579931472822333"
+    ]
   }
 }

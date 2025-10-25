@@ -2206,6 +2206,89 @@ async function detectCurrentDSTStates(useAPI = false) {
 
 ---
 
+## 📅 Implementation Status (January 2025)
+
+### As-Built Documentation
+
+#### ✅ Phase 1: Core DST Infrastructure (COMPLETED)
+**Date:** January 27, 2025
+**Commits:** cb35f6d8
+
+**What Was Built:**
+1. **dstState.json** - 16 timezone entries with DST metadata
+   - All timezones initialized to winter state (isDST: false)
+   - Successfully loads on startup: "✅ DST state loaded: 16 timezones"
+
+2. **DST State Management** (storage.js:406-432)
+   - `loadDSTState()` - Caches state in memory
+   - `saveDSTState()` - Persists changes
+   - `getDSTOffset()` - Returns current offset for timezone ID
+   - Auto-initialization on module load
+
+3. **Dual-Mode Time Calculation** (playerManagement.js:72-86)
+   - Feature detection via `timezoneId` field presence
+   - Legacy path: Uses `tzData.offset` directly
+   - New path: Uses `getDSTOffset(tzData.timezoneId)`
+   - Fully backwards compatible
+
+4. **Updated STANDARD_TIMEZONE_ROLES** (roleManager.js:135-292)
+   - Converted from 20 dual roles to 16 single roles
+   - New format: "PST / PDT" showing both states
+   - Each entry has `id` field linking to dstState.json
+   - Migration fields preserved (`standardName`, `standardNameDST`)
+
+#### 🔄 Lessons Learned
+
+1. **Feature Toggle Success**
+   - Presence of `timezoneId` field perfectly separates old/new systems
+   - No breaking changes for existing servers
+   - Can deploy to production immediately
+
+2. **Data Structure Insights**
+   - Global state (dstState.json) eliminates 842 duplicate offsets
+   - Treating timezone offsets as configuration (not user data) is cleaner
+   - 16 roles vs 20 achieves better Discord limit compliance
+
+3. **Import Pattern Discovery**
+   - Dynamic import in playerManagement.js works for getDSTOffset
+   - Avoids circular dependency issues with storage.js
+
+### 🚧 Known Issues & Future Work
+
+#### Issue 1: nuke_roles Not DST-Aware (LOW PRIORITY)
+**Discovery Date:** January 27, 2025
+**Impact:** Role deletion still uses old patterns
+
+**Current Behavior:**
+- Detects old dual roles: "PST (UTC-8)", "PDT (UTC-7)"
+- Does NOT detect new single roles: "PST / PDT"
+- Does NOT interact with dstState.json
+
+**Required Changes:**
+```javascript
+// roleManager.js nukeRoles() function needs:
+1. Update timezone patterns to include new format
+   - Add detection for "PST / PDT" style roles
+   - Keep old patterns for backwards compatibility
+
+2. Clear dstState.json references (optional)
+   - Not critical since roles are deleted anyway
+   - Could be useful for clean reset
+
+// Example pattern update:
+const isTimezoneRole = (roleName) => {
+  // Old patterns
+  if (/^(PST|PDT|MST|MDT|CST|CDT|EST|EDT)/.test(roleName)) return true;
+
+  // NEW: Single-role patterns
+  if (/^(PST \/ PDT|MST \/ MDT|CST \/ CDT)/.test(roleName)) return true;
+
+  return false;
+};
+```
+
+**Priority:** LOW - nukeRoles is rarely used and current detection still works for old roles
+
 ## 🚀 Zero-Context Implementation Guide
 
 ### File Locations & Changes Required
@@ -2391,6 +2474,64 @@ const STANDARD_TIMEZONE_ROLES = [
 - [ ] **Verify time display** updates immediately
   - [ ] No playerData.json changes needed
   - [ ] All servers show new time instantly
+
+### 🔮 Next Steps (Not Yet Implemented)
+
+#### Phase 2: Migration Logic (Priority: HIGH)
+**Status:** NOT STARTED
+**Complexity:** MEDIUM
+
+**Required Components:**
+1. **Fuzzy Matching Patterns**
+   ```javascript
+   const TIMEZONE_PATTERNS = {
+     'PT': ['PST', 'PDT', 'PST (UTC-8)', 'PDT (UTC-7)', 'Pacific'],
+     'CT': ['CST', 'CDT', 'CST (UTC-6)', 'CDT (UTC-5)', 'Central'],
+     // ... etc
+   };
+   ```
+
+2. **Migration Preview Function**
+   - Detect existing dual roles
+   - Show consolidation plan
+   - Keep old roles (don't delete)
+
+3. **executeSetup() Enhancement**
+   - Add timezoneId to playerData
+   - Create single "PST / PDT" roles
+   - Handle edge cases (DST-only servers)
+
+#### Phase 3: DST Toggle UI (Priority: MEDIUM)
+**Status:** NOT STARTED
+**Complexity:** LOW
+
+**Manual Toggle Available Now:**
+```bash
+# Edit dstState.json directly
+# Change PT to summer time:
+{
+  "PT": {
+    "currentOffset": -7,  # Was -8
+    "isDST": true        # Was false
+  }
+}
+# Restart dev to apply
+```
+
+**Future UI Components:**
+1. Button in reece_stuff_menu
+2. Modal with Role Select + String Select
+3. Toggle handler updates dstState.json
+
+#### Phase 4: Production Rollout (Priority: HIGH)
+**Status:** READY FOR DEPLOYMENT
+**Risk:** LOW - Fully backwards compatible
+
+**Deployment Steps:**
+1. Deploy to production (safe - feature toggle protects old servers)
+2. Test on your servers with manual timezoneId addition
+3. Gradually migrate friendly servers
+4. Monitor for issues
 
 ### Phase 5: Testing & Validation
 
