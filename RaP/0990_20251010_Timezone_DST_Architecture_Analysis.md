@@ -843,6 +843,225 @@ ELSE IF server has custom roles (19%)
 - Log for audit trail
 - Don't block migration
 
+## 🎯 FINALIZED ARCHITECTURE: Global DST State with dstState.json (January 2025)
+
+### The Problem with Current Architecture
+
+**Current Issue:** Offset data is duplicated 842 times across playerData.json
+- Each server stores its own offset values
+- DST toggle would require updating all 842 entries
+- No single source of truth for timezone offsets
+
+**Solution:** Global DST state file with timezone ID linking
+
+### New Architecture: dstState.json
+
+#### Global State File (Single Source of Truth)
+```javascript
+// NEW FILE: dstState.json
+{
+  "PT": {
+    "displayName": "Pacific Time",
+    "roleFormat": "PST / PDT",      // Discord role name template
+    "standardOffset": -8,            // PST offset (winter)
+    "dstOffset": -7,                 // PDT offset (summer)
+    "currentOffset": -8,             // ← CHANGES with DST toggle
+    "isDST": false,                  // ← CHANGES with DST toggle
+    "standardAbbrev": "PST",         // Winter abbreviation
+    "dstAbbrev": "PDT",             // Summer abbreviation
+    "dstObserved": true             // This timezone uses DST
+  },
+  "MT": {
+    "displayName": "Mountain Time",
+    "roleFormat": "MST / MDT",
+    "standardOffset": -7,
+    "dstOffset": -6,
+    "currentOffset": -7,
+    "isDST": false,
+    "standardAbbrev": "MST",
+    "dstAbbrev": "MDT",
+    "dstObserved": true
+  },
+  "CT": {
+    "displayName": "Central Time",
+    "roleFormat": "CST / CDT",
+    "standardOffset": -6,
+    "dstOffset": -5,
+    "currentOffset": -6,
+    "isDST": false,
+    "standardAbbrev": "CST",
+    "dstAbbrev": "CDT",
+    "dstObserved": true
+  },
+  "ET": {
+    "displayName": "Eastern Time",
+    "roleFormat": "EST / EDT",
+    "standardOffset": -5,
+    "dstOffset": -4,
+    "currentOffset": -5,
+    "isDST": false,
+    "standardAbbrev": "EST",
+    "dstAbbrev": "EDT",
+    "dstObserved": true
+  },
+  "GMT": {
+    "displayName": "Greenwich Mean Time",
+    "roleFormat": "GMT",            // No DST variant
+    "standardOffset": 0,
+    "currentOffset": 0,
+    "isDST": false,
+    "dstObserved": false            // Never changes
+  }
+  // Total: ~12 timezone entries (down from 20 roles)
+}
+```
+
+#### Updated STANDARD_TIMEZONE_ROLES (From CSV)
+```javascript
+// Based on temp/STANDARD_TIMEZONE_ROLES_newRoles.csv
+const STANDARD_TIMEZONE_ROLES = [
+  {
+    id: "PT",                       // ← Links to dstState.json
+    name: "PST / PDT",              // Discord role name
+    description: "Pacific Time",     // Friendly display name
+    offset: -8,                     // Standard offset (backwards compat)
+    offsetDST: -7,                  // DST offset
+    dstObserved: "yes",
+    standardName: "PST (UTC-8)",   // For migration mapping
+    standardNameDST: "PDT (UTC-7)"  // For migration mapping
+  },
+  {
+    id: "MT",
+    name: "MST / MDT",
+    description: "Mountain Time",
+    offset: -7,
+    offsetDST: -6,
+    dstObserved: "yes",
+    standardName: "MST (UTC-7)",
+    standardNameDST: "MDT (UTC-6)"
+  },
+  // ... ~12 total entries
+];
+```
+
+#### Simplified playerData.json
+```javascript
+// OLD: Stored offsets directly (duplicated 842 times)
+{
+  "1008584295193006121": {
+    "timezones": {
+      "roleId_PST": { "offset": -8 },  // Duplicated data
+      "roleId_PDT": { "offset": -7 }   // Separate role
+    }
+  }
+}
+
+// NEW: Store only timezone ID reference
+{
+  "1008584295193006121": {
+    "timezones": {
+      "roleId_Pacific": {
+        "timezoneId": "PT",          // ← Just links to dstState.json
+        "offset": -8                 // ← Keep for backwards compat (deprecated)
+      }
+    }
+  }
+}
+```
+
+### How DST Toggle Works with Global State
+
+#### Toggle Flow (One Button, Updates Everything)
+```javascript
+// Admin toggles PT to summer time
+async function toggleDSTForTimezone(timezoneId, isDST) {
+  // Step 1: Load global state
+  const dstState = await loadDSTState();
+
+  // Step 2: Update ONLY the global state
+  dstState["PT"].isDST = true;
+  dstState["PT"].currentOffset = dstState["PT"].dstOffset; // -7
+
+  // Step 3: Save global state
+  await saveDSTState(dstState);
+
+  // DONE! No playerData.json updates needed
+  // All servers with PT timezone instantly show PDT time
+}
+```
+
+#### Time Calculation (Updated)
+```javascript
+// OLD: Read from playerData.json (duplicated data)
+const offset = timezones[roleId].offset;
+
+// NEW: Read from global state
+const tzData = timezones[roleId];
+let offset;
+
+if (tzData.timezoneId) {
+  // New system: lookup from dstState.json
+  const dstState = await loadDSTState();
+  offset = dstState[tzData.timezoneId].currentOffset;
+} else {
+  // Legacy fallback: read from playerData
+  offset = tzData.offset;
+}
+```
+
+### Data Flow Comparison
+
+#### Current Flow (Inefficient)
+```
+Toggle DST → Update 842 offset values in playerData.json → Each server reads its own offset
+           ↑ Risk of inconsistency
+           ↑ Slow file I/O
+           ↑ Complex migration
+```
+
+#### New Flow (Efficient)
+```
+Toggle DST → Update 1 entry in dstState.json → All servers read same global offset
+           ↑ Single source of truth
+           ↑ Fast operation
+           ↑ Simple implementation
+```
+
+### Naming Conventions (From CSV Files)
+
+| Field | Purpose | Example | Used Where |
+|-------|---------|---------|------------|
+| `id` | Unique timezone identifier | `"PT"` | Links dstState to playerData |
+| `name` | Discord role name | `"PST / PDT"` | Role creation/display |
+| `description` | User-friendly name | `"Pacific Time"` | String select descriptions |
+| `displayName` | Full timezone name | `"Pacific Time"` | UI headers |
+| `roleFormat` | Role name template | `"PST / PDT"` | Discord role naming |
+| `timezoneId` | Reference in playerData | `"PT"` | Links to dstState.json |
+| `standardAbbrev` | Winter abbreviation | `"PST"` | Display formatting |
+| `dstAbbrev` | Summer abbreviation | `"PDT"` | Display formatting |
+
+### Implementation Benefits
+
+1. **Single Toggle Updates All**
+   - Change `dstState["PT"].isDST` once
+   - All 57 servers instantly show correct time
+
+2. **No Data Duplication**
+   - Offset stored once per timezone (not 842 times)
+   - playerData only stores timezone ID reference
+
+3. **Backwards Compatible**
+   - Keep `offset` field during transition
+   - Legacy servers continue working
+
+4. **Clean Separation**
+   - Configuration (dstState.json) vs User Data (playerData.json)
+   - Offset is config, not user data
+
+5. **Simple DST Management**
+   - One button per timezone
+   - Or one button to toggle all DST-observing zones
+
 ### Implementation Recommendation (January 2025)
 
 Based on production data analysis, I recommend:
@@ -1987,64 +2206,98 @@ async function detectCurrentDSTStates(useAPI = false) {
 
 ---
 
-## Updated Implementation Checklist
+## Updated Implementation Checklist (dstState.json Architecture)
 
-### Phase 1: Data Structure & Fuzzy Matching ✅ Designed
+### Phase 1: Global DST State Setup (✅ DESIGNED - Tonight)
 
-- [ ] **Create TIMEZONE_PATTERNS** constant (modeled after PRONOUN_PATTERNS)
-- [ ] **Create TIMEZONE_COLORS** constant (regional color grouping)
-- [ ] **Create findExistingTimezoneRole()** function (modeled after pronouns)
-- [ ] **Update STANDARD_TIMEZONE_ROLES** to single-role structure (~12 roles)
-  - [ ] Add `shortName`, `displayName` fields
-  - [ ] Add `emoji` field for visual identification
-  - [ ] Keep DST fields (`standardOffset`, `dstOffset`, abbreviations)
-- [ ] **Update executeSetup()** timezone processing (line 456+)
-  - [ ] Use `findExistingTimezoneRole()` for fuzzy matching
-  - [ ] Apply colors from `TIMEZONE_COLORS`
-  - [ ] Save enhanced structure (all new fields)
-- [ ] **Update updateCastBotStorage()** (lines 584-599)
-  - [ ] Save all new fields (shortName, displayName, currentOffset, etc.)
-  - [ ] Preserve backwards-compat `offset` field
+- [ ] **Create dstState.json file** with initial winter offsets
+  - [ ] ~12 timezone entries (PT, MT, CT, ET, AT, NT, GMT, CET, etc.)
+  - [ ] Each entry has: displayName, roleFormat, offsets, isDST, abbreviations
+  - [ ] Set all isDST to false initially (winter state)
 
-### Phase 2: Time Display Updates
+- [ ] **Create DST state management functions**
+  ```javascript
+  async function loadDSTState() { /* Load from dstState.json */ }
+  async function saveDSTState(state) { /* Save to dstState.json */ }
+  function getDSTOffset(timezoneId) { /* Get current offset for timezone */ }
+  ```
 
-- [ ] **Update playerManagement.js** time calculation (lines 59-80)
-  - [ ] Use `currentOffset` instead of static `offset`
-  - [ ] Display abbreviation: Show "CST" or "CDT" based on `isDST`
-- [ ] **Update timezone selector UI** (playerManagement.js lines 851-923)
-  - [ ] Change option description format to show both abbreviations
-  - [ ] Example: `"CST (UTC-6) in standard time; CDT (UTC-5) during DST"`
+- [ ] **Update STANDARD_TIMEZONE_ROLES** from CSV format
+  - [ ] Add `id` field (e.g., "PT") linking to dstState.json
+  - [ ] Use `name: "PST / PDT"` format (both states in role name)
+  - [ ] Add `description: "Pacific Time"` for friendly display
+  - [ ] Keep `standardName` and `standardNameDST` for migration mapping
 
-### Phase 3: Migration/Transition
+### Phase 2: Time Calculation Updates (Tonight)
 
-- [ ] **Document migration approach** (executeSetup re-run vs script)
-- [ ] **Test fuzzy matching** with legacy role names (CST, CDT, "Central Time")
-- [ ] **Create migration guide** for admins with existing timezones
-- [ ] **Add warnings** in setup response for detected legacy roles
+- [ ] **Update playerManagement.js time calculation** (lines 59-80)
+  ```javascript
+  const tzData = timezones[timezoneRole.id];
+  let offset;
 
-### Phase 4: Auto-Toggle (OPTIONAL - Decision Deferred)
+  if (tzData.timezoneId) {
+    // New system: read from dstState.json
+    const dstState = await loadDSTState();
+    offset = dstState[tzData.timezoneId].currentOffset;
+  } else {
+    // Legacy: read from playerData.json
+    offset = tzData.offset;
+  }
+  ```
 
-- [ ] **Select implementation option** (Manual, API, or Hybrid)
-- [ ] **If Option 1 (Manual):**
-  - [ ] Add toggle button to reece_stuff_menu
-  - [ ] Implement toggle handler (update `isDST`, `currentOffset`)
-- [ ] **If Option 2 (API):**
-  - [ ] Create `src/scheduling/dstAutoToggle.js`
-  - [ ] Set up CRON job (daily at 3 AM)
-  - [ ] Add error handling and retry logic
-  - [ ] Add admin notification on DST changes
-- [ ] **If Option 3 (executeSetup):**
-  - [ ] Add DST detection to executeSetup()
-  - [ ] Create "Update DST" button in admin menu
+- [ ] **Update timezone selector UI** to show new role format
+  - [ ] Display: "PST / PDT" instead of separate options
+  - [ ] Description: "Pacific Time" instead of just UTC offset
 
-### Phase 5: Testing
+### Phase 3: Migration Logic (Tonight)
 
-- [ ] **Test single-role creation** (CT, ET, PT)
-- [ ] **Test fuzzy matching** with legacy roles
-- [ ] **Test DST toggle** (manual or automatic)
-- [ ] **Test time display** in different DST states
-- [ ] **Test backwards compatibility** (old offset field still works)
+- [ ] **Create TIMEZONE_PATTERNS** for fuzzy matching
+  ```javascript
+  const TIMEZONE_PATTERNS = {
+    'PT': ['PST', 'PDT', 'PST (UTC-8)', 'PDT (UTC-7)', 'Pacific'],
+    'CT': ['CST', 'CDT', 'CST (UTC-6)', 'CDT (UTC-5)', 'Central'],
+    'ET': ['EST', 'EDT', 'EST (UTC-5)', 'EDT (UTC-4)', 'Eastern']
+  };
+  ```
+
+- [ ] **Enhanced executeSetup()** with consolidation
+  - [ ] Detect dual roles (PST + PDT) and consolidate to single "PST / PDT"
+  - [ ] Map to timezone ID "PT" in playerData
+  - [ ] Store `{ timezoneId: "PT", offset: -8 }` structure
+
+- [ ] **Migration preview button** in prod_setup
+  - [ ] Show what will be consolidated
+  - [ ] Keep old roles (don't delete)
+  - [ ] Update playerData with timezoneId references
+
+### Phase 4: DST Toggle Implementation (Simple!)
+
+- [ ] **Add DST toggle button** in reece_stuff_menu
+  - [ ] Opens modal with Components V2 (Role Select + String Select)
+  - [ ] Role Select shows all timezone roles
+  - [ ] String Select: "Standard Time" or "Daylight Time"
+
+- [ ] **Toggle handler** updates dstState.json
+  ```javascript
+  const selectedTimezoneId = detectTimezoneId(selectedRole);
+  dstState[selectedTimezoneId].isDST = (selection === 'daylight');
+  dstState[selectedTimezoneId].currentOffset = isDST ? dstOffset : standardOffset;
+  await saveDSTState(dstState);
+  ```
+
+- [ ] **Verify time display** updates immediately
+  - [ ] No playerData.json changes needed
+  - [ ] All servers show new time instantly
+
+### Phase 5: Testing & Validation
+
+- [ ] **Test single-role creation** ("PST / PDT" format)
+- [ ] **Test fuzzy matching** with legacy role names
+- [ ] **Test DST toggle** updates all servers
+- [ ] **Test time display** shows correct offset
+- [ ] **Test backwards compatibility** (legacy offset field)
 - [ ] **Test migration** from dual-role to single-role
+- [ ] **Create migration guide** for admins
 
 ---
 
