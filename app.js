@@ -22852,17 +22852,19 @@ Are you sure you want to continue?`;
       })(req, res, client);
       
     } else if (custom_id === 'map_delete_cancel') {
-      // Handle cancelled map deletion - return to map explorer
+      // Handle cancelled map deletion - return to reece_stuff_menu
       return ButtonHandlerFactory.create({
         id: 'map_delete_cancel',
         requiresPermission: PermissionFlagsBits.ManageRoles,
         permissionName: 'Manage Roles',
         handler: async (context) => {
-          // Return to the Map Explorer menu
-          const { createMapExplorerMenu } = await import('./mapExplorer.js');
-          const ui = await createMapExplorerMenu(context.guildId);
-          
-          return ui;
+          // Return to Reece Stuff menu (admin menu)
+          const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
+
+          return {
+            ...reeceMenuData,
+            ephemeral: true
+          };
         }
       })(req, res, client);
       
