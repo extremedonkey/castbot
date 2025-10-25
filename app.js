@@ -9199,25 +9199,22 @@ Your server is now ready for Tycoons gameplay!`;
           const guildData = playerData[context.guildId] || {};
           const timezones = guildData.timezones || {};
 
-          // Get timezone roles that use the new DST system
+          // Get timezone roles that use the new DST system (deduplicated by timezoneId)
+          const seenTimezoneIds = new Set();
           const dstTimezones = [];
           for (const [roleId, tzData] of Object.entries(timezones)) {
             if (tzData.timezoneId && dstState[tzData.timezoneId]) {
-              try {
-                const role = await context.guild.roles.fetch(roleId);
-                if (role) {
-                  const tzInfo = dstState[tzData.timezoneId];
-                  dstTimezones.push({
-                    roleId,
-                    roleName: role.name,
-                    timezoneId: tzData.timezoneId,
-                    currentState: tzInfo.isDST ? 'Daylight' : 'Standard',
-                    currentOffset: tzInfo.currentOffset,
-                    displayName: tzInfo.displayName
-                  });
-                }
-              } catch (e) {
-                console.log(`⚠️ Could not fetch role ${roleId}`);
+              // Only add each unique timezoneId once to dropdown
+              if (!seenTimezoneIds.has(tzData.timezoneId)) {
+                seenTimezoneIds.add(tzData.timezoneId);
+                const tzInfo = dstState[tzData.timezoneId];
+                dstTimezones.push({
+                  timezoneId: tzData.timezoneId,
+                  currentState: tzInfo.isDST ? 'Daylight' : 'Standard',
+                  currentOffset: tzInfo.currentOffset,
+                  displayName: tzInfo.displayName,
+                  emoji: tzInfo.isDST ? '☀️' : '❄️'
+                });
               }
             }
           }

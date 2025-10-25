@@ -1655,6 +1655,20 @@
           "castlist_1760891080792_1331657596087566398"
         ],
         "castlist": "My Cool Castlist"
+      },
+      "1431726492223672381": {
+        "name": "Tribe 1431726492223672381",
+        "emoji": "🏕️",
+        "color": null
+      },
+      "1391142497484275712": {
+        "name": "Tribe 1391142497484275712",
+        "emoji": "🏕️",
+        "color": null,
+        "castlistIds": [
+          "castlist_1761424028120_1331657596087566398"
+        ],
+        "castlist": "MST Test"
       }
     },
     "timezones": {
@@ -2787,7 +2801,7 @@
       },
       "castlist_1761424028120_1331657596087566398": {
         "id": "castlist_1761424028120_1331657596087566398",
-        "name": "MST Test",
+        "name": "PST Test",
         "type": "custom",
         "createdAt": 1761424028120,
         "createdBy": "391415444084490240",
@@ -2799,10 +2813,12 @@
           "seasonId": "season_cac1b81de8914c79"
         },
         "metadata": {
-          "emoji": "⛰️",
-          "description": "Testin' the MSTzz",
+          "emoji": "🌏",
+          "description": "Testin' the PSTzz",
           "lastModified": 1761424028120
-        }
+        },
+        "modifiedAt": 1761425214156,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {
@@ -5457,10 +5473,136 @@
       }
     },
     "tribes": {},
-    "timezones": {},
-    "pronounRoleIDs": [],
+    "timezones": {
+      "1431745240124887040": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)",
+        "timezoneId": "PT"
+      },
+      "1431745241739694242": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1431745243686113362": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
+      },
+      "1431745245628072017": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
+      },
+      "1431745247670571048": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1431745249386037260": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
+      },
+      "1431745251164291132": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
+      },
+      "1431745253081223192": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
+      },
+      "1431745255564120116": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
+      },
+      "1431745257975975986": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
+      },
+      "1431745259481595959": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
+      },
+      "1431745261507579954": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
+      },
+      "1431745263512326145": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
+      },
+      "1431745265387438352": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
+      },
+      "1431745267102781502": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1431745269573226567": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
+      }
+    },
+    "pronounRoleIDs": [
+      "1431745215605248030",
+      "1431745220025778428",
+      "1431745228888473661",
+      "1431745230616662066",
+      "1431745232181002272",
+      "1431745234248794142",
+      "1431745236354465794",
+      "1431745237981728850"
+    ],
     "firstInstalled": 1753970820644,
-    "installationMethod": "command"
+    "installationMethod": "command",
+    "castlistConfigs": {
+      "castlist_1761425264687_1400479796219215959": {
+        "id": "castlist_1761425264687_1400479796219215959",
+        "name": "PST Alt Test",
+        "type": "custom",
+        "createdAt": 1761425264687,
+        "createdBy": "391415444084490240",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "emoji": "📋",
+          "description": "",
+          "lastModified": 1761425264687
+        }
+      }
+    }
   },
   "1294676751913320618": {
     "serverName": "HasChannel",
