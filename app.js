@@ -7705,13 +7705,18 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_player_data_cancel') {
-      // Cancel the data nuke operation (DELEGATED TO MODULE)
+      // Cancel the data nuke operation - return to reece_stuff_menu
       return ButtonHandlerFactory.create({
         id: 'nuke_player_data_cancel',
         updateMessage: true,
         handler: async (context) => {
-          const { handleNukeCancel } = await import('./dataNuker.js');
-          return handleNukeCancel(context);
+          // Return to Reece Stuff menu (admin menu)
+          const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
+
+          return {
+            ...reeceMenuData,
+            ephemeral: true
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_safari_content') {
@@ -7735,13 +7740,18 @@ To fix this:
         }
       })(req, res, client);
     } else if (custom_id === 'nuke_safari_content_cancel') {
-      // Cancel the Safari data nuke operation (DELEGATED TO MODULE)
+      // Cancel the Safari data nuke operation - return to reece_stuff_menu
       return ButtonHandlerFactory.create({
         id: 'nuke_safari_content_cancel',
         updateMessage: true,
         handler: async (context) => {
-          const { handleNukeCancel } = await import('./dataNuker.js');
-          return handleNukeCancel(context);
+          // Return to Reece Stuff menu (admin menu)
+          const reeceMenuData = await createReeceStuffMenu(context.guildId, context.channelId);
+
+          return {
+            ...reeceMenuData,
+            ephemeral: true
+          };
         }
       })(req, res, client);
     } else if (custom_id === 'prod_change_season') {

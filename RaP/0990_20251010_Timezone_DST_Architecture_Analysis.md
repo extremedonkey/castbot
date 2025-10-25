@@ -2237,6 +2237,33 @@ async function detectCurrentDSTStates(useAPI = false) {
    - Each entry has `id` field linking to dstState.json
    - Migration fields preserved (`standardName`, `standardNameDST`)
 
+#### ✅ Phase 4: DST Toggle UI (COMPLETED)
+**Date:** January 27, 2025
+**Commit:** 766a4be6
+
+**What Was Built:**
+1. **DST Manager Button** (app.js:1041-1045)
+   - Added to Admin Tools section of reece_stuff_menu
+   - Custom ID: `admin_dst_toggle`
+   - Security restricted to admin user
+
+2. **Timezone Selection Interface** (app.js:9170-9266)
+   - Shows dropdown of DST-aware timezones only
+   - Components V2 String Select (type 3)
+   - Displays current state with ☀️/❄️ emoji
+   - Shows timezone ID, display name, and current offset
+
+3. **DST Toggle Handler** (app.js:19560-19625)
+   - Custom ID: `dst_timezone_select`
+   - Toggles DST state in dstState.json
+   - Updates currentOffset based on DST state
+   - Saves globally (affects all servers)
+
+4. **Button Registry Entries** (buttonHandlerFactory.js:103-120)
+   - Registered `admin_dst_toggle` and `dst_timezone_select`
+   - Prevents unregistered button warnings
+   - Properly categorized as admin tools
+
 #### 🔄 Lessons Learned
 
 1. **Feature Toggle Success**
