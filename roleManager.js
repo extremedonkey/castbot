@@ -808,11 +808,17 @@ async function updateCastBotStorage(guildId, results) {
         
         // Add new timezone data with enhanced structure for future DST support
         newTimezoneEntries.forEach(tz => {
-            currentTimezones[tz.id] = { 
+            // Find the original timezone ID from STANDARD_TIMEZONE_ROLES
+            const originalTimezone = STANDARD_TIMEZONE_ROLES.find(t => t.name === tz.name);
+            const timezoneId = originalTimezone?.id || null; // e.g., "PT", "MT", "ET"
+
+            currentTimezones[tz.id] = {
                 offset: tz.offset,
                 // Store DST information for future automatic switching
                 dstObserved: tz.dstObserved || false,
-                standardName: tz.standardName || null
+                standardName: tz.standardName || null,
+                // Enable new DST system via feature toggle
+                timezoneId: timezoneId  // Links to dstState.json (enables DST toggle)
             };
         });
         

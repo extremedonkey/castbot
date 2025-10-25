@@ -19578,7 +19578,7 @@ If you need more emoji space, delete existing ones from Server Settings > Emojis
         id: 'dst_timezone_select',
         ephemeral: true,
         handler: async (context) => {
-          const selectedTimezoneId = context.data.values[0];
+          const selectedTimezoneId = context.values[0];
           console.log(`🌍 DEBUG: Toggling DST for timezone ${selectedTimezoneId}`);
 
           // Load DST state

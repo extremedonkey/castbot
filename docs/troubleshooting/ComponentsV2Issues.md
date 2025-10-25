@@ -618,6 +618,54 @@ return {
 - [ ] Is your pattern handler before or after specific handlers in the chain?
 - [ ] Have you tested button IDs that start with your pattern?
 
+### 13. ButtonHandlerFactory Context for Select Values
+
+**Symptom**: `TypeError: Cannot read properties of undefined (reading 'values')` when handling String Select in ButtonHandlerFactory
+
+**Root Cause**: Incorrect property path for accessing select values in ButtonHandlerFactory context
+
+**Critical Difference**:
+```javascript
+// ❌ WRONG - Direct handlers use data.values
+} else if (custom_id === 'my_select') {
+  const selectedValue = data.values[0];  // Works in direct handlers
+}
+
+// ❌ WRONG - ButtonHandlerFactory doesn't use context.data.values
+return ButtonHandlerFactory.create({
+  id: 'my_select',
+  handler: async (context) => {
+    const selectedValue = context.data.values[0];  // ❌ context.data is undefined!
+  }
+});
+
+// ✅ CORRECT - ButtonHandlerFactory uses context.values directly
+return ButtonHandlerFactory.create({
+  id: 'my_select',
+  handler: async (context) => {
+    const selectedValue = context.values[0];  // ✅ Values directly on context
+  }
+});
+```
+
+**ButtonHandlerFactory Context Properties**:
+- `context.guildId` - Guild ID
+- `context.userId` - User ID
+- `context.member` - Member object
+- `context.client` - Discord client
+- `context.values` - **String Select values array** (NOT context.data.values!)
+- `context.customId` - Full custom ID string
+- `context.message` - Original message (if updateMessage: true)
+
+**Real-World Example** (dst_timezone_select handler):
+```javascript
+// Fixed implementation
+handler: async (context) => {
+  const selectedTimezoneId = context.values[0];  // ✅ Correct path
+  console.log(`Selected: ${selectedTimezoneId}`);
+}
+```
+
 ## Quick Reference
 
 **Always Remember**:
@@ -636,6 +684,7 @@ return {
 13. **ButtonHandlerFactory ephemeral config is NOT automatic** - Must add flag to response
 14. **Plain content doesn't support ephemeral** - Must use full Container structure
 15. **Check for pattern conflicts** - `startsWith()` can match unintended button IDs
+16. **ButtonHandlerFactory select values** - Use `context.values[0]` not `context.data.values[0]`
 
 **Ephemeral Quick Pattern**:
 ```javascript
