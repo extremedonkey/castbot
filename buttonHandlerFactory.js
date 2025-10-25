@@ -224,7 +224,6 @@ export const BUTTON_REGISTRY = {
   'prod_menu_back': {
     label: '← Menu',
     description: 'Return to main production menu',
-    emoji: '⬅',
     style: 'Secondary',
     category: 'navigation'
   },

@@ -133,21 +133,26 @@ export class MenuBuilder {
 
     // Build sections
     if (menuConfig.sections) {
-      for (const section of menuConfig.sections) {
+      menuConfig.sections.forEach((section, index) => {
         if (section.label) {
-          components.push({ 
-            type: 10, 
-            content: `> **\`${section.label}\`**` 
+          components.push({
+            type: 10,
+            content: `> **\`${section.label}\`**`
           });
         }
-        
+
         // Add section components (buttons, selects, etc.)
         if (section.components) {
           components.push(...section.components);
         }
-        
-        components.push({ type: 14 }); // Separator between sections
-      }
+
+        // Add separator between sections, but NOT after the last section
+        // Container itself provides the visual boundary
+        const isLastSection = index === menuConfig.sections.length - 1;
+        if (!isLastSection) {
+          components.push({ type: 14 }); // Separator between sections only
+        }
+      });
     }
 
     // Return Components V2 container
