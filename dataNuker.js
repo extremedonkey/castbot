@@ -14,6 +14,18 @@ import { loadPlayerData, savePlayerData } from './storage.js';
 import { nukeRoles } from './roleManager.js';
 
 /**
+ * Convert dataType (camelCase) to snake_case for custom_ids
+ * @param {string} dataType - Data type in camelCase (playerData, safariContent, roles)
+ * @returns {string} snake_case version for use in button custom_ids
+ */
+function convertToSnakeCase(dataType) {
+  return dataType
+    .replace(/([A-Z])/g, '_$1')
+    .toLowerCase()
+    .replace(/^_/, '');
+}
+
+/**
  * Data type configurations
  */
 const DATA_CONFIGS = {
@@ -136,14 +148,14 @@ export function createNukeConfirmationUI(dataType, guildId, serverName) {
             type: 2, // Button
             style: 4, // Danger
             label: 'Yes, Nuke All Data',
-            custom_id: `nuke_${dataType}_confirm`,
+            custom_id: `nuke_${convertToSnakeCase(dataType)}_confirm`,
             emoji: { name: '⚠️' }
           },
           {
             type: 2, // Button
             style: 2, // Secondary
             label: 'Cancel',
-            custom_id: `nuke_${dataType}_cancel`,
+            custom_id: `nuke_${convertToSnakeCase(dataType)}_cancel`,
             emoji: { name: '❌' }
           }
         ]

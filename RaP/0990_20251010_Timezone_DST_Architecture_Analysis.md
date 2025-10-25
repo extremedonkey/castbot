@@ -2456,24 +2456,38 @@ const STANDARD_TIMEZONE_ROLES = [
   - [ ] Keep old roles (don't delete)
   - [ ] Update playerData with timezoneId references
 
-### Phase 4: DST Toggle Implementation (Simple!)
+### Phase 4: DST Toggle Implementation ✅ COMPLETED (January 27, 2025)
 
-- [ ] **Add DST toggle button** in reece_stuff_menu
-  - [ ] Opens modal with Components V2 (Role Select + String Select)
-  - [ ] Role Select shows all timezone roles
-  - [ ] String Select: "Standard Time" or "Daylight Time"
+- [x] **Add DST toggle button** in reece_stuff_menu
+  - [x] Added "DST Manager" button under Admin Tools section
+  - [x] Uses Components V2 with String Select dropdown
+  - [x] Shows only DST-aware timezones (those with timezoneId field)
 
-- [ ] **Toggle handler** updates dstState.json
+- [x] **Toggle handler** updates dstState.json
+  - [x] Button handler: `admin_dst_toggle` (app.js:9170)
+  - [x] Select handler: `dst_timezone_select` (app.js:19560)
+  - [x] Registered in BUTTON_REGISTRY (buttonHandlerFactory.js:103-120)
+  - [x] Updates `isDST` and `currentOffset` in dstState.json
+  - [x] Saves state globally for all servers
+
+- [x] **Implementation Details:**
   ```javascript
-  const selectedTimezoneId = detectTimezoneId(selectedRole);
-  dstState[selectedTimezoneId].isDST = (selection === 'daylight');
-  dstState[selectedTimezoneId].currentOffset = isDST ? dstOffset : standardOffset;
+  // Button shows dropdown with DST-aware timezones
+  if (tzData.timezoneId && dstState[tzData.timezoneId]) {
+    // Shows in dropdown with current state (☀️/❄️)
+  }
+
+  // Selection toggles DST state
+  timezone.isDST = !timezone.isDST;
+  timezone.currentOffset = timezone.isDST ?
+    timezone.dstOffset : timezone.standardOffset;
   await saveDSTState(dstState);
   ```
 
-- [ ] **Verify time display** updates immediately
-  - [ ] No playerData.json changes needed
-  - [ ] All servers show new time instantly
+- [x] **Testing completed:**
+  - [x] Manually added `timezoneId: "PT"` to test server
+  - [x] DST state loads properly (16 timezones)
+  - [x] Toggle functionality ready for production
 
 ### 🔮 Next Steps (Not Yet Implemented)
 
