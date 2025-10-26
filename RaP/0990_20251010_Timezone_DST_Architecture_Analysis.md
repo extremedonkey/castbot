@@ -199,6 +199,56 @@
 - **Fix:** Track roles with existing `timezoneId` in `results.unchanged`
 - **Impact:** Setup response showed nothing for already-converted servers
 
+**Bug 4: Duplicate Role Creation on Hierarchy Failures (CRITICAL)**
+- **Git Commit:** `a21fa0c3`
+- **Symptom:** When CastBot role below existing timezone roles, setup created duplicates
+- **Root Cause:**
+  - Conversion failed to rename "PST (UTC-7)" → "PST / PDT" (Missing Permissions)
+  - Timezone processing looked for "PST / PDT", didn't find it
+  - Created NEW "PST / PDT" role, leaving old "PST (UTC-7)" in place
+  - Result: 2 sets of roles (14 old + 16 new = 30 total!)
+- **Fix (4 parts):**
+  1. Store `timezoneId` in conversion failure results
+  2. Check for conversion failures before creating new roles
+  3. If conversion failed due to "Missing Permissions", add to hierarchy warnings
+  4. Display existing role names (not new names) in hierarchy section
+- **Impact:** Prevented duplicate roles, proper hierarchy warnings
+- **Affected Servers:** Any server with CastBot role below existing timezone roles
+- **Expected Behavior NOW:**
+  - Conversion fails → No new role created
+  - Failed roles shown in hierarchy warnings (like pronouns)
+  - Clear instructions to fix hierarchy
+  - No duplicates in playerData.json
+
+#### Error Handling Design (Hierarchy Failures)
+
+**Verbose Logging is Intentional:**
+- Discord API errors (DiscordAPIError[50013]: Missing Permissions) log full stack traces
+- This is **expected behavior** and provides debugging context
+- Errors are caught, tracked in `results.failed`, and don't crash setup
+- System continues processing other roles gracefully
+
+**Error Flow:**
+1. `role.setName()` fails → Discord throws DiscordAPIError[50013]
+2. Caught in try/catch → `console.error()` logs full stack trace
+3. Added to `results.failed` with `timezoneId`
+4. Conversion continues with next role
+5. Timezone processing skips failed roles (prevents duplicates)
+6. User sees hierarchy warnings in setup response
+
+**Why Full Stack Traces:**
+- Helps diagnose permission issues vs other API errors
+- Shows exact role ID and API endpoint
+- Production logs can filter/suppress if needed
+- Development benefits from detailed error context
+
+**Recovery Behavior:**
+- ✅ Setup completes successfully despite errors
+- ✅ Created 5 new roles (AST, EET, ICT, JST, NZST) that had no conflicts
+- ✅ No duplicates created for failed conversions
+- ✅ Clear user feedback about what needs fixing
+- ✅ Re-running setup after fixing hierarchy successfully converts all 14 roles
+
 #### Next Steps for Fresh Instance
 
 1. **Test Fixed Conversion on Production Server**

@@ -919,14 +919,18 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
         };
       }
 
+      // Load DST state for enhanced descriptions
+      const { loadDSTState } = await import('./storage.js');
+      const dstState = await loadDSTState();
+
       // Get role objects and sort by UTC offset
       const timezoneRoles = [];
-      
+
       for (const [roleId, data] of timezoneEntries) {
         try {
           const role = await guild.roles.fetch(roleId);
           if (role) {
-            timezoneRoles.push({ role, offset: data.offset });
+            timezoneRoles.push({ role, offset: data.offset, data }); // Include data for timezoneId
           }
         } catch (error) {
           console.warn(`🚨 Skipping invalid timezone role ${roleId}:`, error.message);
@@ -955,13 +959,24 @@ async function createHotSwappableSelect(activeButton, targetMember, playerData, 
           placeholder: 'Select timezone',
           min_values: 0,
           max_values: 1,
-          options: timezoneRoles.map(({ role, offset }) => ({
-            label: role.name,
-            value: role.id,
-            description: `UTC${offset >= 0 ? '+' : ''}${offset}`,
-            emoji: { name: '🌍' },
-            default: currentTimezone?.id === role.id
-          }))
+          options: timezoneRoles.map(({ role, offset, data }) => {
+            // Use displayName from dstState if role has been converted to new system
+            let description;
+            if (data.timezoneId && dstState[data.timezoneId]) {
+              description = dstState[data.timezoneId].displayName;
+            } else {
+              // Fallback to UTC offset for legacy roles
+              description = `UTC${offset >= 0 ? '+' : ''}${offset}`;
+            }
+
+            return {
+              label: role.name,
+              value: role.id,
+              description,
+              emoji: { name: '🌍' },
+              default: currentTimezone?.id === role.id
+            };
+          })
         }]
       };
     }
