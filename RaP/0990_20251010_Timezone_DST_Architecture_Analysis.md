@@ -1,9 +1,13 @@
 # Timezone DST Architecture Analysis - REVISED
 
 **Date:** 2025-01-10 (Revised)
+**Last Updated:** 2025-01-27 (Added conversion visual guide reference)
 **Status:** Analysis Complete - Architecture Redesigned Based on Feedback
 **Complexity:** Medium (Single-Role Paradigm + Optional Auto-Toggle)
 **Risk Level:** LOW (Backwards Compatible, No Role Switching Required)
+
+**Related Documents:**
+- **[RaP 0989 - Timezone Conversion Visual Guide](0989_20250127_Timezone_Conversion_Visual_Guide.md)** - Detailed visual diagrams of conversion process, pattern matching rules, and Discord role operations (metadata-only vs physical consolidation)
 
 ---
 
@@ -2517,6 +2521,12 @@ const STANDARD_TIMEZONE_ROLES = [
   - [x] Toggle functionality ready for production
 
 ## 🔄 Many-to-Many Timezone Mapping (CRITICAL DESIGN - January 27, 2025)
+
+**📊 For detailed visual guide:** See [RaP 0989 - Timezone Conversion Visual Guide](0989_20250127_Timezone_Conversion_Visual_Guide.md)
+- Pattern matching rules with examples
+- Discord role name fetching flow
+- Metadata-only vs Physical consolidation options
+- Complete conversion algorithm with edge cases
 
 ### The Discovery: Player Role Assignments are Ephemeral
 

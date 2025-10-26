@@ -146,49 +146,183 @@ flowchart LR
     style Fail fill:#ff6b6b
 ```
 
-### Pattern Matching Rules
+### Pattern Matching Rules - Detailed Explanation
+
+**How Detection Works:**
+
+Pattern matching uses **TWO criteria** to identify timezones safely:
+1. **Name patterns** (fuzzy matching with common variations)
+2. **Offset validation** (ensures offset is in expected range)
+
+**Why both criteria?**
+- Prevents false positives (e.g., "MST" with offset -8 won't match Mountain Time)
+- Handles typos and variations (e.g., "Pacific", "pacific time", "PST")
+- Supports both seasonal variants (PST offset -8 OR PDT offset -7 both → PT)
+
+**Pattern Matching Logic:**
 
 ```javascript
 /**
  * Detection rules use BOTH name patterns AND offset ranges
  * This handles variations like "PST", "PST (UTC-8)", "Pacific"
+ *
+ * @param {string} roleName - Discord role name (fetched from API)
+ * @param {number} offset - Stored offset from playerData.json
+ * @returns {string|null} - timezoneId or null if unrecognized
  */
 function detectTimezoneId(roleName, offset) {
   const name = roleName.toLowerCase();
 
   // Pacific Time: offset -8 or -7, name contains PST/PDT/Pacific
+  // Matches: "PST", "PDT", "PST (UTC-8)", "Pacific Time", "pacific"
   if ((name.includes('pst') || name.includes('pdt') || name.includes('pacific'))
       && (offset === -8 || offset === -7)) {
     return 'PT';
   }
 
   // Mountain Time: offset -7 or -6, name contains MST/MDT/Mountain
+  // Matches: "MST", "MDT", "MST (UTC-7)", "Mountain Time", "mountain"
   if ((name.includes('mst') || name.includes('mdt') || name.includes('mountain'))
       && (offset === -7 || offset === -6)) {
     return 'MT';
   }
 
   // Central Time: offset -6 or -5, name contains CST/CDT/Central
+  // Matches: "CST", "CDT", "CST (UTC-6)", "Central Time", "central"
   if ((name.includes('cst') || name.includes('cdt') || name.includes('central'))
       && (offset === -6 || offset === -5)) {
     return 'CT';
   }
 
   // Eastern Time: offset -5 or -4, name contains EST/EDT/Eastern
+  // Matches: "EST", "EDT", "EST (UTC-5)", "Eastern Time", "eastern"
   if ((name.includes('est') || name.includes('edt') || name.includes('eastern'))
       && (offset === -5 || offset === -4)) {
     return 'ET';
   }
 
-  // GMT: offset 0, name contains GMT/UTC
-  if ((name.includes('gmt') || name.includes('utc')) && offset === 0) {
+  // Atlantic Time: offset -4 or -3, name contains AST/ADT/Atlantic
+  if ((name.includes('ast') || name.includes('adt') || name.includes('atlantic'))
+      && (offset === -4 || offset === -3)) {
+    return 'AT';
+  }
+
+  // Newfoundland Time: offset -3.5 or -2.5, name contains NST/NDT/Newfoundland
+  if ((name.includes('nst') || name.includes('ndt') || name.includes('newfoundland'))
+      && (offset === -3.5 || offset === -2.5)) {
+    return 'NT';
+  }
+
+  // GMT/UK: offset 0 or 1, name contains GMT/UTC/BST/British
+  if ((name.includes('gmt') || name.includes('utc') || name.includes('bst') || name.includes('british'))
+      && (offset === 0 || offset === 1)) {
     return 'GMT';
   }
 
-  // ... (continue for all 16 timezones)
+  // Central European Time: offset 1 or 2, name contains CET/CEST
+  if ((name.includes('cet') || name.includes('cest') || name.includes('central europe'))
+      && (offset === 1 || offset === 2)) {
+    return 'CET';
+  }
 
-  return null;  // Couldn't identify
+  // Eastern European Time: offset 2 or 3, name contains EET/EEST
+  if ((name.includes('eet') || name.includes('eest') || name.includes('eastern europe'))
+      && (offset === 2 || offset === 3)) {
+    return 'EET';
+  }
+
+  // South Africa: offset 2, name contains SAST/South Africa
+  if ((name.includes('sast') || name.includes('south africa'))
+      && offset === 2) {
+    return 'SAST';
+  }
+
+  // India: offset 5.5, name contains IST/India
+  if ((name.includes('ist') || name.includes('india'))
+      && offset === 5.5) {
+    return 'IST';
+  }
+
+  // Indochina: offset 7, name contains ICT/Bangkok/Vietnam
+  if ((name.includes('ict') || name.includes('bangkok') || name.includes('vietnam'))
+      && offset === 7) {
+    return 'ICT';
+  }
+
+  // GMT+8/Western Australia: offset 8, name contains GMT+8/AWST/Perth
+  if ((name.includes('gmt+8') || name.includes('awst') || name.includes('perth'))
+      && offset === 8) {
+    return 'GMT8';
+  }
+
+  // Japan: offset 9, name contains JST/Japan
+  if ((name.includes('jst') || name.includes('japan'))
+      && offset === 9) {
+    return 'JST';
+  }
+
+  // Australian Eastern: offset 10 or 11, name contains AEST/AEDT/Sydney/Melbourne
+  if ((name.includes('aest') || name.includes('aedt') || name.includes('sydney') || name.includes('melbourne'))
+      && (offset === 10 || offset === 11)) {
+    return 'AEST';
+  }
+
+  // New Zealand: offset 12 or 13, name contains NZST/NZDT/Auckland
+  if ((name.includes('nzst') || name.includes('nzdt') || name.includes('auckland') || name.includes('new zealand'))
+      && (offset === 12 || offset === 13)) {
+    return 'NZST';
+  }
+
+  // ❌ No pattern matched
+  return null;
 }
+```
+
+**Pattern Matching Examples:**
+
+| Role Name (Discord) | Offset | Detection Result | Why? |
+|---------------------|--------|------------------|------|
+| "PST (UTC-8)" | -8 | ✅ PT | Contains "pst", offset matches |
+| "PDT" | -7 | ✅ PT | Contains "pdt", offset matches |
+| "Pacific Time" | -8 | ✅ PT | Contains "pacific", offset matches |
+| "PST" | -7 | ✅ PT | Contains "pst", offset -7 valid for PT |
+| "MST" | -8 | ❌ null | Contains "mst" but offset wrong (-8 not valid for MT) |
+| "Aussie Time" | 10 | ❌ null | No matching pattern |
+| "UTC-5" | -5 | ❌ null | No timezone name pattern (just offset) |
+
+**What Happens with "Unknown Role Pattern":**
+
+An "unknown role pattern" means:
+- ❌ Role name doesn't match any timezone keyword
+- OR ❌ Role name matches but offset is invalid
+- OR ❌ Role name is too generic (e.g., "Timezone A")
+
+**What happens to unknown roles:**
+```javascript
+// In convertExistingTimezones():
+if (timezoneId) {
+  // ✅ Converted successfully
+  tzData.timezoneId = timezoneId;
+  results.mapped.push({ roleId, roleName, timezoneId });
+} else {
+  // ⚠️ Unknown pattern - NOT converted
+  results.unmapped.push({ roleId, roleName, offset });
+  // Role stays in playerData with ONLY offset (legacy mode)
+  // System continues working, just without DST toggle
+}
+```
+
+**Conversion report shows:**
+```
+✅ Mapped 8 roles to timezone IDs
+⚠️ 2 roles need manual review:
+  - Role: "Aussie Time" (offset: 10)
+  - Role: "UTC-5" (offset: -5)
+
+Admin can:
+1. Ignore (players still see correct time using legacy offset)
+2. Rename role to match pattern (e.g., "Aussie Time" → "AEST")
+3. Re-run setup to convert after rename
 ```
 
 ---
@@ -389,6 +523,92 @@ Mapping breakdown:
 
 Total players affected: 43
 ⚠️ No unrecognized roles found
+```
+
+### Discord Role Name Fetching - Critical Implementation Detail
+
+**Important:** CastBot does NOT store Discord role names in playerData.json by design. This is intentional architecture:
+
+**Why role names aren't stored:**
+- ✅ Single source of truth (Discord API)
+- ✅ Handles role renames automatically
+- ✅ Smaller data storage footprint
+- ✅ No sync issues between CastBot and Discord
+
+**How conversion fetches role names:**
+
+```javascript
+async function convertExistingTimezones(guild) {
+  const playerData = await loadPlayerData();
+  const timezones = playerData[guild.id]?.timezones || {};
+
+  for (const [roleId, tzData] of Object.entries(timezones)) {
+    // Step 1: Fetch role details from Discord API
+    const role = await guild.roles.fetch(roleId).catch(() => null);
+
+    if (!role) {
+      // Role was deleted from Discord
+      console.log(`⚠️ Role ${roleId} no longer exists, skipping`);
+      continue;
+    }
+
+    // Step 2: Use role.name (fetched from Discord) for detection
+    const timezoneId = detectTimezoneId(role.name, tzData.offset);
+    //                                    ^^^^^^^^^ From Discord API
+
+    // Step 3: Add timezoneId to playerData
+    if (timezoneId) {
+      tzData.timezoneId = timezoneId;
+    }
+  }
+
+  await savePlayerData(playerData);
+}
+```
+
+**Data flow:**
+
+```mermaid
+sequenceDiagram
+    participant PD as playerData.json
+    participant Convert as convertExistingTimezones()
+    participant Discord as Discord API
+
+    PD->>Convert: Role ID: 1234567890<br/>offset: -8
+    Note over PD: ❌ No role name stored
+
+    Convert->>Discord: fetch(roleId: 1234567890)
+    Discord-->>Convert: Role object:<br/>{<br/>  id: "1234567890",<br/>  name: "PST (UTC-8)",<br/>  members: 12<br/>}
+
+    Convert->>Convert: detectTimezoneId("PST (UTC-8)", -8)
+    Convert->>Convert: Result: "PT"
+
+    Convert->>PD: Update:<br/>{<br/>  offset: -8,<br/>  timezoneId: "PT"<br/>}
+
+    rect rgb(81, 207, 102)
+        Note over PD: ✅ timezoneId added<br/>Role name NOT stored
+    end
+```
+
+**Edge case: Deleted roles**
+
+```javascript
+// Conversion handles deleted roles gracefully
+const role = await guild.roles.fetch(roleId).catch(() => null);
+
+if (!role) {
+  results.deleted.push({ roleId, offset: tzData.offset });
+  continue;  // Skip this role, don't crash
+}
+```
+
+**Conversion report includes deleted roles:**
+```
+🔄 Conversion Results:
+✅ Mapped 5 roles
+⚠️ 1 deleted role found:
+  - Role ID 1234567899 (offset: -7) - no longer exists in Discord
+  → Recommend: Remove from CastBot via setup cleanup
 ```
 
 ---
@@ -611,6 +831,252 @@ Before deploying conversion to production, verify:
 - ✅ **playerManagement.js:72-91** - Dual-mode time calculation
 - ✅ **castlistV2.js:389-423, 602-637** - DST-aware time display
 - ✅ **storage.js** - getDSTOffset() and loadDSTState()
+
+---
+
+## 🔄 Discord Role Operations: Metadata vs Physical Consolidation
+
+### CRITICAL DESIGN DECISION REQUIRED
+
+This section clarifies TWO DIFFERENT approaches to conversion. **We must choose which one to implement:**
+
+---
+
+### Option A: Metadata-Only Conversion (CURRENT DESIGN - LOW RISK)
+
+**What happens:**
+- ✅ Discord roles kept EXACTLY as-is ("PST", "PDT" remain separate)
+- ✅ Only playerData.json updated (add `timezoneId` field)
+- ✅ No Discord API role modifications
+- ✅ Players keep their current role assignments
+
+**Visual representation:**
+
+```mermaid
+graph TB
+    subgraph Discord["Discord Server (UNCHANGED)"]
+        R1["Role: PST<br/>12 players assigned"]
+        R2["Role: PDT<br/>8 players assigned"]
+    end
+
+    subgraph PlayerData["playerData.json (UPDATED)"]
+        M1["roleId_PST:<br/>{offset: -8, timezoneId: 'PT'}"]
+        M2["roleId_PDT:<br/>{offset: -7, timezoneId: 'PT'}"]
+    end
+
+    subgraph DST["dstState.json"]
+        PT["PT: currentOffset varies<br/>(DST toggle changes this)"]
+    end
+
+    R1 --> M1
+    R2 --> M2
+    M1 --> PT
+    M2 --> PT
+
+    style Discord fill:#ffd43b
+    style PlayerData fill:#51cf66
+    style PT fill:#51cf66
+```
+
+**Conversion code (simplified):**
+```javascript
+// NO Discord API modifications!
+async function convertExistingTimezones_MetadataOnly(guild) {
+  const timezones = playerData[guild.id].timezones;
+
+  for (const [roleId, tzData] of Object.entries(timezones)) {
+    const role = await guild.roles.fetch(roleId);  // Read-only
+    const timezoneId = detectTimezoneId(role.name, tzData.offset);
+
+    if (timezoneId) {
+      // ONLY update playerData, NOT Discord
+      tzData.timezoneId = timezoneId;
+    }
+  }
+
+  await savePlayerData(playerData);
+  // Discord roles completely untouched!
+}
+```
+
+**Pros:**
+- ✅ **Zero Discord disruption** - Roles never change
+- ✅ **Instant rollback** - Just remove timezoneId field
+- ✅ **No permission issues** - Don't need MANAGE_ROLES
+- ✅ **Players unaffected** - Keep existing assignments
+- ✅ **Safe to test** - Can't break anything
+
+**Cons:**
+- ❌ **Messy role list** - Server still has PST + PDT roles
+- ❌ **Confusing for admins** - Which role to assign?
+- ❌ **No visual cleanup** - Old dual-role structure visible
+
+**When to use:**
+- Initial rollout (minimize risk)
+- Servers with complex role hierarchies
+- Servers where admin doesn't want role changes
+
+---
+
+### Option B: Physical Role Consolidation (HIGH RISK - NOT YET DESIGNED)
+
+**What happens:**
+- 🔄 Discord roles renamed/consolidated via API
+- 🔄 "PST" + "PDT" → single "PST / PDT" role
+- 🔄 Players migrated to new role
+- 🔄 Old roles optionally deleted
+
+**Visual representation:**
+
+```mermaid
+flowchart TB
+    subgraph Before["BEFORE: Discord Server"]
+        B1["Role: PST<br/>12 players"]
+        B2["Role: PDT<br/>8 players"]
+    end
+
+    subgraph Process["Conversion Process"]
+        C1[Rename PST → 'PST / PDT']
+        C2[Migrate PDT players → PST]
+        C3[Delete PDT role]
+    end
+
+    subgraph After["AFTER: Discord Server"]
+        A1["Role: PST / PDT<br/>20 players (merged!)"]
+    end
+
+    Before --> Process
+    Process --> After
+
+    style Before fill:#ff6b6b
+    style Process fill:#ffd43b
+    style After fill:#51cf66
+```
+
+**Conversion code (conceptual - NOT IMPLEMENTED):**
+```javascript
+// ⚠️ HIGH RISK - Modifies Discord directly!
+async function convertExistingTimezones_PhysicalConsolidation(guild) {
+  const consolidationPlan = {
+    PT: { roles: ['PST', 'PDT'], target: 'PST / PDT' },
+    MT: { roles: ['MST', 'MDT'], target: 'MST / MDT' },
+    // ...
+  };
+
+  for (const [tzId, plan] of Object.entries(consolidationPlan)) {
+    // Step 1: Find roles to consolidate
+    const rolesToMerge = [];
+    for (const roleName of plan.roles) {
+      const role = guild.roles.cache.find(r => r.name === roleName);
+      if (role) rolesToMerge.push(role);
+    }
+
+    if (rolesToMerge.length === 0) continue;
+
+    // Step 2: Create or rename to new standard name
+    let targetRole = guild.roles.cache.find(r => r.name === plan.target);
+
+    if (!targetRole) {
+      // Option 2a: Rename first role
+      targetRole = rolesToMerge[0];
+      await targetRole.setName(plan.target);
+    }
+
+    // Step 3: Migrate players from other roles
+    for (const oldRole of rolesToMerge.slice(1)) {
+      for (const member of oldRole.members.values()) {
+        await member.roles.add(targetRole);
+        await member.roles.remove(oldRole);
+      }
+
+      // Step 4: Delete old role (DESTRUCTIVE!)
+      await oldRole.delete('Timezone consolidation');
+    }
+
+    // Step 5: Update playerData
+    playerData[guild.id].timezones[targetRole.id] = {
+      offset: tzData.standardOffset,
+      timezoneId: tzId
+    };
+  }
+}
+```
+
+**Pros:**
+- ✅ **Clean role list** - Only "PST / PDT" visible
+- ✅ **Clear for admins** - One role per timezone
+- ✅ **Visual consistency** - Matches new standard
+- ✅ **Eliminates confusion** - No more "which role to pick?"
+
+**Cons:**
+- ❌ **HIGH RISK** - Role deletion is irreversible
+- ❌ **Player migration complexity** - Must reassign all players
+- ❌ **Audit log spam** - Every player gets role change notification
+- ❌ **Slow operation** - Discord rate limits (50 changes/sec)
+- ❌ **Requires MANAGE_ROLES permission** - CastBot might not have it
+- ❌ **Rollback difficult** - Can't undo role deletion
+- ❌ **Edge cases:** Role position/permissions/color lost during migration
+
+**Critical risks:**
+1. **Role hierarchy preserved?** - If PST is above/below PDT, which position wins?
+2. **Role permissions?** - Does PST have special permissions that PDT doesn't?
+3. **Role color?** - PST might be red, PDT blue - which color to keep?
+4. **Concurrent changes?** - What if admin renames role during conversion?
+5. **Partial failure?** - What if 500 player migrations, 250 succeed then Discord rate limit hits?
+
+**When to use:**
+- ONLY after extensive testing
+- Servers that explicitly request cleanup
+- With admin confirmation dialog first
+
+---
+
+### Comparison Table
+
+| Aspect | Option A: Metadata-Only | Option B: Physical Consolidation |
+|--------|-------------------------|-----------------------------------|
+| **Discord roles** | Unchanged | Renamed/deleted |
+| **Player assignments** | Unchanged | Migrated |
+| **Risk level** | LOW | HIGH |
+| **Rollback** | Easy (remove field) | Hard (can't restore deleted roles) |
+| **Implementation time** | 30 minutes | 2-3 hours + extensive testing |
+| **Permissions required** | None (read-only) | MANAGE_ROLES |
+| **Visual cleanup** | No | Yes |
+| **Testing needed** | Minimal | Extensive |
+| **Recommended for** | Initial rollout | Future enhancement (optional) |
+
+---
+
+### Recommendation: Start with Option A, Optionally Add Option B Later
+
+**Phase 2b Implementation Plan:**
+1. **IMPLEMENT:** Option A (metadata-only) - Safe, fast, reversible
+2. **DEPLOY:** Test on production servers
+3. **EVALUATE:** Gather feedback on messy role lists
+4. **DECIDE:** If needed, design Option B as separate feature
+
+**If implementing Option B later:**
+- Make it **opt-in** via button in Production Menu
+- Show **preview of changes** before executing
+- Require **explicit admin confirmation**
+- Add **progress tracking** (X of Y players migrated)
+- Include **error recovery** (partial migration handling)
+
+---
+
+### Question for Reece: Which Option Did You Expect?
+
+Based on your comment:
+> "my expectation is that if a server had a role called 'PST' and another role called 'PDT (UTC-7)', CastBot would interact with the discord API to update both to our new standard (PST / PDT from memory)"
+
+**This sounds like you're expecting Option B** (physical consolidation), but the document so far describes **Option A** (metadata-only).
+
+**Clarifying questions:**
+1. **Do you want Discord roles renamed?** (PST → PST / PDT)
+2. **Do you want old roles deleted?** (Delete PDT after migrating players)
+3. **Or is metadata-only acceptable?** (Keep PST, PDT separate, just link to same timezoneId)
+
+**My recommendation:** Start with Option A (metadata-only) for safety, then add Option B as optional cleanup feature if desired.
 
 ---
 
