@@ -97,6 +97,109 @@
 4. **Preview mode** - Always show changes before applying
 5. **Rollback plan** - Can restore from old roles if needed
 
+---
+
+## 🚀 IMPLEMENTATION STATUS (January 2025)
+
+### ✅ Phase 1: Timezone Conversion System - IMPLEMENTED
+
+**Date Completed:** 2025-01-27
+**Git Commit:** `a752e3b6` - "Implement timezone conversion system"
+
+#### What Was Built
+
+**Core Functions Added to roleManager.js:**
+
+1. **`detectTimezoneId(roleName, offset)`** (lines 576-684)
+   - Detects timezone ID from legacy role names using dual validation
+   - Pattern matching: "PST", "PDT", "PST (UTC-8)" → "PT"
+   - Offset validation: Prevents false matches (e.g., "MST" with -8 offset won't match)
+   - Supports all 16 timezones in production
+
+2. **`convertExistingTimezones(guild, currentTimezones)`** (lines 686-765)
+   - Renames Discord roles via `role.setName()` to match dstState.json format
+   - Adds metadata: `timezoneId`, `dstObserved`, `standardName`
+   - Rate-limited: 200ms delay between renames
+   - Returns: `{ renamed, unchanged, unmapped, failed }`
+   - **CRITICAL:** Idempotent - skips roles with existing `timezoneId`
+
+3. **Enhanced `executeSetup()`** (lines 774-832)
+   - Runs conversion BEFORE creating new roles
+   - Tracks conversion results in new fields
+   - Prevents duplicate processing
+
+4. **Enhanced Setup Response** (lines 1141-1201)
+   - Shows "🔄 Converted to DST-Aware Standard" section
+   - Lists rename details: `"PST (UTC-8)" → "PST / PDT"`
+   - Warnings for unmapped/failed conversions
+
+#### Testing Results
+
+**✅ WORKING: Fresh Server (No Existing Roles)**
+- Creates all 16 standard roles with new format
+- Shows "✅ Newly Created Timezone Roles" section
+- All metadata properly set
+
+**⚠️ POTENTIAL ISSUES: Existing Server Migration**
+- User reported "happy path works with fresh server"
+- User noted "possible bugs with existing ones that we need to work through"
+- **NOT YET TESTED THOROUGHLY** with legacy servers
+
+#### Known Edge Cases to Test
+
+1. **Duplicate Role Names After Conversion**
+   - Server has both "PST" and "PDT" roles
+   - Expected: Both renamed to "PST / PDT" (Discord allows this)
+   - Needs testing: Does conversion handle both correctly?
+
+2. **Mixed Old/New Roles**
+   - Server has "PST (UTC-8)" (old) and "EST / EDT" (new)
+   - Expected: Converts old, detects new as already correct
+   - Needs testing: Verify no duplicate entries in response
+
+3. **Unrecognized Patterns**
+   - Custom timezone names like "My Timezone"
+   - Expected: Logged to `unmapped[]` with warning
+   - Needs testing: Verify graceful handling
+
+4. **Missing Permissions**
+   - Bot lacks MANAGE_ROLES permission
+   - Expected: Conversion fails, logs error to `conversionFailed[]`
+   - Needs testing: Verify graceful degradation
+
+#### Files Modified
+
+- `/home/reece/castbot/roleManager.js` - Added conversion system
+- `/home/reece/castbot/dstState.json` - Already exists (global timezone definitions)
+- `/home/reece/castbot/playerData.json` - Schema updated (adds `timezoneId` field)
+
+#### Next Steps for Fresh Instance
+
+1. **Test Conversion on Production Server**
+   - Pick server with legacy timezone roles
+   - Run `/menu` → Production Menu → Initial Setup
+   - Verify conversion response shows renamed roles
+   - Check Discord roles actually renamed
+   - Verify playerData.json has `timezoneId` fields
+
+2. **Debug Any Conversion Issues**
+   - Check logs: `tail -f /tmp/castbot-dev.log | grep "timezone"`
+   - Look for: `🔄 Renamed role`, `❌ Could not detect`, `⚠️ Role no longer exists`
+   - Fix detection patterns if needed
+
+3. **Implement DST Toggle System** (Phase 2)
+   - Create manual toggle button in reece_stuff_menu
+   - Use modal with Role Select + String Select (Standard/Daylight)
+   - Update all servers with selected timezone
+   - Update `offset` field (not just `currentOffset`)
+
+4. **Update Time Calculation Code** (Phase 3)
+   - Modify playerManagement.js to read from dstState.json
+   - Fallback to `offset` field for backwards compat
+   - Test time display accuracy
+
+---
+
 ## 🤔 The Problem (Revised Understanding)
 
 CastBot's timezone system currently creates **separate Discord roles for standard and daylight saving time** (EST vs EDT, CST vs CDT), forcing users to manually switch roles twice a year OR admins to manually update role assignments.

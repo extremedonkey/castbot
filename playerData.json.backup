@@ -264,6 +264,102 @@
       },
       "1328044491860607118": {
         "offset": 10
+      },
+      "1431904575392186448": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)",
+        "timezoneId": "PT"
+      },
+      "1431904577149472819": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1431904579179774045": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
+      },
+      "1431904581360681030": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
+      },
+      "1431904583122161726": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1431904586062495794": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
+      },
+      "1431904587991879682": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
+      },
+      "1431904589854146701": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
+      },
+      "1431904591611433001": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
+      },
+      "1431904593599795200": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
+      },
+      "1431904595428249621": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
+      },
+      "1431904597546504304": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
+      },
+      "1431904601661247530": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
+      },
+      "1431904603489833151": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
+      },
+      "1431904605989765132": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1431904608141443203": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
       }
     },
     "pronounRoleIDs": [
@@ -5868,10 +5964,138 @@
       }
     },
     "tribes": {},
-    "timezones": {},
-    "pronounRoleIDs": [],
+    "timezones": {
+      "1431928292985933906": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)",
+        "timezoneId": "PT"
+      },
+      "1431928294714118325": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1431928296383451177": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
+      },
+      "1431928298199322625": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
+      },
+      "1431928300090949683": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1431928301831585915": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
+      },
+      "1431928303887061033": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
+      },
+      "1431928305606721687": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
+      },
+      "1431928306957287457": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
+      },
+      "1431928309490647040": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
+      },
+      "1431928310887092245": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
+      },
+      "1431928313353601106": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
+      },
+      "1431928315018608711": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
+      },
+      "1431928316792934482": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
+      },
+      "1431928318415994880": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1431928320236322967": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
+      }
+    },
+    "pronounRoleIDs": [
+      "1431928276477280257",
+      "1431928278469447791",
+      "1431928280415473694",
+      "1431928282512625786",
+      "1431928284861567016",
+      "1431928286153277441",
+      "1431928288565137542",
+      "1431928290662420573"
+    ],
     "firstInstalled": 1758548256348,
-    "installationMethod": "command"
+    "installationMethod": "command",
+    "castlistConfigs": {
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1761468862204,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1761468862216,
+        "modifiedBy": "system"
+      }
+    }
   },
   "1420100181017231563": {
     "serverName": "Pokévivor",
@@ -8532,9 +8756,125 @@
   },
   "1400065575090389045": {
     "players": {},
-    "tribes": {},
-    "timezones": {},
-    "pronounRoleIDs": [],
+    "tribes": {
+      "1431679081287647232": {
+        "name": "Tribe 1431679081287647232",
+        "emoji": "🏕️",
+        "color": null,
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "Active Castlist"
+      }
+    },
+    "timezones": {
+      "1431679076254355567": {
+        "offset": -8,
+        "dstObserved": true,
+        "standardName": "PST (UTC-8)",
+        "timezoneId": "PT"
+      },
+      "1431679079605735539": {
+        "offset": -7,
+        "dstObserved": true,
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
+      },
+      "1431679081287647232": {
+        "offset": -6,
+        "dstObserved": true,
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
+      },
+      "1431679082839543821": {
+        "offset": -5,
+        "dstObserved": true,
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
+      },
+      "1431679085343674388": {
+        "offset": -4,
+        "dstObserved": true,
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
+      },
+      "1431679087281307788": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
+      },
+      "1431679089051172904": {
+        "offset": 0,
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
+      },
+      "1431679090716573766": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
+      },
+      "1431679092125728943": {
+        "offset": 2,
+        "dstObserved": true,
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
+      },
+      "1431679094218690712": {
+        "offset": 2,
+        "dstObserved": false,
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
+      },
+      "1431679096093540413": {
+        "offset": 5.5,
+        "dstObserved": false,
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
+      },
+      "1431679098203275414": {
+        "offset": 7,
+        "dstObserved": false,
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
+      },
+      "1431679100094906420": {
+        "offset": 8,
+        "dstObserved": false,
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
+      },
+      "1431679101818638498": {
+        "offset": 9,
+        "dstObserved": false,
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
+      },
+      "1431679103563464845": {
+        "offset": 10,
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
+      },
+      "1431679105753022474": {
+        "offset": 12,
+        "dstObserved": true,
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
+      }
+    },
+    "pronounRoleIDs": [
+      "1431927276555206748",
+      "1431927278383661147",
+      "1431927285627224135",
+      "1431927287636562052",
+      "1431927289725059163",
+      "1431927291562168373",
+      "1431927293575696395",
+      "1431927295752409188"
+    ],
     "serverName": "CastBot Regression Pink",
     "icon": "https://cdn.discordapp.com/icons/1400065575090389045/bd1ee1bc1ff3abca14f2d2ba9455716f.webp",
     "ownerId": "391415444084490240",
@@ -8552,7 +8892,54 @@
       "discriminator": "0",
       "tag": "extremedonkey"
     },
-    "analyticsVersion": "1.0"
+    "analyticsVersion": "1.0",
+    "reactionMappings": {
+      "1431927492901343333": {
+        "mapping": {
+          "1️⃣": "1431679103563464845",
+          "2️⃣": "1431679085343674388",
+          "3️⃣": "1431679090716573766",
+          "4️⃣": "1431679081287647232",
+          "5️⃣": "1431679092125728943",
+          "6️⃣": "1431679082839543821",
+          "7️⃣": "1431679089051172904",
+          "8️⃣": "1431679100094906420",
+          "9️⃣": "1431679098203275414",
+          "🔟": "1431679096093540413",
+          "🇦": "1431679101818638498",
+          "🇧": "1431679079605735539",
+          "🇨": "1431679087281307788",
+          "🇩": "1431679105753022474",
+          "🇪": "1431679076254355567",
+          "🇫": "1431679094218690712",
+          "isTimezone": true
+        },
+        "createdAt": 1761468528347,
+        "lastAccessed": 1761468528347
+      }
+    },
+    "castlistConfigs": {
+      "default": {
+        "id": "default",
+        "name": "Active Castlist",
+        "type": "system",
+        "createdAt": 1761468582847,
+        "createdBy": "system",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Select if you don't know what you're doing. Castlist for active phase of the game.",
+          "emoji": "📋",
+          "isDefault": true
+        },
+        "modifiedAt": 1761468582864,
+        "modifiedBy": "system"
+      }
+    }
   },
   "1431897593771982870": {
     "serverName": "Emerald CastBot TST",
