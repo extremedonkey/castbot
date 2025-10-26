@@ -706,9 +706,20 @@ async function convertExistingTimezones(guild, currentTimezones) {
     };
 
     for (const [roleId, tzData] of Object.entries(currentTimezones)) {
-        // Skip if already converted (has timezoneId)
+        // Skip if already converted (has timezoneId) but track it in results
         if (tzData.timezoneId) {
-            console.log(`✅ Role ${roleId} already has timezoneId: ${tzData.timezoneId}, skipping conversion`);
+            console.log(`✅ Role ${roleId} already has timezoneId: ${tzData.timezoneId}, already converted`);
+
+            // Fetch role name for display purposes
+            const role = await guild.roles.fetch(roleId).catch(() => null);
+            if (role) {
+                results.unchanged.push({
+                    roleId,
+                    name: role.name,
+                    timezoneId: tzData.timezoneId,
+                    alreadyConverted: true  // Flag to indicate this was already done
+                });
+            }
             continue;
         }
 
