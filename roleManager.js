@@ -574,15 +574,206 @@ function checkRoleHierarchy(guild, role) {
 }
 
 /**
+ * Detect timezone ID from role name and offset
+ * Uses both name patterns AND offset validation for safety
+ * @param {string} roleName - Discord role name (fetched from API)
+ * @param {number} offset - Stored offset from playerData.json
+ * @returns {string|null} - timezoneId (e.g., "PT", "MT") or null if unrecognized
+ */
+function detectTimezoneId(roleName, offset) {
+    const name = roleName.toLowerCase();
+
+    // Pacific Time: offset -8 or -7, name contains PST/PDT/Pacific
+    if ((name.includes('pst') || name.includes('pdt') || name.includes('pacific'))
+        && (offset === -8 || offset === -7)) {
+        return 'PT';
+    }
+
+    // Mountain Time: offset -7 or -6, name contains MST/MDT/Mountain
+    if ((name.includes('mst') || name.includes('mdt') || name.includes('mountain'))
+        && (offset === -7 || offset === -6)) {
+        return 'MT';
+    }
+
+    // Central Time: offset -6 or -5, name contains CST/CDT/Central
+    if ((name.includes('cst') || name.includes('cdt') || name.includes('central'))
+        && (offset === -6 || offset === -5)) {
+        return 'CT';
+    }
+
+    // Eastern Time: offset -5 or -4, name contains EST/EDT/Eastern
+    if ((name.includes('est') || name.includes('edt') || name.includes('eastern'))
+        && (offset === -5 || offset === -4)) {
+        return 'ET';
+    }
+
+    // Atlantic Time: offset -4 or -3, name contains AST/ADT/Atlantic
+    if ((name.includes('ast') || name.includes('adt') || name.includes('atlantic'))
+        && (offset === -4 || offset === -3)) {
+        return 'AT';
+    }
+
+    // Newfoundland Time: offset -3.5 or -2.5, name contains NST/NDT/Newfoundland
+    if ((name.includes('nst') || name.includes('ndt') || name.includes('newfoundland'))
+        && (offset === -3.5 || offset === -2.5)) {
+        return 'NT';
+    }
+
+    // GMT/UK: offset 0 or 1, name contains GMT/UTC/BST/British
+    if ((name.includes('gmt') || name.includes('utc') || name.includes('bst') || name.includes('british'))
+        && (offset === 0 || offset === 1)) {
+        return 'GMT';
+    }
+
+    // Central European Time: offset 1 or 2, name contains CET/CEST
+    if ((name.includes('cet') || name.includes('cest') || name.includes('central europe'))
+        && (offset === 1 || offset === 2)) {
+        return 'CET';
+    }
+
+    // Eastern European Time: offset 2 or 3, name contains EET/EEST
+    if ((name.includes('eet') || name.includes('eest') || name.includes('eastern europe'))
+        && (offset === 2 || offset === 3)) {
+        return 'EET';
+    }
+
+    // South Africa: offset 2, name contains SAST/South Africa
+    if ((name.includes('sast') || name.includes('south africa'))
+        && offset === 2) {
+        return 'SAST';
+    }
+
+    // India: offset 5.5, name contains IST/India
+    if ((name.includes('ist') || name.includes('india'))
+        && offset === 5.5) {
+        return 'IST';
+    }
+
+    // Indochina: offset 7, name contains ICT/Bangkok/Vietnam
+    if ((name.includes('ict') || name.includes('bangkok') || name.includes('vietnam'))
+        && offset === 7) {
+        return 'ICT';
+    }
+
+    // GMT+8/Western Australia: offset 8, name contains GMT+8/AWST/Perth
+    if ((name.includes('gmt+8') || name.includes('awst') || name.includes('perth'))
+        && offset === 8) {
+        return 'GMT8';
+    }
+
+    // Japan: offset 9, name contains JST/Japan
+    if ((name.includes('jst') || name.includes('japan'))
+        && offset === 9) {
+        return 'JST';
+    }
+
+    // Australian Eastern: offset 10 or 11, name contains AEST/AEDT/Sydney/Melbourne
+    if ((name.includes('aest') || name.includes('aedt') || name.includes('sydney') || name.includes('melbourne'))
+        && (offset === 10 || offset === 11)) {
+        return 'AEST';
+    }
+
+    // New Zealand: offset 12 or 13, name contains NZST/NZDT/Auckland
+    if ((name.includes('nzst') || name.includes('nzdt') || name.includes('nzt') || name.includes('auckland') || name.includes('new zealand'))
+        && (offset === 12 || offset === 13)) {
+        return 'NZST';
+    }
+
+    // No pattern matched
+    return null;
+}
+
+/**
+ * Convert existing timezone roles to new DST-aware standard
+ * - Renames Discord roles to match dstState.json roleFormat
+ * - Adds timezoneId to playerData entries
+ * - Does NOT delete roles, does NOT migrate players
+ * @param {Guild} guild - Discord guild object
+ * @param {Object} currentTimezones - Existing timezone data from playerData
+ * @returns {Object} Conversion results { renamed, unchanged, unmapped, failed }
+ */
+async function convertExistingTimezones(guild, currentTimezones) {
+    console.log(`🔄 Starting timezone conversion for guild ${guild.id}`);
+
+    const dstState = await loadDSTState();
+
+    const results = {
+        renamed: [],      // Roles renamed successfully
+        unchanged: [],    // Role name already correct
+        unmapped: [],     // Couldn't detect timezone
+        failed: []        // API error during rename
+    };
+
+    for (const [roleId, tzData] of Object.entries(currentTimezones)) {
+        // Skip if already converted (has timezoneId)
+        if (tzData.timezoneId) {
+            console.log(`✅ Role ${roleId} already has timezoneId: ${tzData.timezoneId}, skipping conversion`);
+            continue;
+        }
+
+        // Step 1: Fetch role from Discord API
+        const role = await guild.roles.fetch(roleId).catch(() => null);
+        if (!role) {
+            console.log(`⚠️ Role ${roleId} no longer exists in Discord, skipping`);
+            continue;
+        }
+
+        // Step 2: Detect timezone from name + offset
+        const timezoneId = detectTimezoneId(role.name, tzData.offset);
+        if (!timezoneId) {
+            results.unmapped.push({ roleId, name: role.name, offset: tzData.offset });
+            console.log(`❌ Could not detect timezone for role "${role.name}" (offset: ${tzData.offset})`);
+            continue;
+        }
+
+        // Step 3: Look up new role name from dstState.json
+        const newRoleName = dstState[timezoneId].roleFormat;
+
+        // Step 4: Rename role if needed
+        if (role.name !== newRoleName) {
+            try {
+                await role.setName(newRoleName);
+                console.log(`🔄 Renamed role: "${role.name}" → "${newRoleName}" (ID: ${roleId})`);
+                results.renamed.push({
+                    roleId,
+                    oldName: role.name,
+                    newName: newRoleName,
+                    timezoneId
+                });
+
+                // Add rate limit delay to avoid Discord rate limits
+                await new Promise(resolve => setTimeout(resolve, 200));
+            } catch (error) {
+                console.error(`❌ Failed to rename role ${roleId}:`, error);
+                results.failed.push({ roleId, name: role.name, error: error.message });
+                continue;
+            }
+        } else {
+            results.unchanged.push({ roleId, name: role.name, timezoneId });
+            console.log(`✅ Role "${role.name}" already has correct name`);
+        }
+
+        // Step 5: Add metadata to tzData (will be saved by updateCastBotStorage)
+        tzData.timezoneId = timezoneId;
+        tzData.dstObserved = dstState[timezoneId].dstObserved;
+        tzData.standardName = dstState[timezoneId].standardName;
+    }
+
+    console.log(`✅ Conversion complete: ${results.renamed.length} renamed, ${results.unchanged.length} unchanged, ${results.unmapped.length} unmapped, ${results.failed.length} failed`);
+
+    return results;
+}
+
+/**
  * Execute comprehensive setup process for pronouns and timezones
- * Handles role creation, existing role detection, and CastBot integration
+ * Handles role creation, existing role detection, timezone conversion, and CastBot integration
  * @param {string} guildId - Discord guild ID
  * @param {Guild} guild - Discord guild object
  * @returns {Object} Detailed setup results for user feedback
  */
 async function executeSetup(guildId, guild) {
     console.log(`🔍 DEBUG: Starting role setup for guild ${guildId}`);
-    
+
     const results = {
         pronouns: {
             created: [],
@@ -596,7 +787,11 @@ async function executeSetup(guildId, guild) {
             existingAdded: [],
             alreadyInCastBot: [],
             failed: [],
-            hierarchyWarnings: []
+            hierarchyWarnings: [],
+            // NEW: Conversion tracking
+            converted: [],    // Roles renamed from old format to new standard
+            unmapped: [],     // Roles that couldn't be detected/converted
+            conversionFailed: []  // Roles that failed during rename
         }
     };
 
@@ -604,6 +799,37 @@ async function executeSetup(guildId, guild) {
     const playerData = await loadPlayerData();
     const currentPronounIds = playerData[guildId]?.pronounRoleIDs || [];
     const currentTimezones = playerData[guildId]?.timezones || {};
+
+    // NEW: Run conversion on existing timezone roles BEFORE creating new ones
+    if (Object.keys(currentTimezones).length > 0) {
+        console.log(`🔄 Found ${Object.keys(currentTimezones).length} existing timezone roles, running conversion...`);
+        const conversionResults = await convertExistingTimezones(guild, currentTimezones);
+
+        // Store conversion results for user feedback
+        results.timezones.converted = conversionResults.renamed;
+        results.timezones.unmapped = conversionResults.unmapped;
+        results.timezones.conversionFailed = conversionResults.failed;
+
+        // Mark converted roles as "already in CastBot" (they now have timezoneId)
+        conversionResults.renamed.forEach(conv => {
+            results.timezones.alreadyInCastBot.push({
+                id: conv.roleId,
+                name: conv.newName,
+                timezoneId: conv.timezoneId,
+                converted: true  // Flag to show this was converted
+            });
+        });
+
+        // Mark unchanged roles as "already in CastBot" too
+        conversionResults.unchanged.forEach(unc => {
+            results.timezones.alreadyInCastBot.push({
+                id: unc.roleId,
+                name: unc.name,
+                timezoneId: unc.timezoneId,
+                converted: false  // Already had correct name
+            });
+        });
+    }
 
     // Process pronoun roles
     console.log('🔍 DEBUG: Processing pronoun roles...');
@@ -677,43 +903,29 @@ async function executeSetup(guildId, guild) {
         }
     }
 
-    // Process timezone roles
+    // Process timezone roles - create missing roles with new standard names
     console.log('🔍 DEBUG: Processing timezone roles...');
     for (const timezone of STANDARD_TIMEZONE_ROLES) {
         try {
             const existingRole = guild.roles.cache.find(r => r.name === timezone.name);
-            
+
             if (existingRole) {
-                // Role exists in Discord - check if it's already in CastBot
+                // Role exists in Discord with correct name - check if it's already in CastBot
                 if (currentTimezones[existingRole.id]) {
-                    console.log(`✅ DEBUG: Timezone role ${timezone.name} already in CastBot`);
-                    
-                    // Check hierarchy even for existing roles but don't store canManage in results
-                    const hierarchyCheck = checkRoleHierarchy(guild, existingRole);
-                    
-                    results.timezones.alreadyInCastBot.push({
-                        ...timezone,
-                        id: existingRole.id
-                    });
-                    
-                    if (!hierarchyCheck.canManage) {
-                        results.timezones.hierarchyWarnings.push({
-                            ...timezone,
-                            id: existingRole.id,
-                            botRoleName: hierarchyCheck.botRoleName
-                        });
-                    }
+                    // Already handled by conversion phase - skip to avoid duplicates
+                    console.log(`✅ DEBUG: Timezone role ${timezone.name} already handled by conversion, skipping`);
+                    continue;
                 } else {
-                    // Add existing Discord role to CastBot
+                    // New role with standard name (not in CastBot yet) - add it
                     console.log(`🔄 DEBUG: Adding existing timezone role ${timezone.name} to CastBot`);
                     const hierarchyCheck = checkRoleHierarchy(guild, existingRole);
-                    
+
                     results.timezones.existingAdded.push({
                         ...timezone,
                         id: existingRole.id,
                         canManage: hierarchyCheck.canManage
                     });
-                    
+
                     if (!hierarchyCheck.canManage) {
                         results.timezones.hierarchyWarnings.push({
                             ...timezone,
@@ -723,14 +935,14 @@ async function executeSetup(guildId, guild) {
                     }
                 }
             } else {
-                // Create new timezone role
+                // Role doesn't exist - create it with new standard name
                 console.log(`🔨 DEBUG: Creating new timezone role ${timezone.name}`);
                 const newRole = await guild.roles.create({
                     name: timezone.name,
                     mentionable: true,
                     reason: 'CastBot timezone role generation'
                 });
-                
+
                 console.log(`✅ DEBUG: Created timezone role ${timezone.name} with ID ${newRole.id}`);
                 results.timezones.created.push({
                     ...timezone,
@@ -926,12 +1138,21 @@ function generateSetupResponseV2(results) {
         sections.push(`**Total Pronoun Roles:** ${pronounTotal}\n`);
     }
     
-    // Timezone Roles Section - detailed with mentions
+    // Timezone Roles Section - detailed with mentions and conversion info
     const timezoneTotal = results.timezones.created.length + results.timezones.existingAdded.length + results.timezones.alreadyInCastBot.length;
-    
+
     if (timezoneTotal > 0) {
         sections.push('## 🌍 Timezone Roles\n');
-        
+
+        // Show conversion summary first if any roles were converted
+        if (results.timezones.converted && results.timezones.converted.length > 0) {
+            sections.push('### 🔄 Converted to DST-Aware Standard:');
+            results.timezones.converted.forEach(conv => {
+                sections.push(`• <@&${conv.roleId}> - Renamed from "${conv.oldName}" → "${conv.newName}"`);
+            });
+            sections.push('');
+        }
+
         if (results.timezones.created.length > 0) {
             sections.push('### ✅ Newly Created Timezone Roles:');
             results.timezones.created.forEach(role => {
@@ -939,7 +1160,7 @@ function generateSetupResponseV2(results) {
             });
             sections.push('');
         }
-        
+
         if (results.timezones.existingAdded.length > 0) {
             sections.push('### ➕ Existing Roles Added to CastBot:');
             results.timezones.existingAdded.forEach(role => {
@@ -947,16 +1168,36 @@ function generateSetupResponseV2(results) {
             });
             sections.push('');
         }
-        
-        if (results.timezones.alreadyInCastBot.length > 0) {
+
+        // Show already configured roles (excluding converted ones which are already shown)
+        const unconvertedRoles = results.timezones.alreadyInCastBot.filter(r => !r.converted);
+        if (unconvertedRoles.length > 0) {
             sections.push('### ✓ Already Configured in CastBot:');
-            results.timezones.alreadyInCastBot.forEach(role => {
+            unconvertedRoles.forEach(role => {
                 sections.push(`• <@&${role.id}> (${role.name})`);
             });
             sections.push('');
         }
-        
+
         sections.push(`**Total Timezone Roles:** ${timezoneTotal}\n`);
+
+        // Show unmapped roles warning if any
+        if (results.timezones.unmapped && results.timezones.unmapped.length > 0) {
+            sections.push('### ⚠️ Roles Not Converted (Unrecognized Pattern):');
+            results.timezones.unmapped.forEach(role => {
+                sections.push(`• ${role.name} (offset: ${role.offset}) - Manual review needed`);
+            });
+            sections.push('');
+        }
+
+        // Show conversion failures if any
+        if (results.timezones.conversionFailed && results.timezones.conversionFailed.length > 0) {
+            sections.push('### ❌ Conversion Failures:');
+            results.timezones.conversionFailed.forEach(role => {
+                sections.push(`• ${role.name} - ${role.error}`);
+            });
+            sections.push('');
+        }
     }
     
     // Warnings and Errors Section

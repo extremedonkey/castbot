@@ -219,38 +219,6 @@
         "emoji": "😅",
         "castlist": "carl"
       },
-      "1297188286326116383": {
-        "emoji": null,
-        "castlist": "nextszn"
-      },
-      "1297188286305013839": {
-        "emoji": null,
-        "castlist": "nextszn"
-      },
-      "1297228233921790045": {
-        "emoji": null,
-        "castlist": "lastszn"
-      },
-      "1299771218479808563": {
-        "emoji": null,
-        "castlist": "lastszn"
-      },
-      "1328367538840801315": {
-        "emoji": null,
-        "castlist": "lastszn"
-      },
-      "1318738763752542278": {
-        "emoji": null,
-        "castlist": "gamenight"
-      },
-      "1297188286250356741": {
-        "emoji": null,
-        "castlist": "challengeupdates"
-      },
-      "1319529241704005703": {
-        "emoji": null,
-        "castlist": "blackjack"
-      },
       "1297188286305013834": {
         "emoji": null,
         "castlist": "immune"
@@ -3195,14 +3163,14 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 564,
+    "memberCount": 562,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1761420367665,
+    "lastUpdated": 1761461011208,
     "players": {
       "235148962103951360": {
         "emojiCode": "<:Carl_bot:1381126640163360800>"
@@ -5927,9 +5895,9 @@
     "players": {
       "391415444084490240": {
         "safari": {
-          "currency": 989,
+          "currency": 967,
           "history": [],
-          "lastInteraction": 1761429871562,
+          "lastInteraction": 1761429871575,
           "achievements": [],
           "inventory": {
             "great_ball_653283": {
@@ -8585,5 +8553,31 @@
       "tag": "extremedonkey"
     },
     "analyticsVersion": "1.0"
+  },
+  "1431897593771982870": {
+    "serverName": "Emerald CastBot TST",
+    "icon": null,
+    "ownerId": "391415444084490240",
+    "memberCount": 2,
+    "description": null,
+    "vanityURLCode": null,
+    "preferredLocale": "en-US",
+    "partnered": false,
+    "verified": false,
+    "createdTimestamp": 1761461389726,
+    "lastUpdated": 1761462125290,
+    "ownerInfo": {
+      "username": "extremedonkey",
+      "globalName": "Reece",
+      "discriminator": "0",
+      "tag": "extremedonkey"
+    },
+    "analyticsVersion": "1.0",
+    "players": {},
+    "tribes": {},
+    "timezones": {},
+    "pronounRoleIDs": [],
+    "firstInstalled": 1761462125290,
+    "installationMethod": "command"
   }
 }
