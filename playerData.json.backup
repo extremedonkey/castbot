@@ -1777,87 +1777,104 @@
       "1391142500936192042": {
         "offset": -7,
         "dstObserved": true,
-        "standardName": "MST (UTC-7)"
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
       },
       "1391142502429495328": {
         "offset": -6,
         "dstObserved": true,
-        "standardName": "MST (UTC-7)"
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
       },
       "1391142506049048686": {
         "offset": -6,
         "dstObserved": true,
-        "standardName": "CST (UTC-6)"
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
       },
       "1391142507446014125": {
         "offset": -5,
         "dstObserved": true,
-        "standardName": "CST (UTC-6)"
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
       },
       "1391142509316411443": {
         "offset": -5,
         "dstObserved": true,
-        "standardName": "EST (UTC-5)"
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
       },
       "1391142510859915358": {
         "offset": -4,
         "dstObserved": true,
-        "standardName": "EST (UTC-5)"
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
       },
       "1391142516262174780": {
         "offset": -3.5,
         "dstObserved": true,
-        "standardName": "NST (UTC-3:30)"
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
       },
       "1391142517944357025": {
         "offset": -2.5,
         "dstObserved": true,
-        "standardName": "NST (UTC-3:30)"
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
       },
       "1391142519148118140": {
         "offset": 0,
-        "dstObserved": false,
-        "standardName": null
+        "dstObserved": true,
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
       },
       "1391142520787832904": {
         "offset": 1,
         "dstObserved": true,
-        "standardName": "GMT (UTC+0)"
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
       },
       "1391142522428067842": {
         "offset": 1,
         "dstObserved": true,
-        "standardName": "CET (UTC+1)"
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
       },
       "1391142524285882551": {
         "offset": 2,
         "dstObserved": true,
-        "standardName": "CET (UTC+1)"
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
       },
       "1391142526072914060": {
         "offset": 8,
         "dstObserved": false,
-        "standardName": null
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
       },
       "1391142527826002000": {
         "offset": 10,
-        "dstObserved": false,
-        "standardName": null
+        "dstObserved": true,
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
       },
       "1391142529482752175": {
         "offset": 11,
         "dstObserved": true,
-        "standardName": "AEST (UTC+10)"
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
       },
       "1401201424783642624": {
         "offset": -4,
         "dstObserved": true,
-        "standardName": "AST (UTC-4)"
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
       },
       "1401201426436456468": {
         "offset": -3,
         "dstObserved": true,
-        "standardName": "AST (UTC-4)"
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
       },
       "1368969401067372625": {
         "offset": 4
@@ -1865,82 +1882,98 @@
       "1409024736490422364": {
         "offset": 12,
         "dstObserved": true,
-        "standardName": "NZST (UTC+12)"
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
       },
       "1431726492223672381": {
         "offset": -7,
         "dstObserved": true,
-        "standardName": "MST (UTC-7)"
+        "standardName": "MST (UTC-7)",
+        "timezoneId": "MT"
       },
       "1431726501602132139": {
         "offset": -6,
         "dstObserved": true,
-        "standardName": "CST (UTC-6)"
+        "standardName": "CST (UTC-6)",
+        "timezoneId": "CT"
       },
       "1431726503325864238": {
         "offset": -5,
         "dstObserved": true,
-        "standardName": "EST (UTC-5)"
+        "standardName": "EST (UTC-5)",
+        "timezoneId": "ET"
       },
       "1431726505569943633": {
         "offset": -4,
         "dstObserved": true,
-        "standardName": "AST (UTC-4)"
+        "standardName": "AST (UTC-4)",
+        "timezoneId": "AT"
       },
       "1431726507297869936": {
         "offset": -3.5,
         "dstObserved": true,
-        "standardName": "NST (UTC-3:30)"
+        "standardName": "NST (UTC-3:30)",
+        "timezoneId": "NT"
       },
       "1431726509957054639": {
         "offset": 0,
         "dstObserved": true,
-        "standardName": "GMT (UTC+0)"
+        "standardName": "GMT (UTC+0)",
+        "timezoneId": "GMT"
       },
       "1431726511932575975": {
         "offset": 1,
         "dstObserved": true,
-        "standardName": "CET (UTC+1)"
+        "standardName": "CET (UTC+1)",
+        "timezoneId": "CET"
       },
       "1431726513988042852": {
         "offset": 2,
         "dstObserved": true,
-        "standardName": "EET (UTC+2)"
+        "standardName": "EET (UTC+2)",
+        "timezoneId": "EET"
       },
       "1431726516210766007": {
         "offset": 2,
         "dstObserved": false,
-        "standardName": "SAST (UTC+2)"
+        "standardName": "SAST (UTC+2)",
+        "timezoneId": "SAST"
       },
       "1431726518358380547": {
         "offset": 5.5,
         "dstObserved": false,
-        "standardName": "IST (UTC+5.5)"
+        "standardName": "IST (UTC+5.5)",
+        "timezoneId": "IST"
       },
       "1431726520430366810": {
         "offset": 7,
         "dstObserved": false,
-        "standardName": "ICT (UTC+7)"
+        "standardName": "ICT (UTC+7)",
+        "timezoneId": "ICT"
       },
       "1431726522649280532": {
         "offset": 8,
         "dstObserved": false,
-        "standardName": "GMT+8 (UTC+8)"
+        "standardName": "GMT+8 (UTC+8)",
+        "timezoneId": "GMT8"
       },
       "1431726524641447936": {
         "offset": 9,
         "dstObserved": false,
-        "standardName": "JST (UTC+9)"
+        "standardName": "JST (UTC+9)",
+        "timezoneId": "JST"
       },
       "1431726526789058682": {
         "offset": 10,
         "dstObserved": true,
-        "standardName": "AEST (UTC+10)"
+        "standardName": "AEST (UTC+10)",
+        "timezoneId": "AEST"
       },
       "1431726529041141822": {
         "offset": 12,
         "dstObserved": true,
-        "standardName": "NZST (UTC+12)"
+        "standardName": "NZST (UTC+12)",
+        "timezoneId": "NZST"
       }
     },
     "pronounRoleIDs": [
@@ -3259,59 +3292,2139 @@
     "serverName": "Servivorg S13 - FINAL DESTINATION (Blood vs Water 2)",
     "icon": "https://cdn.discordapp.com/icons/974318870057848842/ccac7cb7552b7408ba39a5de1b3e9a1e.webp",
     "ownerId": "468655730975703041",
-    "memberCount": 562,
+    "memberCount": 556,
     "description": null,
     "vanityURLCode": null,
     "preferredLocale": "en-US",
     "partnered": false,
     "verified": false,
     "createdTimestamp": 1652366120591,
-    "lastUpdated": 1761461011208,
+    "lastUpdated": 1760973118491,
     "players": {
       "235148962103951360": {
-        "emojiCode": "<:Carl_bot:1381126640163360800>"
-      },
-      "877692281619116093": {
-        "emojiCode": "<:jenn95:1381126645796044910>"
+        "emojiCode": "<:Carl_bot:1380989603783249950>"
       },
       "813130551254056960": {
-        "emojiCode": "<:logoins:1381126650430750791>"
+        "emojiCode": "<:logoins:1380989612595613910>"
       },
       "272907597303119873": {
-        "emojiCode": "<:asmashterpiece:1381126654562406480>"
+        "emojiCode": "<:asmashterpiece:1380989616265498644>",
+        "age": "32"
       },
-      "880086374479450143": {
-        "emojiCode": "<:markshoe:1381126659608154133>"
+      "613201173239037953": {
+        "emojiCode": "<:traytray75:1380989625828642847>",
+        "age": "33"
+      },
+      "987862850338963506": {
+        "emojiCode": "<:jandrew286:1380989629313978429>",
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385242808952160326"
+        ]
+      },
+      "404426600260698112": {
+        "emojiCode": "<:glugunner77:1380989633713934386>",
+        "age": "23"
+      },
+      "473926986516135937": {
+        "emojiCode": "<:justinmasonfwfb:1380989638134464612>"
       },
       "468655730975703041": {
-        "emojiCode": "<:serviver:1381126665111076914>"
+        "emojiCode": "<:serviver:1380989642496540727>"
       },
       "391415444084490240": {
-        "emojiCode": "<:extremedonkey:1381126669783535719>"
+        "emojiCode": "<:extremedonkey:1380989646313623712>",
+        "age": "36"
       },
       "891514863107579984": {
-        "emojiCode": "<:rockyff:1381126675189858467>"
+        "emojiCode": "<:rockyff:1380989649757147187>"
+      },
+      "671651621956222978": {
+        "emojiCode": "<:danarazzi:1380989658544083125>",
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385242971938750597"
+        ]
+      },
+      "408736654275379210": {
+        "emojiCode": "<:guardianbrandt:1380989662373609533>"
+      },
+      "478790892489146369": {
+        "age": "21",
+        "emojiCode": "<:478790892489146369:1365903719924895806>"
+      },
+      "582902689726201895": {
+        "age": "41",
+        "emojiCode": "<:ring0jack:1378659979476860938>",
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385243139769372703"
+        ]
+      },
+      "431872284911992834": {
+        "age": "28",
+        "emojiCode": "<:431872284911992834:1365903628870881424>"
+      },
+      "539542420686372864": {
+        "age": "22",
+        "emojiCode": "<:539542420686372864:1365903615465750560>"
+      },
+      "977455730300956683": {
+        "age": "37",
+        "emojiCode": "<:morgane_m:1378659991245946893>"
+      },
+      "386463066600112128": {
+        "age": "29",
+        "emojiCode": "<:386463066600112128:1365903621983830047>"
+      },
+      "419952715477680138": {
+        "age": "35",
+        "emojiCode": "<:419952715477680138:1368923037755375746>"
+      },
+      "507355591593820161": {
+        "age": "23"
+      },
+      "823354355775438919": {
+        "age": "22",
+        "emojiCode": "<:823354355775438919:1365903723209035867>",
+        "safari": {
+          "currency": 40,
+          "history": [],
+          "lastInteraction": 1757205355987,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": {
+              "quantity": 3,
+              "numAttacksAvailable": 0
+            },
+            "raider_499497": {
+              "quantity": 0,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757167060291
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757167069708
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757167096420
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757187534535
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757188051014
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757188058652
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757201771469
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757201779340
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:57:28.865Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426480647568101377"
+        ]
+      },
+      "687399525002117160": {
+        "age": "42",
+        "emojiCode": "<:687399525002117160:1365903801160175616>"
+      },
+      "338264402245582848": {
+        "age": "30s"
+      },
+      "749410046269456495": {
+        "age": "29",
+        "emojiCode": "<:749410046269456495:1365903618523398206>"
+      },
+      "1214792878484758530": {
+        "age": "31",
+        "emojiCode": "<:1214792878484758530:1365903805018935416>"
+      },
+      "143659356334850049": {
+        "age": "32",
+        "emojiCode": "<:143659356334850049:1365903706964496446>"
+      },
+      "554164950667362345": {
+        "age": "23",
+        "emojiCode": "<:554164950667362345:1365903807938035793>"
+      },
+      "839635943072858134": {
+        "age": "35",
+        "emojiCode": "<:839635943072858134:1365903794029727775>",
+        "safari": {
+          "currency": 75,
+          "history": [],
+          "lastInteraction": 1757205364377,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 2,
+              "numAttacksAvailable": 0
+            },
+            "nest_guardian_461600": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "territory_forager_404120": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "raider_499497": {
+              "quantity": 0,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757121154345
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757121282160
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757121661288
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757122923154
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757180510707
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757180520107
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757180600373
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757180846939
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757198928371
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757198934143
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757198940110
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757198947400
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757198954506
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:50:09.486Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426478110089674832",
+          "1426478637363761183",
+          "1426478898257854536",
+          "1426479372256411739",
+          "1426481214839328829"
+        ]
+      },
+      "1138954636091478119": {
+        "age": "32",
+        "emojiCode": "<:kris5168:1378659982794297436>"
+      },
+      "420787141023629316": {
+        "age": "31",
+        "emojiCode": "<:420787141023629316:1365903790066241598>",
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385243321471078471"
+        ]
+      },
+      "312026946647359488": {
+        "age": "33",
+        "emojiCode": "<:312026946647359488:1365903625431289998>"
+      },
+      "470706722596716547": {
+        "age": "23",
+        "emojiCode": "<:470706722596716547:1365903611024117821>",
+        "safari": {
+          "currency": 160,
+          "history": [],
+          "lastInteraction": 1757205369691,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 4,
+              "numAttacksAvailable": 0
+            },
+            "nest_guardian_461600": {
+              "quantity": 4,
+              "numAttacksAvailable": 0
+            },
+            "raider_499497": {
+              "quantity": 0,
+              "numAttacksAvailable": 0
+            },
+            "territory_forager_404120": {
+              "quantity": 4,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757121379009
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757123380211
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757124680086
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757176719510
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757176726105
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757179838670
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757179847056
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757180734015
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757197142605
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757197149287
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757197153610
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757197159457
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:50:54.043Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1124166029988348004",
+          "1426478110089674832",
+          "1426480046872334387",
+          "1426481214839328829",
+          "1426479372256411739"
+        ]
+      },
+      "730235354535428127": {
+        "age": "36",
+        "emojiCode": "<:730235354535428127:1365903713830699019>"
+      },
+      "768184354802761798": {
+        "age": "32",
+        "emojiCode": "<:samwisepnw:1378659987777126430>"
+      },
+      "598287033022021632": {
+        "age": "28",
+        "emojiCode": "<:598287033022021632:1365903726555955260>",
+        "vanityRoles": [
+          "1426480253441675295",
+          "1426481126415011941"
+        ]
+      },
+      "1302132800421367826": {
+        "age": "30"
+      },
+      "916435034469187584": {
+        "age": "58",
+        "emojiCode": "<:916435034469187584:1365903786945679462>"
+      },
+      "208197633846542336": {
+        "age": "22",
+        "emojiCode": "<:208197633846542336:1365903710542237716>"
+      },
+      "877692281619116093": {
+        "emojiCode": "<:jenn95:1380989607939932236>"
+      },
+      "880086374479450143": {
+        "emojiCode": "<:markshoe:1380989621420429392>"
+      },
+      "700105131517018182": {
+        "emojiCode": "<:redbong:1380989654823866509>",
+        "age": "28",
+        "safari": {
+          "currency": 15,
+          "history": [],
+          "lastInteraction": 1757205356892,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 4,
+              "numAttacksAvailable": 0
+            },
+            "territory_forager_404120": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "nest_guardian_461600": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "raider_499497": {
+              "quantity": 0,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757125476606
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757125494423
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757125509472
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757188716892
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757188728033
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757204996955
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757205003518
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757205007611
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757205011632
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757205018472
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757205037384
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757205045345
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757205058458
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757205067086
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757205076894
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757205087050
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:57:14.926Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426480830544478268",
+          "1426481214839328829"
+        ]
+      },
+      "705936744595587112": {
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385243081447837887"
+        ]
+      },
+      "698321458648318034": {
+        "vanityRoles": [
+          "1124166029988348004",
+          "1323402779271889059"
+        ]
+      },
+      "661808186843594752": {
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385243029643989092"
+        ]
+      },
+      "1116862694918721556": {
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385243029643989092"
+        ]
+      },
+      "1152522361724227644": {
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385242917890949213"
+        ]
+      },
+      "493803682173943810": {
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385242864694329394"
+        ],
+        "age": "33"
+      },
+      "756383872379256933": {
+        "vanityRoles": [
+          "1385242520161620039",
+          "1385242743130947665"
+        ]
+      },
+      "773649617975771147": {
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385242599203410032"
+        ]
+      },
+      "335169111342579712": {
+        "vanityRoles": [
+          "1124166029988348004",
+          "1385243081447837887"
+        ]
+      },
+      "1086246253819613274": {
+        "age": "17"
+      },
+      "242017916826943489": {
+        "age": "41",
+        "safari": {
+          "currency": 370,
+          "history": [],
+          "lastInteraction": 1757205362235,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 13,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757125112057
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757125119210
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757125124194
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757179900821
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757179910312
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194385781
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194391291
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194400689
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194409705
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194418515
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194429772
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194440826
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:49:36.882Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426478529213763594"
+        ]
+      },
+      "206564376692523010": {
+        "age": "23"
+      },
+      "646130635102093312": {
+        "age": "19",
+        "safari": {
+          "currency": 80,
+          "history": [],
+          "lastInteraction": 1757205359194,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 2,
+              "numAttacksAvailable": 0
+            },
+            "raider_499497": {
+              "quantity": 0,
+              "numAttacksAvailable": 0
+            },
+            "nest_guardian_461600": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "territory_forager_404120": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757120741016
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757121071074
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757121074805
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757121077778
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757176970340
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757176979746
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757176986314
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757176995247
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757194490416
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757194494648
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757194500128
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:55:46.099Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426480135103578122"
+        ]
+      },
+      "684530139694104618": {
+        "age": "40",
+        "safari": {
+          "currency": 75,
+          "history": [],
+          "lastInteraction": 1757205360203,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 2,
+              "numAttacksAvailable": 0
+            },
+            "territory_forager_404120": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "nest_guardian_461600": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "raider_499497": {
+              "quantity": 0,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757123861167
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757124111198
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757124314629
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757124327988
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757185828123
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757185840697
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757185856684
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757185946644
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757194670211
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757194675407
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757194684532
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757194688399
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757194690776
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:57:46.147Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426478293728624660"
+        ]
+      },
+      "585425481763913738": {
+        "age": "18"
+      },
+      "885537043629895690": {
+        "age": "32",
+        "safari": {
+          "currency": 80,
+          "history": [],
+          "lastInteraction": 1757205362650,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 2,
+              "numAttacksAvailable": 0
+            },
+            "territory_forager_404120": {
+              "quantity": 3,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757122251066
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757122265262
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757122277236
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757175616252
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:52:49.523Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426479942488559616",
+          "1426480253441675295"
+        ]
+      },
+      "344289901803601920": {
+        "age": "19"
+      },
+      "692719264452444191": {
+        "age": "17",
+        "safari": {
+          "currency": 0,
+          "history": [],
+          "lastInteraction": 1757205360707,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 4,
+              "numAttacksAvailable": 0
+            },
+            "territory_forager_404120": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "raider_499497": {
+              "quantity": 0,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757153542399
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757153557936
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757186803308
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757186818241
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757186830520
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757195028043
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757195031781
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757195035433
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757195039886
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757195045288
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757195050689
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757195057154
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757195059602
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757195062551
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:56:23.359Z",
+              "regenConfig": "hourly"
+            }
+          }
+        }
+      },
+      "514216748203900931": {
+        "age": "26"
+      },
+      "856932012748439632": {
+        "age": "34",
+        "safari": {
+          "currency": 45,
+          "history": [],
+          "lastInteraction": 1757205370073,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": 1,
+            "territory_forager_404120": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "raider_499497": {
+              "quantity": 0,
+              "numAttacksAvailable": 0
+            },
+            "nest_guardian_461600": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757121689312
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757121707334
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757122012765
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757122128465
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757122919857
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757175450232
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757175458730
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757196962586
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757196973653
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:51:47.972Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426480647568101377"
+        ]
+      },
+      "248962410306600960": {
+        "age": "28",
+        "safari": {
+          "currency": 80,
+          "history": [],
+          "lastInteraction": 1757205370572,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 2,
+              "numAttacksAvailable": 0
+            },
+            "nest_guardian_461600": {
+              "quantity": 5,
+              "numAttacksAvailable": 0
+            },
+            "raider_499497": {
+              "quantity": 0,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757122582812
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757122793074
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757124192935
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757176299737
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757176316304
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757177008881
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757177020057
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757198593517
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757198599918
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757198604137
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757198608948
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:50:34.374Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426479372256411739",
+          "1426479942488559616",
+          "1426480383373082634",
+          "1426480942746177698",
+          "1426481055334142053"
+        ]
+      },
+      "344384241767022592": {
+        "age": "28"
+      },
+      "572291395365109770": {
+        "age": "29",
+        "safari": {
+          "currency": 80,
+          "history": [],
+          "lastInteraction": 1757205363481,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 2,
+              "numAttacksAvailable": 0
+            },
+            "territory_forager_404120": {
+              "quantity": 3,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757122774870
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757122815655
+            },
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757122821157
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757175445445
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:51:10.569Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426477775501525024",
+          "1426479372256411739",
+          "1426479840357388298",
+          "1426479942488559616",
+          "1426481214839328829",
+          "1426481385178140672"
+        ]
+      },
+      "267029241353338880": {
+        "age": "21"
+      },
+      "723629872173416579": {
+        "age": "27",
+        "vanityRoles": [
+          "1426480485294542848"
+        ]
+      },
+      "697253400827396106": {
+        "age": "23",
+        "safari": {
+          "currency": 300,
+          "history": [],
+          "lastInteraction": 1757205357471,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 8,
+              "numAttacksAvailable": 0
+            },
+            "nest_guardian_461600": {
+              "quantity": 5,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757169107518
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757169116806
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757169124708
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757188722769
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757188727493
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757189016661
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757205144313
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757205148418
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757205169352
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757205176732
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757205184289
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757205188771
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:55:16.064Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426477822083469312",
+          "1426481214839328829"
+        ]
+      },
+      "397167214404435968": {
+        "age": "34",
+        "safari": {
+          "currency": 155,
+          "history": [],
+          "lastInteraction": 1757205361840,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 8,
+              "numAttacksAvailable": 0
+            },
+            "territory_forager_404120": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            },
+            "raider_499497": {
+              "quantity": 0,
+              "numAttacksAvailable": 0
+            },
+            "nest_guardian_461600": {
+              "quantity": 1,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "territory_forager_404120",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757120544053
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757121172107
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757121185418
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757121197560
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757184915524
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757184924198
+            },
+            {
+              "itemId": "raider_499497",
+              "storeId": "the_hatchery_637531",
+              "price": 15,
+              "timestamp": 1757184934551
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194238352
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194244614
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194255222
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757194271220
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757194302977
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:56:45.037Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426478780968468602",
+          "1426478110089674832"
+        ]
+      },
+      "324349115461009409": {
+        "age": "24",
+        "safari": {
+          "currency": 280,
+          "history": [],
+          "lastInteraction": 1757205358735,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 8,
+              "numAttacksAvailable": 0
+            },
+            "nest_guardian_461600": {
+              "quantity": 4,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757138968220
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757138978921
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757138985975
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757188733972
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757188741146
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757188746912
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757188749497
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757188760513
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757205107277
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757205111479
+            },
+            {
+              "itemId": "nest_guardian_461600",
+              "storeId": "the_hatchery_637531",
+              "price": 25,
+              "timestamp": 1757205113557
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:54:59.129Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426480485294542848",
+          "1426480732485718037"
+        ]
+      },
+      "365171952693805056": {
+        "age": "20"
+      },
+      "138708059395457025": {
+        "age": "39",
+        "safari": {
+          "currency": 420,
+          "history": [],
+          "lastInteraction": 1757205363936,
+          "achievements": [],
+          "inventory": {
+            "nurturer_361363": {
+              "quantity": 17,
+              "numAttacksAvailable": 0
+            }
+          },
+          "cooldowns": {},
+          "buttonUses": {},
+          "storeHistory": [
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757122320167
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757122329395
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757122338579
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757174789174
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757174794633
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757174820339
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757174829401
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757174834482
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757193111404
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757193115843
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757193122075
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757193125191
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757193131559
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757193140990
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757193145316
+            },
+            {
+              "itemId": "nurturer_361363",
+              "storeId": "the_hatchery_637531",
+              "price": 30,
+              "timestamp": 1757193149610
+            }
+          ],
+          "mapProgress": {},
+          "points": {
+            "stamina": {
+              "current": 1,
+              "maximum": 1,
+              "lastRegeneration": "2025-09-05T19:49:55.103Z",
+              "regenConfig": "hourly"
+            }
+          }
+        },
+        "vanityRoles": [
+          "1426479372256411739",
+          "1426480383373082634",
+          "1426481214839328829"
+        ]
+      },
+      "138429066008068097": {
+        "age": "25"
+      },
+      "241987329978269696": {
+        "age": "33"
+      },
+      "1242546896325841047": {
+        "age": "17",
+        "vanityRoles": [
+          "1426478402998636724"
+        ]
+      },
+      "776002860285952032": {
+        "age": "45"
+      },
+      "145983905458028544": {
+        "age": "32"
+      },
+      "613529921557364737": {
+        "age": "25"
+      },
+      "676262975132139522": {},
+      "854840881998462987": {
+        "age": "31"
+      },
+      "782815164118073375": {
+        "age": "39"
+      },
+      "598965290495115295": {
+        "age": "37"
+      },
+      "792965047315726347": {
+        "age": "18+"
+      },
+      "644748993288601600": {
+        "age": "24"
+      },
+      "1147751688481026110": {
+        "age": "23"
+      },
+      "798283806405951528": {
+        "age": "39"
+      },
+      "755552370259263530": {
+        "age": "21"
+      },
+      "624993492954775562": {
+        "age": "32"
+      },
+      "804394689968996432": {
+        "age": "29"
+      },
+      "526601259340529664": {
+        "vanityRoles": [
+          "1426479269391106088"
+        ],
+        "age": "34"
+      },
+      "351034726120816642": {
+        "vanityRoles": [
+          "1426480485294542848"
+        ]
+      },
+      "474338809719554068": {
+        "age": "32"
+      },
+      "1417946570082615493": {
+        "age": "25"
+      },
+      "488062014057349120": {
+        "age": "36"
+      },
+      "819192988911403028": {
+        "age": "33"
+      },
+      "1415508449692745809": {
+        "age": "46"
+      },
+      "1268768030393892934": {
+        "age": "28"
+      },
+      "232393582261174273": {
+        "age": "28"
       }
     },
     "tribes": {
-      "974319320240885821": {
-        "emoji": null,
-        "castlist": "default",
-        "showPlayerEmojis": true,
-        "color": "#66e9ab"
+      "1124166029988348004": {
+        "emoji": "🏆",
+        "castlist": "Winners",
+        "showPlayerEmojis": false,
+        "color": "#c99738",
+        "analyticsName": "🏆 Winner 🏆",
+        "analyticsAdded": 1749987859643
+      },
+      "1406847946758033539": {
+        "emoji": "🦖",
+        "castlist": "S12 - Jurassic Park",
+        "showPlayerEmojis": false,
+        "color": "#9d55e0",
+        "analyticsName": "🦖 S12 - Jurassic Park 🦖",
+        "analyticsAdded": 1759581597773,
+        "castlistId": "castlist_1760168292677_system"
       },
       "1385242520161620039": {
         "emoji": "1️⃣",
-        "castlist": "Season 1: Buffy",
+        "castlist": "S1",
         "showPlayerEmojis": false,
         "color": "#e74c3c",
         "analyticsName": "1️⃣ S1 - Buffy 1️⃣",
-        "analyticsAdded": 1759676584249,
-        "castlistId": "castlist_1759676597377_system"
+        "analyticsAdded": 1759854390066,
+        "castlistIds": [
+          "castlist_1760892362223_system"
+        ]
       }
     },
-    "timezones": {},
-    "pronounRoleIDs": [],
+    "timezones": {
+      "1353716900365860894": {
+        "offset": -7
+      },
+      "1353716901724815471": {
+        "offset": -6
+      },
+      "1353716903205408808": {
+        "offset": -5
+      },
+      "1353716904547717171": {
+        "offset": -4
+      },
+      "1353716905797750884": {
+        "offset": 0
+      },
+      "1353716907026550798": {
+        "offset": 1
+      },
+      "1353716908431638630": {
+        "offset": 2
+      },
+      "1353716909861765150": {
+        "offset": 8
+      },
+      "1401192833825771571": {
+        "offset": -3.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1401192835511877634": {
+        "offset": -2.5,
+        "dstObserved": true,
+        "standardName": "NST (UTC-3:30)"
+      },
+      "1401192837239803986": {
+        "offset": 1,
+        "dstObserved": true,
+        "standardName": "CET (UTC+1)"
+      },
+      "1401192838774915122": {
+        "offset": 10,
+        "dstObserved": false,
+        "standardName": null
+      },
+      "1401207657800536174": {
+        "offset": 5.5
+      },
+      "1401207600363737098": {
+        "offset": 2
+      }
+    },
+    "pronounRoleIDs": [
+      "1353716895131631626",
+      "1353716896402505800",
+      "1353716899057504338",
+      "975536782391246878",
+      "1081386366828552312",
+      "975536776968044564",
+      "979090097465086072",
+      "1401192818243928084"
+    ],
     "ownerInfo": {
       "username": "serviver",
       "globalName": "Serviver",
@@ -3319,25 +5432,173 @@
       "tag": "serviver"
     },
     "analyticsVersion": "1.0",
+    "reactionMappings": {
+      "1431936884254441572": {
+        "mapping": {
+          "1️⃣": "1401192838774915122",
+          "2️⃣": "1353716907026550798",
+          "3️⃣": "1353716908431638630",
+          "4️⃣": "1401192837239803986",
+          "5️⃣": "1353716903205408808",
+          "6️⃣": "1353716904547717171",
+          "7️⃣": "1353716905797750884",
+          "8️⃣": "1353716909861765150",
+          "9️⃣": "1401207657800536174",
+          "🔟": "1353716901724815471",
+          "🇦": "1401192835511877634",
+          "🇧": "1401192833825771571",
+          "🇨": "1353716900365860894",
+          "🇩": "1401207600363737098",
+          "isTimezone": true
+        },
+        "createdAt": 1761470766960,
+        "lastAccessed": 1761470766960
+      }
+    },
     "applicationConfigs": {
-      "config_1749735756270_391415444084490240": {
-        "buttonText": "Apply to be Reece's bestie",
-        "explanatoryText": "Click if you think Reece is cool",
-        "channelFormat": "%name%-app",
-        "targetChannelId": "1353518434541113364",
-        "categoryId": "1081791358131523664",
-        "buttonStyle": "Success",
-        "createdBy": "391415444084490240",
+      "config_1759025879573_468655730975703041": {
+        "buttonText": "Apply to SEASON 13 - FINAL DESTINATION (BvW2)",
+        "explanatoryText": "We're looking for newbie or alumni/newbie pairs for our next Blood vs Water season. Starts Oct 31!",
+        "channelFormat": "📝%name%-app",
         "stage": "active",
-        "createdAt": 1749735756272,
-        "lastUpdated": 1749735756272,
-        "seasonId": "season_aaa92150e4c646d3",
-        "seasonName": "Apply to be Reece's bestie",
-        "questions": []
+        "seasonId": "season_fc058f8886fc4fdc",
+        "seasonName": "SEASON 13 - FINAL DESTINATION (BvW2)",
+        "questions": [
+          {
+            "id": "question_be6563457ced469d",
+            "order": 1,
+            "questionTitle": "BASIC INFO",
+            "questionText": "Can you tell us a little bit about yourself? Some org history or a cool story from another game you've played?",
+            "imageURL": "",
+            "createdAt": 1759025977230,
+            "lastUpdated": 1759193232599
+          },
+          {
+            "id": "question_44889d9777184056",
+            "order": 2,
+            "questionTitle": "WHAT BRINGS YOU HERE",
+            "questionText": "How did you find out about our game?",
+            "imageURL": "",
+            "createdAt": 1759026643507
+          },
+          {
+            "id": "question_c61d3b483f8b48e2",
+            "order": 3,
+            "questionTitle": "MOVIE KNOWLEDGE",
+            "questionText": "Have you seen any of the Final Destination movies? Which is your favorite and, of course, which is your favorite death scene?",
+            "imageURL": "",
+            "createdAt": 1759026729253
+          },
+          {
+            "id": "question_a053094e525848fb",
+            "order": 4,
+            "questionTitle": "PARTNER INFO",
+            "questionText": "As this is a Blood vs Water season, everybody is required to play with a partner. Can you tell us who your partner is, and what we can expect from them?",
+            "imageURL": "",
+            "createdAt": 1759026837909
+          },
+          {
+            "id": "question_23a707ae613a4a54",
+            "order": 5,
+            "questionTitle": "LIMITATIONS",
+            "questionText": "Is there anything that may hinder your enjoyent of the game? Things such as color blindness, etc\n\nAlso, is there anyone on your DNP list?",
+            "imageURL": "",
+            "createdAt": 1759193355147,
+            "lastUpdated": 1759540687177
+          },
+          {
+            "id": "question_6f098adf90d64953",
+            "order": 6,
+            "questionTitle": "FINAL QUESTION",
+            "questionText": "Do you have anything to add that will help you stand out above all the other applicants?",
+            "imageURL": "",
+            "createdAt": 1759193397814
+          }
+        ],
+        "targetChannelId": "1422385253070147644",
+        "categoryId": "1422035551447416982",
+        "buttonStyle": "Primary",
+        "productionRole": null,
+        "createdBy": "468655730975703041",
+        "createdAt": 1759256114694,
+        "lastUpdated": 1759256114694
       },
-      "config_1759676660042_391415444084490240": {
-        "buttonText": "Apply to S1 - Buffy",
-        "explanatoryText": "Join S1 - Buffy!",
+      "config_1759102758454_468655730975703041": {
+        "buttonText": "HOST APPLICATION",
+        "explanatoryText": "We're looking for 2-3 FULL TIME hosts for the next  few seasons. Only ages 21+ please!",
+        "channelFormat": "📝%name%-app",
+        "stage": "awaiting_selections",
+        "seasonId": "season_531f0be672df4177",
+        "seasonName": "HOST APPLICATION",
+        "questions": [
+          {
+            "id": "question_92d54152c3cf4965",
+            "order": 1,
+            "questionTitle": "QUESTION 1",
+            "questionText": "Why would you like to join the team?",
+            "imageURL": "",
+            "createdAt": 1759102815631
+          },
+          {
+            "id": "question_10f92195baf54bb5",
+            "order": 2,
+            "questionTitle": "QUESTION 2",
+            "questionText": "What times of day are you generally available to help out?",
+            "imageURL": "",
+            "createdAt": 1759102859037
+          },
+          {
+            "id": "question_479508a403fc4bf8",
+            "order": 3,
+            "questionTitle": "QUESTION 3",
+            "questionText": "Which areas are you most comfortable helping out with?",
+            "imageURL": "",
+            "createdAt": 1759102917936
+          },
+          {
+            "id": "question_c81712913b074f40",
+            "order": 4,
+            "questionTitle": "QUESTION 4",
+            "questionText": "Are you comfortable doing any of the following:\n - spec engagement\n - recruiting new players\n - Edgic\n - exit interviews\n - setting up bot commands",
+            "imageURL": "",
+            "createdAt": 1759103034483
+          },
+          {
+            "id": "question_715cc821e4f64a3b",
+            "order": 5,
+            "questionTitle": "QUESTION 5",
+            "questionText": "Do you have any prior hosting experience? Which servers and what was your role there?",
+            "imageURL": "",
+            "createdAt": 1759103095513
+          },
+          {
+            "id": "question_16484c7a68f240d2",
+            "order": 6,
+            "questionTitle": "QUESTION 6",
+            "questionText": "Do you have any ideas that could help improve Servivorg at all?",
+            "imageURL": "",
+            "createdAt": 1759103177201
+          },
+          {
+            "id": "question_a1dd25a3d8ad4524",
+            "order": 7,
+            "questionTitle": "QUESTION 7",
+            "questionText": "Finally, if brought on, do you promise:\n - to be actively available\n - to give prior notice if you need to step away\n - represent us in a positive light in other servers",
+            "imageURL": "",
+            "createdAt": 1759103259150
+          }
+        ],
+        "targetChannelId": "1422006954406187159",
+        "categoryId": "1422035551447416982",
+        "buttonStyle": "Success",
+        "productionRole": "974319320240885821",
+        "createdBy": "468655730975703041",
+        "createdAt": 1759195989436,
+        "lastUpdated": 1759195989436
+      },
+      "config_1760168278327_391415444084490240": {
+        "buttonText": "Apply to SEASON 12 - JURASSIC PARK",
+        "explanatoryText": "Join SEASON 12 - JURASSIC PARK!",
         "completionDescription": "Thank you for completing your application! A host will review it soon.",
         "completionImage": null,
         "channelFormat": "📝%name%-app",
@@ -3346,36 +5607,418 @@
         "buttonStyle": "Primary",
         "createdBy": "391415444084490240",
         "stage": "draft",
-        "createdAt": 1759676660046,
-        "lastUpdated": 1759676660046,
-        "seasonId": "season_8562dceec0454513",
-        "seasonName": "S1 - Buffy",
+        "createdAt": 1760168278337,
+        "lastUpdated": 1760168278337,
+        "seasonId": "season_ddb0fef37a464200",
+        "seasonName": "SEASON 12 - JURASSIC PARK",
         "questions": []
       }
     },
     "applications": {
-      "1382716755968786513": {
+      "1422099816644739082": {
+        "userId": "324349115461009409",
+        "channelId": "1422099816644739082",
+        "username": "blitzzerged",
+        "displayName": "Blitz",
+        "avatarURL": "https://cdn.discordapp.com/avatars/324349115461009409/9649bc4be79f4ee4ba119e79bba21432.webp?size=128",
+        "channelName": "📝blitz-app",
+        "createdAt": "2025-09-29T05:56:58.350Z",
+        "configId": "config_1759102758454_468655730975703041",
+        "currentQuestion": 6
+      },
+      "1422263564315398254": {
+        "userId": "598287033022021632",
+        "channelId": "1422263564315398254",
+        "username": "shallow44067",
+        "displayName": "Ryan",
+        "avatarURL": "https://cdn.discordapp.com/avatars/598287033022021632/f35dca3e74821f7736b48df8e7d9fe94.webp?size=128",
+        "channelName": "📝ryan-app",
+        "createdAt": "2025-09-29T16:47:38.966Z",
+        "configId": "config_1759102758454_468655730975703041",
+        "currentQuestion": 6
+      },
+      "1422264149416743035": {
+        "userId": "572291395365109770",
+        "channelId": "1422264149416743035",
+        "username": "nutmeggiee",
+        "displayName": "Megan",
+        "avatarURL": "https://cdn.discordapp.com/avatars/572291395365109770/9df7667024edf75998005c39bc6074b0.webp?size=128",
+        "channelName": "📝megan-app",
+        "createdAt": "2025-09-29T16:49:58.638Z",
+        "configId": "config_1759102758454_468655730975703041",
+        "currentQuestion": 6
+      },
+      "1422394141853089963": {
+        "userId": "468655730975703041",
+        "channelId": "1422394141853089963",
+        "username": "serviver",
+        "displayName": "Davey Bludworth",
+        "avatarURL": "https://cdn.discordapp.com/avatars/468655730975703041/db65f5b1966022e3c481822630af663b.webp?size=128",
+        "channelName": "📝daveybludworth-app",
+        "createdAt": "2025-09-30T01:26:30.872Z",
+        "configId": "config_1759025879573_468655730975703041"
+      },
+      "1422446560649805876": {
+        "userId": "248962410306600960",
+        "channelId": "1422446560649805876",
+        "username": "jonjonjonjonjon",
+        "displayName": "Jon",
+        "avatarURL": "https://cdn.discordapp.com/avatars/248962410306600960/dbb18e61053df23a72388a5bded982cf.webp?size=128",
+        "channelName": "📝jon-app",
+        "createdAt": "2025-09-30T04:54:48.911Z",
+        "configId": "config_1759025879573_468655730975703041"
+      },
+      "1422458616266362931": {
+        "userId": "854840881998462987",
+        "channelId": "1422458616266362931",
+        "username": "insamity247",
+        "displayName": "Sammy",
+        "avatarURL": "https://cdn.discordapp.com/avatars/854840881998462987/3804fb65601f2c7b472d7b0992a2c2f4.webp?size=128",
+        "channelName": "📝sammy-app",
+        "createdAt": "2025-09-30T05:42:42.820Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1422592887291510916": {
+        "userId": "782815164118073375",
+        "channelId": "1422592887291510916",
+        "username": "dbockbrader86",
+        "displayName": "Dusty",
+        "avatarURL": "https://cdn.discordapp.com/avatars/782815164118073375/1767b9f0b439d7fe912ca1bb7e9bf9ef.webp?size=128",
+        "channelName": "📝dusty-app",
+        "createdAt": "2025-09-30T14:36:15.817Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1422613355813666930": {
+        "userId": "598965290495115295",
+        "channelId": "1422613355813666930",
+        "username": "boomersgametoo",
+        "displayName": "Kyle",
+        "avatarURL": "https://cdn.discordapp.com/avatars/598965290495115295/601dc667d4d61d7454b207551ab1a981.webp?size=128",
+        "channelName": "📝kyle-app",
+        "createdAt": "2025-09-30T15:57:35.758Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1422621516255727727": {
+        "userId": "1086246253819613274",
+        "channelId": "1422621516255727727",
+        "username": "radicaldinosaurtest",
+        "displayName": "radicaldinosaur",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1086246253819613274/881a4d91ea2d26c3659c562ec18a7ace.webp?size=128",
+        "channelName": "📝radicaldinosaur-app",
+        "createdAt": "2025-09-30T16:30:01.264Z",
+        "configId": "config_1759025879573_468655730975703041"
+      },
+      "1422659192296177664": {
+        "userId": "856932012748439632",
+        "channelId": "1422659192296177664",
+        "username": "vince199030",
+        "displayName": "Vince",
+        "avatarURL": "https://cdn.discordapp.com/avatars/856932012748439632/1aac18cc156d88ac30f60b4e32ce0dbf.webp?size=128",
+        "channelName": "📝vince-app",
+        "createdAt": "2025-09-30T18:59:44.039Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1422671707008667712": {
+        "userId": "792965047315726347",
+        "channelId": "1422671707008667712",
+        "username": "ashnicole13",
+        "displayName": "~ash~",
+        "avatarURL": "https://cdn.discordapp.com/avatars/792965047315726347/1224928eca5b9a7e9fa28fa498e3a48b.webp?size=128",
+        "channelName": "📝ash-app",
+        "createdAt": "2025-09-30T19:49:27.807Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1422731092762427433": {
+        "userId": "644748993288601600",
+        "channelId": "1422731092762427433",
+        "username": "nosh__",
+        "displayName": "Nosh (S6–S8)",
+        "avatarURL": "https://cdn.discordapp.com/avatars/644748993288601600/826ad1ce8f61344afdd6697848aeee9e.webp?size=128",
+        "channelName": "📝noshs6s8-app",
+        "createdAt": "2025-09-30T23:45:26.360Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1422791459228356750": {
+        "userId": "623029247631425540",
+        "channelId": "1422791459228356750",
+        "username": "lameradio278",
+        "displayName": "LameRadio",
+        "avatarURL": "https://cdn.discordapp.com/avatars/623029247631425540/77c0f7891d726ac3513b1b16d763349c.webp?size=128",
+        "channelName": "📝lameradio-app",
+        "createdAt": "2025-10-01T03:45:19.022Z",
+        "configId": "config_1759025879573_468655730975703041"
+      },
+      "1422793231288111197": {
+        "userId": "830289688929239070",
+        "channelId": "1422793231288111197",
+        "username": "swagatron4evr",
+        "displayName": "jules 𝜗𝜚",
+        "avatarURL": "https://cdn.discordapp.com/avatars/830289688929239070/7e91298e5a7dfd5557ade59395a92fab.webp?size=128",
+        "channelName": "📝jules-app",
+        "createdAt": "2025-10-01T03:52:21.314Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1422802552092622938": {
+        "userId": "493803682173943810",
+        "channelId": "1422802552092622938",
+        "username": "courtneyvee",
+        "displayName": "The Final Girl",
+        "avatarURL": "https://cdn.discordapp.com/avatars/493803682173943810/30645e165ae384722b5e17aaeae34a82.webp?size=128",
+        "channelName": "📝thefinalgirl-app",
+        "createdAt": "2025-10-01T04:29:23.646Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 0
+      },
+      "1422930593347276910": {
+        "userId": "1147751688481026110",
+        "channelId": "1422930593347276910",
+        "username": "troy.lt",
+        "displayName": "TJ",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1147751688481026110/a6117bbdfd61f7894ae53ea0a43e6f95.webp?size=128",
+        "channelName": "📝tj-app",
+        "createdAt": "2025-10-01T12:58:11.029Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1423096580554227894": {
+        "userId": "473926986516135937",
+        "channelId": "1423096580554227894",
+        "username": "justinmasonfwfb",
+        "displayName": "Smokey (2x Worst Move Awards)",
+        "avatarURL": "https://cdn.discordapp.com/avatars/473926986516135937/4697083546416bade7bfca1f908858c5.webp?size=128",
+        "channelName": "📝smokey2xworstmoveawards-app",
+        "createdAt": "2025-10-01T23:57:45.449Z",
+        "configId": "config_1759102758454_468655730975703041"
+      },
+      "1423484421603983461": {
+        "userId": "798283806405951528",
+        "channelId": "1423484421603983461",
+        "username": "pixiebbtg",
+        "displayName": "Pixie",
+        "avatarURL": "https://cdn.discordapp.com/avatars/798283806405951528/c031d5a69f188cfd717cd06fe71fc496.webp?size=128",
+        "channelName": "📝pixie-app",
+        "createdAt": "2025-10-03T01:38:53.795Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1423747939788001432": {
+        "userId": "755552370259263530",
+        "channelId": "1423747939788001432",
+        "username": "noisysea34",
+        "displayName": "Noisy",
+        "avatarURL": "https://cdn.discordapp.com/avatars/755552370259263530/ab81a9fc46b7eff03d6c9304a0370603.webp?size=128",
+        "channelName": "📝noisy-app",
+        "createdAt": "2025-10-03T19:06:01.776Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1423838231807529020": {
+        "userId": "138429066008068097",
+        "channelId": "1423838231807529020",
+        "username": "nightaronipepperoni",
+        "displayName": "The Real Night",
+        "avatarURL": "https://cdn.discordapp.com/avatars/138429066008068097/a_e306f4fd6b67e4b9c8859d0691cabda8.gif?size=128",
+        "channelName": "📝therealnight-app",
+        "createdAt": "2025-10-04T01:04:48.769Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1423841868109578294": {
+        "userId": "613201173239037953",
+        "channelId": "1423841868109578294",
+        "username": "traytray75",
+        "displayName": "Tracy",
+        "avatarURL": "https://cdn.discordapp.com/avatars/613201173239037953/baba4d46393e31031004a31123f35d6f.webp?size=128",
+        "channelName": "📝tracy-app",
+        "createdAt": "2025-10-04T01:19:16.695Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 0
+      },
+      "1423846674916446289": {
+        "userId": "624993492954775562",
+        "channelId": "1423846674916446289",
+        "username": "sawyer0912",
+        "displayName": "Steph👻",
+        "avatarURL": "https://cdn.discordapp.com/avatars/624993492954775562/5dc283e9877424e1604e831b1134cea1.webp?size=128",
+        "channelName": "📝steph-app",
+        "createdAt": "2025-10-04T01:38:21.802Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1424190261566767216": {
+        "userId": "885537043629895690",
+        "channelId": "1424190261566767216",
+        "username": "changethisplz",
+        "displayName": "John (The Zeppo)",
+        "avatarURL": "https://cdn.discordapp.com/avatars/885537043629895690/9abe2ed97fae0fe5055bc4c2e4d65ff2.webp?size=128",
+        "channelName": "📝johnthezeppo-app",
+        "createdAt": "2025-10-05T00:23:39.238Z",
+        "configId": "config_1759025879573_468655730975703041"
+      },
+      "1424191259680968736": {
+        "userId": "804394689968996432",
+        "channelId": "1424191259680968736",
+        "username": "alamo_joe",
+        "displayName": "Joe",
+        "avatarURL": "https://cdn.discordapp.com/avatars/804394689968996432/49b40960700eb7db71b623cfba620d2f.webp?size=128",
+        "channelName": "📝joe-app",
+        "createdAt": "2025-10-05T00:27:37.153Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1425594684251836416": {
+        "userId": "1406014440549253310",
+        "channelId": "1425594684251836416",
+        "username": "oswaldpenitentiary09",
+        "displayName": "Kareemsaid",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1406014440549253310/396b33373997818027fb2a12f44c65e9.webp?size=128",
+        "channelName": "📝kareemsaid-app",
+        "createdAt": "2025-10-08T21:24:19.875Z",
+        "configId": "config_1759025879573_468655730975703041"
+      },
+      "1425848839167803424": {
+        "userId": "242017916826943489",
+        "channelId": "1425848839167803424",
+        "username": "timrigginshair",
+        "displayName": "Tim Carpenter",
+        "avatarURL": "https://cdn.discordapp.com/avatars/242017916826943489/6139708bb780489e38ae0ecb2d1443a9.webp?size=128",
+        "channelName": "📝timcarpenter-app",
+        "createdAt": "2025-10-09T14:14:15.236Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 0
+      },
+      "1425849622638886932": {
+        "userId": "272907597303119873",
+        "channelId": "1425849622638886932",
+        "username": "asmashterpiece",
+        "displayName": "Dr. Smellie Sattler",
+        "avatarURL": "https://cdn.discordapp.com/avatars/272907597303119873/fc1168b941c966e25b44b61bb4ebb792.webp?size=128",
+        "channelName": "📝drsmelliesattler-app",
+        "createdAt": "2025-10-09T14:17:21.736Z",
+        "configId": "config_1759025879573_468655730975703041"
+      },
+      "1425867713313505441": {
         "userId": "391415444084490240",
-        "channelId": "1382716755968786513",
+        "channelId": "1425867713313505441",
         "username": "extremedonkey",
-        "displayName": "Reeceful Things",
+        "displayName": "Reeceosaurus",
         "avatarURL": "https://cdn.discordapp.com/avatars/391415444084490240/fb378b90e7a7ee72348a2bd3dab855b3.webp?size=128",
-        "channelName": "reecefulthings-app",
-        "createdAt": "2025-06-12T13:42:45.734Z",
-        "configId": "unknown"
-      }
-    },
-    "rankings": {
-      "1382716755968786513": {
-        "391415444084490240": 5
+        "channelName": "📝reeceosaurus-app",
+        "createdAt": "2025-10-09T15:29:15.292Z",
+        "configId": "config_1759025879573_468655730975703041"
+      },
+      "1428223321417187348": {
+        "userId": "474338809719554068",
+        "channelId": "1428223321417187348",
+        "username": "fusromanda",
+        "displayName": "Poppy",
+        "avatarURL": "https://cdn.discordapp.com/avatars/474338809719554068/0625d97264328d8f4bf222bf4e45da60.webp?size=128",
+        "channelName": "📝poppy-app",
+        "createdAt": "2025-10-16T03:29:35.897Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1428243353400639509": {
+        "userId": "338264402245582848",
+        "channelId": "1428243353400639509",
+        "username": "drusilla",
+        "displayName": "Dru",
+        "avatarURL": "https://cdn.discordapp.com/avatars/338264402245582848/a_f780227bcd0f24744eabb97a28be4f31.gif?size=128",
+        "channelName": "📝dru-app",
+        "createdAt": "2025-10-16T04:49:11.825Z",
+        "configId": "config_1759025879573_468655730975703041"
+      },
+      "1428475382251651223": {
+        "userId": "1417946570082615493",
+        "channelId": "1428475382251651223",
+        "username": "amber.freeman.mm",
+        "displayName": "Amber",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1417946570082615493/c4ff8610a82429562dd7013c4b99a156.webp?size=128",
+        "channelName": "📝amber-app",
+        "createdAt": "2025-10-16T20:11:11.563Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1429117334303408188": {
+        "userId": "526601259340529664",
+        "channelId": "1429117334303408188",
+        "username": "nix.it",
+        "displayName": "nix.",
+        "avatarURL": "https://cdn.discordapp.com/avatars/526601259340529664/4a9bccd401a17b314dac9223ce93d7b2.webp?size=128",
+        "channelName": "📝nix-app",
+        "createdAt": "2025-10-18T14:42:04.951Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1429819937479852173": {
+        "userId": "488062014057349120",
+        "channelId": "1429819937479852173",
+        "username": "billy89",
+        "displayName": "Billy89",
+        "avatarURL": "https://cdn.discordapp.com/avatars/488062014057349120/bc3651cd0ba0a9acb04d6852ad37b8f7.webp?size=128",
+        "channelName": "📝billy89-app",
+        "createdAt": "2025-10-20T13:13:58.566Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1429820631465332907": {
+        "userId": "819192988911403028",
+        "channelId": "1429820631465332907",
+        "username": "ashcash",
+        "displayName": "AshCash",
+        "avatarURL": "https://cdn.discordapp.com/avatars/819192988911403028/e237476a8cec3946d0efd47f03d8fe65.webp?size=128",
+        "channelName": "📝ashcash-app",
+        "createdAt": "2025-10-20T13:16:43.944Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1429921802028847164": {
+        "userId": "1415508449692745809",
+        "channelId": "1429921802028847164",
+        "username": "caseybecker826",
+        "displayName": "CaseyBecker",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1415508449692745809/19a50a1661380fb0b35f0ab6eaec4aab.webp?size=128",
+        "channelName": "📝caseybecker-app",
+        "createdAt": "2025-10-20T19:58:44.962Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1430326887871283302": {
+        "userId": "1268768030393892934",
+        "channelId": "1430326887871283302",
+        "username": "agrxo",
+        "displayName": "ali 🩷",
+        "avatarURL": "https://cdn.discordapp.com/avatars/1268768030393892934/f1580520acfe706645ae4d55263a4366.webp?size=128",
+        "channelName": "📝ali-app",
+        "createdAt": "2025-10-21T22:48:25.188Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
+      },
+      "1431432815483945030": {
+        "userId": "232393582261174273",
+        "channelId": "1431432815483945030",
+        "username": "joshd5809",
+        "displayName": "Josh Duenas",
+        "avatarURL": "https://cdn.discordapp.com/avatars/232393582261174273/de2dc5abe827af19f37dcff9e117622c.webp?size=128",
+        "channelName": "📝joshduenas-app",
+        "createdAt": "2025-10-25T00:02:58.675Z",
+        "configId": "config_1759025879573_468655730975703041",
+        "currentQuestion": 5
       }
     },
     "castlistConfigs": {
-      "castlist_1759676597377_system": {
-        "id": "castlist_1759676597377_system",
-        "name": "Season 1: Buffy",
+      "castlist_1760168292677_system": {
+        "id": "castlist_1760168292677_system",
+        "name": "S12 - Jurassic Park",
         "type": "system",
-        "createdAt": 1759676597377,
+        "createdAt": 1760168292677,
         "createdBy": "migration",
         "settings": {
           "sortStrategy": "placements",
@@ -3384,77 +6027,218 @@
           "visibility": "public"
         },
         "metadata": {
-          "description": "Castlist for Season 1: Buffy",
-          "emoji": "1️⃣",
-          "migratedFrom": "virtual_U2Vhc29uIDE6IEJ1ZmZ5",
-          "migrationDate": 1759676597377
+          "description": "Second chances. 36 player season of madness!",
+          "emoji": "🦖",
+          "migratedFrom": "virtual_UzEyIC0gSnVyYXNzaWMgUGFyaw",
+          "migrationDate": 1760168292677
         },
-        "seasonId": "season_8562dceec0454513",
-        "modifiedAt": 1759677029504,
+        "seasonId": "season_ddb0fef37a464200",
+        "modifiedAt": 1760168500079,
         "modifiedBy": "system"
+      },
+      "castlist_1760892362223_system": {
+        "id": "castlist_1760892362223_system",
+        "name": "Season 1 - Buffy",
+        "type": "system",
+        "createdAt": 1760892362223,
+        "createdBy": "migration",
+        "settings": {
+          "sortStrategy": "alphabetical",
+          "showRankings": false,
+          "maxDisplay": 25,
+          "visibility": "public"
+        },
+        "metadata": {
+          "description": "Season 1 Castlist",
+          "emoji": "🧛‍♀️",
+          "migratedFrom": "virtual_UzE",
+          "migrationDate": 1760892362223
+        },
+        "modifiedAt": 1760892424820,
+        "modifiedBy": "391415444084490240"
       }
     },
     "placements": {
-      "season_8562dceec0454513": {
-        "419881222760824832": {
-          "placement": 4,
+      "season_ddb0fef37a464200": {
+        "145983905458028544": {
+          "placement": 19,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:08:08.912Z"
+          "updatedAt": "2025-10-11T07:43:31.616Z"
         },
-        "885537043629895690": {
-          "placement": 18,
+        "730235354535428127": {
+          "placement": 19,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:08:40.125Z"
+          "updatedAt": "2025-10-11T07:45:16.935Z"
         },
-        "749332105942794314": {
-          "placement": 13,
-          "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:08:50.091Z"
-        },
-        "276520553400238081": {
+        "365171952693805056": {
           "placement": 16,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:08:59.694Z"
+          "updatedAt": "2025-10-11T07:45:30.050Z"
         },
-        "761034006682271765": {
-          "placement": 7,
-          "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:09:10.574Z"
-        },
-        "700105131517018182": {
-          "placement": 9,
-          "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:09:27.105Z"
-        },
-        "1142043228653232159": {
-          "placement": 2,
-          "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:09:33.592Z"
-        },
-        "555868346197737482": {
-          "placement": 6,
-          "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:09:41.030Z"
-        },
-        "351034726120816642": {
-          "placement": 17,
-          "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:09:52.788Z"
-        },
-        "613201173239037953": {
+        "138708059395457025": {
           "placement": 8,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:10:03.483Z"
+          "updatedAt": "2025-10-11T07:46:14.595Z"
         },
-        "756383872379256933": {
-          "placement": 1,
+        "697253400827396106": {
+          "placement": 11,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:10:11.102Z"
+          "updatedAt": "2025-10-11T07:46:22.483Z"
         },
-        "426442485305180162": {
+        "839635943072858134": {
+          "placement": 4,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:46:35.347Z"
+        },
+        "514216748203900931": {
+          "placement": 24,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:46:41.873Z"
+        },
+        "206564376692523010": {
+          "placement": 20,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:46:52.188Z"
+        },
+        "723629872173416579": {
+          "placement": 16,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:47:00.688Z"
+        },
+        "324349115461009409": {
+          "placement": 9,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:47:30.361Z"
+        },
+        "646130635102093312": {
+          "placement": 10,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:47:42.024Z"
+        },
+        "344289901803601920": {
+          "placement": 15,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:47:59.975Z"
+        },
+        "692719264452444191": {
           "placement": 14,
           "updatedBy": "391415444084490240",
-          "updatedAt": "2025-10-05T15:11:19.702Z"
+          "updatedAt": "2025-10-11T07:48:42.098Z"
+        },
+        "687399525002117160": {
+          "placement": 21,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:48:49.496Z"
+        },
+        "885537043629895690": {
+          "placement": 13,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:48:57.394Z"
+        },
+        "248962410306600960": {
+          "placement": 5,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:49:04.013Z"
+        },
+        "241987329978269696": {
+          "placement": 18,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:49:11.581Z"
+        },
+        "344384241767022592": {
+          "placement": 22,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:49:19.717Z"
+        },
+        "470706722596716547": {
+          "placement": 1,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:49:27.351Z"
+        },
+        "397167214404435968": {
+          "placement": 7,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:49:37.231Z"
+        },
+        "572291395365109770": {
+          "placement": 6,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:49:45.544Z"
+        },
+        "613529921557364737": {
+          "placement": 21,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:49:53.158Z"
+        },
+        "138429066008068097": {
+          "placement": 22,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:49:59.956Z"
+        },
+        "526601259340529664": {
+          "placement": 20,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:50:08.462Z"
+        },
+        "1242546896325841047": {
+          "placement": 15,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:50:16.439Z"
+        },
+        "208197633846542336": {
+          "placement": 23,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:50:24.127Z"
+        },
+        "700105131517018182": {
+          "placement": 2,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:50:31.859Z"
+        },
+        "267029241353338880": {
+          "placement": 18,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:50:40.146Z"
+        },
+        "823354355775438919": {
+          "placement": 3,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:50:51.431Z"
+        },
+        "585425481763913738": {
+          "placement": 24,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:50:57.856Z"
+        },
+        "598287033022021632": {
+          "placement": 17,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:51:05.983Z"
+        },
+        "404426600260698112": {
+          "placement": 17,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:51:12.353Z"
+        },
+        "684530139694104618": {
+          "placement": 12,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:51:19.538Z"
+        },
+        "776002860285952032": {
+          "placement": 23,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:51:26.275Z"
+        },
+        "242017916826943489": {
+          "placement": 9,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:51:33.134Z"
+        },
+        "856932012748439632": {
+          "placement": 14,
+          "updatedBy": "391415444084490240",
+          "updatedAt": "2025-10-11T07:51:40.062Z"
         }
       }
     }
@@ -5963,7 +8747,17 @@
         }
       }
     },
-    "tribes": {},
+    "tribes": {
+      "1431928292985933906": {
+        "name": "Tribe 1431928292985933906",
+        "emoji": "🏕️",
+        "color": null,
+        "castlistIds": [
+          "default"
+        ],
+        "castlist": "Active Castlist"
+      }
+    },
     "timezones": {
       "1431928292985933906": {
         "offset": -8,

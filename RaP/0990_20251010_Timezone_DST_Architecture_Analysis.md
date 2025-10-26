@@ -173,27 +173,55 @@
 - `/home/reece/castbot/dstState.json` - Already exists (global timezone definitions)
 - `/home/reece/castbot/playerData.json` - Schema updated (adds `timezoneId` field)
 
+#### Critical Bugs Fixed (January 27, 2025)
+
+**Bug 1: Missing loadDSTState Import**
+- **Git Commit:** `314ed3a2`
+- **Symptom:** `ReferenceError: loadDSTState is not defined`
+- **Fix:** Added `loadDSTState` to imports from storage.js
+- **Impact:** Conversion system completely non-functional
+
+**Bug 2: Conversion Data Not Persisted (CRITICAL)**
+- **Git Commit:** `06b2ff05`
+- **Symptom:** DST toggle only showing 1 timezone (PT) despite 16 being set up
+- **Root Cause:**
+  - `convertExistingTimezones()` modified `currentTimezones` in-place
+  - `updateCastBotStorage()` reloaded fresh data from disk (line 990)
+  - In-memory conversion changes were lost before being saved
+- **Fix:** Save `playerData` immediately after conversion completes
+- **Impact:** All converted timezone metadata (timezoneId) was lost
+- **Affected Servers:** ALL servers with existing timezone roles
+- **Data Loss:** No permanent damage - re-running setup after fix will restore metadata
+
+**Bug 3: Already-Converted Roles Not Tracked**
+- **Git Commit:** `ba67d9fd`
+- **Symptom:** Empty timezone display when all roles already converted
+- **Fix:** Track roles with existing `timezoneId` in `results.unchanged`
+- **Impact:** Setup response showed nothing for already-converted servers
+
 #### Next Steps for Fresh Instance
 
-1. **Test Conversion on Production Server**
+1. **Test Fixed Conversion on Production Server**
    - Pick server with legacy timezone roles
    - Run `/menu` → Production Menu → Initial Setup
    - Verify conversion response shows renamed roles
    - Check Discord roles actually renamed
-   - Verify playerData.json has `timezoneId` fields
+   - **CRITICAL:** Verify playerData.json has `timezoneId` fields persisted
+   - Test DST toggle shows ALL timezones (not just PT)
 
 2. **Debug Any Conversion Issues**
    - Check logs: `tail -f /tmp/castbot-dev.log | grep "timezone"`
    - Look for: `🔄 Renamed role`, `❌ Could not detect`, `⚠️ Role no longer exists`
+   - Look for: `💾 DEBUG: Saving X timezone conversions to playerData.json`
    - Fix detection patterns if needed
 
-3. **Implement DST Toggle System** (Phase 2)
-   - Create manual toggle button in reece_stuff_menu
-   - Use modal with Role Select + String Select (Standard/Daylight)
-   - Update all servers with selected timezone
-   - Update `offset` field (not just `currentOffset`)
+3. **DST Toggle System** (Phase 2 - IMPLEMENTED)
+   - ✅ Manual toggle button in reece_stuff_menu
+   - ✅ Shows all DST-aware timezones with `timezoneId` field
+   - ⚠️ Currently only works AFTER conversion persists data
+   - Test toggle functionality updates dstState.json
 
-4. **Update Time Calculation Code** (Phase 3)
+4. **Update Time Calculation Code** (Phase 3 - PENDING)
    - Modify playerManagement.js to read from dstState.json
    - Fallback to `offset` field for backwards compat
    - Test time display accuracy

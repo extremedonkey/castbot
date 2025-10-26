@@ -757,7 +757,12 @@ async function convertExistingTimezones(guild, currentTimezones) {
                 await new Promise(resolve => setTimeout(resolve, 200));
             } catch (error) {
                 console.error(`❌ Failed to rename role ${roleId}:`, error);
-                results.failed.push({ roleId, name: role.name, error: error.message });
+                results.failed.push({
+                    roleId,
+                    name: role.name,
+                    error: error.message,
+                    timezoneId  // CRITICAL: Store which timezone this was for duplicate prevention
+                });
                 continue;
             }
         } else {
@@ -927,6 +932,30 @@ async function executeSetup(guildId, guild) {
     console.log('🔍 DEBUG: Processing timezone roles...');
     for (const timezone of STANDARD_TIMEZONE_ROLES) {
         try {
+            // CRITICAL: Check if conversion failed for this timezone due to hierarchy
+            const conversionFailed = results.timezones.conversionFailed.find(f =>
+                f.timezoneId === timezone.id
+            );
+
+            if (conversionFailed) {
+                // Old role exists but couldn't be renamed
+                // DON'T create duplicate - add to hierarchy warnings if it's a permissions issue
+                console.log(`⚠️ DEBUG: Skipping ${timezone.name} creation - conversion failed (existing role: ${conversionFailed.name})`);
+
+                // Check if it's a hierarchy issue (Missing Permissions)
+                if (conversionFailed.error === 'Missing Permissions') {
+                    results.timezones.hierarchyWarnings.push({
+                        ...timezone,
+                        id: conversionFailed.roleId,
+                        existingName: conversionFailed.name,
+                        botRoleName: guild.members.me?.roles.highest?.name || 'CastBot',
+                        reason: 'Role exists but is above CastBot in hierarchy'
+                    });
+                }
+                // Conversion failure is already tracked in conversionFailed array
+                continue;
+            }
+
             const existingRole = guild.roles.cache.find(r => r.name === timezone.name);
 
             if (existingRole) {
@@ -1231,7 +1260,9 @@ function generateSetupResponseV2(results) {
             sections.push('### 🔺 Role Hierarchy Issues:');
             sections.push('The following roles need to be moved **below** the CastBot role in Server Settings → Roles for auto-assignment to work properly:\n');
             allWarnings.forEach(role => {
-                sections.push(`• <@&${role.id}> (${role.name})`);
+                // For conversion failures, show the existing name (e.g., "PST (UTC-7)")
+                const displayName = role.existingName || role.name;
+                sections.push(`• <@&${role.id}> (${displayName})`);
             });
             sections.push('\n**How to fix:** Go to Server Settings → Roles and drag these roles below the CastBot role.\n');
         }
