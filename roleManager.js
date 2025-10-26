@@ -841,6 +841,14 @@ async function executeSetup(guildId, guild) {
                 converted: false  // Already had correct name
             });
         });
+
+        // CRITICAL: Save converted timezone metadata to playerData.json
+        // The conversion modified currentTimezones in-place, but updateCastBotStorage()
+        // will reload from disk, losing these changes if we don't save now
+        console.log(`💾 DEBUG: Saving ${Object.keys(currentTimezones).length} timezone conversions to playerData.json`);
+        playerData[guildId].timezones = currentTimezones;
+        await savePlayerData(playerData);
+        console.log(`✅ DEBUG: Conversion data saved successfully`);
     }
 
     // Process pronoun roles
