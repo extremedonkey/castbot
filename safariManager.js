@@ -854,9 +854,9 @@ async function executeDisplayText(config, interaction) {
 async function executeUpdateCurrency(config, userId, guildId, interaction) {
     // Get custom terms for this guild
     const customTerms = await getCustomTerms(guildId);
-    
+
     console.log(`${customTerms.currencyEmoji} DEBUG: Executing currency update: ${config.amount} for user ${userId}`);
-    
+
     const context = {
         username: interaction?.user?.username || 'Unknown',
         displayName: interaction?.member?.displayName || interaction?.user?.username || 'Unknown',
@@ -864,17 +864,23 @@ async function executeUpdateCurrency(config, userId, guildId, interaction) {
         channelName: interaction?.channel?.name || null
     };
     const newBalance = await updateCurrency(guildId, userId, config.amount, context);
-    
+
     let message = config.message || `Currency updated!`;
-    
+
     // Add balance info with custom currency terms
     const sign = config.amount >= 0 ? '+' : '';
     message += `\n\n${customTerms.currencyEmoji} **${sign}${config.amount} ${customTerms.currencyName}**`;
     message += `\nYour balance: **${newBalance} ${customTerms.currencyName}**`;
-    
+
     return {
-        content: message,
-        flags: InteractionResponseFlags.EPHEMERAL
+        flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+        components: [{
+            type: 17, // Container
+            components: [{
+                type: 10, // Text Display
+                content: message
+            }]
+        }]
     };
 }
 
@@ -894,15 +900,27 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
         
         if (config.limit.type === 'once_per_player' && claimedBy.includes(userId)) {
             return {
-                content: `❌ You have already claimed this ${customTerms.currencyName} reward!`,
-                flags: InteractionResponseFlags.EPHEMERAL
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+                components: [{
+                    type: 17, // Container
+                    components: [{
+                        type: 10, // Text Display
+                        content: `❌ You have already claimed this ${customTerms.currencyName} reward!`
+                    }]
+                }]
             };
         }
-        
+
         if (config.limit.type === 'once_globally' && claimedBy) {
             return {
-                content: `❌ This ${customTerms.currencyName} reward has already been claimed!`,
-                flags: InteractionResponseFlags.EPHEMERAL
+                flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+                components: [{
+                    type: 17, // Container
+                    components: [{
+                        type: 10, // Text Display
+                        content: `❌ This ${customTerms.currencyName} reward has already been claimed!`
+                    }]
+                }]
             };
         }
     }
@@ -977,10 +995,16 @@ async function executeGiveCurrency(config, userId, guildId, interaction, buttonI
     let message = config.message || `You received ${customTerms.currencyName}!`;
     message += `\n\n${customTerms.currencyEmoji} **+${config.amount} ${customTerms.currencyName}**`;
     message += `\nYour balance: **${newBalance} ${customTerms.currencyName}**`;
-    
+
     return {
-        content: message,
-        flags: InteractionResponseFlags.EPHEMERAL
+        flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+        components: [{
+            type: 17, // Container
+            components: [{
+                type: 10, // Text Display
+                content: message
+            }]
+        }]
     };
 }
 
@@ -1149,12 +1173,18 @@ async function executeGiveItem(config, userId, guildId, interaction, buttonId = 
  */
 async function executeFollowUpButton(config, guildId, interaction) {
     console.log(`🔗 DEBUG: Executing follow-up button: ${config.buttonId}`);
-    
+
     const followUpButton = await getCustomButton(guildId, config.buttonId);
     if (!followUpButton) {
         return {
-            content: '❌ Follow-up button not found.',
-            flags: InteractionResponseFlags.EPHEMERAL
+            flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+            components: [{
+                type: 17, // Container
+                components: [{
+                    type: 10, // Text Display
+                    content: '❌ Follow-up button not found.'
+                }]
+            }]
         };
     }
     
@@ -1200,88 +1230,73 @@ async function executeFollowUpButton(config, guildId, interaction) {
  */
 async function executeGiveRole(config, userId, guildId, interaction) {
     console.log(`👑 DEBUG: Executing give role: ${config.roleId} for user ${userId}`);
-    
+
+    // Helper to create Components V2 response
+    const createResponse = (content) => ({
+        flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+        components: [{
+            type: 17, // Container
+            components: [{
+                type: 10, // Text Display
+                content
+            }]
+        }]
+    });
+
     // Validate role ID
     if (!config.roleId) {
-        return {
-            content: '❌ No role configured for this action.',
-            flags: InteractionResponseFlags.EPHEMERAL
-        };
+        return createResponse('❌ No role configured for this action.');
     }
-    
+
     // Check if member object exists
     if (!interaction.member) {
         console.error('❌ No member object in interaction');
-        return {
-            content: '❌ Unable to manage roles. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-        };
+        return createResponse('❌ Unable to manage roles. Please try again.');
     }
-    
+
     // Check if user already has the role
     const memberRoles = interaction.member.roles || [];
     const hasRole = memberRoles.includes(config.roleId);
-    
+
     if (hasRole) {
-        return {
-            content: '✅ You already have this role!',
-            flags: InteractionResponseFlags.EPHEMERAL
-        };
+        return createResponse('✅ You already have this role!');
     }
-    
+
     try {
         // Get the guild and member from Discord.js client
         const guild = await interaction.client.guilds.fetch(guildId);
         const member = await guild.members.fetch(userId);
         const role = await guild.roles.fetch(config.roleId);
-        
+
         if (!role) {
-            return {
-                content: '❌ The configured role no longer exists.',
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+            return createResponse('❌ The configured role no longer exists.');
         }
-        
+
         // Check if bot has permission to manage this role
         const botMember = await guild.members.fetch(interaction.client.user.id);
         const botHighestRole = botMember.roles.highest;
-        
+
         if (role.position >= botHighestRole.position) {
-            return {
-                content: `❌ I cannot assign the **${role.name}** role because it's higher than or equal to my highest role.`,
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+            return createResponse(`❌ I cannot assign the **${role.name}** role because it's higher than or equal to my highest role.`);
         }
-        
+
         // Add the role
         await member.roles.add(role);
-        
+
         console.log(`✅ Successfully gave role ${role.name} (${config.roleId}) to user ${userId}`);
-        
-        return {
-            content: `✅ You have been given the **${role.name}** role!`,
-            flags: InteractionResponseFlags.EPHEMERAL
-        };
-        
+
+        return createResponse(`✅ You have been given the **${role.name}** role!`);
+
     } catch (error) {
         console.error(`❌ Error giving role: ${error.message}`);
-        
+
         // Handle specific Discord API errors
         if (error.code === 50013) {
-            return {
-                content: '❌ I don\'t have permission to manage this role. Please check my role permissions.',
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+            return createResponse('❌ I don\'t have permission to manage this role. Please check my role permissions.');
         } else if (error.code === 10011) {
-            return {
-                content: '❌ The configured role no longer exists.',
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+            return createResponse('❌ The configured role no longer exists.');
         } else {
-            return {
-                content: '❌ Failed to assign role. Please try again or contact an administrator.',
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+            return createResponse('❌ Failed to assign role. Please try again or contact an administrator.');
         }
     }
 }
@@ -1291,88 +1306,73 @@ async function executeGiveRole(config, userId, guildId, interaction) {
  */
 async function executeRemoveRole(config, userId, guildId, interaction) {
     console.log(`🚫 DEBUG: Executing remove role: ${config.roleId} for user ${userId}`);
-    
+
+    // Helper to create Components V2 response
+    const createResponse = (content) => ({
+        flags: (1 << 15) | InteractionResponseFlags.EPHEMERAL, // IS_COMPONENTS_V2 + EPHEMERAL
+        components: [{
+            type: 17, // Container
+            components: [{
+                type: 10, // Text Display
+                content
+            }]
+        }]
+    });
+
     // Validate role ID
     if (!config.roleId) {
-        return {
-            content: '❌ No role configured for this action.',
-            flags: InteractionResponseFlags.EPHEMERAL
-        };
+        return createResponse('❌ No role configured for this action.');
     }
-    
+
     // Check if member object exists
     if (!interaction.member) {
         console.error('❌ No member object in interaction');
-        return {
-            content: '❌ Unable to manage roles. Please try again.',
-            flags: InteractionResponseFlags.EPHEMERAL
-        };
+        return createResponse('❌ Unable to manage roles. Please try again.');
     }
-    
+
     // Check if user has the role
     const memberRoles = interaction.member.roles || [];
     const hasRole = memberRoles.includes(config.roleId);
-    
+
     if (!hasRole) {
-        return {
-            content: '✅ You don\'t have this role.',
-            flags: InteractionResponseFlags.EPHEMERAL
-        };
+        return createResponse('✅ You don\'t have this role.');
     }
-    
+
     try {
         // Get the guild and member from Discord.js client
         const guild = await interaction.client.guilds.fetch(guildId);
         const member = await guild.members.fetch(userId);
         const role = await guild.roles.fetch(config.roleId);
-        
+
         if (!role) {
-            return {
-                content: '❌ The configured role no longer exists.',
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+            return createResponse('❌ The configured role no longer exists.');
         }
-        
+
         // Check if bot has permission to manage this role
         const botMember = await guild.members.fetch(interaction.client.user.id);
         const botHighestRole = botMember.roles.highest;
-        
+
         if (role.position >= botHighestRole.position) {
-            return {
-                content: `❌ I cannot remove the **${role.name}** role because it's higher than or equal to my highest role.`,
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+            return createResponse(`❌ I cannot remove the **${role.name}** role because it's higher than or equal to my highest role.`);
         }
-        
+
         // Remove the role
         await member.roles.remove(role);
-        
+
         console.log(`✅ Successfully removed role ${role.name} (${config.roleId}) from user ${userId}`);
-        
-        return {
-            content: `✅ The **${role.name}** role has been removed!`,
-            flags: InteractionResponseFlags.EPHEMERAL
-        };
-        
+
+        return createResponse(`✅ The **${role.name}** role has been removed!`);
+
     } catch (error) {
         console.error(`❌ Error removing role: ${error.message}`);
-        
+
         // Handle specific Discord API errors
         if (error.code === 50013) {
-            return {
-                content: '❌ I don\'t have permission to manage this role. Please check my role permissions.',
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+            return createResponse('❌ I don\'t have permission to manage this role. Please check my role permissions.');
         } else if (error.code === 10011) {
-            return {
-                content: '❌ The configured role no longer exists.',
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+            return createResponse('❌ The configured role no longer exists.');
         } else {
-            return {
-                content: '❌ Failed to remove role. Please try again or contact an administrator.',
-                flags: InteractionResponseFlags.EPHEMERAL
-            };
+            return createResponse('❌ Failed to remove role. Please try again or contact an administrator.');
         }
     }
 }
